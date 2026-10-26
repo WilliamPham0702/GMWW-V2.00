@@ -13,6 +13,7 @@ import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
+import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -33,7 +34,7 @@ const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+' })',{
   ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
-  resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
+  resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -59,7 +60,12 @@ function harness({artifact=true,auto=false,singleUse=false}={}){
   if(artifact)data.set('artifact:alice',{matchId:'test-match',artifactId:'mirror',artifactName:'Tráng Gương',priorityFirst:true,singleUse,artifactCard:{actions:[{id:'copy',name:'Tráng Gương'}]}});
   const meta=()=>storage.get('meta');
   const runtime=async()=>room.getNightRuntime(await meta(),1,true);
-  const jump=async kind=>{const rt=await runtime();return room.gmTurn(null,{action:'jump',targetIndex:rt.queue.findIndex(x=>x.kind===kind)})};
+  const jump=async kind=>{const rt=await runtime(),index=rt.queue.findIndex(x=>x.kind===kind);
+    // Night 1 may begin directly on a Role when WOLF-01 omits the solo-Wolf
+    // introduction. In the live room applyCycle initializes this meta pointer.
+    if(index===rt.cursor){const m=await meta();m.currentNightTurnId=rt.currentId;await storage.put('meta',m);return rt}
+    return room.gmTurn(null,{action:'jump',targetIndex:index});
+  };
   const act=async overrides=>{const rt=await runtime();return room.gmInteraction(null,{turnId:rt.currentId,artifactId:'mirror',actorId:'alice',actionId:'copy',actionNonce:'nonce-1',targetIds:['bob'],loginId:'bob',type:'effect_notice',night:1,clientEventId:'nonce-1:bob',...overrides})};
   return{data,room,events,storage,meta,runtime,jump,act};
 }
@@ -67,13 +73,37 @@ async function result(response){return {status:response.status,...await response
 
 test('no Artifact produces no opening window; configured Artifacts preserve one owned opening window',async()=>{
   const h=harness({artifact:false}),rt=await h.runtime();
-  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-introduction','role','role','village-wakeup']);
+  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['role','role','village-wakeup']);
   assert.equal(timelineDisplaySteps(rt.queue).filter(x=>x.kind==='early-artifact-window').length,0);
   const h2=harness(),r2=await h2.runtime();
-  assert.equal(r2.queue[2].loginIds.length,2);assert.equal(r2.queue[2].artifacts[0].loginId,'alice');
+  assert.deepEqual(Array.from(r2.queue.slice(0,2),x=>x.kind),['early-artifact-window','role']);
+  assert.equal(r2.queue[1].loginIds.length,2);assert.equal(r2.queue[1].artifacts[0].loginId,'alice');
   assert.equal(h2.data.has('artifactUse:alice:mirror'),false);
   assert.equal(timelineDisplaySteps(r2.queue).filter(x=>x.kind==='early-artifact-window').length,1);
 });
+test('ART-01 skip from night two when priority absent/exhausted; no Artifact mode skips night one',async()=>{
+  const h=harness();
+  h.data.get('gameConfig').artifactsEnabled=false;
+  assert.ok(!(await h.runtime()).queue.some(x=>x.kind==='early-artifact-window'));
+  const prioritized=harness({singleUse:true});
+  prioritized.data.set('artifactUse:alice:mirror',{usedAt:new Date().toISOString()});
+  const second=await prioritized.room.getNightRuntime({...await prioritized.meta(),cycleNight:2},2,true);
+  assert.ok(!second.queue.some(x=>x.kind==='early-artifact-window'));
+  const reusable=harness();
+  const next=await reusable.room.getNightRuntime({...await reusable.meta(),cycleNight:2},2,true);
+  assert.equal(next.queue[0].kind,'early-artifact-window');
+  const unprioritized=harness();
+  unprioritized.data.get('assignments')[0].artifactPriorityFirst=false;
+  unprioritized.data.get('artifact:alice').priorityFirst=false;
+  const first=await unprioritized.runtime();
+  assert.equal(first.queue[0].kind,'early-artifact-window');
+  assert.equal(first.queue[0].actions.length,0);
+  const later=await unprioritized.room.getNightRuntime({...await unprioritized.meta(),cycleNight:2},2,true);
+  assert.equal(later.queue.some(x=>x.kind==='early-artifact-window'),false);
+  const audio=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  assert.match(audio,/audio_system_early_artifacts/);
+});
+
 test('skipping priority window does not consume Artifact; owner uses it at role turn',async()=>{
   const h=harness();await h.jump('role');
   assert.equal(h.data.has('artifactUse:alice:mirror'),false);
@@ -236,6 +266,9 @@ test('batched GM action reverses both targets and one Artifact use on server',as
   const h=harness({artifact:true,singleUse:true});
   await h.jump('early-artifact-window');
   const meta=await h.meta(),rt=await h.runtime();
+  // Match applyCycle: it saves the first night turn ID even when the first step
+  // is Artifact at index zero (jumping to the same index does not rewrite meta).
+  h.data.get('meta').currentNightTurnId=rt.currentId;
   const payload={turnId:rt.currentId,actorId:'alice',artifactId:'mirror',
     type:'frozen',actionId:'copy',effectId:'freeze',effectName:'Đóng Băng',
     targetIds:['bob','carol'],matchId:meta.matchId,cycleKey:meta.cycleKey,

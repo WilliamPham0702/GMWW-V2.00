@@ -112,6 +112,37 @@ jobs:
           node -e "const fs=require('fs'),crypto=require('crypto');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json','utf8'));let e=m.icons.find(x=>x.svg==='01_soi_xet.svg');let s=crypto.createHash('sha256').update(fs.readFileSync('assets/action-icons/v2/01_soi_xet.svg')).digest('hex');if(m.count!==49||e.sha256_svg!==s)process.exit(1)"
           test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
 
+      - name: WOLF-01 — chỉ thử sói nhận diện riêng, đổi phe, quyền xem và đồng bộ Runtime
+        if: steps.scope.outputs.mode == 'wolf01-private-pack'
+        run: |
+          node --test tests/wolf01-private-pack-recognition.test.mjs tests/v389-night-runtime-integration.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check src/gmww-wolf-recognition.js
+          node --check src/gmww-members-live.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.239-wolf01-recognition-20261026.md
+
+      - name: ART-01 — chỉ kiểm tra sửa chốt phát hành Server-only
+        if: steps.scope.outputs.mode == 'art01-deploy-gate'
+        run: |
+          node --test tests/art01-deployment-gate.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          test -s docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md
+
+      - name: ART-01 — chỉ kiểm tra thứ tự Artifact → Bầy Sói và giới hạn sử dụng
+        if: steps.scope.outputs.mode == 'art01-night-flow'
+        run: |
+          node --test tests/artifact-priority-first.test.mjs tests/v389-night-runtime-integration.test.mjs
+          node --check src/index.js
+          node --check src/gmww-game-scene-rules.js
+          node --check src/gmww-night-turn-rules.js
+          test -s docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md
+          node .github/scripts/verify-gmww-versions.mjs
+
       - name: V3.238 — chỉ kiểm tra sửa workflow Production
         if: steps.scope.outputs.mode == 'gm238-deploy-repair'
         run: |

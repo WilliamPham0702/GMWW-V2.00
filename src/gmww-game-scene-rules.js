@@ -10,16 +10,17 @@ export function artifactPriorityFirst(artifact){
   const value=artifact?.priorityFirst??artifact?.artifact?.priorityFirst;
   return typeof value==="boolean"?value:defaultPriorityFirst(artifact?.artifactName||artifact?.name);
 }
-export function buildNightQueue({night,normalTurns=[],artifactOwners=[]}){
-  const queue=[];
-  // Match the real Durable Object night scheduler: only night one has the wolf introduction.
-  if(Math.max(1,Number(night)||1)===1)queue.push({kind:"wolf-introduction",label:"Bầy Sói"});
-  // Every cycle, eligible configured Artifacts act before roles. No unused
-  // Artifact is consumed simply by appearing in this opening window.
-  const earlyActions=artifactOwners.filter(owner=>!owner?.used&&artifactPriorityFirst(owner)).map(owner=>({kind:"early-artifact",name:owner.artifactName||owner.name,artifactId:owner.artifactId,playerId:owner.playerId}));
-  if(artifactOwners.length>0)queue.push({kind:"early-artifact-window",label:"Artifact đầu ván",actions:earlyActions});
+export function buildNightQueue({night,normalTurns=[],artifactOwners=[],artifactsEnabled}){
+  const queue=[],n=Math.max(1,Number(night)||1);
+  const enabled=artifactsEnabled===true||(artifactsEnabled!==false&&artifactOwners.length>0);
+  // ART-01: Night 1 starts with the Artifact stage, before Wolf recognition.
+  // Nights 2+ skip it as soon as no usable priority Artifact remains.
+  const earlyActions=enabled?artifactOwners.filter(owner=>!owner?.used&&artifactPriorityFirst(owner)).map(owner=>({kind:"early-artifact",name:owner.artifactName||owner.name,artifactId:owner.artifactId,playerId:owner.playerId})):[];
+  if(enabled&&(n===1||earlyActions.length>0))
+    queue.push({kind:"early-artifact-window",label:"Artifact đầu ván",actions:earlyActions});
+  if(n===1)queue.push({kind:"wolf-introduction",label:"Bầy Sói"});
   for(const turn of normalTurns){
-    if((turn?.artifactId||turn?.artifactName)&&artifactOwners.some(x=>x.playerId===turn.playerId&&(turn.artifactId?x.artifactId===turn.artifactId:x.artifactName===turn.artifactName)&&x.used))continue;
+    if((turn?.artifactId||turn?.artifactName)&&(!enabled||artifactOwners.some(x=>x.playerId===turn.playerId&&(turn.artifactId?x.artifactId===turn.artifactId:x.artifactName===turn.artifactName)&&x.used)))continue;
     queue.push({...turn,kind:turn.kind||"normal"});
   }
   queue.push({kind:"village-wakeup",label:"Làng ơi dậy đi"});
