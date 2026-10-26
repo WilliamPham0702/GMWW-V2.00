@@ -54,6 +54,16 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: V3.228 – chỉ kiểm thử giảm ghi DO, quyền GM, Cài đặt và Runtime
+        if: steps.scope.outputs.mode == 'do-optimizer-3228'
+        run: |
+          node --test tests/do-write-optimizer.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.228-do-write-optimizer-20261026.md
+
       - name: Chỉ xác minh quy tắc CI AUTO VÁN (không chạy gameplay không liên quan)
         if: steps.scope.outputs.mode == 'auto-van-ci'
         run: |

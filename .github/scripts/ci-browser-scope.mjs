@@ -1133,7 +1133,32 @@ function isIconV2CIRepairScope(changes){
   (paths.get('.github/workflows/deploy-production.yml')||'').includes('ICON_V2_CI_HOTFIX');
 }
 
+
+/* V3.228: chỉ cho phép bộ file chống ghi DO và giao diện công cụ tương ứng. */
+function isDOOptimizer3228Scope(changes){
+  if(!Array.isArray(changes)||!changes.length)return false;
+  const allowed=new Set([
+    'src/index.js','src/gmww-do-write-optimizer.js',
+    'server-game/src/00-core-and-library.part','server-game/src/20-members-and-roster.part',
+    'server-game/current/app.js','server-game/current/GMWW.html',
+    'package.json','package-lock.json','tests/do-write-optimizer.test.mjs',
+    'docs/releases/GMWW-V3.228-do-write-optimizer-20261026.md',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+  ]);
+  const files=new Map(changes.map(x=>[x.path,x]));
+  if(changes.some(x=>!allowed.has(x.path)||!['A','M'].includes(x.status)))return false;
+  const required=['src/index.js','src/gmww-do-write-optimizer.js',
+    'server-game/current/app.js','server-game/current/GMWW.html','tests/do-write-optimizer.test.mjs'];
+  if(!required.every(x=>files.has(x)))return false;
+  return (files.get('src/index.js').after||'').includes('shouldSkipMemberHeartbeat')&&
+    (files.get('src/index.js').after||'').includes('VERSION="V3.228"')&&
+    (files.get('server-game/current/GMWW.html').after||'').includes('id="settingsOptimizeDO"')&&
+    (files.get('server-game/current/app.js').after||'').includes("const VERSION='3.228'")&&
+    (files.get('tests/do-write-optimizer.test.mjs').after||'').includes('shouldSkipDirectoryHeartbeat');
+}
+
 export function classifyBrowserScope(changes){
+  if(isDOOptimizer3228Scope(changes))return 'do-optimizer-3228';
   if(isIconV2CIRepairScope(changes))return 'icon-v2-ci-fix';
   if(isGMIcons501ReleaseScope(changes))return 'gm-icons-501-release';
   if(isGMIcons501Scope(changes))return 'gm-icons-501';
@@ -1195,6 +1220,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
       if(isIconV2CIRepairScope(changes))return{mode:'icon-v2-ci-fix',reason:'Exact 7-file approved V3.227 CI-only patch; no gameplay or Runtime version'};
       if(isAutoVanCIPolicyScope(changes))return{mode:'auto-van-ci',reason:'AUTO VÁN CI routing only'};
       if(isAutoVanReleaseScope(changes))return{mode:'auto-van-3222',reason:'V3.222 AUTO VÁN exact version, notes and OTA only'};
