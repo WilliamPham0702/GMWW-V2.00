@@ -7977,7 +7977,7 @@ body.play-immersive #start #playShell[data-step="battle"] #battleFactionStats{
 #battleFireIconDock.is-pending{pointer-events:none!important}
 #battleFireIconDock.is-pending .battle-fire-icon{opacity:.47!important;pointer-events:none!important}
 
-/* GMWW V3.228 — Restore native-size frameless drag icons; distinguish every active action. */
+/* GMWW V3.229 — Restore native-size frameless drag icons; distinguish every active action. */
 #battleFireIconDock .battle-fire-icon{
  width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;
 }
