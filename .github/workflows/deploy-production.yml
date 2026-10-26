@@ -855,6 +855,26 @@ jobs:
           set -euo pipefail
           echo "approved=false" >> "$GITHUB_OUTPUT"
           if [ "$(node -p "require('./package.json').version")" != '3.238.0' ]; then exit 0; fi
+          # ART-01 server-only deployment gate. V3.238 Runtime already shipped;
+          # this exact CI-policy-only change publishes Worker Core without OTA/IPA.
+          # Fail closed unless exact four-file recovery scope and same-SHA Worker
+          # CI on main both succeed; never relax V3.238 Runtime gate generally.
+          ART01_SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$ART01_SCOPE" == 'GMWW browser CI scope: art01-deploy-gate |'* ]]; then
+            test -s docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md
+            grep -Fq 'ART-01: Night 1 always opens the Artifact stage' src/index.js
+            grep -Fq 'ART-01 opening before Wolves' src/gmww-night-turn-rules.js
+            node --test tests/artifact-priority-first.test.mjs tests/v389-night-runtime-integration.test.mjs
+            CI_STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.event==='push'&&x.head_sha===process.env.TESTED_SHA&&x.name==='Check Player Web Worker');
+                process.stdout.write(runs.some(r=>r.conclusion==='success')?'success':'missing');
+              })")
+            test "$CI_STATE" = 'success' || { echo "::error::ART-01 Worker CI not verified"; exit 1; }
+            echo 'approved=true' >> "$GITHUB_OUTPUT"
+            echo 'ART-01: SERVER_ONLY Worker Core verified; Runtime/IPA untouched.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           test -s docs/releases/GMWW-V3.238-uniform-gm-controls-20261026.md
           grep -Fq 'V3.238 — every GM control' server-game/current/style.css
           grep -Fq 'id="battleGMChromeToggle"' server-game/current/GMWW.html
