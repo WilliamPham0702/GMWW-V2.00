@@ -79,3 +79,17 @@
 2. Chạy full game GM ↔ Player 3D/Core trên STAGING sau code portal mới (tạo phòng, người thật, chọn ván/phân vai, reconnect, Ngày/Đêm, treo giàn, kết thúc). Chrome/WebKit không tương đương phép đo iPhone thật.
 3. Rà soát quyền GM/Player và bridge bản chính thức, kiểm tra Game 2D không bị hồi quy; CI phát hành bắt buộc phải SUCCESS đúng SHA.
 4. Chuẩn bị Runtime OTA kế tiếp, ghi chú tiếng Việt, bản manifest+SHA-256 và rollback; cập nhật Player Web/iPhone `VÀO LÀNG`; sau merge/deploy phải xác minh Worker/asset/room/wss trên Production thật.
+
+## GĐ35 — Tích hợp nền V3.227, kết thúc ván 3D (26/10/2026)
+
+- Đã đồng bộ nhánh PR #487 với `main` từ bản V3.227 và commit sửa CI/asset Icon Action V2 cuối cùng `3b0b1f54250fdab4aef0de1821eba18bcc82993a`. Merge commit main-ancestor: `8729ea50ab036920e6cf228935813b2e0662038b`. **Không merge vào main hoặc deploy Production trong bước này**.
+- Bổ sung chính thức trên giao diện Arena 3D: nút **Kết thúc ván**, chọn Phe Dân/Phe Sói/Phe Ba/Phe Khác, xác nhận GM, buộc phải có phòng đang chơi + `matchId`, gửi POST tới `/api/gm/rooms/:room/end` bằng bearer GM hiện tại. Không cho phép Player/bất kỳ phiên thiếu GM tự ghi kết quả. Sau Core chấp nhận, đồng bộ lại room và xoá lựa chọn phe thắng. Không sửa luật tính thắng, không kết thúc tự động.
+- Unit `tests/arena3d-gm-end.test.mjs` xác nhận đường đi UI → Core, kiểm tra không quyền GM / lobby / `matchId` thiếu / phe thắng rỗng hoặc sai / GM hủy thao tác đều không gửi mutation.
+- E2E `tests/arena3d-stage30-crowd-core-e2e.mjs` được nâng từ gọi trực tiếp API thành nhấn nút **Kết thúc ván** trong GM 3D sau một ván Core 30 người, đêm/ngày, phát vai, reconnect, lên giàn. Bắt buộc xác minh lobby realtime ở cả GM và người xem. Đã thêm bước E2E này vào STAGING workflow; kết quả còn phụ thuộc GitHub Actions commit cuối.
+- Lối vào cùng origin Production đã được chuẩn bị từ GĐ34: app GMWW gửi room code và bearer trực tiếp bằng `postMessage` đúng frame, Core xác minh lại, không lưu token vào URL; chế độ Production ẩn/gạt cứng các thao tác tạo người giả/phát vai thử.
+- **Chưa phát hành:** GM 3D vẫn phụ thuộc phần cấu hình phân Vai/Artifact từ Core hiện hữu, Player 3D vẫn dùng iframe Player Web để xử lý hành động riêng tư, chưa xác minh đủ các Vai/Artifact tuỳ biến và audio thực, chưa có Runtime OTA tăng phiên bản, SHA/rollback Production hoặc xác minh iPhone thật bản tích hợp. STAGING không thay thế nghiệm thu Product khi thiếu các chốt này. Không được đánh dấu hoàn thành.
+
+### Chốt phát hành bắt buộc
+1. Kiểm chứng STAGING WebKit/Chromium, Core 30/30 người, private 401, GM UI end ván và reconnect trên commit mới.
+2. Đảm bảo luồng tạo/tập hợp/phát vai trong Arena 3D có thể sử dụng Core thật, không còn hành động demo trong Production, dữ liệu trận không phân nhánh.
+3. Khi đủ phạm vi sản phẩm mới tạo Runtime OTA V3.228 **hoặc phiên bản lớn hơn nếu main thay đổi**, release notes tiếng Việt, manifest SHA-256, CI SUCCESS, rollback và xác minh Production thực tế.
