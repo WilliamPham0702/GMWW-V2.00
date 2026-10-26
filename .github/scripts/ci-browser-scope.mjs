@@ -1133,6 +1133,42 @@ function isIconV2CIRepairScope(changes){
   (paths.get('.github/workflows/deploy-production.yml')||'').includes('ICON_V2_CI_HOTFIX');
 }
 
+// V3.228: the owner's four corrections to battle icons and fixed bottom rail only.
+// Fail closed if anything outside this explicit Runtime/UI/test subset changed.
+const gm3228Files=new Set([
+ 'server-game/current/app.js','server-game/src/30-village-and-setup.part',
+ 'server-game/src/40-battle-and-timeline.part','server-game/src/00-core-and-library.part',
+ 'server-game/current/style.css','server-game/current/GMWW.html',
+ 'src/index.js','package.json','package-lock.json',
+ '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
+ '.github/workflows/deploy-production.yml','.github/workflows/prepare-runtime-v3202-candidate.yml',
+ 'tests/gmww-v3228-battle-icons-footer.test.mjs',
+ 'tests/gmww-action-icon-stacking.test.mjs',
+ 'tests/gm-free-floating-shortcuts-20261025.test.mjs',
+ 'docs/releases/GMWW-V3.228-battle-icon-footer-20261026.md'
+]);
+function isGMFooter3228Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const map=new Map(changes.map(x=>[x.path,x]));
+ for(const path of ['server-game/current/app.js','server-game/current/style.css',
+  'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'server-game/current/GMWW.html','src/index.js','package.json',
+  'tests/gmww-v3228-battle-icons-footer.test.mjs',
+  'docs/releases/GMWW-V3.228-battle-icon-footer-20261026.md'])
+  if(!map.has(path))return false;
+ if(!changes.every(x=>gm3228Files.has(x.path)&&['A','M'].includes(x.status)))return false;
+ const pkg=map.get('package.json')?.after||'';
+ const worker=map.get('src/index.js')?.after||'';
+ const app=map.get('server-game/current/app.js')?.after||'';
+ const html=map.get('server-game/current/GMWW.html')?.after||'';
+ const css=map.get('server-game/current/style.css')?.after||'';
+ return pkg.includes('"version": "3.228.0"')&&worker.includes('VERSION="V3.228"')&&
+  app.includes("const VERSION='3.228'")&&html.includes('<title>GMWW V3.228</title>')&&
+  app.includes('battleIconSpawnPoint')&&app.includes('battleMainActionSlot')&&
+  css.includes('/* GMWW V3.228');
+}
+
 export function classifyBrowserScope(changes){
   if(isIconV2CIRepairScope(changes))return 'icon-v2-ci-fix';
   if(isGMIcons501ReleaseScope(changes))return 'gm-icons-501-release';
@@ -1140,6 +1176,7 @@ export function classifyBrowserScope(changes){
   if(isAutoVanCIPolicyScope(changes))return 'auto-van-ci';
   if(isAutoVanReleaseScope(changes))return 'auto-van-3222';
   if(!Array.isArray(changes)||!changes.length)return 'full';
+  if(isGMFooter3228Scope(changes))return 'gm-footer-3228';
   if(isIconActionV23227Scope(changes))return 'icon-action-v2-3227';
   if(isFireIcons3226Scope(changes))return 'fire-icons-3226';
   if(isActionIcon3225Scope(changes))return 'active-icons-3225';
@@ -1198,6 +1235,7 @@ function detect(){
       if(isIconV2CIRepairScope(changes))return{mode:'icon-v2-ci-fix',reason:'Exact 7-file approved V3.227 CI-only patch; no gameplay or Runtime version'};
       if(isAutoVanCIPolicyScope(changes))return{mode:'auto-van-ci',reason:'AUTO VÁN CI routing only'};
       if(isAutoVanReleaseScope(changes))return{mode:'auto-van-3222',reason:'V3.222 AUTO VÁN exact version, notes and OTA only'};
+      if(isGMFooter3228Scope(changes))return{mode:'gm-footer-3228',reason:'Owner V3.228 fixed action icons, multi target and lower rail only'};
       if(isIconActionV23227Scope(changes))return{mode:'icon-action-v2-3227',reason:'Icon Action V2 free drag/snap, 49 frameless SVG/PNG and OTA only'};
       if(isFireIcons3226Scope(changes))return{mode:'fire-icons-3226',reason:'V3.226 iPhone icon dock z-index versus immersive village; scoped CSS/OTA'};
       if(isActionIcon3225Scope(changes))return{mode:'active-icons-3225',reason:'V3.225 focused GM Icon runtime fix and OTA'};
@@ -1228,6 +1266,11 @@ function detect(){
   }
   // Owner-initiated V3.210 release on main after approved PR #483 merged.
   // Never narrow an arbitrary manual build: verify the exact release contract.
+  if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.228.0'){
+    if(fs.existsSync('docs/releases/GMWW-V3.228-battle-icon-footer-20261026.md')&&
+       fs.readFileSync('server-game/current/app.js','utf8').includes('battleMainActionSlot'))
+       return{mode:'gm-footer-3228',reason:'Owner V3.228 focused GM action icons and footer release'};
+  }
   if(process.env.GMWW_CI_EVENT==='workflow_dispatch'&&process.env.GITHUB_REF==='refs/heads/main'&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.227.0'){
     const path='assets/action-icons/v2/manifest.json';
     if(fs.existsSync(path)&&fs.existsSync('docs/releases/GMWW-V3.227-icon-action-v2-20261025.md')){
@@ -1312,7 +1355,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');
   if(result.mode==='dual-renderer')console.log('Chỉ kiểm thử hợp đồng dùng chung 2D/3D, phân quyền và tính cô lập của bản mẫu; không chạy bộ test game không liên quan.');
   if(result.mode==='p0-roster')console.log('Chỉ kiểm tra 2 người, Role/Artifact, đề cử/vote Chrome/Edge và trạng thái phòng; bỏ qua 30 ghế/cảnh nền/DEMO rules. Release main vẫn full.');
-  else if(!['icon-v2-ci-fix','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
+  else if(!['icon-v2-ci-fix','dual-renderer','gallows','ci-policy','postgame','p0-roster','demo-475','audio-v3208','audio-gallows-3209','audio-fix-3217','icon-runtime-3210','icon-clean-3212','icon-wave3-3213','home-podium-3214','home-sea-3216','icon-wave5-3218','active-icons-3225','fire-icons-3226','icon-action-v2-3227','gm-footer-3228'].includes(result.mode))console.log('Phạm vi chưa được chứng minh an toàn hoặc đang phát hành: chạy toàn bộ kiểm thử.');
   if(process.env.GITHUB_OUTPUT)fs.appendFileSync(process.env.GITHUB_OUTPUT,'mode='+result.mode+'\n');
   if(process.env.GITHUB_STEP_SUMMARY)fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Phạm vi CI: '+result.mode+'\n'+result.reason+'\n');
 }
