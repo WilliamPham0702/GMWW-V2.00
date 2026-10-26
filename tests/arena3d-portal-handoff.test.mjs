@@ -61,3 +61,28 @@ test('Bridge fails closed for spoofed origin/source, hidden/nonexistent iframe a
   const t=runBridge(opts);t.send();assert.equal(t.outbound.length,0,JSON.stringify(opts));
  }
 });
+
+
+test('Arena 3D only opens Core setup in owning same-origin host frame',()=>{
+ const start=html.indexOf('  // GMWW keeps the one authoritative Role/Artifact editor');
+ const end=html.indexOf('  // Capture BEFORE app.js',start);
+ assert.ok(start>0&&end>start);
+ const snippet=html.slice(start,end),bound=[];
+ const frame={contentWindow:{}},overlay={hidden:false};
+ const root={window:{addEventListener:(type,listener)=>bound.push({type,listener})},
+   frame,overlay,arenaUrl:origin+'/village/arena-3d/live.html',
+   closeArena:flag=>actions.push(flag),URL};
+ const actions=[];
+ vm.runInNewContext(snippet,root);
+ assert.equal(bound.length,1);
+ assert.equal(bound[0].type,'message');
+ const event={origin,source:frame.contentWindow,data:{kind:'gmww-arena3d-open-setup'}};
+ const receive=bound[0].listener;
+ receive({...event,origin:'https://evil.example'});
+ receive({...event,source:{}});
+ receive({...event,data:{kind:'gmww-arena3d-ready'}});
+ overlay.hidden=true;receive(event);
+ assert.equal(actions.length,0,'a hidden overlay must never switch the GM workflow');
+ overlay.hidden=false;receive(event);
+ assert.deepEqual(actions,[true],'legitimate child opens the official GMWW Core setup');
+});
