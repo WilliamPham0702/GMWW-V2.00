@@ -115,7 +115,7 @@ jobs:
       - name: V3.234 — chỉ dock Đêm/Ngày và danh sách Lên Giàn 5 dòng
         if: steps.scope.outputs.mode == 'phase-dock-gallows-3234'
         run: |
-          node --test tests/gmww-v3234-phase-dock-gallows.test.mjs tests/gmww-v3233-audio-templates-dock.test.mjs tests/gallows-redesign-live.test.mjs
+          node --test tests/gmww-v3234-phase-dock-gallows.test.mjs tests/gmww-v3233-audio-templates-dock.test.mjs tests/gallows-redesign-live.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           node --check server-game/current/app.js
