@@ -1,6 +1,7 @@
 // Artwork-only changes must leave gameplay, dependencies and persisted mappings unchanged.
 const policyPaths=new Set([
  '.github/scripts/verify-icon-artwork-production.mjs','.github/scripts/icon-artwork-scope.mjs','.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-gallows-redesign.yml','.github/workflows/check-gm-free-icons-501.yml',
  '.github/workflows/prepare-runtime-v3202-candidate.yml','.github/workflows/check-player-web.yml','.github/workflows/deploy-production.yml',
  '.github/workflows/build-server-game-ipa.yml','.github/workflows/check-dual-renderer.yml',
  'tests/icon-artwork-ci.test.mjs','docs/superpowers/plans/2026-10-26-approved-icon-artwork.md'

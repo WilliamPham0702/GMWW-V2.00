@@ -51,3 +51,15 @@ test('Menu candidate excludes artwork and its CI policy while preserving other g
  const paths=['.github/scripts/icon-artwork-scope.mjs','.github/scripts/ci-browser-scope.mjs','tests/icon-artwork-ci.test.mjs','.github/workflows/prepare-runtime-v3202-candidate.yml'];
  assert.equal(classifyBrowserScope(paths.map(p=>item(p,null,''))),'icon-artwork-policy');
 });
+
+test('Legacy gallows and shortcut suites exclude proven artwork scopes',()=>{
+ const files=['.github/workflows/check-gallows-redesign.yml','.github/workflows/check-gm-free-icons-501.yml'];
+ for(const file of files){
+  const w=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+  const guards=w.split('\n').filter(l=>l.trim().startsWith('if: steps.')&&l.includes("!= 'post-match-room-532'"));
+  assert.ok(guards.length>0,file);
+  for(const guard of guards)for(const mode of ['icon-artwork','icon-artwork-policy'])assert.ok(guard.includes("!= '"+mode+"'"),file+' '+mode);
+ }
+ const paths=['.github/scripts/icon-artwork-scope.mjs','.github/scripts/ci-browser-scope.mjs','tests/icon-artwork-ci.test.mjs',...files];
+ assert.equal(classifyBrowserScope(paths.map(p=>item(p,null,''))),'icon-artwork-policy');
+});
