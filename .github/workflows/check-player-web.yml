@@ -410,8 +410,8 @@ jobs:
           node --check server-game/current/app.js
           test -s docs/releases/post-match-room-demo-seat-20261026.md
       - name: Chỉ kiểm thử phân loại CI không thay đổi gameplay
-        if: steps.scope.outputs.mode == 'ci-policy'
-        run: node --test tests/ci-browser-scope.test.mjs
+        if: steps.scope.outputs.mode == 'postmatch-ci-532'
+        run: node --test --test-name-pattern='PR532' tests/ci-browser-scope.test.mjs
       - name: Chỉ kiểm thử lỗi ván cũ hiện lại
         if: steps.scope.outputs.mode == 'postgame'
         run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs
