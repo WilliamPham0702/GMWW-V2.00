@@ -42,14 +42,17 @@ test('Chốt đề cử auto-selects sole leader but only MỞ BỎ PHIẾU star
  assert.equal(gallowsCast(opened.value,'david','👍',3003).ok,true);
 });
 
-test('Tied nominations require GM selection; no random candidate and no late submission',()=>{
+test('Tied nominations are resolved as no-lynch; no random hanging and no late receipt',()=>{
  let b=gallowsOpen(fixture(),1000).value;
  b=gallowsNominate(b,'alice','bob',1100).value;
  b=gallowsNominate(b,'david','carol',1200).value;
  assert.equal(gallowsAutomaticNominee(b),null);
  const closed=gallowsCloseNomination(b,1300);
- assert.equal(closed.ok,true);assert.equal(closed.value.stage,'selecting');
+ assert.equal(closed.ok,true);assert.equal(closed.value.stage,'resolved');
+ assert.equal(closed.value.outcome,'no_lynch');
+ assert.equal(closed.value.candidateId,null);
  assert.equal(gallowsNominate(closed.value,'carol','bob',1400).error,'NOMINATION_CLOSED');
+ assert.equal(gallowsBegin(closed.value,'bob',1401).error,'BALLOT_NOT_READY');
 });
 
 test('Markup: four ordered sections, shared timer, real-time GM counts and visible bans',()=>{
@@ -99,7 +102,7 @@ test('Server rejects nominations from people outside the living eligible roster'
  assert.equal(gallowsNominate(opened,'alice','bob',1500).ok,true);
 });
 
-test('After Chốt đề cử, only the unique top nominee or a tied top nominee can be voted',()=>{
+test('After Chốt đề cử, only unique leader can be voted; a tie blocks all',()=>{
  let b=gallowsOpen(fixture(),1000).value;
  b=gallowsNominate(b,'alice','bob',1100).value;
  b=gallowsNominate(b,'david','bob',1200).value;
@@ -111,9 +114,10 @@ test('After Chốt đề cử, only the unique top nominee or a tied top nominee
  const open2=gallowsOpen(fixture(),1000).value;
  const tie=gallowsCloseNomination(gallowsNominate(
    gallowsNominate(open2,'alice','bob',1100).value,'david','carol',1200).value,1400).value;
- assert.equal(gallowsBegin(tie,'alice',1500).error,'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE');
- assert.equal(gallowsBegin(tie,'bob',1500).ok,true);
- assert.equal(gallowsBegin(tie,'carol',1500).ok,true);
+ assert.equal(tie.outcome,'no_lynch');
+ assert.equal(gallowsBegin(tie,'alice',1500).error,'BALLOT_NOT_READY');
+ assert.equal(gallowsBegin(tie,'bob',1500).error,'BALLOT_NOT_READY');
+ assert.equal(gallowsBegin(tie,'carol',1500).error,'BALLOT_NOT_READY');
 });
 
 test('GM only enables Mở bỏ phiếu after Chốt đề cử; stale select cannot override leader',()=>{
@@ -132,13 +136,12 @@ test('Cấm đề cử sau Chốt cập nhật ứng viên treo, không giữ ng
  assert.equal(b.candidateId,'bob');
  const restricted=gallowsSetRestriction(b,'alice','nomination',true,1400);
  assert.equal(restricted.ok,true);
- assert.equal(restricted.value.candidateId,null,'Hoà 1–1 cần GM chọn, không treo nhầm Bob');
+ assert.equal(restricted.value.candidateId,null,'Hoà 1–1: không treo Bob hoặc Carol');
  assert.equal(restricted.value.hangingStartedAt,null);
- assert.equal(gallowsBegin(restricted.value,'bob',1500).ok,true);
- assert.equal(gallowsBegin(restricted.value,'carol',1500).ok,true);
- const final=gallowsSetRestriction(restricted.value,'david','nomination',true,1450).value;
- assert.equal(final.candidateId,'carol','Khi chỉ Carol còn phiếu, chuyển người lên giàn đúng');
- assert.equal(gallowsBegin(final,'bob',1500).error,'GALLOWS_CANDIDATE_NOT_TOP_NOMINEE');
+ assert.equal(restricted.value.stage,'resolved');
+ assert.equal(restricted.value.outcome,'no_lynch');
+ assert.equal(gallowsBegin(restricted.value,'bob',1500).error,'BALLOT_NOT_READY');
+ assert.equal(gallowsBegin(restricted.value,'carol',1500).error,'BALLOT_NOT_READY');
 });
 
 test('Một thời gian chung cho đề cử và vote, không chỉnh giữa phiên',()=>{
@@ -150,7 +153,8 @@ test('Một thời gian chung cho đề cử và vote, không chỉnh giữa phi
  const nom=gallowsOpen(changed.value,1000);
  assert.equal(nom.value.nominationDeadlineAt,43000);
  assert.equal(gallowsSetDuration(nom.value,'both',12,2000).error,'GALLOWS_TIMER_LOCKED');
- const vote=gallowsBegin(gallowsCloseNomination(nom.value,3000).value,'bob',3001);
+ const withNominee=gallowsNominate(nom.value,'alice','bob',2000).value;
+ const vote=gallowsBegin(gallowsCloseNomination(withNominee,3000).value,'bob',3001);
  assert.equal(vote.value.deadlineAt,45001);
 });
 

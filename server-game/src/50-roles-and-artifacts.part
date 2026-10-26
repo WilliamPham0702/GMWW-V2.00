@@ -803,20 +803,32 @@ async function backPlayPhase(){
 }
 const PLAY_GAME_CHROME_IDLE_MS=30000;
 let playGameChromeIdleTimer=0;
+const GMWW_CHROME_MENU_KEY='gmww_play_menu_hidden_v3236';
+let gmwwPlayChromeHidden=false;
+try{gmwwPlayChromeHidden=localStorage.getItem(GMWW_CHROME_MENU_KEY)==='1'}catch{}
 function setPlayGameChromeHidden(hidden){
-  if(playSceneState.step==='seats'&&playSceneState.phase==='lobby')hidden=false;
-  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu'),gather=document.getElementById('playGatherToolbar');
-  [top,bottom,gather].forEach(menu=>{if(!menu)return;menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0'});
+  const shell=document.getElementById('playShell');
+  shell?.classList.toggle('gmww-chrome-hidden',!!hidden);
+  for(const id of ['playSetupStrip','gmTopMenu','playBattleTop','battleBottomControls']){
+    const menu=document.getElementById(id);if(!menu)continue;
+    menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0';
+  }
+  const toggle=document.getElementById('battleGMChromeToggle');
+  if(toggle){toggle.setAttribute('aria-pressed',String(!!hidden));toggle.textContent=hidden?'◉ HIỆN MENU':'◉ ẨN MENU'}
+}
+function gmwwTogglePlayChrome(){
+  gmwwPlayChromeHidden=!gmwwPlayChromeHidden;
+  try{localStorage.setItem(GMWW_CHROME_MENU_KEY,gmwwPlayChromeHidden?'1':'0')}catch{}
+  setPlayGameChromeHidden(gmwwPlayChromeHidden);
 }
 function clearPlayGameChromeIdle(){
   if(playGameChromeIdleTimer){clearTimeout(playGameChromeIdleTimer);playGameChromeIdleTimer=0}
 }
 function resetPlayGameChromeIdle(){
-  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
-  if(!top&&!bottom)return;
-  setPlayGameChromeHidden(false);clearPlayGameChromeIdle();
-  if(!document.body.classList.contains('play-immersive'))return;
-  playGameChromeIdleTimer=setTimeout(()=>{if(document.body.classList.contains('play-immersive'))setPlayGameChromeHidden(true)},PLAY_GAME_CHROME_IDLE_MS);
+  // V3.236: GM's explicit toggle owns visibility. Touching the map must not
+  // reveal a deliberately hidden toolbar or auto-hide a deliberately shown one.
+  clearPlayGameChromeIdle();
+  setPlayGameChromeHidden(gmwwPlayChromeHidden);
 }
 function initPlayGameChromeAutoHide(){
   const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
@@ -1077,7 +1089,8 @@ function initPlayScene(){
   document.getElementById('playEndConfirm')?.addEventListener('click',confirmPlayEndGame);
   document.getElementById('playEndClose')?.addEventListener('click',closePlayEndSheet);document.getElementById('playEndCancel')?.addEventListener('click',closePlayEndSheet);
   document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
-  document.querySelector('.play-core-pearl')?.addEventListener('click',()=>{if(playSceneState.step==='battle'){battleToggleWolfMenu();return}openPlayCreateRoomSheet()});
+  document.querySelector('.play-core-pearl')?.addEventListener('click',()=>battleToggleWolfMenu());
+  document.getElementById('battleGMChromeToggle')?.addEventListener('click',gmwwTogglePlayChrome);
   document.getElementById('playCreateRoomAdd')?.addEventListener('click',()=>openPlayRoomEditor(true));
   document.getElementById('playCreateRoomSave')?.addEventListener('click',savePlayRoomEditor);
   document.getElementById('playCreateRoomSeatCount')?.addEventListener('change',e=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(e.target.value)||12));e.target.value=String(playSceneState.seatCount);savePlayScene();if(isLivePlayRoom())playUpdateRoomSettings({seatCount:playSceneState.seatCount})});

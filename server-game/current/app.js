@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.235';
+const VERSION='3.236';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5893,7 +5893,7 @@ function battleMarkPlayers(){
     if(count>0&&labels){
       if(!countMark){countMark=document.createElement('span');countMark.className='battle-nomination-pearl';
         countMark.setAttribute('aria-label','Số phiếu đề cử')}
-      countMark.textContent='✦ '+count;
+      countMark.textContent=String(count);
       countMark.title='Được đề cử '+count+' phiếu';
       if(labels.firstElementChild!==countMark)labels.prepend(countMark);
     }else countMark?.remove();
@@ -5946,7 +5946,7 @@ async function battleGallowsAcceptVerdict(expected){
 function battleRenderGallowsVerdict(g,stage,phase){
   const notice=document.getElementById('battleGallowsVerdict');
   if(!notice)return;
-  if(phase!=='day'||stage!=='resolved'||!g?.candidateId||!['dead','alive'].includes(g.outcome)){
+  if(phase!=='day'||stage!=='resolved'||!['dead','alive','no_lynch'].includes(g?.outcome)){
     notice.hidden=true;return;
   }
   const key=[playSceneRuntime.room?.matchId,playSceneState.night,g.id,g.resolvedAt||g.updatedAt||''].join(':');
@@ -5957,9 +5957,11 @@ function battleRenderGallowsVerdict(g,stage,phase){
     const start=Number(g.resolvedAt||Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0));
     const elapsed=Math.max(0,Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)-start);
     battleVerdictTimer=setTimeout(()=>battleGallowsAcceptVerdict(key),Math.max(0,30000-elapsed));
-    const name=battleMember(g.candidateId)?.displayName||g.candidateId;
+    const noLynch=g.outcome==='no_lynch';
+    const name=noLynch?'Không ai lên giàn':(battleMember(g.candidateId)?.displayName||g.candidateId);
     const cue=g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved';
-    if(g.mode==='auto'){
+    if(noLynch){void battlePlayConfiguredAudio('system','audio_system_gallows_nomination_result','Hòa phiếu đề cử: hôm nay không ai lên giàn');}
+    else if(g.mode==='auto'){
       void battlePlayConfiguredAudio('system','audio_system_gallows_vote_result',
         'Kết quả phiếu: '+Number(g.voteTotals?.save||0)+' cứu, '+Number(g.voteTotals?.kill||0)+' giết',
         false,()=>{if(battleState.gallowsVerdictKey===key)
@@ -5968,11 +5970,11 @@ function battleRenderGallowsVerdict(g,stage,phase){
   }
   notice.hidden=!!battleState.gallowsVerdictAcknowledged;
   notice.dataset.outcome=g.outcome;
-  const name=battleMember(g.candidateId)?.displayName||String(g.candidateId);
+  const name=g.outcome==='no_lynch'?'Không có người lên giàn':(battleMember(g.candidateId)?.displayName||String(g.candidateId));
   const who=notice.querySelector('[data-verdict-player]'),result=notice.querySelector('[data-verdict-outcome]'),
     votes=notice.querySelector('[data-verdict-votes]');
   if(who)who.textContent=name;
-  if(result)result.textContent=g.outcome==='dead'?'ĐÃ CHẾT':'ĐƯỢC SỐNG';
+  if(result)result.textContent=g.outcome==='no_lynch'?'HÒA PHIẾU · KHÔNG TREO':g.outcome==='dead'?'ĐÃ CHẾT':'ĐƯỢC SỐNG';
   if(votes)votes.textContent='👍 '+Number(g.voteTotals?.save||0)+' cứu · 👎 '+Number(g.voteTotals?.kill||0)+' giết';
 }
 function battleGallowsRender(phase){
@@ -6078,7 +6080,7 @@ function battleGallowsRender(phase){
   const stageText=document.getElementById('battleGallowsStage');
   if(stageText)stageText.textContent=stage==='ready'?(mode==='gm'?'Chọn người trên danh sách rồi chốt Sống / Chết.':'Sẵn sàng mở đề cử.') :
     stage==='nominating'?'Đang nhận đề cử từ Player Web.':
-    stage==='selecting'?'Đã khóa đề cử; GM chọn người hòa phiếu rồi mở bỏ phiếu.':
+    stage==='selecting'?'Đã khóa đề cử; người dẫn đầu duy nhất chờ mở bỏ phiếu.':
     stage==='voting'?'Đang nhận phiếu Cứu / Giết từ Player Web.':
     stage==='closed'?'Đã chốt phiếu; đang chờ Server công bố kết quả.':
     'Kết quả đã được chốt.';
@@ -6086,7 +6088,7 @@ function battleGallowsRender(phase){
   if(info){
     const candidate=String(g.candidateId||unique||''),n=Number(rosterStats.get(candidate)?.nominations||nomineeCount.get(candidate)||0),
       v=g.voteTotals||{},yes=Number(v.save||0),no=Number(v.kill||0);
-    info.textContent=!candidate?'CHƯA CÓ NGƯỜI LÊN GIÀN':
+    info.textContent=!candidate?(g.outcome==='no_lynch'?'HÒA PHIẾU ĐỀ CỬ · HÔM NAY KHÔNG AI LÊN GIÀN':'CHƯA CÓ NGƯỜI LÊN GIÀN'):
       '⚖️ '+memberName(candidate)+' · '+n+'/'+nomEligible+' đề cử · 👍 '+yes+'/'+voteEligible+
       ' CỨU · 👎 '+no+'/'+voteEligible+' GIẾT'+
       (stage==='resolved'?' · KẾT LUẬN: '+(g.outcome==='dead'?'CHẾT':'SỐNG'):'');
@@ -6103,7 +6105,8 @@ function battleGallowsRender(phase){
   if(result){
     result.hidden=stage!=='resolved';
     if(!result.hidden){
-      result.textContent=memberName(g.candidateId)+(g.outcome==='dead'?' đã bị giết.':' được sống.')+
+      result.textContent=g.outcome==='no_lynch'?'Đề cử hòa phiếu · hôm nay không ai lên giàn.':
+        memberName(g.candidateId)+(g.outcome==='dead'?' đã bị giết.':' được sống.')+
         ' · 👍 CỨU '+Number(g.voteTotals?.save||0)+' · 👎 GIẾT '+Number(g.voteTotals?.kill||0);
       result.dataset.resultTone=g.outcome==='dead'?'negative':'positive';
       // Final verdict audio is emitted once by battleRenderGallowsVerdict,
@@ -6176,10 +6179,10 @@ function battleSyncPhaseDock(phase,visible){
 function renderPlayBattle(){
   demoSyncScreenAwake();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
-  const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
+  const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible&&!battleState.wolfOpen;
   gmwwSetupFreeBattleIcons();
   battleSyncPhaseDock(playSceneState.phase,visible);
-  const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');
+  const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label','Đống lửa · Mở/đóng Menu GM');
   if(!visible){
     for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver','battleFactionStats']){
       const node=document.getElementById(id);if(node)node.hidden=true;
@@ -6187,7 +6190,14 @@ function renderPlayBattle(){
     document.getElementById('battleFactionStatsToggle')?.setAttribute('aria-pressed','false');
   }
   if(!visible){document.getElementById('battleFireIconDock')?.setAttribute('hidden','');battleIconClearDrag();const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
-  if(!visible){battleClear();battleState.key='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.quickType='';return}
+  if(!visible){
+    battleClear();battleState.key='';battleState.details=false;battleState.clockOpen=false;battleState.quickType='';
+    const menu=document.getElementById('battleWolfMenu');
+    if(menu){menu.hidden=!battleState.wolfOpen;if(!menu.hidden)requestAnimationFrame(()=>gmwwPlaceWolfMenuAtFire(menu));}
+    if(typeof setPlayGameChromeHidden==='function')setPlayGameChromeHidden(gmwwPlayChromeHidden);
+    return;
+  }
+  if(typeof setPlayGameChromeHidden==='function')setPlayGameChromeHidden(gmwwPlayChromeHidden);
   if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   // Visibility of all dock controls follows the current battle phase.
@@ -6483,7 +6493,7 @@ function battleToggleLabelVisibility(kind){
   battleSyncLabelVisibility();
 }
 function battleToggleWolfMenu(){
-  if(playSceneState.step!=='battle')return;
+  // The campfire opens one shared GM menu during setup and gameplay.
   battleState.wolfOpen=!battleState.wolfOpen;
   if(battleState.wolfOpen){battleState.details=false;battleState.roster=false;battleState.quickType='';battleState.clockOpen=false;const menuRow=document.querySelector('#battleWolfMenu .battle-wolf-actions');if(menuRow)menuRow.scrollLeft=0}
   renderPlayBattle();
@@ -8371,20 +8381,32 @@ async function backPlayPhase(){
 }
 const PLAY_GAME_CHROME_IDLE_MS=30000;
 let playGameChromeIdleTimer=0;
+const GMWW_CHROME_MENU_KEY='gmww_play_menu_hidden_v3236';
+let gmwwPlayChromeHidden=false;
+try{gmwwPlayChromeHidden=localStorage.getItem(GMWW_CHROME_MENU_KEY)==='1'}catch{}
 function setPlayGameChromeHidden(hidden){
-  if(playSceneState.step==='seats'&&playSceneState.phase==='lobby')hidden=false;
-  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu'),gather=document.getElementById('playGatherToolbar');
-  [top,bottom,gather].forEach(menu=>{if(!menu)return;menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0'});
+  const shell=document.getElementById('playShell');
+  shell?.classList.toggle('gmww-chrome-hidden',!!hidden);
+  for(const id of ['playSetupStrip','gmTopMenu','playBattleTop','battleBottomControls']){
+    const menu=document.getElementById(id);if(!menu)continue;
+    menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0';
+  }
+  const toggle=document.getElementById('battleGMChromeToggle');
+  if(toggle){toggle.setAttribute('aria-pressed',String(!!hidden));toggle.textContent=hidden?'◉ HIỆN MENU':'◉ ẨN MENU'}
+}
+function gmwwTogglePlayChrome(){
+  gmwwPlayChromeHidden=!gmwwPlayChromeHidden;
+  try{localStorage.setItem(GMWW_CHROME_MENU_KEY,gmwwPlayChromeHidden?'1':'0')}catch{}
+  setPlayGameChromeHidden(gmwwPlayChromeHidden);
 }
 function clearPlayGameChromeIdle(){
   if(playGameChromeIdleTimer){clearTimeout(playGameChromeIdleTimer);playGameChromeIdleTimer=0}
 }
 function resetPlayGameChromeIdle(){
-  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
-  if(!top&&!bottom)return;
-  setPlayGameChromeHidden(false);clearPlayGameChromeIdle();
-  if(!document.body.classList.contains('play-immersive'))return;
-  playGameChromeIdleTimer=setTimeout(()=>{if(document.body.classList.contains('play-immersive'))setPlayGameChromeHidden(true)},PLAY_GAME_CHROME_IDLE_MS);
+  // V3.236: GM's explicit toggle owns visibility. Touching the map must not
+  // reveal a deliberately hidden toolbar or auto-hide a deliberately shown one.
+  clearPlayGameChromeIdle();
+  setPlayGameChromeHidden(gmwwPlayChromeHidden);
 }
 function initPlayGameChromeAutoHide(){
   const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
@@ -8645,7 +8667,8 @@ function initPlayScene(){
   document.getElementById('playEndConfirm')?.addEventListener('click',confirmPlayEndGame);
   document.getElementById('playEndClose')?.addEventListener('click',closePlayEndSheet);document.getElementById('playEndCancel')?.addEventListener('click',closePlayEndSheet);
   document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
-  document.querySelector('.play-core-pearl')?.addEventListener('click',()=>{if(playSceneState.step==='battle'){battleToggleWolfMenu();return}openPlayCreateRoomSheet()});
+  document.querySelector('.play-core-pearl')?.addEventListener('click',()=>battleToggleWolfMenu());
+  document.getElementById('battleGMChromeToggle')?.addEventListener('click',gmwwTogglePlayChrome);
   document.getElementById('playCreateRoomAdd')?.addEventListener('click',()=>openPlayRoomEditor(true));
   document.getElementById('playCreateRoomSave')?.addEventListener('click',savePlayRoomEditor);
   document.getElementById('playCreateRoomSeatCount')?.addEventListener('change',e=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(e.target.value)||12));e.target.value=String(playSceneState.seatCount);savePlayScene();if(isLivePlayRoom())playUpdateRoomSettings({seatCount:playSceneState.seatCount})});
