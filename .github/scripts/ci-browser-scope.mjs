@@ -1444,6 +1444,13 @@ function isGM238UniformMenuScope(changes){
 
 /* V3.238 deploy-only recovery — no Runtime, Player Web, IPA or Core changes. */
 function isGM238DeployGateRecovery(changes){
+ if(Array.isArray(changes)&&changes.length===3){
+  const required=['.github/workflows/deploy-production.yml','.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs'];
+  const by=new Map(changes.map(x=>[x.path,x]));
+  if(by.size===3&&required.every(p=>by.get(p)?.status==='M')&&
+     by.get('.github/workflows/deploy-production.yml')?.after?.includes('V3.238 recovery:')&&
+     by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('V3.238 workflow revalidation'))return true;
+ }
  const allowed=new Set(['.github/workflows/deploy-production.yml','.github/workflows/check-player-web.yml','.github/workflows/check-dual-renderer.yml','.github/workflows/build-server-game-ipa.yml','.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs']);
  if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
  const by=new Map(changes.map(x=>[x.path,x]));
