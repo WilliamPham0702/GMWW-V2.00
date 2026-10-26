@@ -8510,3 +8510,43 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
  #battleUndoButton > span{
  display:flex!important;visibility:visible!important;justify-content:center!important;align-items:center!important;
 }
+
+
+/* V3.238 — every GM control uses exactly the Artifact / Vai Trò on/off language. */
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button{
+ display:inline-flex!important;flex:0 0 99px!important;width:99px!important;min-width:99px!important;max-width:99px!important;
+ height:44px!important;min-height:44px!important;max-height:44px!important;
+ align-items:center!important;justify-content:center!important;
+ padding:5px 6px!important;white-space:nowrap!important;
+ border-radius:12px!important;
+ font-family:inherit!important;font-size:12px!important;font-weight:750!important;line-height:1.12!important;
+ text-align:center!important;color:#d0e2e4!important;text-shadow:none!important;
+ background:rgba(27,42,53,.76)!important;border:1px solid rgba(129,158,161,.4)!important;
+ opacity:.67!important;box-shadow:none!important;transition:background .15s ease,border-color .15s ease,opacity .15s ease!important;
+ scroll-snap-align:start!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[aria-pressed="true"]{
+ background:rgba(12,105,101,.93)!important;
+ border:2px solid rgba(123,252,222,.93)!important;
+ color:#fafffc!important;font-size:12px!important;font-weight:1000!important;
+ box-shadow:inset 0 1px 0 #ffffff26,0 0 7px rgba(99,243,204,.25)!important;
+ text-shadow:0 1px 2px #001b1c!important;opacity:1!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[aria-pressed="false"]{
+ background:rgba(27,42,53,.76)!important;color:#aabfc2!important;
+ border:1px solid rgba(129,158,161,.3)!important;font-weight:650!important;
+ box-shadow:none!important;text-shadow:none!important;opacity:.58!important;
+}
+/* Placement, ending and exit are commands rather than persistent switches. */
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button:not([aria-pressed]){
+ color:#f6fffd!important;font-weight:850!important;opacity:.88!important;
+ border:1px solid rgba(173,226,228,.48)!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button:not([aria-pressed]):active{
+ background:rgba(12,105,101,.93)!important;color:#fff!important;
+ border:2px solid rgba(123,252,222,.93)!important;opacity:1!important;
+ box-shadow:0 0 7px rgba(99,243,204,.25)!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[hidden]{
+ display:none!important;
+}
