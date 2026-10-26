@@ -110,8 +110,7 @@ async function playGatherConfirm(){
 }
 async function advancePlayPhase(){
   if(playSceneRuntime.busy)return;
-  if(playSceneState.step==='lobby'){setPlayStep('room');await openPlayCreateRoomSheet();return}
-  if(playSceneState.step==='room'){if(isLivePlayRoom()){await playCreateRoomNext();return}openPlayCreateRoomSheet();return}
+  if(playSceneState.step==='lobby'||playSceneState.step==='room'){await playEnsureGatherRoom();return}
   if(playSceneState.step==='game'){openPlayGameSheet();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){playConfirmAssignments();return}
@@ -1734,7 +1733,13 @@ function renderPlayBattle(){
     const assassinChoices=document.getElementById('battleAssassinChoice');
     if(assassinChoices){assassinChoices.hidden=act?.actionId!=='action_assassin_mark';
       assassinChoices.querySelectorAll('[data-assassin-choice]').forEach(btn=>{btn.setAttribute('aria-pressed',String(btn.dataset.assassinChoice===battleState.assassinChoice));btn.classList.toggle('is-selected',btn.dataset.assassinChoice===battleState.assassinChoice)})}
-    if(pickerOK)pickerOK.disabled=battleState.busy||battleState.syncPending||!targetReady||(act?.actionId==='action_assassin_mark'&&!['👍','👎'].includes(battleState.assassinChoice));
+    if(pickerOK){
+      // Only the assassin moves OK beside 👍 and 👎; others use the normal footer.
+      const assassin=act?.actionId==='action_assassin_mark';
+      const destination=assassin?assassinChoices?.querySelector('div'):picker.querySelector('footer');
+      if(destination&&pickerOK.parentElement!==destination)destination.appendChild(pickerOK);
+      pickerOK.disabled=battleState.busy||battleState.syncPending||!targetReady||(assassin&&!['👍','👎'].includes(battleState.assassinChoice));
+    }
   }
   const undo=document.getElementById('battleUndoButton');
   if(undo){undo.disabled=battleState.busy||battleState.syncPending||battleState.undoBusy||!playSceneRuntime.battleUndo?.token;
@@ -2439,7 +2444,7 @@ function renderPlayScene(){
   if(phase==='night'){const rt=playSceneRuntime.nightRuntime,cur=rt&&!rt.completed?rt.queue?.[rt.cursor]:null;put('playPhaseOrb','☾');put('playPhaseTitle',playVisibleStageLabel());put('playCycleBadge','ĐÊM '+Math.max(1,night));put('playCoreKicker',cur?.kind==='early-artifact'?'ARTIFACT GỌI SỚM':cur?.kind==='artifact-main'?'ARTIFACT':cur?.kind==='role'?'VAI TRÒ':night===1?'MỞ ĐẦU ĐÊM 1':'BAN ĐÊM');put('playCoreTitle',cur?.label||'HOÀN TẤT ĐÊM '+Math.max(1,night));put('playCoreHint',rt?.completed?'Đã xong toàn bộ lượt. Có thể chuyển sang Ban Ngày.':cur?.kind==='wolf-introduction'?'Bầy Sói nhìn mặt nhau trước khi vào lượt chức năng.':'Thực hiện bước hiện tại rồi nhấn Tiếp theo.')}
   else if(phase==='day'){put('playPhaseOrb','☀');put('playPhaseTitle',playVisibleStageLabel());put('playCycleBadge','NGÀY '+Math.max(1,night));put('playCoreKicker','LÀNG ƠI! DẬY ĐI');put('playCoreTitle','BAN NGÀY');put('playCoreHint','Công bố kết quả, thảo luận và bỏ phiếu.')}
   else{const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;put('playPhaseOrb','◉');put('playPhaseTitle',playVisibleStageLabel());put('playCycleBadge',playVisibleStageLabel().toUpperCase());put('playCoreKicker','GMWW • SÂN CHƠI');put('playCoreTitle',step.k);put('playCoreHint',step.x)}
-  document.querySelectorAll('[data-play-step]').forEach((b,idx)=>{const cur=PLAY_STEPS.indexOf(playSceneState.step);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur);if(idx===cur)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
+  document.querySelectorAll('[data-play-step]').forEach(b=>{const cur=PLAY_STEPS.indexOf(playSceneState.step),idx=PLAY_STEPS.indexOf(b.dataset.playStep);b.classList.toggle('active',idx===cur);b.classList.toggle('done',idx<cur);if(idx===cur)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
   const stepStatus=document.getElementById('playPhasePill');if(stepStatus)stepStatus.setAttribute('aria-label','Bước hiện tại '+playVisibleStageLabel()+' · Chạm để tiếp tục');
   const primary=document.getElementById('playPrimaryLabel');
   if(primary){const step=PLAY_STEP_COPY[playSceneState.step]||PLAY_STEP_COPY.room;primary.textContent=playSceneState.step==='deal'&&playDeliveryProgress().success?'VÀO TRẬN':step.t.toUpperCase()}

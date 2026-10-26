@@ -117,12 +117,11 @@
 
         <section class="play-setup-strip gm-stage-timeline-v330" id="playSetupStrip" aria-label="Luồng vào trận">
           <button class="active" data-play-step="lobby" type="button"><span>1</span><b>Sảnh chờ</b></button>
-          <button data-play-step="room" type="button"><span>2</span><b>Tạo phòng</b></button>
-          <button data-play-step="seats" type="button"><span>3</span><b>Tập hợp</b></button>
-          <button data-play-step="game" type="button"><span>4</span><b>Ván Mẫu</b></button>
-          <button data-play-step="roles" type="button"><span>5</span><b>Phân Vai</b></button>
-          <button data-play-step="deal" type="button"><span>6</span><b>Phát Vai</b></button>
-          <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
+          <button data-play-step="seats" type="button"><span>2</span><b>Tập hợp</b></button>
+          <button data-play-step="game" type="button"><span>3</span><b>Ván Mẫu</b></button>
+          <button data-play-step="roles" type="button"><span>4</span><b>Phân Vai</b></button>
+          <button data-play-step="deal" type="button"><span>5</span><b>Phát Vai</b></button>
+          <button data-play-step="battle" type="button"><span>6</span><b>Vào Trận</b></button>
         </section>
 
         <section id="playBattleTop" class="play-battle-top" aria-label="Điều khiển trong trận" hidden>
@@ -137,6 +136,9 @@
             <b>TẬP HỢP DÂN LÀNG</b>
             <span id="playGatherCount" aria-live="polite">0 người</span>
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
+          </div>
+          <div class="play-gather-mode-row" aria-label="Hình thức chơi">
+            <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Chuyển Online, Offline, Demo"><b>CHẾ ĐỘ</b></button>
           </div>
           <div class="play-seat-shift-controls" aria-label="Giãn cách và khôi phục vị trí Seat">
             <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
@@ -263,7 +265,7 @@
           <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
           <div id="battleAssassinChoice" hidden role="group" aria-label="Sát Thủ chọn dấu bí mật">
             <strong>SÁT THỦ CHỌN DẤU BÍ MẬT</strong>
-            <div><button type="button" data-assassin-choice="👍" aria-pressed="false">👍 LIKE</button><button type="button" data-assassin-choice="👎" aria-pressed="false">👎 DISLIKE</button></div>
+            <div><button type="button" data-assassin-choice="👍" aria-pressed="false">👍</button><button type="button" data-assassin-choice="👎" aria-pressed="false">👎</button></div>
           </div>
           <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK</button></footer>
         </section>
@@ -981,7 +983,6 @@
 
       <section class="play-room-section-card play-room-step hidden" id="playRoomModeStep" aria-label="Chế độ và trạng thái phòng">
         <div class="play-room-control-row">
-          <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Sau khi tạo phòng, nhấn để đổi Offline, Online, Demo"><b>CHẾ ĐỘ</b></button>
           <button id="playCreateRoomEnabled" type="button" aria-pressed="false" aria-label="Bật hoặc tắt phòng"><span></span><b>ON</b></button>
           <button class="play-room-step-next" id="playRoomNextStep" type="button" aria-label="Lưu và sang bước tiếp theo" title="Sang bước tiếp theo">›</button>
         </div>
