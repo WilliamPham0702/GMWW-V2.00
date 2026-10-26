@@ -40,6 +40,11 @@ test('GM app compiled runtime contains exactly the same Arena 3D trusted-frame h
  assert.match(arena,/window\.parent\.postMessage\(\{kind:'gmww-arena3d-ready'\},'\*'\)/);
  assert.match(arena,/validateArenaGmContext\(event\.data/);
  assert.match(arena,/if\(!verified\.ok\)throw Error/);
+ assert.match(html,/event\.origin!==new URL\(arenaUrl\)\.origin/);
+ assert.match(html,/event\.source!==frame\?\.contentWindow/);
+ assert.match(html,/event\.data\?\.kind!=='gmww-arena3d-open-setup'/);
+ assert.match(html,/closeArena\(true\)/);
+ assert.match(arena,/window\.parent\.postMessage\(\{kind:'gmww-arena3d-open-setup'\},location\.origin\)/);
 });
 test('Official iframe receives only selected current room GM token, exactly one origin-scoped postMessage',()=>{
  const x=runBridge();x.send();
