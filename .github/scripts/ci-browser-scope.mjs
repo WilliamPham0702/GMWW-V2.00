@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Select the smallest SAFE browser scope on PRs. Unknown diffs run the full suite.
-// Verified main-push scopes use their focused checks; unknown/manual releases use full checks.
+// Verified main-push scopes use focused checks; icon policy also isolates legacy gallows/shortcut workflows.
 import fs from 'node:fs';
 import {isIconArtworkScope,isIconArtworkPolicyScope} from './icon-artwork-scope.mjs';
 import {execFileSync} from 'node:child_process';
