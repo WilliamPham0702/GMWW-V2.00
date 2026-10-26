@@ -1,4 +1,4 @@
-name: GMWW V3.237 OTA Candidate SHA-256 (Dock Đêm/Ngày và Lên Giàn 5 dòng)
+name: GMWW V3.237 OTA Candidate SHA-256 (Menu GM và icon footer)
 on:
   pull_request:
     branches: [main]
@@ -72,7 +72,7 @@ jobs:
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-v3237-gm-menu-footer.test.mjs tests/gmww-v3237-gm-menu-footer.test.mjs
+          node --test tests/gmww-v3237-gm-menu-footer.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
