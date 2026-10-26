@@ -4346,6 +4346,7 @@ async function flushPlayRoomMode(){
           throw new Error('Chưa giải phóng xong Seat của ván trước.');
         playSceneRuntime.room=reset.room||previous;playSceneRuntime.players=[];playSceneRuntime.assignments=[];
         if(roomCode!==String(playSceneState.roomCode)){playRoomUiState.pendingMode='';break;}
+        playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';
         data=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify(patch)});
       }
       if(roomCode!==String(playSceneState.roomCode)){playRoomUiState.pendingMode='';break;}
