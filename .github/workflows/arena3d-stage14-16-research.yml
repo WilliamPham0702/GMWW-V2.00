@@ -179,6 +179,8 @@ jobs:
         run: node tests/arena3d-stage16-standard-core-e2e.mjs
       - name: "GĐ16: Core thật — Vai Trò tự tạo và Artifact 3D"
         run: node tests/arena3d-stage16-dynamic-core-e2e.mjs
+      - name: "GM 3D thực tế: đủ 30 người, phát Vai, Đêm/Ngày, Lên Giàn, kết thúc bằng nút GM"
+        run: node tests/arena3d-stage30-crowd-core-e2e.mjs
       - name: "Ghi nhận Preview GĐ14–16"
         run: |
           echo "Preview GĐ14–16: https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html" >> "$GITHUB_STEP_SUMMARY"
