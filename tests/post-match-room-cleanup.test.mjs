@@ -60,7 +60,7 @@ test('Completed game: failed seat release must not fake a completed exit',async(
 
 test('Old finished DEMO room: changing mode repairs remaining seats once, never resets an active match',async()=>{
   const calls=[],errors=[],ui={pendingMode:'offline',modeSaving:false,selectedCode:'ABCDEF'};
-  const scene={roomCode:'ABCDEF',gmToken:'token',roomMode:'demo'};
+  const scene={roomCode:'ABCDEF',gmToken:'token',roomMode:'demo',selectedMemberIds:['alice'],activePlayerId:'alice'};
   const runtime={room:{phase:'lobby',endedAt:'2026-10-26T12:00:00Z',lastEndedMatchId:'m1',resetVersion:2,demo:true},
     players:[{seatId:4}],assignments:[{loginId:'alice'}]};
   const fn=vm.runInNewContext(between(setup,'async function flushPlayRoomMode(){','function bindPlayRoomModeButtons()')+';flushPlayRoomMode',{
@@ -76,6 +76,8 @@ test('Old finished DEMO room: changing mode repairs remaining seats once, never 
   assert.deepEqual(calls.map(x=>x[0]),['/room-settings','/reset','/room-settings']);
   assert.equal(calls[1][1].preserveParticipants,false);
   assert.equal(scene.roomMode,'offline');
+  assert.deepEqual(scene.selectedMemberIds,[]);
+  assert.equal(scene.activePlayerId,'');
   assert.equal(runtime.players.length,0);
   assert.equal(errors.length,0);
   assert.equal(ui.pendingMode,'');
