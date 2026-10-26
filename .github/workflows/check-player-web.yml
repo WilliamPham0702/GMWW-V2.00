@@ -112,6 +112,18 @@ jobs:
           node -e "const fs=require('fs'),crypto=require('crypto');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json','utf8'));let e=m.icons.find(x=>x.svg==='01_soi_xet.svg');let s=crypto.createHash('sha256').update(fs.readFileSync('assets/action-icons/v2/01_soi_xet.svg')).digest('hex');if(m.count!==49||e.sha256_svg!==s)process.exit(1)"
           test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
 
+      - name: V3.237 — chỉ Menu GM và các icon thanh dưới
+        if: steps.scope.outputs.mode == 'gm-ui-menu-3237'
+        run: |
+          node --test tests/gmww-v3237-gm-menu-footer.test.mjs
+          node --test --test-name-pattern='V3.237 scoped' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.237-gm-menu-footer-20261026.md
+
       - name: V3.236 — Menu GM đống lửa và luật hòa phiếu Lên Giàn
         if: steps.scope.outputs.mode == 'gm-menu-gallows-3236'
         run: |

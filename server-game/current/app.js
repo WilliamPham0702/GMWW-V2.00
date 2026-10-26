@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.236';
+const VERSION='3.237';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -6827,6 +6827,12 @@ function initBattleControls(){
   battleBindAuxiliaryDrag('battleDetails','#battleRoster > header');
   // One outside-dismiss handler for all battle overlays. Never cancel a validated Server action.
   document.addEventListener('pointerdown',event=>{
+    // The SAME campfire GM menu is available in Setup and Battle.
+    // Outside tap dismisses it in either phase, including when chrome is hidden.
+    if(document.body.classList.contains('play-immersive')&&playSceneState.step!=='battle'&&
+       battleState.wolfOpen&&!event.target.closest?.('#battleWolfMenu,.play-core-pearl')){
+      battleState.wolfOpen=false;renderPlayBattle();return;
+    }
     if(playSceneState.step!=='battle')return;
     const stats=document.getElementById('battleFactionStats');
     if(stats&&!stats.hidden&&!stats.contains(event.target)&&!event.target.closest?.('#battleFactionStatsToggle')){
@@ -6870,7 +6876,8 @@ function initBattleControls(){
     if(changed)renderPlayBattle();
   },true);
   document.addEventListener('keydown',event=>{
-    if(event.key==='Escape'&&playSceneState.step==='battle'&&(battleState.wolfOpen||battleState.clockOpen||battleState.dayActionsOpen||battleState.gallowsOpen)){
+    if(event.key==='Escape'&&document.body.classList.contains('play-immersive')&&
+       (battleState.wolfOpen||(playSceneState.step==='battle'&&(battleState.clockOpen||battleState.dayActionsOpen||battleState.gallowsOpen)))){
       battleState.wolfOpen=false;battleState.clockOpen=false;battleState.dayActionsOpen=false;battleState.gallowsOpen=false;renderPlayBattle();
       document.querySelector('.play-core-pearl')?.focus();
     }
@@ -8392,7 +8399,7 @@ function setPlayGameChromeHidden(hidden){
     menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0';
   }
   const toggle=document.getElementById('battleGMChromeToggle');
-  if(toggle){toggle.setAttribute('aria-pressed',String(!!hidden));toggle.textContent=hidden?'◉ HIỆN MENU':'◉ ẨN MENU'}
+  if(toggle){toggle.setAttribute('aria-pressed',String(!!hidden));toggle.textContent='ẨN MENU';toggle.title=hidden?'Nhấn để hiện lại menu trên và dưới':'Nhấn để ẩn menu trên và dưới'}
 }
 function gmwwTogglePlayChrome(){
   gmwwPlayChromeHidden=!gmwwPlayChromeHidden;
