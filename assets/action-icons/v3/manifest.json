@@ -1,0 +1,807 @@
+{
+  "schema": 1,
+  "count": 50,
+  "catalogCount": 49,
+  "icons": [
+    {
+      "number": 1,
+      "id": "soi-xet",
+      "file": "01_soi_xet.webp",
+      "sha256": "2a1c50fcdf47f0da91ad25de8e74ca0e803a50ec96937df161d6556329b5e1c0",
+      "bytes": 148906,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Con mắt phép xanh tím.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "26f7eb71bfab531ebe3cc4a5c8abce35593fcdef128c441cb3ba2cafdcadad7c",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 2,
+      "id": "soi-dac-biet",
+      "file": "02_soi_dac_biet.webp",
+      "sha256": "b10507f6b5cac97b2b8c36b7aaca991efb5fb2f80803bedf21838f597e8c8c75",
+      "bytes": 123008,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Kính lúp vàng và bóng người.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "0ba6bb8be55364a660c583edd0eb51546d08a7a5bc3a54588b717865a87ac682",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 3,
+      "id": "soi-nhom",
+      "file": "03_soi_nhom.webp",
+      "sha256": "d6c69ecccc14f1b98a88ec96942b368e71ad747b40c1304f5494c20b603aed8f",
+      "bytes": 144626,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Ba con mắt ma thuật phát sáng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "84501277fa1fb3670b0e71a58e2629243969404ad790fa602ee79e68071772ea",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 4,
+      "id": "so-sanh-phe",
+      "file": "04_so_sanh_phe.webp",
+      "sha256": "cd4cf181be16dd1b55d68a6436ae8c83e13123a1d6756a461e3ac909ef502773",
+      "bytes": 147204,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Cán cân sói xanh đỏ.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "dde67600ab09fdaa9ed561f4890564a31fdf3a4520482a1ec1b646add58f2b46",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 5,
+      "id": "soi-can",
+      "file": "05_soi_can.webp",
+      "sha256": "e85a00d93f18295a74ed8572ae860e34036203d5d32820cc94422a37f9d8801f",
+      "bytes": 153476,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Sói bạc gầm giữa năng lượng đỏ.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "f9cac671a94e4af3ede8f807e3a7e624bc79cf3f17469a89079ee6b3416119bb",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 6,
+      "id": "bao-ve",
+      "file": "06_bao_ve.webp",
+      "sha256": "ab4fda66861f9b5b36df5ee5024d96898ca680bdf96ed5fc600efcfe967bc43d",
+      "bytes": 146126,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Khiên bảo vệ ngôi sao vàng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "1a275347ec04cde97177fa2b4498359563f57baf789ea5a90ed58e7585ee7e2a",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 7,
+      "id": "cuu",
+      "file": "07_cuu.webp",
+      "sha256": "91bdcdfbd6853fa16387236ec42f0357398c76d3e9b486c51522c275b1a77d06",
+      "bytes": 131426,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Bình thuốc xanh, dấu cộng vàng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "2254ce464e96a534529f6d768865d1588b8ba069f1ce71371397e186f8406879",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 8,
+      "id": "ha-doc",
+      "file": "08_ha_doc.webp",
+      "sha256": "87ee58efde226f735929acae61fdb2ece7e02ab0c758805ff177f33ad2c785cc",
+      "bytes": 145646,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Bình thuốc tím đầu lâu hồng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "75878f07107c6652617096c525b38c591111b2667f7f46ebbb6043e08ac94517",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 9,
+      "id": "dong-bang",
+      "file": "09_dong_bang.webp",
+      "sha256": "7472ab9dd6f67e99f44ee3988c830e9cd671a95bdbfd82323a0e617a182be203",
+      "bytes": 151300,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Bông tuyết băng giá lấp lánh.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "e5951335da7ec39fe7cb89fff8c0a4204b5538251565e5487838042143e45696",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 10,
+      "id": "danh-dau",
+      "file": "10_danh_dau.webp",
+      "sha256": "c8f83c6d4fc935855551bc348a13cd5eae2b48de223af7228249b54b0ff1c496",
+      "bytes": 143938,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Giáo bạc cán vàng, tâm ngắm đỏ.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "c717b4daf973b258c710fdfd229790d90703a19b4287ae9d943677c06f3f707e",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 11,
+      "id": "dich-trai",
+      "file": "11_dich_trai.webp",
+      "sha256": "c833ed3ffb6d28199d2d97239655db31769d5a56d9755d8765287e39b2cbf7b8",
+      "bytes": 128116,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Mũi tên cong phát sáng hướng trái.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "12a0064958317eb286a967b27f34b2f83b9e1aea60f8773d0fd5aa0ea4c1f034",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 12,
+      "id": "dich-phai",
+      "file": "12_dich_phai.webp",
+      "sha256": "fd837daf452406990ac5c3b2218cc7bb97a56a4dcc595c8d61484b2ca4391e97",
+      "bytes": 126712,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Mũi tên vàng uốn cong sang phải.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "9ec6adfb939716714c157c9b5dad644b37bd999596d0a649b91d8b86b3f1e18d",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 13,
+      "id": "hoi-sinh",
+      "file": "13_hoi_sinh.webp",
+      "sha256": "74a3e7e9bd6b45926e0539abddafddff8261b5dd1a359edf095405e20ca3eb57",
+      "bytes": 157584,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Phượng hoàng vàng hồi sinh.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "80c9294f62a549ea05493960f73493c421d0b26bc8471f5aa20d5c7dc6cf7482",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 14,
+      "id": "duoi",
+      "file": "14_duoi_khoi_lang.webp",
+      "sha256": "2abd9266b5261e7a90f9c236804a556d12d8574ba8d3b3cd78b3579ca19214e2",
+      "bytes": 142648,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Cổng gỗ và bóng người xanh.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "341958339d12d8679004f69efac978e8e2fd9da3c8444074fc5895e7985c5c5d",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 15,
+      "id": "san-giet",
+      "file": "15_san_giet.webp",
+      "sha256": "131c1c738f45bbf273d94149786679713b46cd84abe0b7877de1a956dd8d1995",
+      "bytes": 148364,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Ngọn giáo vàng và sói bóng tối.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "d3ea49ba9c8f394aa82dbea00809086dbe901a2a8aab32b68d8e27dd01cdcd63",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 16,
+      "id": "tham-nha",
+      "file": "16_tham_nha.webp",
+      "sha256": "00ad1d13c1a8508bff8bc3994446666231ccacf0455c298c9840fd336a85cfa0",
+      "bytes": 128640,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Căn nhà nhiệt đới dưới trăng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "f90943ad1361fc12aafdcf980bc11c325bdf93a6ed36e9c165e39685200a1318",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 17,
+      "id": "nhan-ban",
+      "file": "17_nhan_ban.webp",
+      "sha256": "351cc65d9de6fce4fd6613fd6cc7762b31464bc664b8facfea3e8f116d90550f",
+      "bytes": 118404,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Song ảnh lam, năng lượng đan xen.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "cbf1ceda3db69276ea162f18784f7d2266ca75feefc3303f9a73a245762f1045",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 18,
+      "id": "doi-vai",
+      "file": "18_doi_vai_tro.webp",
+      "sha256": "6a444a1bd5c1d0c7412e9a0367dcac6fa01ed96fd1ee80eb323ace2f506b03d6",
+      "bytes": 127150,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Hai lá bài đổi vai trò.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "175f573c38dd2e7f6cf77605fb5478b618a3779c56a61e3033156a1747e76f34",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 19,
+      "id": "hiep-si",
+      "file": "19_hiep_si.webp",
+      "sha256": "76dec69dfaab121d29c49022328be29117789b2967eca5d90a4a118f3497d3ef",
+      "bytes": 127774,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Kiếm bạc tỏa sáng giữa sóng ngọc.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "163e7403069a82368d4714ec89f724d5aef111baaefbbfd77977763517cc02f5",
+      "approval": "user-approved-2026-10-26"
+    },
+    {
+      "number": 20,
+      "id": "phong-an",
+      "file": "20_phong_an.webp",
+      "sha256": "c6af3aa52023f84b8a40e85b4c86149d24e2e114416588611f73c8cf6d35dfee",
+      "bytes": 166206,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Ổ khóa vàng phong ấn tinh thể xanh.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "cd4e5bc50c5e0791a188ba88ada450e6c88179f14a53ae71a6f66d90735da4cd",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 21,
+      "id": "cam-vote",
+      "file": "21_cam_vote.webp",
+      "sha256": "a774b8ab2f846474b93d36f04c9372a4d2f5828861a53c7212286552f865f891",
+      "bytes": 148768,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Phiếu bầu và dấu cấm đỏ.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "272f818ae1c72b20ac08a83da810eb02c6c458edec719e810b5ade2aa9aae9fb",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 22,
+      "id": "cam-de-cu",
+      "file": "22_cam_de_cu.webp",
+      "sha256": "6d38d28d5476acc473cc32d087162bdea078d32c4fe53555f41a44bad0e86aab",
+      "bytes": 144130,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Lá cờ đề cử khóa vàng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "e5f67d9d8fa03568bb153fbc7ffa777355e8a67f1667fe35e7f2670330c28ca8",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 23,
+      "id": "nguyen-rua",
+      "file": "23_nguyen_rua.webp",
+      "sha256": "e1fd4ec80abd66d63b112f801203d0a63492aed870263005c6bbbfd799e99547",
+      "bytes": 161648,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Hộp sọ tím và gai.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "80b14c423151b064416bf36941058f17f45a8ac3365517dae09a747559a6c4e2",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 24,
+      "id": "ban-phuoc",
+      "file": "24_ban_phuoc.webp",
+      "sha256": "5bfb2b851fbcf9e61dd22e25eae707976dbd199f04684b79d49a9c3b144b3e43",
+      "bytes": 145162,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Đôi tay vàng nâng sao phước lành.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "09627befc964848fdf4208406c5e7eeec86eb262c8965efac24596a4dddfdff7",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 25,
+      "id": "cuop-artifact",
+      "file": "25_cuop_artifact.webp",
+      "sha256": "b09ba8446b213a5bcbc8ae133c827e4b231b98ea967ba2c978c8804058595b30",
+      "bytes": 152664,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Bàn tay trộm nắm ngọc tím.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "d9b65fc05ed112d3b8296a26a836936a4d6a91fc0c47c3ee97178d7e8ed138a7",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 26,
+      "id": "phan-don",
+      "file": "26_phan_don.webp",
+      "sha256": "2d962ccbaa59de3763041a0cad48448ec6048d8c2f1a4f8acb97f4b8401abb93",
+      "bytes": 156454,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Khiên xanh phản đòn ma thuật.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "3bb830ccc535cf18886608ac1ab182e2fb557264055ebca9cb3637974264ae33",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 27,
+      "id": "tang-hinh",
+      "file": "27_tang_hinh.webp",
+      "sha256": "691b937e39a5051371c4bd7e347870e87f7085dc5325c9f2cc9aa4e9fa8502c7",
+      "bytes": 145114,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Bóng áo choàng tàng hình.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "c3e8e87e28cff80107b522797636ee11c93a942ba0f8aa61acc9c71065d84b80",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 28,
+      "id": "dat-bay",
+      "file": "28_bay.webp",
+      "sha256": "760afba418da29a9759d47154a722eec2898b9686ee34eb888e580d963a0c2eb",
+      "bytes": 151158,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Bẫy gấu cơ khí bạc.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "a3b21ff7177abbbf8d7bcc631525a1846dc7d003db3623f4bd639fa63251f2b3",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 29,
+      "id": "thanh-tay",
+      "file": "29_thanh_tay.webp",
+      "sha256": "70890cc863a8d54ccf35ae5f6b6071b80db25c54e4d76ff518054cdf05a88b47",
+      "bytes": 151688,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Giọt thanh tẩy xua tan lời nguyền.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "b1a00eee6016ceaeabf399f4555d779f4722ca413436245c66bdb93f6262bf59",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 30,
+      "id": "ghep-doi",
+      "file": "30_ghep_doi.webp",
+      "sha256": "93cc7e0129c5232449f605d7723ea720cd0e27e5071aa27b8b3784cab6df46ae",
+      "bytes": 145788,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Đôi tim hồng kết duyên.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "20cb730f3cb3caa1bf5b9a599eefb784bc770f66ae2ac0025845a2a82b9c90a2",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 31,
+      "id": "rung-chuong",
+      "file": "31_rung_chuong.webp",
+      "sha256": "be6fd76b8b4abdf09b392e0c9f2217d622e118a61335726fa6b68543bd667b38",
+      "bytes": 148124,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Chuông vàng ngân sóng lam.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "b880bef1defbddbeb98efc96658a0b95757e06d0120ca9b646a56d07b5974238",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 32,
+      "id": "hi-mat",
+      "file": "32_hi_mat.webp",
+      "sha256": "dbd82ac20acf645c6457c7dab51f29dd1a3370d7ef84675ec347f69d6385e713",
+      "bytes": 142758,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Mắt xanh hé mở giữa bàn tay.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "67b5e396b8d221681d1d05e42722ff53b36bd03fae4a4140d0e00f42e69612b2",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 33,
+      "id": "giao",
+      "file": "33_giao.webp",
+      "sha256": "cb4125478d8f6215509c852e7487b07a2843167f46e4c0dfb8816cf122d6052c",
+      "bytes": 153956,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Giáo bạc vàng năng lượng lam.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "5e0bc91897d236c5741d48b584a3a15d396784b087d097e7840101bb341a132d",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 34,
+      "id": "ba-anh-em",
+      "file": "34_ba_anh_em.webp",
+      "sha256": "6815da7668b28ae845e31d489a7f4cadecee62991faca3adf64f24f473c2f2d2",
+      "bytes": 146938,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Ba bóng xanh dưới vầng vàng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "b900b12771bef593b54068c0f34f6856ece5c8e3ab54ef5ec926c46277c4a46b",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 35,
+      "id": "bao-thu",
+      "file": "35_bao_thu.webp",
+      "sha256": "330c1592eb842c1823b3419bcc7df6d61420705a44fe6a5c52333123868c1bbe",
+      "bytes": 151240,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Nắm đấm giáp cầm dao lửa.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "5213dd95067b3787abeed6fb7c78b9601282506da75b98711e6e59488f697715",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 36,
+      "id": "mang-benh",
+      "file": "36_mang_benh.webp",
+      "sha256": "f01077eb69e8663ea438561c5e80f5ad8e70ddcae8aa15b965e1b5ddcec27711",
+      "bytes": 145970,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Linh thể xanh với ba bào tử.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "867b164636c6315d16ede1f0e0e88c55e3a50045fbd4b3749fd419e18a0e3aaf",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 37,
+      "id": "loan-tin",
+      "file": "37_loan_tin.webp",
+      "sha256": "e785c8c26e3008f80e6d49280e3d858a568ed6489ed9846e6dc72993a7a7f1d6",
+      "bytes": 150894,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Thông điệp cánh vàng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "edcb6a3b592b83d8a911f4c67403db595341cf103e2baf44bfef15a15f32ac04",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 38,
+      "id": "phan-quyet-kep",
+      "file": "38_phan_quyet_kep.webp",
+      "sha256": "41a64f192477e9526ee77f41c3fa275b05ce6994c7fd05512b1298a740b26fa9",
+      "bytes": 155512,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Đôi búa vàng phán quyết.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "3c5cabbac3081af60a6bf7abb3d33b1a6c54944bdf1ecfa519235f788b25584d",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 39,
+      "id": "cam-noi",
+      "file": "39_cam_noi.webp",
+      "sha256": "7db1dbd162a0b32629689e86824be634d0e0ee1814202abc041a117a39618136",
+      "bytes": 145548,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Khuôn mặt xanh, khóa vàng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "e2a12679dc9f9347742ceafa44a3125d752c79f0c9a38ebf9714adcf5c42191f",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 40,
+      "id": "phieu-con-qua",
+      "file": "40_phieu_con_qua.webp",
+      "sha256": "7b8762204de76fc42056961b9228144f1a7d66ab53b5b7fc7dfce57c1efec028",
+      "bytes": 152780,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Quạ đen ngậm phiếu ngà.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "931d36f03822cc177add5baa24374a3926c1abed83d8b958bade1b40c2f1ad2f",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 41,
+      "id": "can-chuyen-hoa",
+      "file": "41_can_chuyen_hoa.webp",
+      "sha256": "a476e50bb11885c36a433e4545213312154400fac36f57fd4327a8a209438038",
+      "bytes": 154220,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Cắn chuyển hóa sói tím.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "380401a044e5c73b50543420770652b9e8d71d3e27fed29dfda7ed70acd488a7",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 42,
+      "id": "chon-hinh-tuong",
+      "file": "42_chon_hinh_tuong.webp",
+      "sha256": "f144abd8a1eef4ac374fd9a870d9380058db196e14d3548ca8744755e5f93a7b",
+      "bytes": 146004,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Bé xanh ngước nhìn tượng vàng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "7b67f1e34c4ceb3ba14133a87aca173a31334bd1ad14d4b3dff579bbb203f326",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 43,
+      "id": "xem-artifact",
+      "file": "43_xem_artifact.webp",
+      "sha256": "560fc0ec8d751ebc88a01dfa077d59469136b91135fbb9c23cb61bb73fb0dcf1",
+      "bytes": 139138,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "exec-8e7402ed-9b6e-4b5e-b2be-ab18e1e8bcf1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "5557d04402d2f92ef91ed708bc6084c7e0677dbcbffa34dd94c26dc8c73563c9",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 44,
+      "id": "doi-artifact",
+      "file": "44_doi_artifact.webp",
+      "sha256": "9dd7d98db1f4a741e2b44c8f745a82efb122aa7c962dd62fb2bc13f0172a1ebe",
+      "bytes": 136912,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "exec-cb1be47e-2168-46bc-9308-9453f185f463.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "615743bb8d3d6ae883baab7793ea1cb1c658b2990b1ac16d1dc3bc71d264f279",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 45,
+      "id": "cong-khai-vai",
+      "file": "45_cong_khai_vai.webp",
+      "sha256": "6f945e181c555074ba39722ea1f63a0ef148b547477c8e28b01941f5983e14bf",
+      "bytes": 117820,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "exec-83310c76-39a8-4b41-817a-b912de5e2bf1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "505f46bcf0a6b343df33dd655ac5050efb1940d7a73018bc5689c72a9de8e73e",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 46,
+      "id": "sao-chep-chuc-nang",
+      "file": "46_sao_chep_chuc_nang.webp",
+      "sha256": "8e5910be6434be8fe857e16e164cc9a4a1948154b2ec1493b93621bec6f669a4",
+      "bytes": 128640,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "exec-c0945759-8a9c-458e-b000-b0308464df6b.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "0618a7db321dacc0e733e798379c09bbbcdcc02807b510a27d022d2e9db7f542",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 47,
+      "id": "huy-artifact",
+      "file": "47_huy_artifact.webp",
+      "sha256": "99dedcc015286c7c738e5455fc0058c916851a05d054b0121e8ce5467f67ad56",
+      "bytes": 140700,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "exec-180b8735-a6b5-4f92-9d70-cfdf375a6dca.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "f2a8a0b4beef16b1e2911ee50f4199773f4cd0096c58e433cf339b7158f50b4e",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 48,
+      "id": "buoc-quay-mat",
+      "file": "48_buoc_quay_mat.webp",
+      "sha256": "54837b0f86f1669270f2e8a0f2255cd7d2438ba89c806077277483af971904a5",
+      "bytes": 126834,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "exec-005a01e0-e7b6-4085-ae38-edb9a4886ec1.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "f9d6bf0ed8f82095f36741fec790dae0888753fe4e3621c1c37be9aade825fc6",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 49,
+      "id": "sang-tao-artifact",
+      "file": "49_sang_tao_artifact.webp",
+      "sha256": "73d10e61ce06fe90180545c99f4da10acf8507375c68c155a3253e0a40429e77",
+      "bytes": 139680,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "exec-7f044c52-0858-43b9-8ad8-5a657c6205b2.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "e0e8f4234b302800629573320b368cac1108838a5df26e521f18b03efd707260",
+      "approval": "authorized-completion-2026-10-26"
+    },
+    {
+      "number": 50,
+      "id": "yeu-tinh-xoay",
+      "file": "50_yeu_tinh_xoay.webp",
+      "sha256": "3a8178d22569118b7d82ae00fd46cd0b906b8117d97bb8371df55911add7eca1",
+      "bytes": 156988,
+      "size": 512,
+      "transparent": true,
+      "sourceFile": "Mũi tên xoay vòng xanh vàng.png",
+      "sourceSize": [
+        1254,
+        1254
+      ],
+      "sourceSha256": "d8c1297980fba3ad9c0c5aeae35f361ca54900976c595e6b8536cfa8abd3739c",
+      "approval": "authorized-completion-2026-10-26"
+    }
+  ]
+}

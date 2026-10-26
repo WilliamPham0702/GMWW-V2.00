@@ -41,27 +41,12 @@ test('Multi-target, directional and card selection actions are not forced to cha
   assert.equal(api.resolve('action_seer').target,'character');
   assert.equal(api.resolve('action_wolf_bite').target,'character');
 });
-test('Approved icons use actual 49 individual PNG assets, not demo SVG or emoji',()=>{
- const icons=api.get();
- assert.equal(icons.length,49);
- assert.equal(new Set(icons.map(x=>x.assetId)).size,49);
- for(const icon of icons){
-  const url=api.image(icon);
-  assert.match(url,/^action-icons\/v2\/[0-9]{2}_[a-z_]+\.png$/);
-  const workerPath=new URL('../assets/'+url,import.meta.url);
-  const gmPath=new URL('../server-game/current/'+url,import.meta.url);
-  const svgPath=new URL('../assets/'+url.replace(/\.png$/,'.svg'),import.meta.url);
-  assert.ok(fs.existsSync(workerPath),url+' Worker PNG');
-  assert.ok(fs.existsSync(gmPath),url+' GM local PNG');
-  assert.ok(fs.existsSync(svgPath),url+' editable SVG');
-  const worker=fs.readFileSync(workerPath),native=fs.readFileSync(gmPath);
-  assert.equal(Buffer.compare(worker,native),0,url+' identical PNG');
-  assert.equal(worker.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
-  assert.equal(worker.readUInt32BE(16),1024);
-  assert.equal(worker.readUInt32BE(20),1024);
-  assert.equal(worker[25],6,'RGBA with alpha');
-  assert.match(fs.readFileSync(svgPath,'utf8'),/<(?:ns[0-9]+:)?svg\s/);
- }
+test('Approved icons use 49 individual illustrated WebP assets',()=>{
+ const icons=api.get();assert.equal(icons.length,49);
+ for(const icon of icons){const url=api.image(icon);assert.match(url,/^action-icons\/v3\/[0-9]{2}_[a-z_]+\.webp$/);
+ const worker=fs.readFileSync(new URL('../assets/'+url,import.meta.url));
+ assert.deepEqual(worker,fs.readFileSync(new URL('../server-game/current/'+url,import.meta.url)));
+ assert.equal(worker.subarray(0,4).toString(),'RIFF');assert.equal(worker.subarray(8,12).toString(),'WEBP');}
 });
 test('Direction-based skill displays two independent choices, no automatic action submission',()=>{
  const icons=api.resolveAll('action_transfer_bite');

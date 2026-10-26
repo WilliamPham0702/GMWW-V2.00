@@ -40,7 +40,7 @@ function dockContext(){
    getElementById(id){return({battleGMActionIcons:toggle,battleFireIconDock:dock,playPlayerRing:ring})[id]||null},
    createElement(){return{className:'',style:{},setAttribute(){},remove(){}}},body:{appendChild(){}}
   },
-  globalThis:{GMWWActionIconLibrary:{resolveAll(id){return id==='action_seer'?[{id:'soi-xet',assetId:'01_soi_xet.png'}]:[]},image(){return'action-icons/v2/01_soi_xet.png'}},
+  globalThis:{GMWWActionIconLibrary:{resolveAll(id){return id==='action_seer'?[{id:'soi-xet',assetId:'01_soi_xet.png'}]:[]},image(icon){return'action-icons/v3/'+icon.assetId.replace(/\.png$/,'.webp')}},
    visualViewport:{width:375,height:640}}, innerWidth:375,innerHeight:640,
   localStorage:{getItem(){return'1'},setItem(){}},
   playSceneState:{step:'battle',night:1},battleState:{key:'one',actionId:'',targets:[],busy:false,syncPending:false},
@@ -60,15 +60,15 @@ function dockContext(){
  vm.runInContext(runtimeIconFns,ctx);
  dock.btn={dataset:{fireAction:'role:seer',fireIcon:'soi-xet'},style:{},classList:{add(){},remove(){},toggle(){}},
   getBoundingClientRect(){return{left:15,top:15,width:44,height:44}},
-  querySelector(){return{src:'action-icons/v2/01_soi_xet.png'}},setPointerCapture(){},closest(){return dock.btn}};
+  querySelector(){return{src:'action-icons/v3/01_soi_xet.webp'}},setPointerCapture(){},closest(){return dock.btn}};
  return{ctx,dock,toggle,actions,callbacks};
 }
 test('Eligible action stays visible at 🔥 during benign server sync, with buttons disabled',()=>{
  const{ctx,dock,toggle}=dockContext();
  vm.runInContext("battleIconDock(battleActions(),'night')",ctx);
  assert.equal(dock.hidden,false);
- assert.match(dock.innerHTML,/action-icons\/v2\/01_soi_xet\.png/);
- assert.equal(toggle.textContent,'ICON: BẬT');
+ assert.match(dock.innerHTML,/action-icons\/v3\/01_soi_xet\.webp/);
+ assert.equal(toggle.textContent,'iCon');
  assert.match(dock.innerHTML,/top:[0-9.]+px/);
  ctx.battleState.syncPending=true;
  vm.runInContext("battleIconDock(battleActions(),'night')",ctx);
@@ -137,11 +137,11 @@ test('Icon Action V2: drag may end anywhere, button stays floating, no Core acti
  assert.equal(dock.btn.style.left,'287px');
  assert.equal(dock.btn.style.top,'387px');
 });
-test('Yêu Tinh has one frameless 🔄 action icon; Core still owns direction choices',()=>{
+test('Yêu Tinh has one illustrated rotation action icon; Core still owns direction choices',()=>{
  const{ctx,dock,actions}=dockContext();
  actions[0].actionId='action_transfer_bite';
  ctx.globalThis.GMWWActionIconLibrary.resolve=id=>id==='action_transfer_bite'?{id:'dich-trai',assetId:'11_dich_trai.png'}:null;
  vm.runInContext("battleIconDock(battleActions(),'night')",ctx);
  assert.equal((dock.innerHTML.match(/data-fire-icon=/g)||[]).length,1);
- assert.match(dock.innerHTML,/🔄/);
+ assert.doesNotMatch(dock.innerHTML,/🔄/);assert.match(dock.innerHTML,/50_yeu_tinh_xoay\.webp/);
 });
