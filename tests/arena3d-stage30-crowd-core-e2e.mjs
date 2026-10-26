@@ -55,16 +55,21 @@ try{
  await gm.locator('.gm-seat-grid button[data-seat-id="6"]').click();
  await gm.locator('#vote').click();
  await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting',null);
- const result=await gm.evaluate(async c=>{
-  const token=document.getElementById('gm-key').value,
-   matchId=window.__GMWW_ARENA_STAGE_READONLY().matchId;
-  const res=await fetch('/api/gm/rooms/'+c+'/end',{method:'POST',cache:'no-store',
-   headers:{authorization:'Bearer '+token,'content-type':'application/json'},
-   body:JSON.stringify({matchId,winnerFaction:'village',winner:'Dân Làng'})});
-  return {status:res.status,data:await res.json()};
- },code);
- assert.equal(result.status,200);
- assert.equal(result.data.ok,true);
+ // Full-match acceptance must exercise the REAL 3D GM UI instead of
+ // bypassing it with a direct /api/gm/end request. Core must emit lobby to 2 clients.
+ const gmEnds=[];
+ gm.on('request',request=>{
+   if(request.method()==='POST'&&new URL(request.url()).pathname==='/api/gm/rooms/'+code+'/end')
+     gmEnds.push({method:request.method(),path:new URL(request.url()).pathname});
+ });
+ await gm.locator('#winner-faction').selectOption('Phe Dân');
+ gm.once('dialog',async dialog=>{
+   assert.match(dialog.message(),/Xác nhận kết thúc ván/);
+   await dialog.accept();
+ });
+ await gm.locator('#end-match').click();
+ await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null,90000);
+ assert.deepEqual(gmEnds,[{method:'POST',path:'/api/gm/rooms/'+code+'/end'}]);
  await gm.locator('#refresh').click();
  await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null);
  await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null);
