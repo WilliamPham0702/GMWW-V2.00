@@ -1483,7 +1483,25 @@ function isART01NightFlowScope(changes){
   by.get('docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md')?.after?.includes('Rollback') &&
   by.get('.github/workflows/check-player-web.yml')?.after?.includes("'art01-night-flow'");
 }
+/* ART-01 server-only deployment gate: exactly scoped release-policy repair.
+ * No new gameplay, UI, native, or runtime content is authorized here. */
+function isART01DeployGateScope(changes){
+ const allowed=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  'tests/art01-deployment-gate.test.mjs'
+ ]);
+ if(!Array.isArray(changes)||changes.length!==4)return false;
+ const by=new Map(changes.map(c=>[c.path,c]));
+ if(by.size!==4||changes.some(c=>!allowed.has(c.path)||c.status!==(c.path.startsWith('tests/')?'A':'M')))return false;
+ return by.get('.github/workflows/deploy-production.yml')?.after?.includes('ART-01 server-only deployment gate') &&
+  by.get('.github/workflows/check-player-web.yml')?.after?.includes("'art01-deploy-gate'") &&
+  by.get('tests/art01-deployment-gate.test.mjs')?.after?.includes('ART-01 release gate focused') &&
+  by.get('.github/scripts/ci-browser-scope.mjs')?.after?.includes('isART01DeployGateScope');
+}
 export function classifyBrowserScope(changes){
+  if(isART01DeployGateScope(changes))return 'art01-deploy-gate';
   if(isART01NightFlowScope(changes))return 'art01-night-flow';
   if(isGM238DeployGateRecovery(changes))return 'gm238-deploy-repair';
   if(isGM238UniformMenuScope(changes))return 'gm-ui-controls-3238';
@@ -1562,6 +1580,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isART01DeployGateScope(changes))return{mode:'art01-deploy-gate',reason:'ART-01 release workflow only: no gameplay changes'};
       if(isART01NightFlowScope(changes))return{mode:'art01-night-flow',reason:'ART-01: only Artifact priority and first-night turn scheduler'};
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
