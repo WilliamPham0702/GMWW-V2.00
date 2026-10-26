@@ -459,3 +459,37 @@ test('V3.238 workflow revalidation: exactly one deploy job and only three repair
  assert.equal(classifyBrowserScope(c.slice(1)),'full');
  assert.equal(classifyBrowserScope([...c,modified('src/index.js','before','after')]),'full');
 });
+
+test('GMWW post-match lifecycle CI limits the fixes to exit reset, mode recovery and DEMO lease cleanup',()=>{
+  const workerBefore='top\n  async gmReset(request,body){return oldReset}\n  async gmEnd(request,body){return end}\nother';
+  const workerAfter=workerBefore.replace('return oldReset','for(const key of ["demoLease","demoClock","demoPlan"])await storage.delete(key);return newReset');
+  const select='async function selectPlayExistingRoom(r){return oldSelection}\nfunction renderPlayCreatedRooms(){return true}\n';
+  const mode='async function flushPlayRoomMode(){return oldMode}\nfunction bindPlayRoomModeButtons(){return true}\n';
+  const setupBefore='top\n'+select+mode+'other';
+  const setupAfter=setupBefore.replace('return oldSelection','return newSelection').replace('return oldMode', "const key='completed-mode-';return newMode");
+  const completion='async function playCompletionNext(choice){return oldComplete}\nfunction initPlayCompletion(){return true}\n';
+  const roleBefore='top\n'+completion+'other';
+  const roleAfter=roleBefore.replace('return oldComplete',"const key='completed-leave-';return newComplete");
+  const packagedBefore='top\n'+select+mode+completion+'other';
+  const packagedAfter=packagedBefore.replace('return oldSelection','return newSelection').replace('return oldMode',"const key='completed-mode-';return newMode").replace('return oldComplete',"const key='completed-leave-';return newComplete");
+  const rows=[
+    modified('src/index.js',workerBefore,workerAfter),
+    modified('server-game/src/30-village-and-setup.part',setupBefore,setupAfter),
+    modified('server-game/src/50-roles-and-artifacts.part',roleBefore,roleAfter),
+    modified('server-game/current/app.js',packagedBefore,packagedAfter),
+    {path:'tests/post-match-room-cleanup.test.mjs',status:'A',after:'tests'},
+    {path:'docs/releases/post-match-room-demo-seat-20261026.md',status:'A',after:'Release notes'}
+  ];
+  assert.equal(classifyBrowserScope(rows),'post-match-seat-cleanup');
+  assert.equal(classifyBrowserScope(rows.map(r=>r.path==='src/index.js'?{...r,after:r.after+'\n// unrelated worker API'}:r)),'full');
+  assert.equal(classifyBrowserScope([...rows,{path:'src/gmww-members-live.js',status:'M',before:'old',after:'new'}]),'full');
+  assert.equal(classifyBrowserScope(rows.filter(r=>r.path!=='server-game/current/app.js')),'full');
+  const policy=[
+    modified('.github/scripts/ci-browser-scope.mjs','before','after'),
+    modified('.github/workflows/check-player-web.yml','before',"if: steps.scope.outputs.mode == 'post-match-seat-cleanup'"),
+    modified('tests/ci-browser-scope.test.mjs','before','GMWW post-match lifecycle CI'),
+    {path:'docs/releases/ci-post-match-seat-scope-20261026.md',status:'A',after:'# Notes'}
+  ];
+  assert.equal(classifyBrowserScope(policy),'post-match-seat-ci');
+  assert.equal(classifyBrowserScope([...policy,modified('src/index.js','old','new')]),'full');
+});
