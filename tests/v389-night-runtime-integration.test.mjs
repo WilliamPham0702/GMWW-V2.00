@@ -14,6 +14,7 @@ import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
 import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
+import {oldWitchActionCheck} from '../src/gmww-old-witch-rules.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -34,7 +35,7 @@ const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+' })',{
   ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
-  resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,
+  resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,oldWitchActionCheck,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -70,6 +71,45 @@ function harness({artifact=true,auto=false,singleUse=false}={}){
   return{data,room,events,storage,meta,runtime,jump,act};
 }
 async function result(response){return {status:response.status,...await response.json()}}
+
+test('WITCH-01 real Durable Object: wake Old Witch right after optional Wolf recognition regardless of order',async()=>{
+  const h=harness();h.data.set('gameConfig',{roles:[{roleId:'seer',order:1},{roleId:'role_wolf',order:2},{roleId:'role_old_witch',order:99}],timing:{defaultActionSec:30,wolfDiscussionSec:20}});
+  h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_old_witch',roleName:'Phù Thuỷ Già'},
+    {loginId:'bob',roleId:'role_wolf',roleName:'Sói'},
+    {loginId:'carol',roleId:'role_wolf',roleName:'Sói'},
+    {loginId:'dave',roleId:'seer',roleName:'Tiên Tri'}
+  ]);
+  const rt=await h.runtime();
+  assert.deepEqual(Array.from(rt.queue.slice(0,3),x=>x.kind),['wolf-introduction','role','role']);
+  assert.equal(rt.queue[1].roleId,'role_old_witch');
+  assert.equal(rt.queue[2].roleId,'seer');
+  const h2=harness({artifact:false});
+  h2.data.set('assignments',[{loginId:'alice',roleId:'role_old_witch',roleName:'Phù Thuỷ Già'},{loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
+  h2.data.set('gameConfig',{roles:[{roleId:'seer',order:1},{roleId:'role_old_witch',order:99}],timing:{defaultActionSec:30}});
+  const alone=await h2.runtime();
+  assert.equal(alone.queue[0].roleId,'role_old_witch');
+});
+
+test('WITCH-01 real Durable Object: reject invalid revive before writes and accept prior-night target',async()=>{
+  const h=harness({artifact:false});h.data.set('gameConfig',{roles:[{roleId:'role_old_witch',order:99}],timing:{defaultActionSec:30}});
+  h.data.set('assignments',[{loginId:'alice',roleId:'role_old_witch',roleName:'Phù Thuỷ Già'}]);
+  h.data.set('roles:alice',[{roleId:'role_old_witch',matchId:'test-match',roleCard:{flags:{allowMultipleActions:false},functions:[
+    {actionId:'action_revive',usageMode:'onceGame',usageCount:1},{actionId:'action_exile',usageMode:'eachNight',usageCount:1}]}}]);
+  h.data.get('meta').cycleNight=2;h.data.get('meta').cycleKey='night-2';
+  const rt=await h.room.getNightRuntime(await h.meta(),2,true),m=await h.meta();
+  m.currentNightTurnId=rt.currentId;h.data.set('meta',m);
+  const act=(targets,nonce,type='revive',actionId='action_revive')=>h.room.gmBattleAction(null,{matchId:'test-match',cycleKey:'night-2',
+    turnId:rt.currentId,actorId:'alice',type,actionId,targetIds:targets,clientEventId:nonce});
+  assert.equal((await result(await act(['bob'],'no-death'))).error,'WITCH_REVIVE_TARGET_INELIGIBLE');
+  assert.equal(h.data.has('battleRoleUsage:test-match'),false);
+  h.data.set('interactions',[{id:'death-1',loginId:'bob',matchId:'test-match',type:'dead',effectActive:true,night:1,cycleKey:'night-1'}]);
+  assert.equal((await result(await act(['alice'],'self'))).error,'WITCH_SELF_TARGET');
+  assert.equal((await result(await act(['bob'],'revive-valid'))).ok,true);
+  assert.equal(h.data.get('interactions')[0].effectActive,false);
+  assert.equal((await result(await act(['bob'],'revive-again'))).error,'WITCH_REVIVE_TARGET_INELIGIBLE');
+  assert.equal((await result(await act(['carol'],'exile-after-revive','expelled','action_exile'))).error,'ROLE_NIGHT_ACTION_EXHAUSTED');
+});
 
 test('no Artifact produces no opening window; configured Artifacts preserve one owned opening window',async()=>{
   const h=harness({artifact:false}),rt=await h.runtime();
