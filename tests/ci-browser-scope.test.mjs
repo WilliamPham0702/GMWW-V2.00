@@ -503,3 +503,33 @@ test('PR532 scoped CI selector permits only the exact isolated CI-only followup'
  assert.equal(classifyBrowserScope(files),'postmatch-ci-532');
  assert.equal(classifyBrowserScope([...files,modified('server-game/current/app.js','a','b')]),'full');
 });
+
+
+test('V3.240 release CI accepts only version metadata and a focused Worker test',()=>{
+ const rows=[
+  modified('src/index.js','const VERSION="V3.239",UPDATE_CHANNEL_REV="runtime-3239"',
+    'const VERSION="V3.240",UPDATE_CHANNEL_REV="runtime-3240"'),
+  modified('server-game/src/00-core-and-library.part',"const VERSION='3.239';","const VERSION='3.240';"),
+  modified('server-game/current/app.js',"const VERSION='3.239';","const VERSION='3.240';"),
+  modified('server-game/current/GMWW.html','<title>GMWW V3.239</title>','<title>GMWW V3.240</title>'),
+  modified('package.json','{"version": "3.239.0"}','{"version": "3.240.0"}'),
+  modified('package-lock.json','{"version": "3.239.0","root":{"version": "3.239.0"}}',
+    '{"version": "3.240.0","root":{"version": "3.240.0"}}'),
+  modified('.github/scripts/prepare-update-channel.mjs','releaseNotes:["V3.239 previous"]',
+    'releaseNotes:["V3.240: bảo toàn lịch sử; rollback V3.239.","V3.239 previous"]'),
+  modified('.github/scripts/ci-browser-scope.mjs','old policy',
+    'function isPostMatchV3240ReleaseScope(changes)'),
+  modified('.github/workflows/check-player-web.yml','old worker\nend',
+    "old worker\n          node --test --test-name-pattern='V3.240' tests/ci-browser-scope.test.mjs\nend"),
+  modified('tests/ci-browser-scope.test.mjs','old tests',
+    'V3.240 release CI accepts only version metadata'),
+  {path:'docs/releases/GMWW-V3.240-post-match-seat-demo-20261026.md',status:'A',
+    after:'# Runtime V3.240\nRollback\nkhông cập nhật IPA'}
+ ];
+ assert.equal(classifyBrowserScope(rows),'post-match-room-532');
+ assert.equal(classifyBrowserScope([...rows,modified('server-game/current/style.css','a','b')]),'full');
+ assert.equal(classifyBrowserScope(rows.filter(r=>r.path!=='docs/releases/GMWW-V3.240-post-match-seat-demo-20261026.md')),'full');
+ assert.equal(classifyBrowserScope(rows.map(r=>r.path==='src/index.js'?{...r,after:r.after+'; deleteAllDurableObjects()'}:r)),'full');
+ assert.equal(classifyBrowserScope(rows.map(r=>r.path==='server-game/current/app.js'?{...r,after:r.after+'; modifyRoles()'}:r)),'full');
+ assert.equal(classifyBrowserScope(rows.map(r=>r.path==='package.json'?{...r,after:'{"version": "3.241.0"}'}:r)),'full');
+});
