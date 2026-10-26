@@ -493,6 +493,7 @@ test('PR532 scoped CI selector permits only the exact isolated CI-only followup'
   '.github/workflows/check-player-card-browsers.yml',
   '.github/workflows/check-gm-free-icons-501.yml',
   '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/check-dual-renderer.yml',
   '.github/workflows/build-server-game-ipa.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/post-match-ci-scope-20261026.md'
