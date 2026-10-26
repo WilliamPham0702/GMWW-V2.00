@@ -459,3 +459,47 @@ test('V3.238 workflow revalidation: exactly one deploy job and only three repair
  assert.equal(classifyBrowserScope(c.slice(1)),'full');
  assert.equal(classifyBrowserScope([...c,modified('src/index.js','before','after')]),'full');
 });
+
+
+
+test('PR532 scoped CI selector accepts exactly match-exit, Demo switch and reset edits',()=>{
+ const workerBefore='header\n  async gmReset(request,body){return 0}\n  async gmEnd(request,body){return 1}\ntail';
+ const workerAfter=workerBefore.replace('return 0','["demoLease","demoClock","demoPlan"]; return 2');
+ const setupBefore='head\nasync function selectPlayExistingRoom(r){return 0}\nfunction renderPlayCreatedRooms(){return 0}\nasync function flushPlayRoomMode(){return 0}\nfunction bindPlayRoomModeButtons(){return 0}\ntail';
+ const setupAfter=setupBefore.replace('selectPlayExistingRoom(r){return 0','selectPlayExistingRoom(r){return 2').replace('flushPlayRoomMode(){return 0','flushPlayRoomMode(){// ROOM_MODE_REQUIRES_EMPTY_RESET; return 3');
+ const uiBefore='head\nasync function playCompletionNext(choice){return 0}\nfunction initPlayCompletion(){return 0}\ntail';
+ const uiAfter=uiBefore.replace('return 0',"transactionId:'completed-leave-'; return 1");
+ const appBefore=setupBefore+'\n'+uiBefore;
+ const appAfter=setupAfter+'\n'+uiAfter;
+ const files=[
+  modified('src/index.js',workerBefore,workerAfter),
+  modified('server-game/src/30-village-and-setup.part',setupBefore,setupAfter),
+  modified('server-game/src/50-roles-and-artifacts.part',uiBefore,uiAfter),
+  modified('server-game/current/app.js',appBefore,appAfter),
+  {path:'tests/post-match-room-cleanup.test.mjs',status:'A',after:'Hard room reset clears DEMO lease'},
+  {path:'docs/releases/post-match-room-demo-seat-20261026.md',status:'A',after:'Release notes'}
+ ];
+ assert.equal(classifyBrowserScope(files),'post-match-room-532');
+ assert.equal(classifyBrowserScope(files.filter(x=>x.path!=='server-game/current/app.js')),'full');
+ assert.equal(classifyBrowserScope([...files,modified('src/gmww-gallows-rules.js','a','b')]),'full');
+ assert.equal(classifyBrowserScope(files.map(x=>x.path==='src/index.js'?{...x,after:x.after+'\n// unwanted Worker change'}:x)),'full');
+ assert.equal(classifyBrowserScope(files.map(x=>x.path==='server-game/src/30-village-and-setup.part'?{...x,after:x.after+'\n// unexpected Seat change'}:x)),'full');
+});
+
+test('PR532 scoped CI selector permits only the exact isolated CI-only followup',()=>{
+ const paths=[
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/check-gm-free-icons-501.yml',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/releases/post-match-ci-scope-20261026.md'
+ ];
+ const files=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M',
+   before:'old',after:path==='tests/ci-browser-scope.test.mjs'?'PR532 scoped CI selector':'CI routing'}));
+ assert.equal(classifyBrowserScope(files),'postmatch-ci-532');
+ assert.equal(classifyBrowserScope([...files,modified('server-game/current/app.js','a','b')]),'full');
+});

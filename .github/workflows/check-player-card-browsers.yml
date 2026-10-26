@@ -121,6 +121,34 @@ jobs:
           node-version: 22
       - name: Kiểm thử đúng luồng kết thúc và tạo ván tiếp theo
         run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs
+  postmatch-532-regression:
+    needs: scope
+    if: needs.scope.outputs.mode == 'post-match-room-532'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Tải mã nguồn
+        uses: actions/checkout@v4
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Chỉ kiểm thử giải phóng Seat và phục hồi DEMO sau ván
+        run: node --test tests/post-match-room-cleanup.test.mjs tests/forced-end-game.test.mjs tests/match-completion-server.test.mjs
+  postmatch-ci-532-policy:
+    needs: scope
+    if: needs.scope.outputs.mode == 'postmatch-ci-532'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Tải mã nguồn
+        uses: actions/checkout@v4
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Chỉ kiểm chứng hợp đồng phân loại CI PR532
+        run: node --test --test-name-pattern='PR532' tests/ci-browser-scope.test.mjs
   # On PR and safe CI-only main merges, run ONLY the selector policy test.
   ci-policy-test:
     needs: scope
