@@ -278,7 +278,14 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 $('open-setup').onclick=()=>{
   if(!productionCoreView)return;
   if(window.parent===window){notice('Hãy mở Arena 3D từ nút VÀO LÀNG của GMWW để dùng thiết lập ván hiện tại.');return;}
-  window.parent.postMessage({kind:'gmww-arena3d-open-setup'},location.origin);
+  // The selected Arena room must become the GMWW Core room BEFORE editing roles.
+  // Transfer a GM bearer only to the exact official same-origin parent;
+  // Core authenticates it independently. Never embed it in a URL.
+  if(code&&gmToken){
+    window.parent.postMessage({kind:'gmww-arena3d-adopt-room',roomCode:code,gmToken},location.origin);
+  }else{
+    window.parent.postMessage({kind:'gmww-arena3d-open-setup'},location.origin);
+  }
 };
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
