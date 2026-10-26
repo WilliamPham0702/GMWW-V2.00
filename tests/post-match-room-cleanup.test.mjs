@@ -36,7 +36,7 @@ test('Completed game: Room/Exit releases server seats before clearing the iPhone
   assert.equal(calls[0][2].expectedResetVersion,3);
   assert.ok(calls.findIndex(x=>x[0]==='disconnect')>0);
   assert.equal(state.roomCode,'—');
-  assert.deepEqual(state.selectedMemberIds,[]);
+  assert.deepEqual(Array.from(state.selectedMemberIds),[]);
   assert.equal(state.activePlayerId,'');
   assert.equal(state.matchId,'');
   assert.equal(runtime.players.length,0);
@@ -76,7 +76,7 @@ test('Old finished DEMO room: changing mode repairs remaining seats once, never 
   assert.deepEqual(calls.map(x=>x[0]),['/room-settings','/reset','/room-settings']);
   assert.equal(calls[1][1].preserveParticipants,false);
   assert.equal(scene.roomMode,'offline');
-  assert.deepEqual(scene.selectedMemberIds,[]);
+  assert.deepEqual(Array.from(scene.selectedMemberIds),[]);
   assert.equal(scene.activePlayerId,'');
   assert.equal(runtime.players.length,0);
   assert.equal(errors.length,0);
