@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.232';
+const VERSION='3.233';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3425,35 +3425,26 @@ function gmwwSetupFreeBattleIcons(){
       node.style.setProperty(name,value,'important');
     return p;
   };
-  // Battle shortcuts are now fixed in the lower rail, not floating/draggable.
-  // The compact sea group contains 🏖️ and 🌈; the remaining slots follow
-  // clock → sea group → action tray → ⛱️ → undo. Day actions retain their own UI.
-  let sea=document.getElementById('battleSeaShortcuts');
-  let actionSlot=document.getElementById('battleMainActionSlot');
+  // V3.233: five exclusive slots, never stack 🏖️ and 🌈 or show Undo here.
   const rail=document.getElementById('battleBottomControls');
   if(rail){
-    if(!sea){sea=document.createElement('div');sea.id='battleSeaShortcuts';sea.className='battle-sea-shortcuts';}
+    let actionSlot=document.getElementById('battleMainActionSlot');
     if(!actionSlot){actionSlot=document.createElement('div');actionSlot.id='battleMainActionSlot';actionSlot.className='battle-main-action-slot';}
-    for(const id of ['battleDayNoticeFloat','battleFactionStatsFloat']){
-      const item=document.getElementById(id);
-      if(!item)continue;
-      sea.appendChild(item);
-      item.classList.remove('gmww-free-icon');
-      for(const css of ['left','top','right','bottom','transform','width','height'])
-       item.style.removeProperty(css);
-    }
     for(const id of ['battleDayActionFloat','battleActionTray']){
       const item=document.getElementById(id);if(item)actionSlot.appendChild(item);
     }
-    for(const element of [document.getElementById('playBattleClockFloat'),sea,actionSlot,
-      document.getElementById('battleDayGallowsFloat'),document.getElementById('battleUndoFloat')])
-      if(element)rail.appendChild(element);
-    const gallows=document.getElementById('battleDayGallowsFloat');
-    if(gallows){
-      gallows.classList.remove('gmww-free-icon');
-      for(const css of ['left','top','right','bottom','transform','width','height'])
-       gallows.style.removeProperty(css);
+    for(const id of ['battleDayNoticeFloat','battleDayGallowsFloat','battleFactionStatsFloat']){
+      const item=document.getElementById(id);if(!item)continue;
+      item.classList.remove('gmww-free-icon');
+      for(const css of ['left','top','right','bottom','transform','width','height'])item.style.removeProperty(css);
     }
+    for(const item of [document.getElementById('playBattleClockFloat'),
+      document.getElementById('battleDayNoticeFloat'),actionSlot,
+      document.getElementById('battleDayGallowsFloat'),document.getElementById('battleFactionStatsFloat')])
+      if(item)rail.appendChild(item);
+    document.getElementById('battleSeaShortcuts')?.remove();
+    const undo=document.getElementById('battleUndoFloat');
+    if(undo){rail.appendChild(undo);undo.hidden=true;}
   }
   // DEMO alone keeps its independent floating shortcut/expanded panel.
   for(const id of ['battleDemoObserver']){
