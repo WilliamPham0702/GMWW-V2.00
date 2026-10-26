@@ -7976,3 +7976,97 @@ body.play-immersive #start #playShell[data-step="battle"] #battleFactionStats{
 }
 #battleFireIconDock.is-pending{pointer-events:none!important}
 #battleFireIconDock.is-pending .battle-fire-icon{opacity:.47!important;pointer-events:none!important}
+
+/* GMWW V3.229 — Restore native-size frameless drag icons; distinguish every active action. */
+#battleFireIconDock .battle-fire-icon{
+ width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;
+}
+#battleFireIconDock .battle-fire-icon img{
+ width:40px!important;height:40px!important;max-width:40px!important;
+}
+#battleFireIconDock .gmww-icon-rotation{
+ width:40px!important;height:40px!important;font-size:40px!important;
+}
+/* Five visual slots: Clock | (🏖️ and 🌈) | current actions | ⛱️ | Restore. */
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{
+ display:flex!important;align-items:stretch!important;gap:4px!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleSeaShortcuts{
+ position:relative!important;display:flex!important;flex-direction:column!important;
+ align-items:center!important;justify-content:space-evenly!important;
+ flex:0 0 54px!important;width:54px!important;min-width:54px!important;
+ height:64px!important;min-height:60px!important;max-width:54px!important;
+ gap:0!important;padding:0!important;margin:0!important;pointer-events:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleSeaShortcuts
+ :is(#battleDayNoticeFloat,#battleFactionStatsFloat){
+ position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+ right:auto!important;bottom:auto!important;transform:none!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 30px!important;width:54px!important;min-width:54px!important;max-width:54px!important;
+ height:30px!important;min-height:30px!important;max-height:30px!important;
+ margin:0!important;padding:0!important;background:transparent!important;
+ border:0!important;box-shadow:none!important;pointer-events:auto!important;
+ touch-action:manipulation!important;z-index:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleSeaShortcuts
+ :is(#battleDayNoticeFloat,#battleFactionStatsFloat)[hidden]{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleSeaShortcuts
+ :is(#battleDayNoticeToggle,#battleFactionStatsToggle){
+ display:grid!important;place-items:center!important;position:static!important;
+ min-width:0!important;max-width:54px!important;width:100%!important;
+ min-height:30px!important;max-height:30px!important;height:30px!important;
+ font-size:29px!important;line-height:30px!important;
+ margin:0!important;padding:0!important;background:transparent!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ touch-action:manipulation!important;cursor:pointer!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot{
+ position:relative!important;display:flex!important;align-items:stretch!important;
+ flex:1 1 0!important;min-width:0!important;width:auto!important;
+ padding:0!important;margin:0!important;pointer-events:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot
+ :is(#battleActionTray,#battleDayActionFloat){
+ position:relative!important;inset:auto!important;
+ min-width:0!important;max-width:100%!important;width:100%!important;
+ height:64px!important;min-height:60px!important;max-height:76px!important;
+ flex:1 1 auto!important;margin:0!important;pointer-events:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot
+ :is(#battleActionTray,#battleDayActionFloat)[hidden]{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleDayGallowsFloat{
+ position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+ right:auto!important;bottom:auto!important;transform:none!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 46px!important;width:46px!important;min-width:46px!important;max-width:46px!important;
+ height:64px!important;min-height:60px!important;
+ padding:0!important;margin:0!important;background:transparent!important;
+ border:0!important;box-shadow:none!important;pointer-events:auto!important;
+ touch-action:manipulation!important;z-index:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleDayGallowsFloat[hidden]{
+ display:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleDayGallowsToggle{
+ display:grid!important;place-items:center!important;width:46px!important;min-width:46px!important;
+ height:60px!important;min-height:60px!important;font-size:39px!important;
+ padding:0!important;margin:0!important;border:0!important;background:transparent!important;
+ box-shadow:none!important;touch-action:manipulation!important;cursor:pointer!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#playBattleClockFloat,#battleUndoFloat){
+ flex:0 0 59px!important;min-width:59px!important;max-width:59px!important;width:59px!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleClockButton{
+ touch-action:pan-y!important;
+}
+@media(max-width:375px){
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleSeaShortcuts{
+  flex-basis:48px!important;width:48px!important;min-width:48px!important;max-width:48px!important;
+ }
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+  :is(#playBattleClockFloat,#battleUndoFloat){
+  flex-basis:52px!important;width:52px!important;min-width:52px!important;max-width:52px!important;
+ }
+}
