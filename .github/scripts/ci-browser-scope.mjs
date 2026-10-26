@@ -1601,7 +1601,6 @@ function isWOLF01Scope(changes){
   has('docs/releases/GMWW-V3.239-wolf01-recognition-20261026.md','Rollback') &&
   has('.github/workflows/check-player-web.yml',"'wolf01-private-pack'");
 }
-export 
 // V3.240: strictly metadata-only OTA release for the already-merged PR #532.
 // No game/role/native IPA edits are allowed. Match every byte outside the exact
 // version strings; unfamiliar diffs fall back to the normal full safety gate.
@@ -1660,7 +1659,7 @@ function isPostMatchV3240ReleaseScope(changes){
   return true;
 }
 
-function classifyBrowserScope(changes){
+export function classifyBrowserScope(changes){
   if(isWOLF01Scope(changes))return 'wolf01-private-pack';
   if(isPostMatchV3240ReleaseScope(changes))return 'post-match-room-532';
   if(isPostMatch532Scope(changes))return 'post-match-room-532';
