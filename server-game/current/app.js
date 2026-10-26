@@ -8184,6 +8184,8 @@ async function playCompletionNext(choice){
       playSceneRuntime.room=reset.room||playSceneRuntime.room;
       rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
       disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
+      // Otherwise playLiveMembers() reconstructs ghost Seat occupants from GM's stale selection.
+      playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';playSceneState.matchId='';
       playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
       closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='exit'){exitPlayImmersive({completed:true});return}await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
     }
