@@ -1344,7 +1344,42 @@ function isGM3234PostMergeReleaseGateScope(changes){
  return required.every(([path,token])=>by.get(path)?.after?.includes(token));
 }
 
+/* V3.235 — fail-closed, precisely scoped GM presentation-only dock / tools. */
+function isGM235GlassDockScope(changes){
+ const allowed=new Set([
+  '.github/scripts/ci-browser-scope.mjs','.github/scripts/prepare-update-channel.mjs',
+  '.github/workflows/check-gallows-redesign.yml','.github/workflows/check-gm-free-icons-501.yml',
+  '.github/workflows/check-dual-renderer.yml','.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  '.github/workflows/check-player-web.yml',
+  'docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md',
+  'package-lock.json','package.json',
+  'server-game/current/GMWW.html','server-game/current/app.js','server-game/current/style.css',
+  'server-game/src/00-core-and-library.part','server-game/src/20-members-and-roster.part',
+  'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'src/index.js','tests/ci-browser-scope.test.mjs',
+  'tests/gmww-v3233-audio-templates-dock.test.mjs',
+  'tests/gmww-v3234-phase-dock-gallows.test.mjs',
+  'tests/gmww-v3235-unified-glass-dock.test.mjs'
+ ]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ if(by.size!==allowed.size||changes.some(x=>!allowed.has(x.path)||!['M','A'].includes(x.status)))return false;
+ const required=[
+  ['src/index.js','VERSION="V3.235"'],
+  ['server-game/current/app.js',"const VERSION='3.235'"],
+  ['server-game/current/style.css','V3.235 unified GM'],
+  ['server-game/current/GMWW.html','gmww-cloudflare-label">CLOUDFLARE</b>'],
+  ['tests/gmww-v3235-unified-glass-dock.test.mjs','V3.235: five daytime text controls'],
+  ['docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md','Rollback'],
+  ['.github/workflows/check-player-web.yml',"'gm-ui-glass-3235'"],
+  ['package.json','"version": "3.235.0"']
+ ];
+ return required.every(([p,token])=>by.get(p)?.after?.includes(token));
+}
+
 export function classifyBrowserScope(changes){
+  if(isGM235GlassDockScope(changes))return 'gm-ui-glass-3235';
   if(isGM3234PostMergeReleaseGateScope(changes))return 'phase-dock-gallows-3234';
   if(isPhaseDockGallows3234Scope(changes))return 'phase-dock-gallows-3234';
   if(isIconArtworkPolicyScope(changes))return 'icon-artwork-policy';
@@ -1419,6 +1454,7 @@ function detect(){
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isGM235GlassDockScope(changes))return{mode:'gm-ui-glass-3235',reason:'V3.235 GM glass-only dock, clock, rainbow and Cloudflare UI'};
       if(isGM3234PostMergeReleaseGateScope(changes)||isPhaseDockGallows3234Scope(changes))return{mode:'phase-dock-gallows-3234',reason:'V3.234 scoped GM Đêm/Ngày/Gallows release and post-merge CI gate'};
       if(isGM3233AudioUICIScope(changes))return{mode:'gm-ui-audio-3233',reason:'V3.233: exactly four GM UI/Audio fixes'};
       if(isRuntimeWarning3232Scope(changes))return{mode:'runtime-warning-3232',reason:'Owner V3.232 Runtime diagnostics and OTA gates only'};

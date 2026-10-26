@@ -2,7 +2,7 @@
 const GMWW_SETTINGS_TOOL_LABELS=Object.freeze({
   settingsRunHealth:'HEALTHY CHECK',settingsOptimizeDO:'TỐI ƯU DO',
   auditLocalData:'KIỂM TRA',clearRuntimeCache:'DỌN CACHE',reloadApp:'TẢI LẠI',
-  gmwwCloudflareOpen:'QUẢN LÝ CLOUDFLARE',gmwwServerTrashOpen:'DỌN RÁC SERVER',
+  gmwwCloudflareOpen:'CLOUDFLARE',gmwwServerTrashOpen:'DỌN RÁC SERVER',
   opsRunFullAudit:'KIỂM TRA TỔNG',opsCheckRoom:'PHÒNG & REALTIME',opsCheckRelease:'PHIÊN BẢN',
   checkServerHealth:'KIỂM TRA SERVER',refreshServerData:'ĐỒNG BỘ SERVER',openPlayerWeb:'MỞ WEB',
   runSystemDiagnostics:'QUÉT LỖI',quickRepairSystem:'SỬA NHANH',checkPlayerWebNow:'CHECK WEB'

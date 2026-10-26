@@ -339,3 +339,39 @@ test('V3.234 post-merge push CI is scoped to four verified CI/release-note files
  const scopeSource=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
  assert.match(scopeSource,/if\(isGM3234PostMergeReleaseGateScope\(changes\)\|\|isPhaseDockGallows3234Scope\(changes\)\)return\{mode:'phase-dock-gallows-3234'/);
 });
+
+test('V3.235 scoped GM glass dock checks only the exact UI release files',()=>{
+ const paths=[
+  '.github/scripts/ci-browser-scope.mjs','.github/scripts/prepare-update-channel.mjs',
+  '.github/workflows/check-player-web.yml','docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md',
+  '.github/workflows/check-gallows-redesign.yml','.github/workflows/check-gm-free-icons-501.yml',
+  '.github/workflows/check-dual-renderer.yml','.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  'package-lock.json','package.json','server-game/current/GMWW.html',
+  'server-game/current/app.js','server-game/current/style.css',
+  'server-game/src/00-core-and-library.part','server-game/src/20-members-and-roster.part',
+  'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'src/index.js','tests/ci-browser-scope.test.mjs',
+  'tests/gmww-v3233-audio-templates-dock.test.mjs',
+  'tests/gmww-v3234-phase-dock-gallows.test.mjs','tests/gmww-v3235-unified-glass-dock.test.mjs'
+ ];
+ const tokens={
+  'src/index.js':'VERSION="V3.235"',
+  'server-game/current/app.js':"const VERSION='3.235'",
+  'server-game/current/style.css':'V3.235 unified GM',
+  'server-game/current/GMWW.html':'gmww-cloudflare-label">CLOUDFLARE</b>',
+  'tests/gmww-v3235-unified-glass-dock.test.mjs':'V3.235: five daytime text controls',
+  'docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md':'Rollback',
+  '.github/workflows/check-player-web.yml':"'gm-ui-glass-3235'",
+  'package.json':'"version": "3.235.0"'
+ };
+ const c=paths.map(path=>({
+  path,status:['tests/gmww-v3235-unified-glass-dock.test.mjs','docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md'].includes(path)?'A':'M',
+  before:'prior',after:tokens[path]||'UI only'
+ }));
+ assert.equal(classifyBrowserScope(c),'gm-ui-glass-3235');
+ assert.equal(classifyBrowserScope(c.slice(1)),'full','Missing file may not bypass full gate');
+ assert.equal(classifyBrowserScope([...c,modified('src/gmww-gallows-rules.js','a','b')]),'full','Core changes fail closed');
+ assert.equal(classifyBrowserScope(c.map(x=>x.path==='src/index.js'?{...x,after:'VERSION="V3.234"'}:x)),'full','Runtime version required');
+ assert.equal(classifyBrowserScope(c.map(x=>x.path==='docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md'?{...x,after:'no notes'}:x)),'full','Release notes required');
+});

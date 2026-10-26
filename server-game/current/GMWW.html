@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.234</title>
-<link rel="stylesheet" href="style.css?v=gmww-v3234-phase-gallows-five">
+<title>GMWW V3.235</title>
+<link rel="stylesheet" href="style.css?v=gmww-v3235-glass-dock">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -227,9 +227,9 @@
 
 
 
-        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Thông cáo · Hành động · Lên Giàn · Thống kê phe">
+        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Báo · Hành động · Lên Giàn · Khôi phục">
         <section id="playBattleClockFloat" class="battle-clock-float-v396" aria-label="Đồng hồ đếm ngược trong thanh dưới" hidden>
-          <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
+          <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><small class="battle-clock-caption" aria-hidden="true">ĐỒNG HỒ</small><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
         </section>
 
         <section id="battleFactionStatsFloat" class="battle-faction-stats-float" aria-label="Thống kê các phe" hidden>
@@ -237,7 +237,7 @@
         </section>
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleDayNoticeFloat" class="battle-day-icon-float" aria-label="Thông cáo Làng" hidden>
-          <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng">🏖️</button>
+          <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng">BÁO</button>
         </section>
         <section id="battleDayActionFloat" class="battle-day-icon-float" aria-label="Hành động ban ngày" hidden>
           <button id="battleDayActionToggle" type="button" aria-controls="battleDayActionMenu" aria-expanded="false"><span aria-hidden="true">✦</span><b>HÀNH ĐỘNG</b><small>Chọn chức năng</small></button>
@@ -251,7 +251,7 @@
           </div>
         </section>
         <section id="battleDayGallowsFloat" class="battle-day-icon-float" aria-label="Lên Giàn" hidden>
-          <button id="battleDayGallowsToggle" type="button" aria-label="Mở hoặc đóng Lên Giàn" aria-controls="battleGallowsPanel" aria-pressed="false" title="Lên Giàn">⛱️</button>
+          <button id="battleDayGallowsToggle" type="button" aria-label="Mở hoặc đóng Lên Giàn" aria-controls="battleGallowsPanel" aria-pressed="false" title="Lên Giàn">LÊN GIÀN</button>
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
           <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
@@ -671,7 +671,7 @@
         </div>
             <div class="settings-tool-inner gmww-cloudflare-card" id="gmwwCloudflareCard" aria-label="Quản lý Cloudflare">
               <div class="health-v236-actions">
-                <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>☁</span><b class="gmww-cloudflare-label"><span>QUẢN LÝ</span><span>CLOUDFLARE</span></b></button>
+                <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>☁</span><b class="gmww-cloudflare-label">CLOUDFLARE</b></button>
                 <button class="settings-action settings-action-server" id="gmwwServerTrashOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>♻</span><b>DỌN RÁC SERVER</b></button>
               </div>
             </div>
@@ -1004,7 +1004,7 @@
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
 <script src="action-icon-library.js?v=v3227-icon-action-v2"></script>
-<script src="app.js?v=gmww-v3234-phase-gallows-five"></script>
+<script src="app.js?v=gmww-v3235-glass-dock"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

@@ -27,7 +27,7 @@ test('Dock đêm Đồng hồ/Hành động/Khôi phục, dock ngày Đồng h�
  };
  const night=['playBattleClockFloat','battleActionTray','battleUndoFloat'];
  check('night',night);
- check('day',['playBattleClockFloat','battleActionTray','battleDayNoticeFloat','battleDayActionFloat',
+ check('day',['playBattleClockFloat','battleActionTray','battleUndoFloat','battleDayNoticeFloat','battleDayActionFloat',
   'battleDayGallowsFloat','battleFactionStatsFloat']);
  check('night',night);
  ctx.battleSyncPhaseDock('day',false);
@@ -57,10 +57,10 @@ test('Gallows keeps all eligible members while showing five rows with vertical s
  assert.match(css,/#battleGallowsPanel #battleGallowsMembers\{[\s\S]*?max-height:195px!important;[\s\S]*?overflow-y:auto!important/);
  assert.match(html,/id="battleGallowsBanDetails"/);
 });
-test('V3.234 Runtime only; Worker, source, HTML and OTA release notes agree',()=>{
- assert.match(read('src/index.js'),/VERSION="V3\.234"/);
- assert.match(app,/const VERSION='3\.234';/);
- assert.match(html,/<title>GMWW V3\.234<\/title>/);
- assert.match(read('package.json'),/"version": "3\.234\.0"/);
- assert.match(read('.github/scripts/prepare-update-channel.mjs'),/V3\.234: Dock Đêm giữ/);
+test('V3.235 Runtime only; Worker, source, HTML and OTA release notes agree',()=>{
+ assert.match(read('src/index.js'),/VERSION="V3\.235"/);
+ assert.match(app,/const VERSION='3\.235';/);
+ assert.match(html,/<title>GMWW V3\.235<\/title>/);
+ assert.match(read('package.json'),/"version": "3\.235\.0"/);
+ assert.match(read('.github/scripts/prepare-update-channel.mjs'),/V3\.235: Đồng bộ menu/);
 });
