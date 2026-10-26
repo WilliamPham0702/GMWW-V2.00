@@ -438,3 +438,16 @@ test('V3.238 scoped all-GM controls only; no unrelated Core, Player Web or IPA t
  assert.equal(classifyBrowserScope([...rows,modified('src/gmww-gallows-rules.js','old','new')]),'full');
  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='package.json'?{...x,after:'"version": "3.237.0"'}:x)),'full');
 });
+
+test('V3.238 deployment hotfix validates only duplicate-ID release workflow repair',()=>{
+ const paths=['.github/workflows/deploy-production.yml','.github/workflows/check-player-web.yml','.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs'];
+ const token={
+  '.github/workflows/deploy-production.yml':'V3.238 emergency:',
+  '.github/workflows/check-player-web.yml':"'gm238-deploy-repair'",
+  'tests/ci-browser-scope.test.mjs':'V3.238 deployment hotfix'
+ };
+ const rows=paths.map(path=>({path,status:'M',after:token[path]||'scope whitelist'}));
+ assert.equal(classifyBrowserScope(rows),'gm238-deploy-repair');
+ assert.equal(classifyBrowserScope(rows.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...rows,modified('server-game/current/app.js','a','b')]),'full');
+});
