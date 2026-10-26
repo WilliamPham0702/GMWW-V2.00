@@ -36,7 +36,7 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
   candidate:
     needs: scope
-    if: needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'gm-icons-501'
+    if: needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'gm-icons-501' && needs.scope.outputs.mode != 'lobby-gather-541'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -111,4 +111,54 @@ jobs:
             assets/updates/runtime/V3.238/manifest.json
             assets/updates/runtime/V3.238/manifest-runtime-3238.json
           if-no-files-found: error
+          retention-days: 14
+
+  lobby541-candidate:
+    name: PR541 V3.243 Runtime OTA SHA-256, no IPA
+    needs: scope
+    if: needs.scope.outputs.mode == 'lobby-gather-541'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Khôi phục bộ ảnh nguyên bản và kiểm tra SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="/tmp/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+          COUNT=0
+          if test -d "$SOURCE/assets/role-artwork-v251/original"; then
+            COUNT=$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')
+          fi
+          if ! test -s "$SOURCE/role-artwork-v251.js" || test "$COUNT" -ne 63; then
+            rm -rf "$SOURCE"
+            curl --fail --location --retry 4 --retry-delay 3 --output "$ARCHIVE" "$URL"
+            echo "$EXPECTED  $ARCHIVE" | sha256sum --check
+            unzip -q "$ARCHIVE" -d .
+          fi
+          test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+      - name: Verify focused V3.243 Runtime version and gameplay safety
+        run: |
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
+          test -s docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md
+      - name: Prepare reproducible Runtime OTA manifest with real hashes
+        run: node .github/scripts/prepare-update-channel.mjs runtime
+      - name: Verify manifest and actual file SHA-256
+        run: node .github/scripts/verify-prepared-runtime.mjs 3.243
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-V3.243-PR541-SHA256-CANDIDATE
+          path: |
+            assets/updates/latest.json
+            assets/updates/runtime/V3.243
           retention-days: 14

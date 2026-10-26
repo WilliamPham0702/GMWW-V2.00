@@ -54,6 +54,15 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: PR541 V3.243 — kiểm thử Sảnh Chờ, Tập Hợp, 3 chế độ và Sát Thủ
+        if: steps.scope.outputs.mode == 'lobby-gather-541'
+        run: |
+          node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md
       - name: V3.242 — chỉ audio icon và Yêu Tinh
         if: steps.scope.outputs.mode == 'fairy-audio-3242'
         run: |

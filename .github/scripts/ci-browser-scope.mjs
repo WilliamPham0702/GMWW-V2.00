@@ -1655,7 +1655,28 @@ export function isFairy3242PolicyScope(changes){
   new Set(changes.map(c=>c.path)).size===paths.size;
 }
 
+// PR541: reviewed GM-only roomless UI, no DO migration or Native IPA changes.
+const lobby541Paths=new Set(["server-game/src/00-core-and-library.part","server-game/src/20-members-and-roster.part","server-game/src/30-village-and-setup.part","server-game/src/40-battle-and-timeline.part","server-game/src/50-roles-and-artifacts.part","server-game/current/app.js","server-game/current/GMWW.html","server-game/current/style.css","src/index.js","package.json","package-lock.json","tests/lobby-gather-mode-assassin-20261027.test.mjs","docs/releases/GMWW-LOBBY-GATHER-ASSASSIN-20261027.md","docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md",".github/workflows/check-lobby-gather-assassin.yml",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-gallows-redesign.yml",".github/workflows/check-gm-free-icons-501.yml",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/deploy-production.yml"]);
+export function isLobbyGather541Scope(changes){
+ if(!Array.isArray(changes)||changes.length<12)return false;
+ const paths=new Set(changes.map(c=>c.path));
+ const required=['server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part','server-game/current/app.js','server-game/current/GMWW.html','tests/lobby-gather-mode-assassin-20261027.test.mjs','docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md','src/index.js','package.json','package-lock.json'];
+ if(paths.size!==changes.length||!required.every(p=>paths.has(p)))return false;
+ if(!changes.every(c=>lobby541Paths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ try{
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const gm=fs.readFileSync('server-game/current/app.js','utf8');
+  const worker=fs.readFileSync('src/index.js','utf8');
+  return pkg.version==='3.243.0'&&html.includes('<title>GMWW V3.243</title>')&&
+   gm.includes("const VERSION='3.243'")&&worker.includes('VERSION="V3.243"')&&
+   fs.readFileSync('docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md','utf8').includes('PR #541')&&
+   html.includes('class="play-gather-mode-row"')&&!html.includes('data-play-step="room"');
+ }catch{return false;}
+}
+
 export function classifyBrowserScope(changes){
+  if(isLobbyGather541Scope(changes))return 'lobby-gather-541';
   if(isFairy3242PolicyScope(changes))return 'fairy-ci-policy';
   if(isFairy3242Scope(changes))return 'fairy-audio-3242';
   if(isWITCH01Scope(changes))return 'witch01-old-witch';
@@ -1741,7 +1762,8 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
-      if(isFairy3242PolicyScope(changes))return{mode:'fairy-ci-policy',reason:'CI-only V3.242 routing'};
+      if(isLobbyGather541Scope(changes))return{mode:'lobby-gather-541',reason:'PR541 V3.243 exact GM Room/Gather UI only'};
+       if(isFairy3242PolicyScope(changes))return{mode:'fairy-ci-policy',reason:'CI-only V3.242 routing'};
       if(isFairy3242Scope(changes))return{mode:'fairy-audio-3242',reason:'Exact reviewed V3.242 blobs'};
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
@@ -1882,7 +1904,8 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='demo-475')console.log('PR #475: chi kiem DEMO Sat Thu/soi xet/audio/Len Gian, bao toan Worker/Player Web; khong kiem Card, Seat, OTA, IPA.');
   if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
   if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');
-  if(result.mode==='fairy-audio-3242')console.log('V3.242: audio icon và Yêu Tinh; không Card, Seat, 3D, IPA.');
+  if(result.mode==='lobby-gather-541')console.log('PR541: only Lobby/Gather/Mode/Assassin tests, no IPA, Chrome or 3D.');
+   if(result.mode==='fairy-audio-3242')console.log('V3.242: audio icon và Yêu Tinh; không Card, Seat, 3D, IPA.');
   if(result.mode==='fairy-ci-policy')console.log('CI-only V3.242; không thay game.');
   if(result.mode==='post-match-room-532')console.log('PR532: chỉ test kết thúc ván, Seat, DEMO, Worker syntax và nguồn app. Không build IPA.');
   if(result.mode==='postgame')console.log('Bỏ qua kiểm thử lá bài / 30 ghế / realtime nặng; chỉ chạy hồi quy kết thúc ván. Production vẫn kiểm thử toàn diện.');

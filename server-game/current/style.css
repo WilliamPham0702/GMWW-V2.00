@@ -8550,3 +8550,13 @@ body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > but
 body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[hidden]{
  display:none!important;
 }
+
+/* GMWW 2026-10-27: Online/Offline/DEMO belongs to Tập Hợp. */
+#playGatherToolbar .play-gather-mode-row{display:flex;width:100%;margin:0 0 6px}
+#playGatherToolbar .play-gather-mode-row #playRoomModeToggle{flex:1;width:100%;min-width:0;min-height:38px;border-radius:12px;border:1px solid rgba(164,226,240,.58);background:rgba(8,46,64,.76);color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em}
+#playGatherToolbar #playRoomModeToggle[data-mode="offline"]{border-color:rgba(248,193,126,.7);background:rgba(90,52,30,.75)}
+#playGatherToolbar #playRoomModeToggle[data-mode="online"]{border-color:rgba(104,232,190,.7);background:rgba(11,94,75,.75)}
+#playGatherToolbar #playRoomModeToggle[data-mode="demo"]{border-color:rgba(212,173,253,.75);background:rgba(95,45,115,.72)}
+#playGatherToolbar #playRoomModeToggle:disabled{opacity:.5}
+#start #playShell[data-step="battle"] #battleAssassinChoice>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#start #playShell[data-step="battle"] #battleAssassinChoice #battleTargetConfirm{display:block;width:100%;min-height:43px;margin:0;padding:5px;background:rgba(38,158,173,.85);border:1px solid rgba(180,244,246,.85);border-radius:11px;color:#fff;font-weight:900}
