@@ -64,6 +64,16 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           test -s docs/releases/GMWW-V3.228-do-write-optimizer-20261026.md
 
+      - name: V3.230 — chỉ kiểm thử thông báo 16 công cụ Cài đặt và chốt Runtime
+        if: steps.scope.outputs.mode == 'settings-notices-3230'
+        run: |
+          node --test tests/settings-unified-notices-v3230.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.230-settings-notices-20261026.md
+
       - name: Chỉ xác minh quy tắc CI AUTO VÁN (không chạy gameplay không liên quan)
         if: steps.scope.outputs.mode == 'auto-van-ci'
         run: |
