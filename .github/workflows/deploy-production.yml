@@ -659,9 +659,9 @@ jobs:
           done
           echo "::error::Chưa có CI Worker SUCCESS cùng SHA cho V3.227"; exit 1
 
-      # V3.228: owner-approved fixed bottom rail, icon spacing and multi-target selection; same-SHA Worker CI mandatory.
-      - name: Chốt Runtime V3.228 Icon iPhone bằng CI cùng SHA
-        id: icon_footer_3228
+      # V3.229: owner-approved fixed bottom rail, icon spacing and multi-target selection; same-SHA Worker CI mandatory.
+      - name: Chốt Runtime V3.229 Icon iPhone bằng CI cùng SHA
+        id: icon_footer_3229
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -670,12 +670,12 @@ jobs:
           set -euo pipefail
           echo "approved=false" >> "$GITHUB_OUTPUT"
           VERSION=$(node -p "require('./package.json').version")
-          if [ "$VERSION" != "3.228.0" ]; then exit 0; fi
-          test -s docs/releases/GMWW-V3.228-battle-icon-footer-20261026.md
+          if [ "$VERSION" != "3.229.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-v3228-battle-icons-footer.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs
-          grep -q 'GMWW V3.228' server-game/current/style.css
+          node --test tests/gmww-v3229-battle-icons-footer.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs
+          grep -q 'GMWW V3.229' server-game/current/style.css
           node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json'));if(m.count!==49||m.icons.length!==49)process.exit(1)"
           for TRY in $(seq 1 25); do
             RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
@@ -687,12 +687,12 @@ jobs:
               const r=a.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
               process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
             });")
-            echo "V3.228 Worker CI $TRY: $STATUS"
+            echo "V3.229 Worker CI $TRY: $STATUS"
             if [ "$STATUS" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
             case "$STATUS" in failure|timed_out|cancelled|action_required) exit 1;; esac
             sleep 8
           done
-          echo "::error::Chưa có CI Worker SUCCESS cùng SHA cho V3.228"; exit 1
+          echo "::error::Chưa có CI Worker SUCCESS cùng SHA cho V3.229"; exit 1
 
       # Normal release: browser gate is retained except tightly scoped verified
       # V3.203 owner-dispatched release and V3.204 gallows-focused release.
@@ -735,7 +735,7 @@ jobs:
           echo "::error::V3.224 thiếu CI 5 icon hoặc Worker cùng SHA"; exit 1
 
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3228.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true'
+        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
