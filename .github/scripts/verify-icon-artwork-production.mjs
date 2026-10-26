@@ -34,6 +34,6 @@ for(let i=0;i<entries.length;i+=5){
 for(const path of ['GMWW.html','app.js','action-icon-library.js']){
  const entry=files.find(x=>x.path===path);assert.ok(entry,path);
  const b=await fetchBytes(entry.url);assert.equal(sha(b),entry.sha256);
- assert.equal(sha(b),sha(fs.readFileSync('server-game/current/'+path)));
+ assert.equal(sha(b),sha(fs.readFileSync('assets/updates/runtime/V'+version+'/'+path)));
 }
 console.log(`PASS Production V${version}: 50 direct images + 50 OTA image SHA-256, runtime JS/HTML, notes, health, IPA unchanged.`);

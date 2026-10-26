@@ -9,10 +9,8 @@ export function isIconArtworkPolicyScope(changes){
  const paths=new Set(changes?.map(x=>x.path));
  return paths.has('.github/scripts/icon-artwork-scope.mjs')&&paths.has('.github/scripts/ci-browser-scope.mjs')&&paths.has('tests/icon-artwork-ci.test.mjs')&&changes.every(x=>policyPaths.has(x.path)&&['A','M'].includes(x.status));
 }
-function stripPicture(s){
- if(typeof s!=='string')return null;
- const a=s.indexOf('function picture(icon){'),b=s.indexOf('\nfunction auditCatalog()',a);
- return a<0||b<0?null:s.slice(0,a)+'PICTURE\n'+s.slice(b);
+function normalizePicture(s){
+ return s.replace("'action-icons/v3/'+encodeURIComponent(icon.assetId.replace(/\\.png$/,'.webp'))", "'action-icons/v2/'+encodeURIComponent(icon.assetId)");
 }
 function normalizeRuntime(s){
  return s.replace(/const VERSION='[0-9.]+';/,"const VERSION='VERSION';")
@@ -31,7 +29,7 @@ export function isIconArtworkScope(changes){
   if(safeFiles.has(path)||/^docs\/releases\/GMWW-V3\.\d+-approved-icons-20261026\.md$/.test(path))continue;
   if(typeof before!=='string'||typeof after!=='string')return false;
   if(path==='server-game/current/action-icon-library.js'){
-   if(!after.includes("'action-icons/v3/'")||stripPicture(before)===null||stripPicture(before)!==stripPicture(after))return false;
+   if(!after.includes("'action-icons/v3/'")||normalizePicture(before)!==normalizePicture(after))return false;
   }else if(['server-game/current/app.js','server-game/src/00-core-and-library.part','server-game/src/40-battle-and-timeline.part'].includes(path)){
    if(normalizeRuntime(before)!==normalizeRuntime(after))return false;
   }else if(path==='src/index.js'){

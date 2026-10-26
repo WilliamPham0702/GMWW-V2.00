@@ -36,3 +36,9 @@ test('CI-only policy does not allow product files',()=>{
 
 import {classifyBrowserScope} from '../.github/scripts/ci-browser-scope.mjs';
 test('selector routes artwork without changing legacy unknown-diff behavior',()=>{assert.equal(classifyBrowserScope(base()),'icon-artwork');assert.equal(classifyBrowserScope([item('src/index.js','before','gameplay')]),'full')});
+test('picture helper cannot hide data deletion or executable code between functions',()=>{
+ const rows=base();rows[3].after=rows[3].after.replace('\nfunction auditCatalog()', '\nlocalStorage.clear();\nfunction auditCatalog()');
+ assert.equal(isIconArtworkScope(rows),false);
+ const body=base();body[3].after=body[3].after.replace('return icon.image','localStorage.clear();return icon.image');
+ assert.equal(isIconArtworkScope(body),false);
+});
