@@ -42,3 +42,12 @@ test('picture helper cannot hide data deletion or executable code between functi
  const body=base();body[3].after=body[3].after.replace('return icon.image','localStorage.clear();return icon.image');
  assert.equal(isIconArtworkScope(body),false);
 });
+
+import fs from 'node:fs';
+test('Menu candidate excludes artwork and its CI policy while preserving other guards',()=>{
+ const w=fs.readFileSync(new URL('../.github/workflows/prepare-runtime-v3202-candidate.yml',import.meta.url),'utf8');
+ const guard=w.match(/candidate:\n\s+needs: scope\n\s+if: (.*)/)?.[1];
+ for(const mode of ['icon-artwork','icon-artwork-policy','gm-icons-501-release','gm-icons-501'])assert.ok(guard?.includes("needs.scope.outputs.mode != '"+mode+"'"),mode);
+ const paths=['.github/scripts/icon-artwork-scope.mjs','.github/scripts/ci-browser-scope.mjs','tests/icon-artwork-ci.test.mjs','.github/workflows/prepare-runtime-v3202-candidate.yml'];
+ assert.equal(classifyBrowserScope(paths.map(p=>item(p,null,''))),'icon-artwork-policy');
+});
