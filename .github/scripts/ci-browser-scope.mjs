@@ -1378,7 +1378,30 @@ function isGM235GlassDockScope(changes){
  return required.every(([p,token])=>by.get(p)?.after?.includes(token));
 }
 
+
+/* V3.236: fail closed to exactly approved campfire-menu and gallows vote change set. */
+function isGM236CampfireGallowsScope(changes){
+ const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-gallows-redesign.yml",".github/workflows/check-gm-free-icons-501.yml",".github/workflows/check-dual-renderer.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","docs/releases/GMWW-V3.236-menu-gallows-20261026.md","package-lock.json","package.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/current/style.css","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","server-game/src/50-roles-and-artifacts.part","src/gmww-gallows-rules.js","src/gmww-members-live.js","src/index.js","src/player-web-src/30-rooms-and-realtime.part","tests/ci-browser-scope.test.mjs","tests/gallows-panel-60s-controls.test.mjs","tests/gmww-v3236-menu-gallows.test.mjs"]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ if(by.size!==allowed.size||changes.some(x=>!allowed.has(x.path)||!['M','A'].includes(x.status)))return false;
+ const expected=[
+  ['src/index.js','VERSION="V3.236"'],
+  ['server-game/current/app.js',"const VERSION='3.236'"],
+  ['server-game/current/GMWW.html','id="battleGMChromeToggle"'],
+  ['server-game/current/style.css','GMWW V3.236'],
+  ['src/gmww-gallows-rules.js',"outcome:'no_lynch'"],
+  ['src/player-web-src/30-rooms-and-realtime.part',"'no_lynch'"],
+  ['tests/gmww-v3236-menu-gallows.test.mjs','V3.236 tied nomination'],
+  ['docs/releases/GMWW-V3.236-menu-gallows-20261026.md','Rollback'],
+  ['package.json','"version": "3.236.0"'],
+  ['.github/workflows/check-player-web.yml',"'gm-menu-gallows-3236'"],
+  ['.github/workflows/deploy-production.yml',"3.236.0"]
+ ];
+ return expected.every(([p,token])=>by.get(p)?.after?.includes(token));
+}
 export function classifyBrowserScope(changes){
+  if(isGM236CampfireGallowsScope(changes))return 'gm-menu-gallows-3236';
   if(isGM235GlassDockScope(changes))return 'gm-ui-glass-3235';
   if(isGM3234PostMergeReleaseGateScope(changes))return 'phase-dock-gallows-3234';
   if(isPhaseDockGallows3234Scope(changes))return 'phase-dock-gallows-3234';
@@ -1454,6 +1477,7 @@ function detect(){
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isGM236CampfireGallowsScope(changes))return{mode:'gm-menu-gallows-3236',reason:'V3.236 exact GM campfire UI and gallows ties; no IPA/Seat/3D'};
       if(isGM235GlassDockScope(changes))return{mode:'gm-ui-glass-3235',reason:'V3.235 GM glass-only dock, clock, rainbow and Cloudflare UI'};
       if(isGM3234PostMergeReleaseGateScope(changes)||isPhaseDockGallows3234Scope(changes))return{mode:'phase-dock-gallows-3234',reason:'V3.234 scoped GM Đêm/Ngày/Gallows release and post-merge CI gate'};
       if(isGM3233AudioUICIScope(changes))return{mode:'gm-ui-audio-3233',reason:'V3.233: exactly four GM UI/Audio fixes'};
