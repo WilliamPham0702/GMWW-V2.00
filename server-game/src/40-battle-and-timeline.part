@@ -1555,14 +1555,25 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
   }
 }
 
+/* V3.234 — phase-specific night and daytime dock. */
+function battleSyncPhaseDock(phase,visible){
+  const day=!!visible&&phase==='day',night=!!visible&&phase==='night';
+  const shell=document.getElementById('playShell');
+  if(shell)shell.dataset.battlePhase=visible?phase:'';
+  const slots={playBattleClockFloat:!!visible,battleActionTray:!!visible,
+    battleUndoFloat:night,battleDayNoticeFloat:day,battleDayActionFloat:day,
+    battleDayGallowsFloat:day,battleFactionStatsFloat:day};
+  for(const [id,show] of Object.entries(slots)){
+    const el=document.getElementById(id);if(el)el.hidden=!show;
+  }
+}
 function renderPlayBattle(){
   demoSyncScreenAwake();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible;
-  const statsFloat=document.getElementById('battleFactionStatsFloat');if(statsFloat)statsFloat.hidden=!visible;
   gmwwSetupFreeBattleIcons();
-  const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');const clockFloat=document.getElementById('playBattleClockFloat');if(clockFloat)clockFloat.hidden=!visible;
-  for(const id of ['battleActionTray','battleUndoFloat']){const el=document.getElementById(id);if(el)el.hidden=!visible}
+  battleSyncPhaseDock(playSceneState.phase,visible);
+  const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label',visible?'Đống lửa · Công cụ GM':'Đống lửa · Tạo phòng');
   if(!visible){
     for(const id of ['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver','battleFactionStats']){
       const node=document.getElementById(id);if(node)node.hidden=true;
@@ -1573,10 +1584,7 @@ function renderPlayBattle(){
   if(!visible){battleClear();battleState.key='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.quickType='';return}
   if(!battleRules()){document.getElementById('battleActionBar').textContent='Chưa tải được bộ điều khiển.';return}
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
-  const shell=document.getElementById('playShell');if(shell)shell.dataset.battlePhase=phase;
-  for(const id of ['battleDayNoticeFloat','battleDayActionFloat','battleDayGallowsFloat']){
-    const el=document.getElementById(id);if(el)el.hidden=phase!=='day';
-  }
+  // Visibility of all dock controls follows the current battle phase.
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);

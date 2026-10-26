@@ -46,7 +46,7 @@ test('Ván gợi ý / AUTO VÁN / THÊM MỚI share one row without duplicate co
  assert.match(css,/#playGameSheet \.play-template-actions-row\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
  assert.match(html,/class="play-auto-game-area"/);
 });
-test('Battle bottom row is clock → 🏖️ → actions → ⛱️ → 🌈, and hides Undo',()=>{
+test('Battle day row is clock → 🏖️ → actions → ⛱️ → 🌈; Undo returns at night',()=>{
  const a=source.indexOf('// V3.233: five exclusive slots'),b=source.indexOf('// DEMO alone keeps',a),dock=source.slice(a,b);
  assert.ok(a>=0&&b>a);
  const names=['playBattleClockFloat','battleDayNoticeFloat','battleMainActionSlot','battleDayGallowsFloat','battleFactionStatsFloat'];
@@ -55,13 +55,14 @@ test('Battle bottom row is clock → 🏖️ → actions → ⛱️ → 🌈, an
  assert.ok(order.every((v,i)=>v>=0&&(i===0||v>order[i-1])),JSON.stringify(order));
  assert.match(dock,/battleSeaShortcuts'\)\?\.remove\(\)/);
  assert.match(css,/#battleBottomControls #battleUndoFloat\{\s*display:none!important/);
+ assert.match(css,/data-battle-phase="night"\] #battleBottomControls #battleUndoFloat:not\(\[hidden\]\)/);
  assert.match(html,/id="battleUndoFloat"/,'Undo logic remains available');
 });
 test('Runtime source bundle and OTA metadata are intact',()=>{
  const pieces=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
  assert.equal(app,pieces.map(p=>fs.readFileSync('server-game/src/'+p,'utf8')).join(''));
- assert.match(app,/const VERSION='3\.233';/);
- assert.match(html,/<title>GMWW V3\.233<\/title>/);
- assert.match(fs.readFileSync('src/index.js','utf8'),/VERSION="V3\.233"/);
+ assert.match(app,/const VERSION='3\.234';/);
+ assert.match(html,/<title>GMWW V3\.234<\/title>/);
+ assert.match(fs.readFileSync('src/index.js','utf8'),/VERSION="V3\.234"/);
  assert.match(fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8'),/V3\.233: Sửa lỗi/);
 });

@@ -1305,7 +1305,26 @@ function isGM3233AudioUICIScope(changes){
  return required.every(([p,token])=>by.get(p)?.after?.includes(token));
 }
 
+/* V3.234 — fail closed: only phase-specific GM UI, five-row gallows and mandatory OTA metadata. */
+function isPhaseDockGallows3234Scope(changes){
+ const allowed=new Set(["server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","server-game/current/app.js","server-game/current/style.css","server-game/current/GMWW.html","src/index.js","package.json","package-lock.json",".github/scripts/prepare-update-channel.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-gallows-redesign.yml",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/check-dual-renderer.yml",".github/workflows/check-gm-free-icons-501.yml","tests/gmww-v3233-audio-templates-dock.test.mjs","tests/gmww-v3234-phase-dock-gallows.test.mjs","docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md"]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ if(by.size!==allowed.size||changes.some(x=>!allowed.has(x.path)||!['A','M'].includes(x.status)))return false;
+ const required=[
+  ['src/index.js','VERSION="V3.234"'],['server-game/current/app.js',"const VERSION='3.234'"],
+  ['server-game/src/40-battle-and-timeline.part','function battleSyncPhaseDock(phase,visible)'],
+  ['server-game/current/style.css','V3.234 — Đêm:'],
+  ['tests/gmww-v3234-phase-dock-gallows.test.mjs','Gallows keeps all eligible members'],
+  ['package.json','"version": "3.234.0"'],
+  ['docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md','rollback'],
+  ['.github/workflows/check-player-web.yml',"'phase-dock-gallows-3234'"]
+ ];
+ return required.every(([path,token])=>by.get(path)?.after?.includes(token));
+}
+
 export function classifyBrowserScope(changes){
+  if(isPhaseDockGallows3234Scope(changes))return 'phase-dock-gallows-3234';
   if(isIconArtworkPolicyScope(changes))return 'icon-artwork-policy';
   if(isIconArtworkScope(changes))return 'icon-artwork';
   if(isGM3233AudioUICIScope(changes))return 'gm-ui-audio-3233';
