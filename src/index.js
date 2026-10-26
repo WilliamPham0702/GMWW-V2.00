@@ -2163,7 +2163,7 @@ export class RoomDurableObject extends DurableObject {
         night:Number(meta.cycleNight||1),actorId,roleId,actionId,policy});
       if(!decision.ok)return j({ok:false,error:decision.error,
         message:decision.message||"Hành động không được phép theo luật vai trò."},409);
-      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,
+      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:targets,
         eventId:token,usedAt:new Date().toISOString(),currentUsage};
     }
     const undoKey="battleLastAction:"+matchId,
@@ -2273,7 +2273,7 @@ export class RoomDurableObject extends DurableObject {
       const claimedActor=normalizeLoginId(body.actorId||"");
       // Only the battle-action endpoint maintains the per-role nightly ledger,
       // limits and atomic Undo; never allow legacy GM interaction to bypass it.
-      if(!verifiedAuth&&body?.artifactId==null&&String(body?.actionId||"")&&
+      if(!verifiedAuth&&!body?.artifactId&&
          (step.kind==="role"&&step.roleId==="role_old_witch"||
           step.kind==="role-group"&&(step.roles||[]).some(r=>r.roleId==="role_old_witch")))
         return j({ok:false,error:"WITCH_USE_BATTLE_ACTION"},409);
