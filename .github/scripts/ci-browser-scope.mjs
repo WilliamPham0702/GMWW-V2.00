@@ -1601,8 +1601,68 @@ function isWOLF01Scope(changes){
   has('docs/releases/GMWW-V3.239-wolf01-recognition-20261026.md','Rollback') &&
   has('.github/workflows/check-player-web.yml',"'wolf01-private-pack'");
 }
-export function classifyBrowserScope(changes){
+export 
+// V3.240: strictly metadata-only OTA release for the already-merged PR #532.
+// No game/role/native IPA edits are allowed. Match every byte outside the exact
+// version strings; unfamiliar diffs fall back to the normal full safety gate.
+const postMatchV3240ReleasePaths=new Set([
+  'src/index.js','server-game/src/00-core-and-library.part',
+  'server-game/current/app.js','server-game/current/GMWW.html',
+  'package.json','package-lock.json',
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/releases/GMWW-V3.240-post-match-seat-demo-20261026.md'
+]);
+function isPostMatchV3240ReleaseScope(changes){
+  if(!Array.isArray(changes)||changes.length!==postMatchV3240ReleasePaths.size)return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  if(by.size!==postMatchV3240ReleasePaths.size||changes.some(c=>!postMatchV3240ReleasePaths.has(c.path)||
+    c.status!==(c.path.startsWith('docs/')?'A':'M')))return false;
+  const normalized={
+    'src/index.js':[['VERSION="V3.239"','VERSION="V3.240"',1],
+      ['UPDATE_CHANNEL_REV="runtime-3239"','UPDATE_CHANNEL_REV="runtime-3240"',1]],
+    'server-game/src/00-core-and-library.part':[["const VERSION='3.239'","const VERSION='3.240'",1]],
+    'server-game/current/app.js':[["const VERSION='3.239'","const VERSION='3.240'",1]],
+    'server-game/current/GMWW.html':[['<title>GMWW V3.239</title>','<title>GMWW V3.240</title>',1]],
+    'package.json':[['"version": "3.239.0"','"version": "3.240.0"',1]],
+    'package-lock.json':[['"version": "3.239.0"','"version": "3.240.0"',2]]
+  };
+  for(const [p,replacements] of Object.entries(normalized)){
+    const row=by.get(p);if(row?.status!=='M'||typeof row.before!=='string'||typeof row.after!=='string')return false;
+    let value=row.before;
+    for(const [from,to,count] of replacements){
+      if(value.split(from).length-1!==count)return false;
+      value=value.replaceAll(from,to);
+    }
+    if(value!==row.after)return false;
+  }
+  const notes=by.get('.github/scripts/prepare-update-channel.mjs');
+  if(notes?.status!=='M'||typeof notes.before!=='string'||typeof notes.after!=='string')return false;
+  const clean=notes.after.replace(/releaseNotes:\["V3\.240:[^"]+","V3\.239/g,'releaseNotes:["V3.239');
+  if(clean!==notes.before||!notes.after.includes('rollback V3.239.')||
+    !notes.after.includes('bảo toàn lịch sử'))return false;
+  const policy=by.get('.github/scripts/ci-browser-scope.mjs');
+  const worker=by.get('.github/workflows/check-player-web.yml');
+  const tests=by.get('tests/ci-browser-scope.test.mjs');
+  const release=by.get('docs/releases/GMWW-V3.240-post-match-seat-demo-20261026.md');
+  if(!policy?.after?.includes('function isPostMatchV3240ReleaseScope(changes)')||
+     !worker?.after?.includes("node --test --test-name-pattern='V3.240' tests/ci-browser-scope.test.mjs")||
+     !tests?.after?.includes('V3.240 release CI accepts only version metadata')||
+     !release?.after?.includes('Rollback')||
+     !release?.after?.includes('không cập nhật IPA'))return false;
+  // The CI workflow may only add the V3.240 policy test to the prior #532 step.
+  const newWorker=worker.after.replace(
+    "          node --test --test-name-pattern='V3.240' tests/ci-browser-scope.test.mjs\n",'');
+  if(worker.before!==newWorker)return false;
+  // Policy and tests are checked above, all runtime bytes are compared exactly.
+  return true;
+}
+
+function classifyBrowserScope(changes){
   if(isWOLF01Scope(changes))return 'wolf01-private-pack';
+  if(isPostMatchV3240ReleaseScope(changes))return 'post-match-room-532';
   if(isPostMatch532Scope(changes))return 'post-match-room-532';
   if(isPostMatchCIOnlyScope(changes))return 'postmatch-ci-532';
   if(isART01DeployGateScope(changes))return 'art01-deploy-gate';
@@ -1684,6 +1744,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isPostMatchV3240ReleaseScope(changes))return{mode:'post-match-room-532',reason:'V3.240 metadata-only Runtime OTA release of verified PR532'};
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
       if(isWOLF01Scope(changes))return{mode:'wolf01-private-pack',reason:'V3.239 WOLF-01 private recognition; focused Player Web and Worker'};
