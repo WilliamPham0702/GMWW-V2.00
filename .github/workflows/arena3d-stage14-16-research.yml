@@ -27,6 +27,7 @@ on:
       - "server-game/current/app.js"
       - "server-game/current/GMWW.html"
       - "tests/arena3d-production-gm-adapter.test.mjs"
+      - "tests/arena3d-production-gm-browser.mjs"
       - "tests/arena3d-native-gm-bridge.test.mjs"
       - "tests/arena3d-player-browser.mjs"
       - "tests/arena3d-stage13-*"
