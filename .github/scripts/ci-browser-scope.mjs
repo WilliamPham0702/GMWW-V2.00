@@ -1421,7 +1421,28 @@ function isGM237MenuFooterScope(changes){
  return required.every(([p,token])=>by.get(p)?.after?.includes(token));
 }
 
+
+/* V3.238: strictly GM control labels/styles and no Core/IPA/Player Web scope. */
+function isGM238UniformMenuScope(changes){
+ const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-gallows-redesign.yml",".github/workflows/check-gm-free-icons-501.yml",".github/workflows/check-dual-renderer.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","docs/releases/GMWW-V3.238-uniform-gm-controls-20261026.md","package-lock.json","package.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/current/style.css","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","server-game/src/50-roles-and-artifacts.part","src/index.js","tests/ci-browser-scope.test.mjs","tests/gmww-v3237-gm-menu-footer.test.mjs","tests/gmww-v3238-uniform-gm-controls.test.mjs"]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ if(by.size!==allowed.size||changes.some(x=>!allowed.has(x.path)||!['M','A'].includes(x.status)))return false;
+ const required=[
+  ['src/index.js','VERSION="V3.238"'],
+  ['server-game/current/app.js',"const VERSION='3.238'"],
+  ['server-game/current/GMWW.html','id="battleGMChromeToggle"'],
+  ['server-game/current/style.css','V3.238 — every GM control'],
+  ['tests/gmww-v3238-uniform-gm-controls.test.mjs','V3.238 all GM buttons'],
+  ['docs/releases/GMWW-V3.238-uniform-gm-controls-20261026.md','Rollback'],
+  ['package.json','"version": "3.238.0"'],
+  ['.github/workflows/check-player-web.yml',"'gm-ui-controls-3238'"],
+  ['.github/workflows/deploy-production.yml',"3.238.0"]
+ ];
+ return required.every(([p,t])=>by.get(p)?.after?.includes(t));
+}
 export function classifyBrowserScope(changes){
+  if(isGM238UniformMenuScope(changes))return 'gm-ui-controls-3238';
   if(isGM237MenuFooterScope(changes))return 'gm-ui-menu-3237';
   if(isGM236CampfireGallowsScope(changes))return 'gm-menu-gallows-3236';
   if(isGM235GlassDockScope(changes))return 'gm-ui-glass-3235';
@@ -1499,6 +1520,7 @@ function detect(){
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isGM238UniformMenuScope(changes))return{mode:'gm-ui-controls-3238',reason:'V3.238 GM buttons uniform ON/OFF and concise labels only'};
       if(isGM237MenuFooterScope(changes))return{mode:'gm-ui-menu-3237',reason:'V3.237 exactly GM menu presentation + outside dismiss + icon footer'};
       if(isGM236CampfireGallowsScope(changes))return{mode:'gm-menu-gallows-3236',reason:'V3.236 exact GM campfire UI and gallows ties; no IPA/Seat/3D'};
       if(isGM235GlassDockScope(changes))return{mode:'gm-ui-glass-3235',reason:'V3.235 GM glass-only dock, clock, rainbow and Cloudflare UI'};

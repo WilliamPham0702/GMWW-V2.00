@@ -418,3 +418,23 @@ test('V3.237 scoped GM menu & footer only, excluding game rules and unrelated te
  assert.equal(classifyBrowserScope([...rows,modified('src/gmww-gallows-rules.js','old','changed')]),'full');
  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='package.json'?{...x,after:'3.236.0'}:x)),'full');
 });
+
+test('V3.238 scoped all-GM controls only; no unrelated Core, Player Web or IPA test',()=>{
+ const paths=[".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-gallows-redesign.yml",".github/workflows/check-gm-free-icons-501.yml",".github/workflows/check-dual-renderer.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","docs/releases/GMWW-V3.238-uniform-gm-controls-20261026.md","package-lock.json","package.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/current/style.css","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","server-game/src/50-roles-and-artifacts.part","src/index.js","tests/ci-browser-scope.test.mjs","tests/gmww-v3237-gm-menu-footer.test.mjs","tests/gmww-v3238-uniform-gm-controls.test.mjs"];
+ const tokens={
+  'src/index.js':'VERSION="V3.238"',
+  'server-game/current/app.js':"const VERSION='3.238'",
+  'server-game/current/GMWW.html':'id="battleGMChromeToggle"',
+  'server-game/current/style.css':'V3.238 — every GM control',
+  'tests/gmww-v3238-uniform-gm-controls.test.mjs':'V3.238 all GM buttons',
+  'docs/releases/GMWW-V3.238-uniform-gm-controls-20261026.md':'Rollback',
+  'package.json':'"version": "3.238.0"',
+  '.github/workflows/check-player-web.yml':"'gm-ui-controls-3238'",
+  '.github/workflows/deploy-production.yml':'3.238.0'
+ };
+ const rows=paths.map(path=>({path,status:['tests/gmww-v3238-uniform-gm-controls.test.mjs','docs/releases/GMWW-V3.238-uniform-gm-controls-20261026.md'].includes(path)?'A':'M',after:tokens[path]||'approved'}));
+ assert.equal(classifyBrowserScope(rows),'gm-ui-controls-3238');
+ assert.equal(classifyBrowserScope(rows.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...rows,modified('src/gmww-gallows-rules.js','old','new')]),'full');
+ assert.equal(classifyBrowserScope(rows.map(x=>x.path==='package.json'?{...x,after:'"version": "3.237.0"'}:x)),'full');
+});

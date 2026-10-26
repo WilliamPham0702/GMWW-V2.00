@@ -814,7 +814,7 @@ function setPlayGameChromeHidden(hidden){
     menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0';
   }
   const toggle=document.getElementById('battleGMChromeToggle');
-  if(toggle){toggle.setAttribute('aria-pressed',String(!!hidden));toggle.textContent='ẨN MENU';toggle.title=hidden?'Nhấn để hiện lại menu trên và dưới':'Nhấn để ẩn menu trên và dưới'}
+  if(toggle){toggle.setAttribute('aria-pressed',String(!hidden));toggle.textContent='Menu';toggle.title=hidden?'Nhấn để bật hiển thị menu trên và dưới':'Nhấn để tắt hiển thị menu trên và dưới';toggle.setAttribute('aria-label','Menu trên và dưới: '+(hidden?'Tắt':'Bật'))}
 }
 function gmwwTogglePlayChrome(){
   gmwwPlayChromeHidden=!gmwwPlayChromeHidden;

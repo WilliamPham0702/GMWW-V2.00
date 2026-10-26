@@ -8,9 +8,9 @@ const battle=read('server-game/src/40-battle-and-timeline.part');
 const gm=read('server-game/src/50-roles-and-artifacts.part');
 
 test('V3.237 GM hide toggle matches Artifact and Vai Trò ON/OFF styling',()=>{
- assert.match(html,/id="battleGMChromeToggle"[^>]*aria-pressed="false"[^>]*>ẨN MENU<\/button>/);
- assert.match(gm,/toggle\.setAttribute\('aria-pressed',String\(!!hidden\)\)/);
- assert.match(gm,/toggle\.textContent='ẨN MENU'/);
+ assert.match(html,/id="battleGMChromeToggle"[^>]*aria-pressed="true"[^>]*>Menu<\/button>/);
+ assert.match(gm,/toggle\.setAttribute\('aria-pressed',String\(!hidden\)\)/);
+ assert.match(gm,/toggle\.textContent='Menu'/);
  assert.match(css,/#battleGMChromeToggle\[aria-pressed="true"\]/);
  assert.match(css,/color:#fff!important;font-size:12px!important;font-weight:1000!important/);
 });
@@ -38,7 +38,7 @@ test('V3.237 footer has no outer frame and icon buttons show no labels',()=>{
 test('V3.237 bundle and shell versions agree; Core and Player Web contracts unchanged',()=>{
  const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'];
  assert.equal(read('server-game/current/app.js'),parts.map(n=>read('server-game/src/'+n+'.part')).join(''));
- assert.match(read('src/index.js'),/VERSION="V3\.237"/);
- assert.match(read('package.json'),/"version": "3\.237\.0"/);
- assert.match(read('server-game/current/GMWW.html'),/GMWW V3\.237/);
+ assert.match(read('src/index.js'),/VERSION="V3\.238"/);
+ assert.match(read('package.json'),/"version": "3\.238\.0"/);
+ assert.match(read('server-game/current/GMWW.html'),/GMWW V3\.238/);
 });
