@@ -50,7 +50,8 @@ test('Battle bottom row is clock → 🏖️ → actions → ⛱️ → 🌈, an
  const a=source.indexOf('// V3.233: five exclusive slots'),b=source.indexOf('// DEMO alone keeps',a),dock=source.slice(a,b);
  assert.ok(a>=0&&b>a);
  const names=['playBattleClockFloat','battleDayNoticeFloat','battleMainActionSlot','battleDayGallowsFloat','battleFactionStatsFloat'];
- const order=names.map(x=>dock.indexOf("document.getElementById('"+x+"')"));
+ const slots=dock.slice(dock.indexOf('for(const item of [document.getElementById('),dock.indexOf('])',dock.indexOf('for(const item of [document.getElementById(')));
+ const order=names.map(x=>slots.indexOf("document.getElementById('"+x+"')"));
  assert.ok(order.every((v,i)=>v>=0&&(i===0||v>order[i-1])),JSON.stringify(order));
  assert.match(dock,/battleSeaShortcuts'\)\?\.remove\(\)/);
  assert.match(css,/#battleBottomControls #battleUndoFloat\{\s*display:none!important/);
