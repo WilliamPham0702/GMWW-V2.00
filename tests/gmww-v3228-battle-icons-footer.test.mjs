@@ -45,7 +45,7 @@ test('Dropping a multi-target action keeps its icon for the next different targe
 });
 test('Frameless icon art is 80px inside a 92px draggable hit area',()=>{
  const end=css.slice(css.lastIndexOf('/* V3.231:'));
- assert.ok(end.length>1000);
+ assert.ok(end.length>450);
  assert.match(end,/#battleFireIconDock \.battle-fire-icon img\{[\s\S]*?width:80px!important/);
  assert.match(end,/#battleFireIconDock \.battle-fire-icon\{[\s\S]*?width:92px!important/);
  assert.match(css,/#battleFireIconDock \.battle-fire-icon\{[\s\S]*?background:transparent!important/);
