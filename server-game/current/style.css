@@ -8463,3 +8463,50 @@ body.play-immersive #start #playShell[data-step="battle"] .battle-nomination-pea
  body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
  #battleUndoFloat:not([hidden]){flex-basis:44px!important;width:44px!important;min-width:44px!important;max-width:44px!important}
 }
+
+
+/* GMWW V3.237: shared campfire menu + icon-only unframed battle footer. */
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > #battleGMChromeToggle{
+ display:inline-flex!important;flex:0 0 132px!important;width:132px!important;min-width:132px!important;
+ height:44px!important;min-height:44px!important;max-height:44px!important;
+ padding:5px 8px!important;align-items:center!important;justify-content:center!important;
+ color:#fff!important;font-size:12px!important;font-weight:1000!important;
+ letter-spacing:0!important;line-height:1.15!important;text-align:center!important;
+ border-radius:12px!important;opacity:1!important;text-shadow:0 1px 2px #001b1c!important;
+ background:rgba(27,42,53,.76)!important;
+ border:2px solid rgba(129,158,161,.5)!important;
+ box-shadow:none!important;touch-action:manipulation!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > #battleGMChromeToggle[aria-pressed="true"]{
+ background:rgba(12,105,101,.93)!important;
+ border:2px solid rgba(123,252,222,.93)!important;
+ color:#fff!important;font-weight:1000!important;opacity:1!important;
+ box-shadow:inset 0 1px rgba(255,255,255,.15),0 0 7px rgba(99,243,204,.25)!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > #battleGMChromeToggle:focus-visible{
+ outline:2px solid rgba(255,244,181,.95)!important;outline-offset:2px!important;
+}
+/* No outer card: only individual glass icon buttons remain. */
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{
+ background:none!important;background-color:transparent!important;background-image:none!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;outline:0!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+ padding:0!important;margin:0!important;min-height:54px!important;max-height:54px!important;
+ height:54px!important;overflow:visible!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton > small,
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls .gmww-footer-hidden-label,
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleDayActionToggle > small{
+ display:none!important;visibility:hidden!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeToggle,#battleDayGallowsToggle,#battleUndoButton) > .gmww-footer-icon,
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleUndoButton > span .gmww-footer-icon{
+ display:block!important;visibility:visible!important;
+ width:27px!important;height:27px!important;min-width:27px!important;min-height:27px!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleUndoButton > span{
+ display:flex!important;visibility:visible!important;justify-content:center!important;align-items:center!important;
+}
