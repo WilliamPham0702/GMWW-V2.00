@@ -13,6 +13,7 @@ import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
+import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -33,7 +34,7 @@ const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+' })',{
   ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
-  resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
+  resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -67,11 +68,11 @@ async function result(response){return {status:response.status,...await response
 
 test('no Artifact produces no opening window; configured Artifacts preserve one owned opening window',async()=>{
   const h=harness({artifact:false}),rt=await h.runtime();
-  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-introduction','role','role','village-wakeup']);
+  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['role','role','village-wakeup']);
   assert.equal(timelineDisplaySteps(rt.queue).filter(x=>x.kind==='early-artifact-window').length,0);
   const h2=harness(),r2=await h2.runtime();
-  assert.deepEqual(Array.from(r2.queue.slice(0,2),x=>x.kind),['early-artifact-window','wolf-introduction']);
-  assert.equal(r2.queue[2].loginIds.length,2);assert.equal(r2.queue[2].artifacts[0].loginId,'alice');
+  assert.deepEqual(Array.from(r2.queue.slice(0,2),x=>x.kind),['early-artifact-window','role']);
+  assert.equal(r2.queue[1].loginIds.length,2);assert.equal(r2.queue[1].artifacts[0].loginId,'alice');
   assert.equal(h2.data.has('artifactUse:alice:mirror'),false);
   assert.equal(timelineDisplaySteps(r2.queue).filter(x=>x.kind==='early-artifact-window').length,1);
 });
