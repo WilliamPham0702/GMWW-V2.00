@@ -1154,7 +1154,8 @@ function isArena3dOfficialPortalScope(changes){
    "frame.title='GMWW Arena 3D — kết nối phòng chơi thật';"],
   ["/* This Runtime-only experiment keeps the 2D menu/game untouched.\n * WebKit handles HTTPS inside subframes; its main-frame external navigation would open Safari.\n * This on-demand iframe stays on independent STAGING Worker/DO (not Production rooms). */",
    "/* Official Arena 3D uses the same Production origin and authoritative Core as 2D.\n * WebKit keeps the 3D world in its own disposable iframe, while native/GMWW host\n * credentials are only transmitted by origin-checked one-frame postMessage.\n * Never send a GM token in URL or across an untrusted origin. */"]
- ];
+ ];,
+  ["  // Capture BEFORE app.js's target-level legacy \"Vào Làng => Trang Chơi\" handler.","  // GMWW keeps the one authoritative Role/Artifact editor until native 3D\n  // forms cover every Core rule. A verified Arena child can request the existing\n  // 2D setup screen; it cannot mutate role assignments through postMessage.\n  window.addEventListener('message',event=>{\n    if(event.origin!==new URL(arenaUrl).origin||\n       event.source!==frame?.contentWindow||!overlay||overlay.hidden||\n       event.data?.kind!=='gmww-arena3d-open-setup')return;\n    closeArena(true);\n  });\n  // Capture BEFORE app.js's target-level legacy \"Vào Làng => Trang Chơi\" handler."]
  let expected=entry.before;
  for(const [oldText,newText] of patches){
   if(expected.split(oldText).length!==2)return false;
