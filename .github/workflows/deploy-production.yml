@@ -786,7 +786,7 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           if [ "$VERSION" != "3.233.0" ]; then exit 0; fi
           test -s docs/releases/GMWW-V3.233-audio-templates-footer-20261026.md
-          grep -Fq "$('[data-system-sound-slot]').forEach" server-game/src/10-library-and-settings.part || {
+          grep -Fq 'data-system-sound-slot' server-game/src/10-library-and-settings.part || {
             echo "::error::GM audio selector missing"; exit 1;
           }
           grep -Fq 'play-template-actions-row' server-game/current/GMWW.html
