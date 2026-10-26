@@ -1441,7 +1441,19 @@ function isGM238UniformMenuScope(changes){
  ];
  return required.every(([p,t])=>by.get(p)?.after?.includes(t));
 }
+
+/* V3.238 deploy-only recovery — no Runtime, Player Web, IPA or Core changes. */
+function isGM238DeployGateRecovery(changes){
+ const allowed=new Set(['.github/workflows/deploy-production.yml','.github/workflows/check-player-web.yml','.github/workflows/check-dual-renderer.yml','.github/workflows/build-server-game-ipa.yml','.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs']);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ if(by.size!==allowed.size||changes.some(x=>!allowed.has(x.path)||x.status!=='M'))return false;
+ return by.get('.github/workflows/deploy-production.yml')?.after?.includes('V3.238 emergency:') &&
+  by.get('.github/workflows/check-player-web.yml')?.after?.includes("'gm238-deploy-repair'") &&
+  by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('V3.238 deployment hotfix');
+}
 export function classifyBrowserScope(changes){
+  if(isGM238DeployGateRecovery(changes))return 'gm238-deploy-repair';
   if(isGM238UniformMenuScope(changes))return 'gm-ui-controls-3238';
   if(isGM237MenuFooterScope(changes))return 'gm-ui-menu-3237';
   if(isGM236CampfireGallowsScope(changes))return 'gm-menu-gallows-3236';
@@ -1520,6 +1532,7 @@ function detect(){
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isGM238DeployGateRecovery(changes))return{mode:'gm238-deploy-repair',reason:'V3.238 fix duplicate release workflow step IDs only'};
       if(isGM238UniformMenuScope(changes))return{mode:'gm-ui-controls-3238',reason:'V3.238 GM buttons uniform ON/OFF and concise labels only'};
       if(isGM237MenuFooterScope(changes))return{mode:'gm-ui-menu-3237',reason:'V3.237 exactly GM menu presentation + outside dismiss + icon footer'};
       if(isGM236CampfireGallowsScope(changes))return{mode:'gm-menu-gallows-3236',reason:'V3.236 exact GM campfire UI and gallows ties; no IPA/Seat/3D'};
