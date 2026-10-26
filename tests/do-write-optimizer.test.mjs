@@ -34,3 +34,20 @@ test('directory never coalesces actual changes or lets its live lease expire',()
   assert.equal(shouldSkipDirectoryHeartbeat(base,{...base,resetVersion:1},now),false);
   assert.equal(shouldSkipDirectoryHeartbeat({...base,leaseUntil:now+99000},base,now),false);
 });
+
+test('settings button links to auth-protected read-only DO stats and versions stay synchronized',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const app=readFileSync('server-game/current/app.js','utf8');
+  const part=readFileSync('server-game/src/20-members-and-roster.part','utf8');
+  const html=readFileSync('server-game/current/GMWW.html','utf8');
+  const worker=readFileSync('src/index.js','utf8');
+  assert.match(html,/id="settingsRunHealth".*id="settingsOptimizeDO"/s);
+  assert.match(html,/id="settingsOptimizeDOStatus"/);
+  assert.match(app,/gmApi\('\/api\/gm\/storage-optimizer'/);
+  assert.match(part,/gmApi\('\/api\/gm\/storage-optimizer'/);
+  assert.match(worker,/if\(bearer\(request\)!==GM_SYNC_TOKEN\)return j\(\{ok:false,error:"UNAUTHORIZED"\},401\)/);
+  assert.match(worker,/url\.pathname==="\/api\/gm\/storage-optimizer"/);
+  assert.match(worker,/url\.pathname==="\/storage-optimizer\/stats"/);
+  assert.match(app,/const VERSION='3\.228';/);
+  assert.match(worker,/VERSION="V3\.228"/);
+});
