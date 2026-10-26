@@ -1167,7 +1167,7 @@ const gm3229Files=new Set([
  '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
  '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
  '.github/workflows/deploy-production.yml','.github/workflows/prepare-runtime-v3202-candidate.yml',
- 'tests/gmww-v3229-battle-icons-footer.test.mjs',
+ 'tests/gmww-v3228-battle-icons-footer.test.mjs',
  'tests/gmww-action-icon-stacking.test.mjs',
  'tests/gm-free-floating-shortcuts-20261025.test.mjs',
  'docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md'
@@ -1178,7 +1178,7 @@ function isGMFooter3229Scope(changes){
  for(const path of ['server-game/current/app.js','server-game/current/style.css',
   'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
   'server-game/current/GMWW.html','src/index.js','package.json',
-  'tests/gmww-v3229-battle-icons-footer.test.mjs',
+  'tests/gmww-v3228-battle-icons-footer.test.mjs',
   'docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md'])
   if(!map.has(path))return false;
  if(!changes.every(x=>gm3229Files.has(x.path)&&['A','M'].includes(x.status)))return false;
