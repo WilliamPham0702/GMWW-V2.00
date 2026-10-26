@@ -260,6 +260,9 @@ test('batched GM action reverses both targets and one Artifact use on server',as
   const h=harness({artifact:true,singleUse:true});
   await h.jump('early-artifact-window');
   const meta=await h.meta(),rt=await h.runtime();
+  // Match applyCycle: it saves the first night turn ID even when the first step
+  // is Artifact at index zero (jumping to the same index does not rewrite meta).
+  h.data.get('meta').currentNightTurnId=rt.currentId;
   const payload={turnId:rt.currentId,actorId:'alice',artifactId:'mirror',
     type:'frozen',actionId:'copy',effectId:'freeze',effectName:'Đóng Băng',
     targetIds:['bob','carol'],matchId:meta.matchId,cycleKey:meta.cycleKey,
