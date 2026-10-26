@@ -59,6 +59,9 @@ jobs:
             SHOULD_DEPLOY=false
             echo 'V3.227: chỉ sửa kiểm thử/định dạng/manifest SHA-256 đã kiểm tra – không phát hành Runtime trùng phiên bản.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          # Separate artwork CI-policy PR never publishes a duplicate Runtime.
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* ]]; then SHOULD_DEPLOY=false; fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
@@ -816,8 +819,25 @@ jobs:
           done
           echo "::error::V3.233 Worker CI unavailable at same SHA"; exit 1
 
+      - name: Xác minh phạm vi ảnh icon và CI thành công cùng SHA
+        id: icon_artwork_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$SCOPE" != "GMWW browser CI scope: icon-artwork |"* ]]; then exit 0; fi
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success
+          node --test tests/icon-artwork-v3.test.mjs tests/icon-artwork-ci.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "Ảnh icon: CI cùng SHA thành công; giữ kiểm tra Worker/OTA/SHA, không chạy Card/Seat/IPA ngoài phạm vi." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true'
+        if: steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -993,7 +1013,12 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy
 
+      - name: Kiểm tra Production bộ ảnh icon và OTA SHA-256
+        if: steps.icon_artwork_release.outputs.approved == 'true'
+        run: node .github/scripts/verify-icon-artwork-production.mjs
+
       - name: Kiểm tra Production sau triển khai
+        if: steps.icon_artwork_release.outputs.approved != 'true'
         shell: bash
         run: |
           set -euo pipefail

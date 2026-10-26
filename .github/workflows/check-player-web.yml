@@ -54,6 +54,18 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Chỉ kiểm thử bộ chọn phạm vi hình icon
+        if: steps.scope.outputs.mode == 'icon-artwork-policy'
+        run: node --test tests/icon-artwork-ci.test.mjs
+      - name: Kiểm thử ảnh minh họa, ánh xạ và kéo thả icon
+        if: steps.scope.outputs.mode == 'icon-artwork'
+        run: |
+          node --test tests/icon-artwork-v3.test.mjs tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/icon-artwork-ci.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check server-game/current/action-icon-library.js
+          python -m pip install Pillow==11.3.0
+          python tools/icons/package-approved-artwork.py --verify
+
       - name: V3.228 – chỉ kiểm thử giảm ghi DO, quyền GM, Cài đặt và Runtime
         if: steps.scope.outputs.mode == 'do-optimizer-3228'
         run: |
