@@ -8550,3 +8550,31 @@ body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > but
 body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[hidden]{
  display:none!important;
 }
+
+/* V3.242: Fairy picker uses the approved sea-blue action artwork (no emoji boxes). */
+#start #playShell[data-step="battle"] .gmww-transfer-card{
+  background:rgba(5,31,48,.92);border:1px solid rgba(236,195,109,.64);
+  border-radius:15px;padding:8px 7px;box-shadow:0 8px 22px #00152499;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-directions{gap:6px;width:100%}
+#start #playShell[data-step="battle"] .gmww-transfer-directions>button{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  min-width:85px;min-height:93px;padding:4px 5px;
+  border:1px solid transparent;border-radius:12px;background:transparent;
+  touch-action:manipulation;cursor:pointer;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-directions>button.is-selected{
+  background:rgba(26,112,139,.50);border-color:#edcf8c;box-shadow:0 0 0 1px #ffdfa677,0 0 13px #68deef66;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-directions>button:disabled{opacity:.5}
+#start #playShell[data-step="battle"] .gmww-transfer-art{position:relative;display:block;width:58px;height:58px;pointer-events:none}
+#start #playShell[data-step="battle"] .gmww-transfer-art>img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 5px #032039b0)}
+#start #playShell[data-step="battle"] .gmww-transfer-still{
+  position:absolute;inset:0;display:grid;place-items:center;font-size:39px;font-weight:900;
+  color:#ffe59a;text-shadow:0 2px 5px #002239,0 0 8px #064a67;line-height:1;
+}
+#start #playShell[data-step="battle"] .gmww-transfer-label{
+  font-size:11px;line-height:1.25;font-weight:800;white-space:nowrap;color:#fff7df;
+  letter-spacing:0;text-shadow:0 1px 3px #001e31;
+}
+@media(max-width:350px){#start #playShell[data-step="battle"] .gmww-transfer-directions>button{min-width:75px}}

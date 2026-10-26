@@ -627,6 +627,9 @@ function battleIconBind(){
   battleIconClearDrag();
   if(e.type!=='pointerup'||battleState.busy||battleState.syncPending||!a)return;
   if(!moved){
+   // A direct iPhone tap must play the configured action audio immediately,
+   // before opening the target picker or Fairy direction choices.
+   if(!playAudioMuted())void battlePlayConfiguredAudio('actions',a.actionId,a.name);
    if(battleIsTransfer(a)){battlePickAction(a.id);return}
    if(a.noTarget||a.targetCount===0){
     if(!confirm('Xác nhận '+a.name+'?'))return;
@@ -899,10 +902,19 @@ function battleRenderTransferPanel(){
   if(panel.dataset.sig===sig)return;panel.dataset.sig=sig;
   panel.hidden=!show;
   if(!show){panel.innerHTML='';return}
-  const options=[['left','↩️','Dịch trái'],['none','⏺️','Không dịch'],['right','↪️','Dịch phải']];
+  // Reuse the approved V3.241 watercolor icons. No emoji buttons or new
+  // action mappings: the neutral Fairy mark overlays her rotation icon.
+  const options=[['left','11_dich_trai.webp','Dịch trái'],
+    ['none','50_yeu_tinh_xoay.webp','Không dịch'],
+    ['right','12_dich_phai.webp','Dịch phải']];
   panel.innerHTML='<div class="gmww-transfer-card" title="Kéo vùng trống để di chuyển">'+
-    '<div class="gmww-transfer-directions" role="group" aria-label="Chọn dịch vết cắn theo vị trí bên trái, giữ nguyên hoặc bên phải của nạn nhân ban đầu">'+
-    options.map(([value,icon,label])=>'<button type="button" data-transfer="'+value+'" aria-label="'+label+'" aria-pressed="'+(dir===value)+'" title="'+label+'" '+(dir===value?'class="is-selected"':'')+'>'+icon+'</button>').join('')+
+    '<div class="gmww-transfer-directions" role="group" aria-label="Chọn Dịch trái, Không dịch hoặc Dịch phải">'+
+    options.map(([value,file,label])=>'<button type="button" data-transfer="'+value+
+      '" aria-label="'+label+'" aria-pressed="'+(dir===value)+'" title="'+label+'" '+
+      (dir===value?'class="is-selected"':'')+'>'+
+      '<span class="gmww-transfer-art"><img draggable="false" src="action-icons/v3/'+file+
+      '" alt="">'+(value==='none'?'<span class="gmww-transfer-still" aria-hidden="true">━</span>':'')+
+      '</span><span class="gmww-transfer-label">'+label+'</span></button>').join('')+
     '</div></div>';
   panel.querySelectorAll('[data-transfer]').forEach(button=>button.addEventListener('click',()=>{
     if(battleState.busy||battleState.syncPending)return;
@@ -1819,7 +1831,12 @@ async function battleConfirmDay(confirmed=false){
 }
 async function battleConfirm(confirmed=false){
   if(playSceneState.phase==='day'){await battleConfirmDay(confirmed);return}
-  const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
+  const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);
+  // The Fairy chooses a direction, not a player: her actual Server payload
+  // targets the actor for logging, never a manually selected victim.
+  if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||
+    (!transferAct&&battleState.targets.length!==a.targetCount)||
+    (transferAct&&!['left','none','right'].includes(battleState.transferDir)))return;
   if(a.actionId==='action_assassin_mark'&&!['👍','👎'].includes(battleState.assassinChoice)){playFlashError('Sát Thủ phải chọn 👍 hoặc 👎 trước khi xác nhận.');return}
   const expected=[playSceneRuntime.room?.matchId||'',playSceneState.phase,Math.max(1,Number(playSceneState.night)||1),t.id].join(':');
   if(expected!==battleState.key){playFlashError('Lượt đã thay đổi. Hãy chọn lại mục tiêu.');renderPlayBattle();return}
