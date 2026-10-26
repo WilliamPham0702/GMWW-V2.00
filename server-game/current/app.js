@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.231';
+const VERSION='3.232';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1752,15 +1752,57 @@ const reloadAppBtn=document.getElementById('reloadApp');if(reloadAppBtn)reloadAp
 
 /* V2.97 — self diagnostics for Server + Player Web */
 let gmwwDiagnosticBusy=false,gmwwRuntimeErrors=[];
-function gmwwCaptureRuntimeIssue(kind,message){
-  const text=String(message||'Lỗi không xác định').replace(/\s+/g,' ').trim().slice(0,220);
-  if(!text)return;
-  gmwwRuntimeErrors.unshift({kind:String(kind||'runtime'),message:text,at:Date.now()});
-  gmwwRuntimeErrors=gmwwRuntimeErrors.slice(0,8);
-  if(document.getElementById('settings')?.classList.contains('active'))setDiagnosticState('warn','PHÁT HIỆN LỖI','Đã ghi nhận lỗi Runtime',text);
+/* GMWW Runtime Warning Diagnostics — không tính lỗi tải ảnh là lỗi JavaScript. */
+const GMWW_RUNTIME_RECENT_MS=15*60*1000;
+const gmwwRuntimePromiseIssues=new WeakMap();
+function gmwwRecentRuntimeIssues(now=Date.now()){
+  gmwwRuntimeErrors=gmwwRuntimeErrors.filter(item=>Number.isFinite(item?.at)&&item.at<=now&&now-item.at<GMWW_RUNTIME_RECENT_MS);
+  const seen=new Set();
+  return gmwwRuntimeErrors.filter(item=>{
+    const signature=item.kind+'\u0000'+item.message;
+    if(seen.has(signature))return false;
+    seen.add(signature);return true;
+  });
 }
-window.addEventListener('error',event=>gmwwCaptureRuntimeIssue('javascript',event?.message||event?.error?.message));
-window.addEventListener('unhandledrejection',event=>gmwwCaptureRuntimeIssue('promise',event?.reason?.message||event?.reason));
+function gmwwCaptureRuntimeIssue(kind,message){
+  const raw=String(message??'').replace(/\s+/g,' ').trim();
+  // iOS/WebKit phát 'error' cho ảnh/tài nguyên thiếu message; request bị hủy là bình thường.
+  if(!raw||/^(?:AbortError\b|The operation was aborted\b|The user aborted a request\b)/i.test(raw))return null;
+  const text=raw.replace(/https?:\/\/[^\s"'<>]+/gi,'[URL đã ẩn]')
+    .replace(/\b(?:token|api[_-]?key|password|authorization)\s*[:=]\s*[^\s,;&]+/gi,'[thông tin ẩn]')
+    .slice(0,180);
+  const item={kind:String(kind||'javascript'),message:text,at:Date.now()};
+  gmwwRuntimeErrors.unshift(item);
+  gmwwRuntimeErrors=gmwwRuntimeErrors.slice(0,8);
+  if(document.getElementById('settings')?.classList.contains('active'))
+    setDiagnosticState('warn','PHÁT HIỆN LỖI','Đã ghi nhận lỗi Runtime',text);
+  return item;
+}
+window.addEventListener('error',event=>{
+  const message=event?.message||event?.error?.message;
+  if(!message){
+    // Chỉ thiếu script mới tác động logic; lỗi image/link đơn lẻ không phải crash Runtime.
+    if(String(event?.target?.tagName||'').toUpperCase()==='SCRIPT')
+      gmwwCaptureRuntimeIssue('javascript','Không tải được tệp JavaScript');
+    return;
+  }
+  gmwwCaptureRuntimeIssue('javascript',message);
+});
+window.addEventListener('unhandledrejection',event=>{
+  const reason=event?.reason;
+  if(reason?.name==='AbortError')return;
+  const item=gmwwCaptureRuntimeIssue('promise',typeof reason==='string'?reason:reason?.message||reason?.name||'');
+  if(item&&event?.promise&&(typeof event.promise==='object'||typeof event.promise==='function'))
+    gmwwRuntimePromiseIssues.set(event.promise,item);
+});
+window.addEventListener('rejectionhandled',event=>{
+  const promise=event?.promise;
+  if(!promise)return;
+  const item=gmwwRuntimePromiseIssues.get(promise);
+  if(!item)return;
+  gmwwRuntimePromiseIssues.delete(promise);
+  gmwwRuntimeErrors=gmwwRuntimeErrors.filter(issue=>issue!==item);
+});
 
 function setDiagnosticState(kind,status,summary,detail=''){
   const dot=document.getElementById('diagnosticDot'),pill=document.getElementById('diagnosticStatus'),sum=document.getElementById('diagnosticSummary'),hint=document.getElementById('diagnosticHint'),det=document.getElementById('diagnosticDetail');
@@ -1811,7 +1853,8 @@ async function runSystemDiagnostics({silent=false}={}){
     const m=update.data||{},runtime=String(m.runtimeVersion||''),shell=String(m.shellVersion||''),type=String(m.releaseType||'');
     if(update.ok&&runtime&&shell&&runtime!==shell&&type!=='runtime')warnings.push('Kênh cập nhật chưa đúng loại Runtime');
     if(server.ok&&server.latency>800)warnings.push('Server phản hồi chậm '+server.latency+' ms');
-    if(gmwwRuntimeErrors.length)warnings.push('Runtime ghi nhận '+gmwwRuntimeErrors.length+' lỗi gần đây');
+    const recentRuntimeIssues=gmwwRecentRuntimeIssues();
+    if(recentRuntimeIssues.length)warnings.push('Runtime: '+recentRuntimeIssues.length+' lỗi gần đây · '+recentRuntimeIssues[0].message);
     if(failures.length){
       setDiagnosticState('bad','PHÁT HIỆN LỖI',failures.length+' thành phần chưa đạt',failures.map(([k,v])=>k+': '+(v.error||'Lỗi')).slice(0,2).join(' • '));
       return{ok:false,failures,warnings,probes}
@@ -1835,7 +1878,7 @@ async function quickRepairSystem(){
     await syncPlayerWebUpdate();
     await checkAppUpdate({notify:false});
     await checkServerHealth();
-    gmwwRuntimeErrors=[];
+    // Không xóa lỗi thật chỉ để Health Check báo xanh; giữ cho đến khi hết hạn.
     const result=await runSystemDiagnostics({silent:true});
     if(result?.ok)setDiagnosticState(result.warnings?.length?'warn':'ok',result.warnings?.length?'CÒN CẢNH BÁO':'ĐÃ SỬA XONG',result.warnings?.length?'Các kết nối đã phục hồi, còn cảnh báo cần theo dõi.':'Server + Player Web đã được kiểm tra lại.',result.warnings?.slice(0,2).join(' • ')||'Không xoá dữ liệu game.');
   }catch(err){setDiagnosticState('bad','SỬA LỖI THẤT BẠI','Không hoàn tất được sửa nhanh.',String(err?.message||'Vui lòng thử lại.'))}
@@ -2086,9 +2129,9 @@ async function gmwwOpsRun({kind='all',silent=false}={}){
       }
     }
     if(runAll){
-      const errorCount=Array.isArray(gmwwRuntimeErrors)?gmwwRuntimeErrors.length:0;
+      const recentRuntimeIssues=gmwwRecentRuntimeIssues(),errorCount=recentRuntimeIssues.length;
       checks.runtime=gmwwOpsResult(errorCount?'warn':'ok',errorCount?errorCount+' CẢNH BÁO':'KHÔNG LỖI',
-        errorCount?'Thiết bị ghi nhận '+errorCount+' lỗi gần đây.':'Chưa ghi nhận lỗi JavaScript gần đây.',
+        errorCount?'Thiết bị ghi nhận '+errorCount+' lỗi JavaScript/Promise: '+recentRuntimeIssues[0].message:'Chưa ghi nhận lỗi JavaScript gần đây.',
         {count:errorCount});
     }
     gmwwOpsSnapshot={checkedAt:new Date().toISOString(),checks};
