@@ -1205,6 +1205,11 @@
        event.data?.kind!=='gmww-arena3d-open-setup')return;
     closeArena(true);
   });
+  // Room created in Arena must be authenticated by official GMWW Core and
+  // adopted into playSceneState BEFORE returning to role/Artifact setup.
+  window.addEventListener('gmww-arena3d-room-adopted',()=>{
+    if(overlay&&!overlay.hidden)closeArena(true);
+  });
   // Capture BEFORE app.js's target-level legacy "Vào Làng => Trang Chơi" handler.
   document.addEventListener('click',function(event){
     if(!event.target?.closest?.('#gmwwHomeEnterVillage'))return;
