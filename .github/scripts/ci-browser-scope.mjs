@@ -1459,7 +1459,32 @@ function isGM238DeployGateRecovery(changes){
   by.get('.github/workflows/check-player-web.yml')?.after?.includes("'gm238-deploy-repair'") &&
   by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('V3.238 deployment hotfix');
 }
+/* ART-01: exact Worker opening-turn contract; unrelated files and gameplay
+ * changes fall back to full checks. No Chrome Card/Seat/IPA/3D tests. */
+function isART01NightFlowScope(changes){
+ const allowed=new Set([
+  'src/index.js','src/gmww-game-scene-rules.js','src/gmww-night-turn-rules.js',
+  'tests/artifact-priority-first.test.mjs','tests/v389-night-runtime-integration.test.mjs',
+  'docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+ ]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ if(by.size!==allowed.size||changes.some(x=>!allowed.has(x.path)||!['M','A'].includes(x.status)))return false;
+ const worker=by.get('src/index.js');
+ const strippedBefore=outsideScope(worker?.before,'  async buildNightRuntime(meta,night){','  async artifactUsedInNight(meta,step){');
+ const strippedAfter=outsideScope(worker?.after,'  async buildNightRuntime(meta,night){','  async artifactUsedInNight(meta,step){');
+ if(strippedBefore===null||strippedAfter===null||strippedBefore!==strippedAfter)return false;
+ return by.get('src/index.js')?.after?.includes('ART-01: Night 1 always opens the Artifact stage') &&
+  by.get('src/gmww-game-scene-rules.js')?.after?.includes('ART-01: Night 1 starts with the Artifact stage') &&
+  by.get('src/gmww-night-turn-rules.js')?.after?.includes('ART-01 opening before Wolves') &&
+  by.get('tests/artifact-priority-first.test.mjs')?.after?.includes('ART-01 first-night Artifact stage') &&
+  by.get('tests/v389-night-runtime-integration.test.mjs')?.after?.includes('ART-01 skip from night two') &&
+  by.get('docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md')?.after?.includes('Rollback') &&
+  by.get('.github/workflows/check-player-web.yml')?.after?.includes("'art01-night-flow'");
+}
 export function classifyBrowserScope(changes){
+  if(isART01NightFlowScope(changes))return 'art01-night-flow';
   if(isGM238DeployGateRecovery(changes))return 'gm238-deploy-repair';
   if(isGM238UniformMenuScope(changes))return 'gm-ui-controls-3238';
   if(isGM237MenuFooterScope(changes))return 'gm-ui-menu-3237';
@@ -1528,6 +1553,7 @@ function detect(){
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
   if(process.env.GMWW_CI_EVENT==='push'){
+    // ART-01 on main must keep the same narrow tests as the reviewed PR.
     try{
       const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
       const changes=rows.map(line=>{
@@ -1536,6 +1562,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isART01NightFlowScope(changes))return{mode:'art01-night-flow',reason:'ART-01: only Artifact priority and first-night turn scheduler'};
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
