@@ -30,9 +30,20 @@ test('three familiar Artifacts default on, other Artifacts default off, explicit
 test('early priority schedules before normal roles but does not consume an unused Artifact',()=>{
   const owners=[{playerId:'member:p1',artifactId:'a',artifactName:'Tráng Gương',priorityFirst:true},{playerId:'member:p2',artifactId:'b',artifactName:'Mắt Tiên Tri',priorityFirst:false}];
   const normalTurns=[{kind:'role',playerId:'member:p3'},{kind:'artifact-main',playerId:'member:p1',artifactId:'a'},{kind:'artifact-main',playerId:'member:p2',artifactId:'b'}];
-  assert.deepEqual(buildNightQueue({night:1,normalTurns,artifactOwners:owners}).map(x=>x.kind),['wolf-introduction','early-artifact-window','role','artifact-main','artifact-main','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:1,normalTurns,artifactOwners:owners}).map(x=>x.kind),['early-artifact-window','wolf-introduction','role','artifact-main','artifact-main','village-wakeup']);
   assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners}).map(x=>x.kind),['early-artifact-window','role','artifact-main','artifact-main','village-wakeup']);
-  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners.map(x=>x.artifactId==='a'?{...x,used:true}:x)}).map(x=>x.kind),['early-artifact-window','role','artifact-main','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:2,normalTurns,artifactOwners:owners.map(x=>x.artifactId==='a'?{...x,used:true}:x)}).map(x=>x.kind),['role','artifact-main','village-wakeup']);
+});
+
+test('ART-01 first-night Artifact stage is conditional on match mode and later-night priority availability',()=>{
+  const owned=[{playerId:'member:p1',artifactId:'a',priorityFirst:true}];
+  const unprioritized=[{playerId:'member:p1',artifactId:'a',priorityFirst:false}];
+  assert.deepEqual(buildNightQueue({night:1,artifactOwners:owned,artifactsEnabled:false}).map(x=>x.kind),['wolf-introduction','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:1,artifactOwners:[],artifactsEnabled:true}).map(x=>x.kind),['early-artifact-window','wolf-introduction','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:1,artifactOwners:unprioritized}).map(x=>x.kind),['early-artifact-window','wolf-introduction','village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:2,artifactOwners:unprioritized}).map(x=>x.kind),['village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:2,artifactOwners:owned.map(x=>({...x,used:true}))}).map(x=>x.kind),['village-wakeup']);
+  assert.deepEqual(buildNightQueue({night:2,artifactOwners:owned}).map(x=>x.kind),['early-artifact-window','village-wakeup']);
 });
 
 test('no Artifact assigned means no opening Artifact turn in any night',()=>{const queue=buildNightQueue({night:3});assert.deepEqual(queue.map(x=>x.kind),['village-wakeup'])});
