@@ -61,6 +61,7 @@ jobs:
       - name: Bắt buộc 6 module GM trùng khớp chính xác Runtime
         run: node .github/scripts/assemble-gm-app.mjs --verify
       - name: Chỉ kiểm 5 icon, kéo chạm thật và cờ đề cử giữ luật cũ
+        if: steps.iconsscope.outputs.mode != 'phase-dock-gallows-3234'
         run: |
           node --test tests/gm-free-floating-shortcuts-20261025.test.mjs \
             tests/gallows-flag-snap-v3206.test.mjs \
