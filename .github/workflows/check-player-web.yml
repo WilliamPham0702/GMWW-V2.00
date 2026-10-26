@@ -112,6 +112,19 @@ jobs:
           node -e "const fs=require('fs'),crypto=require('crypto');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json','utf8'));let e=m.icons.find(x=>x.svg==='01_soi_xet.svg');let s=crypto.createHash('sha256').update(fs.readFileSync('assets/action-icons/v2/01_soi_xet.svg')).digest('hex');if(m.count!==49||e.sha256_svg!==s)process.exit(1)"
           test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
 
+      - name: V3.236 — Menu GM đống lửa và luật hòa phiếu Lên Giàn
+        if: steps.scope.outputs.mode == 'gm-menu-gallows-3236'
+        run: |
+          node --test tests/gmww-v3236-menu-gallows.test.mjs tests/gallows-panel-60s-controls.test.mjs tests/gallows-redesign-live.test.mjs
+          node --test --test-name-pattern='V3.236 scoped' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.236-menu-gallows-20261026.md
+
       - name: V3.235 — chỉ GM kính mờ, menu Ngày/Đêm, 🌈 và Cloudflare
         if: steps.scope.outputs.mode == 'gm-ui-glass-3235'
         run: |
