@@ -18,7 +18,7 @@ export function oldWitchReviveTargets(interactions,{matchId,night,actorId,player
  }
  return [...byLogin];
 }
-export function oldWitchActionCheck({actionId,actorId,targetIds,matchId,night,interactions=[],players={}}={}){
+export function oldWitchActionCheck({actionId,actorId,targetIds,matchId,night,interactions=[],usage=[],players={}}={}){
  const action=String(actionId||''),targets=Array.isArray(targetIds)?targetIds.map(id):[],actor=id(actorId),n=Math.max(1,Number(night)||1);
  if(!actor||!matchId||targets.length!==1||!targets[0])return{ok:false,error:'WITCH_INVALID_TARGET'};
  if(!['action_exile','action_revive'].includes(action))return{ok:false,error:'WITCH_INVALID_ACTION'};
@@ -33,7 +33,11 @@ export function oldWitchActionCheck({actionId,actorId,targetIds,matchId,night,in
    const lastNight=(Array.isArray(interactions)?interactions:[]).some(x=>
      same(x,matchId)&&x?.type==='expelled'&&x?.actionId==='action_exile'&&
      id(x?.actorId)===actor&&id(x?.loginId)===target&&Number(x?.night)===n-1&&x?.undone!==true);
-   if(lastNight)return{ok:false,error:'WITCH_CONSECUTIVE_EXILE',message:'Phù Thuỷ Già không được đuổi cùng một người hai đêm liên tiếp.'};
+   const previouslyUsed=(Array.isArray(usage)?usage:[]).some(x=>
+     same(x,matchId)&&x.roleId==='role_old_witch'&&x.actionId==='action_exile'&&
+     id(x.actorId)===actor&&Number(x.night)===n-1&&
+     (Array.isArray(x.targetIds)?x.targetIds:[]).some(t=>id(t)===target));
+   if(lastNight||previouslyUsed)return{ok:false,error:'WITCH_CONSECUTIVE_EXILE',message:'Phù Thuỷ Già không được đuổi cùng một người hai đêm liên tiếp.'};
  }
  return{ok:true};
 }
