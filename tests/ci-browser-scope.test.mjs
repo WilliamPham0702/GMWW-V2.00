@@ -440,7 +440,7 @@ test('V3.238 scoped all-GM controls only; no unrelated Core, Player Web or IPA t
 });
 
 test('V3.238 deployment hotfix validates only duplicate-ID release workflow repair',()=>{
- const paths=['.github/workflows/deploy-production.yml','.github/workflows/check-player-web.yml','.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs'];
+ const paths=['.github/workflows/deploy-production.yml','.github/workflows/check-player-web.yml','.github/workflows/check-dual-renderer.yml','.github/workflows/build-server-game-ipa.yml','.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs'];
  const token={
   '.github/workflows/deploy-production.yml':'V3.238 emergency:',
   '.github/workflows/check-player-web.yml':"'gm238-deploy-repair'",
