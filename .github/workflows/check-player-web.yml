@@ -272,7 +272,7 @@ jobs:
       - name: "Arena 3D official: Core/Player, GM room token, native portal, phòng thật"
         if: steps.scope.outputs.mode == 'arena3d-official'
         run: |
-          node --test tests/arena3d-ci-focused-scope.test.mjs tests/arena3d-room-adoption.test.mjs tests/arena3d-portal-handoff.test.mjs tests/arena3d-native-gm-bridge.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-gm-end.test.mjs tests/arena3d-player-public.test.mjs tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-stage33-parity.test.mjs tests/gmww-gm-app-source-modules.test.mjs
+          node --test tests/arena3d-ci-focused-scope.test.mjs tests/arena3d-room-adoption.test.mjs tests/arena3d-portal-handoff.test.mjs tests/arena3d-native-gm-bridge.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-gm-end.test.mjs tests/arena3d-player-public.test.mjs tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-stage33-parity.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
