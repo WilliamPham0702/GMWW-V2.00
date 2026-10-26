@@ -44,7 +44,7 @@ test('Dropping a multi-target action keeps its icon for the next different targe
  assert.match(block,/if\(!target\|\|!a\.targetCount\)return/);
 });
 test('Icon art is frameless at 40px inside a 50px draggable hit area',()=>{
- const end=css.slice(css.lastIndexOf('/* GMWW V3.228'));
+ const end=css.slice(css.lastIndexOf('/* GMWW V3.229'));
  assert.ok(end.length>1000);
  assert.match(end,/#battleFireIconDock \.battle-fire-icon img\{[\s\S]*?width:40px!important/);
  assert.match(end,/#battleFireIconDock \.battle-fire-icon\{[\s\S]*?width:50px!important/);
