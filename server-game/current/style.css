@@ -8141,3 +8141,106 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
 #battleFireIconDock .battle-fire-icon{width:92px!important;height:92px!important;min-width:92px!important;min-height:92px!important;background:transparent!important;border:0!important;box-shadow:none!important}
 #battleFireIconDock .battle-fire-icon img{width:80px!important;height:80px!important;max-width:80px!important;object-fit:contain!important;background:transparent!important;border:0!important}
 #battleFireIconDock .gmww-icon-rotation{width:80px!important;height:80px!important;font-size:80px!important;line-height:1!important}
+
+
+/* GMWW V3.233: Cloudflare two-line label, same tile dimensions. */
+#settings #settingsGroupHealth #gmwwCloudflareOpen .gmww-cloudflare-label{
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+ gap:1px!important;min-width:0!important;max-width:100%!important;width:100%!important;
+ font-size:10px!important;line-height:1.1!important;white-space:nowrap!important;
+ word-break:normal!important;overflow-wrap:normal!important;letter-spacing:-.15px!important;
+}
+#settings #settingsGroupHealth #gmwwCloudflareOpen .gmww-cloudflare-label>span{
+ display:block!important;font:inherit!important;max-width:100%!important;
+}
+/* Three distinct, equally sized row actions on iPhone. */
+#playGameSheet .play-template-actions-row{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:6px!important;align-items:stretch!important;min-width:0!important;width:100%!important;
+ margin:8px 0 6px!important;
+}
+#playGameSheet .play-template-actions-row .play-template-suggested,
+#playGameSheet .play-template-actions-row .play-auto-game-area,
+#playGameSheet .play-template-actions-row #playGameTemplateAdd{
+ box-sizing:border-box!important;min-width:0!important;width:100%!important;
+ height:58px!important;min-height:58px!important;max-height:58px!important;margin:0!important;
+}
+#playGameSheet .play-template-actions-row .play-template-suggested{
+ display:flex!important;flex-direction:column!important;justify-content:center!important;gap:3px!important;
+ padding:5px 6px!important;border-radius:12px!important;border:1px solid rgba(154,222,245,.55)!important;
+ background:rgba(5,47,74,.86)!important;
+}
+#playGameSheet .play-template-actions-row .play-template-suggested>span{
+ display:block!important;font-size:10px!important;font-weight:900!important;color:#f3edc1!important;
+ white-space:nowrap!important;text-align:center!important;
+}
+#playGameSheet .play-template-actions-row #playGameTemplateSelect{
+ box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:100%!important;
+ height:27px!important;min-height:27px!important;margin:0!important;
+ padding:2px 10px 2px 3px!important;font-size:11px!important;line-height:1.1!important;
+ text-overflow:ellipsis!important;
+}
+#playGameSheet .play-template-actions-row .play-auto-game-area{display:flex!important;align-items:stretch!important}
+#playGameSheet .play-template-actions-row .play-auto-game-area[hidden]{display:none!important}
+#playGameSheet .play-template-actions-row .play-template-add{
+ box-sizing:border-box!important;min-width:0!important;width:100%!important;
+ height:58px!important;min-height:58px!important;max-height:58px!important;
+ margin:0!important;padding:6px 4px!important;border-radius:12px!important;
+ font-size:11px!important;line-height:1.2!important;white-space:normal!important;
+ text-align:center!important;overflow:hidden!important;
+}
+#playGameSheet .play-game-sheet-card[data-mode="library"] .play-template-actions-row{
+ grid-template-columns:minmax(0,2fr) minmax(0,1fr)!important;
+}
+/* Clock | 🏖️ | Action | ⛱️ | 🌈, never stack or float within the dock. */
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{
+ display:flex!important;flex-flow:row nowrap!important;align-items:stretch!important;
+ gap:4px!important;max-width:100%!important;min-width:0!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeFloat,#battleDayGallowsFloat,#battleFactionStatsFloat){
+ position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+ right:auto!important;bottom:auto!important;transform:none!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 43px!important;width:43px!important;min-width:43px!important;max-width:43px!important;
+ height:64px!important;min-height:60px!important;max-height:64px!important;
+ padding:0!important;margin:0!important;background:transparent!important;
+ border:0!important;box-shadow:none!important;z-index:auto!important;pointer-events:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeFloat,#battleDayGallowsFloat,#battleFactionStatsFloat)[hidden]{
+ display:none!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeToggle,#battleDayGallowsToggle,#battleFactionStatsToggle){
+ display:grid!important;place-items:center!important;position:static!important;
+ width:43px!important;min-width:43px!important;max-width:43px!important;
+ height:60px!important;min-height:60px!important;max-height:60px!important;
+ padding:0!important;margin:0!important;background:transparent!important;
+ border:0!important;box-shadow:none!important;font-size:32px!important;
+ line-height:1!important;touch-action:manipulation!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #playBattleClockFloat{
+ flex:0 0 57px!important;width:57px!important;min-width:57px!important;max-width:57px!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot{
+ flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;
+ overflow:hidden!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoFloat{
+ display:none!important;pointer-events:none!important;
+}
+@media(max-width:375px){
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{gap:2px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #playBattleClockFloat{
+  flex-basis:52px!important;width:52px!important;min-width:52px!important;max-width:52px!important;
+ }
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeFloat,#battleDayGallowsFloat,#battleFactionStatsFloat){
+  flex-basis:38px!important;width:38px!important;min-width:38px!important;max-width:38px!important;
+ }
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeToggle,#battleDayGallowsToggle,#battleFactionStatsToggle){
+  width:38px!important;min-width:38px!important;max-width:38px!important;font-size:29px!important;
+ }
+}

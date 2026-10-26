@@ -773,8 +773,51 @@ jobs:
           done
           echo "::error::Không thấy V3.232 Worker CI SUCCESS tại SHA $TESTED_SHA"; exit 1
 
+      # V3.233: Owner-approved GM Audio/UI-only fix; release requires same-SHA Worker CI.
+      - name: Chốt Runtime V3.233 Audio/UI với CI đúng phạm vi cùng SHA
+        id: gm_ui_audio_3233
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.233.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.233-audio-templates-footer-20261026.md
+          grep -Fq 'data-system-sound-slot' server-game/src/10-library-and-settings.part || {
+            echo "::error::GM audio selector missing"; exit 1;
+          }
+          grep -Fq 'play-template-actions-row' server-game/current/GMWW.html
+          grep -Fq 'V3.233: five exclusive slots' server-game/current/app.js
+          grep -Fq 'V3.233: Sửa lỗi' .github/scripts/prepare-update-channel.mjs
+          STATUS=missing
+          for TRY in $(seq 1 30); do
+            RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESPONSE" | node -e "
+              let s='';process.stdin.on('data',b=>s+=b).on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const latest=runs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                process.stdout.write(latest?(latest.conclusion||latest.status):'missing');
+              })")
+            echo "V3.233 Worker CI at same SHA: $STATUS"
+            if [ "$STATUS" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.233: focused Audio/Cloudflare/Template/Footer CI SUCCESS at $TESTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATUS" = failure ] || [ "$STATUS" = cancelled ] || [ "$STATUS" = timed_out ]; then
+              echo "::error::V3.233 Worker CI not successful at same SHA"; exit 1
+            fi
+            sleep 10
+          done
+          echo "::error::V3.233 Worker CI unavailable at same SHA"; exit 1
+
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true'
+        if: steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
