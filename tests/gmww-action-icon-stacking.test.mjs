@@ -40,11 +40,11 @@ test('GM loads icon library before battle script and leaves the IPA shell unchan
  assert.match(css,/\.battle-fire-icon\s*\{[^}]*touch-action:none/);
 });
 
-test('V2 overlays have no box, contain independent floating controls and halve artwork size',()=>{
+test('V3.228 icons stay frameless, return to 40px and preserve successive multi-target drops',()=>{
  assert.match(css,/#battleFireIconDock\.battle-fire-icon-dock\{[^}]*background:transparent!important/);
  assert.match(css,/#battleFireIconDock \.battle-fire-icon\{[^}]*background:transparent!important/);
- assert.match(css,/#battleFireIconDock \.battle-fire-icon img\{[^}]*width:24px!important/);
- assert.match(app,/battleIconPositions\.set\(battleIconPositionKey\(id,d\.iconId\),point\)/);
+ assert.match(css,/#battleFireIconDock \.battle-fire-icon img\{[^}]*width:40px!important/);
+ assert.match(app,/battleIconPositions\.delete\(key\)/);
  assert.match(app,/battleIconFirePoint\(\)/);
  assert.match(app,/\bis-sucked\b/);
 });
