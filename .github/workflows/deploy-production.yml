@@ -836,8 +836,41 @@ jobs:
           echo "approved=true" >> "$GITHUB_OUTPUT"
           echo "Ảnh icon: CI cùng SHA thành công; giữ kiểm tra Worker/OTA/SHA, không chạy Card/Seat/IPA ngoài phạm vi." >> "$GITHUB_STEP_SUMMARY"
 
+      # V3.236 explicitly changes only GM play menu + server-authoritative Gallows.
+      # Same-SHA Worker and Gallows checks suffice; no unrelated Card/Seat/IPA.
+      - name: V3.236 — xác minh GM menu và Lên Giàn trước Production
+        id: gm236_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != '3.236.0' ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.236-menu-gallows-20261026.md
+          grep -Fq 'id="battleGMChromeToggle"' server-game/current/GMWW.html
+          grep -Fq "outcome:'no_lynch'" src/gmww-gallows-rules.js
+          grep -Fq "'no_lynch'" src/player-web-src/30-rooms-and-realtime.part
+          node --test tests/gmww-v3236-menu-gallows.test.mjs tests/gallows-panel-60s-controls.test.mjs
+          STATUS=pending
+          for TRY in $(seq 1 30); do
+            RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RUNS" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const get=name=>{const a=runs.filter(x=>x.name===name).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));return a[0]?.conclusion||'pending'};
+                const results=[get('Check Lên Giàn theo đúng phạm vi'),get('Check Player Web Worker')];
+                process.stdout.write(results.every(x=>x==='success')?'success':results.some(x=>['failure','cancelled','timed_out'].includes(x))?'failure':'pending');
+              })")
+            if [ "$STATUS" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            if [ "$STATUS" = failure ]; then echo "::error::V3.236 CI failed same SHA"; exit 1; fi
+            sleep 10
+          done
+          echo "::error::V3.236 focused CI not yet SUCCESS ($STATUS)";exit 1
+
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true'
+        if: steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm236_release.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
