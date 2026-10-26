@@ -324,3 +324,18 @@ test('V3.224 #501 release mode verifies exact 3.223 to 3.224 changes and fails c
  assert.equal(classifyBrowserScope(c.map(x=>x.path==='server-game/current/app.js'?{...x,after:"const VERSION='3.223';"}:x)),'full','Missing runtime version fails closed');
  assert.equal(classifyBrowserScope(c.filter(x=>x.path!=='docs/releases/GMWW-V3.224-five-floating-icons-20261025.md')),'full','Mandatory release notes');
 });
+
+test('V3.234 post-merge push CI is scoped to four verified CI/release-note files',()=>{
+ const c=[
+  modified('.github/scripts/ci-browser-scope.mjs','old','isGM3234PostMergeReleaseGateScope(changes)'),
+  modified('tests/ci-browser-scope.test.mjs','old','V3.234 post-merge push CI is scoped'),
+  modified('.github/workflows/check-player-web.yml','old','node --test tests/ci-browser-scope.test.mjs'),
+  modified('docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md','old','CI hậu merge V3.234')
+ ];
+ assert.equal(classifyBrowserScope(c),'phase-dock-gallows-3234');
+ assert.equal(classifyBrowserScope(c.slice(0,3)),'full','Release notes mandatory');
+ assert.equal(classifyBrowserScope([...c,modified('src/gmww-gallows-rules.js','old','new')]),'full','Core modification cannot inherit UI scope');
+ assert.equal(classifyBrowserScope(c.map(x=>x.path==='docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md'?{...x,after:'unknown version'}:x)),'full','Release version evidence mandatory');
+ const scopeSource=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ assert.match(scopeSource,/if\(isGM3234PostMergeReleaseGateScope\(changes\)\|\|isPhaseDockGallows3234Scope\(changes\)\)return\{mode:'phase-dock-gallows-3234'/);
+});

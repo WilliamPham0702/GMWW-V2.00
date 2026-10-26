@@ -116,6 +116,7 @@ jobs:
         if: steps.scope.outputs.mode == 'phase-dock-gallows-3234'
         run: |
           node --test tests/gmww-v3234-phase-dock-gallows.test.mjs tests/gmww-v3233-audio-templates-dock.test.mjs tests/gallows-redesign-live.test.mjs
+          node --test --test-name-pattern='V3.234 post-merge push CI is scoped' tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           node --check server-game/current/app.js

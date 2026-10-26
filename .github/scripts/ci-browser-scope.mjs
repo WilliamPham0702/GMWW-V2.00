@@ -1323,7 +1323,29 @@ function isPhaseDockGallows3234Scope(changes){
  return required.every(([path,token])=>by.get(path)?.after?.includes(token));
 }
 
+/* V3.234 post-merge: only repair the main push-scope, with exact four-file CI notes. */
+function isGM3234PostMergeReleaseGateScope(changes){
+ const allowed=new Set([
+  '.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs',
+  '.github/workflows/check-player-web.yml',
+  'docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md'
+ ]);
+ if(!Array.isArray(changes)||changes.length!==4)return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ if(by.size!==4||changes.some(x=>!allowed.has(x.path)||x.status!=='M'))return false;
+ if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.234.0')return false;
+ if(!fs.readFileSync('server-game/current/app.js','utf8').includes("const VERSION='3.234'"))return false;
+ const required=[
+  ['.github/scripts/ci-browser-scope.mjs','isGM3234PostMergeReleaseGateScope(changes)'],
+  ['tests/ci-browser-scope.test.mjs','V3.234 post-merge push CI is scoped'],
+  ['.github/workflows/check-player-web.yml','tests/ci-browser-scope.test.mjs'],
+  ['docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md','CI hậu merge V3.234']
+ ];
+ return required.every(([path,token])=>by.get(path)?.after?.includes(token));
+}
+
 export function classifyBrowserScope(changes){
+  if(isGM3234PostMergeReleaseGateScope(changes))return 'phase-dock-gallows-3234';
   if(isPhaseDockGallows3234Scope(changes))return 'phase-dock-gallows-3234';
   if(isIconArtworkPolicyScope(changes))return 'icon-artwork-policy';
   if(isIconArtworkScope(changes))return 'icon-artwork';
@@ -1397,6 +1419,7 @@ function detect(){
       if(isIconArtworkPolicyScope(changes))return{mode:'icon-artwork-policy',reason:'Artwork CI only; no runtime deploy'};
       if(isIconArtworkScope(changes))return{mode:'icon-artwork',reason:'Individual image assets, picture URLs, version/notes only; gameplay unchanged'};
       if(isDOOptimizer3228Scope(changes))return{mode:'do-optimizer-3228',reason:'V3.228 Durable Object heartbeat dedup + Settings + Runtime gates'};
+      if(isGM3234PostMergeReleaseGateScope(changes)||isPhaseDockGallows3234Scope(changes))return{mode:'phase-dock-gallows-3234',reason:'V3.234 scoped GM Đêm/Ngày/Gallows release and post-merge CI gate'};
       if(isGM3233AudioUICIScope(changes))return{mode:'gm-ui-audio-3233',reason:'V3.233: exactly four GM UI/Audio fixes'};
       if(isRuntimeWarning3232Scope(changes))return{mode:'runtime-warning-3232',reason:'Owner V3.232 Runtime diagnostics and OTA gates only'};
       if(isGMEntryIcons3231Scope(changes))return{mode:'entry-icons-3231',reason:'Only V3.231 GM entrance icon placement and 2x visual size'};
