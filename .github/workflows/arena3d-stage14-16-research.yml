@@ -1,4 +1,4 @@
-name: Arena 3D GĐ14–34 — Core V3.226, Player 3D, E2E STAGING
+name: Arena 3D — Core V3.230, GM/Player, E2E STAGING & Release Gate
 on:
   push:
     branches: ["feature/arena3d-stage14-16-dynamic-artifacts-audio"]
