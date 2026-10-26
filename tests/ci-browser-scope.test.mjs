@@ -461,13 +461,14 @@ test('V3.238 workflow revalidation: exactly one deploy job and only three repair
 });
 
 
+
 test('PR532 scoped CI selector accepts exactly match-exit, Demo switch and reset edits',()=>{
  const workerBefore='header\n  async gmReset(request,body){return 0}\n  async gmEnd(request,body){return 1}\ntail';
- const workerAfter=workerBefore.replace('return 0','// \"demoLease\",\"demoClock\",\"demoPlan\"; return 2');
+ const workerAfter=workerBefore.replace('return 0','["demoLease","demoClock","demoPlan"]; return 2');
  const setupBefore='head\nasync function selectPlayExistingRoom(r){return 0}\nfunction renderPlayCreatedRooms(){return 0}\nasync function flushPlayRoomMode(){return 0}\nfunction bindPlayRoomModeButtons(){return 0}\ntail';
  const setupAfter=setupBefore.replace('selectPlayExistingRoom(r){return 0','selectPlayExistingRoom(r){return 2').replace('flushPlayRoomMode(){return 0','flushPlayRoomMode(){// ROOM_MODE_REQUIRES_EMPTY_RESET; return 3');
  const uiBefore='head\nasync function playCompletionNext(choice){return 0}\nfunction initPlayCompletion(){return 0}\ntail';
- const uiAfter=uiBefore.replace('return 0','// transactionId:\'completed-leave-\'; return 1');
+ const uiAfter=uiBefore.replace('return 0',"transactionId:'completed-leave-'; return 1");
  const appBefore=setupBefore+'\n'+uiBefore;
  const appAfter=setupAfter+'\n'+uiAfter;
  const files=[
