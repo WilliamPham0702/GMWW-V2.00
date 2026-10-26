@@ -72,7 +72,7 @@ jobs:
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/gmww-v3235-phase-dock-gallows.test.mjs
+          node --test tests/gmww-v3234-phase-dock-gallows.test.mjs tests/gmww-v3235-unified-glass-dock.test.mjs
       - name: Đóng gói manifest từ bytes Runtime thật
         run: node .github/scripts/prepare-update-channel.mjs runtime
       - name: Kiểm chứng SHA-256 từng file và manifest V3.235
