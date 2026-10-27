@@ -43,7 +43,16 @@ if(published.releaseType==='native'){
  }
 }else{
  assert.equal(published.releaseType,'runtime');
- assert.equal(published.shellVersion,'3.110','Legacy Character40 Runtime shell must remain supported');
+ // Validate against the independently pinned native shell (Worker and Xcode),
+ // not the obsolete V3.110 baseline. Runtime updates must preserve the actual IPA.
+ const workerSource=await readFile('src/index.js','utf8');
+ const xcodeProject=await readFile('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
+ const workerShell=workerSource.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
+ const xcodeShell=xcodeProject.match(/MARKETING_VERSION\s*=\s*([0-9.]+);/)?.[1];
+ assert.match(String(workerShell||''),/^\d+\.\d+(?:\.\d+)?$/,'Worker native shell version missing');
+ assert.equal(workerShell,xcodeShell,'Worker shell must match pinned Xcode IPA version');
+ assert.equal(published.shellVersion,workerShell,'Runtime manifest must keep verified installed IPA shell');
+ assert.equal(published.minimumShellVersion,workerShell,'Runtime must not silently raise native IPA requirement');
 }
 const accepted=JSON.parse(await readFile('prototype/character40/catalog.json','utf8')).characters;
 let index=0;
