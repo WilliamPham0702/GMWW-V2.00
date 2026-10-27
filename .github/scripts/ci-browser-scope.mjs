@@ -1862,9 +1862,16 @@ export function isIcon247Scope(changes){
 // already-tested PR #551. The game source, package and IPA must be unchanged.
 const icon247PostMergePaths=new Set([".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","tests/ci-v3247-postmerge.test.mjs"]);
 export function isIcon247PostMergeScope(changes){
- if(!Array.isArray(changes)||changes.length!==icon247PostMergePaths.size||
-    new Set(changes.map(c=>c.path)).size!==icon247PostMergePaths.size||
-    !changes.every(c=>icon247PostMergePaths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ // The first recovery (PR #552) was four CI files. After merge it only
+ // needs this selector and its regression test corrected: exactly two files.
+ const tiny=new Set(['.github/scripts/ci-browser-scope.mjs','tests/ci-v3247-postmerge.test.mjs']);
+ const validStatus=Array.isArray(changes)&&changes.every(c=>['A','M'].includes(c.status));
+ const four=validStatus&&changes.length===icon247PostMergePaths.size&&
+    new Set(changes.map(c=>c.path)).size===icon247PostMergePaths.size&&
+    changes.every(c=>icon247PostMergePaths.has(c.path));
+ const two=validStatus&&changes.length===tiny.size&&
+    new Set(changes.map(c=>c.path)).size===tiny.size&&changes.every(c=>tiny.has(c.path));
+ if(!four&&!two)return false;
  try{
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
@@ -1872,6 +1879,7 @@ export function isIcon247PostMergeScope(changes){
   const settings=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
   git('merge-base','--is-ancestor','688d348bc690c26060e3b8344b31f738ee9d1ca9','HEAD');
+  if(two)git('merge-base','--is-ancestor','a160500980879db81e1a30c1a4b77b929cbdae90','HEAD');
   return pkg.version==='3.247.0'&&html.includes('<title>GMWW V3.247</title>')&&
     html.includes('id="actionIconScaleCard"')&&
     settings.includes('initActionIconScaleSetting')&&
@@ -1980,6 +1988,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isIcon247PostMergeScope(changes))return{mode:'icon-scale-3247-postmerge',reason:'Audited 2-file V3.247 CI release scope order fix'};
       if(isFairy246PostMergeScope(changes))return{mode:'fairy-246-postmerge',reason:'PR548 V3.246 exact 5-file post-merge CI repair; same Runtime and icon SHA'};
       if(isPlayerReceiptHotfixScope(changes))return{mode:'player-receipt-hotfix',reason:'Exact Player Web private receipt hotfix; no runtime/IPA'};
       if(isTimeline244Scope(changes))return{mode:'timeline-six-center-3244',reason:'V3.244 exact six-step centered GM timeline only'};
