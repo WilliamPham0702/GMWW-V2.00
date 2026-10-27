@@ -2042,7 +2042,7 @@ function detect(){
  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
   try{
    if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.253.0'){
-    const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+    const base=process.env.GMWW_CI_EVENT==='push'||String(process.env.GITHUB_REF||'').startsWith('refs/pull/')?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
     if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
      execFileSync(process.execPath,['.github/scripts/verify-release-v3253.mjs'],{encoding:'utf8',env:{...process.env,GMWW_V3253_BASE:base}});
      return{mode:'gm-performance-thermal-3253',reason:'V3.253 narrow GM anti-heat Runtime and OTA verified'};
