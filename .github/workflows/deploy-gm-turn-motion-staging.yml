@@ -102,7 +102,7 @@ jobs:
           grep -q 'battleGMTurnMotion' /tmp/gm-turn-gm.html
           fetch_live gm-turn-stage/app.js /tmp/gm-turn-app.js
           grep -q 'GMWW_SERVER_BASE=window.location.origin' /tmp/gm-turn-app.js
-          grep -q 'GMWW_GM_TURN_MOTION_V1' /tmp/gm-turn-app.js
+          grep -q 'GMWW_GM_FIRE_WALK_V2' /tmp/gm-turn-app.js
           ! grep -q 'gmww-v2-00.williampham0702.workers.dev' /tmp/gm-turn-app.js
           echo 'STAGING GM iPhone: '"$BASE"'/gm-turn-stage/GMWW.html' >> "$GITHUB_STEP_SUMMARY"
           echo 'PASS GM game/Worker smoke. Production, rooms, history and IPA untouched.' >> "$GITHUB_STEP_SUMMARY"
