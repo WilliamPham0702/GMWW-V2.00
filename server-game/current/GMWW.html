@@ -775,7 +775,18 @@
         </div>
         <div class="settings-unified-box" id="settingsGroupAppearance">
           <div class="settings-unified-heading"><span class="settings-unified-index">03</span><div><h3>Giao diện & nhân vật</h3></div></div>
-          <div class="settings-tool-inner character-scale-card" id="characterScaleCard">
+          <div class="settings-tool-inner gmww-perf-card" id="gmwwPerfCard" aria-label="Hiệu năng và Chống nóng">
+          <div class="settings-title"><div><h3>🌡️ Hiệu năng &amp; Chống nóng</h3><small>Tự tối ưu đồ họa trên GM iPhone, không tác động luật game hoặc Player Web</small></div></div>
+          <label class="gmww-perf-field" for="gmwwPerfMode"><span>Chế độ</span><select id="gmwwPerfMode" aria-label="Chế độ hiệu năng">
+            <option value="auto" selected>Tự động (khuyến nghị)</option><option value="save">Tiết kiệm</option><option value="high">Chất lượng cao</option>
+          </select></label>
+          <label class="gmww-perf-toggle"><input type="checkbox" id="gmwwPerfGuard" checked disabled><span>Chống vòng lặp thừa <small>Luôn bật, không cho phép tạo lịch render trùng</small></span></label>
+          <label class="gmww-perf-toggle"><input type="checkbox" id="gmwwPerfEffects" checked><span>Giảm hiệu ứng khi tải cao <small>Giữ icon và trạng thái; giảm chuyển động trang trí</small></span></label>
+          <label class="gmww-perf-toggle"><input type="checkbox" id="gmwwPerfIdle" checked><span>Tạm nghỉ khi không hoạt động <small>Dừng vẽ nhân vật đứng yên và khi rời sân chơi</small></span></label>
+          <div id="gmwwPerfStatus" class="gmww-perf-status" role="status">Tự động • đang giám sát tải đồ họa</div>
+          <small class="gmww-perf-note">Ước lượng tải bằng độ trễ khung hình, không phải số đo nhiệt độ iOS. Đồng hồ, âm thanh và đồng bộ ván game vẫn hoạt động.</small>
+        </div>
+        <div class="settings-tool-inner character-scale-card" id="characterScaleCard">
           <div class="settings-title"><div><h3>Kích thước nhân vật</h3><small>Chỉ thay đổi Nhân Vật 2D, không thay đổi Box hoặc giao diện</small></div><b id="characterScaleValue">100%</b></div>
           <div id="characterScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước nhân vật">
             <button type="button" data-character-scale="75">75%</button>
@@ -1012,6 +1023,7 @@
 </div>
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
 <script src="village-layout.js?v=3.218-seat-map-drag-20261024"></script>
+<script src="gmww-performance.js?v=gm-perf-1"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
 <script src="battle-controls.js?v=3.175-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
