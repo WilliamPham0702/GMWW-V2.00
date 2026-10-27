@@ -54,6 +54,29 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Player receipt hotfix — login, join, reconnect and JS integrity
+        if: steps.scope.outputs.mode == 'player-receipt-hotfix'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/gmww-player-private-card-patch.js
+          node --check src/gmww-members-live.js
+          node --test tests/player-web-receipt-patch-hotfix.test.mjs tests/player-web-resume-receipt-runtime.test.mjs
+          test -s docs/releases/GMWW-PLAYER-WEB-RECEIPT-HOTFIX-20261027.md
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-player-receipt-worker.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true' EXIT
+          READY=0
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 4 http://127.0.0.1:8787/api/health > /tmp/player-receipt-health.json 2>/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" != 1 ]; then cat /tmp/gmww-player-receipt-worker.log; exit 1; fi
+          curl --fail --silent --show-error --max-time 30 http://127.0.0.1:8787/gmww-members-live.js > /tmp/gmww-player-receipt-live.js
+          test -s /tmp/gmww-player-receipt-live.js
+          node --check /tmp/gmww-player-receipt-live.js
+          node tests/worker-private-delivery-e2e.mjs
+          echo 'PASS: JS 200, compiled, login/join/receipt/reconnect via local Worker.'
       - name: PR541 V3.243 — kiểm thử Sảnh Chờ, Tập Hợp, 3 chế độ và Sát Thủ
         if: steps.scope.outputs.mode == 'lobby-gather-541'
         run: |
