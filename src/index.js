@@ -1051,6 +1051,11 @@ export class RoomDurableObject extends DurableObject {
     const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
     const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
+    const drunkDraws=[];
+    if(Number(meta.cycleNight)===3&&String(meta.cyclePhase)==='night'){
+      const entries=await this.ctx.storage.list({prefix:'drunkDeck:'+String(meta.matchId)+':3:'});
+      for(const deck of entries.values())drunkDraws.push(drunkDeckView(deck,true));
+    }
     const demoLease=meta.demo?await this.ctx.storage.get("demoLease"):null;
     const storedDemoClock=meta.demo?await this.ctx.storage.get("demoClock"):null,
       demoClock=storedDemoClock?projectDemoClock(storedDemoClock,Date.now()):null;
@@ -1063,7 +1068,7 @@ export class RoomDurableObject extends DurableObject {
       // includes older nights and nonpersistent effects (effect_notice, healed...).
       // Never derive the village bulletin from only the short-lived rules buffer.
       villageHistory:await this.villageHistoryForMatch(meta,interactions),
-      interactionResponses,activeEffects,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+      interactionResponses,activeEffects,drunkDraws,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -2386,8 +2391,13 @@ export class RoomDurableObject extends DurableObject {
     const before=await snapshot(),results=[];
     // Other players may select expelled targets. The selection consumes the
     // actor's normal action, but never applies gameplay effects to those targets.
-    const effectiveTargets=targets.filter(id=>!isExpelled(id));
+    const isFactionCompare=String(body?.actionId||'')==='action_compare_faction';
+    // Observation is not a harmful effect: Exile must not suppress faction comparison.
+    const effectiveTargets=isFactionCompare?targets:targets.filter(id=>!isExpelled(id));
     for(const id of targets){
+      if(isFactionCompare){
+        results.push({ok:true,loginId:id,observed:true});continue;
+      }
       if(!effectiveTargets.includes(id)){
         results.push({ok:true,loginId:id,noEffect:true,reason:"EXPELLED"});
         continue;
@@ -2411,7 +2421,7 @@ export class RoomDurableObject extends DurableObject {
         before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
-    const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>players["member:"+id]&&!isExpelled(id)),
+    const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>players["member:"+id]&&(isFactionCompare||!isExpelled(id))),
       assignments:await readNightAssignments(this.ctx.storage,matchId)}):null;
     const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
       resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:(await this.ctx.storage.get("interactions"))||[],players,
@@ -2736,7 +2746,13 @@ export class RoomDurableObject extends DurableObject {
       await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
     const wolfRecognition=privateWolfRecognition(meta,wolfRuntime,loginId,
       wolfPackMembers(await this.ctx.storage.get("assignments")||[],rows,meta.matchId));
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    const turn=wolfRuntime?.queue?.[wolfRuntime.cursor];
+    const drawn=Number(meta.cycleNight)===3&&String(meta.cyclePhase)==='night'?
+      await this.ctx.storage.get('drunkDeck:'+String(meta.matchId)+':3:'+loginId):null;
+    const drunkDraw=drawn&&(drawn.selectedId||
+      turn?.roleId==='role_drunk'&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId))?
+      drunkDeckView(drawn,false):null;
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,drunkDraw,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
