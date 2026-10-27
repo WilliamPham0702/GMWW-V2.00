@@ -36,14 +36,16 @@ function imageFor(url){if(!images.has(url)){const im=new Image();im.decoding='as
 function actionFor(command){return command.state==='dead'?'idle':command.motion==='turn'?'turn':command.state==='running'?'run':command.state==='walking'?'walk':'idle';}
 function apply(root,command={}){
  const id=command.characterId||root.dataset.characterId,c=CATALOG[visualId(id)];if(!c)return false;
- const changed=root.dataset.characterId!==id;
+ const changed=root.dataset.characterId!==id,previousAction=root._gmwwMotion?.action,previousPaused=root._gmwwPaused;
  if(changed){root.dataset.characterId=id;root._gmwwMotion=createMotion(c);root._gmwwCharacter=c;root._gmwwWantedFacing=undefined;root._gmwwPending=null;root._gmwwFrameScale=0;}
  const s=root._gmwwMotion,action=actionFor(command),facing=command.facing==='left'?'left':'right';
  if(s.action==='turn'&&root._gmwwPending){root._gmwwPending={action:action==='turn'?'idle':action,facing};}
  else if((root._gmwwWantedFacing!==undefined&&s.facing!==facing)||action==='turn'){root._gmwwPending={action:action==='turn'?'idle':action,facing:action==='turn'&&s.facing===facing?(facing==='left'?'right':'left'):facing};setAction(s,'turn');}
  else {if(s.action!==action)setAction(s,action);s.facing=facing;}
  root._gmwwWantedFacing=facing;
- root._gmwwPaused=command.paused===true||command.state==='dead';root.dataset.state=action==='walk'?'walking':action==='run'?'running':'idle';root.dataset.motion=action;root.dataset.facing=facing;return true;
+ root._gmwwPaused=command.paused===true||command.state==='dead';root.dataset.state=action==='walk'?'walking':action==='run'?'running':'idle';root.dataset.motion=action;root.dataset.facing=facing;
+ if(roots.has(root)&&(changed||previousAction!==s.action||previousPaused!==root._gmwwPaused))wakeNow();
+ return true;
 }
 function paint(root,dt){
  const canvas=root.firstElementChild,c=root._gmwwCharacter,s=root._gmwwMotion;
@@ -61,6 +63,11 @@ function paint(root,dt){
  ctx.drawImage(im,x,y,w,h,(256-w*scale)/2,320-h*scale,w*scale,h*scale);
  root._gmwwDrawKey=drawKey;
  root.dataset.loaded='true';root.dataset.frame=String(index);root.dataset.action=s.action;
+}
+function wakeNow(){
+ if(document.hidden||!roots.size)return;
+ if(wake){clearTimeout(wake);wake=0;}
+ if(!raf){last=0;raf=requestAnimationFrame(loop);}
 }
 function schedule(delay=0){
  if(!roots.size||raf||wake)return;
