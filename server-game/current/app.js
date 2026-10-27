@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.244';
+const VERSION='3.245';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -789,9 +789,9 @@ function applyV226Prefs(p,migrating=false){
 }
 
 function loadState(){
-  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV226Catalog(applyV210Rules(s),false)}}catch(_){}
-  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV226Catalog(applyV210Rules(migrateOld(raw)),true);localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
-  return applyV226Catalog(clone(DEFAULT_STATE),false);
+  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV226Catalog(applyNight02Rules(applyV210Rules(s)),false)}}catch(_){}
+  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV226Catalog(applyNight02Rules(applyV210Rules(migrateOld(raw))),true);localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
+  return applyV226Catalog(applyNight02Rules(clone(DEFAULT_STATE)),false);
 }
 function loadPrefs(){
   try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return applyV226Prefs(deepMerge(clone(DEFAULT_PREFS),cur),false)}catch(_){}
@@ -799,6 +799,45 @@ function loadPrefs(){
   return applyV226Prefs(clone(DEFAULT_PREFS),false);
 }
 
+/* NIGHT-02: migrate only the five approved role contracts in previously
+ * saved GM card libraries; preserve all artwork, audio links and other cards. */
+function applyNight02Rules(s){
+  for(const card of s.cards||[]){
+    const role=String(card.id||'');
+    if(card.factionId==='wolf'){
+      card.flags={...(card.flags||{}),allowMultipleActions:true};
+      card.specialRules={...(card.specialRules||{}),usesPackBite:true,
+        ...(role==='role_snow_wolf'?{requiresNoOtherLivingWolf:true}:{})};
+    }
+    if(role==='role_snow_wolf'){
+      card.limits='Đóng Băng không được chọn cùng một người hai đêm liên tiếp.';
+      card.conditions='Ưu tiên Đóng Băng; chỉ Cắn chung khi Sói Tuyết là Sói duy nhất còn sống.';
+      const freeze=(card.functions||[]).find(f=>f.actionId==='action_snow_wolf_freeze');
+      if(freeze)Object.assign(freeze,{usageMode:'eachNight',usageCount:1,phase:'night',
+        cooldownNights:1,allowConsecutive:false,noSelf:true,allowDead:false});
+      const bite=(card.functions||[]).find(f=>f.actionId==='action_wolf_bite');
+      if(bite)Object.assign(bite,{usageMode:'eachNight',usageCount:1,
+        requiresNoOtherLivingWolf:true,usesPackBite:true});
+    }else if(role==='role_guard'){
+      card.limits='Không Bảo Vệ cùng một người hai đêm liên tiếp.';
+      card.conditions='Chỉ chặn vết Cắn của Sói, kể cả khi Yêu Tinh đã dịch chuyển.';
+      const protect=(card.functions||[]).find(f=>f.actionId==='action_protect');
+      if(protect)Object.assign(protect,{usageMode:'eachNight',usageCount:1,
+        cooldownNights:1,allowConsecutive:false,allowDead:false,effectIds:['effect_protected']});
+    }else if(role==='role_alpha_wolf'){
+      card.conditions='Khi Sói Trùm bị Đóng Băng: vết Cắn chung vô hiệu, Phù Thủy không nhận thông tin nạn nhân. Khi Sói Trùm bị Đuổi: không thể thực hiện Sói Cắn.';
+    }else if(role==='role_wolf_seer'){
+      card.conditions='Sói Tiên Tri tham gia lượt Sói Cắn chung, sau đó thức riêng để tìm Tiên Tri theo thứ tự cấu hình.';
+      card.information=String(card.information||'').replace('Không tham gia Sói Cắn cho tới khi là con Sói cuối cùng trong bầy.','Tham gia Sói Cắn chung cùng Phe Sói.');
+    }else if(role==='role_fairy'){
+      card.conditions='Sau khi Bầy Sói Cắn và mọi vai Sói đã thức. Chọn dịch Trái, Phải hoặc Không dịch; bỏ qua người chết từ các chu kỳ trước.';
+      const transfer=(card.functions||[]).find(f=>f.actionId==='action_transfer_bite');
+      if(transfer)Object.assign(transfer,{phase:'night',usageMode:'eachNight',
+        usageCount:1,allowConsecutive:true});
+    }
+  }
+  return s;
+}
 function applyV221AudioGuard(s){
   const keep='ROLE:source-18';
   for(const kind of ['cards','artifacts','actions','system'])for(const a of (s.audio?.[kind]||[])){
@@ -5398,6 +5437,14 @@ const battleActions=()=>{
   // still act, even when one wolf/player is frozen, dead or exhausted.
   return actions.map(action=>{
     let unavailableReason='';
+    if(turn?.kind==='wolf-pack-bite'){
+      const alpha=(playSceneRuntime.assignments||[]).filter(x=>x.roleId==='role_alpha_wolf');
+      const expelled=alpha.some(x=>(playSceneRuntime.activeEffects||[]).some(e=>e.type==='expelled'&&
+        e.effectActive!==false&&String(e.loginId||'').replace(/^member:/,'')===String(x.loginId||'').replace(/^member:/,'')));
+      const alreadyBit=ledger.some(x=>String(x.matchId)===matchId&&Number(x.night)===night&&x.actionId==='action_wolf_bite');
+      if(expelled||alreadyBit)return {...action,unavailable:true,actorIds:[],
+        unavailableReason:expelled?'Sói Trùm bị đuổi: Bầy Sói không thể Cắn.':'Bầy Sói đã Cắn trong đêm này.'};
+    }
     if(action.roleId==='role_old_witch'&&action.actionId==='action_revive'&&
       !playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'&&
         battleRules().oldWitchReviveEligible(action,m,playSceneRuntime.activeEffects,night)))
@@ -5447,9 +5494,12 @@ const battleActions=()=>{
     // WITCH-01: keep the last confirmed target unavailable on the next night.
     // Older matches without ledger targets remain protected by the Server check.
     const actor=actorIds[0];
-    const forbiddenTargets=action.roleId==='role_old_witch'&&action.actionId==='action_exile'&&actor?
-      ledger.filter(x=>String(x.matchId)===matchId&&String(x.roleId)==='role_old_witch'&&
-        String(x.actionId)==='action_exile'&&String(x.actorId)===String(actor)&&Number(x.night)===night-1)
+    const consecutiveRole=action.actionId==='action_snow_wolf_freeze'?'role_snow_wolf':
+      action.actionId==='action_protect'?'role_guard':
+      action.roleId==='role_old_witch'&&action.actionId==='action_exile'?'role_old_witch':'';
+    const forbiddenTargets=consecutiveRole&&actor?
+      ledger.filter(x=>String(x.matchId)===matchId&&String(x.roleId)===consecutiveRole&&
+        String(x.actionId)===String(action.actionId)&&String(x.actorId)===String(actor)&&Number(x.night)===night-1)
         .flatMap(x=>Array.isArray(x.targetIds)?x.targetIds:[]):[];
     return {...action,name,actorIds,forbiddenTargets,unavailable:!!action.unavailable||!actorIds.length,unavailableReason:action.unavailableReason||unavailableReason};
   });
