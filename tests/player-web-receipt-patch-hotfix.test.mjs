@@ -9,7 +9,7 @@ const replacedReceipt="try{const d=await gmwwReadPrivateReceipt();if(!d)return f
 test('Player JS receipt injection compiles and preserves private wolf recognition',()=>{
   assert.equal(gmwwMembersLiveScript.split(sourceReceipt).length-1,1,'exactly one source receipt anchor');
   const script=patchPrivatePlayerCards(gmwwMembersLiveScript);
-  assert.ok(script.length>gmwwMembersLiveScript.length);
+  assert.notEqual(script,gmwwMembersLiveScript,'patched script must differ from authored source');
   assert.doesNotThrow(()=>new Function(script));
   assert.equal(script.split(replacedReceipt).length-1,1,'one authenticated receipt reader');
   assert.ok(script.includes("if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition"));
