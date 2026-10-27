@@ -13,10 +13,10 @@
 - Cần kiểm tra hình ảnh trên iPhone thật: Phù Thủy thấy nhãn MỤC TIÊU, số vote thay đổi realtime, 👍👎 không khung; ưu tiên giảm nhiệt.
 
 ## Phát hành và khôi phục
-- Chỉ **Đã phê duyệt phát hành 27/10/2026.** Chỉ merge khi kiểm thử bắt buộc đúng phạm vi SUCCESS. Runtime OTA cần xác minh SHA-256 và rollback; bảo toàn IPA, phòng và lịch sử.
+- **Đã phê duyệt phát hành 27/10/2026.** Chỉ merge khi kiểm thử bắt buộc đúng phạm vi SUCCESS. Runtime OTA cần xác minh SHA-256 và rollback; bảo toàn IPA, phòng và lịch sử.
 - Khi được phê duyệt phát hành, tăng Runtime OTA theo quy định, SHA-256, release notes và lưu bản rollback.
 - Rollback mã bằng revert commit/PR; không xóa DO hoặc ghi đè dữ liệu người chơi.
 
 ## Phiên bản phát hành theo phê duyệt
-- **Runtime OTA ứng viên: V3.258**, kế thừa V3.257; không thay IPA, Core, Player Web hay Durable Objects.
-- Sau merge và xác minh Production, ghi lại SHA-256 manifest/gói Runtime và mốc rollback V3.257.
+- **Runtime OTA ứng viên: V3.259**, kế thừa V3.258 Audio; không thay IPA, Core, Player Web hay Durable Objects.
+- Sau CI và xác minh Production, ghi lại SHA-256 manifest/gói Runtime và mốc rollback V3.258.

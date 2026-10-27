@@ -2023,6 +2023,17 @@ function isManualRuntimeScope(changes){
 }
 
 
+
+function isGMVote3259Scope(changes){
+  const allowed=new Set(["package.json","package-lock.json","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/current/GMWW.html","src/index.js",".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-GM-VOTE-BADGES-2026-10-27.md",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/check-gm-vote-markers-565.yml",".github/scripts/verify-release-v3259.mjs"]);
+  if(!Array.isArray(changes)||changes.length!==allowed.size||changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status)))return false;
+  try{
+    const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+    const app=fs.readFileSync('server-game/current/app.js','utf8'),worker=fs.readFileSync('src/index.js','utf8'),css=fs.readFileSync('server-game/current/style.css','utf8');
+    return pkg.version==='3.259.0'&&app.includes("const VERSION='3.259'")&&app.includes('function battleQueueDayAudio(')&&!app.includes('🐺 VẾT CẮN · PHÙ THỦY')&&css.includes('gmwwNominationVoteBounce')&&worker.includes('VERSION="V3.259"')&&worker.includes('NATIVE_SHELL_VERSION="3.257"')&&fs.readFileSync('server-game/current/GMWW.html','utf8').includes('<title>GMWW V3.259</title>');
+  }catch{return false}
+}
+
 // V3.258: verified narrow release. This classifier rejects ANY extra path
 // and requires an exact Runtime identity; no legacy Card/Seat/IPA tests.
 function isGMWWAudio3258Scope(changes){
@@ -2060,6 +2071,7 @@ function isGMWWAudio3258Scope(changes){
 }
 
 export function classifyBrowserScope(changes){
+  if(isGMVote3259Scope(changes))return 'gm-vote-3259';
   if(isGMWWAudio3258Scope(changes))return 'gm-audio-3258';
   if(isNativeManualReleaseVerifyScope(changes))return 'native-manual-release-verify';
   if(isManualRuntimeScope(changes))return "manual-runtime";
@@ -2163,6 +2175,8 @@ function detect(){
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
         const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n')
           .filter(Boolean).map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isGMVote3259Scope(changes))
+          return{mode:'gm-vote-3259',reason:'Exact PR565 release V3.259, Audio V3.258 preserved'};
         if(isGMWWAudio3258Scope(changes))
           return{mode:'gm-audio-3258',reason:'Exact V3.258 GM Audio only; same-SHA Worker and OTA release guards'};
       }
