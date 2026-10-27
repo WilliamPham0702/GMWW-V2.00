@@ -1704,7 +1704,15 @@ export class RoomDurableObject extends DurableObject {
       id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",
       recognitionIds:wolfMembers.map(a=>a.loginId),durationSec:wolfDiscussionSec,status:"pending"});
     const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
-    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid||rid==="role_villager"&&a.inheritedFromRoleId==="role_drunk")continue;let g=groups.get(rid);if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(roleOrder.get(rid)??a?.order??9999),loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};groups.set(rid,g)}const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
+    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid||rid==="role_villager"&&a.inheritedFromRoleId==="role_drunk")continue;
+      const lid=normalizeLoginId(a?.loginId),drunkInheritedWolf=rid==="role_snow_wolf"&&a.inheritedFromRoleId==="role_drunk";
+      const groupId=drunkInheritedWolf?rid+":drunk:"+lid:rid;
+      let g=groups.get(groupId);
+      if(!g){g={id:"role:"+groupId,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,
+        drunkInheritedWolf,order:Number(roleOrder.get(rid)??a?.order??9999),
+        loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};
+        groups.set(groupId,g)}
+      if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
     const roleTurns=[...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi"));
     const artifactOrder=new Map((Array.isArray(cfg.artifacts)?cfg.artifacts:[]).map((a,i)=>[String(a?.artifactId||""),Number(a?.order||i+1)]));
     artifactRows.sort((a,b)=>(artifactOrder.get(String(a.artifactId))??9999)-(artifactOrder.get(String(b.artifactId))??9999)||a._index-b._index);
