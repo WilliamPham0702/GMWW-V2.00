@@ -4332,7 +4332,7 @@ async function playSyncRoom(force=false){
     const data=await playRoomApi('');
     if(syncSerial!==playSceneRuntime.syncSerial)return data;
     if(Number.isFinite(Number(data?.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(data.serverTime)-Date.now();
-    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.battleActionUsage=Array.isArray(data.battleActionUsage)?data.battleActionUsage:[];playSceneRuntime.demoControl=data.demoControl||null;playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.battleUndo=data.battleUndo||null;playSceneRuntime.nightIntel=data.nightIntel||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.recentInteractions=Array.isArray(data.interactions)?data.interactions:[];playSceneRuntime.villageHistory=Array.isArray(data.villageHistory)?data.villageHistory:playSceneRuntime.recentInteractions;playSceneRuntime.gallows=data.gallows||null;playSceneRuntime.dayActionUsage=Array.isArray(data.dayActionUsage)?data.dayActionUsage:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
+    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.battleActionUsage=Array.isArray(data.battleActionUsage)?data.battleActionUsage:[];playSceneRuntime.demoControl=data.demoControl||null;playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.drunkDraws=Array.isArray(data.drunkDraws)?data.drunkDraws:[];playSceneRuntime.battleUndo=data.battleUndo||null;playSceneRuntime.nightIntel=data.nightIntel||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.recentInteractions=Array.isArray(data.interactions)?data.interactions:[];playSceneRuntime.villageHistory=Array.isArray(data.villageHistory)?data.villageHistory:playSceneRuntime.recentInteractions;playSceneRuntime.gallows=data.gallows||null;playSceneRuntime.dayActionUsage=Array.isArray(data.dayActionUsage)?data.dayActionUsage:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
     const syncedServerPhase=String(data?.room?.phase||'lobby').toLowerCase();playSceneState.artifactCount=['running','started','game','playing'].includes(syncedServerPhase)?Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max??3),Number(playSceneRuntime.artifactCycle?.count||0))):0;const serverMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));if(serverMemberIds.length||playSceneState.step!=='members'||playSceneState.roomMode!=='online')playSceneState.selectedMemberIds=serverMemberIds;
     const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);playSceneState.autoGM=room.autoGM!==false;playSceneState.roomEnabled=room.enabled!==false;playSceneState.roomMode=room.demo===true?'demo':room.roomMode==='offline'?'offline':'online';playSceneState.seatMoveMode=room.seatMoveMode==='walk'?'walk':'instant';playSceneState.seatCount=Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12));
     if(!playStagePublishPending&&['room','seats','game','roles','deal'].includes(room.gmStage))playSceneState.step=room.gmStage==='room'?'lobby':room.gmStage;
@@ -6012,6 +6012,40 @@ function battleWolfOutcomeText(result){
     return (x.direction!=='none'?from+' → '+to:to)+(x.protected?' · ĐƯỢC BẢO VỆ':' · BỊ SÓI CẮN');
   }).join(' · ');
 }
+function battleRenderDrunkDraw(turn){
+  let box=document.getElementById('gmwwGmDrunkDeck');
+  const inNight=playSceneState.step==='battle'&&playSceneState.phase==='night'&&
+    Number(playSceneState.night||0)===3;
+  const draws=inNight?(playSceneRuntime.drunkDraws||[]):[];
+  if(!draws.length){if(box)box.hidden=true;return}
+  if(!box){
+    const css=document.createElement('style');css.id='gmwwGmDrunkDeckCss';
+    css.textContent='#gmwwGmDrunkDeck{position:fixed;z-index:900;right:12px;top:24%;width:min(82vw,320px);max-height:45dvh;overflow:auto;padding:10px;border-radius:16px;border:1px solid #e0bd80;background:#073448ed;color:#fff;box-shadow:0 10px 24px #0008;font-size:12px;text-align:center}'+
+      '#gmwwGmDrunkDeck[hidden]{display:none!important}#gmwwGmDrunkDeck strong{color:#ffe9ac;font-size:14px}#gmwwGmDrunkDeck .deck-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:7px 0 12px}'+
+      '#gmwwGmDrunkDeck .deck-card{position:relative;width:52px;height:72px;border-radius:7px;border:1px solid #ecc98f;background:linear-gradient(145deg,#174968,#081327);display:grid;place-content:center;color:#f4dba9}'+
+      '#gmwwGmDrunkDeck .deck-card.is-picked{border-color:#a5ffc8;background:#14594d}#gmwwGmDrunkDeck .deck-result{font-weight:900;color:#bfffd1}';
+    document.head.appendChild(css);
+    box=document.createElement('section');box.id='gmwwGmDrunkDeck';
+    document.body.appendChild(box);
+  }
+  box.hidden=false;box.replaceChildren();
+  const title=document.createElement('strong');title.textContent='🍻 SAY RƯỢU · LÁ BÀI ĐÃ CHẾT';box.appendChild(title);
+  for(const draw of draws){
+    const name=(playSceneRuntime.players||[]).find(x=>String(x?.loginId||'')===String(draw.actorId||''))?.displayName||'Say Rượu';
+    const owner=document.createElement('p');owner.textContent=name+' · '+(draw.status==='selected'?'ĐÃ BỐC':'ĐANG CHỜ BỐC');box.appendChild(owner);
+    const grid=document.createElement('div');grid.className='deck-row';
+    for(const [i,card] of (draw.cards||[]).entries()){
+      const el=document.createElement('div');el.className='deck-card'+(card.selected?' is-picked':'');
+      el.textContent=card.selected?'✓ '+String(card.roleName||draw.selectedRoleName||'Vai Trò'):'🂠 '+(i+1);
+      grid.appendChild(el);
+    }
+    box.appendChild(grid);
+    if(draw.status==='selected'){
+      const result=document.createElement('div');result.className='deck-result';
+      result.textContent='ĐÃ NHẬN VAI: '+String(draw.selectedRoleName||'');box.appendChild(result);
+    }
+  }
+}
 function battleShowWitchIntel(turn){
   const roles=turn?.kind==='role-group'?(turn.roles||[]):[turn];
   if(!roles.some(row=>String(row?.roleId||'')==='role_witch'))return;
@@ -6612,6 +6646,7 @@ function renderPlayBattle(){
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);
+  battleRenderDrunkDraw(t);
   if(t&&phase==='night'&&!battleState.busy&&!battleState.syncPending&&!playSceneRuntime.busy)
     battleShowWitchIntel(t);
   if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
