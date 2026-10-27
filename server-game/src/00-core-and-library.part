@@ -952,9 +952,27 @@ function applyApprovedRoleSettings(s){
   },[
     ['action_clone_target',{description:'Đêm 1 chọn một người còn sống khác bản thân; chỉ khi mục tiêu chết mới kế thừa vào đêm sau.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:1,targetCount:1,noSelf:true,allowDead:false}]
   ]);
+  update('role_wolf_seer',{
+    information:'Sói Tiên Tri thức cùng Bầy Sói để chọn Sói Cắn chung, sau đó thức riêng theo thứ tự để tìm Tiên Tri. Mỗi đêm chọn một người sống khác bản thân và nhận kết quả Có/Không là Tiên Tri.',
+    limits:'Sói Cắn chỉ được chọn trong lượt chung của Bầy Sói; năng lực tìm Tiên Tri tối đa 1 lần mỗi đêm.',
+    conditions:'Thức cùng tất cả Sói trong lượt Cắn chung; sau đó dùng năng lực riêng tìm Tiên Tri. Không phải chờ trở thành Sói cuối cùng mới được tham gia Cắn.',
+    flags:{allowMultipleActions:true}
+  },[
+    ['action_find_seer',{description:'Sau lượt Sói Cắn chung, chọn một người còn sống khác mình để tìm Tiên Tri.',phase:'night',usageMode:'eachNight',usageCount:1,targetCount:1,noSelf:true,allowDead:false}]
+  ]);
+  update('role_wolf',{
+    information:'Sói Thường thức với toàn Bầy Sói khi còn ít nhất một Sói sống, cùng chọn một Sói Cắn chung mỗi đêm.',
+    conditions:'Thức chung cùng Bầy Sói và thực hiện Sói Cắn chung. Không có hành động đặc biệt ngoài lượt Cắn.',
+    flags:{allowMultipleActions:true}
+  },[
+    ['action_wolf_bite',{description:'Cùng toàn Bầy Sói chọn một mục tiêu Sói Cắn chung; không Cắn riêng.',usesPackBite:true,allowFriendlyFaction:true}]
+  ]);
   for(const c of cards){
     if(c?.factionId!=='wolf'||!c.id)continue;
     c.specialRules={...(c.specialRules||{}),usesPackBite:true};
+    c.flags={...(c.flags||{}),allowMultipleActions:true};
+    for(const fn of c.functions||[])if(fn?.actionId==='action_wolf_bite')
+      Object.assign(fn,{usesPackBite:true,allowFriendlyFaction:true});
     const extra='Bầy Sói thức chung để chọn Sói Cắn khi còn ít nhất một Vai Trò Sói sống. Năng lực riêng của từng Sói được gọi sau lượt Sói Cắn chung (Sói Tuyết ưu tiên Đóng Băng trước Bầy Sói).';
     if(!String(c.conditions||'').includes('Bầy Sói thức chung để chọn Sói Cắn'))
       c.conditions=[String(c.conditions||'').trim(),extra].filter(Boolean).join(' ');
