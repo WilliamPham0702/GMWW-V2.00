@@ -575,6 +575,17 @@ jobs:
           node --check server-game/current/app.js
           node --check src/index.js
           test -s docs/releases/GMWW-V3.249-witch-drunk-clone-20261027.md
+      - name: V3.250 — Cài đặt từng lá Vai Trò theo luật đã chốt
+        if: steps.scope.outputs.mode == 'approved-role-card-settings-3250'
+        run: |
+          node .github/scripts/verify-release-v3250.mjs
+          node --test tests/approved-role-card-settings-20261027.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/witch01-old-witch-rules.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.250-approved-role-card-settings-20261027.md
+
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
