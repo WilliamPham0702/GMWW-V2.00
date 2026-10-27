@@ -8704,3 +8704,19 @@ body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > but
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
  }
 }
+
+/* GMWW iPhone GM: dedicated, device-local performance controls. */
+#gmwwPerfCard{display:grid;gap:10px}
+#gmwwPerfCard .gmww-perf-field{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px;font-weight:700}
+#gmwwPerfCard select{min-width:0;max-width:64%;padding:9px;border:1px solid rgba(132,220,235,.3);border-radius:10px;background:#0b2938;color:#fff}
+#gmwwPerfCard .gmww-perf-toggle{display:flex;align-items:flex-start;gap:10px;min-height:38px;padding:9px 10px;border-radius:10px;background:rgba(8,37,56,.5);color:#f3fcff;font-weight:700}
+#gmwwPerfCard .gmww-perf-toggle input{flex:none;margin:3px 0;accent-color:#4dcfb4}
+#gmwwPerfCard .gmww-perf-toggle small{display:block;font-size:11px;line-height:1.5;font-weight:400;color:#a9cbd7}
+#gmwwPerfCard .gmww-perf-status{padding:9px;border:1px solid rgba(120,216,189,.35);border-radius:9px;font-size:12px;color:#bff6df}
+#gmwwPerfCard .gmww-perf-note{color:#a9cbd7;line-height:1.5}
+html[data-gmww-perf-reduced="true"] #start .gmww-sv-orbit-item,
+html[data-gmww-perf-reduced="true"] #start .gmww-sv-snowfall::before,
+html[data-gmww-perf-reduced="true"] #start .gmww-sv-snowfall::after,
+html[data-gmww-perf-reduced="true"] #start .gmww-sv-gray-mist,
+html[data-gmww-perf-reduced="true"] #start .gmww-sv-gray-puff,
+html[data-gmww-perf-reduced="true"] #start .play-core-pearl::after{animation-play-state:paused!important}

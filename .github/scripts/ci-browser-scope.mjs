@@ -1944,7 +1944,13 @@ export function isRuntime248PostMergeScope(changes){
  }catch{return false}
 }
 
+function isGMPerformance3253Scope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/scripts/verify-release-v3253.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/build-server-game-ipa.yml","assets/characters/gmww40/runtime.js","docs/releases/GMWW-V3.253-performance-thermal-20261027.md","server-game/current/GMWW.html","server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","server-game/current/style.css","server-game/current/app.js","server-game/src/00-core-and-library.part","tests/gmww-performance-thermal.test.mjs","package.json","package-lock.json","src/index.js"]);
+ return changes.every(c=>allowed.has(c.path)&&['M','A'].includes(c.status))&&["server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","assets/characters/gmww40/runtime.js","server-game/current/GMWW.html","tests/gmww-performance-thermal.test.mjs","src/index.js","package.json","package-lock.json"].every(p=>changes.some(c=>c.path===p))&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.253.0';
+}
 export function classifyBrowserScope(changes){
+ if(isGMPerformance3253Scope(changes))return 'gm-performance-thermal-3253';
   if(isRuntime248PostMergeScope(changes))return 'runtime-3248-postmerge';
   if(isRuntime248SetupUiScope(changes))return 'runtime-3248-setup-ui';
   if(isIcon247PostMergeScope(changes))return 'icon-scale-3247-postmerge';
@@ -2033,6 +2039,18 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+ if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+  try{
+   if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.253.0'){
+    const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+    if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+     execFileSync(process.execPath,['.github/scripts/verify-release-v3253.mjs'],{encoding:'utf8',env:{...process.env,GMWW_V3253_BASE:base}});
+     return{mode:'gm-performance-thermal-3253',reason:'V3.253 narrow GM anti-heat Runtime and OTA verified'};
+    }
+   }
+  }catch{}
+ }
+
   // V3.252: iPhone maintenance grid is flat, all 16 original handlers unchanged.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
