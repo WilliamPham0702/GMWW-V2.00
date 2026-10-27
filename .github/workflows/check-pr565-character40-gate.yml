@@ -1,0 +1,44 @@
+name: GMWW PR565 Production Character40 gate — focused
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/scripts/verify-character40-production.mjs'
+      - 'tests/character40-shell-gate-pr565.test.mjs'
+      - '.github/workflows/check-pr565-character40-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/verify-character40-production.mjs'
+      - 'tests/character40-shell-gate-pr565.test.mjs'
+      - '.github/workflows/check-pr565-character40-gate.yml'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Correct shell/version and SHA-256 guards — no unrelated suites
+        run: |
+          node --check .github/scripts/verify-character40-production.mjs
+          node --test tests/character40-shell-gate-pr565.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+  verify-live:
+    needs: contract
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build canonical Character40 identity images
+        run: |
+          python3 -m pip install --user Pillow==11.3.0
+          python3 tools/generate-character40-portraits.py --verify
+      - name: Verify Production Character40, OTA hashes and preserved Player Web
+        run: node .github/scripts/verify-character40-production.mjs
