@@ -2323,7 +2323,7 @@ body.play-immersive #start .play-shell[data-step="lobby"] .play-setup-strip,
 body.play-immersive #start .play-shell[data-step="room"] .play-setup-strip{
   display:grid!important;position:absolute!important;z-index:44!important;
   top:calc(env(safe-area-inset-top) + 76px)!important;left:8px!important;right:8px!important;
-  grid-template-columns:repeat(7,minmax(0,1fr))!important;column-gap:2px!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;column-gap:2px!important;
   padding:5px 3px!important;border:1px solid rgba(216,255,255,.3)!important;
   border-radius:14px!important;background:rgba(2,40,57,.75)!important;
   box-shadow:0 4px 18px rgba(0,23,34,.23)!important;
@@ -2336,7 +2336,7 @@ body.play-immersive #start .play-setup-strip span{width:20px;height:20px;font-si
 body.play-immersive #start .play-setup-strip b{font-size:7px;line-height:1.1;white-space:normal}
 body.play-immersive #start .play-shell[data-step="lobby"] .play-card-fan{display:none!important}
 
-/* V3.25: single seven-step top timeline and frosted five-control bottom dock.
+/* V3.244: six centered top timeline steps and frosted five-control bottom dock.
    Frosted chrome only; the village art stays sharp. */
 body.play-immersive #start #playSetupStrip.play-setup-strip,
 body.play-immersive #start .play-shell[data-step="lobby"] #playSetupStrip,
@@ -2344,7 +2344,7 @@ body.play-immersive #start .play-shell[data-step="room"] #playSetupStrip{
  display:grid!important;position:absolute!important;z-index:96!important;
  top:calc(env(safe-area-inset-top) + 10px)!important;bottom:auto!important;
  left:9px!important;right:9px!important;width:auto!important;max-width:900px!important;margin:0 auto!important;
- grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:2px!important;align-items:center!important;
+ grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:2px!important;align-items:center!important;
  min-height:62px!important;padding:7px 5px!important;border-radius:17px!important;
  border:1px solid rgba(186,240,250,.39)!important;
  background:linear-gradient(155deg,rgba(5,39,58,.64),rgba(7,69,87,.54))!important;

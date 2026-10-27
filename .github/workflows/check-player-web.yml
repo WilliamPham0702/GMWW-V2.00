@@ -467,6 +467,17 @@ jobs:
         run: |
           node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
+
+      - name: V3.244 — chỉ menu tiến trình 6 bước căn đều và an toàn Runtime
+        if: steps.scope.outputs.mode == 'timeline-six-center-3244'
+        run: |
+          node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.244-timeline-center-20261027.md
+
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test

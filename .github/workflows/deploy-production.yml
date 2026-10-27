@@ -982,9 +982,51 @@ jobs:
           echo "::error::PR541 required CI not SUCCESS; Production remains unchanged"
           exit 1
 
+
+      # V3.244 — timeline 6 o, khong thay doi IPA, DO, Server rule.
+      - name: V3.244 — CI đúng phạm vi timeline 6 ô và Worker cùng SHA
+        id: timeline244_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.244.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.244-timeline-center-20261027.md
+          node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          git diff --name-only HEAD^1 HEAD | while IFS= read -r FILE; do
+            case "$FILE" in
+              .github/workflows/deploy-production.yml|server-game/current/style.css|server-game/current/GMWW.html|server-game/current/app.js|server-game/src/00-core-and-library.part|src/index.js|package.json|package-lock.json|tests/lobby-gather-mode-assassin-20261027.test.mjs|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-web.yml|docs/releases/GMWW-V3.244-timeline-center-20261027.md) ;;
+              *) echo "::error::V3.244 out-of-scope file: $FILE"; exit 1;;
+            esac
+          done
+          STATE=pending
+          for TRY in $(seq 1 30); do
+            RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATE=$(printf '%s' "$RUNS" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{
+                const rs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const get=n=>rs.filter(x=>x.name===n).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0]?.conclusion||'pending';
+                const states=[get('Check Player Web Worker'),get('Check GM Lobby Gather and Assassin')];
+                process.stdout.write(states.every(x=>x==='success')?'success':states.some(x=>['failure','cancelled','timed_out'].includes(x))?'failure':'pending');
+              })")
+            if [ "$STATE" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.244: GM timeline + Worker CI SUCCESS cùng SHA; IPA không đổi." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATE" = failure ]; then echo "::error::V3.244 required CI failed"; exit 1; fi
+            sleep 10
+          done
+          echo "::error::V3.244 required CI pending; Production unchanged"; exit 1
+
       # Historical V3.236/V3.237 gates are intentionally omitted from the V3.238 release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true'
+        if: steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
