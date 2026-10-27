@@ -2,7 +2,7 @@
 
 Bốn nút Tự Động / Thủ Công / Tải IPA / Đồng bộ Web cùng một hàng trên iPhone.
 Thủ Công mở Tệp, xác minh toàn bộ gói .gmwwupdate trước khi xin xác nhận cài.
-Gói chứa manifest và bytes base64, không tải lại file qua mạng. Kiểm tra đường dẫn,
+Gói chứa manifest và bytes nhị phân đọc từng file (không nạp toàn bộ gói vào RAM), không tải lại file qua mạng. Kiểm tra đường dẫn,
 file trùng/thiếu, SHA-256, phiên bản IPA tối thiểu và giới hạn dung lượng.
 Cần IPA mới có native document picker một lần; IPA cũ hiển thị hướng dẫn nâng cấp.
 Không đổi dữ liệu phòng, tài khoản, Core hoặc lịch sử.

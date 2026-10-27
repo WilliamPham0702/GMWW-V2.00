@@ -183,7 +183,7 @@ struct GameWebView: UIViewRepresentable {
             return path.split(separator: "/").allSatisfy { !$0.isEmpty && $0 != "." }
         }
 
-        private func installRuntime(manifestObject: [String: Any], webView: WKWebView, localFiles: [String: String]? = nil) {
+        private func installRuntime(manifestObject: [String: Any], webView: WKWebView, localFiles: [String: (offset: UInt64, size: Int)]? = nil, packageURL: URL? = nil) {
             guard JSONSerialization.isValidJSONObject(manifestObject),
                   let data = try? JSONSerialization.data(withJSONObject: manifestObject),
                   let manifest = try? JSONDecoder().decode(UpdateManifest.self, from: data),
@@ -202,9 +202,14 @@ struct GameWebView: UIViewRepresentable {
             guard !runtimeInstallBusy else { return }
             runtimeInstallBusy = true
             Task {
-                defer { runtimeInstallBusy = false }
+                defer {
+                    runtimeInstallBusy = false
+                    if let packageURL { try? FileManager.default.removeItem(at: packageURL) }
+                }
                 var staging: URL?
                 do {
+                    let packageHandle = try packageURL.map { try FileHandle(forReadingFrom: $0) }
+                    defer { try? packageHandle?.close() }
                     let root = try runtimeRoot()
                     let temp = root.appendingPathComponent(".staging-\(UUID().uuidString)", isDirectory: true)
                     staging = temp
@@ -237,10 +242,12 @@ struct GameWebView: UIViewRepresentable {
                         }
                         let fileData: Data
                         if let localFiles {
-                            guard let encoded = localFiles[item.path], let decoded = Data(base64Encoded: encoded) else {
+                            guard let entry = localFiles[item.path], let packageHandle else {
                                 throw NSError(domain: "GMWWUpdater", code: 9, userInfo: [NSLocalizedDescriptionKey: "Gói thủ công thiếu file hoặc dữ liệu hỏng: \(item.path)"])
                             }
-                            fileData = decoded
+                            try packageHandle.seek(toOffset: entry.offset)
+                            fileData = try packageHandle.read(upToCount: entry.size) ?? Data()
+                            guard fileData.count == entry.size else { throw manualError("File cập nhật bị cắt ngắn.") }
                         } else {
                             let (downloaded, response) = try await URLSession.shared.data(from: remote)
                             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
@@ -299,14 +306,25 @@ struct GameWebView: UIViewRepresentable {
             DispatchQueue.global(qos: .userInitiated).async {
                 let scoped = url.startAccessingSecurityScopedResource()
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                var retainedPackage: URL?
                 do {
                     let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                    guard size > 0, size <= 170 * 1024 * 1024 else { throw self.manualError("File cập nhật quá lớn hoặc rỗng.") }
-                    let data = try Data(contentsOf: url)
-                    guard let package = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                          package["format"] as? String == "gmww-runtime-1",
+                    guard size > 0, size <= 515 * 1024 * 1024 else { throw self.manualError("File cập nhật quá lớn hoặc rỗng.") }
+                    let copy = FileManager.default.temporaryDirectory.appendingPathComponent("GMWW-manual-" + UUID().uuidString)
+                    try FileManager.default.copyItem(at: url, to: copy)
+                    retainedPackage = copy
+                    let handle = try FileHandle(forReadingFrom: copy)
+                    defer { try? handle.close() }
+                    let magic = Data("GMWWRUNTIME2\n".utf8)
+                    guard try handle.read(upToCount: magic.count) == magic,
+                          let lengthBytes = try handle.read(upToCount: 4), lengthBytes.count == 4 else { throw self.manualError("Không phải gói GMWW hợp lệ.") }
+                    let headerSize = lengthBytes.reduce(0) { ($0 << 8) | Int($1) }
+                    guard headerSize > 0, headerSize <= 2 * 1024 * 1024,
+                          let data = try handle.read(upToCount: headerSize), data.count == headerSize,
+                          let package = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                          package["format"] as? String == "gmww-runtime-2",
                           let manifestObject = package["manifest"] as? [String: Any],
-                          let files = package["files"] as? [String: String] else { throw self.manualError("Không phải gói GMWW hợp lệ.") }
+                          let lengths = package["lengths"] as? [String: Int] else { throw self.manualError("Header gói cập nhật không hợp lệ.") }
                     let manifestData = try JSONSerialization.data(withJSONObject: manifestObject)
                     let manifest = try JSONDecoder().decode(UpdateManifest.self, from: manifestData)
                     let version = manifest.runtimeVersion ?? ""
@@ -316,25 +334,33 @@ struct GameWebView: UIViewRepresentable {
                     guard shell.compare(manifest.minimumShellVersion ?? "0", options: .numeric) != .orderedAscending else { throw self.manualError("Gói này cần IPA mới hơn.") }
                     guard version.compare(shell, options: .numeric) != .orderedAscending else { throw self.manualError("Gói Runtime cũ hơn bản đã có trong IPA.") }
                     let paths = entries.map { $0.path }
-                    guard Set(paths).count == paths.count, Set(paths) == Set(files.keys),
+                    guard Set(paths).count == paths.count, Set(paths) == Set(lengths.keys),
                           ["GMWW.html", "app.js", "style.css"].allSatisfy({ paths.contains($0) }),
                           (manifest.delete ?? []).allSatisfy({ self.safeRelativePath($0) }) else { throw self.manualError("Danh sách file thiếu, trùng hoặc không an toàn.") }
                     var total = 0
+                    var offset = UInt64(magic.count + 4 + headerSize)
+                    var files: [String: (offset: UInt64, size: Int)] = [:]
                     for item in entries {
                         guard self.safeRelativePath(item.path), let remote = URL(string: item.url), self.allowedRuntimeURL(remote),
-                              let encoded = files[item.path], let bytes = Data(base64Encoded: encoded),
+                              let length = lengths[item.path], length >= 0, length <= 16 * 1024 * 1024,
+                              let bytes = try handle.read(upToCount: length), bytes.count == length,
                               self.sha256(bytes) == item.sha256.lowercased() else { throw self.manualError("SHA-256 hoặc đường dẫn không hợp lệ: \(item.path)") }
-                        total += bytes.count
-                        guard total <= 120 * 1024 * 1024 else { throw self.manualError("Gói cập nhật vượt giới hạn dung lượng.") }
+                        files[item.path] = (offset, length)
+                        offset += UInt64(length)
+                        total += length
+                        guard total <= 512 * 1024 * 1024 else { throw self.manualError("Gói cập nhật vượt giới hạn dung lượng.") }
                     }
+                    guard offset == UInt64(size) else { throw self.manualError("Gói cập nhật có dữ liệu thừa hoặc bị thiếu.") }
+                    let verifiedFiles = files
                     let notes = (manifestObject["releaseNotes"] as? [String] ?? []).prefix(3).joined(separator: "\n")
                     DispatchQueue.main.async {
                         let alert = UIAlertController(title: "Cài Runtime V" + version + "?", message: notes + "\n\nChỉ cài file nhận từ bản phát hành GMWW tin cậy. SHA-256 đã khớp; dữ liệu ván được giữ nguyên.", preferredStyle: .alert)
-                        alert.addAction(UIAlertAction(title: "Hủy", style: .cancel) { _ in self.sendResult(["cancelled": true, "action": "installRuntime"], to: webView) })
-                        alert.addAction(UIAlertAction(title: "Cài cập nhật", style: .default) { _ in self.installRuntime(manifestObject: manifestObject, webView: webView, localFiles: files) })
+                        alert.addAction(UIAlertAction(title: "Hủy", style: .cancel) { _ in try? FileManager.default.removeItem(at: copy); self.sendResult(["cancelled": true, "action": "installRuntime"], to: webView) })
+                        alert.addAction(UIAlertAction(title: "Cài cập nhật", style: .default) { _ in self.installRuntime(manifestObject: manifestObject, webView: webView, localFiles: verifiedFiles, packageURL: copy) })
                         self.present(alert, from: webView)
                     }
                 } catch {
+                    if let retainedPackage { try? FileManager.default.removeItem(at: retainedPackage) }
                     self.sendResult(["ok": false, "action": "installRuntime", "error": error.localizedDescription], to: webView)
                 }
             }

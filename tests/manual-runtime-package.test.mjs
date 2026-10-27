@@ -7,14 +7,26 @@ import {createHash} from 'node:crypto';
 const modulePath='../.github/scripts/build-manual-runtime.mjs';
 test('manual runtime packager validates bytes, missing entry points and unsafe paths',async()=>{
  assert.ok(fs.existsSync(new URL(modulePath,import.meta.url)),'manual packager must exist');
- const {buildManualPackage}=await import(modulePath);
+ const {buildManualPackage,writeManualPackage}=await import(modulePath);
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'gmww-manual-'));
  try{
   const files=['GMWW.html','app.js','style.css'].map(p=>{fs.writeFileSync(path.join(root,p),'fixture '+p);return {path:p,url:'https://gmww-v2-00.williampham0702.workers.dev/'+p,sha256:createHash('sha256').update('fixture '+p).digest('hex')}});
   const manifest={runtimeVersion:'3.257',minimumShellVersion:'3.110',runtime:{files}};
   const pkg=buildManualPackage(manifest,root);
-  assert.equal(pkg.format,'gmww-runtime-1');
-  assert.equal(Buffer.from(pkg.files['app.js'],'base64').toString(),'fixture app.js');
+  assert.equal(pkg.format,'gmww-runtime-2');
+  const output=path.join(root,'test.gmwwupdate');
+  writeManualPackage(manifest,root,output);
+  const bytes=fs.readFileSync(output),magic=Buffer.from('GMWWRUNTIME2\n');
+  assert.ok(bytes.subarray(0,magic.length).equals(magic));
+  const headerLength=bytes.readUInt32BE(magic.length);
+  const header=JSON.parse(bytes.subarray(magic.length+4,magic.length+4+headerLength));
+  assert.equal(header.format,'gmww-runtime-2');
+  let offset=magic.length+4+headerLength;
+  for(const item of header.manifest.runtime.files){
+   const length=header.lengths[item.path];
+   assert.equal(bytes.subarray(offset,offset+length).toString(),'fixture '+item.path);offset+=length;
+  }
+  assert.equal(offset,bytes.length);
   fs.writeFileSync(path.join(root,'app.js'),'corrupt');
   assert.throws(()=>buildManualPackage(manifest,root),/SHA-256/);
   assert.throws(()=>buildManualPackage({...manifest,runtime:{files:[{...files[0],path:'../escape'}]}},root),/path|entry/i);
