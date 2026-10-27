@@ -510,7 +510,9 @@ test('PR550 focused rules regression only (no unrelated gameplay, IPA, OTA)',()=
    {path:'tests/ci-browser-scope.test.mjs',status:'M',before:'previous',after:'PR550 focused rules regression only'},
    {path:'.github/scripts/ci-browser-scope.mjs',status:'M',before:'previous',after:'function isRules550Scope(changes)'},
    {path:'.github/workflows/check-player-web.yml',status:'M',before:'previous',
-     after:"steps.scope.outputs.mode == 'night02-rule-regression-550'"}
+     after:"steps.scope.outputs.mode == 'night02-rule-regression-550'"},
+   {path:'.github/workflows/deploy-production.yml',status:'M',before:'previous',
+     after:'PR550 test-only rule regression'}
  ];
  assert.equal(classifyBrowserScope(rows),'night02-rule-regression-550');
  assert.equal(classifyBrowserScope(rows.slice(1)),'full');
