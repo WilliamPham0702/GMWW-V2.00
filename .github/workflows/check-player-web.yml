@@ -174,6 +174,15 @@ jobs:
           node -e "const fs=require('fs'),crypto=require('crypto');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json','utf8'));let e=m.icons.find(x=>x.svg==='01_soi_xet.svg');let s=crypto.createHash('sha256').update(fs.readFileSync('assets/action-icons/v2/01_soi_xet.svg')).digest('hex');if(m.count!==49||e.sha256_svg!==s)process.exit(1)"
           test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
 
+      - name: PR550 focused Snow Wolf Guard Pack Fairy rules regression
+        if: steps.scope.outputs.mode == 'night02-rule-regression-550'
+        run: |
+          node --test tests/gmww-rule-snow-guard-pack-fairy.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/ci-browser-scope.test.mjs
+          node --check src/gmww-pack-night-rules.js
+          node --check src/gmww-wolf-night-resolution.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+
       - name: NIGHT-02 - scoped Snow Guard Wolf Pack Fairy real gameplay and GM bundle
         if: steps.scope.outputs.mode == 'night02-pack-roles'
         run: |
