@@ -1127,7 +1127,7 @@ jobs:
           node --test tests/gmww-v3248-setup-ui-perf.test.mjs tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs tests/ci-v3248-postmerge.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
-          test -s docs/releases/GMWW-V3.248-icon-size-20261027.md
+          test -s docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md
           STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
           test "$STATE" = success || { echo "::error::Same-SHA mandatory Worker CI not SUCCESS"; exit 1; }
           echo "approved=true" >> "$GITHUB_OUTPUT"
