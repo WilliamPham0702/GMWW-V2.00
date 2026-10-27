@@ -367,6 +367,42 @@ async function initCharacterScaleSetting(){
 }
 setTimeout(initCharacterScaleSetting,0);
 
+/* GMWW V3.247: device-local icon size uses the same six Character steps. */
+const ACTION_ICON_SCALE_STORAGE_KEY='GMWW_GM_ACTION_ICON_SCALE_V1';
+function normalizeActionIconScale(value){
+ const n=Number(value);if(!Number.isFinite(n))return 100;
+ return CHARACTER_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,100);
+}
+function applyActionIconScale(value){
+ const n=normalizeActionIconScale(value);
+ document.documentElement?.style?.setProperty('--gmww-action-icon-scale',String(n/100));
+ document.querySelectorAll('[data-action-icon-scale]').forEach(btn=>{
+  const active=Number(btn.dataset.actionIconScale)===n;
+  btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));
+ });
+ const label=document.getElementById('actionIconScaleValue');if(label)label.textContent=n+'%';
+ const dock=document.getElementById('battleFireIconDock');if(dock)delete dock.dataset.sig;
+ return n;
+}
+function saveActionIconScale(value){
+ const n=applyActionIconScale(value);
+ try{localStorage.setItem(ACTION_ICON_SCALE_STORAGE_KEY,String(n))}
+ catch(err){console.warn('GMWW_ICON_SCALE_SAVE',err)}
+}
+function initActionIconScaleSetting(){
+ const choices=document.getElementById('actionIconScaleChoices');if(!choices)return;
+ let n=100;
+ try{const v=localStorage.getItem(ACTION_ICON_SCALE_STORAGE_KEY);if(v!==null)n=normalizeActionIconScale(v)}
+ catch(err){console.warn('GMWW_ICON_SCALE_LOAD',err)}
+ applyActionIconScale(n);
+ choices.addEventListener('click',event=>{
+  const btn=event.target.closest('[data-action-icon-scale]');
+  if(btn)saveActionIconScale(btn.dataset.actionIconScale);
+ });
+}
+setTimeout(initActionIconScaleSetting,0);
+
+
 /* V2.22 — Server Health in Cài Đặt */
 const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
 const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
