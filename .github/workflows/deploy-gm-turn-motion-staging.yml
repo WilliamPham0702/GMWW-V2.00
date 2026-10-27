@@ -1,0 +1,104 @@
+name: GM turn-motion iPhone STAGING (isolated)
+
+on:
+  push:
+    branches:
+      - feature/gm-turn-flight-target-run-lowheat-20261027
+    paths:
+      - 'server-game/current/**'
+      - 'server-game/src/30-village-and-setup.part'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'tests/gm-turn-motion-lowheat.test.mjs'
+      - '.github/scripts/build-gm-turn-motion-staging.mjs'
+      - '.github/workflows/deploy-gm-turn-motion-staging.yml'
+      - 'wrangler.gm-turn-motion-staging.jsonc'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-gm-turn-motion-stage
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: GM-only tests, source assembly and JS syntax
+        run: |
+          node --test tests/gm-turn-motion-lowheat.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check server-game/current/app.js
+          node --check server-game/current/gmww-shared-motion.js
+      - name: Confirm STAGING Worker and credentials are isolated
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const c=JSON.parse(fs.readFileSync('wrangler.gm-turn-motion-staging.jsonc','utf8'));
+          if(c.name!=='gmww-gm-turn-motion-staging'||c.main!=='src/index.js')throw Error('Wrong staging Worker');
+          if(c.routes||c.route||c.services||c.env||c.vars)throw Error('Unexpected Production route/binding');
+          if(c.durable_objects?.bindings?.length!==1||c.durable_objects.bindings[0].class_name!=='RoomDurableObject')throw Error('Unexpected DO binding');
+          if(JSON.stringify(c).includes('gmww-v2-00_RoomDurableObject'))throw Error('Production namespace!');
+          console.log('PASS isolated Worker, rooms namespace, no Production route');
+          NODE
+          node .github/scripts/build-gm-turn-motion-staging.mjs
+          node --check src/index.js
+          node --check assets/gm-turn-stage/app.js
+          npx wrangler deploy --config wrangler.gm-turn-motion-staging.jsonc --dry-run
+      - name: Ensure release notes
+        run: test -s docs/releases/GMWW-GM-TURN-MOTION-20261027.md
+
+  deploy-staging:
+    needs: validate
+    if: github.ref == 'refs/heads/feature/gm-turn-flight-target-run-lowheat-20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build GM game only on independent stage
+        run: node .github/scripts/build-gm-turn-motion-staging.mjs
+      - name: Deploy STAGING only (Production and IPA untouched)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx wrangler deploy --config wrangler.gm-turn-motion-staging.jsonc
+      - name: HTTP verification of isolated GM game and Worker
+        run: |
+          set -euo pipefail
+          BASE="https://gmww-gm-turn-motion-staging.williampham0702.workers.dev"
+          fetch_live() {
+            local suffix="$1" dest="$2" code=''
+            for i in $(seq 1 25); do
+              code=$(curl --location --silent --show-error --max-time 10 -o "$dest" -w '%{http_code}' "$BASE/$suffix" || true)
+              if [ "$code" = '200' ]; then echo "PASS HTTP 200: /$suffix"; return 0; fi
+              echo "STAGING warming up: /$suffix returned ${code:-network error} (try $i)"
+              sleep 2
+            done
+            echo "::error::STAGING route failed: /$suffix HTTP $code"
+            return 1
+          }
+          fetch_live api/health /tmp/gm-turn-health.json
+          grep -q '"project":"GMWW-V2.00"' /tmp/gm-turn-health.json
+          fetch_live gm-turn-stage/GMWW.html /tmp/gm-turn-gm.html
+          grep -q 'battleGMTurnMotion' /tmp/gm-turn-gm.html
+          fetch_live gm-turn-stage/app.js /tmp/gm-turn-app.js
+          grep -q 'GMWW_SERVER_BASE=window.location.origin' /tmp/gm-turn-app.js
+          grep -q 'GMWW_GM_TURN_MOTION_V1' /tmp/gm-turn-app.js
+          ! grep -q 'gmww-v2-00.williampham0702.workers.dev' /tmp/gm-turn-app.js
+          echo 'STAGING GM iPhone: '"$BASE"'/gm-turn-stage/GMWW.html' >> "$GITHUB_STEP_SUMMARY"
+          echo 'PASS GM game/Worker smoke. Production, rooms, history and IPA untouched.' >> "$GITHUB_STEP_SUMMARY"
