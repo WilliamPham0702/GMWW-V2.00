@@ -51,3 +51,9 @@ test('manual action never posts to an unsupported shell and blocks duplicate req
  assert.equal(ctx.installManualRuntimeUpdate(),true);assert.deepEqual(calls,['pickRuntimePackage']);
  assert.equal(ctx.installManualRuntimeUpdate(),false);assert.equal(calls.length,1);
 });
+
+test('native asset validator skips the special about:blank document without hiding actual missing assets',()=>{
+ const validator=fs.readFileSync('.github/scripts/verify-native-web.mjs','utf8');
+ assert.match(validator,/ref==='about:blank'/);
+ assert.match(validator,/requireFile\(ref\)/);
+});
