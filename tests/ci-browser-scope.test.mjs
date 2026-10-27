@@ -503,3 +503,19 @@ test('PR532 scoped CI selector permits only the exact isolated CI-only followup'
  assert.equal(classifyBrowserScope(files),'postmatch-ci-532');
  assert.equal(classifyBrowserScope([...files,modified('server-game/current/app.js','a','b')]),'full');
 });
+
+test('PR550 focused rules regression only (no unrelated gameplay, IPA, OTA)',()=>{
+ const rows=[
+   {path:'tests/gmww-rule-snow-guard-pack-fairy.test.mjs',status:'A',after:'Snow Wolf: night N target is barred at N+1'},
+   {path:'tests/ci-browser-scope.test.mjs',status:'M',before:'previous',after:'PR550 focused rules regression only'},
+   {path:'.github/scripts/ci-browser-scope.mjs',status:'M',before:'previous',after:'function isRules550Scope(changes)'},
+   {path:'.github/workflows/check-player-web.yml',status:'M',before:'previous',
+     after:"steps.scope.outputs.mode == 'night02-rule-regression-550'"},
+   {path:'.github/workflows/deploy-production.yml',status:'M',before:'previous',
+     after:'PR550 test-only rule regression'}
+ ];
+ assert.equal(classifyBrowserScope(rows),'night02-rule-regression-550');
+ assert.equal(classifyBrowserScope(rows.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...rows,{path:'src/index.js',status:'M',before:'a',after:'b'}]),'full');
+ assert.equal(classifyBrowserScope(rows.map(row=>row.path.startsWith('tests/gmww-rule-snow')?{...row,after:'unrelated'}:row)),'full');
+});
