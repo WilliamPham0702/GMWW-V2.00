@@ -2315,8 +2315,9 @@ export class RoomDurableObject extends DurableObject {
       // Only the battle-action endpoint maintains the per-role nightly ledger,
       // limits and atomic Undo; never allow legacy GM interaction to bypass it.
       if(!verifiedAuth&&!body?.artifactId&&
-         (step.kind==="wolf-pack-bite"||step.kind==="role"&&step.roleId==="role_old_witch"||
-          step.kind==="role-group"&&(step.roles||[]).some(r=>r.roleId==="role_old_witch")))
+         (step.kind==="wolf-pack-bite"||
+          step.kind==="role"&&["role_old_witch","role_snow_wolf","role_guard"].includes(step.roleId)||
+          step.kind==="role-group"&&(step.roles||[]).some(r=>["role_old_witch","role_snow_wolf","role_guard"].includes(r.roleId))))
         return j({ok:false,error:"WITCH_USE_BATTLE_ACTION"},409);
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
       const artifactActions=Array.isArray(step.actions)?step.actions:[];
