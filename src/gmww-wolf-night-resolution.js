@@ -38,7 +38,8 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
     x?.roleId==='role_alpha_wolf'&&!rows.some(y=>isFrom(y,match,cycle)&&y?.type==='dead'&&
       y.effectActive!==false&&login(y.loginId)===login(x.loginId))).map(x=>login(x.loginId)));
   const disabledAlpha=rows.some(x=>String(x?.matchId||'')===match&&alphaIds.has(login(x.loginId))&&
-    x.effectActive!==false&&((x.type==='frozen'&&Number(x.night)===cycle)||x.type==='expelled'));
+    (x.effectActive!==false||(x.type==='frozen'&&x.expiredReason==='MORNING_START'&&Number(x.night)===cycle))&&
+    ((x.type==='frozen'&&Number(x.night)===cycle)||x.type==='expelled'));
   if(disabledAlpha)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:bites.length,
     packDisabled:true,reason:'ALPHA_FROZEN_OR_EXPELLED'};
 
