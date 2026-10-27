@@ -1934,6 +1934,7 @@ function detect(){
       if(isFairy3242Scope(changes))return{mode:'fairy-audio-3242',reason:'Exact reviewed V3.242 blobs'};
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
+      if(isRules550Scope(changes))return{mode:'night02-rule-regression-550',reason:'PR550 exact four-file test-only merge; no Worker, gameplay, OTA or IPA'};
       if(isNight02Scope(changes))return{mode:'night02-pack-roles',reason:'V3.245 NIGHT-02 scoped wolf pack, snow, guard, fairy Core + GM'};
       if(isWITCH01Scope(changes))return{mode:'witch01-old-witch',reason:'V3.240 WITCH-01 authoritative and GM-only tests'};
       if(isWOLF01Scope(changes))return{mode:'wolf01-private-pack',reason:'V3.239 WOLF-01 private recognition; focused Player Web and Worker'};
