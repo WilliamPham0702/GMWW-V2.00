@@ -6110,7 +6110,7 @@ function battleMarkPlayers(){
   // During the day, a chosen action identifies the actor without making all day roles fly.
   const dayActorIds=playSceneState.phase==='day'?(battleAction()?.actorIds||[]):[];
   const actors=new Set([...actorIds,...dayActorIds].map(id=>String(id).replace(/^member:/,''))),now=Date.now();
-  const motionOn=playSceneState.step==='battle'&&battleMotionOn()&&document.visibilityState!=='hidden';
+  const motionOn=playSceneState.step==='battle'&&battleMotionOn()&&document.visibilityState!=='hidden'&&!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const witchAwake=playSceneState.phase==='night'&&
     (t?.roleId==='role_witch'||(t?.roles||[]).some(row=>row.roleId==='role_witch'));
   const intel=playSceneRuntime.nightIntel;
