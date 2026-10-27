@@ -57,3 +57,12 @@ test('native asset validator skips the special about:blank document without hidi
  assert.match(validator,/ref==='about:blank'/);
  assert.match(validator,/requireFile\(ref\)/);
 });
+
+test('the manual update native shell version matches the release and Xcode baseline',()=>{
+ const worker=fs.readFileSync('src/index.js','utf8');
+ const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
+ const shell=worker.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
+ const runtime=worker.match(/VERSION="V([0-9.]+)"/)?.[1];
+ assert.equal(shell,runtime,'manual picker changes require a new IPA shell');
+ assert.equal((project.match(/MARKETING_VERSION = 3\.257;/g)||[]).length,2);
+});
