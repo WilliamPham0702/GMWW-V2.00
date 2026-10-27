@@ -6215,14 +6215,6 @@ function battlePlayWakeupAndAdvance(turn,key){
   // optional terminal Night turn. This avoids missing or double wake-up cues.
   void battleWakeupToDay(key);
 }
-function battleWolfOutcomeText(result){
-  if(!result?.ok)return 'Không thể xác định vết cắn: cần kiểm tra vị trí Seat.';
-  if(!result.attacked?.length)return 'Không có vết cắn trong đêm này.';
-  return result.attacked.map(x=>{
-    const from=battleMember(x.from)?.displayName||x.from,to=battleMember(x.to)?.displayName||x.to;
-    return (x.direction!=='none'?from+' → '+to:to)+(x.protected?' · ĐƯỢC BẢO VỆ':' · BỊ SÓI CẮN');
-  }).join(' · ');
-}
 function battleRenderDrunkDraw(turn){
   let box=document.getElementById('gmwwGmDrunkDeck');
   const inNight=playSceneState.step==='battle'&&playSceneState.phase==='night'&&
@@ -6257,13 +6249,7 @@ function battleRenderDrunkDraw(turn){
     }
   }
 }
-function battleShowWitchIntel(turn){
-  const roles=turn?.kind==='role-group'?(turn.roles||[]):[turn];
-  if(!roles.some(row=>String(row?.roleId||'')==='role_witch'))return;
-  if(!playSceneRuntime.nightIntel||battleState.intelShownForKey===battleState.key)return;
-  battleState.intelShownForKey=battleState.key;
-  battleShowResultPopup('🐺 VẾT CẮN · PHÙ THỦY',battleWolfOutcomeText(playSceneRuntime.nightIntel));
-}
+// Nhãn MỤC TIÊU vẫn hiển thị; không mở popup Phù Thủy riêng.
 function battleBindResultPopup(){
   const popup=document.getElementById('battleResultPopup');if(!popup||popup.dataset.dragReady)return;
   popup.dataset.dragReady='1';
@@ -6957,8 +6943,6 @@ function renderPlayBattle(){
   if(battleState.key!==key){battleState.gmwwWalkExpired=false;battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);
   battleRenderDrunkDraw(t);
-  if(t&&phase==='night'&&!battleState.busy&&!battleState.syncPending&&!playSceneRuntime.busy)
-    battleShowWitchIntel(t);
   if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   // Do not claim a wake-up cue was played during intermediate Server sync, or
   // while the GM is navigating. The first stable role of EVERY night must speak.
