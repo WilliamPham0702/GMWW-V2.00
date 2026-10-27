@@ -8704,3 +8704,17 @@ body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > but
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
  }
 }
+
+/* GM-only turn/target scene animation. The seat, role, status and server state never move.
+   Only the selected actor's avatar layer gets a composited translate; no shadow/filter loop. */
+#playShell[data-step="battle"] .play-player-token .play-player-avatar{
+  transition:transform 480ms cubic-bezier(.2,.7,.2,1);
+}
+#playShell[data-step="battle"] .play-player-token.is-gm-turn-floating{z-index:140!important;}
+#playShell[data-step="battle"] .play-player-token.is-gm-turn-floating .play-player-avatar{
+  transform:translate3d(0,-100%,0)!important;
+}
+@media(prefers-reduced-motion:reduce){
+  #playShell[data-step="battle"] .play-player-token .play-player-avatar{transition:none!important}
+  #playShell[data-step="battle"] .play-player-token.is-gm-turn-floating .play-player-avatar{transform:none!important}
+}
