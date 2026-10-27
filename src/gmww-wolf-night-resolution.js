@@ -142,11 +142,13 @@ export function canSnowWolfBite({assignments=[],interactions=[],matchId}={}){
   const dead=new Set((Array.isArray(interactions)?interactions:[]).filter(row=>
     String(row?.matchId||'')===match&&row?.type==='dead'&&row?.effectActive!==false)
     .map(row=>login(row.loginId)));
-  return !(Array.isArray(assignments)?assignments:[]).some(row=>{
-    const role=String(row?.roleId||''),faction=String(row?.roleCard?.factionId||row?.factionId||row?.faction||'').toLowerCase();
-    const wolf=role==='role_wolf'||role==='role_alpha_wolf'||role==='role_snow_wolf'||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
-    return wolf&&role!=='role_snow_wolf'&&!dead.has(login(row?.loginId));
+  // Even two living Snow Wolves do NOT satisfy "one Snow Wolf alone".
+  const aliveWolves=(Array.isArray(assignments)?assignments:[]).filter(row=>{
+    const role=String(row?.roleId||''),faction=String(row?.faction||row?.factionId||row?.roleCard?.factionId||'').toLowerCase();
+    const wolf=role.includes('wolf')||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
+    return wolf&&!dead.has(login(row?.loginId));
   });
+  return aliveWolves.length===1&&aliveWolves[0]?.roleId==='role_snow_wolf';
 }
 export function resolveMaidenNight({assignments=[],interactions=[],matchId,night}={}){
   const match=String(matchId||''),cycle=Number(night);
