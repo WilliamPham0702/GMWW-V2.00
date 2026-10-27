@@ -54,6 +54,16 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: V3.252 — Hiệu năng & Chống nóng GM
+        if: steps.scope.outputs.mode == 'gm-performance-thermal-3252'
+        run: |
+          node .github/scripts/verify-release-v3252.mjs
+          node --check server-game/current/gmww-performance.js
+          node --check server-game/current/gmww-shared-motion.js
+          node --check assets/characters/gmww40/runtime.js
+          node --test tests/gmww-performance-thermal.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          test -s docs/releases/GMWW-V3.252-performance-thermal-20261027.md
       - name: Player receipt hotfix — login, join, reconnect and JS integrity
         if: steps.scope.outputs.mode == 'player-receipt-hotfix'
         shell: bash

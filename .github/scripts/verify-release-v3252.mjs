@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+import fs from 'node:fs';import{execFileSync}from'node:child_process';
+const base=process.env.GMWW_V3252_BASE||'HEAD^1';
+if(base!=='HEAD^1'&&!/^[a-f0-9]{40}$/i.test(base))throw Error('Untrusted V3.252 base');
+const changed=execFileSync('git',['diff','--name-only',base,'HEAD'],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/scripts/verify-release-v3252.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/build-server-game-ipa.yml","assets/characters/gmww40/runtime.js","docs/releases/GMWW-V3.252-performance-thermal-20261027.md","server-game/current/GMWW.html","server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","server-game/current/style.css","server-game/current/app.js","server-game/src/00-core-and-library.part","tests/gmww-performance-thermal.test.mjs","package.json","package-lock.json","src/index.js"]);
+if(changed.some(p=>!allowed.has(p)))throw Error('Unapproved V3.252 files: '+changed.filter(p=>!allowed.has(p)).join(','));
+for(const p of ["server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","assets/characters/gmww40/runtime.js","server-game/current/GMWW.html","tests/gmww-performance-thermal.test.mjs","src/index.js","package.json","package-lock.json"])if(!changed.includes(p))throw Error('Missing V3.252 file: '+p);
+const read=p=>fs.readFileSync(p,'utf8'),pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.json'));
+const html=read('server-game/current/GMWW.html'),gm=read('server-game/current/app.js'),core=read('server-game/src/00-core-and-library.part'),worker=read('src/index.js'),pack=read('.github/scripts/prepare-update-channel.mjs'),motion=read('server-game/current/gmww-shared-motion.js');
+if(pkg.version!=='3.252.0'||lock.version!=='3.252.0'||lock.packages[''].version!=='3.252.0'||!worker.includes('VERSION="V3.252"')||!worker.includes('UPDATE_CHANNEL_REV="runtime-3252"')||!gm.includes("const VERSION='3.252'")||!core.includes("const VERSION='3.252'")||!html.includes('<title>GMWW V3.252</title>'))throw Error('Runtime V3.252 version mismatch');
+if(!html.includes('id="gmwwPerfMode"')||!html.includes('gmww-performance.js?v=gm-perf-3252')||!motion.includes('function wakeNow(){')||motion!==read('assets/characters/gmww40/runtime.js')||!pack.includes("copy('server-game/current/gmww-performance.js','gmww-performance.js');")||!pack.includes('V3.252: Hiệu năng & Chống nóng'))throw Error('GM performance OTA integration incomplete');
+if(!fs.existsSync('docs/releases/GMWW-V3.252-performance-thermal-20261027.md'))throw Error('Missing Vietnamese notes');
+console.log('V3.252 scoped GM thermal release PASS ('+changed.length+' files)');
