@@ -1699,7 +1699,10 @@ export function isPlayerReceiptHotfixScope(changes){
   const newCall="try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});";
   const oldChange='replaceReceipt("'+oldCall+'",'+String.fromCharCode(10)+'   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");';
   const newChange='replaceReceipt("'+newCall+'",'+String.fromCharCode(10)+'   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;");';
-  return p.before.includes(oldChange)&&p.after===p.before.replace(oldChange,newChange);
+  const oldChange2='offlineReplace("try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);",'+String.fromCharCode(10)+'   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");';
+  const newChange2='offlineReplace("if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);handleSeatSwapRequests(d?.swapRequests);",'+String.fromCharCode(10)+'   "if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");';
+  return p.before.includes(oldChange)&&p.before.includes(oldChange2)&&
+    p.after===p.before.replace(oldChange,newChange).replace(oldChange2,newChange2);
 }
 
 export function classifyBrowserScope(changes){
