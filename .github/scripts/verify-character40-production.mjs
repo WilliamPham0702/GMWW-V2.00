@@ -43,7 +43,12 @@ if(published.releaseType==='native'){
  }
 }else{
  assert.equal(published.releaseType,'runtime');
- assert.equal(published.shellVersion,'3.110','Legacy Character40 Runtime shell must remain supported');
+ const nativeProject=await readFile('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
+ const nativeShell=nativeProject.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim();
+ assert.ok(nativeShell,'Native version missing');
+ assert.equal(published.shellVersion,nativeShell,'Runtime shell must match the unchanged signed IPA');
+ assert.equal(published.ipa?.version,nativeShell,'Runtime IPA metadata must stay aligned with native project');
+ assert.equal(published.minimumShellVersion,nativeShell,'Never install OTA on unsupported old shell');
 }
 const accepted=JSON.parse(await readFile('prototype/character40/catalog.json','utf8')).characters;
 let index=0;

@@ -8,6 +8,7 @@ on:
       - 'server-game/current/style.css'
       - 'tests/gm-gallows-vote-markers-ui.test.mjs'
       - '.github/workflows/check-gm-vote-markers-565.yml'
+      - 'tests/character40-native-shell-contract-v3259.test.mjs'
   push:
     branches: [main]
     paths:

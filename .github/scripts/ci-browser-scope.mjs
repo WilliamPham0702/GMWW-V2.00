@@ -2024,6 +2024,21 @@ function isManualRuntimeScope(changes){
 
 
 
+
+/* V3.259 postdeploy CI-only guard, no app/Worker/IPA bytes changed. */
+function isGMVote3259PostverifyScope(changes){
+  const allowed=new Set([".github/scripts/verify-character40-production.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/check-gm-vote-markers-565.yml","tests/character40-native-shell-contract-v3259.test.mjs","docs/releases/GMWW-V3.259-character40-postverify.md"]);
+  if(!Array.isArray(changes)||changes.length!==allowed.size||changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status)))return false;
+  try{
+    const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+    const verifier=fs.readFileSync('.github/scripts/verify-character40-production.mjs','utf8');
+    const worker=fs.readFileSync('src/index.js','utf8');
+    return pkg.version==='3.259.0'&&verifier.includes('Runtime shell must match the unchanged signed IPA')&&
+      !verifier.includes("published.shellVersion,'3.110'")&&
+      worker.includes('VERSION="V3.259"')&&worker.includes('NATIVE_SHELL_VERSION="3.257"');
+  }catch{return false}
+}
+
 function isGMVote3259Scope(changes){
   const allowed=new Set(["package.json","package-lock.json","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/current/GMWW.html","src/index.js",".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-GM-VOTE-BADGES-2026-10-27.md",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/check-gm-vote-markers-565.yml",".github/scripts/verify-release-v3259.mjs"]);
   if(!Array.isArray(changes)||changes.length!==allowed.size||changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status)))return false;
@@ -2071,6 +2086,7 @@ function isGMWWAudio3258Scope(changes){
 }
 
 export function classifyBrowserScope(changes){
+  if(isGMVote3259PostverifyScope(changes))return 'gm-vote-postverify-3259';
   if(isGMVote3259Scope(changes))return 'gm-vote-3259';
   if(isGMWWAudio3258Scope(changes))return 'gm-audio-3258';
   if(isNativeManualReleaseVerifyScope(changes))return 'native-manual-release-verify';
@@ -2175,6 +2191,8 @@ function detect(){
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
         const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n')
           .filter(Boolean).map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isGMVote3259PostverifyScope(changes))
+          return{mode:'gm-vote-postverify-3259',reason:'V3.259: fix stale Native V3.110 assertion only; release existing Runtime V3.259 with SHA checks'};
         if(isGMVote3259Scope(changes))
           return{mode:'gm-vote-3259',reason:'Exact PR565 release V3.259, Audio V3.258 preserved'};
         if(isGMWWAudio3258Scope(changes))
