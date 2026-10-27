@@ -73,6 +73,12 @@ jobs:
           if [[ "$SCOPE" == "GMWW browser CI scope: player-receipt-hotfix |"* ]]; then SHOULD_DEPLOY=false; fi
           # PR550 test-only rule regression: exact verified five-file scope, no Worker/GM/IPA change.
           if [[ "$SCOPE" == "GMWW browser CI scope: night02-rule-regression-550 |"* ]]; then SHOULD_DEPLOY=false; fi
+          # Exact V3.247 postmerge CI recovery is also the approved release
+          # handshake for the already-merged Runtime PR #551.
+          if [ "$(node -p "require('./package.json').version")" = "3.247.0" ] &&
+             [[ "$SCOPE" == "GMWW browser CI scope: icon-scale-3247-postmerge |"* ]]; then
+            SHOULD_DEPLOY=true
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
@@ -1071,9 +1077,36 @@ jobs:
           echo "approved=true" >> "$GITHUB_OUTPUT"
           echo "V3.246 verified on same SHA: Fairy artwork, audio, actor-only Server guard, Worker; IPA unchanged." >> "$GITHUB_STEP_SUMMARY"
 
+
+      # V3.247 follows exactly tested and merged #551, with only four
+      # postmerge CI files allowed. Do not bypass Worker/OTA/health/SHA guards.
+      - name: V3.247 — xác minh icon scale, Worker CI và commit cùng SHA
+        id: icon247_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.247.0" ]; then exit 0; fi
+          git merge-base --is-ancestor 688d348bc690c26060e3b8344b31f738ee9d1ca9 HEAD
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: icon-scale-3247-postmerge |"* ]] || {
+            echo "::error::V3.247 release outside approved four-file recovery"; exit 1;
+          }
+          node --test tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs tests/ci-v3247-postmerge.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.247-icon-size-20261027.md
+          STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATE" = success || { echo "::error::Same-SHA mandatory Worker CI not SUCCESS"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.247: verified icon sizing, three-zone Fairy, source bundle, same-SHA Worker; OTA checks remain required." >> "$GITHUB_STEP_SUMMARY"
+
       # Historical V3.236/V3.237 gates are intentionally omitted from the V3.238 release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
+        if: steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
