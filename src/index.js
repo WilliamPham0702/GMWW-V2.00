@@ -2168,6 +2168,20 @@ export class RoomDurableObject extends DurableObject {
         !canSnowWolfBite({assignments:assigned,interactions,matchId}))
         return j({ok:false,error:"SNOW_WOLF_PACK_ALIVE",message:"Sói Tuyết chỉ được Cắn khi không còn Sói khác sống trong ván."},409);
       const packBite=step.kind==="wolf-pack-bite";
+      // Reject forged effect types and invalid frozen/dead targets before the
+      // use ledger or interactions are changed. The UI is not an authority.
+      const expectedType=packBite?"effect_notice":roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"?"frozen":
+        roleId==="role_guard"&&actionId==="action_protect"?"effect_notice":
+        roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":"";
+      if(expectedType&&type!==expectedType)
+        return j({ok:false,error:"NIGHT_ACTION_TYPE_MISMATCH"},409);
+      if(roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"&&targets.includes(actorId))
+        return j({ok:false,error:"SNOW_WOLF_SELF_FREEZE"},409);
+      if((roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"||
+          roleId==="role_guard"&&actionId==="action_protect")&&
+        targets.some(id=>interactions.some(x=>String(x?.matchId||"")===matchId&&
+          normalizeLoginId(x?.loginId)===id&&x?.type==="dead"&&x.effectActive!==false)))
+        return j({ok:false,error:"TARGET_ALREADY_DEAD"},409);
       if(!packBite&&actionId==="action_wolf_bite")
         return j({ok:false,error:"PACK_BITE_WRONG_TURN"},403);
       if(packBite&&(!isWolfRole(row)||actionId!=="action_wolf_bite"))
