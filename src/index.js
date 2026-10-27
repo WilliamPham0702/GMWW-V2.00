@@ -1655,7 +1655,10 @@ export class RoomDurableObject extends DurableObject {
         roles:eligiblePack.map(x=>({roleId:String(x.roleId),loginIds:[normalizeLoginId(x.loginId)]})),
         order:-1,durationSec:defaultActionSec,status:"pending"});
     }
-    const distinctWolf=arranged.wolves.filter(row=>!["role_wolf","role_alpha_wolf"].includes(row.roleId)||row.artifacts?.length);
+    // Historical role IDs for bare Bite-only Wolves must not produce a
+    // second waking turn. Special Wolf powers still keep configured order.
+    const biteOnlyAliases=new Set(["role_wolf","role_alpha_wolf","wolf","regular-wolf","alpha-wolf"]);
+    const distinctWolf=arranged.wolves.filter(row=>!biteOnlyAliases.has(row.roleId)||row.artifacts?.length);
     queue.push(...groupConfiguredRoleTurns(distinctWolf));
     if(arranged.fairy)queue.push(arranged.fairy);
     queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(arranged.rest),arranged.artifactTurns));
