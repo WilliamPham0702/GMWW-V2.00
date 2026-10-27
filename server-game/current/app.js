@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.246';
+const VERSION='3.247';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1390,6 +1390,42 @@ async function initCharacterScaleSetting(){
   choices.addEventListener('click',event=>{const btn=event.target.closest('[data-character-scale]');if(btn)saveCharacterScale(btn.dataset.characterScale)});
 }
 setTimeout(initCharacterScaleSetting,0);
+
+/* GMWW V3.247: device-local icon size uses the same six Character steps. */
+const ACTION_ICON_SCALE_STORAGE_KEY='GMWW_GM_ACTION_ICON_SCALE_V1';
+function normalizeActionIconScale(value){
+ const n=Number(value);if(!Number.isFinite(n))return 100;
+ return CHARACTER_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,100);
+}
+function applyActionIconScale(value){
+ const n=normalizeActionIconScale(value);
+ document.documentElement?.style?.setProperty('--gmww-action-icon-scale',String(n/100));
+ document.querySelectorAll('[data-action-icon-scale]').forEach(btn=>{
+  const active=Number(btn.dataset.actionIconScale)===n;
+  btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));
+ });
+ const label=document.getElementById('actionIconScaleValue');if(label)label.textContent=n+'%';
+ const dock=document.getElementById('battleFireIconDock');if(dock)delete dock.dataset.sig;
+ return n;
+}
+function saveActionIconScale(value){
+ const n=applyActionIconScale(value);
+ try{localStorage.setItem(ACTION_ICON_SCALE_STORAGE_KEY,String(n))}
+ catch(err){console.warn('GMWW_ICON_SCALE_SAVE',err)}
+}
+function initActionIconScaleSetting(){
+ const choices=document.getElementById('actionIconScaleChoices');if(!choices)return;
+ let n=100;
+ try{const v=localStorage.getItem(ACTION_ICON_SCALE_STORAGE_KEY);if(v!==null)n=normalizeActionIconScale(v)}
+ catch(err){console.warn('GMWW_ICON_SCALE_LOAD',err)}
+ applyActionIconScale(n);
+ choices.addEventListener('click',event=>{
+  const btn=event.target.closest('[data-action-icon-scale]');
+  if(btn)saveActionIconScale(btn.dataset.actionIconScale);
+ });
+}
+setTimeout(initActionIconScaleSetting,0);
+
 
 /* V2.22 — Server Health in Cài Đặt */
 const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
@@ -5201,15 +5237,27 @@ function battleIconResolve(action){
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
 // V3.231: start above the fixed footer at the village entrance stairs, not GM fire.
-function battleIconSpawnPoint(entry,index,count){
- const vw=globalThis.visualViewport?.width||innerWidth;
- const columns=Math.min(count===4?2:3,Math.max(1,Math.floor((vw-12)/100)),Math.max(1,count));
- const row=Math.floor(index/columns),slots=Math.min(columns,count-row*columns),col=index%columns;
- return battleIconClamp(entry.x+(col-(slots-1)/2)*100,entry.y-row*102);
+function battleIconScaleRatio(){
+ const n=Number(document.documentElement?.style?.getPropertyValue?.('--gmww-action-icon-scale'));
+ return Number.isFinite(n)&&n>=.75&&n<=2?n:1;
 }
-function battleIconClamp(x,y){
+function battleIconSize(isFairy=false){
+ const w=globalThis.visualViewport?.width||innerWidth,s=battleIconScaleRatio();
+ const width=isFairy?Math.min(276*s,Math.max(100,w-22)):92*s;
+ return {width,height:isFairy?width/3:92*s};
+}
+function battleIconSpawnPoint(entry,index,count,isFairy=false){
+ const vw=globalThis.visualViewport?.width||innerWidth,s=battleIconScaleRatio();
+ const dx=Math.max(100,92*s+8),dy=Math.max(102,92*s+10);
+ const columns=Math.min(count===4?2:3,Math.max(1,Math.floor((vw-12)/dx)),Math.max(1,count));
+ const row=Math.floor(index/columns),slots=Math.min(columns,count-row*columns),col=index%columns;
+ return battleIconClamp(entry.x+(col-(slots-1)/2)*dx,entry.y-row*dy,isFairy);
+}
+function battleIconClamp(x,y,isFairy=false){
  const vw=globalThis.visualViewport?.width||innerWidth,vh=globalThis.visualViewport?.height||innerHeight;
- return {x:Math.min(Math.max(52,x),Math.max(52,vw-52)),y:Math.min(Math.max(52,y),Math.max(52,vh-52))};
+ const size=battleIconSize(isFairy),px=Math.min(vw/2,Math.max(isFairy?0:52,size.width/2+6));
+ const py=Math.min(vh/2,Math.max(isFairy?0:52,size.height/2+6));
+ return {x:Math.min(Math.max(px,x),Math.max(px,vw-px)),y:Math.min(Math.max(py,y),Math.max(py,vh-py))};
 }
 function battleIconEntryPoint(){
  const rail=document.getElementById('battleBottomControls');
@@ -5239,7 +5287,7 @@ function battleIconDock(actions,phase){
  if(!active){battleIconClearDrag();dock.replaceChildren();delete dock.dataset.sig;return}
  const entry=battleIconEntryPoint();
  const key=JSON.stringify(eligible.map(x=>[x.a.id,x.a.targetCount,x.icon.id,x.icon.image||x.icon.assetId]))+
-  ':'+turn+':'+battleState.actionId+':'+battleState.targets.length+':'+waiting;
+  ':'+turn+':'+battleState.actionId+':'+battleState.targets.length+':'+waiting+':'+battleIconScaleRatio();
  if(battleIconDragging)return;
  if(dock.dataset.sig===key){
   // Unused icons follow the entrance as the bottom menu moves.
@@ -5247,7 +5295,7 @@ function battleIconDock(actions,phase){
    const position=battleIconPositions.get(battleIconPositionKey(button.dataset.fireAction,button.dataset.fireIcon));
    if(!position){
     const slot=Number(button.dataset.fireIndex)||0;
-    const point=battleIconSpawnPoint(entry,slot,eligible.length);
+    const point=battleIconSpawnPoint(entry,slot,eligible.length,button.dataset.fireIcon==='yeu-tinh-three-way');
     button.style.left=point.x+'px';button.style.top=point.y+'px';
    }
   }
@@ -5256,8 +5304,9 @@ function battleIconDock(actions,phase){
  dock.dataset.sig=key;
  const api=globalThis.GMWWActionIconLibrary;
  dock.innerHTML=eligible.map(({a,icon},i)=>{
-  const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||
-    battleIconSpawnPoint(entry,i,eligible.length);
+  const saved=battleIconPositions.get(battleIconPositionKey(a.id,icon.id));
+  const point=saved?battleIconClamp(saved.x,saved.y,!!icon.isFairyTriptych):
+    battleIconSpawnPoint(entry,i,eligible.length,!!icon.isFairyTriptych);
   const visual='<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
   return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon'+(icon.isFairyTriptych?' is-fairy-triptych':'')+'" '+
    'style="left:'+point.x+'px;top:'+point.y+'px" data-fire-action="'+playEsc(a.id)+
@@ -5316,7 +5365,7 @@ function battleIconBind(){
   d.button.classList.toggle('is-sucked',!!candidate);
   const r=candidate?.getBoundingClientRect();
   const point=r?battleIconClamp(r.left+r.width/2,r.top+r.height/2):
-   battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY);
+   battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY,!!(a&&battleIsTransfer(a)));
   d.button.style.left=point.x+'px';d.button.style.top=point.y+'px';
   e.preventDefault();
  });
@@ -5326,7 +5375,7 @@ function battleIconBind(){
   const a=battleActions().find(x=>x.id===id&&!x.unavailable);
   const target=e.type==='pointerup'&&moved&&a?.targetCount>0&&!battleIsTransfer(a)?
    battleIconTargetAt(e.clientX,e.clientY,a):null;
-  const point=battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY);
+  const point=battleIconClamp(d.baseX+e.clientX-d.startX,d.baseY+e.clientY-d.startY,!!(a&&battleIsTransfer(a)));
   if(e.type==='pointerup'&&moved){
    // For multi-target actions return the icon to its entrance slot for the next drop.
    // For single target/free moving keep the chosen location.

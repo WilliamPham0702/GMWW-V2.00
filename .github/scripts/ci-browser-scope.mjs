@@ -1835,7 +1835,30 @@ function isRules550Scope(changes){
     rows.get('.github/workflows/deploy-production.yml')?.after?.includes('PR550 test-only rule regression');
 }
 
+// V3.247 is an exact GM-only icon-size release. Reject widened scope instead
+// of silently running unrelated Chrome/Gallows/legacy test suites.
+const icon247Allowed=new Set([".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-V3.247-icon-size-20261027.md","package-lock.json","package.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/current/style.css","server-game/src/00-core-and-library.part","server-game/src/10-library-and-settings.part","server-game/src/40-battle-and-timeline.part","src/index.js","tests/gmww-action-icon-scale-setting.test.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml","tests/ci-v3247-icon-size-scope.test.mjs"]);
+export function isIcon247Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==icon247Allowed.size||
+   new Set(changes.map(c=>c.path)).size!==icon247Allowed.size||
+   !changes.every(c=>icon247Allowed.has(c.path)&&['M','A'].includes(c.status)))return false;
+ try{
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+  const style=fs.readFileSync('server-game/current/style.css','utf8');
+  const settings=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+  return pkg.version==='3.247.0'&&html.includes('<title>GMWW V3.247</title>')&&
+    html.includes('id="actionIconScaleCard"')&&
+    settings.includes('initActionIconScaleSetting')&&
+    gm.includes('function battleIconScaleRatio()')&&
+    style.includes('--gmww-action-icon-scale')&&
+    fs.existsSync('docs/releases/GMWW-V3.247-icon-size-20261027.md');
+ }catch{return false}
+}
+
 export function classifyBrowserScope(changes){
+  if(isIcon247Scope(changes))return 'icon-scale-3247';
   if(isRules550Scope(changes))return 'night02-rule-regression-550';
   // A partial/expanded PR550 change must never masquerade as a historic CI-only scope.
   if(Array.isArray(changes)&&changes.some(c=>
