@@ -319,7 +319,7 @@ test('request-ID collision across owners cannot reserve or impersonate another A
 });
 
 
-test('roles with identical wake order share a single server turn and keep both owners',async()=>{
+test('NIGHT-02 bare Wolf roles sharing order only wake in the common pack bite turn',async()=>{
   const h=harness({artifact:false});
   h.data.set('gameConfig',{roles:[{roleId:'regular-wolf',order:6},{roleId:'alpha-wolf',order:6}],
     timing:{wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:35}});
@@ -327,11 +327,11 @@ test('roles with identical wake order share a single server turn and keep both o
     {loginId:'alice',roleId:'regular-wolf',roleName:'Sói Thường'},
     {loginId:'bob',roleId:'alpha-wolf',roleName:'Sói Trùm'}
   ]);
-  const rt=await h.runtime(),group=rt.queue.find(x=>x.kind==='role-group');
-  assert.ok(group);assert.equal(group.order,6);
-  assert.deepEqual([...group.loginIds].sort(),['alice','bob']);
-  assert.deepEqual(group.roles.map(r=>r.label),['Sói Thường','Sói Trùm']);
-  assert.equal(rt.queue.filter(x=>x.kind==='role').length,0);
+  const rt=await h.runtime(),pack=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.ok(pack);assert.equal(pack.order,-1);
+  assert.deepEqual([...pack.loginIds].sort(),['alice','bob']);
+  assert.deepEqual(pack.roles.map(r=>r.roleId),['regular-wolf','alpha-wolf']);
+  assert.equal(rt.queue.filter(x=>['role','role-group'].includes(x.kind)).length,0);
   assert.equal(rt.queue[0].durationSec,30);
   assert.equal(rt.queue[1].durationSec,35);
   assert.ok(!rt.queue.some(x=>x.kind==='early-artifact-window'));
