@@ -52,6 +52,7 @@ function dockContext(){
   playPlayerEffect(){return'alive'},battlePickTargetWithAudio(){ctx.battleState.targets=['player-B'];return true},
   battleConfirm(){ctx.confirmed++},battleOpenTargetSheet(){ctx.sheetOpened++},
   battleClear(){ctx.battleState.targets=[];ctx.battleState.actionId=''},
+  playAudioMuted(){return false},battlePlayConfiguredAudio(){ctx.audioCount=(ctx.audioCount||0)+1;return true},
   confirm(){return true},confirmed:0,sheetOpened:0,renderPlayBattle(){},
   addEventListener(){},Event:function(){},console
  };
