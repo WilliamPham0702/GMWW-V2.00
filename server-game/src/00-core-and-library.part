@@ -915,6 +915,7 @@ function applyApprovedRoleSettings(s){
   ]);
   update('role_alpha_wolf',{
     information:'Sói Trùm cùng thức trong Bầy Sói để thực hiện Sói Cắn chung. Khi bị Đóng Băng hoặc bị Đuổi khỏi làng, vết Sói Cắn không có hiệu lực và Phù Thuỷ không thấy mục tiêu. Tiên Tri soi Sói Trùm cho kết quả KHÔNG PHẢI SÓI.',
+    limits:'Mỗi đêm tối đa một lượt Sói Cắn chung; không có lượt Cắn riêng khi đang bị Đóng Băng hoặc Đuổi.',
     conditions:'Sói Trùm cùng bầy thức khi có Sói còn sống. Nếu bị Đóng Băng hoặc bị Đuổi thì Sói Cắn chung vô hiệu; năng lực chuyên biệt của Sói khác thức sau Sói Cắn.',
     flags:{allowMultipleActions:true}
   },[
