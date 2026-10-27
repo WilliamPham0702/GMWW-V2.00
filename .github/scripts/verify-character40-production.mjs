@@ -17,7 +17,31 @@ const catalog=await json('/api/game-characters');assert.equal(catalog.count,40);
 const manifest=await json('/api/character-engine/manifest');assert.deepEqual(manifest.master.motionSet,actions);
 for(const c of manifest.characters)assert.deepEqual(c.motions,actions,c.id);
 const ota=await json('/api/update/manifest?current=3.153&character40-verify='+Date.now());
-assert.equal(ota.releaseType,'runtime');assert.equal(ota.runtimeVersion,version);assert.equal(ota.shellVersion,'3.110');
+const worker=await readFile('src/index.js','utf8');
+const shell=worker.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
+assert.ok(shell,'Worker shell version must be declared');
+assert.equal(ota.releaseVersion,version);
+assert.equal(ota.runtimeVersion,version);
+assert.equal(ota.shellVersion,shell);
+const isNative=ota.releaseType==='native';
+assert.ok(isNative||ota.releaseType==='runtime','Unexpected production release type');
+if(isNative){
+  assert.equal(shell,version,'Native release shell must match the release');
+  assert.equal(ota.ipa?.version,version,'Native release must advertise its new IPA');
+  assert.equal(ota.ipa?.fileName,'GMWW-V'+version+'.ipa');
+  assert.equal(ota.runtime?.files?.length,0,'Native release must not falsely advertise runtime OTA');
+} else {
+  assert.ok(ota.runtime?.files?.length>0,'Runtime release must include OTA files');
+}
+// Native releases deliberately advertise an empty OTA list. Inspect the separately
+// SHA-256 verified manual Runtime inventory produced from the SAME deployed bytes.
+const inventory=isNative
+  ? JSON.parse(await readFile('assets/updates/runtime/V'+version+'/manual-manifest.json','utf8'))
+  : ota;
+assert.equal(inventory.releaseVersion,version);
+assert.equal(inventory.runtimeVersion,version);
+assert.equal(inventory.shellVersion,shell);
+assert.ok(inventory.runtime?.files?.length>0,'Verified runtime inventory missing');
 const accepted=JSON.parse(await readFile('prototype/character40/catalog.json','utf8')).characters;
 let index=0;
 await Promise.all(Array.from({length:4},async()=>{
@@ -35,12 +59,12 @@ await Promise.all(Array.from({length:4},async()=>{
   for(const [path,expected] of [
     ['characters/gmww40/'+c.original,c.originalSHA256],
     ['characters/gmww40/'+c.atlas,c.atlasSHA256]
-  ]) assert.equal(ota.runtime.files.find(f=>f.path===path)?.sha256,expected,c.id+' OTA artwork');
+  ]) assert.equal(inventory.runtime.files.find(f=>f.path===path)?.sha256,expected,c.id+' OTA artwork');
 
  }
 }));
 for(const path of ['gmww-shared-motion.js','GMWW.html','app.js']){
- const f=ota.runtime.files.find(f=>f.path===path);assert.ok(f,path+' OTA entry');
+ const f=inventory.runtime.files.find(f=>f.path===path);assert.ok(f,path+' OTA entry');
  const expected=sha(await readFile('assets/updates/runtime/V'+version+'/'+path));assert.equal(f.sha256,expected,path+' manifest');assert.equal(sha(await bytes(f.url)),expected,path+' actual OTA bytes');
 }
 const player=(await bytes('/village/character40-renderer.mjs?v=c40-1')).toString();assert.ok(player.includes('characters/gmww40/runtime.js'));assert.ok(!player.includes('character-renderer.mjs'));
@@ -51,6 +75,6 @@ const localPlayerBytes=await readFile('assets/characters/gmww40/runtime.js');
 const gmBytes=await readFile('server-game/current/gmww-shared-motion.js');
 assert.equal(sha(playerBytes),sha(localPlayerBytes),'Player Web controller SHA must match deployed, approved web renderer');
 assert.notEqual(sha(gmBytes),sha(localPlayerBytes),'GM-only low-power controller must remain isolated from Player Web');
-assert.equal(ota.runtime.files.find(f=>f.path==='gmww-shared-motion.js')?.sha256,sha(gmBytes),'GM low-power controller OTA SHA');
-assert.equal(ota.runtime.files.find(f=>f.path==='characters/gmww40/runtime.js')?.sha256,sha(localPlayerBytes),'Player controller OTA SHA');
-console.log('Production Character40 PASS: 40 new portraits + 40 motion atlases SHA-256; four actions only; GM low-power and Player Web controllers verified independently; actual OTA HTML/JS/controller SHA verified; shell 3.110 preserved.');
+assert.equal(inventory.runtime.files.find(f=>f.path==='gmww-shared-motion.js')?.sha256,sha(gmBytes),'GM low-power controller OTA SHA');
+assert.equal(inventory.runtime.files.find(f=>f.path==='characters/gmww40/runtime.js')?.sha256,sha(localPlayerBytes),'Player controller OTA SHA');
+console.log('Production Character40 PASS: 40 portraits + 40 motion atlases SHA-256; four actions only; GM low-power and Player Web controllers verified independently; '+(isNative?'native manual inventory':'OTA inventory')+' HTML/JS/controller SHA verified; shell '+shell+'.');
