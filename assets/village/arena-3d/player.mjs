@@ -7,6 +7,7 @@ import {connectStagingRoom} from './room-realtime.mjs';
 import {createArenaCharacterField} from './character-atelier.mjs';
 import {createCoastalVillage} from './coastal-village.mjs';
 import {arenaSceneSignature,arenaTargetFrameHz,createArenaPaintScheduler} from './render-optimization.mjs';
+import {gallowsCandidateActorId} from './stage38-public-gallows.mjs';
 
 const $=id=>document.getElementById(id);
 const code=String(new URL(location.href).searchParams.get('room')||'').trim().toUpperCase();
@@ -24,7 +25,7 @@ field.setReducedMotion(reducedMotion);
 const scheduler=createArenaPaintScheduler();
 let orbit=.5,elevation=.75,radius=20,lastSize='',lastSignature='',room=null;
 let selected=null,activePointer=null,pinchSize=0,contextLost=false,lastPaintHz=0;
-let frameCount=0,fps=0,fpsSince=performance.now(),connection=null;
+let frameCount=0,fps=0,fpsSince=performance.now(),connection=null,publicBallot=null;
 const pointers=new Map();
 
 function showState(frame){
@@ -42,10 +43,11 @@ function drawFrame(frame){
     lastSignature=signature;
   }
   if(room?.matchId!==frame.room.matchId||room?.cycleKey!==frame.room.cycleKey){
-    field.clearEffects();
+    publicBallot=null;field.setGallowsCandidate(null);field.clearEffects();
     field.setCastingTurn(null);
   }
   room=frame.room;
+  field.setGallowsCandidate(gallowsCandidateActorId(publicBallot,frame));
   village.setNight(room.cyclePhase==='night');
   showState(frame);
   message('Đã đồng bộ '+items.length+' nhân vật. Để thực hiện hành động hoặc mở lá vai, nhấn “Lá Vai / Hành động”.');
@@ -129,7 +131,8 @@ $('close-card').onclick=()=>{
 // Diagnostics expose only public room identifier and counts, never private interactions.
 window.__GMWW_ARENA_PLAYER_READONLY=()=>({
   room:room?.code||null,count:field.actorCount,phase:room?.phase||null,
-  cyclePhase:room?.cyclePhase||null,cardOpen:$('card').classList.contains('open'),
+  cyclePhase:room?.cyclePhase||null,gallowsActorId:field.gallowsActorId,
+  cardOpen:$('card').classList.contains('open'),
   fps,connection,drawCalls:renderer.info.render.calls
 });
 requestAnimationFrame(frame);
@@ -137,7 +140,13 @@ if(!validCode){$('state').textContent='Thiếu mã phòng';message('Mở trang t
 else{
   message('Đang kết nối Core của phòng '+code+'…');
   connectStagingRoom({roomCode:code,loadPublicGallows:false,onFrame:drawFrame,
-    onGallows:ballot=>{if(ballot?.stage)message('Lên Giàn: '+ballot.stage+' · xem lá vai để đề cử/bỏ phiếu.');},
+    onGallows:ballot=>{
+      publicBallot=ballot||null;
+      field.setGallowsCandidate(gallowsCandidateActorId(publicBallot,
+        {room,players:field.actors}));
+      if(ballot?.stage)message('Lên Giàn: '+ballot.stage+
+        ' · thao tác đề cử/bỏ phiếu trong Lá Vai / Hành động.');
+    },
     onStatus:s=>{connection=s;if(s==='reconnecting')message('Mất kết nối, đang tự đồng bộ lại…');},
     onError:e=>message('Chưa đồng bộ được phòng: '+String(e?.message||e))});
 }
