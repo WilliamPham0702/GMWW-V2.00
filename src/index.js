@@ -28,6 +28,7 @@ import { oldWitchActionCheck } from "./gmww-old-witch-rules.js";
 import { isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles } from "./gmww-pack-night-rules.js";
 import { partitionNightSpecialRoles,witchSaveTargetAllowed } from "./gmww-witch-drunk-clone-rules.js";
 import { inheritedRolePlans } from "./gmww-role-inheritance-rules.js";
+import {drunkDeadCards,drunkDeckView,isPassiveInformationAction} from "./gmww-drunk-draw-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -1595,16 +1596,17 @@ export class RoomDurableObject extends DurableObject {
   }
   // Called only while constructing a new authoritative Night. Converted roles
   // keep each owner's membership, seat, artifact and player identity unchanged.
-  async applyNightRoleInheritance(meta,night,assignments){
+  async applyNightRoleInheritance(meta,night,assignments,{drunkChoice=null}={}){
     const n=Math.max(1,Number(night)||1),matchId=String(meta?.matchId||'');
     if(!matchId||n<2)return {assignments,drunkNotices:[]};
     const key='roleInheritanceNight:'+matchId+':'+n;
     const past=await this.ctx.storage.get(key);
-    if(past)return {assignments:(await this.ctx.storage.get('assignments'))||assignments,
+    if(past&&!drunkChoice)return {assignments:(await this.ctx.storage.get('assignments'))||assignments,
       drunkNotices:Array.isArray(past.drunkNotices)?past.drunkNotices:[]};
     const events=await this.ctx.storage.get('interactions')||[];
-    const plans=inheritedRolePlans({assignments,interactions:events,matchId,night:n});
-    if(!plans.length)return {assignments,drunkNotices:[]};
+    let plans=inheritedRolePlans({assignments,interactions:events,matchId,night:n,drunkChoice});
+    if(drunkChoice)plans=plans.filter(x=>x.kind==='drunk'&&x.actorId===normalizeLoginId(drunkChoice.actorId));
+    if(!plans.length)return {assignments,drunkNotices:[],applied:0};
     let updated=assignments.map(x=>({...x})),drunkNotices=[],applied=0;
     const changed=new Map(),publishedAt=new Date().toISOString();
     for(const plan of plans){
@@ -1671,8 +1673,8 @@ export class RoomDurableObject extends DurableObject {
       await this.ctx.storage.put('meta',meta);
       this.broadcast({type:'room_state',room:publicRoom(meta),serverTime:Date.now()});
     }
-    await this.ctx.storage.put(key,{drunkNotices,applied});
-    return {assignments:updated,drunkNotices};
+    if(!drunkChoice)await this.ctx.storage.put(key,{drunkNotices,applied});
+    return {assignments:updated,drunkNotices,applied};
   }
   async buildNightRuntime(meta,night){
     let assignments=(await this.ctx.storage.get("assignments"))||[];
@@ -1732,6 +1734,24 @@ export class RoomDurableObject extends DurableObject {
     // Drunk draws exactly at Night 3, before Old Witch, without changing ART-01/WOLF-01.
     // Clone selects its target only on Night 1. Regular Witch wakes AFTER Fairy.
     const specials=partitionNightSpecialRoles(roleTurns,n);
+    if(n===3&&specials.drunk){
+      const interactions=await this.ctx.storage.get('interactions')||[];
+      for(const loginId of specials.drunk.loginIds||[]){
+        const actorId=normalizeLoginId(loginId),deckKey='drunkDeck:'+String(meta.matchId)+':3:'+actorId;
+        let deck=await this.ctx.storage.get(deckKey);
+        if(!deck){
+          const candidates=drunkDeadCards({assignments,interactions,matchId:meta.matchId,night:n});
+          const cards=candidates.map(c=>({...c,id:'card-'+crypto.randomUUID()}));
+          for(let i=cards.length-1;i>0;i--){
+            const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);
+            [cards[i],cards[j]]=[cards[j],cards[i]];
+          }
+          deck={matchId:String(meta.matchId),night:n,actorId,turnId:specials.drunk.id,
+            cards,selectedId:null};
+          await this.ctx.storage.put(deckKey,deck);
+        }
+      }
+    }
     queue.push(...inheritance.drunkNotices.map(row=>({...row,durationSec:defaultActionSec})));
     if(specials.drunk)queue.push(specials.drunk);
     if(specials.oldWitch)queue.push(specials.oldWitch);
