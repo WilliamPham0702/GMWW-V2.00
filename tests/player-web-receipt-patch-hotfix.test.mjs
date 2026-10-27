@@ -3,29 +3,28 @@ import assert from 'node:assert/strict';
 import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js';
 
-const receiptCall="try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});";
+const sourceReceipt="try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});";
+const replacedReceipt="try{const d=await gmwwReadPrivateReceipt();if(!d)return false;";
 
-test('Player JS dynamic compilation: private receipt patch no longer crashes entry',()=>{
-  assert.equal(gmwwMembersLiveScript.split(receiptCall).length-1,1,'single source anchor');
-  const patched=patchPrivatePlayerCards(gmwwMembersLiveScript);
-  assert.ok(patched.length>gmwwMembersLiveScript.length);
-  assert.doesNotThrow(()=>new Function(patched));
-  assert.equal((patched.match(/try\\{const d=await gmwwReadPrivateReceipt\\(\\);if\\(!d\\)return false;/g)||[]).length,1);
-  assert.match(patched,/if\\(wolfWakeEpoch===Number\\(state\\.wolfWakeEpoch\\|\\|0\\)\\)setPrivateWolfRecognition/);
-  assert.equal(patchPrivatePlayerCards(patched),patched,'idempotent');
+test('Player JS receipt injection compiles and preserves private wolf recognition',()=>{
+  assert.equal(gmwwMembersLiveScript.split(sourceReceipt).length-1,1,'exactly one source receipt anchor');
+  const script=patchPrivatePlayerCards(gmwwMembersLiveScript);
+  assert.ok(script.length>gmwwMembersLiveScript.length);
+  assert.doesNotThrow(()=>new Function(script));
+  assert.equal(script.split(replacedReceipt).length-1,1,'one authenticated receipt reader');
+  assert.ok(script.includes("if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition"));
+  assert.equal(patchPrivatePlayerCards(script),script,'idempotent');
 });
 
-test('login, join, authenticated room receipt and reconnect paths remain available',()=>{
-  const patched=patchPrivatePlayerCards(gmwwMembersLiveScript);
-  assert.match(patched,/\\/api\\/members\\/login/);
-  assert.match(patched,/\\/api\\/rooms\\//);
-  assert.match(patched,/function gmwwReadPrivateReceipt\\(/);
-  assert.match(patched,/async function autoResumeActiveRoom\\(/);
-  assert.match(patched,/connectWS\\(/);
+test('login, join, room receipt and reconnect handlers survive Player script patch',()=>{
+  const script=patchPrivatePlayerCards(gmwwMembersLiveScript);
+  for(const marker of ['/api/members/login','/api/rooms/','function gmwwReadPrivateReceipt(','async function autoResumeActiveRoom(','connectWS(']){
+    assert.ok(script.includes(marker),'missing Player entry flow: '+marker);
+  }
 });
 
-test('changed/unknown receipt anchor fails closed rather than serving a broken Player script',()=>{
-  const corrupted=gmwwMembersLiveScript.replace(receiptCall,'try{const d=await legacyBrokenReceipt();');
+test('unknown receipt source must fail closed instead of serving broken JavaScript',()=>{
+  const corrupted=gmwwMembersLiveScript.replace(sourceReceipt,'try{const d=await legacyBrokenReceipt();');
   assert.notEqual(corrupted,gmwwMembersLiveScript);
-  assert.throws(()=>patchPrivatePlayerCards(corrupted),/Player receipt patch mismatch/);
+  assert.throws(()=>patchPrivatePlayerCards(corrupted),error=>String(error).includes('Player receipt patch mismatch'));
 });
