@@ -332,13 +332,19 @@ async function attach(room){
   enableGm();
 }
 function showBallot(x){
-  dashboard.setBallot(x);
-  field.setGallowsCandidate(gallowsCandidateActorId(x,current));
+  const previous=ballot;
+  ballot=x||null;
+  const save=Math.max(0,Number(x?.voteTotals?.save??x?.save)||0);
+  const kill=Math.max(0,Number(x?.voteTotals?.kill??x?.kill)||0);
+  dashboard.setBallot(x?{...x,save,kill}:null);
+  const gallowsId=gallowsCandidateActorId(x,current);
+  field.setGallowsCandidate(gallowsId);
   if(!x){$('ballot').textContent='Lên Giàn: chưa bắt đầu trong ngày hiện tại';document.body.dataset.gmwwLiveBallot='none';return;}
   const scores=(x.nominationTotals||[]).map(t=>t.loginId+': '+t.votes).join(' · ');
-  if(x.candidateId)field.interact('member:'+x.candidateId,{effect:'vote',durationMs:1300});
+  if(gallowsId&&(previous?.candidateId!==x.candidateId||previous?.stage!==x.stage))
+    field.interact(gallowsId,{effect:'vote',durationMs:1300});
   $('ballot').textContent='Lên Giàn '+x.stage+' · '+(x.candidateId||'chưa chọn')+
-    ' · '+scores+' · 👍 '+x.save+' / 👎 '+x.kill+(x.outcome?' · '+x.outcome:'');
+    ' · '+scores+' · 👍 '+save+' / 👎 '+kill+(x.outcome?' · '+x.outcome:'');
   document.body.dataset.gmwwLiveBallot=x.stage;
 }
 async function guarded(label,work){try{notice(label+' ...');await work();}catch(error){notice(label+': '+String(error.message||error));}}
