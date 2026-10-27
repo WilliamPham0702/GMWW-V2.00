@@ -1642,10 +1642,11 @@ export class RoomDurableObject extends DurableObject {
     // Fairy → remaining configured turns. Do not rewrite saved template orders.
     const arranged=arrangeNightRoles(following,artifactTurns);
     queue.push(...arranged.fixed);
-    const eligiblePack=packMembers(assignments,await this.ctx.storage.get("interactions")||[],meta.matchId);
+    const packInteractions=await this.ctx.storage.get("interactions")||[];
+    const eligiblePack=packMembers(assignments,packInteractions,meta.matchId);
     if(assignments.some(isWolfRole)){
-      const packOwners=eligiblePack.filter(x=>x.roleId!=="role_snow_wolf"||
-        canSnowWolfBite({assignments,interactions:await this.ctx.storage.get("interactions")||[],matchId:meta.matchId}));
+      const snowCanBite=canSnowWolfBite({assignments,interactions:packInteractions,matchId:meta.matchId});
+      const packOwners=eligiblePack.filter(x=>x.roleId!=="role_snow_wolf"||snowCanBite);
       queue.push({id:"wolf-pack-bite",kind:"wolf-pack-bite",label:"Bầy Sói Cắn",
         // Every living Wolf wakes; Snow Wolf observes but cannot submit Bite
         // while another wolf survives.
