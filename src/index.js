@@ -2167,6 +2167,9 @@ export class RoomDurableObject extends DurableObject {
         return j({ok:false,error:"PACK_BITE_WRONG_TURN"},403);
       if(packBite&&(!isWolfRole(row)||actionId!=="action_wolf_bite"))
         return j({ok:false,error:"INVALID_PACK_ACTOR"},403);
+      if(packBite&&currentUsage.some(x=>String(x?.matchId)===matchId&&Number(x?.night)===Number(meta.cycleNight||1)&&
+        x?.actionId==="action_wolf_bite"))
+        return j({ok:false,error:"PACK_BITE_ALREADY_USED"},409);
       const policy=packBite?{roleId,actionId,singleActionPerNight:false,usageMode:"eachNight",usageCount:1,knownAction:true}:
         resolveRoleActionPolicy(roleCard,roleId,actionId);
       // Guard & Snow Wolf may not repeat the exact target two consecutive nights.
@@ -2312,7 +2315,7 @@ export class RoomDurableObject extends DurableObject {
       // Only the battle-action endpoint maintains the per-role nightly ledger,
       // limits and atomic Undo; never allow legacy GM interaction to bypass it.
       if(!verifiedAuth&&!body?.artifactId&&
-         (step.kind==="role"&&step.roleId==="role_old_witch"||
+         (step.kind==="wolf-pack-bite"||step.kind==="role"&&step.roleId==="role_old_witch"||
           step.kind==="role-group"&&(step.roles||[]).some(r=>r.roleId==="role_old_witch")))
         return j({ok:false,error:"WITCH_USE_BATTLE_ACTION"},409);
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
