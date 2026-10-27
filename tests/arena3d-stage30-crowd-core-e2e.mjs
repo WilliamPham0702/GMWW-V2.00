@@ -55,6 +55,13 @@ try{
  await gm.locator('.gm-seat-grid button[data-seat-id="6"]').click();
  await gm.locator('#vote').click();
  await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().ballot==='voting',null);
+ // GĐ38: both authorized GM and public viewer must render the SAME public
+ // suspended candidate in the 3D InstancedMesh scene (not merely Core vote state).
+ await wait(gm,()=>String(window.__GMWW_ARENA_STAGE_READONLY?.().gallowsActorId||'').startsWith('member:'),null);
+ await wait(viewer,()=>String(window.__GMWW_ARENA_STAGE_READONLY?.().gallowsActorId||'').startsWith('member:'),null);
+ const gmGallows=(await gm.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).gallowsActorId;
+ const viewerGallows=(await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).gallowsActorId;
+ assert.equal(gmGallows,viewerGallows,'the GM and the public 3D scene use one Core candidate');
  // Full-match acceptance must exercise the REAL 3D GM UI instead of
  // bypassing it with a direct /api/gm/end request. Core must emit lobby to 2 clients.
  const gmEnds=[];
@@ -73,6 +80,8 @@ try{
  await gm.locator('#refresh').click();
  await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null);
  await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().phase==='lobby',null);
+ assert.equal((await gm.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).gallowsActorId,null,
+   'ending the Core match returns the suspended candidate to its Seat');
  assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).privateOverlayCount,0);
  assert.deepEqual(errors,[]);
  console.log('STAGE30_CROWD_CORE_PASS',JSON.stringify({players:30,dealReconnect:true,
