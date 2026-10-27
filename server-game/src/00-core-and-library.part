@@ -826,6 +826,9 @@ function applyNight02Rules(s){
         cooldownNights:1,allowConsecutive:false,allowDead:false,effectIds:['effect_protected']});
     }else if(role==='role_alpha_wolf'){
       card.conditions='Khi Sói Trùm bị Đóng Băng: vết Cắn chung vô hiệu, Phù Thủy không nhận thông tin nạn nhân. Khi Sói Trùm bị Đuổi: không thể thực hiện Sói Cắn.';
+    }else if(role==='role_wolf_seer'){
+      card.conditions='Sói Tiên Tri tham gia lượt Sói Cắn chung, sau đó thức riêng để tìm Tiên Tri theo thứ tự cấu hình.';
+      card.information=String(card.information||'').replace('Không tham gia Sói Cắn cho tới khi là con Sói cuối cùng trong bầy.','Tham gia Sói Cắn chung cùng Phe Sói.');
     }else if(role==='role_fairy'){
       card.conditions='Sau khi Bầy Sói Cắn và mọi vai Sói đã thức. Chọn dịch Trái, Phải hoặc Không dịch; bỏ qua người chết từ các chu kỳ trước.';
       const transfer=(card.functions||[]).find(f=>f.actionId==='action_transfer_bite');
