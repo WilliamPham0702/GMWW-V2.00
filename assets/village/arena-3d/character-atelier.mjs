@@ -8,6 +8,7 @@ import {choreographyPose,approachPoint,renderWalkPosition,travelProgress,WALK_TI
 import {createArenaSpellVfx} from './spell-vfx.mjs';
 import {resolveRoleAnimation,animationMotion} from './stage10-role-animations.mjs';
 import {arenaCrowdDetailPolicy} from './stage23-25-mobile-budget.mjs';
+import {gallowsWorldPose} from './stage38-public-gallows.mjs';
 const MAX=30,TAU=Math.PI*2;
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 export const atelierPalette=characterArtProfile;
@@ -120,6 +121,33 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
   const spellVfx=createArenaSpellVfx(THREE,root);
   const byId=new Map(),actors=[],up=new THREE.Vector3(0,1,0);
   let reducedMotion=false,lastDraw=-1,updates=0,qualityFps=60,qualityLowPower=false;
+  // Public gallows projects the existing actor to the fire; no extra geometry.
+  let gallowsActorId=null;
+  const gallowsTravel=new Map();
+  function gallowsProgress(state,now){
+    if(!state)return 0;
+    const from=clamp(state.startValue,0,1);
+    const span=Math.max(1,1250*(state.direction==='out'?1-from:from));
+    const t=clamp((now-state.startedAt)/span,0,1);
+    const eased=t*t*(3-2*t);
+    return state.direction==='out'?from+(1-from)*eased:from*(1-eased);
+  }
+  function setGallowsCandidate(id,now=performance.now()){
+    const next=byId.has(String(id||''))?String(id):null;
+    if(next===gallowsActorId)return false;
+    if(gallowsActorId){
+      const prev=gallowsTravel.get(gallowsActorId);
+      gallowsTravel.set(gallowsActorId,{direction:'return',startedAt:now,
+        startValue:gallowsProgress(prev,now)});
+    }
+    if(next){
+      const prev=gallowsTravel.get(next);
+      gallowsTravel.set(next,{direction:'out',startedAt:now,
+        startValue:gallowsProgress(prev,now)});
+    }
+    gallowsActorId=next;
+    return true;
+  }
   function setActors(players,{seatCount=players?.length||6,seatLayout='circle'}={}){
     const previous=new Map(byId);actors.length=0;byId.clear();const used=new Set();
     for(const source of (Array.isArray(players)?players:[])){
@@ -151,6 +179,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         part.mesh.setColorAt(i,colorTemp.set(hex));
       }
     }
+    if(gallowsActorId&&!byId.has(gallowsActorId)){gallowsActorId=null;gallowsTravel.clear();}
     for(const part of meshes){
       part.mesh.count=actors.length;
       if(part.mesh.instanceColor)part.mesh.instanceColor.needsUpdate=true;
@@ -257,11 +286,17 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         Math.abs(actor.travel.from-actor.travel.to)>.01);
       const moving=(actor.walk||inTransit)&&!reducedMotion;
       const pose=choreographyPose(actor,time,{lowMotion:reducedMotion});
-      const walkPos=renderWalkPosition(actor.position,actor.approach,actor.travel,
+      const gallowsTrack=gallowsTravel.get(actor.id);
+      const gallowsFraction=gallowsProgress(gallowsTrack,time);
+      if(gallowsTrack?.direction==='return'&&gallowsFraction<=0)gallowsTravel.delete(actor.id);
+      const gallows=gallowsFraction>0?gallowsWorldPose(actor.position,{
+        progress:gallowsFraction,now:time,reducedMotion}):null;
+      const walkPos=gallows||renderWalkPosition(actor.position,actor.approach,actor.travel,
         reducedMotion?time+WALK_TIMING.approachMs:time);
+      const gallowsLift=gallows?.lift||0,suspended=gallows?.suspended||false;
       const motion=characterMotionFrame({time,index:actor.index,moving,casting:Boolean(pose.casting),standing:Boolean(pose.stand),reducedMotion});
       const expression=expressionFrame({time,index:actor.index,moving,casting:Boolean(pose.casting),reducedMotion});
-      base.set(walkPos.x,0,walkPos.z);
+      base.set(walkPos.x,gallowsLift,walkPos.z);
       const bounce=reducedMotion?0:(moving?.065*Math.sin(time*.014+actor.index):.024*Math.sin(time*.0025+actor.index));
       // A long Core session must not retain stale effect deadlines or old
       // travel data after dozens of night/day cycles.
@@ -287,6 +322,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         if(part.name==='cheekL'||part.name==='cheekR')y+=expression.cheekLift;
         if(part.name==='tunic'||part.name==='skirt')x+=motion.robeSway;
         if(part.name==='armL'||part.name==='armR'){
+          if(suspended&&!reducedMotion)y+=.12*Math.sin(time*.016+(part.name==='armL'?0:Math.PI));
           if(gesturing&&actor.gesture==='wave'&&part.name==='armR')y+=.23+.15*Math.sin(time*.018);
           else if(gesturing&&actor.gesture==='cheer')y+=animationMotion(actor.animationProfile,time,{reducedMotion}).armLift;
           else y+=motion.armLift;
@@ -297,18 +333,18 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
         if(part.name==='shellCrown')sy*=actor.look.hairHeight;
         if(part.name==='shoeL'||part.name==='shoeR')y+=motion.step;
         if(part.name!=='stool'){
-          y*=.69+.31*pose.stand;
-          if(part.name==='skirt'||part.name==='tunic')sy*=.90+.1*pose.stand;
+          y*=.69+.31*(suspended?1:pose.stand);
+          if(part.name==='skirt'||part.name==='tunic')sy*=.90+.1*(suspended?1:pose.stand);
           if(part.name.startsWith('shoe'))z+=(1-pose.stand)*.21;
           if(pose.casting&&part.name==='armR')y+=.24*Math.abs(Math.sin(time*.015));
         }
         if(part.name==='stool')base.set(actor.position.x,0,actor.position.z);
-        else base.set(walkPos.x,0,walkPos.z);
+        else base.set(walkPos.x,gallowsLift,walkPos.z);
         pos.set(x,y,z).applyQuaternion(turn).add(base);
         scale.set(sx,sy,sz);
         temp.compose(pos,turn,scale);part.mesh.setMatrixAt(actor.index,temp);
       }
-      base.set(walkPos.x,0,walkPos.z);
+      base.set(walkPos.x,gallowsLift,walkPos.z);
       const status=actor.statusIds;
       for(const effect of effects){
         const active=(effect.name==='shield'&&status.has('protected'))||
@@ -316,7 +352,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
           (effect.name==='vote'&&status.has('marked'))||
           Number(actor.effects.get(effect.name)||0)>time;
         const size=active?effect.size*(1+(reducedMotion?0:.05*Math.sin(time*.005+actor.index))):.00001;
-        pos.set(walkPos.x,.78,walkPos.z);scale.set(size,size,size);
+        pos.set(walkPos.x,.78+gallowsLift,walkPos.z);scale.set(size,size,size);
         quat.setFromAxisAngle(up,time*.0005);
         temp.compose(pos,quat,scale);effect.mesh.setMatrixAt(actor.index,temp);
       }
@@ -378,6 +414,10 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     updates++;return true;
   }
   function hasActiveMotion(time=performance.now()){
+    for(const motion of gallowsTravel.values()){
+      const progress=gallowsProgress(motion,time);
+      if(motion.direction==='out'?progress<1:progress>0)return true;
+    }
     if(activeBeam&&time<activeBeam.until)return true;
     for(const actor of actors){
       if(actor.walk||actor.gestureEnd>time||actor.castUntil>time)return true;
@@ -404,11 +444,11 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     for(const dome of shieldDomes){dome.geometry.dispose();dome.material.dispose();}
     for(const ring of impactRings){ring.geometry.dispose();ring.material.dispose();}
     wand.geometry.dispose();wand.material.dispose();spellVfx.dispose();
-    actors.length=0;byId.clear();
+    actors.length=0;byId.clear();gallowsTravel.clear();gallowsActorId=null;
   }
-  return {setActors,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,hasActiveMotion,pick,dispose,
+  return {setActors,setGallowsCandidate,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,hasActiveMotion,pick,dispose,
     artVersion:CHARACTER_ART_VERSION,expressionVersion:STAGE7_VERSION,
-    get actorCount(){return actors.length},get crowdTier(){return crowdTier},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
+    get gallowsActorId(){return gallowsActorId},get actorCount(){return actors.length},get crowdTier(){return crowdTier},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
     get peakVfxDrawBudget(){return spellBeams.length+wolfHeads.length*4+shieldDomes.length+impactRings.length+1},
     get spellVfxActive(){return spellVfx.active},get spellVfxKind(){return spellVfx.effectKind},
     get spellVfxPearls(){return spellVfx.visiblePearls},
