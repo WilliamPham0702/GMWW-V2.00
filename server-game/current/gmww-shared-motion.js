@@ -96,7 +96,7 @@ function loop(now){
   if(root._gmwwLowPower&&root._gmwwPaused&&root._gmwwDrawKey)continue;
   paint(root,dt);
  }
- if(roots.size&&[...roots].some(root=>root.isConnected&&(!root._gmwwLowPower||!root._gmwwPaused)))schedule(policy?policy.frameInterval(active,roots.size):0);
+ if([...roots].some(root=>!root._gmwwLowPower||!root._gmwwPaused))schedule(policy?policy.frameInterval(active,roots.size):0);
  else last=0;
 }
 if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{
