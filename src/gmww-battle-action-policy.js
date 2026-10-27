@@ -25,7 +25,12 @@ export function checkBattleRoleActionUsage(rows,detail){
   if(!rule.knownAction)return{ok:false,error:'INVALID_ROLE_ACTION_FOR_TURN'};
   const own=previous.filter(x=>normalized(x?.matchId)===match&&normalized(x?.roleId)===role&&
     normalized(x?.actorId)===actor);
-  if(rule.singleActionPerNight&&own.some(x=>Number(x.night)===night))
+  // NIGHT-02: a shared Pack Bite is separate from each wolf role's own
+  // night power. Never make a Wolf Seer's private action unavailable because
+  // that same member already participated in the pack bite.
+  const individualUses=role.includes('wolf')&&action!=='action_wolf_bite'?
+    own.filter(x=>normalized(x.actionId)!=='action_wolf_bite'):own;
+  if(rule.singleActionPerNight&&individualUses.some(x=>Number(x.night)===night))
     return{ok:false,error:'ROLE_NIGHT_ACTION_EXHAUSTED',message:'Vai trò đã sử dụng một chức năng trong đêm này.'};
   const uses=own.filter(x=>normalized(x.actionId)===action&&
     (['onceGame','nGame'].includes(rule.usageMode)||Number(x.night)===night)).length;

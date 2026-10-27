@@ -25,6 +25,7 @@ import { authorizedPitr } from "./gr01-pitr-auth.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
 import { oldWitchActionCheck } from "./gmww-old-witch-rules.js";
+import { isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles } from "./gmww-pack-night-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -42,7 +43,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.244",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3244",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.245",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3245",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1637,7 +1638,35 @@ export class RoomDurableObject extends DurableObject {
     const witch=roleTurns.find(row=>row.roleId==="role_old_witch");
     const following=roleTurns.filter(row=>row.roleId!=="role_old_witch");
     if(witch)queue.push(witch);
-    queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(following),artifactTurns));
+    // NIGHT-02: Snow Wolf → Guard → shared Pack Bite → other Wolf powers →
+    // Fairy → remaining configured turns. Do not rewrite saved template orders.
+    const arranged=arrangeNightRoles(following,artifactTurns);
+    queue.push(...arranged.fixed);
+    const packInteractions=await this.ctx.storage.get("interactions")||[];
+    const eligiblePack=packMembers(assignments,packInteractions,meta.matchId);
+    if(assignments.some(isWolfRole)){
+      const snowCanBite=canSnowWolfBite({assignments,interactions:packInteractions,matchId:meta.matchId});
+      const packOwners=eligiblePack.filter(x=>x.roleId!=="role_snow_wolf"||snowCanBite);
+      queue.push({id:"wolf-pack-bite",kind:"wolf-pack-bite",label:"Bầy Sói Cắn",
+        // Every living Wolf wakes; Snow Wolf observes but cannot submit Bite
+        // while another wolf survives.
+        loginIds:eligiblePack.map(x=>normalizeLoginId(x.loginId)),playerIds:eligiblePack.map(x=>"member:"+normalizeLoginId(x.loginId)),
+        biteActorIds:packOwners.map(x=>normalizeLoginId(x.loginId)),
+        roles:eligiblePack.map(x=>({roleId:String(x.roleId),loginIds:[normalizeLoginId(x.loginId)]})),
+        order:-1,durationSec:defaultActionSec,status:"pending"});
+    }
+    // Data-driven: only Wolfs with a configured non-Bite power need a second
+    // private wake-up. A Wolf with only the shared Bite never wakes twice.
+    const privateAssignments=await readNightAssignments(this.ctx.storage,meta.matchId);
+    const distinctWolf=arranged.wolves.filter(row=>row.artifacts?.length||
+      privateAssignments.filter(a=>String(a.roleId||"")===String(row.roleId||"")).some(a=>
+        (Array.isArray(a.roleCard?.functions)?a.roleCard.functions:[]).some(fn=>
+          fn&&!fn.passive&&String(fn.actionId||fn.id||"")!=="action_wolf_bite"&&
+          (!fn.phase||["night","any"].includes(fn.phase))&&
+          (!fn.fromNight||Number(fn.fromNight)<=n)&&(!fn.toNight||Number(fn.toNight)>=n))));
+    queue.push(...groupConfiguredRoleTurns(distinctWolf));
+    if(arranged.fairy)queue.push(arranged.fairy);
+    queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(arranged.rest),arranged.artifactTurns));
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
     const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
@@ -2093,6 +2122,10 @@ export class RoomDurableObject extends DurableObject {
       if(!owners.some(a=>String(a.artifactId)===artifactId&&normalizeLoginId(a.loginId)===actorId))
         return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN"},403);
     }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
+    if(step.kind==="wolf-pack-bite"&&
+      (String(body.actionId)!=="action_wolf_bite"||
+        !(step.biteActorIds||[]).map(normalizeLoginId).includes(actorId)))
+      return j({ok:false,error:"INVALID_PACK_ACTION"},403);
     const players=await this.ctx.storage.get("players")||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
     // Validate all private divination targets BEFORE any usage ledger or game-state write.
@@ -2109,6 +2142,11 @@ export class RoomDurableObject extends DurableObject {
       (!row?.expiresAt||Date.parse(row.expiresAt)>Date.now()));
     if(isExpelled(actorId))
       return j({ok:false,error:"ACTOR_EXPELLED",message:"Người thực hiện đã bị đuổi khỏi làng, không thể dùng chức năng."},409);
+    if(step.kind==="wolf-pack-bite"){
+      const members=await this.ctx.storage.get("assignments")||[];
+      const alpha=alphaPackState(members,interactions,matchId,meta.cycleNight);
+      if(alpha.expelled)return j({ok:false,error:"PACK_ALPHA_EXPELLED",message:"Sói Trùm bị đuổi khỏi làng, Bầy Sói không thể Cắn."},409);
+    }
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
@@ -2121,7 +2159,7 @@ export class RoomDurableObject extends DurableObject {
     const usageKey="battleRoleUsage:"+matchId;
     let currentUsage=(await this.ctx.storage.get(usageKey))||[],roleUse=null;
     if(!artifactId){
-      const roleStep=step.kind==="role-group"?(step.roles||[]).find(r=>
+      const roleStep=["role-group","wolf-pack-bite"].includes(step.kind)?(step.roles||[]).find(r=>
         (r.loginIds||[]).map(normalizeLoginId).includes(actorId)):step.kind==="role"?step:null;
       if(!roleStep)return j({ok:false,error:"INVALID_ROLE_FOR_TURN"},403);
       const roleId=String(roleStep.roleId||"");
@@ -2138,7 +2176,37 @@ export class RoomDurableObject extends DurableObject {
       if(roleId==='role_snow_wolf'&&actionId==='action_wolf_bite'&&
         !canSnowWolfBite({assignments:assigned,interactions,matchId}))
         return j({ok:false,error:"SNOW_WOLF_PACK_ALIVE",message:"Sói Tuyết chỉ được Cắn khi không còn Sói khác sống trong ván."},409);
-      const policy=resolveRoleActionPolicy(roleCard,roleId,actionId);
+      const packBite=step.kind==="wolf-pack-bite";
+      // Reject forged effect types and invalid frozen/dead targets before the
+      // use ledger or interactions are changed. The UI is not an authority.
+      const expectedType=packBite?"effect_notice":roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"?"frozen":
+        roleId==="role_guard"&&actionId==="action_protect"?"effect_notice":
+        roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":"";
+      if(expectedType&&type!==expectedType)
+        return j({ok:false,error:"NIGHT_ACTION_TYPE_MISMATCH"},409);
+      if(roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"&&targets.includes(actorId))
+        return j({ok:false,error:"SNOW_WOLF_SELF_FREEZE"},409);
+      if((roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"||
+          roleId==="role_guard"&&actionId==="action_protect")&&
+        targets.some(id=>interactions.some(x=>String(x?.matchId||"")===matchId&&
+          normalizeLoginId(x?.loginId)===id&&x?.type==="dead"&&x.effectActive!==false)))
+        return j({ok:false,error:"TARGET_ALREADY_DEAD"},409);
+      if(!packBite&&actionId==="action_wolf_bite")
+        return j({ok:false,error:"PACK_BITE_WRONG_TURN"},403);
+      if(packBite&&(!isWolfRole(row)||actionId!=="action_wolf_bite"))
+        return j({ok:false,error:"INVALID_PACK_ACTOR"},403);
+      if(packBite&&currentUsage.some(x=>String(x?.matchId)===matchId&&Number(x?.night)===Number(meta.cycleNight||1)&&
+        x?.actionId==="action_wolf_bite"))
+        return j({ok:false,error:"PACK_BITE_ALREADY_USED"},409);
+      const policy=packBite?{roleId,actionId,singleActionPerNight:false,usageMode:"eachNight",usageCount:1,knownAction:true}:
+        resolveRoleActionPolicy(roleCard,roleId,actionId);
+      // Guard & Snow Wolf may not repeat the exact target two consecutive nights.
+      if(["action_protect","action_snow_wolf_freeze"].includes(actionId)){
+        const correctRole=actionId==="action_protect"?"role_guard":"role_snow_wolf";
+        if(roleId===correctRole&&targets.some(x=>previousNightTargets(currentUsage,{
+          matchId,roleId,actionId,actorId,night:Number(meta.cycleNight||1)}).includes(x)))
+          return j({ok:false,error:"CONSECUTIVE_NIGHT_TARGET_FORBIDDEN"},409);
+      }
       if(roleId==="role_old_witch"){
         // GM can submit forged action types or targets; enforce WITCH-01 before
         // taking snapshots, writing interactions, debiting uses or broadcasting.
@@ -2275,8 +2343,9 @@ export class RoomDurableObject extends DurableObject {
       // Only the battle-action endpoint maintains the per-role nightly ledger,
       // limits and atomic Undo; never allow legacy GM interaction to bypass it.
       if(!verifiedAuth&&!body?.artifactId&&
-         (step.kind==="role"&&step.roleId==="role_old_witch"||
-          step.kind==="role-group"&&(step.roles||[]).some(r=>r.roleId==="role_old_witch")))
+         (step.kind==="wolf-pack-bite"||
+          step.kind==="role"&&["role_old_witch","role_snow_wolf","role_guard"].includes(step.roleId)||
+          step.kind==="role-group"&&(step.roles||[]).some(r=>["role_old_witch","role_snow_wolf","role_guard"].includes(r.roleId))))
         return j({ok:false,error:"WITCH_USE_BATTLE_ACTION"},409);
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
       const artifactActions=Array.isArray(step.actions)?step.actions:[];

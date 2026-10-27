@@ -15,6 +15,7 @@ import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
 import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
 import {oldWitchActionCheck} from '../src/gmww-old-witch-rules.js';
+import {isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -36,6 +37,7 @@ const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMetho
   ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,oldWitchActionCheck,
+  isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -81,9 +83,9 @@ test('WITCH-01 real Durable Object: wake Old Witch right after optional Wolf rec
     {loginId:'dave',roleId:'seer',roleName:'Tiên Tri'}
   ]);
   const rt=await h.runtime();
-  assert.deepEqual(Array.from(rt.queue.slice(0,3),x=>x.kind),['wolf-introduction','role','role']);
+  assert.deepEqual(Array.from(rt.queue.slice(0,3),x=>x.kind),['wolf-introduction','role','wolf-pack-bite']);
   assert.equal(rt.queue[1].roleId,'role_old_witch');
-  assert.equal(rt.queue[2].roleId,'seer');
+  assert.equal(rt.queue[3].roleId,'seer');
   const h2=harness({artifact:false});
   h2.data.set('assignments',[{loginId:'alice',roleId:'role_old_witch',roleName:'Phù Thuỷ Già'},{loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
   h2.data.set('gameConfig',{roles:[{roleId:'seer',order:1},{roleId:'role_old_witch',order:99}],timing:{defaultActionSec:30}});
@@ -111,13 +113,47 @@ test('WITCH-01 real Durable Object: reject invalid revive before writes and acce
   assert.equal((await result(await act(['carol'],'exile-after-revive','expelled','action_exile'))).error,'ROLE_NIGHT_ACTION_EXHAUSTED');
 });
 
+test('NIGHT-02 real DO: Snow Guard pack Wolf specials Fairy precede configured village roles',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('gameConfig',{roles:[
+    {roleId:'role_fairy',order:1},{roleId:'seer',order:2},{roleId:'role_wolf_seer',order:5},
+    {roleId:'role_guard',order:80},{roleId:'role_snow_wolf',order:99},{roleId:'role_wolf',order:1}],
+    timing:{defaultActionSec:35,wolfDiscussionSec:20}});
+  h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_fairy',roleName:'Yêu Tinh'},
+    {loginId:'bob',roleId:'role_guard',roleName:'Bảo Vệ'},
+    {loginId:'carol',roleId:'role_snow_wolf',roleName:'Sói Tuyết',faction:'wolf'},
+    {loginId:'dave',roleId:'role_wolf',roleName:'Sói Thường',faction:'wolf'},
+    {loginId:'eve',roleId:'role_wolf_seer',roleName:'Sói Tiên Tri',faction:'wolf',
+      roleCard:{functions:[{actionId:'action_find_seer',phase:'night'}]}},
+    {loginId:'frank',roleId:'seer',roleName:'Tiên Tri'}
+  ]);
+  const rt=await h.runtime();
+  const seq=rt.queue.map(x=>x.kind==='role'?x.roleId:x.kind);
+  assert.deepEqual(Array.from(seq.slice(0,7)),[
+    'wolf-introduction','role_snow_wolf','role_guard','wolf-pack-bite',
+    'role_wolf_seer','role_fairy','seer']);
+  const bite=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.deepEqual(Array.from(bite.loginIds).sort(),['carol','dave','eve']);
+  assert.deepEqual(Array.from(bite.biteActorIds).sort(),['dave','eve']);
+});
+test('NIGHT-02 real DO: Snow alone is eligible for pack Bite; wolves absent omit pack step',async()=>{
+  const h=harness({artifact:false});h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_snow_wolf',roleName:'Sói Tuyết',faction:'wolf'},
+    {loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
+  const rt=await h.runtime(),bite=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.ok(bite);assert.deepEqual(Array.from(bite.biteActorIds),['alice']);
+  const none=harness({artifact:false});
+  none.data.set('assignments',[{loginId:'alice',roleId:'seer',roleName:'Tiên Tri'}]);
+  assert.equal((await none.runtime()).queue.some(x=>x.kind==='wolf-pack-bite'),false);
+});
 test('no Artifact produces no opening window; configured Artifacts preserve one owned opening window',async()=>{
   const h=harness({artifact:false}),rt=await h.runtime();
-  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['role','role','village-wakeup']);
+  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-pack-bite','role','village-wakeup']);
   assert.equal(timelineDisplaySteps(rt.queue).filter(x=>x.kind==='early-artifact-window').length,0);
   const h2=harness(),r2=await h2.runtime();
-  assert.deepEqual(Array.from(r2.queue.slice(0,2),x=>x.kind),['early-artifact-window','role']);
-  assert.equal(r2.queue[1].loginIds.length,2);assert.equal(r2.queue[1].artifacts[0].loginId,'alice');
+  assert.deepEqual(Array.from(r2.queue.slice(0,2),x=>x.kind),['early-artifact-window','wolf-pack-bite']);
+  assert.equal(r2.queue[2].loginIds.length,2);assert.equal(r2.queue[2].artifacts[0].loginId,'alice');
   assert.equal(h2.data.has('artifactUse:alice:mirror'),false);
   assert.equal(timelineDisplaySteps(r2.queue).filter(x=>x.kind==='early-artifact-window').length,1);
 });
@@ -284,7 +320,7 @@ test('request-ID collision across owners cannot reserve or impersonate another A
 });
 
 
-test('roles with identical wake order share a single server turn and keep both owners',async()=>{
+test('NIGHT-02 bare Wolf roles sharing order only wake in the common pack bite turn',async()=>{
   const h=harness({artifact:false});
   h.data.set('gameConfig',{roles:[{roleId:'regular-wolf',order:6},{roleId:'alpha-wolf',order:6}],
     timing:{wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:35}});
@@ -292,11 +328,11 @@ test('roles with identical wake order share a single server turn and keep both o
     {loginId:'alice',roleId:'regular-wolf',roleName:'Sói Thường'},
     {loginId:'bob',roleId:'alpha-wolf',roleName:'Sói Trùm'}
   ]);
-  const rt=await h.runtime(),group=rt.queue.find(x=>x.kind==='role-group');
-  assert.ok(group);assert.equal(group.order,6);
-  assert.deepEqual([...group.loginIds].sort(),['alice','bob']);
-  assert.deepEqual(group.roles.map(r=>r.label),['Sói Thường','Sói Trùm']);
-  assert.equal(rt.queue.filter(x=>x.kind==='role').length,0);
+  const rt=await h.runtime(),pack=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.ok(pack);assert.equal(pack.order,-1);
+  assert.deepEqual([...pack.loginIds].sort(),['alice','bob']);
+  assert.deepEqual(pack.roles.map(r=>r.roleId),['regular-wolf','alpha-wolf']);
+  assert.equal(rt.queue.filter(x=>['role','role-group'].includes(x.kind)).length,0);
   assert.equal(rt.queue[0].durationSec,30);
   assert.equal(rt.queue[1].durationSec,35);
   assert.ok(!rt.queue.some(x=>x.kind==='early-artifact-window'));
@@ -342,9 +378,10 @@ test('GM undo rejects stale turn and changed state; frozen role owner cannot act
   await h.room.gmTurn(null,{action:'next',expectedTurnId:rt.currentId}); // advance to the next configured role
   assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STALE_TURN');
   const i=await h.data.get('interactions');
-  i.push({id:'freeze-owner',loginId:'carol',type:'frozen',effectActive:true,matchId:'test-match'});
+  i.push({id:'freeze-owner',loginId:'alice',type:'frozen',effectActive:true,matchId:'test-match'});
   h.data.set('interactions',i);
-  const next=await result(await h.room.gmBattleAction(null,{...p,actorId:'carol',turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
+  await h.jump('role'); // After the shared pack turn there may be no second bare-Wolf role.
+  const next=await result(await h.room.gmBattleAction(null,{...p,actorId:'alice',turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
   assert.equal(next.error,'ACTOR_CANNOT_ACT');
 });
 
@@ -408,14 +445,14 @@ test('G4 live DO: frozen actor is blocked on night 1, thawed by morning, acts on
   const success=await result(await h.room.gmBattleAction(null,{...payload,night:2,
     turnId:current.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-night-2-success'}));
   assert.equal(success.ok,true,'once thawed the actor can use their role');
-  const wolfIndex=current.queue.findIndex(row=>
-    ['role','role-group'].includes(row.kind)&&(row.loginIds||[]).includes('carol'));
-  assert.ok(wolfIndex>=0,'wolf waking step exists on night 2');
+  const wolfIndex=current.queue.findIndex(row=>row.kind==='wolf-pack-bite');
+  assert.ok(wolfIndex>=0,'shared Pack Bite step exists when a Wolf was configured');
   await h.room.gmTurn(null,{action:'jump',targetIndex:wolfIndex});
   const wolf=await h.room.getNightRuntime(await h.meta(),2,false);
   const denied=await result(await h.room.gmBattleAction(null,{...payload,actorId:'carol',
-    turnId:wolf.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-dead-wolf-denied',night:2}));
-  assert.equal(denied.error,'ACTOR_CANNOT_ACT','death must persist across night transitions');
+    actionId:'action_wolf_bite',turnId:wolf.currentId,cycleKey:meta2.cycleKey,
+    clientEventId:'g4-dead-wolf-denied',night:2}));
+  assert.equal(denied.error,'INVALID_ACTOR_FOR_TURN','dead wolf has no pack action authority');
 });
 test('G4 live DO: two-night disabled status expires at night 3, not night 2',async()=>{
   const h=harness({artifact:false});
