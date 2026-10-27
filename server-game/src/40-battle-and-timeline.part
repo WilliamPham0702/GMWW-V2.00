@@ -726,6 +726,14 @@ const battleActions=()=>{
   // still act, even when one wolf/player is frozen, dead or exhausted.
   return actions.map(action=>{
     let unavailableReason='';
+    if(turn?.kind==='wolf-pack-bite'){
+      const alpha=(playSceneRuntime.assignments||[]).filter(x=>x.roleId==='role_alpha_wolf');
+      const expelled=alpha.some(x=>(playSceneRuntime.activeEffects||[]).some(e=>e.type==='expelled'&&
+        e.effectActive!==false&&String(e.loginId||'').replace(/^member:/,'')===String(x.loginId||'').replace(/^member:/,'')));
+      const alreadyBit=ledger.some(x=>String(x.matchId)===matchId&&Number(x.night)===night&&x.actionId==='action_wolf_bite');
+      if(expelled||alreadyBit)return {...action,unavailable:true,actorIds:[],
+        unavailableReason:expelled?'Sói Trùm bị đuổi: Bầy Sói không thể Cắn.':'Bầy Sói đã Cắn trong đêm này.'};
+    }
     if(action.roleId==='role_old_witch'&&action.actionId==='action_revive'&&
       !playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'&&
         battleRules().oldWitchReviveEligible(action,m,playSceneRuntime.activeEffects,night)))
@@ -775,9 +783,12 @@ const battleActions=()=>{
     // WITCH-01: keep the last confirmed target unavailable on the next night.
     // Older matches without ledger targets remain protected by the Server check.
     const actor=actorIds[0];
-    const forbiddenTargets=action.roleId==='role_old_witch'&&action.actionId==='action_exile'&&actor?
-      ledger.filter(x=>String(x.matchId)===matchId&&String(x.roleId)==='role_old_witch'&&
-        String(x.actionId)==='action_exile'&&String(x.actorId)===String(actor)&&Number(x.night)===night-1)
+    const consecutiveRole=action.actionId==='action_snow_wolf_freeze'?'role_snow_wolf':
+      action.actionId==='action_protect'?'role_guard':
+      action.roleId==='role_old_witch'&&action.actionId==='action_exile'?'role_old_witch':'';
+    const forbiddenTargets=consecutiveRole&&actor?
+      ledger.filter(x=>String(x.matchId)===matchId&&String(x.roleId)===consecutiveRole&&
+        String(x.actionId)===String(action.actionId)&&String(x.actorId)===String(actor)&&Number(x.night)===night-1)
         .flatMap(x=>Array.isArray(x.targetIds)?x.targetIds:[]):[];
     return {...action,name,actorIds,forbiddenTargets,unavailable:!!action.unavailable||!actorIds.length,unavailableReason:action.unavailableReason||unavailableReason};
   });
