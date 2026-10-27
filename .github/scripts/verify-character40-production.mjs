@@ -44,5 +44,13 @@ for(const path of ['gmww-shared-motion.js','GMWW.html','app.js']){
  const expected=sha(await readFile('assets/updates/runtime/V'+version+'/'+path));assert.equal(f.sha256,expected,path+' manifest');assert.equal(sha(await bytes(f.url)),expected,path+' actual OTA bytes');
 }
 const player=(await bytes('/village/character40-renderer.mjs?v=c40-1')).toString();assert.ok(player.includes('characters/gmww40/runtime.js'));assert.ok(!player.includes('character-renderer.mjs'));
-assert.equal(sha(await bytes('/characters/gmww40/runtime.js?v=c40-1')),sha(await readFile('server-game/current/gmww-shared-motion.js')));
-console.log('Production Character40 PASS: 40 new portraits + 40 motion atlases SHA-256; four actions only; GM/Player identical controller; actual OTA HTML/JS/controller verified; shell 3.110 preserved.');
+// Player Web retains the approved shared renderer; GM iPhone uses a separate
+// low-power scheduler since V3.253. Compare each against its own immutable bytes.
+const playerBytes=await bytes('/characters/gmww40/runtime.js?v=c40-1');
+const localPlayerBytes=await readFile('assets/characters/gmww40/runtime.js');
+const gmBytes=await readFile('server-game/current/gmww-shared-motion.js');
+assert.equal(sha(playerBytes),sha(localPlayerBytes),'Player Web controller SHA must match deployed, approved web renderer');
+assert.notEqual(sha(gmBytes),sha(localPlayerBytes),'GM-only low-power controller must remain isolated from Player Web');
+assert.equal(ota.runtime.files.find(f=>f.path==='gmww-shared-motion.js')?.sha256,sha(gmBytes),'GM low-power controller OTA SHA');
+assert.equal(ota.runtime.files.find(f=>f.path==='characters/gmww40/runtime.js')?.sha256,sha(localPlayerBytes),'Player controller OTA SHA');
+console.log('Production Character40 PASS: 40 new portraits + 40 motion atlases SHA-256; four actions only; GM low-power and Player Web controllers verified independently; actual OTA HTML/JS/controller SHA verified; shell 3.110 preserved.');

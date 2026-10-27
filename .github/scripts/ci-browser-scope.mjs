@@ -1971,7 +1971,16 @@ function isGMTurnMotionScope(changes){
     content('package.json').includes('"version": "3.253.0"');
 }
 function isGMPerformance3254Scope(changes){const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/scripts/verify-release-v3254.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/build-server-game-ipa.yml","docs/releases/GMWW-V3.254-performance-thermal-20261027.md","server-game/current/GMWW.html","server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","server-game/current/style.css","server-game/current/app.js","server-game/src/00-core-and-library.part","tests/gmww-performance-thermal.test.mjs","tests/gm-turn-motion-lowheat.test.mjs","package.json","package-lock.json","src/index.js"]);return Array.isArray(changes)&&changes.length>0&&changes.every(c=>allowed.has(c.path)&&['M','A'].includes(c.status))&&["server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","server-game/current/GMWW.html","tests/gmww-performance-thermal.test.mjs","src/index.js","package.json","package-lock.json"].every(p=>changes.some(c=>c.path===p))&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.254.0';}
+function isCharacter40V3254PostverifyScope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const allowed=new Set([".github/scripts/verify-character40-production.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/build-server-game-ipa.yml","tests/gmww-v3254-character40-postverify.test.mjs","docs/releases/GMWW-V3.254-character40-postverify-20261027.md"]);
+ const required=[".github/scripts/verify-character40-production.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","tests/gmww-v3254-character40-postverify.test.mjs","docs/releases/GMWW-V3.254-character40-postverify-20261027.md"];
+ return changes.every(c=>allowed.has(c.path)&&['M','A'].includes(c.status)) &&
+   required.every(p=>changes.some(c=>c.path===p)) &&
+   JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.254.0';
+}
 export function classifyBrowserScope(changes){
+ if(isCharacter40V3254PostverifyScope(changes))return 'character40-postverify-3254';
  if(isGMPerformance3254Scope(changes))return 'gm-performance-thermal-3254';
   if(isGMTurnMotionScope(changes))return 'gm-turn-motion-lowheat';
   if(isRuntime248PostMergeScope(changes))return 'runtime-3248-postmerge';
@@ -2062,6 +2071,19 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+ // V3.254 CI-only safety repair: no Runtime, Player or IPA changes.
+ if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+   try{
+     const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+     if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+       const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean).map(l=>{
+          const [status,path]=l.split('\t');return{status,path};
+       });
+       if(isCharacter40V3254PostverifyScope(changes))return{mode:'character40-postverify-3254',reason:'Exact CI-only independent GM and Web controller SHA verification, V3.254'};
+     }
+   }catch{}
+ }
+
  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
   try{
    if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.254.0'){
