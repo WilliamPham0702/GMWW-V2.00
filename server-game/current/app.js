@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.248';
+const VERSION='3.249';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -789,9 +789,9 @@ function applyV226Prefs(p,migrating=false){
 }
 
 function loadState(){
-  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV226Catalog(applyNight02Rules(applyV210Rules(s)),false)}}catch(_){}
-  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV226Catalog(applyNight02Rules(applyV210Rules(migrateOld(raw))),true);localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
-  return applyV226Catalog(applyNight02Rules(clone(DEFAULT_STATE)),false);
+  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV226Catalog(applyWitchDrunkCloneRules(applyNight02Rules(applyV210Rules(s))),false)}}catch(_){}
+  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV226Catalog(applyWitchDrunkCloneRules(applyNight02Rules(applyV210Rules(migrateOld(raw)))),true);localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
+  return applyV226Catalog(applyWitchDrunkCloneRules(applyNight02Rules(clone(DEFAULT_STATE))),false);
 }
 function loadPrefs(){
   try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return applyV226Prefs(deepMerge(clone(DEFAULT_PREFS),cur),false)}catch(_){}
@@ -834,6 +834,32 @@ function applyNight02Rules(s){
       const transfer=(card.functions||[]).find(f=>f.actionId==='action_transfer_bite');
       if(transfer)Object.assign(transfer,{phase:'night',usageMode:'eachNight',
         usageCount:1,allowConsecutive:true});
+    }
+  }
+  return s;
+}
+/* Witch/Drunk/Clone contracts for existing saved role libraries. Only the
+ * three selected cards are normalized; all artwork/audio and unrelated cards stay intact. */
+function applyWitchDrunkCloneRules(s){
+  for(const card of s.cards||[]){
+    const role=String(card?.id||'');
+    if(role==='role_witch'){
+      card.flags={...(card.flags||{}),allowMultipleActions:true};
+      card.information='Mỗi đêm biết người nhận vết Sói Cắn cuối cùng sau Yêu Tinh, kể cả khi được Bảo Vệ hoặc Bất Tử Đêm. Không thấy vết Cắn khi Sói Trùm bị Đóng Băng hoặc Đuổi khỏi làng. Có thể dùng bình Cứu và bình Giết trong cùng một đêm.';
+      card.limits='Mỗi bình chỉ dùng 1 lần trong ván. Dùng một bình không tự kết thúc lượt Phù Thuỷ.';
+      card.conditions='Bình Cứu chỉ chọn người nhận vết Sói Cắn cuối cùng; bình Giết độc lập.';
+      for(const fn of card.functions||[])if(['action_witch_save','action_witch_kill'].includes(fn?.actionId))
+        Object.assign(fn,{phase:'night',usageMode:'onceGame',usageCount:1});
+    }else if(role==='role_drunk'){
+      card.limits='Bốc Vai Trò 1 lần duy nhất vào Đêm 3; Đêm 1–2 không thức.';
+      card.conditions='Đêm 3 ưu tiên trước Phù Thuỷ Già. Bốc ngẫu nhiên từ những người đã chết trước đó; không ai chết thì trở thành Dân Làng. Chuyển Phe theo lá bốc.';
+      const fn=(card.functions||[]).find(x=>x.actionId==='action_drunk_draw');
+      if(fn)Object.assign(fn,{phase:'night',usageMode:'onceGame',usageCount:1,fromNight:3,toNight:3});
+    }else if(role==='role_clone'){
+      card.limits='Chỉ chọn 1 mục tiêu còn sống ở Đêm 1, không chọn lại.';
+      card.conditions='Nếu người được chọn chết, kế thừa Vai Trò, Phe và chức năng từ đêm kế tiếp. Nếu chưa chết, Nhân Bản là Dân Làng.';
+      const fn=(card.functions||[]).find(x=>x.actionId==='action_clone_target');
+      if(fn)Object.assign(fn,{phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:1,noSelf:true,allowDead:false});
     }
   }
   return s;
@@ -5739,7 +5765,12 @@ function battleAdvanceConfirmedTurn(){
   const id=battleState.pendingNextTurnId;
   if(!id||battleState.syncPending||battleState.busy||battleConfirmAudioGate||document.getElementById('battleResultPopup')?.hidden===false)return;
   battleState.pendingNextTurnId='';
-  if(playSceneState.phase==='night'&&battleTurn()?.id===id)battleNavigateRelative(1);
+  // Phù Thủy has two independent once-per-match potions. Keep this turn open
+  // after either confirmation; only GM navigation or turn deadline advances it.
+  const turn=battleTurn();
+  if(playSceneState.phase==='night'&&turn?.id===id&&
+     (turn.roleId==='role_witch'||(turn.roles||[]).some(x=>x.roleId==='role_witch')))return;
+  if(playSceneState.phase==='night'&&turn?.id===id)battleNavigateRelative(1);
 }
 function battleCloseResultPopup(){
   const popup=document.getElementById('battleResultPopup');
@@ -6029,6 +6060,11 @@ function battlePickTarget(id,actionId){
   if(battleState.busy||battleState.syncPending)return;
   const a=battleActions().find(x=>x.id===(actionId||battleState.actionId));if(!a||a.unavailable)return;
   if(battleState.actionId!==a.id){battleClear();battleState.actionId=a.id}
+  if(a.actionId==='action_witch_save'){
+    const intel=playSceneRuntime.nightIntel;
+    const legal=intel?.ok&&!intel.packDisabled?(intel.attacked||[]).some(x=>String(x.to)===String(id)):false;
+    if(!legal){playFlashError('Bình Cứu chỉ áp dụng cho người bị Sói Cắn cuối cùng.');return}
+  }
   const m=battleMember(id);
   if(!battleRules()?.targetAllowed(a,m,playPlayerEffect(id),playSceneRuntime.activeEffects,playSceneState.night)){playFlashError('Mục tiêu không hợp lệ cho chức năng này.');return}
   id=String(id);const i=battleState.targets.indexOf(id);
@@ -6050,7 +6086,13 @@ function battlePickTargetWithAudio(id,actionId){
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   if(battleState.impacts.size)battleState.impacts.clear();
-  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),chosen=new Set(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),now=Date.now();
+  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),now=Date.now();
+  const witchAwake=playSceneState.phase==='night'&&
+    (t?.roleId==='role_witch'||(t?.roles||[]).some(row=>row.roleId==='role_witch'));
+  const intel=playSceneRuntime.nightIntel;
+  const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled?
+    (intel.attacked||[]).map(row=>String(row?.to||'').replace(/^member:/,'')).filter(Boolean):[];
+  const chosen=new Set([...(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),...biteTargets]);
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
     const id=String(el.dataset.playPlayerId||'');
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
@@ -6418,6 +6460,8 @@ function renderPlayBattle(){
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);
+  if(t&&phase==='night'&&!battleState.busy&&!battleState.syncPending&&!playSceneRuntime.busy)
+    battleShowWitchIntel(t);
   if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   // Do not claim a wake-up cue was played during intermediate Server sync, or
   // while the GM is navigating. The first stable role of EVERY night must speak.
@@ -6506,7 +6550,11 @@ function renderPlayBattle(){
     const list=document.getElementById('battleRosterList');
     if(list)list.innerHTML=playLiveMembers().filter(m=>m.loginId).map(m=>{
       const id=String(m.loginId),status=playPlayerEffect(id),selected=battleState.targets.includes(id);
-      const allowed=quick?(quick==='revive'?status==='dead':status!=='dead'):!!action&&battleRules().targetAllowed(action,m,status,playSceneRuntime.activeEffects,playSceneState.night);
+      const witchAllowed=action?.actionId!=='action_witch_save'||
+        (playSceneRuntime.nightIntel?.ok&&!playSceneRuntime.nightIntel?.packDisabled&&
+        (playSceneRuntime.nightIntel?.attacked||[]).some(x=>String(x?.to)===id));
+      const allowed=quick?(quick==='revive'?status==='dead':status!=='dead'):
+        !!action&&witchAllowed&&battleRules().targetAllowed(action,m,status,playSceneRuntime.activeEffects,playSceneState.night);
       return '<button data-battle-member="'+playEsc(id)+'" '+(!allowed?'disabled ':'')+'class="'+(selected?'selected':'')+'"><span>'+(selected?'✓':'○')+'</span><b>'+playEsc(m.displayName||id)+'</b><span>'+(selected?'×':'')+'</span></button>';
     }).join('');
   }
