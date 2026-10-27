@@ -1675,7 +1675,35 @@ export function isLobbyGather541Scope(changes){
  }catch{return false;}
 }
 
+
+const playerReceiptHotfixPaths=new Set([
+  'src/gmww-player-private-card-patch.js',
+  'tests/player-web-receipt-patch-hotfix.test.mjs',
+  'docs/releases/GMWW-PLAYER-WEB-RECEIPT-HOTFIX-20261027.md',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/deploy-player-receipt-hotfix.yml'
+]);
+export function isPlayerReceiptHotfixScope(changes){
+  if(!Array.isArray(changes)||changes.length!==playerReceiptHotfixPaths.size)return false;
+  const seen=new Set();
+  for(const c of changes){
+    if(!playerReceiptHotfixPaths.has(c.path)||seen.has(c.path)||!['M','A'].includes(c.status))return false;
+    seen.add(c.path);
+    if(c.path.startsWith('src/')&&c.status!=='M')return false;
+  }
+  const p=changes.find(c=>c.path==='src/gmww-player-private-card-patch.js');
+  if(!p||typeof p.before!=='string'||typeof p.after!=='string')return false;
+  const oldCall="try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);";
+  const newCall="try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});";
+  const oldChange='replaceReceipt("'+oldCall+'",\\n   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");';
+  const newChange='replaceReceipt("'+newCall+'",\\n   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;");';
+  return p.before.includes(oldChange)&&p.after===p.before.replace(oldChange,newChange);
+}
+
 export function classifyBrowserScope(changes){
+  if(isPlayerReceiptHotfixScope(changes))return 'player-receipt-hotfix';
   if(isLobbyGather541Scope(changes))return 'lobby-gather-541';
   if(isFairy3242PolicyScope(changes))return 'fairy-ci-policy';
   if(isFairy3242Scope(changes))return 'fairy-audio-3242';
@@ -1762,6 +1790,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isPlayerReceiptHotfixScope(changes))return{mode:'player-receipt-hotfix',reason:'Exact Player Web private receipt hotfix; no runtime/IPA'};
       if(isLobbyGather541Scope(changes))return{mode:'lobby-gather-541',reason:'PR541 V3.243 exact GM Room/Gather UI only'};
        if(isFairy3242PolicyScope(changes))return{mode:'fairy-ci-policy',reason:'CI-only V3.242 routing'};
       if(isFairy3242Scope(changes))return{mode:'fairy-audio-3242',reason:'Exact reviewed V3.242 blobs'};
