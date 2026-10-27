@@ -12,8 +12,10 @@ export function drunkDeadCards({assignments=[],interactions=[],matchId='',night=
 export function drunkDeckView(deck,gm=false){
  if(!deck)return null;
  return {matchId:deck.matchId,night:deck.night,turnId:deck.turnId,
+   ...(gm?{actorId:deck.actorId}:{}),
    status:deck.selectedId?'selected':'pending',
-   cards:(deck.cards||[]).map(x=>gm?{id:x.id,roleName:x.roleName,selected:x.id===deck.selectedId}:
+   cards:(deck.cards||[]).map(x=>gm?{id:x.id,selected:x.id===deck.selectedId,
+     ...(x.id===deck.selectedId?{roleName:x.roleName}: {})}:
      {id:x.id,selected:x.id===deck.selectedId}),
    ...(gm&&deck.selectedId?{selectedRoleName:deck.selectedRoleName||''}:{}),
    ...(!gm&&deck.selectedId?{selectedId:deck.selectedId,selectedRoleName:deck.selectedRoleName||''}:{})};
