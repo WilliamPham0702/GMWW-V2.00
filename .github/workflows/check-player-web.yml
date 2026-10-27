@@ -633,6 +633,19 @@ jobs:
           node --check server-game/current/gmww-shared-motion.js
           node --check src/index.js
           test -s docs/releases/GMWW-V3.253-gm-turn-motion-20261027.md
+      - name: V3.255 — Player Web bốc lá Say Rượu, quyền riêng tư và soi phe mục tiêu bị Đuổi
+        if: steps.scope.outputs.mode == 'drunk-spiritualist-3255'
+        run: |
+          node .github/scripts/verify-release-v3255.mjs
+          node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/player-role-receipt-recovery.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check src/gmww-drunk-draw-rules.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.255-drunk-draw-spiritualist-20261027.md
+
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
