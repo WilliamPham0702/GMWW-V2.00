@@ -741,6 +741,10 @@ test('Spiritualist compares factions normally when B was expelled in an earlier 
   h.data.set('interactions',[{matchId:'test-match',type:'expelled',loginId:'bob',
     night:1,effectActive:true}]);
   const rt=await h.room.getNightRuntime(await h.meta(),1,true);
+  const spiritualistIndex=rt.queue.findIndex(x=>x.roleId==='role_spiritualist');
+  assert.ok(spiritualistIndex>=0,'Spiritualist turn must exist after shared Wolf bite');
+  rt.cursor=spiritualistIndex;rt.currentId=rt.queue[spiritualistIndex].id;
+  await h.storage.put(h.room.nightRuntimeKey(await h.meta(),1),rt);
   const answer=await result(await h.room.gmBattleAction(null,{
     matchId:'test-match',cycleKey:'night-1',turnId:rt.currentId,
     actorId:'alice',type:'effect_notice',actionId:'action_compare_faction',
