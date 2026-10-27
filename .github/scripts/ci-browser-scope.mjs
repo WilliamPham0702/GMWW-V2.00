@@ -2011,7 +2011,13 @@ function isGMFireWalk3256Scope(changes){
       worker.includes('VERSION="V3.256"');
   }catch{return false}
 }
+function isManualRuntimeScope(changes){
+ const allowed=new Set([".github/scripts/prepare-update-channel.mjs", ".github/workflows/deploy-production.yml", "package-lock.json", "package.json", "server-game/GMWW-Server/GameView.swift", "server-game/current/GMWW.html", "server-game/current/app.js", "server-game/current/style.css", "server-game/src/00-core-and-library.part", "server-game/src/10-library-and-settings.part", "src/index.js", ".github/scripts/build-manual-runtime.mjs", "tests/manual-runtime-package.test.mjs", "docs/releases/GMWW-V3.257-manual-runtime.md", ".github/scripts/ci-browser-scope.mjs", ".github/workflows/check-player-web.yml", ".github/workflows/build-server-game-ipa.yml", ".github/workflows/check-dual-renderer.yml", ".github/workflows/check-gm-free-icons-501.yml", ".github/workflows/prepare-runtime-v3202-candidate.yml", ".github/workflows/check-gallows-redesign.yml"]);
+ return Array.isArray(changes)&&changes.length>0&&changes.every(c=>allowed.has(c.path)&&['A','M'].includes(c.status))&&changes.some(c=>c.path==='server-game/GMWW-Server/GameView.swift')&&changes.some(c=>c.path==='tests/manual-runtime-package.test.mjs');
+}
+
 export function classifyBrowserScope(changes){
+  if(isManualRuntimeScope(changes))return "manual-runtime";
   if(isGMFireWalk3256Scope(changes))return 'gm-fire-walk-3256';
  if(isCharacter40V3254PostverifyScope(changes))return 'character40-postverify-3254';
  if(isGMPerformance3254Scope(changes))return 'gm-performance-thermal-3254';
@@ -2104,6 +2110,16 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean).map(row=>{const [status,path]=row.split('\t');return {status,path}});
+        if(isManualRuntimeScope(changes))return {mode:'manual-runtime',reason:'Manual updater, package integrity and native IPA only'};
+      }
+    }catch{}
+  }
+
   // Exact GM-only V3.256 release: do not run unrelated Player Card/Seat/3D/IPA suites.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{

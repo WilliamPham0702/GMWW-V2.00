@@ -44,6 +44,11 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Cập nhật Runtime thủ công — kiểm tra đúng phạm vi
+        if: steps.scope.outputs.mode == 'manual-runtime'
+        run: |
+          node --test tests/manual-runtime-package.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
       - name: Kiểm tra mã nguồn Worker
         run: npm run check
       - name: Kiểm tra đồng bộ phiên bản GMWW

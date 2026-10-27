@@ -3,6 +3,7 @@ import WebKit
 import UIKit
 import AudioToolbox
 import CryptoKit
+import UniformTypeIdentifiers
 
 struct GameView: View {
     var body: some View {
@@ -28,10 +29,10 @@ struct GameWebView: UIViewRepresentable {
         // A freshly installed IPA contains a complete runtime with the same version.
         // Do not let a stale Application Support runtime from an older install override it.
         if let active = UserDefaults.standard.string(forKey: "GMWWActiveRuntimeVersion"),
-           active.compare(shellVersion, options: .numeric) == .orderedAscending {
+           String(active.split(separator: "-").first ?? "").compare(shellVersion, options: .numeric) == .orderedAscending {
             UserDefaults.standard.removeObject(forKey: "GMWWActiveRuntimeVersion")
         }
-        let bridgeScript = "window.GMWW_NATIVE_SHELL_VERSION='\(escapedVersion)';window.GMWW_NATIVE_UPDATER=true;"
+        let bridgeScript = "window.GMWW_NATIVE_SHELL_VERSION='\(escapedVersion)';window.GMWW_NATIVE_UPDATER=true;window.GMWW_NATIVE_MANUAL_RUNTIME=true;"
         config.userContentController.addUserScript(WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
 
         let web = WKWebView(frame: .zero, configuration: config)
@@ -55,10 +56,12 @@ struct GameWebView: UIViewRepresentable {
         coordinator.stopObservingAppState()
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, UIDocumentPickerDelegate {
         weak var webView: WKWebView?
         private let activeRuntimeKey = "GMWWActiveRuntimeVersion"
         private var demoAwakeRequested = false
+        private var runtimeInstallBusy = false
+        private let previousRuntimeKey = "GMWWPreviousRuntimeVersion"
 
         // Keep the display awake only while DEMO is actively playing in the foreground.
         func observeAppState() {
@@ -100,6 +103,7 @@ struct GameWebView: UIViewRepresentable {
         private struct UpdateManifest: Decodable {
             let releaseVersion: String?
             let runtimeVersion: String?
+            let minimumShellVersion: String?
             let runtime: RuntimePackage?
             let delete: [String]?
         }
@@ -175,11 +179,11 @@ struct GameWebView: UIViewRepresentable {
         }
 
         private func safeRelativePath(_ path: String) -> Bool {
-            guard !path.isEmpty, !path.hasPrefix("/"), !path.contains("..") else { return false }
+            guard !path.isEmpty, !path.hasPrefix("/"), !path.contains(".."), !path.contains("\\") else { return false }
             return path.split(separator: "/").allSatisfy { !$0.isEmpty && $0 != "." }
         }
 
-        private func installRuntime(manifestObject: [String: Any], webView: WKWebView) {
+        private func installRuntime(manifestObject: [String: Any], webView: WKWebView, localFiles: [String: String]? = nil) {
             guard JSONSerialization.isValidJSONObject(manifestObject),
                   let data = try? JSONSerialization.data(withJSONObject: manifestObject),
                   let manifest = try? JSONDecoder().decode(UpdateManifest.self, from: data),
@@ -190,12 +194,15 @@ struct GameWebView: UIViewRepresentable {
             }
 
             let version = (manifest.runtimeVersion ?? manifest.releaseVersion ?? "").replacingOccurrences(of: "V", with: "")
-            guard !version.isEmpty else {
+            guard version.range(of: "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$", options: .regularExpression) != nil else {
                 sendResult(["ok": false, "action": "installRuntime", "error": "Thiếu phiên bản runtime."], to: webView)
                 return
             }
 
+            guard !runtimeInstallBusy else { return }
+            runtimeInstallBusy = true
             Task {
+                defer { runtimeInstallBusy = false }
                 var staging: URL?
                 do {
                     let root = try runtimeRoot()
@@ -228,9 +235,18 @@ struct GameWebView: UIViewRepresentable {
                               allowedRuntimeURL(remote) else {
                             throw NSError(domain: "GMWWUpdater", code: 2, userInfo: [NSLocalizedDescriptionKey: "File cập nhật không hợp lệ: \(item.path)"])
                         }
-                        let (fileData, response) = try await URLSession.shared.data(from: remote)
-                        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                            throw NSError(domain: "GMWWUpdater", code: 3, userInfo: [NSLocalizedDescriptionKey: "Không tải được \(item.path)."])
+                        let fileData: Data
+                        if let localFiles {
+                            guard let encoded = localFiles[item.path], let decoded = Data(base64Encoded: encoded) else {
+                                throw NSError(domain: "GMWWUpdater", code: 9, userInfo: [NSLocalizedDescriptionKey: "Gói thủ công thiếu file hoặc dữ liệu hỏng: \(item.path)"])
+                            }
+                            fileData = decoded
+                        } else {
+                            let (downloaded, response) = try await URLSession.shared.data(from: remote)
+                            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+                                throw NSError(domain: "GMWWUpdater", code: 3, userInfo: [NSLocalizedDescriptionKey: "Không tải được \(item.path)."])
+                            }
+                            fileData = downloaded
                         }
                         guard sha256(fileData).lowercased() == item.sha256.lowercased() else {
                             throw NSError(domain: "GMWWUpdater", code: 4, userInfo: [NSLocalizedDescriptionKey: "Checksum không khớp: \(item.path)"])
@@ -246,19 +262,86 @@ struct GameWebView: UIViewRepresentable {
                         throw NSError(domain: "GMWWUpdater", code: 5, userInfo: [NSLocalizedDescriptionKey: "Gói cập nhật thiếu GMWW.html."])
                     }
 
-                    let final = root.appendingPathComponent(version, isDirectory: true)
+                    // Commit to a unique directory: never remove the active runtime before success.
+                    let installedDirectory = version + "-" + UUID().uuidString
+                    let final = root.appendingPathComponent(installedDirectory, isDirectory: true)
                     if FileManager.default.fileExists(atPath: final.path) {
                         try FileManager.default.removeItem(at: final)
                     }
                     try FileManager.default.moveItem(at: temp, to: final)
                     staging = nil
-                    UserDefaults.standard.set(version, forKey: activeRuntimeKey)
+                    UserDefaults.standard.set(UserDefaults.standard.string(forKey: activeRuntimeKey), forKey: previousRuntimeKey)
+                    UserDefaults.standard.set(installedDirectory, forKey: activeRuntimeKey)
                     sendResult(["ok": true, "action": "installRuntime", "version": version], to: webView)
                 } catch {
                     if let staging { try? FileManager.default.removeItem(at: staging) }
                     sendResult(["ok": false, "action": "installRuntime", "error": error.localizedDescription], to: webView)
                 }
             }
+        }
+
+        private func pickRuntimePackage(from webView: WKWebView) {
+            guard !runtimeInstallBusy, var controller = webView.window?.rootViewController else { return }
+            while let presented = controller.presentedViewController { controller = presented }
+            let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.data], asCopy: true)
+            picker.allowsMultipleSelection = false
+            picker.delegate = self
+            controller.present(picker, animated: true)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            if let webView { sendResult(["cancelled": true, "action": "installRuntime"], to: webView) }
+        }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first, let webView else { return }
+            // Import only an explicitly chosen file. Parsing runs away from UI rendering.
+            DispatchQueue.global(qos: .userInitiated).async {
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                    guard size > 0, size <= 170 * 1024 * 1024 else { throw self.manualError("File cập nhật quá lớn hoặc rỗng.") }
+                    let data = try Data(contentsOf: url)
+                    guard let package = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                          package["format"] as? String == "gmww-runtime-1",
+                          let manifestObject = package["manifest"] as? [String: Any],
+                          let files = package["files"] as? [String: String] else { throw self.manualError("Không phải gói GMWW hợp lệ.") }
+                    let manifestData = try JSONSerialization.data(withJSONObject: manifestObject)
+                    let manifest = try JSONDecoder().decode(UpdateManifest.self, from: manifestData)
+                    let version = manifest.runtimeVersion ?? ""
+                    guard version.range(of: "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$", options: .regularExpression) != nil,
+                          let entries = manifest.runtime?.files, !entries.isEmpty else { throw self.manualError("Thiếu phiên bản hoặc danh sách file.") }
+                    let shell = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+                    guard shell.compare(manifest.minimumShellVersion ?? "0", options: .numeric) != .orderedAscending else { throw self.manualError("Gói này cần IPA mới hơn.") }
+                    guard version.compare(shell, options: .numeric) != .orderedAscending else { throw self.manualError("Gói Runtime cũ hơn bản đã có trong IPA.") }
+                    let paths = entries.map { $0.path }
+                    guard Set(paths).count == paths.count, Set(paths) == Set(files.keys),
+                          ["GMWW.html", "app.js", "style.css"].allSatisfy({ paths.contains($0) }),
+                          (manifest.delete ?? []).allSatisfy({ self.safeRelativePath($0) }) else { throw self.manualError("Danh sách file thiếu, trùng hoặc không an toàn.") }
+                    var total = 0
+                    for item in entries {
+                        guard self.safeRelativePath(item.path), let remote = URL(string: item.url), self.allowedRuntimeURL(remote),
+                              let encoded = files[item.path], let bytes = Data(base64Encoded: encoded),
+                              self.sha256(bytes) == item.sha256.lowercased() else { throw self.manualError("SHA-256 hoặc đường dẫn không hợp lệ: \(item.path)") }
+                        total += bytes.count
+                        guard total <= 120 * 1024 * 1024 else { throw self.manualError("Gói cập nhật vượt giới hạn dung lượng.") }
+                    }
+                    let notes = (manifestObject["releaseNotes"] as? [String] ?? []).prefix(3).joined(separator: "\n")
+                    DispatchQueue.main.async {
+                        let alert = UIAlertController(title: "Cài Runtime V" + version + "?", message: notes + "\n\nChỉ cài file nhận từ bản phát hành GMWW tin cậy. SHA-256 đã khớp; dữ liệu ván được giữ nguyên.", preferredStyle: .alert)
+                        alert.addAction(UIAlertAction(title: "Hủy", style: .cancel) { _ in self.sendResult(["cancelled": true, "action": "installRuntime"], to: webView) })
+                        alert.addAction(UIAlertAction(title: "Cài cập nhật", style: .default) { _ in self.installRuntime(manifestObject: manifestObject, webView: webView, localFiles: files) })
+                        self.present(alert, from: webView)
+                    }
+                } catch {
+                    self.sendResult(["ok": false, "action": "installRuntime", "error": error.localizedDescription], to: webView)
+                }
+            }
+        }
+
+        private func manualError(_ message: String) -> NSError {
+            NSError(domain: "GMWWUpdater", code: 10, userInfo: [NSLocalizedDescriptionKey: message])
         }
 
         private func downloadIPA(urlString: String, fileName: String, webView: WKWebView) {
@@ -321,6 +404,8 @@ struct GameWebView: UIViewRepresentable {
                   let webView else { return }
 
             switch action {
+            case "pickRuntimePackage":
+                pickRuntimePackage(from: webView)
             case "installRuntime":
                 guard let manifest = body["manifest"] as? [String: Any] else {
                     sendResult(["ok": false, "action": action, "error": "Thiếu manifest cập nhật."], to: webView)
@@ -332,7 +417,8 @@ struct GameWebView: UIViewRepresentable {
             case "restartRuntime":
                 loadInitialRuntime(in: webView)
             case "rollbackRuntime":
-                UserDefaults.standard.removeObject(forKey: activeRuntimeKey)
+                UserDefaults.standard.set(UserDefaults.standard.string(forKey: previousRuntimeKey), forKey: activeRuntimeKey)
+                UserDefaults.standard.removeObject(forKey: previousRuntimeKey)
                 loadInitialRuntime(in: webView)
                 sendResult(["ok": true, "action": "rollbackRuntime"], to: webView)
             default:

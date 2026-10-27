@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 jobs:
@@ -1396,6 +1396,19 @@ jobs:
 
           node .github/scripts/prepare-update-channel.mjs "$TYPE"
 
+      - name: Đóng gói cập nhật thủ công từ đúng bytes OTA
+        run: |
+          VERSION=$(node -p 'require("./package.json").version.replace(/\.0$/, "")')
+          mkdir -p /tmp/gmww-manual-runtime
+          node .github/scripts/build-manual-runtime.mjs "assets/updates/runtime/V$VERSION/manual-manifest.json" "/tmp/gmww-manual-runtime/GMWW-Runtime-V$VERSION.gmwwupdate"
+      - name: Lưu gói Runtime thủ công và SHA-256
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-Manual-Runtime
+          path: /tmp/gmww-manual-runtime/*
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Kiểm tra tăng phiên bản OTA khi Runtime thay đổi
         shell: bash
         run: |
@@ -1930,3 +1943,15 @@ jobs:
           else
             echo "Unchanged Character V4/V5 lab checks skipped; active Runtime/OTA/SHA guards still PASS."
           fi
+
+      - name: Đính kèm gói thủ công vào bản phát hành đã xác minh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p 'require("./package.json").version.replace(/\.0$/, "")')
+          TAG="gmww-v$VERSION"
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("assets/updates/latest.json"));fs.writeFileSync("/tmp/gmww-notes.md",m.releaseNotes.join("\n\n"))'
+            gh release create "$TAG" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes-file /tmp/gmww-notes.md
+          fi
+          gh release upload "$TAG" /tmp/gmww-manual-runtime/* --repo "$GITHUB_REPOSITORY" --clobber

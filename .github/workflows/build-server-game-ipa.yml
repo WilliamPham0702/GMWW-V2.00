@@ -58,7 +58,12 @@ jobs:
       - name: Verify source before building official IPA
         run: |
           node .github/scripts/verify-gmww-versions.mjs
-          npm test
+          if [ "${{ needs.scope.outputs.mode }}" = "manual-runtime" ]; then
+            node --test tests/manual-runtime-package.test.mjs
+            node .github/scripts/assemble-gm-app.mjs --verify
+          else
+            npm test
+          fi
 
       - name: Resolve and stage clean native release metadata
         id: meta
@@ -483,7 +488,7 @@ jobs:
           TAG="gmww-v$VERSION"
           IPA="GMWW-V$VERSION.ipa"
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "Verified GMWW IPA V$VERSION / build $BUILD"
+            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "GMWW IPA V$VERSION: bổ sung chọn file cập nhật Runtime thủ công, kiểm tra SHA-256 và khôi phục Runtime trước; bốn nút cập nhật cùng một hàng."
           else
             gh release upload "$TAG" "$IPA" "$IPA.sha256" --repo "$GITHUB_REPOSITORY" --clobber
           fi
