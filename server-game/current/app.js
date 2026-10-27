@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.245';
+const VERSION='3.246';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5194,9 +5194,9 @@ function battleIconSetOn(on){try{localStorage.setItem(BATTLE_ICON_ON_KEY,on?'1':
 function battleIconResolve(action){
  const api=globalThis.GMWWActionIconLibrary;
  if(!api)return [];
- // Yêu Tinh already chooses direction in Core, so do not draw two arrows.
+ // One approved 3-way Fairy artwork with three independent touch regions.
  if(action.actionId==='action_transfer_bite'&&api.resolve(action.actionId))
-  return [{id:'yeu-tinh-xoay',name:'Yêu Tinh',assetId:'50_yeu_tinh_xoay.png',image:'',isRotation:true}];
+  return [{id:'yeu-tinh-three-way',name:'Yêu Tinh',assetId:'51_yeu_tinh_three_way.png',image:'',isFairyTriptych:true}];
  return api.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
@@ -5259,7 +5259,7 @@ function battleIconDock(actions,phase){
   const point=battleIconPositions.get(battleIconPositionKey(a.id,icon.id))||
     battleIconSpawnPoint(entry,i,eligible.length);
   const visual='<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
-  return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon" '+
+  return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon'+(icon.isFairyTriptych?' is-fairy-triptych':'')+'" '+
    'style="left:'+point.x+'px;top:'+point.y+'px" data-fire-action="'+playEsc(a.id)+
    '" data-fire-icon="'+playEsc(icon.id)+'" data-fire-index="'+i+'" aria-label="'+playEsc(a.name)+
    '" title="'+playEsc(a.name)+'" aria-pressed="'+String(a.id===battleState.actionId)+'">'+
@@ -5296,7 +5296,9 @@ function battleIconBind(){
   const rect=btn.getBoundingClientRect();
   battleIconDragging={pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,
    baseX:rect.left+rect.width/2,baseY:rect.top+rect.height/2,
-   actionId:action.id,iconId:btn.dataset.fireIcon,button:btn,moved:false,target:null};
+   actionId:action.id,iconId:btn.dataset.fireIcon,button:btn,moved:false,target:null,
+   fairyDirection:battleIsTransfer(action)?((e.clientX-rect.left)/Math.max(1,rect.width)<.33?'left':
+    (e.clientX-rect.left)/Math.max(1,rect.width)>.67?'right':'none'):''};
   try{btn.setPointerCapture(e.pointerId)}catch{}
   e.preventDefault();
  });
@@ -5330,14 +5332,24 @@ function battleIconBind(){
    // For single target/free moving keep the chosen location.
    const key=battleIconPositionKey(id,d.iconId);
    if(a?.targetCount>1&&target)battleIconPositions.delete(key);
-   else battleIconPositions.set(key,point);
+   else {
+    if(a&&battleIsTransfer(a)){
+     const w=globalThis.visualViewport?.width||innerWidth;
+     point.x=Math.min(Math.max(140,point.x),Math.max(140,w-140));
+    }
+    battleIconPositions.set(key,point);
+   }
   }else{
    d.button.style.left=d.baseX+'px';d.button.style.top=d.baseY+'px';
   }
   battleIconClearDrag();
   if(e.type!=='pointerup'||battleState.busy||battleState.syncPending||!a)return;
   if(!moved){
-   if(battleIsTransfer(a)){battlePickAction(a.id);return}
+   if(!playAudioMuted())void battlePlayConfiguredAudio('actions',a.actionId,a.name);
+   if(battleIsTransfer(a)){
+    battleClear();battleState.actionId=a.id;battleState.transferDir=d.fairyDirection||'none';
+    void battleConfirm(true);return;
+   }
    if(a.noTarget||a.targetCount===0){
     if(!confirm('Xác nhận '+a.name+'?'))return;
     battleClear();battleState.actionId=a.id;void battleConfirm(true);return;
@@ -5612,38 +5624,23 @@ const battleVisualType=a=>{const key=String([a?.actionId,a?.name,...(a?.effectId
 function battleIsTransfer(a){return !!a&&!a.artifactId&&String(a.actionId||'')==='action_transfer_bite'}
 // GM picks the bite direction; OK confirms. No choice means the Fairy does nothing.
 function battleRenderTransferPanel(){
-  const bar=document.getElementById('battleActionBar');if(!bar)return;
-  let panel=document.getElementById('battleTransferPanel');
-  if(!panel){panel=document.createElement('div');panel.id='battleTransferPanel';(bar.closest('.battle-action-rail')||bar).insertAdjacentElement('afterend',panel)}
-  const a=battleAction(),show=!!a&&battleIsTransfer(a)&&battleState.actionId===a.id&&!a.unavailable;
-  const dir=battleState.transferDir,sig=show+':'+dir+':'+battleState.busy+':'+battleState.syncPending;
-  if(panel.dataset.sig===sig)return;panel.dataset.sig=sig;
-  panel.hidden=!show;
-  if(!show){panel.innerHTML='';return}
-  const options=[['left','↩️','Dịch trái'],['none','⏺️','Không dịch'],['right','↪️','Dịch phải']];
-  panel.innerHTML='<div class="gmww-transfer-card" title="Kéo vùng trống để di chuyển">'+
-    '<div class="gmww-transfer-directions" role="group" aria-label="Chọn dịch vết cắn theo vị trí bên trái, giữ nguyên hoặc bên phải của nạn nhân ban đầu">'+
-    options.map(([value,icon,label])=>'<button type="button" data-transfer="'+value+'" aria-label="'+label+'" aria-pressed="'+(dir===value)+'" title="'+label+'" '+(dir===value?'class="is-selected"':'')+'>'+icon+'</button>').join('')+
-    '</div></div>';
-  panel.querySelectorAll('[data-transfer]').forEach(button=>button.addEventListener('click',()=>{
-    if(battleState.busy||battleState.syncPending)return;
-    // Each of the three buttons is the confirmation; no extra OK/title row.
-    battleState.transferDir=button.dataset.transfer;void battleConfirm(true);
-  }));
-  const grip=panel.querySelector('.gmww-transfer-card');let drag=null;
-  grip?.addEventListener('pointerdown',e=>{
-    if(e.target.closest('button'))return;
-    const r=panel.getBoundingClientRect();drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
-    panel.style.left=r.left+'px';panel.style.top=r.top+'px';panel.style.transform='none';
-    grip.setPointerCapture?.(e.pointerId);e.preventDefault();
-  });
-  grip?.addEventListener('pointermove',e=>{
-    if(!drag||e.pointerId!==drag.id)return;
-    const left=Math.max(6,Math.min(window.innerWidth-panel.offsetWidth-6,drag.left+e.clientX-drag.x));
-    const top=Math.max(6,Math.min(window.innerHeight-panel.offsetHeight-6,drag.top+e.clientY-drag.y));
-    panel.style.left=left+'px';panel.style.top=top+'px';
-  });
-  grip?.addEventListener('pointerup',()=>{drag=null});grip?.addEventListener('pointercancel',()=>{drag=null});
+ const bar=document.getElementById('battleActionBar');if(!bar)return;
+ let panel=document.getElementById('battleTransferPanel');
+ if(!panel){panel=document.createElement('div');panel.id='battleTransferPanel';(bar.closest('.battle-action-rail')||bar).insertAdjacentElement('afterend',panel)}
+ const a=battleAction(),show=!!a&&battleIsTransfer(a)&&battleState.actionId===a.id&&!a.unavailable&&!battleIconOn();
+ const sig=show+':'+battleState.busy+':'+battleState.syncPending;
+ if(panel.dataset.sig===sig)return;panel.dataset.sig=sig;panel.hidden=!show;
+ if(!show){panel.innerHTML='';return}
+ panel.innerHTML='<div class="gmww-transfer-card gmww-fairy-panel" role="group" aria-label="Hướng dịch vết cắn">'+
+   '<img draggable="false" src="action-icons/v3/51_yeu_tinh_three_way.webp" alt="">'+
+   [['left','Dịch trái'],['none','Không dịch'],['right','Dịch phải']].map(([v,label])=>
+     '<button type="button" class="gmww-fairy-hotspot" data-transfer="'+v+'" aria-label="'+label+'" title="'+label+'"></button>').join('')+
+   '</div>';
+ panel.querySelectorAll('[data-transfer]').forEach(button=>button.addEventListener('click',()=>{
+   if(battleState.busy||battleState.syncPending)return;
+   if(!playAudioMuted())void battlePlayConfiguredAudio('actions',a.actionId,a.name);
+   battleState.transferDir=button.dataset.transfer;void battleConfirm(true);
+ }));
 }
 function battleUpdateActionNavigation(){
   // GMWW mobile: the full-width action rail uses direct swipe; arrows take
@@ -6546,7 +6543,10 @@ async function battleConfirmDay(confirmed=false){
 }
 async function battleConfirm(confirmed=false){
   if(playSceneState.phase==='day'){await battleConfirmDay(confirmed);return}
-  const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||battleState.targets.length!==a.targetCount||(transferAct&&!battleState.transferDir))return;
+  const a=battleAction(),t=battleTurn(),transferAct=!!a&&battleIsTransfer(a);
+  if(battleState.busy||battleState.syncPending||!a||a.unavailable||!t||
+    (!transferAct&&battleState.targets.length!==a.targetCount)||
+    (transferAct&&!['left','none','right'].includes(battleState.transferDir)))return;
   if(a.actionId==='action_assassin_mark'&&!['👍','👎'].includes(battleState.assassinChoice)){playFlashError('Sát Thủ phải chọn 👍 hoặc 👎 trước khi xác nhận.');return}
   const expected=[playSceneRuntime.room?.matchId||'',playSceneState.phase,Math.max(1,Number(playSceneState.night)||1),t.id].join(':');
   if(expected!==battleState.key){playFlashError('Lượt đã thay đổi. Hãy chọn lại mục tiêu.');renderPlayBattle();return}

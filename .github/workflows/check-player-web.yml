@@ -86,6 +86,15 @@ jobs:
           node --check src/index.js
           node --check server-game/current/app.js
           test -s docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md
+      - name: V3.246 — chỉ kiểm tra Yêu Tinh ba nhánh, audio và Server guard
+        if: steps.scope.outputs.mode == 'fairy-triptych-3246'
+        run: |
+          node --test tests/gmww-v3246-fairy-triptych.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.246-fairy-triptych-audio-20261027.md
       - name: V3.242 — chỉ audio icon và Yêu Tinh
         if: steps.scope.outputs.mode == 'fairy-audio-3242'
         run: |

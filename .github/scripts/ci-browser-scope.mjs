@@ -1770,7 +1770,31 @@ function isNight02Scope(changes){
   has('.github/workflows/check-player-web.yml',"'night02-pack-roles'")&&
   has('.github/workflows/deploy-production.yml','night245_release');
 }
+/* V3.246 — restrict CI to the exact user-approved Fairy triptych + audio patch.
+   Unknown or expanded diffs fall back to full checks; never silently waive gates. */
+const fairy246Paths=new Set(["server-game/src/40-battle-and-timeline.part","server-game/current/app.js","server-game/current/style.css","server-game/src/00-core-and-library.part","server-game/current/GMWW.html","src/index.js","package.json","package-lock.json",".github/scripts/prepare-update-channel.mjs","tests/gmww-action-icons-in-battle.test.mjs","docs/releases/GMWW-V3.246-fairy-triptych-audio-20261027.md","tests/gmww-v3246-fairy-triptych.test.mjs","server-game/current/action-icons/v3/51_yeu_tinh_three_way.webp","assets/action-icons/v3/51_yeu_tinh_three_way.webp",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-gallows-redesign.yml",".github/workflows/check-gm-free-icons-501.yml",".github/workflows/deploy-production.yml",".github/scripts/verify-fairy-triptych-production.mjs",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/check-dual-renderer.yml"]);
+export function isFairy246Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==fairy246Paths.size)return false;
+ const actual=new Set(changes.map(c=>c.path));
+ if(actual.size!==fairy246Paths.size||!changes.every(c=>fairy246Paths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ try{
+  const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+  const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+  const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const image=fs.readFileSync('assets/action-icons/v3/51_yeu_tinh_three_way.webp');
+  return p.version==='3.246.0'&&lock.version==='3.246.0'&&
+   gm.includes("assetId:'51_yeu_tinh_three_way.png'")&&
+   gm.includes("fairyDirection:battleIsTransfer(action)?")&&
+   gm.includes("battlePlayConfiguredAudio('actions',a.actionId,a.name)")&&
+   worker.includes("VERSION=\"V3.246\"")&&worker.includes('INVALID_FAIRY_DIRECTION')&&
+   createHash('sha256').update(image).digest('hex')==='7e6a3bc3fc63993c4b9ebe0da8bf39099b5a5d8a9f2f4a02dad95778a8320c9a'&&
+   fs.existsSync("docs/releases/GMWW-V3.246-fairy-triptych-audio-20261027.md");
+ }catch{return false}
+}
+
 export function classifyBrowserScope(changes){
+  if(isFairy246Scope(changes))return 'fairy-triptych-3246';
   if(isNight02Scope(changes))return 'night02-pack-roles';
   if(isPlayerReceiptHotfixScope(changes))return 'player-receipt-hotfix';
   if(isTimeline244Scope(changes))return 'timeline-six-center-3244';
