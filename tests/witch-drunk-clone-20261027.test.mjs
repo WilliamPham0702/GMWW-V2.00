@@ -112,7 +112,10 @@ test('Drunk draw is once at night three from confirmed dead roles of the same ma
   const args={assignments,interactions,matchId,chooseIndex:()=>0};
   assert.deepEqual(inheritedRolePlans({...args,night:1}),[]);
   assert.deepEqual(inheritedRolePlans({...args,night:2}),[]);
-  const result=inheritedRolePlans({...args,night:3});
+  assert.deepEqual(inheritedRolePlans({...args,night:3}),[],
+    'No server auto-draw before the player clicks a face-down card');
+  const result=inheritedRolePlans({...args,night:3,
+    drunkChoice:{actorId:'drunk',sourceId:'wolf'}});
   assert.equal(result.length,1);
   assert.equal(result[0].kind,'drunk');
   assert.equal(result[0].sourceRoleId,'role_alpha_wolf');
