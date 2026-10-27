@@ -1250,12 +1250,18 @@ jobs:
           set -euo pipefail
           echo "approved=false" >> "$GITHUB_OUTPUT"
           if [ "$(node -p "require('./package.json').version")" != "3.254.0" ]; then exit 0; fi
-          node .github/scripts/verify-release-v3254.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$SCOPE" == "GMWW browser CI scope: character40-postverify-3254 |"* ]]; then
+            node --test tests/gmww-v3254-character40-postverify.test.mjs
+            node --check .github/scripts/verify-character40-production.mjs
+          else
+            node .github/scripts/verify-release-v3254.mjs
+          fi
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node --test tests/gmww-performance-thermal.test.mjs tests/gm-turn-motion-lowheat.test.mjs
           SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
-          [[ "$SCOPE" == "GMWW browser CI scope: gm-performance-thermal-3254 |"* ]] || { echo "::error::V3.254 scope incorrect"; exit 1; }
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-performance-thermal-3254 |"* || "$SCOPE" == "GMWW browser CI scope: character40-postverify-3254 |"* ]] || { echo "::error::V3.254 scope incorrect"; exit 1; }
           STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
           test "$STATUS" = success || { echo "::error::Worker not SUCCESS on same SHA"; exit 1; }
           echo "approved=true" >> "$GITHUB_OUTPUT"
