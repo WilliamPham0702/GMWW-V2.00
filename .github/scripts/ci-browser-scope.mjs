@@ -1743,7 +1743,35 @@ export function isPlayerReceiptHotfixScope(changes){
     p.after===p.before.replace(oldChange,newChange).replace(oldChange2,newChange2).replace(oldChange3,newChange3);
 }
 
+/* NIGHT-02 exact approved Core/GM release. Unexpected changed paths
+ * fall back to the normal mandatory CI path (fail closed). */
+function isNight02Scope(changes){
+ const allowed=new Set(["src/gmww-pack-night-rules.js","src/index.js","src/gmww-wolf-night-resolution.js","src/gmww-battle-action-policy.js","server-game/src/00-core-and-library.part","server-game/src/30-village-and-setup.part","server-game/src/40-battle-and-timeline.part","server-game/current/battle-controls.js","server-game/current/app.js","server-game/current/GMWW.html","tests/v389-night-runtime-integration.test.mjs","tests/night02-pack-snow-guard-fairy.test.mjs","package.json","package-lock.json",".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-V3.245-night02-pack-snow-guard-fairy-20261027.md",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml"]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size)return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ if(by.size!==allowed.size||changes.some(x=>!allowed.has(x.path)||!['A','M'].includes(x.status)))return false;
+ const has=(p,n)=>by.get(p)?.after?.includes(n);
+ return has('src/index.js','NIGHT-02: Snow Wolf')&&
+  has('src/gmww-pack-night-rules.js','arrangeNightRoles')&&
+  has('src/gmww-wolf-night-resolution.js','ALPHA_FROZEN_OR_EXPELLED')&&
+  has('src/gmww-battle-action-policy.js','NIGHT-02: a shared Pack Bite')&&
+  has('server-game/src/00-core-and-library.part',"const VERSION='3.245'")&&
+  has('server-game/src/30-village-and-setup.part',"turn.kind==='wolf-pack-bite'")&&
+  has('server-game/src/40-battle-and-timeline.part',"turn?.kind==='wolf-pack-bite'")&&
+  has('server-game/current/battle-controls.js','wolf-pack:action_wolf_bite')&&
+  has('server-game/current/app.js',"const VERSION='3.245'")&&
+  has('server-game/current/GMWW.html','<title>GMWW V3.245</title>')&&
+  has('tests/night02-pack-snow-guard-fairy.test.mjs','NIGHT-02')&&
+  has('tests/v389-night-runtime-integration.test.mjs','NIGHT-02 real DO')&&
+  has('package.json','"version": "3.245.0"')&&
+  has('package-lock.json','"version": "3.245.0"')&&
+  has('.github/scripts/prepare-update-channel.mjs','V3.245 NIGHT-02:')&&
+  has('docs/releases/GMWW-V3.245-night02-pack-snow-guard-fairy-20261027.md','Rollback')&&
+  has('.github/workflows/check-player-web.yml',"'night02-pack-roles'")&&
+  has('.github/workflows/deploy-production.yml','night245_release');
+}
 export function classifyBrowserScope(changes){
+  if(isNight02Scope(changes))return 'night02-pack-roles';
   if(isPlayerReceiptHotfixScope(changes))return 'player-receipt-hotfix';
   if(isTimeline244Scope(changes))return 'timeline-six-center-3244';
   if(isLobbyGather541Scope(changes))return 'lobby-gather-541';
@@ -1839,6 +1867,7 @@ function detect(){
       if(isFairy3242Scope(changes))return{mode:'fairy-audio-3242',reason:'Exact reviewed V3.242 blobs'};
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
+      if(isNight02Scope(changes))return{mode:'night02-pack-roles',reason:'V3.245 NIGHT-02 scoped wolf pack, snow, guard, fairy Core + GM'};
       if(isWITCH01Scope(changes))return{mode:'witch01-old-witch',reason:'V3.240 WITCH-01 authoritative and GM-only tests'};
       if(isWOLF01Scope(changes))return{mode:'wolf01-private-pack',reason:'V3.239 WOLF-01 private recognition; focused Player Web and Worker'};
       if(isART01DeployGateScope(changes))return{mode:'art01-deploy-gate',reason:'ART-01 release workflow only: no gameplay changes'};
