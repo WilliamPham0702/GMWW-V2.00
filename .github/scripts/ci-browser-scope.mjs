@@ -2011,7 +2011,52 @@ function isGMFireWalk3256Scope(changes){
       worker.includes('VERSION="V3.256"');
   }catch{return false}
 }
+function isNativeManualReleaseVerifyScope(changes){
+ const allowed=new Set([".github/scripts/verify-character40-production.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/build-server-game-ipa.yml","tests/native-v3257-release-verify.test.mjs"]);
+ return Array.isArray(changes)&&changes.length>0&&changes.every(c=>allowed.has(c.path)&&['A','M'].includes(c.status))&&
+   changes.some(c=>c.path==='.github/scripts/verify-character40-production.mjs')&&
+   changes.some(c=>c.path==='tests/native-v3257-release-verify.test.mjs');
+}
+function isManualRuntimeScope(changes){
+ const allowed=new Set([".github/scripts/verify-native-web.mjs", "server-game/GMWW-Server.xcodeproj/project.pbxproj", ".github/scripts/prepare-update-channel.mjs", ".github/workflows/deploy-production.yml", "package-lock.json", "package.json", "server-game/GMWW-Server/GameView.swift", "server-game/current/GMWW.html", "server-game/current/app.js", "server-game/current/style.css", "server-game/src/00-core-and-library.part", "server-game/src/10-library-and-settings.part", "src/index.js", ".github/scripts/build-manual-runtime.mjs", "tests/manual-runtime-package.test.mjs", "docs/releases/GMWW-V3.257-manual-runtime.md", ".github/scripts/ci-browser-scope.mjs", ".github/workflows/check-player-web.yml", ".github/workflows/build-server-game-ipa.yml", ".github/workflows/check-dual-renderer.yml", ".github/workflows/check-gm-free-icons-501.yml", ".github/workflows/prepare-runtime-v3202-candidate.yml", ".github/workflows/check-gallows-redesign.yml"]);
+ return Array.isArray(changes)&&changes.length>0&&changes.every(c=>allowed.has(c.path)&&['A','M'].includes(c.status))&&changes.some(c=>c.path==='server-game/GMWW-Server/GameView.swift')&&changes.some(c=>c.path==='tests/manual-runtime-package.test.mjs');
+}
+
+// V3.258 hotfix: only trusted DOM/fire-walk files; never hide unrelated changes.
+const fireWalk3258Allowed=new Set([
+ 'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+ 'server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
+ 'server-game/current/style.css','server-game/current/GMWW.html',
+ 'src/index.js','package.json','package-lock.json',
+ '.github/scripts/prepare-update-channel.mjs',
+ 'tests/gm-fire-walk-position.test.mjs',
+ 'docs/releases/GMWW-GM-FIRE-WALK-POSITION-FIX-20261027.md',
+ 'docs/releases/GMWW-V3.258-gm-walk-position-hotfix-20261027.md',
+ '.github/workflows/deploy-gm-turn-motion-staging.yml',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+ '.github/workflows/deploy-production.yml'
+]);
+function isFireWalk3258Scope(changes){
+ if(!Array.isArray(changes))return false;
+ const names=new Set(changes.map(c=>c.path));
+ const required=['server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+ 'server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
+ 'server-game/current/style.css','server-game/current/GMWW.html',
+ 'src/index.js','package.json','package-lock.json',
+ 'tests/gm-fire-walk-position.test.mjs',
+ 'docs/releases/GMWW-V3.258-gm-walk-position-hotfix-20261027.md'];
+ if(!required.every(p=>names.has(p))||!changes.every(c=>fireWalk3258Allowed.has(c.path)&&['A','M'].includes(c.status)))return false;
+ const src=p=>changes.find(c=>c.path===p)?.after||'';
+ return src('server-game/current/app.js').includes("const VERSION='3.258'")&&
+ src('server-game/current/app.js').includes('GMWW_GM_FIRE_WALK_V2')&&
+ src('server-game/current/app.js').includes("token.animate([{translate:from},{translate:target}]")&&
+ src('src/index.js').includes('VERSION="V3.258"')&&
+ src('package.json').includes('"version": "3.258.0"');
+}
 export function classifyBrowserScope(changes){
+ if(isFireWalk3258Scope(changes))return 'gm-fire-walk-3258';
+  if(isNativeManualReleaseVerifyScope(changes))return 'native-manual-release-verify';
+  if(isManualRuntimeScope(changes))return "manual-runtime";
   if(isGMFireWalk3256Scope(changes))return 'gm-fire-walk-3256';
  if(isCharacter40V3254PostverifyScope(changes))return 'character40-postverify-3254';
  if(isGMPerformance3254Scope(changes))return 'gm-performance-thermal-3254';
@@ -2104,6 +2149,17 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean).map(row=>{const [status,path]=row.split('\t');return {status,path}});
+        if(isNativeManualReleaseVerifyScope(changes))return {mode:'native-manual-release-verify',reason:'Only V3.257 Native release verification and focused CI'};
+        if(isManualRuntimeScope(changes))return {mode:'manual-runtime',reason:'Manual updater, package integrity and native IPA only'};
+      }
+    }catch{}
+  }
+
   // Exact GM-only V3.256 release: do not run unrelated Player Card/Seat/3D/IPA suites.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
@@ -2229,6 +2285,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isFireWalk3258Scope(changes))return{mode:'gm-fire-walk-3258',reason:'V3.258 verified GM fire walk DOM hotfix'};
       if(isGMTurnMotionScope(changes))return{mode:'gm-turn-motion-lowheat',reason:'V3.253 exact GM motion and OTA changes only'};
       if(isRuntime248PostMergeScope(changes))return{mode:'runtime-3248-postmerge',reason:'Exact 4-file CI release fix for already tested Runtime V3.248'};
       if(isIcon247PostMergeScope(changes))return{mode:'icon-scale-3247-postmerge',reason:'Audited 2-file V3.247 CI release scope order fix'};

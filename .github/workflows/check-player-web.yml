@@ -44,6 +44,17 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Chốt Native V3.257 — xác minh manifest và gói thủ công đúng phạm vi
+        if: steps.scope.outputs.mode == 'native-manual-release-verify'
+        run: |
+          node --check .github/scripts/verify-character40-production.mjs
+          node --test tests/native-v3257-release-verify.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+      - name: Cập nhật Runtime thủ công — kiểm tra đúng phạm vi
+        if: steps.scope.outputs.mode == 'manual-runtime'
+        run: |
+          node --test tests/manual-runtime-package.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
       - name: Kiểm tra mã nguồn Worker
         run: npm run check
       - name: Kiểm tra đồng bộ phiên bản GMWW
@@ -54,6 +65,15 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: V3.258 — sửa tọa độ đi bộ GM quanh đống lửa
+        if: steps.scope.outputs.mode == 'gm-fire-walk-3258'
+        run: |
+          node --test tests/gm-fire-walk-position.test.mjs tests/gm-turn-motion-lowheat.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.258-gm-walk-position-hotfix-20261027.md
       - name: V3.254 — Hiệu năng & Chống nóng GM
         if: steps.scope.outputs.mode == 'gm-performance-thermal-3254'
         run: |

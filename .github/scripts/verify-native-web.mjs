@@ -8,7 +8,7 @@ const requireFile=rel=>{if(!safe(rel)||!fs.statSync(path.join(root,rel)).isFile(
 const html=fs.readFileSync(path.join(root,'GMWW.html'),'utf8');
 for(const m of html.matchAll(/(?:src|href)=["']([^"']+)["']/g)){
  const ref=m[1].split(/[?#]/)[0];
- if(!ref||/^(?:https?:|data:|\/\/)/.test(ref))continue;
+ if(!ref||ref==='about:blank'||/^(?:https?:|data:|\/\/)/.test(ref))continue;
  requireFile(ref);
 }
 const hash=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');

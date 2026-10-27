@@ -41,7 +41,7 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
   build:
     needs: scope
-    if: needs.scope.outputs.mode != 'character40-postverify-3254' && needs.scope.outputs.mode != 'gm-performance-thermal-3254' && needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'post-match-room-532' && needs.scope.outputs.mode != 'postmatch-ci-532' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210' && needs.scope.outputs.mode != 'icon-clean-3212' && needs.scope.outputs.mode != 'icon-wave3-3213' && needs.scope.outputs.mode != 'icon-game-3215' && needs.scope.outputs.mode != 'icon-wave5-3218' && needs.scope.outputs.mode != 'active-icons-3225' && needs.scope.outputs.mode != 'fire-icons-3226' && needs.scope.outputs.mode != 'icon-action-v2-3227' && needs.scope.outputs.mode != 'gm-footer-3229' && needs.scope.outputs.mode != 'entry-icons-3231' && needs.scope.outputs.mode != 'phase-dock-gallows-3234' && needs.scope.outputs.mode != 'gm-ui-glass-3235' && needs.scope.outputs.mode != 'gm-menu-gallows-3236' && needs.scope.outputs.mode != 'gm-ui-menu-3237' && needs.scope.outputs.mode != 'gm-ui-controls-3238' && needs.scope.outputs.mode != 'gm238-deploy-repair' && needs.scope.outputs.mode != 'runtime-warning-3232' && needs.scope.outputs.mode != 'icon-v2-ci-fix' && needs.scope.outputs.mode != 'gm-icons-501' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'lobby-gather-541'
+    if: needs.scope.outputs.mode != 'native-manual-release-verify' && needs.scope.outputs.mode != 'character40-postverify-3254' && needs.scope.outputs.mode != 'gm-performance-thermal-3254' && needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'post-match-room-532' && needs.scope.outputs.mode != 'postmatch-ci-532' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210' && needs.scope.outputs.mode != 'icon-clean-3212' && needs.scope.outputs.mode != 'icon-wave3-3213' && needs.scope.outputs.mode != 'icon-game-3215' && needs.scope.outputs.mode != 'icon-wave5-3218' && needs.scope.outputs.mode != 'active-icons-3225' && needs.scope.outputs.mode != 'fire-icons-3226' && needs.scope.outputs.mode != 'icon-action-v2-3227' && needs.scope.outputs.mode != 'gm-footer-3229' && needs.scope.outputs.mode != 'entry-icons-3231' && needs.scope.outputs.mode != 'phase-dock-gallows-3234' && needs.scope.outputs.mode != 'gm-ui-glass-3235' && needs.scope.outputs.mode != 'gm-menu-gallows-3236' && needs.scope.outputs.mode != 'gm-ui-menu-3237' && needs.scope.outputs.mode != 'gm-ui-controls-3238' && needs.scope.outputs.mode != 'gm238-deploy-repair' && needs.scope.outputs.mode != 'runtime-warning-3232' && needs.scope.outputs.mode != 'icon-v2-ci-fix' && needs.scope.outputs.mode != 'gm-icons-501' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'lobby-gather-541'
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -58,7 +58,12 @@ jobs:
       - name: Verify source before building official IPA
         run: |
           node .github/scripts/verify-gmww-versions.mjs
-          npm test
+          if [ "${{ needs.scope.outputs.mode }}" = "manual-runtime" ]; then
+            node --test tests/manual-runtime-package.test.mjs
+            node .github/scripts/assemble-gm-app.mjs --verify
+          else
+            npm test
+          fi
 
       - name: Resolve and stage clean native release metadata
         id: meta
@@ -122,6 +127,9 @@ jobs:
           cp server-game/current/runtime-recovery.js "$APPDIR/Web/runtime-recovery.js"
           cp server-game/current/gmww-local-export.js "$APPDIR/Web/gmww-local-export.js"
           cp server-game/current/artifact-sea-import.js "$APPDIR/Web/artifact-sea-import.js"
+          cp server-game/current/gmww-performance.js "$APPDIR/Web/gmww-performance.js"
+          cp server-game/current/action-icon-library.js "$APPDIR/Web/action-icon-library.js"
+          cp -R server-game/current/action-icons "$APPDIR/Web/action-icons"
           cp server-game/current/gmww-shared-motion.js "$APPDIR/Web/gmww-shared-motion.js"
           mkdir -p "$APPDIR/Web/characters/gmww40"
           cp -R assets/characters/gmww40/. "$APPDIR/Web/characters/gmww40/"
@@ -342,7 +350,7 @@ jobs:
           const stubEl=()=>({dataset:{},classList:{toggle(){},add(){},remove(){},contains(){return false}},style:{setProperty(){},removeProperty(){},getPropertyValue(){return''}},value:'',checked:false,innerHTML:'',textContent:'',files:[],scrollTop:0,disabled:false,querySelector(){return stubEl()},querySelectorAll(){return[]},addEventListener(){},setAttribute(){},removeAttribute(){},appendChild(){},remove(){},click(){},focus(){},closest(){return null}});
           const doc={readyState:'complete',querySelector(){return stubEl()},querySelectorAll(){return[]},getElementById(){return stubEl()},createElement(){return stubEl()},body:stubEl(),addEventListener(){}};
           const store=new Map();
-          const ctx={document:doc,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)},window:{},CSS:{escape:s=>String(s)},navigator:{onLine:true},console,Blob,Uint8Array,TextDecoder,TextEncoder,atob:s=>Buffer.from(s,'base64').toString('binary'),btoa:s=>Buffer.from(s,'binary').toString('base64'),performance:{now:()=>0},fetch:async()=>({ok:true,json:async()=>({})}),AbortController:class{constructor(){this.signal={}}abort(){}},setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},requestAnimationFrame(){return 0},cancelAnimationFrame(){},confirm(){return true},alert(){},URL:{createObjectURL(){return''},revokeObjectURL(){}},indexedDB:{open(){return{}}},Image:class{},FileReader:class{},Audio:class{play(){return Promise.resolve()}pause(){}}};
+          const ctx={innerWidth:390,innerHeight:844,devicePixelRatio:1,document:doc,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)},window:{},CSS:{escape:s=>String(s)},navigator:{onLine:true},console,Blob,Uint8Array,TextDecoder,TextEncoder,atob:s=>Buffer.from(s,'base64').toString('binary'),btoa:s=>Buffer.from(s,'binary').toString('base64'),performance:{now:()=>0},fetch:async()=>({ok:true,json:async()=>({})}),AbortController:class{constructor(){this.signal={}}abort(){}},setTimeout(){return 0},clearTimeout(){},setInterval(){return 0},clearInterval(){},requestAnimationFrame(){return 0},cancelAnimationFrame(){},confirm(){return true},alert(){},URL:{createObjectURL(){return''},revokeObjectURL(){}},indexedDB:{open(){return{}}},Image:class{},FileReader:class{},Audio:class{play(){return Promise.resolve()}pause(){}}};
           ctx.window=ctx;ctx.window.addEventListener=()=>{};ctx.window.location={assign(){}};ctx.window.GMWW_THEME_ARTWORK={};
           vm.createContext(ctx);
           vm.runInContext(fs.readFileSync('assets/village/village-layout.js','utf8'),ctx,{filename:'village-layout.js'});
@@ -483,7 +491,7 @@ jobs:
           TAG="gmww-v$VERSION"
           IPA="GMWW-V$VERSION.ipa"
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "Verified GMWW IPA V$VERSION / build $BUILD"
+            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "GMWW IPA V$VERSION: bổ sung chọn file cập nhật Runtime thủ công, kiểm tra SHA-256 và khôi phục Runtime trước; bốn nút cập nhật cùng một hàng."
           else
             gh release upload "$TAG" "$IPA" "$IPA.sha256" --repo "$GITHUB_REPOSITORY" --clobber
           fi

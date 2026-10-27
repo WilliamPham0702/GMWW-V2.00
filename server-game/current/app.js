@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.256';
+const VERSION='3.258';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1644,7 +1644,7 @@ function setUpdateAction(kind,context={}){
   const buttons=[runtime,ipa,web];buttons.forEach(x=>{if(!x)return;x.classList.remove('recommended');x.disabled=false;x.removeAttribute('aria-disabled')});
   const enable=x=>{if(!x)return;x.disabled=false;x.removeAttribute('aria-disabled');x.classList.add('recommended')};
   const shell=String(context.shell||gmwwShellVersion()),runtimeV=String(context.runtime||gmwwRuntimeVersion()),latest=String(context.latest||runtimeV),ipaV=String(context.ipaVersion||'').replace(/^V/i,'');
-  if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn CẬP NHẬT RUNTIME. Không cần tải IPA mới.'}
+  if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn TỰ ĐỘNG. Không cần tải IPA mới.'}
   else if(kind==='native'){enable(ipa);if(title)title.textContent='Bắt buộc cài IPA V'+latest;if(hint)hint.textContent='Nhấn TẢI IPA. Cập nhật Runtime không thay thế được phiên bản ứng dụng này.'}
   else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
   else if(kind==='compatible'){if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Ứng dụng V'+shell+' vẫn tương thích với Runtime/Server V'+runtimeV+'.'}
@@ -1652,6 +1652,17 @@ function setUpdateAction(kind,context={}){
   else if(kind==='pending'){if(title)title.textContent='Server đang phát hành bản cập nhật.';if(hint)hint.textContent='Chưa có gói Runtime sẵn sàng. Không cần nhấn Cập nhật lúc này.'}
   else if(kind==='unverified'){if(title)title.textContent='Chưa xác minh được phiên bản mới nhất.';if(hint)hint.textContent='Không kết luận đã cập nhật xong khi Server hoặc gói cập nhật chưa phản hồi. Nhấn ↻ để kiểm tra lại.'}
   else {if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Hệ thống đang ở trạng thái phù hợp.'}
+}
+function installManualRuntimeUpdate(){
+  if(gmwwUpdateBusy)return false;
+  if(!window.GMWW_NATIVE_MANUAL_RUNTIME){
+    setUpdateUi('warn','CẦN NÂNG IPA','Cập nhật thủ công cần IPA hỗ trợ chọn file.','Cài IPA có tính năng Thủ Công một lần, sau đó chọn file .gmwwupdate trong Tệp.');
+    return false;
+  }
+  gmwwUpdateBusy=true;
+  if(!gmwwNativePost('pickRuntimePackage')){gmwwUpdateBusy=false;return false}
+  gmwwSetUpdateProgress('running',null,'Chọn file cập nhật trong Tệp');
+  return true;
 }
 async function installRuntimeUpdate(){
   if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
@@ -1867,6 +1878,7 @@ window.GMWWUpdateNative={
   onResult(result={}){
     gmwwUpdateBusy=false;
     if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;
+    if(result.cancelled){gmwwSetUpdateProgress('idle',null,'Đã hủy chọn file');return}
     if(result.ok&&result.action==='installRuntime'){
       gmwwSetUpdateProgress('done',100,'Đã tải và cài Runtime');
       const v=String(result.version||gmwwUpdateManifest?.releaseVersion||'mới');
@@ -1926,6 +1938,7 @@ const openPlayerWeb=document.getElementById('openPlayerWeb');
 if(openPlayerWeb)openPlayerWeb.addEventListener('click',()=>window.location.assign(GMWW_SERVER_BASE+'/'));
 const healthButton=document.getElementById('checkServerHealth');
 if(healthButton)healthButton.addEventListener('click',checkServerHealth);
+document.getElementById('installManualRuntimeUpdate')?.addEventListener('click',installManualRuntimeUpdate);
 const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if(installRuntimeUpdateBtn)installRuntimeUpdateBtn.addEventListener('click',updateDataNow);
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
