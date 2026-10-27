@@ -69,6 +69,8 @@ jobs:
           # Separate artwork CI-policy PR never publishes a duplicate Runtime.
           SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
           if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* || "$SCOPE" == "GMWW browser CI scope: fairy-ci-policy |"* ]]; then SHOULD_DEPLOY=false; fi
+          # Worker-only Player receipt recovery uses its dedicated same-SHA gated workflow.
+          if [[ "$SCOPE" == "GMWW browser CI scope: player-receipt-hotfix |"* ]]; then SHOULD_DEPLOY=false; fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
