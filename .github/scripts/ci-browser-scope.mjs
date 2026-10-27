@@ -1915,7 +1915,33 @@ export function isRuntime248SetupUiScope(changes){
  }catch{return false}
 }
 
+
+// V3.248: only these four CI/release files may change after the already tested
+// and merged Runtime PR #555. Any app, rule, asset or IPA diff => full CI.
+const runtime248PostMergePaths=new Set([".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","tests/ci-v3248-postmerge.test.mjs"]);
+export function isRuntime248PostMergeScope(changes){
+ if(!Array.isArray(changes)||changes.length!==runtime248PostMergePaths.size||
+   new Set(changes.map(c=>c.path)).size!==runtime248PostMergePaths.size||
+   !changes.every(c=>runtime248PostMergePaths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ try{
+   git('merge-base','--is-ancestor','878e3ae02dd8daba0846aba9d0ee46667944f2d1','HEAD');
+   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+   const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+   const village=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+   const settings=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+   return pkg.version==='3.248.0'&&html.includes('<title>GMWW V3.248</title>')&&
+     html.includes('data-action-icon-scale="25"')&&
+     html.includes('data-action-icon-scale="150"')&&
+     battle.includes('visibleSteps=steps.map')&&
+     village.includes('playSetupSyncFingerprint')&&
+     settings.includes('ACTION_ICON_SCALE_OPTIONS=[25,50,75,100,125,150]')&&
+     fs.existsSync('docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md');
+ }catch{return false}
+}
+
 export function classifyBrowserScope(changes){
+  if(isRuntime248PostMergeScope(changes))return 'runtime-3248-postmerge';
   if(isRuntime248SetupUiScope(changes))return 'runtime-3248-setup-ui';
   if(isIcon247PostMergeScope(changes))return 'icon-scale-3247-postmerge';
   if(isIcon247Scope(changes))return 'icon-scale-3247';
@@ -2015,6 +2041,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isRuntime248PostMergeScope(changes))return{mode:'runtime-3248-postmerge',reason:'Exact 4-file CI release fix for already tested Runtime V3.248'};
       if(isIcon247PostMergeScope(changes))return{mode:'icon-scale-3247-postmerge',reason:'Audited 2-file V3.247 CI release scope order fix'};
       if(isFairy246PostMergeScope(changes))return{mode:'fairy-246-postmerge',reason:'PR548 V3.246 exact 5-file post-merge CI repair; same Runtime and icon SHA'};
       if(isPlayerReceiptHotfixScope(changes))return{mode:'player-receipt-hotfix',reason:'Exact Player Web private receipt hotfix; no runtime/IPA'};
