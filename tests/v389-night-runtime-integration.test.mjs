@@ -113,6 +113,39 @@ test('WITCH-01 real Durable Object: reject invalid revive before writes and acce
   assert.equal((await result(await act(['carol'],'exile-after-revive','expelled','action_exile'))).error,'ROLE_NIGHT_ACTION_EXHAUSTED');
 });
 
+test('NIGHT-02 real DO: Snow Guard pack Wolf specials Fairy precede configured village roles',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('gameConfig',{roles:[
+    {roleId:'role_fairy',order:1},{roleId:'seer',order:2},{roleId:'role_wolf_seer',order:5},
+    {roleId:'role_guard',order:80},{roleId:'role_snow_wolf',order:99},{roleId:'role_wolf',order:1}],
+    timing:{defaultActionSec:35,wolfDiscussionSec:20}});
+  h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_fairy',roleName:'Yêu Tinh'},
+    {loginId:'bob',roleId:'role_guard',roleName:'Bảo Vệ'},
+    {loginId:'carol',roleId:'role_snow_wolf',roleName:'Sói Tuyết',faction:'wolf'},
+    {loginId:'dave',roleId:'role_wolf',roleName:'Sói Thường',faction:'wolf'},
+    {loginId:'eve',roleId:'role_wolf_seer',roleName:'Sói Tiên Tri',faction:'wolf'},
+    {loginId:'frank',roleId:'seer',roleName:'Tiên Tri'}
+  ]);
+  const rt=await h.runtime();
+  const seq=rt.queue.map(x=>x.kind==='role'?x.roleId:x.kind);
+  assert.deepEqual(Array.from(seq.slice(0,7)),[
+    'wolf-introduction','role_snow_wolf','role_guard','wolf-pack-bite',
+    'role_wolf_seer','role_fairy','seer']);
+  const bite=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.deepEqual(Array.from(bite.loginIds).sort(),['carol','dave','eve']);
+  assert.deepEqual(Array.from(bite.biteActorIds).sort(),['dave','eve']);
+});
+test('NIGHT-02 real DO: Snow alone is eligible for pack Bite; wolves absent omit pack step',async()=>{
+  const h=harness({artifact:false});h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_snow_wolf',roleName:'Sói Tuyết',faction:'wolf'},
+    {loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
+  const rt=await h.runtime(),bite=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.ok(bite);assert.deepEqual(Array.from(bite.biteActorIds),['alice']);
+  const none=harness({artifact:false});
+  none.data.set('assignments',[{loginId:'alice',roleId:'seer',roleName:'Tiên Tri'}]);
+  assert.equal((await none.runtime()).queue.some(x=>x.kind==='wolf-pack-bite'),false);
+});
 test('no Artifact produces no opening window; configured Artifacts preserve one owned opening window',async()=>{
   const h=harness({artifact:false}),rt=await h.runtime();
   assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-pack-bite','role','village-wakeup']);
