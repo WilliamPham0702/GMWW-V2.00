@@ -47,7 +47,7 @@ test('every approved role displays matching description / limits / conditions in
   }
  }
  assert.match(card(s,'role_old_witch').conditions,/Phù Thuỷ Già|Bầy Sói/);
- assert.match(card(s,'role_snow_wolf').limits,/đêm thứ ba/);
+ assert.match(card(s,'role_snow_wolf').limits,/đêm thứ ba/i);
  assert.match(card(s,'role_guard').information,/Yêu Tinh/);
  assert.match(card(s,'role_alpha_wolf').information,/Đuổi/);
  assert.match(card(s,'role_fairy').information,/Không Dịch/);
