@@ -2033,6 +2033,20 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // V3.252: iPhone maintenance grid is flat, all 16 original handlers unchanged.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.252.0'){
+        const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3252.mjs'],{
+            encoding:'utf8',env:{...process.env,GMWW_V3252_BASE:base}});
+          return{mode:'uniform-maintenance-3252',reason:'V3.252 same-size direct 16 tools and unaffected handlers'};
+        }
+      }
+    }catch{} // Unexpected changes require full checks.
+  }
+
   // V3.251: exact CSS-only GM settings release; keep V3.250 role-card changes.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{

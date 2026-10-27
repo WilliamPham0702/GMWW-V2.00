@@ -596,6 +596,16 @@ jobs:
           node --check src/index.js
           node --check server-game/current/app.js
           test -s docs/releases/GMWW-V3.251-cloudflare-tiles-20261027.md
+      - name: V3.252 — 16 ô chuẩn Healthy Check, bố cục iPhone không phình
+        if: steps.scope.outputs.mode == 'uniform-maintenance-3252'
+        run: |
+          node .github/scripts/verify-release-v3252.mjs
+          node --test tests/gmww-v3252-uniform-maintenance-boxes.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.252-uniform-maintenance-boxes-20261027.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
