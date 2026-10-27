@@ -1057,7 +1057,7 @@ jobs:
           echo "approved=false" >> "$GITHUB_OUTPUT"
           if [ "$(node -p "require('./package.json').version")" != "3.246.0" ]; then exit 0; fi
           SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
-          [[ "$SCOPE" == "GMWW browser CI scope: fairy-triptych-3246 |"* ]] || {
+          [[ "$SCOPE" == "GMWW browser CI scope: fairy-triptych-3246 |"* || "$SCOPE" == "GMWW browser CI scope: fairy-246-postmerge |"* ]] || {
             echo "::error::V3.246 scope differs from approved Fairy changes"; exit 1;
           }
           node --test tests/gmww-v3246-fairy-triptych.test.mjs tests/gmww-action-icons-in-battle.test.mjs

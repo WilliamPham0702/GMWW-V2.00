@@ -1793,7 +1793,30 @@ export function isFairy246Scope(changes){
  }catch{return false}
 }
 
+
+// Follow-up gate for PR #548 main merge: the original 22-file update was
+// already inspected; this recovery changes only the five CI/verifier files.
+const fairy246PostMergePaths=new Set([".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/scripts/verify-fairy-triptych-production.mjs",".github/workflows/check-dual-renderer.yml"]);
+export function isFairy246PostMergeScope(changes){
+ if(!Array.isArray(changes)||changes.length!==fairy246PostMergePaths.size||
+   new Set(changes.map(c=>c.path)).size!==fairy246PostMergePaths.size||
+   !changes.every(c=>fairy246PostMergePaths.has(c.path)&&c.status==='M'))return false;
+ try{
+   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+   const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+   const worker=fs.readFileSync('src/index.js','utf8');
+   const art=fs.readFileSync('assets/action-icons/v3/51_yeu_tinh_three_way.webp');
+   return pkg.version==='3.246.0'&&
+      gm.includes("assetId:'51_yeu_tinh_three_way.png'")&&
+      gm.includes("battlePlayConfiguredAudio('actions',a.actionId,a.name)")&&
+      worker.includes('INVALID_FAIRY_DIRECTION')&&
+      createHash('sha256').update(art).digest('hex')==='7e6a3bc3fc63993c4b9ebe0da8bf39099b5a5d8a9f2f4a02dad95778a8320c9a'&&
+      fs.existsSync('docs/releases/GMWW-V3.246-fairy-triptych-audio-20261027.md');
+ }catch{return false}
+}
+
 export function classifyBrowserScope(changes){
+  if(isFairy246PostMergeScope(changes))return 'fairy-246-postmerge';
   if(isFairy246Scope(changes))return 'fairy-triptych-3246';
   if(isNight02Scope(changes))return 'night02-pack-roles';
   if(isPlayerReceiptHotfixScope(changes))return 'player-receipt-hotfix';
@@ -1884,6 +1907,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isFairy246PostMergeScope(changes))return{mode:'fairy-246-postmerge',reason:'PR548 V3.246 exact 5-file post-merge CI repair; same Runtime and icon SHA'};
       if(isPlayerReceiptHotfixScope(changes))return{mode:'player-receipt-hotfix',reason:'Exact Player Web private receipt hotfix; no runtime/IPA'};
       if(isTimeline244Scope(changes))return{mode:'timeline-six-center-3244',reason:'V3.244 exact six-step centered GM timeline only'};
       if(isLobbyGather541Scope(changes))return{mode:'lobby-gather-541',reason:'PR541 V3.243 exact GM Room/Gather UI only'};
