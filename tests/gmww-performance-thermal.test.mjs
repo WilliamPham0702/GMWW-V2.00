@@ -74,7 +74,7 @@ test('motion scheduler keeps one pending callback for multiple characters and ca
  const draw={clearRect(){},drawImage(){}};
  const makeNode=()=>({isConnected:true,dataset:{},style:{},firstElementChild:null,
    append(child){this.firstElementChild??=child;},replaceChildren(){this.firstElementChild=null;},
-   setAttribute(){},closest(){return null},getContext(){return draw}});
+   setAttribute(){},closest(){return null},getContext(){return draw},querySelector(){return this.firstElementChild;}});
  const document={hidden:false,createElement:makeNode,addEventListener:(event,cb)=>events[event]=cb};
  const ctx={document,Image:class {constructor(){this.complete=true;this.naturalWidth=2000;}},
    requestAnimationFrame:cb=>{const id=nextId++;framesRequested++;callbacks.set(id,cb);return id;},
@@ -91,6 +91,10 @@ test('motion scheduler keeps one pending callback for multiple characters and ca
  callbacks.clear();pending(1000);
  assert.equal(timeouts.size,1,'one timer schedules the next batched draw');
  assert.equal(framesRequested,1,'no 60Hz idle RAF spin');
+ const transitioned=ctx.GMWW_SHARED_MOTION.update(host1,{state:'running',motion:'run'});
+ assert.equal(transitioned,true,'animation command reaches mounted character');
+ assert.equal(timeouts.size,0,'a new gameplay action cancels the sleeping timer');
+ assert.equal(callbacks.size,1,'wakes immediately with exactly one animation callback');
  document.hidden=true;events.visibilitychange();
  assert.equal(timeouts.size,0,'background transition cancels wake timers');
  document.hidden=false;events.visibilitychange();
