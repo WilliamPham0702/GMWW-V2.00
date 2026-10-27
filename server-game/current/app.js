@@ -3431,10 +3431,20 @@ const PLAY_SEATED_CHARACTER_URLS=Object.freeze({'character-01':PLAY_SEATED_CHARA
 function playCharacterSitting(member,now=playNow()){return Number(member?.seatId||0)>0||(member?.villageActivity==='sitting'&&Number(member?.sitUntil||0)>now)}
 function playCharacterVisualUrl(member,frame=1,direction='right',now=playNow()){const id=playActiveCharacterId(member?.gameCharacterId),seatedUrl='';return playCharacterSitting(member,now)&&seatedUrl?seatedUrl:playCharacterFrameUrl(id,frame,direction)}
 function playCharacterRendererApi(){return window.GMWW_CHARACTER_RENDERER||null}
-function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive',hanging=false}={}){const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};const battleStatic=playSceneState.step==='battle',state=hanging?'walking':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle',motion=state==='running'?'run':state==='walking'?'walk':'idle';return{...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,paused:effect==='dead'||(battleStatic&&!hanging)}}
+function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive',hanging=false,battleTargetRunning=false}={}){
+  const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};
+  const battleStatic=playSceneState.step==='battle';
+  // Only GM drives this local presentation. Running does NOT update Seat or Server coordinates.
+  const runTarget=battleStatic&&battleTargetRunning&&effect!=='dead'&&effect!=='expelled'&&effect!=='frozen';
+  const state=hanging?'walking':runTarget?'running':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle';
+  const motion=state==='running'?'run':state==='walking'?'walk':'idle';
+  return {...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,
+    facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,
+    paused:effect==='dead'||(battleStatic&&!hanging&&!runTarget),lowPower:battleStatic};
+}
 function playRigTextureUrl(characterId,facing='right'){return playCharacterFrameUrl(characterId,1,facing)}
 function playMountCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){const id=playActiveCharacterId(member?.gameCharacterId),api=window.GMWW_SHARED_MOTION;if(!api?.supports(id))return false;api.mount(host,{characterId:id,command:playCharacterAnimationCommand(member,{moving,sitting,effect}),assetBase:location.protocol==='file:'?new URL('.',document.baseURI).href:GMWW_SERVER_BASE});return true}
-function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive',hanging=false}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect,hanging}))||false}
+function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive',hanging=false,battleTargetRunning=false}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect,hanging,battleTargetRunning}))||false}
 function playNow(){return Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)}
 function playWalkFrame(member,now=playNow()){if(member?.movementStatus!=='moving'||!member?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(member.moveStartedAt))/95)%6)+1}
 function playSeatStats(){
@@ -4481,7 +4491,7 @@ function renderPlayPlayers(){
       for(const status of ['alive','dead','frozen','expelled'])
         token.classList.toggle('is-'+status,status===effect&&status!=='alive');
       token.dataset.gmwwCurrentEffect=effect;
-      playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{moving:playSeatMovementActive(member),sitting:false,effect});
+      playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{moving:playSeatMovementActive(member),sitting:false,effect,battleTargetRunning:token.classList.contains('is-gm-target-running')});
       if(!visual)continue;
       const ids=visual.resolveRows(playSceneRuntime.activeEffects,member.loginId,playNow()),sig=ids.join('|');
       if(token.dataset.gmwwStatuses===sig)continue;
@@ -5383,6 +5393,16 @@ async function demoStep(epoch){
 const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:'',dayCountdownCueKey:'',dayTimeupCueKey:'',morningOpen:false,morningDayKey:'',morningAudioKey:'',morningSig:'',gallowsOpen:false,dayActionsOpen:false,dayMenuSig:'',dayClockBusy:false,key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,intelShownForKey:'',confirmPosition:null,ignoreConfirmClickUntil:0,impacts:new Map()};
 // UI-only skill icon drag: server remains sole action authority. Uses the same
 // GM battleConfirm() and existing rollback token as manual target selection.
+// GM-only visual preference. Nothing enters the authoritative Room DTO or Player Web.
+const GMWW_TURN_MOTION_KEY='GMWW_GM_TURN_MOTION_V1';
+function battleMotionOn(){try{return localStorage.getItem(GMWW_TURN_MOTION_KEY)!=='0'}catch{return true}}
+function battleMotionSetOn(on){
+  try{localStorage.setItem(GMWW_TURN_MOTION_KEY,on?'1':'0')}catch{}
+  renderPlayBattle();
+}
+document.addEventListener('visibilitychange',()=>{
+  if(playSceneState.step==='battle')battleMarkPlayers();
+});
 const BATTLE_ICON_ON_KEY='GMWW_GM_SHOW_ACTION_ICONS_V1';
 let battleIconDragging=null;
 let battleIconTurnKey='';
@@ -6202,7 +6222,11 @@ function battlePickTargetWithAudio(id,actionId){
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   if(battleState.impacts.size)battleState.impacts.clear();
-  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),now=Date.now();
+  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])];
+  // During the day, a chosen action identifies the actor without making all day roles fly.
+  const dayActorIds=playSceneState.phase==='day'?(battleAction()?.actorIds||[]):[];
+  const actors=new Set([...actorIds,...dayActorIds].map(id=>String(id).replace(/^member:/,''))),now=Date.now();
+  const motionOn=playSceneState.step==='battle'&&battleMotionOn()&&document.visibilityState!=='hidden'&&!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const witchAwake=playSceneState.phase==='night'&&
     (t?.roleId==='role_witch'||(t?.roles||[]).some(row=>row.roleId==='role_witch'));
   const intel=playSceneRuntime.nightIntel;
@@ -6214,6 +6238,17 @@ function battleMarkPlayers(){
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
     el.classList.toggle('is-battle-target',playSceneState.step==='battle'&&chosen.has(id));
     const actorOn=el.classList.contains('is-battle-actor'),targetOn=el.classList.contains('is-battle-target'),avatar=el.querySelector('.play-player-avatar');
+    const effect=playPlayerEffect(id),canAnimate=motionOn&&!['dead','expelled','frozen'].includes(effect);
+    const runTarget=canAnimate&&targetOn;
+    const floatActor=canAnimate&&!runTarget&&actors.has(id);
+    el.classList.toggle('is-gm-turn-floating',floatActor);
+    el.classList.toggle('is-gm-target-running',runTarget);
+    // Update only on state transitions; a heartbeat must not reset animated rigs.
+    if(avatar&&el.dataset.gmwwMotionRun!==String(runTarget)){
+      el.dataset.gmwwMotionRun=String(runTarget);
+      const member=battleMember(id);
+      if(member)playUpdateCharacterRig(avatar,member,{effect,battleTargetRunning:runTarget});
+    }
     // Battle labels live at the very top of the existing status/name/role stack.
     // Absolute-positioned labels obscured player names on smaller iPhones.
     const labels=el.querySelector('.play-player-over');
@@ -6540,10 +6575,11 @@ function battleSyncGMMenuControls(){
   on('battleLabelPlayer',gmLabelVisibility.player,'Người Chơi');
   on('battleShowDead',gmLabelVisibility.dead,'Người Chết');
   on('battleGMActionIcons',battleIconOn(),'iCon');
+  on('battleGMTurnMotion',battleMotionOn(),'Bay/Chạy');
   on('battleGMAudio',!playAudioMuted(),'Audio');
   on('battleGMHaptic',gmHapticEnabled(),'Rung');
   on('battleGMAuto',!!playSceneState.autoGM,'Auto GM');
-  for(const [id,label] of [['battleGMChromeToggle','Menu'],['battleGMActionIcons','iCon'],['battleShowDead','Người Chết'],['battleGMAudio','Audio'],['battleGMHaptic','Rung'],['battleGMAuto','Auto GM']]){
+  for(const [id,label] of [['battleGMChromeToggle','Menu'],['battleGMTurnMotion','Bay/Chạy'],['battleGMActionIcons','iCon'],['battleShowDead','Người Chết'],['battleGMAudio','Audio'],['battleGMHaptic','Rung'],['battleGMAuto','Auto GM']]){
     const el=document.getElementById(id);if(el)el.textContent=label;
   }
 }
@@ -7306,6 +7342,7 @@ function initBattleControls(){
   });
   document.getElementById('battleGMAudio')?.addEventListener('click',()=>{togglePlayAudio();renderPlayBattle()});
   document.getElementById('battleGMActionIcons')?.addEventListener('click',()=>battleIconSetOn(!battleIconOn()));
+  document.getElementById('battleGMTurnMotion')?.addEventListener('click',()=>battleMotionSetOn(!battleMotionOn()));
    document.getElementById('battleGMHaptic')?.addEventListener('click',()=>{
     setGmHapticEnabled(!gmHapticEnabled());renderPlayBattle();
   });

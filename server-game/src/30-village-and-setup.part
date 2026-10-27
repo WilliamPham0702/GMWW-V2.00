@@ -464,10 +464,20 @@ const PLAY_SEATED_CHARACTER_URLS=Object.freeze({'character-01':PLAY_SEATED_CHARA
 function playCharacterSitting(member,now=playNow()){return Number(member?.seatId||0)>0||(member?.villageActivity==='sitting'&&Number(member?.sitUntil||0)>now)}
 function playCharacterVisualUrl(member,frame=1,direction='right',now=playNow()){const id=playActiveCharacterId(member?.gameCharacterId),seatedUrl='';return playCharacterSitting(member,now)&&seatedUrl?seatedUrl:playCharacterFrameUrl(id,frame,direction)}
 function playCharacterRendererApi(){return window.GMWW_CHARACTER_RENDERER||null}
-function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive',hanging=false}={}){const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};const battleStatic=playSceneState.step==='battle',state=hanging?'walking':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle',motion=state==='running'?'run':state==='walking'?'walk':'idle';return{...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,paused:effect==='dead'||(battleStatic&&!hanging)}}
+function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive',hanging=false,battleTargetRunning=false}={}){
+  const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};
+  const battleStatic=playSceneState.step==='battle';
+  // Only GM drives this local presentation. Running does NOT update Seat or Server coordinates.
+  const runTarget=battleStatic&&battleTargetRunning&&effect!=='dead'&&effect!=='expelled'&&effect!=='frozen';
+  const state=hanging?'walking':runTarget?'running':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle';
+  const motion=state==='running'?'run':state==='walking'?'walk':'idle';
+  return {...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,
+    facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,
+    paused:effect==='dead'||(battleStatic&&!hanging&&!runTarget),lowPower:battleStatic};
+}
 function playRigTextureUrl(characterId,facing='right'){return playCharacterFrameUrl(characterId,1,facing)}
 function playMountCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){const id=playActiveCharacterId(member?.gameCharacterId),api=window.GMWW_SHARED_MOTION;if(!api?.supports(id))return false;api.mount(host,{characterId:id,command:playCharacterAnimationCommand(member,{moving,sitting,effect}),assetBase:location.protocol==='file:'?new URL('.',document.baseURI).href:GMWW_SERVER_BASE});return true}
-function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive',hanging=false}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect,hanging}))||false}
+function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive',hanging=false,battleTargetRunning=false}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect,hanging,battleTargetRunning}))||false}
 function playNow(){return Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)}
 function playWalkFrame(member,now=playNow()){if(member?.movementStatus!=='moving'||!member?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(member.moveStartedAt))/95)%6)+1}
 function playSeatStats(){
@@ -1514,7 +1524,7 @@ function renderPlayPlayers(){
       for(const status of ['alive','dead','frozen','expelled'])
         token.classList.toggle('is-'+status,status===effect&&status!=='alive');
       token.dataset.gmwwCurrentEffect=effect;
-      playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{moving:playSeatMovementActive(member),sitting:false,effect});
+      playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{moving:playSeatMovementActive(member),sitting:false,effect,battleTargetRunning:token.classList.contains('is-gm-target-running')});
       if(!visual)continue;
       const ids=visual.resolveRows(playSceneRuntime.activeEffects,member.loginId,playNow()),sig=ids.join('|');
       if(token.dataset.gmwwStatuses===sig)continue;
