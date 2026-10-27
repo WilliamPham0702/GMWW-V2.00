@@ -53,8 +53,8 @@ test('WITCH-01 GM target picker hides nonprevious deaths and disabled revive unt
 });
 test('WITCH-01 integration source: isolated witch wake before all configured roles, Server validation before effects',()=>{
  const worker=fs.readFileSync('src/index.js','utf8'),gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
- assert.match(worker,/if\(witch\)queue\.push\(witch\)/);
- assert.match(worker,/groupConfiguredRoleTurns\(following\)/);
+ assert.match(worker,/if\(specials\.oldWitch\)queue\.push\(specials\.oldWitch\)/);
+ assert.match(worker,/groupConfiguredRoleTurns\(arranged\.rest\)/);
  assert.match(worker,/const checked=oldWitchActionCheck\(/);
  assert.ok(worker.indexOf('const checked=oldWitchActionCheck(')<worker.indexOf('const before=await snapshot()'));
  assert.match(gm,/oldWitchReviveEligible\(action,m,playSceneRuntime\.activeEffects,night\)/);

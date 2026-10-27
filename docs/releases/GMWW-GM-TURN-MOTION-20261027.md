@@ -1,6 +1,6 @@
 # GMWW — Hiệu ứng đến lượt bay lên / mục tiêu chạy tại chỗ (27/10/2026)
 
-**Trạng thái:** tính năng GM-only trên PR riêng; chưa phát hành Production hoặc IPA.
+**Trạng thái:** PR #562 đã được phê duyệt phát hành Runtime OTA V3.253. Chỉ đánh dấu phát hành sau khi Production và SHA-256 được xác nhận.
 
 ## Nội dung cập nhật
 - Trong lượt Đêm, nhân vật thuộc nhóm được gọi thực hiện chức năng bay lên một chiều cao nhân vật. Ban Ngày, nhân vật của hành động GM đang chọn được áp dụng hiệu ứng tương tự.

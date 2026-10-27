@@ -1944,22 +1944,31 @@ export function isRuntime248PostMergeScope(changes){
  }catch{return false}
 }
 
-// New GM-only motion is fully local to the GM UI and atlas; never trigger unrelated Player Card/Seat suites.
+// V3.253 GM-only turn motion, exact-file scope. Unknown changes run full CI.
 const gmTurnMotionPaths=new Set([
   'server-game/current/app.js','server-game/current/GMWW.html','server-game/current/style.css',
-  'server-game/current/gmww-shared-motion.js',
+  'server-game/current/gmww-shared-motion.js','server-game/src/00-core-and-library.part',
   'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'src/index.js','package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
   'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-TURN-MOTION-20261027.md',
-  'wrangler.gm-turn-motion-staging.jsonc','.github/scripts/build-gm-turn-motion-staging.mjs',
-  '.github/workflows/deploy-gm-turn-motion-staging.yml',
-  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+  'docs/releases/GMWW-V3.253-gm-turn-motion-20261027.md','wrangler.gm-turn-motion-staging.jsonc',
+  '.github/scripts/build-gm-turn-motion-staging.mjs','.github/workflows/deploy-gm-turn-motion-staging.yml',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml'
 ]);
 function isGMTurnMotionScope(changes){
   const paths=new Set((changes||[]).map(c=>c.path));
-  return ['server-game/current/app.js','server-game/current/gmww-shared-motion.js',
-    'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
-    'tests/gm-turn-motion-lowheat.test.mjs'].every(p=>paths.has(p))&&
-    changes.every(c=>gmTurnMotionPaths.has(c.path)&&['A','M'].includes(c.status));
+  const required=['server-game/current/app.js','server-game/current/gmww-shared-motion.js',
+   'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+   'server-game/src/40-battle-and-timeline.part','src/index.js','package.json',
+   'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-V3.253-gm-turn-motion-20261027.md'];
+  if(!required.every(p=>paths.has(p))||!changes.every(c=>gmTurnMotionPaths.has(c.path)&&['A','M'].includes(c.status)))return false;
+  const content=path=>changes.find(c=>c.path===path)?.after||'';
+  return content('server-game/src/00-core-and-library.part').includes("const VERSION='3.253'")&&
+    content('src/index.js').includes('VERSION="V3.253"')&&
+    content('server-game/current/app.js').includes('GMWW_GM_TURN_MOTION_V1')&&
+    content('server-game/current/gmww-shared-motion.js').includes('_gmwwLowPower')&&
+    content('package.json').includes('"version": "3.253.0"');
 }
 export function classifyBrowserScope(changes){
   if(isGMTurnMotionScope(changes))return 'gm-turn-motion-lowheat';
@@ -2051,6 +2060,49 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // V3.252: iPhone maintenance grid is flat, all 16 original handlers unchanged.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.252.0'){
+        const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3252.mjs'],{
+            encoding:'utf8',env:{...process.env,GMWW_V3252_BASE:base}});
+          return{mode:'uniform-maintenance-3252',reason:'V3.252 same-size direct 16 tools and unaffected handlers'};
+        }
+      }
+    }catch{} // Unexpected changes require full checks.
+  }
+
+  // V3.251: exact CSS-only GM settings release; keep V3.250 role-card changes.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.251.0'){
+        const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3251.mjs'],{encoding:'utf8',env:{...process.env,GMWW_V3251_BASE:base}});
+          return{mode:'cloudflare-tiles-3251',reason:'V3.251 only 16 uniform maintenance tiles, OTA and gate'};
+        }
+      }
+    }catch{} // Keep full tests if release scope differs unexpectedly.
+  }
+
+  // V3.250 owner-approved settings fix: scoped only after strict diff+version
+  // verification. Any unexpected changed file uses existing full CI.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.250.0'){
+        const base=process.env.GMWW_CI_EVENT==='pull_request'?
+          String(process.env.GMWW_CI_BASE_SHA||''):'HEAD^1';
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3250.mjs'],{
+            encoding:'utf8',env:{...process.env,GMWW_V3250_BASE:base}});
+          return{mode:'approved-role-card-settings-3250',
+            reason:'V3.250 strict approved card settings, actions and Runtime files'};
+        }
+      }
+    }catch{} // Fail closed; never pretend arbitrary changes are scoped.
+  }
   // V3.249 scoped release: execute the fail-closed Worker/GM/OTA diff verifier.
   // Any unrecognized file or missing version contract falls back to full checks.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
@@ -2080,6 +2132,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isGMTurnMotionScope(changes))return{mode:'gm-turn-motion-lowheat',reason:'V3.253 exact GM motion and OTA changes only'};
       if(isRuntime248PostMergeScope(changes))return{mode:'runtime-3248-postmerge',reason:'Exact 4-file CI release fix for already tested Runtime V3.248'};
       if(isIcon247PostMergeScope(changes))return{mode:'icon-scale-3247-postmerge',reason:'Audited 2-file V3.247 CI release scope order fix'};
       if(isFairy246PostMergeScope(changes))return{mode:'fairy-246-postmerge',reason:'PR548 V3.246 exact 5-file post-merge CI repair; same Runtime and icon SHA'};
