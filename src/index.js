@@ -1655,10 +1655,15 @@ export class RoomDurableObject extends DurableObject {
         roles:eligiblePack.map(x=>({roleId:String(x.roleId),loginIds:[normalizeLoginId(x.loginId)]})),
         order:-1,durationSec:defaultActionSec,status:"pending"});
     }
-    // Historical role IDs for bare Bite-only Wolves must not produce a
-    // second waking turn. Special Wolf powers still keep configured order.
-    const biteOnlyAliases=new Set(["role_wolf","role_alpha_wolf","wolf","regular-wolf","alpha-wolf"]);
-    const distinctWolf=arranged.wolves.filter(row=>!biteOnlyAliases.has(row.roleId)||row.artifacts?.length);
+    // Data-driven: only Wolfs with a configured non-Bite power need a second
+    // private wake-up. A Wolf with only the shared Bite never wakes twice.
+    const privateAssignments=await readNightAssignments(this.ctx.storage,meta.matchId);
+    const distinctWolf=arranged.wolves.filter(row=>row.artifacts?.length||
+      privateAssignments.filter(a=>String(a.roleId||"")===String(row.roleId||"")).some(a=>
+        (Array.isArray(a.roleCard?.functions)?a.roleCard.functions:[]).some(fn=>
+          fn&&!fn.passive&&String(fn.actionId||fn.id||"")!=="action_wolf_bite"&&
+          (!fn.phase||["night","any"].includes(fn.phase))&&
+          (!fn.fromNight||Number(fn.fromNight)<=n)&&(!fn.toNight||Number(fn.toNight)>=n))));
     queue.push(...groupConfiguredRoleTurns(distinctWolf));
     if(arranged.fairy)queue.push(arranged.fairy);
     queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(arranged.rest),arranged.artifactTurns));
