@@ -1679,6 +1679,7 @@ export function isLobbyGather541Scope(changes){
 const playerReceiptHotfixPaths=new Set([
   'src/gmww-player-private-card-patch.js',
   'tests/player-web-receipt-patch-hotfix.test.mjs',
+  'tests/player-web-resume-receipt-runtime.test.mjs',
   'docs/releases/GMWW-PLAYER-WEB-RECEIPT-HOTFIX-20261027.md',
   '.github/scripts/ci-browser-scope.mjs',
   '.github/workflows/check-player-web.yml',
