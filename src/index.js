@@ -215,6 +215,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/end"&&request.method==="POST")return this.gmEnd(request,await safeJson(request));
     if(url.pathname==="/gm/delete"&&request.method==="POST")return this.gmDelete(request);
     if(url.pathname==="/player/state"&&request.method==="POST")return this.playerState(await safeJson(request));
+    if(url.pathname==="/player/drunk/draw"&&request.method==="POST")return this.playerDrunkDraw(await safeJson(request));
     if(url.pathname==="/player/delivery-received"&&request.method==="POST")return this.playerDeliveryReceived(await safeJson(request));
     if(url.pathname==="/player/role-viewed"&&request.method==="POST")return this.playerRoleViewed(await safeJson(request));
     if(url.pathname==="/player/artifact-viewed"&&request.method==="POST")return this.playerArtifactViewed(await safeJson(request));
@@ -2737,6 +2738,69 @@ export class RoomDurableObject extends DurableObject {
       wolfPackMembers(await this.ctx.storage.get("assignments")||[],rows,meta.matchId));
     return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
+  async playerDrunkDraw(body){
+    // One trusted choice per match; Client cannot specify another account's actor.
+    return this.ctx.blockConcurrencyWhile(async()=>{
+      const meta=await this.ctx.storage.get('meta'),actorId=normalizeLoginId(body?.loginId);
+      const matchId=String(meta?.matchId||''),night=Number(meta?.cycleNight||0);
+      if(!actorId||String(meta?.phase)!=='running'||String(meta?.cyclePhase)!=='night'||night!==3)
+        return j({ok:false,error:'DRUNK_DRAW_NOT_ACTIVE'},409);
+      const players=await this.ctx.storage.get('players')||{};
+      if(!players['member:'+actorId])return j({ok:false,error:'PLAYER_NOT_IN_ROOM'},403);
+      const runtime=await this.getNightRuntime(meta,3,false),turn=runtime?.queue?.[runtime.cursor];
+      const key='drunkDeck:'+matchId+':3:'+actorId,deck=await this.ctx.storage.get(key);
+      if(deck?.selectedId)return j({ok:false,error:'DRUNK_ALREADY_CHOSEN',draw:drunkDeckView(deck)},409);
+      if(turn?.roleId!=='role_drunk'||!(turn.loginIds||[]).map(normalizeLoginId).includes(actorId))
+        return j({ok:false,error:'DRUNK_WRONG_TURN'},409);
+      const effects=await this.ctx.storage.get('interactions')||[];
+      if(isBattleActorBlocked(effects,{actorId,matchId,statusDefs:STATUS_DEFS})||
+        effects.some(x=>String(x?.matchId||'')===matchId&&normalizeLoginId(x?.loginId)===actorId&&
+          x?.type==='expelled'&&x.effectActive!==false&&(!x.expiresAt||Date.parse(x.expiresAt)>Date.now())))
+        return j({ok:false,error:'DRUNK_ACTOR_BLOCKED'},409);
+      const chosen=deck?.cards?.find(x=>x.id===String(body?.cardId||''));
+      if(!chosen||!deck.cards.length||String(deck.matchId)!==matchId)
+        return j({ok:false,error:'DRUNK_CARD_INVALID'},400);
+      const assignments=await this.ctx.storage.get('assignments')||[];
+      if(!assignments.some(x=>normalizeLoginId(x.loginId)===actorId&&x.roleId==='role_drunk'))
+        return j({ok:false,error:'DRUNK_ROLE_NO_LONGER_OWNED'},409);
+      const outcome=await this.applyNightRoleInheritance(meta,3,assignments,{
+        drunkChoice:{actorId,sourceId:chosen.sourceId}});
+      if(outcome.applied!==1)return j({ok:false,error:'DRUNK_ROLE_TRANSFER_FAILED'},409);
+      const own=await this.ctx.storage.get('roles:'+actorId)||[];
+      const picked=own.find(x=>x.inheritedFromRoleId==='role_drunk');
+      const summary=outcome.assignments.find(x=>normalizeLoginId(x.loginId)===actorId);
+      if(!picked||!summary)return j({ok:false,error:'DRUNK_ROLE_TRANSFER_INCOMPLETE'},409);
+      const pack=runtime.queue.find(x=>x.kind==='wolf-pack-bite');
+      const wolf=String(summary.faction||'').toLowerCase()==='wolf';
+      if(wolf&&pack){
+        if(!pack.loginIds.includes(actorId))pack.loginIds.push(actorId);
+        if(!pack.playerIds.includes('member:'+actorId))pack.playerIds.push('member:'+actorId);
+        if(!pack.roles.some(x=>(x.loginIds||[]).includes(actorId)))
+          pack.roles.push({roleId:summary.roleId,loginIds:[actorId]});
+        if(summary.roleId!=='role_snow_wolf'&&!pack.biteActorIds.includes(actorId))
+          pack.biteActorIds.push(actorId);
+      }
+      const functions=Array.isArray(picked.roleCard?.functions)?picked.roleCard.functions:[];
+      const hasPower=functions.some(fn=>fn&&!fn.passive&&
+        fn.actionId!=='action_wolf_bite'&&['night','any',''].includes(String(fn.phase||''))&&
+        Number(fn.fromNight||1)<=3&&(fn.toNight==null||Number(fn.toNight)>=3));
+      if((!wolf||hasPower)&&summary.roleId!=='role_villager'){
+        const newTurn={id:'role:drunk-inherited:'+actorId,kind:'role',
+          roleId:summary.roleId,label:summary.roleName||'Vai Trò',
+          loginIds:[actorId],playerIds:['member:'+actorId],
+          order:99,durationSec:Number(turn.durationSec||45),status:'pending'};
+        const at=wolf&&pack?runtime.queue.indexOf(pack)+1:runtime.cursor+1;
+        runtime.queue.splice(at,0,newTurn);
+      }
+      deck.selectedId=chosen.id;deck.selectedRoleName=summary.roleName||chosen.roleName;
+      deck.selectedAt=new Date().toISOString();
+      await this.ctx.storage.put(key,deck);
+      await this.ctx.storage.put(this.nightRuntimeKey(meta,3),runtime);
+      this.broadcast({type:'role_progress',matchId,serverTime:Date.now()});
+      return j({ok:true,selectedId:deck.selectedId,roleName:deck.selectedRoleName,
+        draw:drunkDeckView(deck),deliveryVersion:meta.deliveryVersion});
+    });
+  }
   async playerDeliveryReceived(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");
     if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);
@@ -3191,6 +3255,8 @@ export default {async fetch(request,env){
   const readyApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/ready$/);if(readyApi&&request.method==="POST")return readyRoom(env,readyApi[1],request);
   const heartbeatApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/heartbeat$/);if(heartbeatApi&&request.method==="POST")return heartbeatRoom(env,heartbeatApi[1],request);
   const leaveApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/leave$/);if(leaveApi&&request.method==="POST")return leaveRoomApi(env,leaveApi[1],request);
+  const drunkDraw=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/drunk\/draw$/);
+  if(drunkDraw&&request.method==='POST')return playerDrunkDrawApi(env,drunkDraw[1],request);
   const playerState=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/me$/);if(playerState&&request.method==="GET")return playerPrivateState(env,playerState[1],request);
   const deliveryReceived=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/delivery\/received$/);if(deliveryReceived&&request.method==="POST")return playerDeliveryReceivedApi(env,deliveryReceived[1],request);
   const roleViewed=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/role\/viewed$/);if(roleViewed&&request.method==="POST")return playerRoleViewedApi(env,roleViewed[1],request);
@@ -3281,6 +3347,16 @@ async function joinRoom(env,raw,request){const code=normalizeRoomCode(raw);if(!i
 async function readyRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/ready",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function heartbeatRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/heartbeat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function leaveRoomApi(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/leave",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:null,ready:false})});if(res.ok)await syncRoomDirectory(env,code);return res}
+async function playerDrunkDrawApi(env,raw,request){
+  const code=normalizeRoomCode(raw);
+  if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
+  const session=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));
+  if(!session.ok)return session;
+  const me=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch('https://room.internal/player/drunk/draw',{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({loginId:me.member.loginId,cardId:body.cardId})});
+}
 async function playerPrivateState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),res=await roomStub(env,c).fetch("https://room.internal/player/state",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,member:data.member})});if(res.ok)await syncRoomDirectory(env,c);return res}
 async function playerRoomSetupApi(env,raw,request){
   const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
