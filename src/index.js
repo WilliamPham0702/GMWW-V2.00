@@ -1647,8 +1647,11 @@ export class RoomDurableObject extends DurableObject {
       const packOwners=eligiblePack.filter(x=>x.roleId!=="role_snow_wolf"||
         canSnowWolfBite({assignments,interactions:await this.ctx.storage.get("interactions")||[],matchId:meta.matchId}));
       queue.push({id:"wolf-pack-bite",kind:"wolf-pack-bite",label:"Bầy Sói Cắn",
-        loginIds:packOwners.map(x=>normalizeLoginId(x.loginId)),playerIds:packOwners.map(x=>"member:"+normalizeLoginId(x.loginId)),
-        roles:packOwners.map(x=>({roleId:String(x.roleId),loginIds:[normalizeLoginId(x.loginId)]})),
+        // Every living Wolf wakes; Snow Wolf observes but cannot submit Bite
+        // while another wolf survives.
+        loginIds:eligiblePack.map(x=>normalizeLoginId(x.loginId)),playerIds:eligiblePack.map(x=>"member:"+normalizeLoginId(x.loginId)),
+        biteActorIds:packOwners.map(x=>normalizeLoginId(x.loginId)),
+        roles:eligiblePack.map(x=>({roleId:String(x.roleId),loginIds:[normalizeLoginId(x.loginId)]})),
         order:-1,durationSec:defaultActionSec,status:"pending"});
     }
     const distinctWolf=arranged.wolves.filter(row=>!["role_wolf","role_alpha_wolf"].includes(row.roleId)||row.artifacts?.length);
@@ -2110,7 +2113,9 @@ export class RoomDurableObject extends DurableObject {
       if(!owners.some(a=>String(a.artifactId)===artifactId&&normalizeLoginId(a.loginId)===actorId))
         return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN"},403);
     }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
-    if(step.kind==="wolf-pack-bite"&&String(body.actionId)!=="action_wolf_bite")
+    if(step.kind==="wolf-pack-bite"&&
+      (String(body.actionId)!=="action_wolf_bite"||
+        !(step.biteActorIds||[]).map(normalizeLoginId).includes(actorId)))
       return j({ok:false,error:"INVALID_PACK_ACTION"},403);
     const players=await this.ctx.storage.get("players")||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
