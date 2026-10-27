@@ -1,3 +1,4 @@
+import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
@@ -99,4 +100,55 @@ test('Worker and GM implement authoritative Witch target and do not advance on f
   assert.match(gm,/turn\.roleId==='role_witch'/);
   assert.match(gm,/const biteTargets=witchAwake/);
   assert.match(gm,/textContent='MỤC TIÊU'/);
+});
+
+test('Drunk draw is once at night three from confirmed dead roles of the same match',()=>{
+  const assignments=[{loginId:'drunk',roleId:'role_drunk',faction:'village'},
+    {loginId:'wolf',roleId:'role_alpha_wolf',faction:'wolf'},
+    {loginId:'seer',roleId:'role_seer',faction:'village'}];
+  const interactions=[{matchId,night:1,type:'dead',loginId:'wolf',effectActive:true},
+    {matchId:'other',night:1,type:'dead',loginId:'seer',effectActive:true}];
+  const args={assignments,interactions,matchId,chooseIndex:()=>0};
+  assert.deepEqual(inheritedRolePlans({...args,night:1}),[]);
+  assert.deepEqual(inheritedRolePlans({...args,night:2}),[]);
+  const result=inheritedRolePlans({...args,night:3});
+  assert.equal(result.length,1);
+  assert.equal(result[0].kind,'drunk');
+  assert.equal(result[0].sourceRoleId,'role_alpha_wolf');
+  assert.deepEqual(inheritedRolePlans({...args,night:4}),[]);
+});
+test('Drunk with nobody dead becomes functionless Villager',()=>{
+  const result=inheritedRolePlans({assignments:[{loginId:'drunk',roleId:'role_drunk'}],
+    interactions:[],matchId,night:3});
+  assert.equal(result.length,1);assert.equal(result[0].sourceId,null);
+  assert.equal(result[0].sourceRoleId,'role_villager');
+});
+test('Clone inherits a marked target only in the night AFTER their death',()=>{
+  const assignments=[{loginId:'clone',roleId:'role_clone'},
+    {loginId:'wolf',roleId:'role_wolf_seer',faction:'wolf'}];
+  const marked={matchId,night:1,type:'effect_notice',actionId:'action_clone_target',
+    actorId:'clone',loginId:'wolf'};
+  const dead={matchId,night:2,type:'dead',loginId:'wolf',effectActive:true};
+  assert.deepEqual(inheritedRolePlans({assignments,interactions:[marked],matchId,night:2}),[]);
+  assert.deepEqual(inheritedRolePlans({assignments,interactions:[marked,dead],matchId,night:2}),[]);
+  const inherited=inheritedRolePlans({assignments,interactions:[marked,dead],matchId,night:3});
+  assert.equal(inherited[0]?.kind,'clone');
+  assert.equal(inherited[0]?.sourceRoleId,'role_wolf_seer');
+  assert.equal(inherited[0]?.sourceId,'wolf');
+});
+test('Clone without selection, living target or mismatched match never inherits',()=>{
+  const assignments=[{loginId:'clone',roleId:'role_clone'},{loginId:'a',roleId:'role_witch'}];
+  const dead={matchId,night:1,type:'dead',loginId:'a',effectActive:true};
+  const mark={matchId:'another',night:1,type:'effect_notice',actionId:'action_clone_target',
+    actorId:'clone',loginId:'a'};
+  assert.deepEqual(inheritedRolePlans({assignments,interactions:[dead,mark],matchId,night:2}),[]);
+  assert.deepEqual(inheritedRolePlans({assignments,interactions:[
+    {...mark,matchId}, {...dead,effectActive:false}],matchId,night:2}),[]);
+});
+test('Worker role transfer refreshes private delivery and never copies target artifact',()=>{
+  const worker=fs.readFileSync('src/index.js','utf8');
+  assert.match(worker,/inheritedFromRoleId:plan.fromRoleId/);
+  assert.match(worker,/artifact:own.artifact\|\|null/);
+  assert.match(worker,/buildPrivateDeliverySnapshot\(\{matchId/);
+  assert.match(worker,/deliveryVersion=Math.max/);
 });
