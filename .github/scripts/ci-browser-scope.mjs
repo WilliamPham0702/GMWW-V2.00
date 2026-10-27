@@ -1815,7 +1815,26 @@ export function isFairy246PostMergeScope(changes){
  }catch{return false}
 }
 
+// PR #550: test-only regression and its narrow CI routing. Gameplay/IPA/OTA
+// changes are deliberately excluded; any other path falls back to full checks.
+function isRules550Scope(changes){
+  const allowed=new Map([
+    ['tests/gmww-rule-snow-guard-pack-fairy.test.mjs','A'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==allowed.size||
+    changes.some(c=>allowed.get(c.path)!==c.status))return false;
+  const rows=new Map(changes.map(c=>[c.path,c]));
+  return rows.get('tests/gmww-rule-snow-guard-pack-fairy.test.mjs')?.after?.includes('Snow Wolf: night N target is barred at N+1')&&
+    rows.get('tests/ci-browser-scope.test.mjs')?.after?.includes('PR550 focused rules regression only')&&
+    rows.get('.github/scripts/ci-browser-scope.mjs')?.after?.includes('function isRules550Scope(changes)')&&
+    rows.get('.github/workflows/check-player-web.yml')?.after?.includes("steps.scope.outputs.mode == 'night02-rule-regression-550'");
+}
+
 export function classifyBrowserScope(changes){
+  if(isRules550Scope(changes))return 'night02-rule-regression-550';
   if(isFairy246PostMergeScope(changes))return 'fairy-246-postmerge';
   if(isFairy246Scope(changes))return 'fairy-triptych-3246';
   if(isNight02Scope(changes))return 'night02-pack-roles';
