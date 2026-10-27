@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>GMWW Arena 3D · Core V2 thử nghiệm</title>
+<title>GMWW Arena 3D GĐ19–21 · STAGING di động</title>
 <style>
 :root{font-family:system-ui,-apple-system,sans-serif;color:#e9f8fa;background:#0b2430}
-*{box-sizing:border-box}body{margin:0}header{background:#153647;padding:10px 13px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+*{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}header{background:#153647;padding:10px 13px;display:flex;justify-content:space-between;gap:12px;align-items:center}
 h1{font-size:17px;margin:0}small{font-size:11px;color:#a9ced0}
 .toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:#153647}
-button,input{font:inherit;border-radius:9px;border:1px solid #73a5a7;color:white;background:#205b70;padding:8px 9px}
+button,input,select{font:inherit;border-radius:9px;border:1px solid #73a5a7;color:white;background:#205b70;padding:8px 9px}
 input{background:#0f3141;max-width:115px}button{cursor:pointer}button:disabled{opacity:.5}
 #scene{position:relative;width:100%;height:60dvh;min-height:340px;overflow:hidden;background:#70bcd3}
 #stage{display:block;width:100%;height:100%;touch-action:none}
@@ -36,7 +36,7 @@ a{color:#92e1df}#joinlink{font-weight:700}
 @media(max-width:430px){.toolbar{gap:5px;padding:6px}#scene{min-height:320px}.gm-seat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style></head>
 <body>
-<header><div><h1>GMWW Arena 3D · Core V2.00</h1><small>STAGING riêng · Dữ liệu phòng thật chỉ trong môi trường thử nghiệm</small></div><small id="connection">Chưa kết nối</small></header>
+<header><div><h1>GMWW Arena 3D · Giai đoạn 19–21</h1><small>STAGING riêng · Biểu cảm Chibi, animation & nghi lễ phép · Core V2.00 thử nghiệm</small></div><small id="connection">Chưa kết nối</small></header>
 <div class="toolbar">
   <input id="room" placeholder="Mã phòng" maxlength="12" aria-label="Mã phòng">
   <button id="create">Tạo phòng thử</button>
@@ -44,15 +44,26 @@ a{color:#92e1df}#joinlink{font-weight:700}
   <button id="seed" disabled>Lấp Seat trống</button>
   <button id="lock" disabled>Khóa Seat</button>
   <button id="deal" disabled>Phát Vai thử</button>
+  <button id="open-setup" type="button" hidden>Thiết lập / Phát Vai (GMWW)</button>
   <button id="start" disabled>Vào Trận</button>
   <button id="night" disabled>🌙 Đêm</button>
   <button id="day" disabled>☀️ Ngày</button>
   <button id="nominate" disabled>Đề cử</button>
   <button id="vote" disabled>Bỏ phiếu</button>
+  <label for="winner-faction" style="font-size:12px">Phe thắng</label>
+  <select id="winner-faction" aria-label="Chọn phe thắng khi kết thúc ván" disabled>
+    <option value="">Chọn phe thắng</option>
+    <option value="Phe Dân">Phe Dân</option>
+    <option value="Phe Sói">Phe Sói</option>
+    <option value="Phe Ba">Phe Ba</option>
+    <option value="Phe Khác">Phe Khác</option>
+  </select>
+  <button id="end-match" type="button" disabled>Kết thúc ván</button>
   <button id="refresh">Đồng bộ lại</button>
   <span id="gm-access"><input id="gm-key" type="password" autocomplete="off" spellcheck="false" placeholder="Mã GM Staging (giữ riêng)" aria-label="Mã GM Staging">
   <button id="gm-restore">Xác thực GM</button><button id="gm-copy" disabled>Chép mã GM</button></span>
-  <a href="#" id="joinlink" target="_blank" rel="noopener">Player Web 2D thử nghiệm</a>
+  <a href="#" id="joinlink" target="_blank" rel="noopener">🎴 Player Web</a>
+  <a href="#" id="join3d" target="_blank" rel="noopener">🌊 Player 3D</a>
 </div>
 <section id="scene"><canvas id="stage"></canvas><div id="hud">Đang tải Arena 3D...</div><div id="state">Core: chưa kết nối</div></section>
 <div id="ballot">Lên Giàn: chưa bắt đầu</div>
@@ -60,17 +71,42 @@ a{color:#92e1df}#joinlink{font-weight:700}
 <div class="toolbar"><span>Kiểm tra 6–30 Character:</span>
 <button data-roster="6">6</button><button data-roster="12">12</button><button data-roster="20">20</button><button data-roster="30">30</button>
 <span><small>Lúc chưa có phòng, đây là dữ liệu demo. Khi kết nối chỉ hiện người thật của phòng thử nghiệm.</small></span></div>
+<div class="toolbar" id="gallery-toolbar"><span>🎨 Bộ sưu tập 40 nhân vật:</span>
+<button data-gallery="0" type="button">Character 01–30</button><button data-gallery="1" type="button">Character 11–40</button>
+<small>Chỉ thay đổi mẫu hiển thị; không thay nhân vật trong phòng thật.</small></div>
 <div class="toolbar" id="sample-vfx"><small>Hiệu ứng 3D mẫu (chỉ khi chưa kết nối phòng):</small>
+<button id="arena-audio" type="button" aria-label="Bật hoặc tắt hiệu ứng âm thanh phép 3D">🔇 Bật tiếng phép 3D</button>
+<details id="arena-voice-upload"><summary>🎙️ Gán file âm thanh thật (chỉ lưu trong tab GM)</summary>
+  <label>Hành động mặc định <select id="arena-audio-action" aria-label="Chọn hành động Core để gán âm thanh"></select></label>
+  <label>Hành động tùy chỉnh (không bắt buộc) <input id="arena-audio-custom" maxlength="80" placeholder="action_id" aria-label="Mã hành động tùy chỉnh"></label>
+  <label>File MP3/WAV/OGG/AAC ≤10MB <input id="arena-audio-file" type="file" accept=".mp3,.wav,.ogg,.aac,.m4a,audio/*" aria-label="Chọn file âm thanh thật cho hành động"></label>
+  <small>Không tải lên Server, không lưu trên thiết bị, không chia sẻ cho Player Web.</small>
+</details>
 <button id="sample-cast">🪄 Mẫu lượt đứng dậy và làm phép</button>
 <button id="camera-follow">🎥 Theo lượt: Bật</button>
+<button id="quality-auto" aria-pressed="true">⚡ Tối ưu tự động: Bật</button>
 <button id="camera-reset">↺ Góc nhìn ban đầu</button>
 <button id="sample-daynight">🌙 Xem cảnh Đêm / Ngày</button>
 <button data-fx="shield">🛡️ Bảo vệ</button>
 <button data-fx="inspect">🔮 Tiên Tri</button>
 <button data-fx="heal">💚 Phù Thủy cứu</button>
-<button data-fx="attack">✨ Tác động tấn công</button>
+<button data-fx="attack">🌙 Tấn công</button>
+<button data-fx="vote">✨ Bỏ phiếu</button>
+<button data-role-fx="soi-tuyet" data-role-kind="attack" data-role-action="wolf-bite">🐺 Sói cắn · đầu sói bay</button>
+<button data-role-fx="phu-thuy" data-role-kind="attack" data-role-action="poison">🪄 Phù Thủy · độc dược</button>
+<button data-role-fx="tien-tri-hao-quang" data-role-kind="inspect" data-role-action="aura-inspect">🔮 Tiên Tri Hào Quang · soi</button>
+<button data-role-fx="bao-ve" data-role-kind="shield" data-role-action="protect">🛡️ Bảo Vệ · khiên phép</button>
 <span><small>Trong phòng thật, hiệu ứng đêm chỉ hiển thị sau khi Server xác thực quyền GM.</small></span>
-</div><div id="log">Camera: kéo để xoay, chạm Character để quay 90°, cuộn để zoom.</div>
-<div id="note">Nhân vật ngồi quanh đống lửa, khi đến lượt sẽ đứng dậy làm phép rồi ngồi xuống. Mô hình chibi kỹ thuật chưa phải art hoàn chỉnh. Không dùng dữ liệu Production. Quyền GM chỉ thuộc token phòng Staging được xác minh lại tại Core V2.00. Token không được lưu vào localStorage hoặc URL; nếu muốn tiếp tục quyền GM sau refresh, hãy sao chép mã GM trước khi rời trang. Vai trò bí mật chỉ hiển thị trên Player Web của chính người đó. FPS tại đây là số đo máy đang sử dụng.</div>
+</div>
+<details id="arena-mobile-diagnostics" style="margin:8px 10px;padding:10px;border:1px solid #477c85;border-radius:12px;background:#113344">
+  <summary>📊 Đo hiệu năng iPhone (chỉ trên máy này)</summary>
+  <p style="font-size:12px">FPS đang vẽ, thời gian xử lý CPU và Draw Calls; không đo nhiệt độ/pin vì trình duyệt không cung cấp. Không tự gửi báo cáo lên Server.</p>
+  <output id="arena-diag-result" aria-live="polite" style="white-space:pre-wrap;font:12px system-ui;display:block;margin:8px 0">Chưa đủ mẫu đo</output>
+  <button type="button" id="arena-diag-refresh">Lấy kết quả</button>
+  <button type="button" id="arena-diag-copy">Sao chép báo cáo ẩn danh</button>
+  <button type="button" id="arena-diag-reset">Đo lại từ đầu</button>
+</details>
+<div id="log">Camera: kéo để xoay, chạm Character để quay 90°, cuộn để zoom.</div>
+<div id="note">GMWW Arena 3D GĐ38 · Kênh QA STAGING riêng. GM/Player sử dụng cùng Core V2.00; ứng viên Lên Giàn được đưa từ Seat vào giữa làng, có chuyển động nâng nhẹ. Hành động Vai Trò, Artifact, phân Vai và bỏ phiếu vẫn do Core xác thực. Chế độ thử không sử dụng phòng/dữ liệu Production. Tài khoản GM phải giữ kín; không đưa mã GM vào URL. Đo FPS tại đây không thay thế đo pin/nhiệt trên iPhone thật.</div>
 <script type="module" src="./live.mjs"></script>
 </body></html>

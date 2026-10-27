@@ -1,3 +1,5 @@
+import {coreCastingKind} from './stage11-core-action-bridge.mjs';
+import {ARENA_FAMILIES} from './stage14-dynamic-actions.mjs';
 // Arena3D staging only: turn-driven choreography. Never infer turns, roles or victims on Player Web.
 // Stage/GM owns secret cues; public players see ONLY approved public status effects.
 export const CHOREOGRAPHY_VERSION='gmww.arena.cast.v1';
@@ -6,13 +8,15 @@ const ID=/^[a-z0-9._-]{1,80}$/i;
 export const visibleId=id=>String(id||'').startsWith('member:')&&ID.test(String(id).slice(7))?String(id):null;
 export function classifyCastingAction(actionId){
   const id=String(actionId||'').toLowerCase();
+  const canonical=coreCastingKind(id);
+  if(canonical)return canonical;
   if(['action_protect','action_guard','action_guard_protect','action_shield'].includes(id))return 'shield';
   if(['action_witch_save','action_witch_heal','action_revive','action_heal'].includes(id))return 'heal';
   if(['action_prophet','action_prophet_inspect','action_seer','action_inspect','action_theologian','action_aura_prophet'].includes(id))return 'inspect';
   if(['action_wolf_bite','action_witch_kill','action_poison','action_kill','action_hunter_shot'].includes(id))return 'attack';
   return null;
 }
-export function stageCastingCue({matchId,cycleKey,phase,turnId,actorIds,targetIds=[],kind,createdAt,expiresAt},now=Date.now()){
+export function stageCastingCue({matchId,cycleKey,phase,turnId,actorIds,targetIds=[],kind,createdAt,expiresAt,actionId='',roleId='',visualFamily=''},now=Date.now()){
   const actors=[...new Set((actorIds||[]).map(visibleId).filter(Boolean))].slice(0,30);
   const targets=[...new Set((targetIds||[]).map(visibleId).filter(Boolean))].slice(0,30);
   const start=Number(createdAt),expiry=Number(expiresAt);
@@ -24,7 +28,10 @@ export function stageCastingCue({matchId,cycleKey,phase,turnId,actorIds,targetId
     matchId:String(matchId).slice(0,128),cycleKey:String(cycleKey).slice(0,128),
     phase,turnId:String(turnId).slice(0,160),actorIds:actors,
     // Target identifiers are restricted to authorized-GM responses.
-    cast:active?{actorId:actors[0],targetIds:targets,kind,startedAt:start,expiresAt:expiry}:null
+    cast:active?{actorId:actors[0],targetIds:targets,kind,startedAt:start,expiresAt:expiry,
+      actionId:typeof actionId==='string'?actionId.slice(0,90):'',
+      roleId:typeof roleId==='string'?roleId.slice(0,90):'',
+      visualFamily:ARENA_FAMILIES.includes(visualFamily)?visualFamily:''}:null
   };
 }
 export function publicCastingState(room,cue,{authorizedGM=false}={}){
