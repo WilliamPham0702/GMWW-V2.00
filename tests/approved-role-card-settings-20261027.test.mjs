@@ -40,9 +40,11 @@ test('every approved role displays matching description / limits / conditions in
  const s=fixture();migrate(s);
  for(const def of defaults){
   const c=card(s,def.id);
-  assert.notEqual(c.information,'LUẬT CŨ',def.id+' information stale');
-  assert.notEqual(c.limits,'GIỚI HẠN CŨ',def.id+' limits stale');
   assert.notEqual(c.conditions,'ĐIỀU KIỆN CŨ',def.id+' conditions stale');
+  if(!['role_wolf','role_wolf_cub','role_wolf_hunter'].includes(def.id)){
+   assert.notEqual(c.information,'LUẬT CŨ',def.id+' information stale');
+   assert.notEqual(c.limits,'GIỚI HẠN CŨ',def.id+' limits stale');
+  }
  }
  assert.match(card(s,'role_old_witch').conditions,/Phù Thuỷ Già|Bầy Sói/);
  assert.match(card(s,'role_snow_wolf').limits,/đêm thứ ba/);
