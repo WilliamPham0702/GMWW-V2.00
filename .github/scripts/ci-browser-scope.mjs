@@ -2038,7 +2038,9 @@ function detect(){
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
       if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.249.0'){
-        const base=process.env.GMWW_CI_EVENT==='pull_request'?
+        const base=process.env.GMWW_CI_EVENT==='pull_request'&&
+          String(process.env.GITHUB_REF||'').startsWith('refs/pull/')?
+          'HEAD^1':process.env.GMWW_CI_EVENT==='pull_request'?
           String(process.env.GMWW_CI_BASE_SHA||''):'HEAD^1';
         if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
           execFileSync(process.execPath,['.github/scripts/verify-release-v3249.mjs'],{
