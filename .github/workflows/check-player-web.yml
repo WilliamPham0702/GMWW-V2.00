@@ -678,6 +678,16 @@ jobs:
           test -s docs/releases/GMWW-V3.255-drunk-draw-spiritualist-20261027.md
 
 
+
+      - name: PR565 V3.259 — sửa chốt xác minh IPA cũ, đúng phạm vi
+        if: steps.scope.outputs.mode == 'gm-vote-postverify-3259'
+        run: |
+          node --check .github/scripts/verify-character40-production.mjs
+          node .github/scripts/verify-release-v3259.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-gallows-vote-markers-ui.test.mjs tests/character40-native-shell-contract-v3259.test.mjs
+
       - name: PR565 V3.259 — ba thay đổi, Audio và bundle
         if: steps.scope.outputs.mode == 'gm-vote-3259'
         run: |

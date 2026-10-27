@@ -1283,7 +1283,8 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node --test tests/gm-gallows-vote-markers-ui.test.mjs
           SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
-          [[ "$SCOPE" == "GMWW browser CI scope: gm-vote-3259 |"* ]] || { echo "::error::V3.259 ngoài phạm vi"; exit 1; }
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-vote-3259 |"* || "$SCOPE" == "GMWW browser CI scope: gm-vote-postverify-3259 |"* ]] || { echo "::error::V3.259 ngoài phạm vi"; exit 1; }
+          node --test tests/character40-native-shell-contract-v3259.test.mjs
           WORKER=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | (.conclusion // "pending")')
           [ "$WORKER" = success ] || { echo "::error::Worker CI chưa SUCCESS"; exit 1; }
           for TRY in $(seq 1 36); do
