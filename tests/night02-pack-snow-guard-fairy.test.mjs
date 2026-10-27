@@ -39,6 +39,7 @@ test('NIGHT-02 pack includes every living wolf including Snow; solo Snow may bit
  const interactions=[dead('alpha'),dead('wolf')];
  assert.deepEqual(packMembers(assignments,interactions,matchId).map(x=>x.loginId),['snow']);
  assert.equal(canSnowWolfBite({assignments,interactions,matchId}),true);
+ assert.equal(canSnowWolfBite({assignments:[assignments[0],{...assignments[0],loginId:'snow2'}],interactions:[],matchId}),false);
 });
 test('NIGHT-02 froze Alpha: bite intent can be confirmed, nobody dies and Witch sees no victim',()=>{
  const interactions=[notice('action_wolf_bite','victim',{actorId:'wolf'}),
