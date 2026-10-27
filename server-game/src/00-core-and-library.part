@@ -937,13 +937,20 @@ function applyApprovedRoleSettings(s){
     ['action_witch_save',{description:'Cứu đúng người nhận vết Sói Cắn cuối cùng, kể cả đã được Bảo Vệ hoặc Bất Tử Ban Đêm.',phase:'night',usageMode:'onceGame',usageCount:1,targetCount:1}],
     ['action_witch_kill',{description:'Dùng bình Giết chọn một người; độc lập với bình Cứu, có thể dùng cùng đêm.',phase:'night',usageMode:'onceGame',usageCount:1,targetCount:1}]
   ]);
+  update('role_spiritualist',{
+    information:'Mỗi đêm Nhà Tinh Thần Học chọn hai người để biết CÙNG PHE hoặc KHÁC PHE. Người đang bị Đuổi khỏi làng vẫn được soi so sánh phe; Đuổi chỉ miễn nhiễm với các tác động gây hại như Cắn/Giết hoặc bình Giết.',
+    limits:'Tối đa bốn lượt trong năm đêm đầu; mỗi đêm tối đa một lần.',
+    conditions:'Soi chính xác hai người khác nhau. Vẫn nhận kết quả khi một hoặc cả hai mục tiêu bị Đuổi khỏi làng. Không thông báo vai trò cụ thể của người bị soi.'
+  },[
+    ['action_compare_faction',{description:'Chọn hai người để biết CÙNG PHE hay KHÁC PHE; mục tiêu bị Đuổi vẫn cho kết quả.',phase:'night',targetCount:2,usageMode:'custom',usageCount:4,fromNight:1,toNight:5}]
+  ]);
   update('role_drunk',{
-    information:'Say Rượu ngủ đêm 1 và 2. Đầu đêm thứ 3, trước Phù Thuỷ Già, chỉ một lần bốc ngẫu nhiên lá Vai Trò của người đã chết trước đó. Không ai chết thì thành Dân Làng không có chức năng. Sau khi bốc, chuyển sang Phe và năng lực của lá nhận được.',
+    information:'Say Rượu ngủ đêm 1 và 2. Đầu đêm 3, trước Phù Thuỷ Già, các lá Vai Trò đã chết hiện úp trên Player Web và GM. Say Rượu tự nhấn mở đúng một lá, các lá còn lại lập tức vô hiệu. Nhận Vai Trò/Phe/năng lực của lá chọn; GM được báo kết quả. Nếu không ai chết, trở thành Dân Làng không chức năng.',
     winCondition:'Trước đêm 3 thắng cùng Phe Dân; từ lúc nhận lá đêm 3 thắng theo Phe của Vai Trò đã bốc.',
     limits:'Bốc đúng một lần duy nhất ở Đêm 3; không thức đêm 1, 2 hoặc bốc lại.',
-    conditions:'Đêm 3 ưu tiên trước Phù Thuỷ Già; nếu nhận vai Sói sẽ tham gia Bầy Sói và sử dụng năng lực Sói theo timeline sau bước Cắn chung.'
+    conditions:'Đêm 3 trước Phù Thuỷ Già: Say Rượu tự mở một lá úp của người đã chết trên Player Web. Sau khi chọn không bốc lại. Nếu nhận Sói thì tham gia Sói Cắn chung và chức năng riêng theo timeline.'
   },[
-    ['action_drunk_draw',{description:'Chỉ Đêm 3 bốc ngẫu nhiên 1 Vai Trò của người đã chết; nếu chưa có ai chết trở thành Dân Làng.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:3,toNight:3,targetCount:0,noTarget:true}]
+    ['action_drunk_draw',{description:'Đêm 3 Say Rượu nhấn chọn duy nhất một lá úp của người đã chết trên Player Web; Server khóa các lá còn lại. Nếu không ai chết thành Dân.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:3,toNight:3,targetCount:0,noTarget:true}]
   ]);
   update('role_clone',{
     information:'Nhân Bản thuộc Phe Dân và Đêm 1 chọn một người còn sống khác bản thân để liên kết. Nếu mục tiêu chưa chết, Nhân Bản vẫn là Dân thường không có năng lực đặc biệt. Khi mục tiêu chết, từ đêm tiếp theo Nhân Bản nhận Vai Trò, Phe và chức năng của mục tiêu; nếu là Sói, thức cùng Bầy Sói.',
