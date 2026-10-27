@@ -1697,8 +1697,8 @@ export function isPlayerReceiptHotfixScope(changes){
   if(!p||typeof p.before!=='string'||typeof p.after!=='string')return false;
   const oldCall="try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);";
   const newCall="try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});";
-  const oldChange='replaceReceipt("'+oldCall+'",\\n   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");';
-  const newChange='replaceReceipt("'+newCall+'",\\n   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;");';
+  const oldChange='replaceReceipt("'+oldCall+'",'+String.fromCharCode(10)+'   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");';
+  const newChange='replaceReceipt("'+newCall+'",'+String.fromCharCode(10)+'   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;");';
   return p.before.includes(oldChange)&&p.after===p.before.replace(oldChange,newChange);
 }
 
