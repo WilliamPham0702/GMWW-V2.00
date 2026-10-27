@@ -562,6 +562,7 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node --check server-game/current/app.js
           node --check src/index.js
+          echo "V3.248: xác minh bản release notes và rollback V3.247"
           test -s docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md
 
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành

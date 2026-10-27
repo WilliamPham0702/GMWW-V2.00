@@ -19,6 +19,7 @@ test('Verified V3.248 Runtime source is unchanged and release gates are present'
  assert.match(deploy,/id: runtime248_release/);
  assert.match(deploy,/steps.runtime248_release.outputs.approved != 'true'/);
  assert.match(deploy,/runtime-3248-postmerge/);
+ assert.match(deploy,/test -s docs\\/releases\\/GMWW-V3\\.248-setup-ui-performance-20261027\\.md/);
  assert.match(workflow,/V3.248 — postmerge CI release/);
  assert.match(workflow,/tests\/gmww-v3248-setup-ui-perf.test.mjs/);
 });

@@ -1904,7 +1904,9 @@ export function isRuntime248SetupUiScope(changes){
   const village=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
   const settings=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
-  return pkg.version==='3.248.0'&&html.includes('<title>GMWW V3.248</title>')&&
+  return pkg.version==='3.248.0'&&
+     fs.readFileSync('.github/workflows/deploy-production.yml','utf8').includes('test -s docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md')&&
+     html.includes('<title>GMWW V3.248</title>')&&
    html.includes('data-action-icon-scale="25"')&&html.includes('data-action-icon-scale="150"')&&
    battle.includes("visibleSteps=steps.map")&&
    village.includes('playSetupSyncFingerprint')&&
