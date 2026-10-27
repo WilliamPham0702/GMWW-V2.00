@@ -575,6 +575,15 @@ jobs:
           node --check server-game/current/app.js
           node --check src/index.js
           test -s docs/releases/GMWW-V3.249-witch-drunk-clone-20261027.md
+      - name: Chỉ kiểm thử Bay/Chạy Character GM và chống nóng (không Card/Seat/IPA)
+        if: steps.scope.outputs.mode == 'gm-turn-motion-lowheat'
+        run: |
+          node --check server-game/current/app.js
+          node --check server-game/current/gmww-shared-motion.js
+          node --test tests/gm-turn-motion-lowheat.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          test -s docs/releases/GMWW-GM-TURN-MOTION-20261027.md
+
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
