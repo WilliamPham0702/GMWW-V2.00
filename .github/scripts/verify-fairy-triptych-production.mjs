@@ -22,6 +22,7 @@ for(let n=0;n<16;n++){
 }
 const manifest=JSON.parse(await fetchBytes(base+'/api/update/manifest'));
 assert.equal(manifest.runtimeVersion,version);
+assert.equal(manifest.releaseVersion,version,'OTA releaseVersion must match Runtime V3.246');
 assert.equal(manifest.shellVersion,'3.110');
 assert.ok(manifest.releaseNotes.some(x=>x.includes('Yêu Tinh liền khối')));
 const entry=(manifest.runtime?.files||[]).find(x=>x.path===path);
