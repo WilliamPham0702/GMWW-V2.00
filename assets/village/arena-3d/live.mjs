@@ -246,7 +246,8 @@ async function refreshPrivateGmEffects(){
     }
     const data=projectGmPayload(await response.json());
     if(!data)return;
-    if(signal.aborted||code!==session.room||gmToken!==session.token||
+    if(signal.aborted||current?.room?.phase!=='running'||
+      code!==session.room||gmToken!==session.token||
       String(current?.room.matchId||'')!==session.matchId||
       String(current?.room.cycleKey||'')!==session.cycleKey)return;
     if(String(data.matchId)!==String(current.room.matchId)||String(data.cycleKey)!==String(current.room.cycleKey))return;
