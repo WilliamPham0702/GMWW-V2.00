@@ -26,7 +26,13 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
   const loaded=await page.goto(origin+'/village/arena-3d/live.html?room='+body.roomCode+'&coreMode=live',
    {waitUntil:'domcontentloaded',timeout:45000});
   assert.equal(loaded.status(),200);
-  await page.waitForFunction(c=>document.querySelector('#room')?.value===c,body.roomCode);
+  // attach() writes the room input before its public HTTP snapshot completes.
+  // Wait for the authoritative initial Core connection, or its eventual
+  // success notice can overwrite the intentionally denied GM-token notice.
+  await page.waitForFunction(c=>
+   document.querySelector('#room')?.value===c&&
+   document.querySelector('#log')?.textContent?.includes('Đã kết nối phòng '+c),
+   body.roomCode,{timeout:45000});
   for(const id of ['seed','deal','sample-vfx','gallery-toolbar']){
    assert.equal(await page.locator('#'+id).isVisible(),false,id+' must be hidden for real-room Core mode');
   }
