@@ -2022,7 +2022,45 @@ function isManualRuntimeScope(changes){
  return Array.isArray(changes)&&changes.length>0&&changes.every(c=>allowed.has(c.path)&&['A','M'].includes(c.status))&&changes.some(c=>c.path==='server-game/GMWW-Server/GameView.swift')&&changes.some(c=>c.path==='tests/manual-runtime-package.test.mjs');
 }
 
+
+// V3.258: verified narrow release. This classifier rejects ANY extra path
+// and requires an exact Runtime identity; no legacy Card/Seat/IPA tests.
+function isGMWWAudio3258Scope(changes){
+ const allowed=new Set([
+   'server-game/src/00-core-and-library.part',
+   'server-game/src/10-library-and-settings.part',
+   'server-game/src/30-village-and-setup.part',
+   'server-game/src/40-battle-and-timeline.part',
+   'server-game/current/app.js',
+   'server-game/current/GMWW.html',
+   'src/index.js','package.json','package-lock.json',
+   'tests/audio-role-day-flow-20261027.test.mjs',
+   'tests/audio-binding-integrity-20261027.test.mjs',
+   '.github/scripts/ci-browser-scope.mjs',
+   '.github/scripts/verify-release-v3258.mjs',
+   '.github/workflows/check-player-web.yml',
+   '.github/workflows/deploy-production.yml',
+   '.github/workflows/check-gm-audio-role-day.yml',
+   'docs/release-notes/audio-audit-20261027.md',
+   'docs/releases/GMWW-V3.258-audio-audit-20261027.md'
+ ]);
+ const seen=new Set(changes.map(x=>x.path));
+ if(seen.size!==allowed.size||changes.some(x=>!allowed.has(x.path)))return false;
+ try{
+   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+   const app=fs.readFileSync('server-game/current/app.js','utf8');
+   const worker=fs.readFileSync('src/index.js','utf8');
+   return pkg.version==='3.258.0'&&
+      app.includes("const VERSION='3.258'")&&
+      app.includes('function battleFindAudioCandidates(')&&
+      app.includes('function battleQueueDayAudio(')&&
+      worker.includes('VERSION="V3.258"')&&
+      fs.readFileSync('server-game/current/GMWW.html','utf8').includes('<title>GMWW V3.258</title>');
+ }catch{return false}
+}
+
 export function classifyBrowserScope(changes){
+  if(isGMWWAudio3258Scope(changes))return 'gm-audio-3258';
   if(isNativeManualReleaseVerifyScope(changes))return 'native-manual-release-verify';
   if(isManualRuntimeScope(changes))return "manual-runtime";
   if(isGMFireWalk3256Scope(changes))return 'gm-fire-walk-3256';
@@ -2117,6 +2155,19 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // Deterministic 3.258 classification on PR or main push; full tests for
+  // unknown diffs. PR merge with exact same files is intentionally supported.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n')
+          .filter(Boolean).map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isGMWWAudio3258Scope(changes))
+          return{mode:'gm-audio-3258',reason:'Exact V3.258 GM Audio only; same-SHA Worker and OTA release guards'};
+      }
+    }catch{}
+  }
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');

@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.257';
+const VERSION='3.258';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -656,18 +656,21 @@ function applyV210Rules(s){
   const witchAudio=cardAudio.filter(a=>a.targetId==='role_old_witch'||a.sourceKey==='ROLE:source-18'||a.name==='Phù Thuỷ Già');
   const keepCard=preferLinked(witchAudio)||{};
   Object.assign(keepCard,{id:keepCard.id||'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:keepCard.sourceKey||'ROLE:source-18',fileName:keepCard.fileName||'Phù Thuỷ Già.mp3',verifiedBinary:keepCard.verifiedBinary!==false});
-  s.audio.cards=[keepCard,...cardAudio.filter(a=>!witchAudio.includes(a))];
+  s.audio.cards=[keepCard,...cardAudio.filter(a=>String(a.id)!==String(keepCard.id))];
 
   const actionAudio=(s.audio&&s.audio.actions)||[];
   const canonicalActions=[
     {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',sourceKey:'ACTION:1',fileName:'duoi_nguoi.mp3',verifiedBinary:false},
     {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',sourceKey:'ACTION:2',fileName:'hoi_sinh.mp3',verifiedBinary:false}
   ];
-  const otherActions=actionAudio.filter(a=>!canonicalActions.some(c=>a.id===c.id||a.targetId===c.targetId||(c.sourceKey&&a.sourceKey===c.sourceKey)||a.name===c.name));
-  s.audio.actions=[...canonicalActions.map(slot=>{
+  const canonicalActionRows=canonicalActions.map(slot=>{
     const previous=preferLinked(actionAudio.filter(a=>a.id===slot.id||a.targetId===slot.targetId||a.sourceKey===slot.sourceKey||a.name===slot.name));
     return {...slot,...(previous||{}),targetId:slot.targetId};
-  }),...otherActions];
+  });
+  // IndexedDB media is keyed by the AUDIO row ID: dropping a duplicate metadata
+  // row silently loses its user-uploaded audio after OTA.
+  const usedActionIds=new Set(canonicalActionRows.map(a=>String(a.id)));
+  s.audio.actions=[...canonicalActionRows,...actionAudio.filter(a=>!usedActionIds.has(String(a.id)))];
 
   const currentCards=s.audio.cards||[];
   const wolfCandidates=currentCards.filter(a=>a.id==='audio_group_wolves'||a.sourceKey==='GROUP:WOLVES'||a.name==='Bầy Sói'||a.name==='Sói thức dậy');
@@ -698,6 +701,15 @@ function applyV210Rules(s){
     {id:'audio_system_morning_frozen',name:'Người chơi bị đóng băng',targetId:'audio_system_morning_frozen',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_silenced',name:'Người chơi bị câm',targetId:'audio_system_morning_silenced',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_infected',name:'Người chơi bị nhiễm bệnh',targetId:'audio_system_morning_infected',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_protected',name:'Người chơi được bảo vệ',targetId:'audio_system_morning_protected',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_saved',name:'Người chơi đã được cứu',targetId:'audio_system_morning_saved',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_healed',name:'Người chơi đã được hồi phục',targetId:'audio_system_morning_healed',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_revived',name:'Người chơi đã hồi sinh',targetId:'audio_system_morning_revived',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_blessed',name:'Người chơi đã được chúc phúc',targetId:'audio_system_morning_blessed',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_shielded',name:'Người chơi đã nhận khiên',targetId:'audio_system_morning_shielded',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_poisoned',name:'Người chơi đã bị đầu độc',targetId:'audio_system_morning_poisoned',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_wolf_bite',name:'Người chơi đã bị Sói cắn',targetId:'audio_system_morning_wolf_bite',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_cursed',name:'Người chơi đã bị nguyền rủa',targetId:'audio_system_morning_cursed',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_deaths_intro',name:'Đêm qua làng chúng ta có',targetId:'audio_system_morning_deaths_intro',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_dead_noun',name:'Người chết',targetId:'audio_system_morning_dead_noun',fileName:'',verifiedBinary:false},
     ...Array.from({length:31},(_,i)=>({id:'audio_system_morning_number_'+i,name:String(i),targetId:'audio_system_morning_number_'+i,fileName:'',verifiedBinary:false})),
@@ -720,14 +732,17 @@ function applyV210Rules(s){
     {id:'audio_system_compare_different',name:'Nhà Tinh Thần Học · Khác Phe',targetId:'audio_system_compare_different',fileName:'',verifiedBinary:false}
   ];
   const systemAliases=new Set(['audio_system_wolf','Sói thức dậy']);
-  const otherSystem=systemAudio.filter(a=>!canonicalSystem.some(c=>a.id===c.id||(c.sourceKey&&a.sourceKey===c.sourceKey)||a.name===c.name)&&!systemAliases.has(a.id)&&!systemAliases.has(a.name));
   // Preserve GM-linked audio URLs and locally uploaded IDs across Runtime upgrades.
-  // Only add missing slots; never overwrite an existing chosen file/audio binding.
-  s.audio.system=[...canonicalSystem.map(slot=>{
+  const canonicalSystemRows=canonicalSystem.map(slot=>{
     const previous=preferLinked(systemAudio.filter(x=>x.id===slot.id||(slot.targetId&&x.targetId===slot.targetId)
       ||x.name===slot.name||(slot.sourceKey&&x.sourceKey===slot.sourceKey)));
     return {...slot,...(previous||{}),id:previous?.id||slot.id,targetId:slot.targetId||previous?.targetId||slot.id,name:slot.name};
-  }),...otherSystem];
+  });
+  const canonicalIds=new Set(canonicalSystemRows.map(x=>String(x.id)));
+  // Never delete a separately uploaded media row simply because its NAME
+  // matches a canonical placeholder. Runtime chooses a verified source by ID.
+  s.audio.system=[...canonicalSystemRows,...systemAudio.filter(a=>!canonicalIds.has(String(a.id))
+    &&!systemAliases.has(a.id)&&!systemAliases.has(a.name))];
 
   const exileAction=(s.actions?.role||[]).find(a=>a.id==='action_exile'||String(a.legacyId)==='1');
   if(exileAction)Object.assign(exileAction,{legacyId:'1',name:'Đuổi Người',description:'Bà phù thủy già đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3'});
@@ -773,7 +788,10 @@ function applyV226Catalog(s,migrating=false){
     if(migrating){a.name=target.name;a.fileName='';a.verifiedBinary=false;delete a.sourceKey;delete a.url}
   };
   for(const c of s.cards)syncAudio('cards',c,'audio_card_');
-  for(const a of s.actions.role)syncAudio('actions',a,'audio_action_');
+  for(const c of s.artifacts)syncAudio('artifacts',c,'audio_artifact_');
+  // Role and Artifact actions share the same action audio catalog.
+  for(const a of [...(s.actions.role||[]),...(s.actions.artifacts||[])])
+    syncAudio('actions',a,'audio_action_');
   if(!s.audio.system.some(x=>x.id==='audio_system_confirm'))s.audio.system.push({id:'audio_system_confirm',name:'Xác nhận',fileName:'',verifiedBinary:false});
   if(!s.audio.system.some(x=>x.id==='audio_system_countdown'))s.audio.system.push({id:'audio_system_countdown',name:'Đếm ngược',fileName:'',verifiedBinary:false});
   if(migrating)for(const a of s.audio.system){a.fileName='';a.verifiedBinary=false;delete a.sourceKey;delete a.url}
@@ -1329,7 +1347,16 @@ function audioBlobKey(kind,id){return 'audio|'+kind+'|'+id}
 // Original Old Witch voice from V2.16; bundled with the OTA application.
 const gmwwBundledLegacyAudio={ "ROLE:source-18":{type:"audio/mpeg",base64:"SUQzBAAAAAAAIlRTU0UAAAAOAAADTGF2ZjYxLjcuMTAzAAAAAAAAAAAAAAD/84TAAAAAAAAAAAAASW5mbwAAAA8AAABgAAAkwAAHCg0PEhQXGhwfISQnKSwvMTQ2OTw+QUNGRklLTlBTVlhbXmBjZWhrbXBydXh6fYCChYWHio2PkpSXmpyfoaSnqayvsbS2uby+wcPDxsnLztDT1tjb3uDj5ejr7fDy9fj6/f8AAAAATGF2YzYxLjE5AAAAAAAAAAAAAAAAJAPAAAAAAAAAJMD2ifO7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/80TEAA4ABhGfQhgAAJAgLOOLAWfBAEAQB83WHsQBgH8/+Jwffgh5c/5SJwfB9H4Pg+BAQBB3/lwfB///+UBAEHXg++8hsa3g6Hbfbydf+5n5Kcv+qKv/s7jwjX7T3NP/80TEGxgLKkQBi1AAzyQbiGCyNzz3beqEpzuPhwEMQwcE8Wtl+p4/LEZOmKolBRBmJAilR////zyBh+YzmMeY3///7WbyZiUiY0gNJSAVxmKiqhP0H4BgAnr//9/8jKf/80TEDRUrFnBVwigBS8/jGdXZFSQ5+khz0O3JYhCloyoRv+mdX7+fujSE7SmshliaHWlbyVkGEe41yKNRkGueRUOjlO6sdRcPi5yoqGKHAAAcxR7FUkkkkkjkkUHhZPX/80TECxUxmtJeSYaSBMVvRyQBQMY2NdtGOen4gwgQAARne7/oiO7u4s/L3eEiHERE9Hd+m7uIRPmhP+7u7oggIvcGBOIHA45//ggIAwH1bG6/P/D8Qa27bbba1JtE8wf/80TECRQgtspY3pg0AwAVG8TRxicIh0w4w30Axw04SodOmrQhyN+Idl05QM8RUlqQ6p2d8mryxtrFjakPDVqxGXJseesAQVPBWEdYietXXzf1HfkVh4hn/12twMOINqz/80TECxO5Zxb41wQ7DNrjlZRACAIU0uqCQDGDRoaVk5lYIIxLxv0SlCABlyV5hUEqgba6ta+8biUtDKsbEgdQ6lUxZHm/95v21/T9HsjB1CSIVo2rRAIe6zImVTTJFWn/80TEDxMwctT+w9ZCVgAyHt09BNsg4LtA9CZ1qoKsLsFhwaE25oCQHDpJB1KkvNGH6zQULMcoALA4YOAC37fX//w+HAWnSweDqK4NS2gUMIbrOKPWpeFwoZdeICQgEpr/80TEFRIgjrR808ZoCBEdtdb5MR+tSgWUDCXCtbyMDB4TgsWAB5wZAcHhEAkPJO/0gqho613////+txGeDBk8miC4ipda3gJRq5dkKyG2w1CuJ8qRYnzIqcBmi0gG8QH/80TEHxEAmuZeeUyGwSLvxGsgliCjWIW4DgN/+rGvAoH0FSGPBMz////7FOdHgMnp6AAokXbbBcHRZjJ4hbGhC2xjhVKiXKXxXDQ+lw6wx5qv9jLOmRl/30FEHALEbi//80TELhKROuJeekZKW6xGMLEbv5YFX61N7EzhQcpsz//6FDhaRGmbuqoAN1S79ycDAKEJCMIFsI6Pwkxu4bDjZX2txY1c6tvFvXJhUb1+kVQKBnohnPjkYrygDNOWD2H/80TENhKA5q5fTxgAAwYN7JVgxlgp////1Dzoq6mW1ZbQ5nS6zMRNJsLNjQQABVtcIWudSi00d8rsAzONvr/Ri87xPUo4MhphMyJBMo+k0sAxwbnVDjPBPWs4fH4mzHf/80TEPyG66s5fmFgA5yXw8sMSNNzpU8mVkys487Q7S+dmSgxNDQ7LzjGX9ljx2T3sg7U0jcL1////Vsm5eyPvj5lkM2z//////L3vNKaf2Kr+0o8fX9CwIAgIwxIE9D7/80TECxHoprz32DAAYGAiGrtd89D8QmZf3PPf4d3hhzDW+/+sWJGgyJ2GlW7tbyINLMO+CoNA08jv4lDX6rBVxvb///2Lp0ofcgDrQ4DAJmLjEbE38LupxO4YjC/W9Zz/80TEFhJ49sGUyZJ8DyA2upSVwIeDn8/M3z/quWZk3DIMTvRayyiK4G0kAYD6/6xYEJT//Tkb///1HYAQPegv3QAHJLFJHaGAhwiOoacUFlJzFZWQk6Z+1KHm2pZ/XU//80TEHxG57v5eOkVGLwoUQghpM4Jy2ggb1Td96JO76UFmC1DvJ2ev//5YMyhriKf//+s7MAAo77kARqEB8EfMZpsQRCzaYTkyxQfTiEaEEyXpbekpw/711EKIczK1zMH/80TEKxI5atZeeMSQQmRiVeffux3KFg5rSuj6xEaMjSQwh///51hlb2oVACcl0iJFgQH5gx8jBQs3VjLjDFx2FZCclQEsWLc6Z68Vk1b5VAkM++21Wg1UxVFsx773O7X/80TENRJp8upeeMR2q40lEb+pHK6ugLHRMyh///+MRaxKZK3//8qUogG4KSZSw5bWlhwmA8IzBGqPmTsUlLh5t8XvyqXXVkNY31Lo9CVarGU4kpW0f/8lmcBIIAiwGpP/80TEPhJx3v5eYMRefX//61KC4MgM8oYuMTWEeHh5i5AwK7YSVxbLofybwVQvxDdIUfhBzTsqmWpVfKUqXykXsdLiNysraf/mYy9DaGX//qUqoYwEEhwd/nf/9T4iHgr/80TERxJR1uMeeMSW5KRqQTuV2aPrJJALS+HsfF9d2wNJwhOe7+oNDpW8+kO7y13R/90hW3MSJGwaFU7Kz7+znndJQYYR1OZ9KwYSQcr/zhf3l/f3lzSKagAZRaLbbbb/80TEUBIRRtJ+YYR+gaAoYpQSGIK5CNFf9X76f63fmK9DRHFh5kzPR+m/3xkgsJysBwseVx0ZgUawnseR3SLX15na6/9ssyr+GCdYdj8Ph+mGqQZjSazzP6nWbO2LIGj/80TEWh369upeOw2LMg5jJsg29628ys+v2RZsM30ixk4H2VZ7+tCDpAAvfSHJeY9Ls2Bgg29QEo3ExUQVPHIYu7qUnM926T18vP7/fPzOTv9feYos5DJ8B6lXRPt/sv7/80TENRy6zrgAywTdcxFGy0lVhYLSepH5ErZH59lcz8M3jUR4ZmEdyihfv0ps6u1GdnNBWVkn7NoY7Xf/0r2tTaiElFsYGDqzP/YALTTbWBDuETcK/i0qjpVU1oBij8r/80TEFRFBGuJSwkyULly8owywSLeFbCsRzg2rTeTQo5oRWjiGyQ2GCBuSqvc35T10EdUEWiw7/uJWK//okZKKckYGIOKLEmHvQH0oYLAOJZkyvMXDhlxy7nFwuZFn3QP/80TEIxIYxtx+awY0ugIgFFjSYhIAAESx4Gms+QjHiUVOgqCX/PFj6LvrPAEld/+uMRUIAf7w+uQzf3BMkfToEZZ/FtnSa+sJ6Jpyzvr5Dy2y2RJGAUiBosVXbe1f9jr/80TELRIY/sVUwwwwzKNcaLCUs+utTWX2knN/8iVu9Aq4GjZ5P/7Cqk42a6ktstA1CGIYzWQpaPxHQDNhHTru4lhG8uMT21FnBXKnlStGrsJjSKPpOQhzMj0p8rt2SlL/80TENxF5jvI+eMpWIJOf/mRZC9Q8Okr//9MfH9BNuStwD4LlElMSKLsqFRNofHVktseDx66712REEiUQVBUG3QzgmYSwAAhw9HqVz10//dTkeqgjgMA4m/+9iOYLGDj/80TERBJBjuGeekRK1f/7NA4wO7w7dChYfkivVmCx9RunixmrSZYHEadCzaa9nWoskzUOq3Cj9j+mt92BC0ZzscW4oXt+YjCcPl//qvS+PYWTJf/4qhUMAQ4tNtgPoLD/80TEThERHsS0wwQ8dUA0SIVWznTQHwFFD30O2uabt4GmMtKjbWtc0z5t9oEtbEdtUdEm+ZUWjllsBAU8mtP9QkDV7WvebbO//yFCVgZOJtysBzTQkkO1Ms9S6WaAEyL/80TEXBHpjtmeSgRc5HJmcai9kMVjGx26uupS3brsQIiokP3dUT/9mllaUqB4///LLDVZ2oOqER6ZN/9TEA+D4nN1vdq/9//e2/1pAC7jr6+2oVhC4KvKdNEzaS+WMub/80TEZxJZitWfRigCJhqXxLBmHwhMYjgDYC8C3H4XAmYwCQ9x6LL93kiiguimYtnTIcpQZCQQ5R1JbJh3Mi8ynss+mm6CkDv1InyW6q1HS+j9Ny1JtJJjJJFmqV7pGjP/80TEcCI7EtB/j2gBJvVrQa/1oq/Z0nV/UgyZukXzNM0Qb9ecioAACgNX56CBiGvA5GTKJKex3KFuOdAT1rvHz/6Y28qDhQXHN7nGmd7f7a6qQ5XEaXVktOv7qyvnUhz/80TEOhJx1tpfzygAE2/pU4wTHDAbpf///+KVKmCHEg5VGoExWxdAO7KGBp9oFjRCj+KdresPCaDJV9jQTvVrvRGVqPT+r0M51Kxf//saVpv//1Y7BiH///55MBWHC33/80TEQxDZ4u5eY8RmVQCI0QpFGcY/hgJpj6XIRhYrKG4eD9OBG5J75U8MZyQkCwCYRwp9yCHsh0dGKmrf0KX0330/9H///+qlEhOv///5JZ6mrs71RQUqSlmrgbFEpBD/80TEUhGh3tpcegqSwbTNCWMMkeTeZKnVZJnMIPzUAhjUAyd6fVrInS9UOre77//+mtf/9pDnCARaf///////S5mNUWQOEbTCepUAETh27VDDWBrCD1LI0Pofk4PWLgz/80TEXhISyu5eiwQyx/lI3P6JpVTXuXQOSYqHJEAYtP/zkIJMDOCND3MaL8suUiwXd/Exs8L////xcUEMto36VQAncyK1qERB+dRrRSnL71UVHSQpeqq2v1TOc/FxBPL/80TEaBIRAtY8gsSSmo/rT94rniIRQD4rXHwwG+4/2ZyXYWa07/9X/FQ6Ev//+j6m7Sg76IWrd7HJfIHxgyGh8QxcQ8fqU1a/KlQv2bhNljVC7CPoCP0KL1DARkTIL/D/80TEchHA+sZeykSwN7Q50goQYgnnPp4kOpBT/EgBCf///9VhtzgEL63ZRUCvmAoAmIgQWcsG8mfUXg6LTZjAU2UDahY7cuhBbYz7bRIeXK2IixySlsYt4BjrEfq3////80TEfhJg+vJeC8Ya//yCA8TF2b/1gQh/6uvHrKuabOIi6QC7ddqnK23R/iCIxXwBFBez8Ly5Mlouf4n9kEqoskdGXO1JH9aMZmZJdgyByGt///7f/7KodAF2f2XsPM//80TEhxKB2rGcDooI+tq1h5JdUwAepUYqAEV2uoBqhjWkK1gG7UoUnggV9oYnBWbCeuVoRmhmZkzdZkjNarr/IY8v3RVFKP/3T/zr//urBAYwO/ZVMtO//ZTPAFn1UuX/80TEkBIJ1uJeeYR2VQANnmZlyZ9ZjWUMNR3ltv+02WU8u6GdbKZlg5SWpTokrbOye1fqkxn26zCAxBYaExpyA6veUUf+qsKh1L/a9KDv/1JQ4WeBkO/1KgAJd/8EYGn/80TEmhHJyrZayMR0LkpAOwKCXUjTVZwvFtpHiDa01SwEblWWlM1pQyL3dC/1Qz7HM7FmAjmb/RLf3NZP//Wihlnf8f//sExUiFauPvpqBAmV3hShWtALV46PswLEOVr/80TEpRKJIsZ8wMRwXRKNdtf0wCXI3uawJjAm/NfsViFEpWMQWKiR3v+VZU9BMO3/xcJHhF/6GCnf8rhsiIsSmQVy1RgXgAoFogag7dH0rrfBxozDFLTdsbU//P6hQvz/80TErRIR2qpcyMR0mv9xU4WOG1NQ1OQNEgLnq4blY/a6mo/Y6dr///v4a9u82B5IrwcU+EdiVS3JgUSGR9kZZdJj4FAwB4GNKcjQsbPJivLKag8hEXKYk+h8XJvY7RL/80TEtxHZcpp+wEqcYuP+P+7JB0WFromiriBUPVCFSR3/v/+ymFVWMaIJputGT1gYJD5YCQ1OdaQAHDBXkl1JFMdc5enaWlEiSwVDASPIOy23X7xuTh6jEBYcGgoBzlz/80TEwhGx5mA0wFCVSb+YfVuQMtkuxFNRAX+zSjTZ7PwsAhScWIhedSSY0TBwBDi1ZA6AXtmwZXRJ+RlNK/XuqVtMSD0EztzImtNM6RYSpRz7lem1/f6dBr9XyK02f1f/80TEzhBxIjAA5lAo7qLbUMuhINtnsRpAKw32a8AQCKgdR6ox36GPA4oIwlrYl7EExwxjUKjWm4/C8E0kGpSisIDEEsiB711LsnTYaOOPsjnHAUY/K2oFJZmNEu1DUIL/80TE3xN45hwA5kYw4VDM2s25zfTCB23eCZeSRz96AKW5lX+ry3vW7uAkODQMrkDKHrWPLrMHg2jCa1zEzj67WKmXXaxhtJU0OCjjSmx5VACGOQRF4VdhBcIw9cl8Ver/80TE5A/wghwE5hIiPE4ADDDDSsRgAGA2A2SgAGFmJqZFYuJhimXmkmQEXQdwmCODgEDBMAOMKEDG3bMAIAJvCEA1qDZoyYN8ALAwRXptg3jDVYyYghdb6CbqIoWhzyD/80TE9xOAfhwM0YpEZE6lc0bxbCcJwZsg5X+pD9i4XDwzZPm+q7fvt9MzTNEG1f+r7emuXC4gbh8EAGnqrqc9lBeD4IHIIGU1AUaBCSSgDIaiczPBV1ZqNDGCOaaAKgH/80TE/BXwhhwNWRgAgSNE4IiZMSAzHGMAMBiO/Y4EFdESVHhATSdBpB02ZFaC6KJwwLBuhWqpbsQ1NjNQtItinqMhShohomzMmdLaJwuGxxVzguMdCBqmOMRUQhA5sLP/80TE9yMaWkRXnoAAgcYTf/T/xXBOgtAaoKhSFaDQFkf///sghL5VN9QCISJohph5l5fayu73+egCGKE9Tl2OX5Nvu6OTgFB0rwqBgaoXEdF3BuIZQoCwPAoC+qqVPUT/80TEvSG6YnF5nJABwvuw8wDEm/gP7/Q67qCOUK+8YJhNadj7/SZZXv+hHPHRnULg4Io1eSQkEDr7mOv4F7LIkeaseQFoRC3K67///7v/7QR0JKFxABqDYGw35McCFQP/80TEiSHa6x8fjEECeEWGoBiI/LAY9g7TROASaFItBu2OMhp6elrxPb0pnvZHbdvC1wlygdiB8OEOTiQRjsD40Vj8iHwRGuKgUJY7BEMzyDGMpNsFBMyfCQ9qjyTmjwT/80TEVCIq7sXV2FgBex6dRNa05p1I3HEjekjuj/////xckbKYlb76+K/pnPLbv+f//6/+K/555m9m5H1tVk7fPGIADSXZglW5YYhBJFqAFmzQgMomQcagM8l8DHqpKxn/80TEHhlaMtpeegaYTMXjLY+YHSISMX9SvPki5Qb7vy6d2BmA0SGYpSPpVmMtaUVThloy////+UnmphgyU4350vIxg0DwuCX2DSC/LJURCoRX2FX1AYc9tICc2cH0I0v/80TECxVCMtZeeMScCTMJfcSwQRNWEyVnTDrBLBNCgKGP06eli/fKSggwMiTy4ZrKK6rGT3rtTCVaV67///6FPOcZ+u7KVRLhiRwHhK7/2bzpJMGhZGkAhfbeEyW1gfj/80TECRKRGtpeewYomsy7KXg1WhwMnm+5qCKqTlro1ZialgmPbz9sukJOQmONqTqYlBKWYbFLmoWl7E/8qtwTCxlSTxAbd//tSp72kEqVAAA6h3YyW/AgPYByuZorG8X/80TEERKJHsseeYZoifhJoWSvwS5TLzit0q6vLr0bn/9LnVQBNjpVtG10HhMSljbUKuIp0nv8VUoy4mXXOL//9zCRYWfIqhEUeP/85dbrx7AVuxS2QyQjtxK25qRwnSP/80TEGRHR4vr+SES2C0IYCiuYsXN/ObQNQxLVyym35KMpkI8iIpv//+dwY7AMkvNs3BV3/HL6hti/5aoQADj2+BOmoOTUQO42PuEISKQXbA0I8jxBvyOehEWZoQA41Hn/80TEJBJw9rr8wMR063lb9iHChwRhGk0oHU03XxL/8EAGkm1L1OLW4H//wOHhwDSWJk4AEVxRAZAG60vL0AceVSQv+hRaqWjPL/3uHSKju5i5Vb4r+krn+iw8EAIBwMP/80TELRIZ2rZUygR8mY6knv//7f//64GdlAEOgguAvWn//9qFDIl99SA9rdYVK7aBMwCgDz/JTEPmUl0VgG32YyDCs1nUZqarOk1ajfK8ylaxm+yG//0crVR//6FR2mH/80TENxGp1uJeYMSWUMAntnZbZI//gqmeInUqeiHNdtq7tvwBEpABdMGE4ZrSsMBOSazopLXu8ze1Iu8ZELwjI0PZncdEB2f+XqIFVcMpkwOOJX1HChmJ30csSYpjTJH/80TEQxIBAs5fTxgC8xm9n5UACqqiCSSEogAqkjHDVMz6tQKVP5afiiFk61zDOg5/hyNS1UrCdeiEamUDApfvWilQbRFUkOs/pWeJEV5K0UgH8r4Io1IlIl79zRhlyob/80TETiIR3qmVmngAK+yoJ6fUv1nfzuztoVauVrkcV9ZzWX63v7vv9xnjVw1NG/r3phwVt3fhg+WdUACj7P+hZQuXNH90uiogB22wUDbAK2XNBWpmx0DCZmC/VZM656b/80TEGBHy0vZXzCgDNXeqLil4DE1N/5SiJOjdaopP//////+b089lZVVnpIIE7W////cjPWqIcXF7yO5uEAAL+uQHxLNEqzpIDMSkWDpPd8RuwrH9T7pyyAGYz+WtO9D/80TEIxpK1sL+ygTsi75IEWSZBHUkFMT9p5Iq+oggsMntulWKJcGgENcpVtWn99f+VGlHEnOioSqX/0lIc6IWREa///+0hSiCI7nQiEAFi4g791UAACuGZEDBHMsZcFr/80TEDBTxxr8Swwp0RT+QROGQZBLKxHU4EMPRicjqdu14cd7kwR/ktL/2auZFFNBmweAd3bJoKZEFyv/////0Qx2aMcXYJLPMrIKcCY7/9DDbRRJFUWNqh3dZcJLAKLD/80TECxQpGwMeU8o2yDdyYRrhtLflsugdO3m2ok8bN8Ku7wFGSYMjbe+iHfCQDnso7h4aLqURDDxX//vEQLjwkNF/kyouxYDWj/F1LNi4fL+PcmFSh5l3aTByTjVI/hH/80TEDRVpGwMeeUzyXlerGluQe1mOkDb1nLWTg45PKsCBs0IgATAUAxfRycr9hM6OQXehlbUwQoHmb//8WDASPsc73hMUoAhj/xkIB8wxqi1KGDBJRcdPXl4WOBOThlb/80TEChRyyvp+ewrm5c4azuEVh+46E2eH8uvnezXnzRXCcV76sj5vcXRqitl9X5QGH0k9PQLF///////UjZVf/21Im8l////W0pRzEmKMFEhGEOypQEKHeHdU5T0Gr6//80TECxIJIu8cepMOQkpYHKmD2wca8xKUpNXtUvDhekITp3q2XheaoRg6W5V+vqV6GDuk7rBQXm9mj//XhHdmhgAP1//9jnHHSSpQg7jLu3SoOQU8DJsCjIMr2ZsO2Kj/80TEFRGhGtsceYSQ68ITncHHhMODpAFKCAQPVkAgIFWW7Ps5f6uCN/xSAn//+owfSJ2X7gE+Kf/7ZMYqNqpFqaGZmjgcbw1IhADKlgOACa7F0tDAFUZQOpVIZQmqveH/80TEIRE44u5+akYyy0r8/8gIWIyubewVGf//UeIrYADDhe8Chwm2//+sHSyyJ3/VUACLuotynnLAOR15xCdNWdpoi/K0NQJTY2Q4uVq4Uu1SZN6xi+7zwc1vB04Li7L/80TELxIAoscewYZIp2usPnvqesGpF+lTyTzWIv+iehsGkmEWnQAbld4YSvw2+hi0AtQqQymHHmmf1GUTLquZN01zvkypC8pkN+6IcldcqOgIy0Vk6f+/BzJ+n5TAwQL/80TEOhHx1qZ0wMR0bm2riJ//+yFFg1LZlj0AWBlAIU+agbIBAEoHSyoOjpcXTxOVH5VQ7Lv//o5juq/VUxKGfzIUpgprm+pn+uh0FBgoZ+RSXCoCJTqqbb1hiz+rWtz/80TERRIJhpZ2wwQICsbPKhwBDhnah4WgBcswStgqGXccl/aRnPmghCuIRMRP//x+NPD0TFKNltVtAHAyBR4qcLWtc/Nftft601lMqr/9evH/kqSbng4jkdNhalRiqEf/80TETxI57lgM0FB4MmxlZILB7FIZn4PsUtPYzEc4X586Ot5fO5b5kMyGLJNLENRTJSwNBUlihPFRjP8FXU4luK5ZVerIIxx4DhqRQOXNycJg1LJo0KArGNZt6WUNmVv/80TEWQ7xIjQA2FKURdP37vmnHhO5n+NtSiHgN2NTTuPK1PTMiqdrPf7fXr2p/sR61Qt6hTGswYZuIGRgVMsiJhiCsZdFKFQOWES0tFg7O1lirAXS4+PSVTW25rSAszj/80TEcBBREhwA0Ix4vuzSxigsuho5bnYvfcWr7+jQlQdbY1CJqVJOjm7wXh4rC5kGRItacw2++0QtRFliRC6VqedA0sUHKdExkGXpcZHG3KMDi5gNEGviB6iiTVjSLkr/80TEgRAgLhgAfhIAj65+AXP6YuoghSlAD3sInw5GrWDUOpQLNOj3qcmvO6jQdkEWWElkcwSfPM8RO7LpUYV9ou5ba/3t0Ow4MA1TjyIjVzPKi/hBBCGRpChk58h1znn/80TEkxHYRhQAekYEl6JQOLeTcC4fQByG8H5FUQGjkMJYOFj4fOKlBgqKFhYjECz6WETj3q34vsa267ouZ1oqQCSaAGHrQJQqa5eTQm2Iv7QYal7ibz9C163VKRmakNr/80TEng4wChy2eEYAV1yrjTi5ulhcL1qoWkh6jPb+/pGXVopAuALzbpQHJyrYJQSoio3n1EqXYxyTR+aGbAIZScaOEaErcUHBHovUVRFnA4dXZYIWMyChdFq3gb9+5Yr/80TExg2gshiuaEQcs7dzCL39+nA2rjTv07r7LRZeMAYBqAZ5GnREwxE1UMp0iKBvReEzaGqpNUoh3RyyFS6kZu81n5xW/+hv6Psauo9JxVCm+r8/Qkt6/Cf5mSMu5qv/80TE4g+AshgMaEQco02z73fnqbKExQMBkU0pnJ3RPJZXdpKhGJp8Wudr6TdALD77nROGYyzCdJbqtx6d3v5BirFMosidaU9n46y3X7TlotLe7/rd4vkepdxSc3ppfVf/80TE9xizBgQAwZAdMz3jxXJC7zg9BoyTxddrbTBa2AMKewWQbizLv2+SZHYXzzYqWsS95mfFFAZjxKgk10NQ4C5oQBRR6TNWitppwsoYbAI1yHFdrw4hTVxfoIWjaLj/80TE5xKp5hVUgEodV7gFcDcskKoB8XkUJvQOJBNIh0KqqTZr0GUCZxzDN0EX20y9ogEKEmCV1jCjkRNxkJma0NGFEZFacz6KXaZX/8N0nJmIx1V0V05DzDiQrEMKJOr/80TE7xZ6aggEmNA8RopMuhvU3y5DKkSGf/7nM1UgwIPZnSVFpVYkwAz55IEJkKHvpMCjF0rlZsOtNsAbC18cVavaeAxwnTJPDM2RwKpXPwHopTpcy1bVSNxxxG/qasz/80TE6BG46hgMaEYA0CcaHpcAiR1DmIhsmbOKm4J65SIWeCItTkIW7ywQSDBBPpsqNZM05wfCUOchWEXMLxKzqxzon+3aKD5AZAiraeY9GLUjeqaDZRcskQ73X2cQwqr/80TE9BjzBgy0gEYF0WSu6bfDx6Hu56++oLc3dbmRdRjYyZl2CeLzb3WjX35OPxK+1QF8vpumhdqmdJrqppIGy6KS6tyUmKZxjYUAjrBYklbBV7SQEa4x3OMy5MVMPan/80TE4w94ChmWaMQAUJCy0hxTjXsBBL+dVarrodb+pC0RTjrFMkN1Gg8PJ5v+tRKf49ETcc/31TIeg8ycOT1vU6lxyGqBeJELX20C7OssxLRxhbBKB/GWIwLdafWZvLD/80TE+B27BfwAyYwB2UmlOmyh6hewq4VAjBuAjgKQMHoNV0NkVLLhoa1UnL45yYUCTHKMYKoQBJA3DXq/u3+v/yXNDY8bkuZEoaGZufA1E0mnlQzGQ0QAL5j9OHL6jNb/80TE1BBwshQBTRAAijxzRpjMF5Jf5gxFCKE3MlE0Rb5IDmJj4LQuReoyJr8LXgDgFIhww94dgVYmTySyZJ0hv8A5AxQAcQWKEVBtULDgRYOcVTIxQLyy6c/8tJD2VyD/80TE5SAjIjABjWgBghOMUkSGkKSIufMS6TKy6Xa0TH/8hhULhmkfMFmiKYX4N5uSTEFNRTMuMTAwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/80TEtyHqmnj9gZABqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqr/80TEggAAA0gBwAAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo="} };
 function bundledAudioBlob(a){const src=a?.sourceKey&&(window.GMWW_V1_AUDIO?.[a.sourceKey]||gmwwBundledLegacyAudio[a.sourceKey]);if(!src?.base64)return null;try{const raw=atob(src.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);return new Blob([u8],{type:src.type||'audio/mpeg'})}catch(_){return null}}
-async function audioHasFile(a){if(a?.sourceKey&&(window.GMWW_V1_AUDIO?.[a.sourceKey]?.base64||gmwwBundledLegacyAudio[a.sourceKey]?.base64))return true;if(a?.url)return true;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);return rec?.blob instanceof Blob}
+async function audioBindingStatus(a,kind=audioKind){
+  if(!a)return 'missing';
+  const rec=await dbGet(audioBlobKey(kind,a.id)).catch(()=>null);
+  if(rec?.blob instanceof Blob&&rec.blob.size>0)return 'local';
+  const bundled=a.sourceKey&&(window.GMWW_V1_AUDIO?.[a.sourceKey]?.base64||gmwwBundledLegacyAudio[a.sourceKey]?.base64);
+  if(typeof bundled==='string'&&bundled.length>100)return 'bundled';
+  if(typeof a.url==='string'&&/^(https?:\/\/|data:audio\/)/i.test(a.url.trim()))return 'remote';
+  return 'missing';
+}
+async function audioHasFile(a,kind=audioKind){return (await audioBindingStatus(a,kind))!=='missing'}
 
 function gmwwAudioHasNameCut(a){return Number.isFinite(Number(a?.roleNameEnd))&&Number(a.roleNameEnd)>Number(a?.roleNameStart||0)}
 async function gmwwOpenAudioNameEditor(a){
@@ -1401,13 +1428,29 @@ async function gmwwOpenAudioNameEditor(a){
   };
 }
 async function renderAudio(){
-  const list=state.audio[audioKind]||[];
-  const resolved=await Promise.all(list.map(async a=>({a,ok:await audioHasFile(a)})));
-  const missing=audioKind==='cards'?(state.cards||[]).filter(card=>
-    !resolved.some(({a,ok})=>ok&&String(a.targetId||'')===String(card.id||''))):[];
-  const missingHtml=audioKind==='cards'?'<div class="gmww-missing-role-audio"><b>Vai trò chưa có liên kết Audio hoạt động ('+missing.length+')</b>'+
-    '<p>'+ (missing.length?missing.map(card=>esc(card.name)).join(' · '):'Tất cả vai trò trong Thư viện đều đã có nguồn Audio.')+
-    '</p><small>Danh sách đọc từ dữ liệu Thư viện trên máy này; chỉ đánh dấu có file thực hoặc URL, không tính tên file rỗng.</small></div>':'';
+  const kind=audioKind,list=state.audio[kind]||[];
+  const resolved=await Promise.all(list.map(async a=>({a,status:typeof audioBindingStatus==='function'?await audioBindingStatus(a,kind):await audioHasFile(a,kind)?'local':'missing'})));
+  if(kind!==audioKind)return; // Ignore late DB reads when user changed tab.
+  const sourceStatus=id=>{
+    const rows=resolved.filter(({a})=>String(a.targetId||a.id||'')===String(id));
+    return rows.some(x=>['local','bundled'].includes(x.status))?'ready':
+      rows.some(x=>x.status==='remote')?'remote':'missing';
+  };
+  const required=kind==='cards'?(state.cards||[]).map(x=>({id:x.id,name:x.name})):
+    kind==='artifacts'?(state.artifacts||[]).map(x=>({id:x.id,name:x.name})):
+    kind==='actions'?[...(state.actions?.role||[]),...(state.actions?.artifacts||[])]
+      .map(x=>({id:x.id,name:x.name})):
+    list.map(x=>({id:x.targetId||x.id,name:x.name}));
+  const missing=required.filter(item=>sourceStatus(item.id)==='missing');
+  const remote=required.filter(item=>sourceStatus(item.id)==='remote');
+  const category=kind==='cards'?'Vai trò':kind==='artifacts'?'Artifact':kind==='actions'?'Hành động':'Hệ thống';
+  const missingHtml='<div class="gmww-missing-role-audio"><b>Đối chiếu Audio '+category+': '+missing.length+' chưa có nguồn, '+remote.length+' URL chưa thử phát</b>'+
+    (missing.length?'<details><summary>File thực còn thiếu ('+missing.length+')</summary><p>'+
+      missing.map(item=>esc(item.name)+' ('+esc(item.id)+')').join(' · ')+'</p></details>':'')+
+    (remote.length?'<details><summary>URL chưa xác minh ('+remote.length+')</summary><p>'+
+      remote.map(item=>esc(item.name)+' ('+esc(item.id)+')').join(' · ')+'</p></details>':'')+
+    (!missing.length&&!remote.length?'<p>Tìm thấy file cục bộ hoặc bản kèm ứng dụng cho mọi mục.</p>':'')+
+    '<small>Tên file, dấu verifiedBinary và URL chưa được phát thử KHÔNG được tính là file hợp lệ. Nguồn thực phải được thử nghe trên iPhone. URL bên ngoài chưa được kiểm tra.</small></div>';
   // Dedicated SYSTEM audio shortcuts: the verdict's sounds are NOT part of the
   // Gallows controls and must not be saved under Vai Trò or Hành Động.
   const systemSlots=[
@@ -1422,19 +1465,22 @@ async function renderAudio(){
       '<strong>🔊 ÂM THANH NGÀY / LÊN GIÀN</strong>'+
       '<p>Chạm đúng tên để gán file Audio từ máy. SỐNG và CHẾT là hai file riêng biệt.</p>'+
       '<div>'+systemSlots.map(([id,label])=>{
-        const linked=resolved.find(x=>String(x.a?.targetId||x.a?.id)===id);
+        const linked=resolved.find(x=>String(x.a?.targetId||x.a?.id)===id&&['local','bundled'].includes(x.status));
+        const online=resolved.some(x=>String(x.a?.targetId||x.a?.id)===id&&x.status==='remote');
         return '<button type="button" data-system-sound-slot="'+esc(id)+'">'+
-          esc(label)+' <small>'+(linked?.ok?'✓ CÓ FILE':'＋ CHƯA GÁN')+'</small></button>';
+          esc(label)+' <small>'+(linked?'✓ CÓ FILE':online?'! URL CHƯA THỬ':'＋ CHƯA GÁN')+'</small></button>';
       }).join('')+'</div></section>':'';
   $('#audioGrid').innerHTML=missingHtml+systemShortcuts+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
-    resolved.map(({a,ok})=>{
-      const file=String(a.fileName||'').trim(),meta=file?(file+' • '+(ok?'Có Audio':'Thiếu Audio')):(ok?'Có Audio':'Thiếu Audio');
+    resolved.map(({a,status})=>{
+      const file=String(a.fileName||'').trim(),verified=status==='local'||status==='bundled';
+      const evidence=verified?'CÓ FILE THỰC':status==='remote'?'URL CHƯA KIỂM TRA':'THIẾU FILE';
+      const meta=(file?file+' • ':'')+evidence;
       const nameBox=audioKind==='cards'?
         '<button type="button" class="audio-name-cut" data-audio-name title="Nhấn đúp để chọn đoạn âm thanh chỉ đọc tên">Tên '+(gmwwAudioHasNameCut(a)?Number(a.roleNameStart||0).toFixed(1)+'–'+Number(a.roleNameEnd).toFixed(1)+'s':'· Chưa cắt')+'</button>':'';
       return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
     }).join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
-  $$('[data-audio-id]').forEach(row=>{
+  $('[data-audio-id]').forEach(row=>{
     const a=list.find(x=>String(x.id)===String(row.dataset.audioId));
     $('[data-audio-play]',row).onclick=()=>playAudioItem(a);
     $('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);
@@ -1445,14 +1491,27 @@ async function renderAudio(){
       button.addEventListener('click',()=>{const now=Date.now();if(now-lastTap<400){lastTap=0;void gmwwOpenAudioNameEditor(a)}else lastTap=now});
     }
   });
-  $$('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
+  $('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
     const id=String(button.dataset.systemSoundSlot||'');
     const item=(state.audio.system||[]).find(x=>String(x.targetId||x.id)===id);
     if(item)replaceAudioItem(item,'system');
     else playFlashError('Chưa tìm được ô Audio Hệ Thống '+id);
   });
 }
-async function playAudioItem(a){if(!a)return;let src='',localUrl=false;const rec=await dbGet(audioBlobKey(audioKind,a.id)).catch(()=>null);let blob=rec?.blob instanceof Blob?rec.blob:null;if(!blob)blob=bundledAudioBlob(a);if(blob){src=URL.createObjectURL(blob);localUrl=true}else if(a.url)src=a.url;if(!src){alert('Âm Thanh này đang Rỗng.');return}const au=new Audio(src);au.preload='auto';const cleanup=()=>{if(localUrl)URL.revokeObjectURL(src)};au.onended=cleanup;au.onerror=()=>{cleanup();alert('Không thể phát file Âm Thanh.')};try{await au.play()}catch(e){cleanup();alert('Không thể phát file Âm Thanh.')}}
+async function playAudioItem(a){
+  if(!a)return;
+  const kind=audioKind;
+  const rec=await dbGet(audioBlobKey(kind,a.id)).catch(()=>null);
+  const blob=(rec?.blob instanceof Blob&&rec.blob.size?rec.blob:null)||bundledAudioBlob(a);
+  const localUrl=!!blob,src=blob?URL.createObjectURL(blob):String(a.url||'');
+  if(!src){alert('Audio chưa có file thực. Hãy gán file vào đúng mục.');return}
+  const au=new Audio(src);au.preload='auto';
+  let cleaned=false;
+  const cleanup=()=>{if(cleaned)return;cleaned=true;if(localUrl)URL.revokeObjectURL(src)};
+  au.onended=cleanup;
+  au.onerror=()=>{cleanup();alert('File đã gán không phát được. Cần thay đúng file Audio.')};
+  try{await au.play()}catch(e){cleanup();alert('Không phát được file Audio này. Kiểm tra quyền phát trên iPhone và file gốc.')}
+}
 function replaceAudioItem(a,category=audioKind){
   if(!a)return;
   // Freeze the category while iOS Files picker is open. The old global audioKind
@@ -3160,20 +3219,31 @@ function battleInvalidateAudioCache(kind,id){
   if(String(url||'').startsWith('blob:'))try{URL.revokeObjectURL(url)}catch{}
   battleAudioReady.delete(key);battleAudioLoading.delete(key);
 }
-function battleFindAudio(kind,targetId,name){
+function battleFindAudioCandidates(kind,targetId,name){
   const list=Array.isArray(state?.audio?.[kind])?state.audio[kind]:[];
-  const label=String(name||'').trim().toLowerCase();
-  // Empty IDs are not a wildcard: this previously played "Xác nhận" for Artifact đầu ván.
-  const fold=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
-  const rawTarget=String(targetId||'');
-  // Saved V1.11 rooms may retain legacy 'source-18' even though the V2 audio
-  // catalog is keyed by 'role_old_witch'. Normalize AUDIO lookup only.
-  const target=kind==='cards'&&(rawTarget==='source-18'||fold(name)==='phu thuy gia')?
-    'role_old_witch':rawTarget;
-  const exact=item=>target&&(String(item?.targetId||'')===target||String(item?.id||'')===target);
-  const candidates=list.filter(item=>exact(item)||(label&&fold(item?.name)===fold(label)&&(!item?.targetId||String(item.targetId)===target)));
-  const linked=item=>!!(item?.url||item?.fileName||item?.sourceKey||item?.verifiedBinary);
-  return candidates.find(item=>exact(item)&&linked(item))||candidates.find(linked)||candidates[0]||null;
+  // Audio IDs are authoritative. Never guess a clip by a shared label:
+  // "Hết giờ", "Xác nhận", "Cứu" and "Giết" are different events.
+  const original=String(targetId||'').trim();
+  const target=kind==='cards'&&original==='source-18'?'role_old_witch':original;
+  if(!target)return [];
+  const found=list.filter(a=>
+    String(a?.targetId||'')===target||
+    (String(a?.id||'')===target&&!a?.targetId)||
+    (kind==='cards'&&target==='role_old_witch'&&a?.sourceKey==='ROLE:source-18'));
+  const score=a=>Number(!!a?.url)+Number(!!(a?.fileName&&a?.verifiedBinary))+
+    2*Number(!!(a?.sourceKey&&(
+      (typeof window!=='undefined'&&window.GMWW_V1_AUDIO?.[a.sourceKey]?.base64)||
+      (typeof gmwwBundledLegacyAudio!=='undefined'&&gmwwBundledLegacyAudio?.[a.sourceKey]?.base64))));
+  return found.sort((a,b)=>score(b)-score(a));
+}
+function battleFindAudio(kind,targetId,name){
+  // Keep legacy callers/tests that extract only this function functional.
+  // The canonical production path uses exhaustive exact-target candidates.
+  if(typeof battleFindAudioCandidates==='function')
+    return battleFindAudioCandidates(kind,targetId,name)[0]||null;
+  const target=kind==='cards'&&String(targetId)==='source-18'?'role_old_witch':String(targetId||'');
+  return (state?.audio?.[kind]||[]).find(item=>String(item.targetId||'')===target||
+    (kind==='cards'&&target==='role_old_witch'&&item.sourceKey==='ROLE:source-18'))||null;
 }
 async function battleWarmAudio(kind,item){
   if(!item)return null;
@@ -3186,7 +3256,7 @@ async function battleWarmAudio(kind,item){
     // never let a stale filename or a mismatched local audio ID silence it.
     const fallback=kind==='cards'&&String(item.targetId||'')==='role_old_witch'?
       bundledAudioBlob({sourceKey:'ROLE:source-18'}):null;
-    const blob=(rec?.blob instanceof Blob?rec.blob:null)||bundledAudioBlob(item)||fallback;
+    const blob=(rec?.blob instanceof Blob&&rec.blob.size>0?rec.blob:null)||bundledAudioBlob(item)||fallback;
     const url=blob?URL.createObjectURL(blob):(typeof item.url==='string'&&/^(https?:|data:audio\/)/i.test(item.url)?item.url:'');
     if(url)battleAudioReady.set(key,url);
     return url||null
@@ -3196,9 +3266,22 @@ async function battleWarmAudio(kind,item){
 }
 function battleSpeakCue(message,showError=false,onFinished=null){
   const speech=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
-  if(!speech||!Voice){if(showError)playFlashError('Chưa gán Audio cho '+message+'. Vui lòng nạp file trong Thư Viện → Âm Thanh.');onFinished?.();return false}
-  try{speech.cancel();const cue=new Voice(String(message||''));cue.lang='vi-VN';cue.rate=.95;cue.onend=()=>onFinished?.();cue.onerror=()=>onFinished?.();speech.speak(cue);return true}
-  catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');onFinished?.();return false}
+  const phrase=String(message||'').trim();
+  if(!phrase||!speech||!Voice){if(showError)playFlashError('Chưa có file Audio hoặc giọng tiếng Việt cho '+phrase+'.');onFinished?.();return false}
+  try{
+    const voices=typeof speech.getVoices==='function'?speech.getVoices():[];
+    const vi=voices.find(v=>/^vi(?:-|$)/i.test(String(v.lang||'')));
+    // iOS sometimes returns an empty voices list until voices load. If the
+    // returned list has ONLY another language, refuse gibberish pronunciation.
+    if(voices.length&&!vi){
+      if(showError)playFlashError('iPhone chưa có giọng tiếng Việt. Hãy nạp file Audio đúng hoặc cài giọng tiếng Việt.');
+      onFinished?.();return false;
+    }
+    speech.cancel();const cue=new Voice(phrase);cue.lang='vi-VN';
+    if(vi)cue.voice=vi;
+    cue.rate=.95;cue.onend=()=>onFinished?.();cue.onerror=()=>onFinished?.();
+    speech.speak(cue);return true;
+  }catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');onFinished?.();return false}
 }
 let battleUnlockedAudioContext=null;
 function battleUnlockAudioFromGesture(){
@@ -3220,7 +3303,7 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
   try{
     const response=await fetch(src);if(!response.ok)return false;
     const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
-    if(requestId!==battleAudioRequestId)return true;
+    if(requestId!==battleAudioRequestId){onFinished?.();return true} // Old decode must release its sequence, never play over the new turn.
     const source=ctx.createBufferSource();source.buffer=buffer;
     globalThis.gmwwBattleBufferSource=source;source.onended=()=>{if(globalThis.gmwwBattleBufferSource===source){globalThis.gmwwBattleBufferSource=null;onFinished?.()}};
     source.connect(ctx.destination);
@@ -3231,26 +3314,111 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
-  const row=battleFindAudio(kind,targetId,name);
-  const key=kind+':'+(row?.id||targetId||name),now=Date.now();
+  let row=battleFindAudio(kind,targetId,name);
+  const key=kind+':'+String(targetId||name),now=Date.now();
   if(!showError&&battleAudioLast.key===key&&battleAudioLast.turn===String(battleState?.key||'')&&now-battleAudioLast.at<350){onFinished?.();return false}
   battleAudioLast={key,at:now,turn:String(battleState?.key||'')};
   const requestId=++battleAudioRequestId;
   if(battleActiveAudio){try{battleActiveAudio.onended=null;battleActiveAudio.onerror=null;battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}battleActiveAudio=null}
   if(globalThis.gmwwBattleBufferSource){try{globalThis.gmwwBattleBufferSource.onended=null;globalThis.gmwwBattleBufferSource.stop()}catch{}globalThis.gmwwBattleBufferSource=null}
   globalThis.speechSynthesis?.cancel();
-  if(!row)return battleSpeakCue(name,showError,onFinished);
-  // When preloaded, play() is invoked before the first asynchronous boundary,
-  // preserving iOS WKWebView user activation on a touch/click.
-  const ready=battleAudioReady.get(key)||null;
-  const src=ready||await battleWarmAudio(kind,row);
-  if(requestId!==battleAudioRequestId){onFinished?.();return false}
-  if(!src)return battleSpeakCue(name,showError,onFinished);
+  // IndexedDB bytes are indexed by row.id, not row.targetId. Iterate all
+  // exact-ID candidate rows so a stale "verifiedBinary" placeholder cannot
+  // mask a real GM upload under an older alternate audio ID.
+  const candidates=typeof battleFindAudioCandidates==='function'
+    ?battleFindAudioCandidates(kind,targetId,name):[row].filter(Boolean);
+  let src=null;
+  for(const candidate of candidates){
+    const found=battleAudioReady.get(kind+':'+String(candidate.id||''))||
+      await battleWarmAudio(kind,candidate);
+    if(requestId!==battleAudioRequestId){onFinished?.();return false}
+    if(found){row=candidate;src=found;break}
+  }
+  // The caller label is not a routing key. Never play an unrelated audio row
+  // based solely on similar names. Missing media falls back to the EXACT cue.
+  const safeSpeech=(()=>{
+    if(kind==='cards'){
+      if(targetId==='audio_group_wolves')return 'Bầy sói ơi dậy đi';
+      const canonical=targetId==='source-18'?'role_old_witch':targetId;
+      const card=(state.cards||[]).find(c=>String(c.id)===String(canonical));
+      return card?card.name+' ơi dậy đi':String(name||'');
+    }
+    if(kind==='actions'){
+      const action=[...(state.actions?.role||[]),...(state.actions?.artifacts||[])].find(a=>a.id===targetId);
+      return String(action?.name||name||'').trim();
+    }
+    if(kind==='artifacts'){
+      const art=(state.artifacts||[]).find(a=>a.id===targetId);
+      return String(art?.name||name||'').trim();
+    }
+    if(kind!=='system')return '';
+    const systemScripts={
+      audio_system_confirm:'Xác nhận',
+      audio_system_countdown:'Còn ba mươi giây',
+      audio_system_time_up:'Hết giờ',
+      audio_system_day_wakeup:'Làng ơi dậy đi',
+      audio_system_gallows_day_long:'Ngày dài rồi',
+      audio_system_gallows_open_nomination:'Bắt đầu đề cử',
+      audio_system_gallows_open_vote:'Bắt đầu bỏ phiếu',
+      audio_system_gallows_nomination_result:'Công bố kết quả đề cử',
+      audio_system_gallows_vote_result:'Công bố kết quả bỏ phiếu',
+      audio_system_gallows_result_saved:'Người bị treo được cứu sống',
+      audio_system_gallows_result_dead:'Người bị treo đã chết',
+      audio_system_morning_expelled:'Đêm qua có người bị đuổi khỏi làng',
+      audio_system_morning_marked:'Người chơi bị Sát Thủ chọn',
+      audio_system_assassin_correct:'Sát Thủ đã chọn đúng, người chơi được sống',
+      audio_system_assassin_wrong:'Sát Thủ đã chọn sai, người chơi đã chết',
+      audio_system_morning_maiden_wolf:'Thiếu Nữ chết vì thăm nhà Sói',
+      audio_system_morning_maiden_follow:'Thiếu Nữ chết theo người được thăm',
+      audio_system_morning_frozen:'Người chơi bị đóng băng',
+      audio_system_morning_silenced:'Người chơi bị câm',
+      audio_system_morning_infected:'Người chơi bị nhiễm bệnh',
+      audio_system_morning_protected:'Người chơi được bảo vệ',
+      audio_system_morning_saved:'Người chơi đã được cứu',
+      audio_system_morning_healed:'Người chơi đã được hồi phục',
+      audio_system_morning_revived:'Người chơi đã hồi sinh',
+      audio_system_morning_blessed:'Người chơi được chúc phúc',
+      audio_system_morning_shielded:'Người chơi đã nhận khiên',
+      audio_system_morning_poisoned:'Người chơi bị đầu độc',
+      audio_system_morning_wolf_bite:'Người chơi bị Sói cắn',
+      audio_system_morning_cursed:'Người chơi bị nguyền rủa',
+      audio_system_morning_deaths_intro:'Đêm qua làng chúng ta có',
+      audio_system_morning_dead_noun:'người chết',
+      audio_system_early_artifacts:'Artifact đầu ván',
+      audio_system_seer_wolf:'Người bạn soi là Sói',
+      audio_system_seer_not_wolf:'Người bạn soi không phải là Sói',
+      audio_system_aura_read:'Người bạn soi là',
+      audio_system_destroyer_role:'Kết quả soi Vai Trò',
+      audio_system_fox_wolf:'Hồ Ly phát hiện có Sói',
+      audio_system_fox_no_wolf:'Hồ Ly không phát hiện Sói',
+      audio_system_bear_wolf:'Thần Gấu phát hiện có Sói',
+      audio_system_bear_no_wolf:'Thần Gấu không phát hiện Sói',
+      audio_system_piper_wolf:'Kẻ Thổi Sáo phát hiện có Sói',
+      audio_system_piper_no_wolf:'Kẻ Thổi Sáo không phát hiện Sói',
+      audio_system_find_seer_yes:'Có Tiên Tri',
+      audio_system_find_seer_no:'Không có Tiên Tri',
+      audio_system_compare_same:'Hai người cùng phe',
+      audio_system_compare_different:'Hai người khác phe'
+    };
+    const number=String(targetId||'').match(/^audio_system_morning_number_(\d+)$/);
+    if(number)return String(Math.max(0,Math.min(30,Number(number[1]))));
+    // Approved event ID is mandatory; a free-form label is never an audio route.
+    return Object.prototype.hasOwnProperty.call(systemScripts,targetId)?
+      String(name||'').trim()||systemScripts[targetId]:'';
+  })();
+  if(!src){if(!row&&showError)playFlashError('Chưa gắn file Audio: '+targetId);
+    return safeSpeech?battleSpeakCue(safeSpeech,showError,onFinished):(onFinished?.(),false)}
   // Exact name clip: prefer decoded WebAudio with explicit offset and duration.
   // WKWebView HTMLAudioElement timeupdate is not guaranteed to fire while hidden.
   const nameStart=Math.max(0,Number(row.roleNameStart)||0);
   const nameEnd=Number(row.roleNameEnd);
-  const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:Number.isFinite(nameEnd)&&nameEnd>nameStart?nameEnd:nameStart+5}:null;
+  const hasExactCut=Number.isFinite(nameEnd)&&nameEnd>nameStart;
+  // Never read an arbitrary first five seconds as a ROLE NAME. The V1 wake-up
+  // clip may start with music, silence or "ơi dậy đi".
+  if(Number(maxSeconds)>0&&!hasExactCut){
+    return battleSpeakCue(String(name||'').trim(),showError,onFinished);
+  }
+  const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:nameEnd}:null;
   if((requestedCut||targetId==='role_old_witch'||targetId==='source-18'||targetId==='audio_system_day_wakeup')&&
      battleUnlockedAudioContext?.state==='running'){
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
@@ -3264,7 +3432,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     if(fallbackStarted||requestId!==battleAudioRequestId)return;
     fallbackStarted=true;
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return;
-    battleSpeakCue(name,showError||String(targetId)==='role_old_witch',onFinished);
+    battleSpeakCue(safeSpeech,showError||String(targetId)==='role_old_witch',onFinished);
   };
   let cutTimer=null,finished=false;
   const finish=()=>{if(finished)return;finished=true;if(cutTimer!==null)clearTimeout(cutTimer);
@@ -3313,7 +3481,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     fallbackStarted=true;finished=true;
     if(battleActiveAudio===player)battleActiveAudio=null;
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,excerpt))return true;
-    return battleSpeakCue(name,showError||['role_old_witch','source-18'].includes(String(targetId)),onFinished)
+    return battleSpeakCue(safeSpeech,showError||['role_old_witch','source-18'].includes(String(targetId)),onFinished)
   }
 }
 function battleTurnAudioCue(turn){
@@ -3890,7 +4058,7 @@ function battleMorningShow(){
     if(heard.has(verdictId))continue;
     heard.add(verdictId);
     const cue=row.kind==='assassin_correct'?'audio_system_assassin_correct':'audio_system_assassin_wrong';
-    void battlePlayConfiguredAudio('system',cue,row.kind==='assassin_correct'?'Chọn đúng':'Chọn sai');
+    battleQueueDayAudio([[cue,row.name+(row.kind==='assassin_correct'?' đã chọn đúng · SỐNG':' đã chọn sai · CHẾT')]]);
   }
 }
 function battleRenderFactionStats(){
@@ -5813,17 +5981,15 @@ function battleTickCountdown(){
   }
   if(phase==='day'&&Number.isFinite(seconds)){
     const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
-    if((playSceneRuntime.room?.autoGM!==false||playSceneRuntime.room?.demo===true)&&seconds<=30&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
+    if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=30&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
       battleState.dayCountdownCueKey=cueKey;
       void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
     }
-    if((playSceneRuntime.room?.autoGM!==false||playSceneRuntime.room?.demo===true)&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
+    if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
       battleState.dayTimeupCueKey=cueKey;
       void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
   }
-  const expired=Number.isFinite(seconds)&&seconds<=0;
-  if(Boolean(battleState.gmwwWalkExpired)!==expired){battleState.gmwwWalkExpired=expired;battleMarkPlayers()}
   const formatted=battleRules()?.formatTime(seconds)||'--:--';
   if(clock.textContent!==formatted)clock.textContent=formatted;
   clock.classList.toggle('is-ending',seconds!==null&&seconds<=10);
@@ -5952,12 +6118,40 @@ function battleShowResultPopup(title,message,scanOnly=false){
 }
 /* Morning notices are derived only from committed interactions for this match and night.
    They must never be synthesized from a selected target or a private role card. */
+let battleDayAudioQueue=null;
+function battleQueueDayAudio(cues){
+  if(playSceneState.phase!=='day'||!Array.isArray(cues)||!cues.length)return;
+  const key=[playSceneRuntime.room?.matchId||'',playSceneState.night||0,
+    playSceneRuntime.room?.cycleStartedAt||''].join(':');
+  if(!battleDayAudioQueue||battleDayAudioQueue.key!==key)
+    battleDayAudioQueue={key,items:[],active:false};
+  const queue=battleDayAudioQueue;
+  queue.items.push(...cues);
+  const playNext=()=>{
+    if(queue!==battleDayAudioQueue||playSceneState.phase!=='day')return;
+    if(queue.active)return;
+    const next=queue.items.shift();if(!next)return;
+    queue.active=true;
+    const [id,label]=next;
+    let done=false,watchdog=null;
+    const complete=()=>{
+      if(done)return;
+      done=true;if(watchdog!==null)clearTimeout(watchdog);
+      queue.active=false;playNext();
+    };
+    // A broken/disabled iOS speech engine must not block all later cues.
+    watchdog=setTimeout(complete,45000);
+    const started=id==='__tts__'?battleSpeakCue(label,false,complete):
+      battlePlayConfiguredAudio('system',id,label,false,complete);
+    void Promise.resolve(started).then(ok=>{if(ok===false)complete()},complete);
+  };
+  playNext();
+}
 function battleMorningPlayAudio(){
   const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
   // Guaranteed day-entry event: the server may skip the optional final
   // village-wakeup NIGHT turn, so speak Làng ơi dậy đi HERE on Day transition.
   queue.push(['audio_system_day_wakeup','Làng ơi dậy đi']);
-  queue.push(['audio_system_gallows_day_long','Ngày dài rồi']);
   queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
   queue.push(['audio_system_morning_number_'+dead,String(dead)]);
   queue.push(['audio_system_morning_dead_noun','người chết']);
@@ -5969,17 +6163,9 @@ function battleMorningPlayAudio(){
       queue.push([/nhà Sói/i.test(row.label)?'audio_system_morning_maiden_wolf':'audio_system_morning_maiden_follow',row.name+' '+row.label]);
     else if(row.kind!=='dead')queue.push(['audio_system_morning_'+row.kind,row.name+' '+row.label]);
   }
-  for(const row of battleMorningRows(Math.max(1,Number(playSceneState.night)||1),'day')){
-    if(row.kind==='assassin_correct')queue.push(['audio_system_assassin_correct','Chọn đúng']);
-    else if(row.kind==='assassin_wrong')queue.push(['audio_system_assassin_wrong','Chọn sai']);
-  }
-  let index=0;
-  const next=()=>{
-    if(index>=queue.length||playSceneState.phase!=='day')return;
-    const [id,label]=queue[index++];
-    void battlePlayConfiguredAudio('system',id,label,false,next);
-  };
-  next();
+  // Responses from Player Web are added by battleMorningShow when confirmed,
+  // not duplicated in this initial snapshot.
+  battleQueueDayAudio(queue);
 }
 function battleDivinationSystemAudioCue(actionId,result){
   const action=String(actionId||'');
@@ -6498,13 +6684,15 @@ function battleRenderGallowsVerdict(g,stage,phase){
     const noLynch=g.outcome==='no_lynch';
     const name=noLynch?'Không ai lên giàn':(battleMember(g.candidateId)?.displayName||g.candidateId);
     const cue=g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved';
-    if(noLynch){void battlePlayConfiguredAudio('system','audio_system_gallows_nomination_result','Hòa phiếu đề cử: hôm nay không ai lên giàn');}
+    if(noLynch)battleQueueDayAudio([['audio_system_gallows_nomination_result','Hòa phiếu đề cử: hôm nay không ai lên giàn']]);
     else if(g.mode==='auto'){
-      void battlePlayConfiguredAudio('system','audio_system_gallows_vote_result',
-        'Kết quả phiếu: '+Number(g.voteTotals?.save||0)+' cứu, '+Number(g.voteTotals?.kill||0)+' giết',
-        false,()=>{if(battleState.gallowsVerdictKey===key)
-          void battlePlayConfiguredAudio('system',cue,name+(g.outcome==='dead'?' chết':' sống'))});
-    }else void battlePlayConfiguredAudio('system',cue,name+(g.outcome==='dead'?' chết':' sống'));
+      const save=Number(g.voteTotals?.save||0),kill=Number(g.voteTotals?.kill||0);
+      battleQueueDayAudio([
+        ['audio_system_gallows_vote_result','Kết quả bỏ phiếu'],
+        ['__tts__','Kết quả phiếu: '+save+' cứu, '+kill+' giết'],
+        [cue,name+(g.outcome==='dead'?' chết':' sống')]
+      ]);
+    }else battleQueueDayAudio([[cue,name+(g.outcome==='dead'?' chết':' sống')]]);
   }
   notice.hidden=!!battleState.gallowsVerdictAcknowledged;
   notice.dataset.outcome=g.outcome;
@@ -6686,9 +6874,12 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     if(data?.ok!==true)throw Error(data?.error||'Server chưa xác nhận.');
     playSceneRuntime.gallows=data.gallows||null;
     // Only play a cue after the Server confirms the phase transition.
-    const cues={open:'audio_system_gallows_open_nomination',close_nomination:'audio_system_gallows_nomination_result',
-      begin:'audio_system_gallows_open_vote'};
-    if(cues[command])void battlePlayConfiguredAudio('system',cues[command],'');
+    const cues={
+      open:[['audio_system_gallows_day_long','Ngày dài rồi'],['audio_system_gallows_open_nomination','Mở đề cử']],
+      close_nomination:[['audio_system_gallows_nomination_result','Công bố đề cử']],
+      begin:[['audio_system_gallows_open_vote','Mở bỏ phiếu']]
+    };
+    if(cues[command])battleQueueDayAudio(cues[command]);
     if(['resolve','restore','close_vote'].includes(command))gmHapticFeedback();
     battleState.gallowsClosedShown=false;
     await playSyncRoom(true);

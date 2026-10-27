@@ -873,17 +873,15 @@ function battleTickCountdown(){
   }
   if(phase==='day'&&Number.isFinite(seconds)){
     const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
-    if((playSceneRuntime.room?.autoGM!==false||playSceneRuntime.room?.demo===true)&&seconds<=30&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
+    if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=30&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
       battleState.dayCountdownCueKey=cueKey;
       void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
     }
-    if((playSceneRuntime.room?.autoGM!==false||playSceneRuntime.room?.demo===true)&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
+    if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
       battleState.dayTimeupCueKey=cueKey;
       void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
   }
-  const expired=Number.isFinite(seconds)&&seconds<=0;
-  if(Boolean(battleState.gmwwWalkExpired)!==expired){battleState.gmwwWalkExpired=expired;battleMarkPlayers()}
   const formatted=battleRules()?.formatTime(seconds)||'--:--';
   if(clock.textContent!==formatted)clock.textContent=formatted;
   clock.classList.toggle('is-ending',seconds!==null&&seconds<=10);
@@ -1012,12 +1010,40 @@ function battleShowResultPopup(title,message,scanOnly=false){
 }
 /* Morning notices are derived only from committed interactions for this match and night.
    They must never be synthesized from a selected target or a private role card. */
+let battleDayAudioQueue=null;
+function battleQueueDayAudio(cues){
+  if(playSceneState.phase!=='day'||!Array.isArray(cues)||!cues.length)return;
+  const key=[playSceneRuntime.room?.matchId||'',playSceneState.night||0,
+    playSceneRuntime.room?.cycleStartedAt||''].join(':');
+  if(!battleDayAudioQueue||battleDayAudioQueue.key!==key)
+    battleDayAudioQueue={key,items:[],active:false};
+  const queue=battleDayAudioQueue;
+  queue.items.push(...cues);
+  const playNext=()=>{
+    if(queue!==battleDayAudioQueue||playSceneState.phase!=='day')return;
+    if(queue.active)return;
+    const next=queue.items.shift();if(!next)return;
+    queue.active=true;
+    const [id,label]=next;
+    let done=false,watchdog=null;
+    const complete=()=>{
+      if(done)return;
+      done=true;if(watchdog!==null)clearTimeout(watchdog);
+      queue.active=false;playNext();
+    };
+    // A broken/disabled iOS speech engine must not block all later cues.
+    watchdog=setTimeout(complete,45000);
+    const started=id==='__tts__'?battleSpeakCue(label,false,complete):
+      battlePlayConfiguredAudio('system',id,label,false,complete);
+    void Promise.resolve(started).then(ok=>{if(ok===false)complete()},complete);
+  };
+  playNext();
+}
 function battleMorningPlayAudio(){
   const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
   // Guaranteed day-entry event: the server may skip the optional final
   // village-wakeup NIGHT turn, so speak Làng ơi dậy đi HERE on Day transition.
   queue.push(['audio_system_day_wakeup','Làng ơi dậy đi']);
-  queue.push(['audio_system_gallows_day_long','Ngày dài rồi']);
   queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
   queue.push(['audio_system_morning_number_'+dead,String(dead)]);
   queue.push(['audio_system_morning_dead_noun','người chết']);
@@ -1029,17 +1055,9 @@ function battleMorningPlayAudio(){
       queue.push([/nhà Sói/i.test(row.label)?'audio_system_morning_maiden_wolf':'audio_system_morning_maiden_follow',row.name+' '+row.label]);
     else if(row.kind!=='dead')queue.push(['audio_system_morning_'+row.kind,row.name+' '+row.label]);
   }
-  for(const row of battleMorningRows(Math.max(1,Number(playSceneState.night)||1),'day')){
-    if(row.kind==='assassin_correct')queue.push(['audio_system_assassin_correct','Chọn đúng']);
-    else if(row.kind==='assassin_wrong')queue.push(['audio_system_assassin_wrong','Chọn sai']);
-  }
-  let index=0;
-  const next=()=>{
-    if(index>=queue.length||playSceneState.phase!=='day')return;
-    const [id,label]=queue[index++];
-    void battlePlayConfiguredAudio('system',id,label,false,next);
-  };
-  next();
+  // Responses from Player Web are added by battleMorningShow when confirmed,
+  // not duplicated in this initial snapshot.
+  battleQueueDayAudio(queue);
 }
 function battleDivinationSystemAudioCue(actionId,result){
   const action=String(actionId||'');
@@ -1558,13 +1576,15 @@ function battleRenderGallowsVerdict(g,stage,phase){
     const noLynch=g.outcome==='no_lynch';
     const name=noLynch?'Không ai lên giàn':(battleMember(g.candidateId)?.displayName||g.candidateId);
     const cue=g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved';
-    if(noLynch){void battlePlayConfiguredAudio('system','audio_system_gallows_nomination_result','Hòa phiếu đề cử: hôm nay không ai lên giàn');}
+    if(noLynch)battleQueueDayAudio([['audio_system_gallows_nomination_result','Hòa phiếu đề cử: hôm nay không ai lên giàn']]);
     else if(g.mode==='auto'){
-      void battlePlayConfiguredAudio('system','audio_system_gallows_vote_result',
-        'Kết quả phiếu: '+Number(g.voteTotals?.save||0)+' cứu, '+Number(g.voteTotals?.kill||0)+' giết',
-        false,()=>{if(battleState.gallowsVerdictKey===key)
-          void battlePlayConfiguredAudio('system',cue,name+(g.outcome==='dead'?' chết':' sống'))});
-    }else void battlePlayConfiguredAudio('system',cue,name+(g.outcome==='dead'?' chết':' sống'));
+      const save=Number(g.voteTotals?.save||0),kill=Number(g.voteTotals?.kill||0);
+      battleQueueDayAudio([
+        ['audio_system_gallows_vote_result','Kết quả bỏ phiếu'],
+        ['__tts__','Kết quả phiếu: '+save+' cứu, '+kill+' giết'],
+        [cue,name+(g.outcome==='dead'?' chết':' sống')]
+      ]);
+    }else battleQueueDayAudio([[cue,name+(g.outcome==='dead'?' chết':' sống')]]);
   }
   notice.hidden=!!battleState.gallowsVerdictAcknowledged;
   notice.dataset.outcome=g.outcome;
@@ -1746,9 +1766,12 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     if(data?.ok!==true)throw Error(data?.error||'Server chưa xác nhận.');
     playSceneRuntime.gallows=data.gallows||null;
     // Only play a cue after the Server confirms the phase transition.
-    const cues={open:'audio_system_gallows_open_nomination',close_nomination:'audio_system_gallows_nomination_result',
-      begin:'audio_system_gallows_open_vote'};
-    if(cues[command])void battlePlayConfiguredAudio('system',cues[command],'');
+    const cues={
+      open:[['audio_system_gallows_day_long','Ngày dài rồi'],['audio_system_gallows_open_nomination','Mở đề cử']],
+      close_nomination:[['audio_system_gallows_nomination_result','Công bố đề cử']],
+      begin:[['audio_system_gallows_open_vote','Mở bỏ phiếu']]
+    };
+    if(cues[command])battleQueueDayAudio(cues[command]);
     if(['resolve','restore','close_vote'].includes(command))gmHapticFeedback();
     battleState.gallowsClosedShown=false;
     await playSyncRoom(true);

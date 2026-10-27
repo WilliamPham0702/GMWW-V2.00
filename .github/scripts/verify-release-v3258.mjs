@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const runtime='3.258';
+const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+const code=fs.readFileSync('server-game/current/app.js','utf8');
+const worker=fs.readFileSync('src/index.js','utf8');
+assert.equal(pkg.version,runtime+'.0');
+assert.equal(lock.version,pkg.version);
+assert.equal(lock.packages[''].version,pkg.version);
+assert.ok(code.includes("const VERSION='"+runtime+"'"));
+assert.ok(html.includes('<title>GMWW V'+runtime+'</title>'));
+assert.ok(worker.includes('VERSION="V'+runtime+'"'));
+assert.ok(worker.includes('UPDATE_CHANNEL_REV="runtime-3258"'));
+assert.ok(code.includes('function battleFindAudioCandidates('));
+assert.ok(code.includes('function battleQueueDayAudio('));
+assert.ok(code.includes('async function audioBindingStatus('));
+assert.ok(fs.statSync('docs/releases/GMWW-V3.258-audio-audit-20261027.md').size>100);
+console.log('GMWW V3.258 Audio release contract SUCCESS');

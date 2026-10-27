@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.257';
+const VERSION='3.258';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -656,18 +656,21 @@ function applyV210Rules(s){
   const witchAudio=cardAudio.filter(a=>a.targetId==='role_old_witch'||a.sourceKey==='ROLE:source-18'||a.name==='Phù Thuỷ Già');
   const keepCard=preferLinked(witchAudio)||{};
   Object.assign(keepCard,{id:keepCard.id||'audio_role_old_witch',name:'Phù Thuỷ Già',targetId:'role_old_witch',sourceKey:keepCard.sourceKey||'ROLE:source-18',fileName:keepCard.fileName||'Phù Thuỷ Già.mp3',verifiedBinary:keepCard.verifiedBinary!==false});
-  s.audio.cards=[keepCard,...cardAudio.filter(a=>!witchAudio.includes(a))];
+  s.audio.cards=[keepCard,...cardAudio.filter(a=>String(a.id)!==String(keepCard.id))];
 
   const actionAudio=(s.audio&&s.audio.actions)||[];
   const canonicalActions=[
     {id:'audio_action_exile',name:'Đuổi Người',targetId:'action_exile',sourceKey:'ACTION:1',fileName:'duoi_nguoi.mp3',verifiedBinary:false},
     {id:'audio_action_revive',name:'Hồi Sinh',targetId:'action_revive',sourceKey:'ACTION:2',fileName:'hoi_sinh.mp3',verifiedBinary:false}
   ];
-  const otherActions=actionAudio.filter(a=>!canonicalActions.some(c=>a.id===c.id||a.targetId===c.targetId||(c.sourceKey&&a.sourceKey===c.sourceKey)||a.name===c.name));
-  s.audio.actions=[...canonicalActions.map(slot=>{
+  const canonicalActionRows=canonicalActions.map(slot=>{
     const previous=preferLinked(actionAudio.filter(a=>a.id===slot.id||a.targetId===slot.targetId||a.sourceKey===slot.sourceKey||a.name===slot.name));
     return {...slot,...(previous||{}),targetId:slot.targetId};
-  }),...otherActions];
+  });
+  // IndexedDB media is keyed by the AUDIO row ID: dropping a duplicate metadata
+  // row silently loses its user-uploaded audio after OTA.
+  const usedActionIds=new Set(canonicalActionRows.map(a=>String(a.id)));
+  s.audio.actions=[...canonicalActionRows,...actionAudio.filter(a=>!usedActionIds.has(String(a.id)))];
 
   const currentCards=s.audio.cards||[];
   const wolfCandidates=currentCards.filter(a=>a.id==='audio_group_wolves'||a.sourceKey==='GROUP:WOLVES'||a.name==='Bầy Sói'||a.name==='Sói thức dậy');
@@ -698,6 +701,15 @@ function applyV210Rules(s){
     {id:'audio_system_morning_frozen',name:'Người chơi bị đóng băng',targetId:'audio_system_morning_frozen',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_silenced',name:'Người chơi bị câm',targetId:'audio_system_morning_silenced',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_infected',name:'Người chơi bị nhiễm bệnh',targetId:'audio_system_morning_infected',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_protected',name:'Người chơi được bảo vệ',targetId:'audio_system_morning_protected',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_saved',name:'Người chơi đã được cứu',targetId:'audio_system_morning_saved',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_healed',name:'Người chơi đã được hồi phục',targetId:'audio_system_morning_healed',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_revived',name:'Người chơi đã hồi sinh',targetId:'audio_system_morning_revived',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_blessed',name:'Người chơi đã được chúc phúc',targetId:'audio_system_morning_blessed',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_shielded',name:'Người chơi đã nhận khiên',targetId:'audio_system_morning_shielded',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_poisoned',name:'Người chơi đã bị đầu độc',targetId:'audio_system_morning_poisoned',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_wolf_bite',name:'Người chơi đã bị Sói cắn',targetId:'audio_system_morning_wolf_bite',fileName:'',verifiedBinary:false},
+    {id:'audio_system_morning_cursed',name:'Người chơi đã bị nguyền rủa',targetId:'audio_system_morning_cursed',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_deaths_intro',name:'Đêm qua làng chúng ta có',targetId:'audio_system_morning_deaths_intro',fileName:'',verifiedBinary:false},
     {id:'audio_system_morning_dead_noun',name:'Người chết',targetId:'audio_system_morning_dead_noun',fileName:'',verifiedBinary:false},
     ...Array.from({length:31},(_,i)=>({id:'audio_system_morning_number_'+i,name:String(i),targetId:'audio_system_morning_number_'+i,fileName:'',verifiedBinary:false})),
@@ -720,14 +732,17 @@ function applyV210Rules(s){
     {id:'audio_system_compare_different',name:'Nhà Tinh Thần Học · Khác Phe',targetId:'audio_system_compare_different',fileName:'',verifiedBinary:false}
   ];
   const systemAliases=new Set(['audio_system_wolf','Sói thức dậy']);
-  const otherSystem=systemAudio.filter(a=>!canonicalSystem.some(c=>a.id===c.id||(c.sourceKey&&a.sourceKey===c.sourceKey)||a.name===c.name)&&!systemAliases.has(a.id)&&!systemAliases.has(a.name));
   // Preserve GM-linked audio URLs and locally uploaded IDs across Runtime upgrades.
-  // Only add missing slots; never overwrite an existing chosen file/audio binding.
-  s.audio.system=[...canonicalSystem.map(slot=>{
+  const canonicalSystemRows=canonicalSystem.map(slot=>{
     const previous=preferLinked(systemAudio.filter(x=>x.id===slot.id||(slot.targetId&&x.targetId===slot.targetId)
       ||x.name===slot.name||(slot.sourceKey&&x.sourceKey===slot.sourceKey)));
     return {...slot,...(previous||{}),id:previous?.id||slot.id,targetId:slot.targetId||previous?.targetId||slot.id,name:slot.name};
-  }),...otherSystem];
+  });
+  const canonicalIds=new Set(canonicalSystemRows.map(x=>String(x.id)));
+  // Never delete a separately uploaded media row simply because its NAME
+  // matches a canonical placeholder. Runtime chooses a verified source by ID.
+  s.audio.system=[...canonicalSystemRows,...systemAudio.filter(a=>!canonicalIds.has(String(a.id))
+    &&!systemAliases.has(a.id)&&!systemAliases.has(a.name))];
 
   const exileAction=(s.actions?.role||[]).find(a=>a.id==='action_exile'||String(a.legacyId)==='1');
   if(exileAction)Object.assign(exileAction,{legacyId:'1',name:'Đuổi Người',description:'Bà phù thủy già đuổi 1 người ra khỏi làng; các tác động lên người đó không có tác dụng.',legacyAudioFile:'duoi_nguoi.mp3'});
@@ -773,7 +788,10 @@ function applyV226Catalog(s,migrating=false){
     if(migrating){a.name=target.name;a.fileName='';a.verifiedBinary=false;delete a.sourceKey;delete a.url}
   };
   for(const c of s.cards)syncAudio('cards',c,'audio_card_');
-  for(const a of s.actions.role)syncAudio('actions',a,'audio_action_');
+  for(const c of s.artifacts)syncAudio('artifacts',c,'audio_artifact_');
+  // Role and Artifact actions share the same action audio catalog.
+  for(const a of [...(s.actions.role||[]),...(s.actions.artifacts||[])])
+    syncAudio('actions',a,'audio_action_');
   if(!s.audio.system.some(x=>x.id==='audio_system_confirm'))s.audio.system.push({id:'audio_system_confirm',name:'Xác nhận',fileName:'',verifiedBinary:false});
   if(!s.audio.system.some(x=>x.id==='audio_system_countdown'))s.audio.system.push({id:'audio_system_countdown',name:'Đếm ngược',fileName:'',verifiedBinary:false});
   if(migrating)for(const a of s.audio.system){a.fileName='';a.verifiedBinary=false;delete a.sourceKey;delete a.url}

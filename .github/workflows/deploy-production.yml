@@ -1267,6 +1267,28 @@ jobs:
           echo "approved=true" >> "$GITHUB_OUTPUT"
           echo "V3.254 Runtime OTA, SHA-256, release notes tiếng Việt, rollback V3.253; IPA unchanged." >> "$GITHUB_STEP_SUMMARY"
 
+      - name: V3.258 — phát hành Audio OTA theo CI cùng SHA
+        id: audio3258_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.258.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3258.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          test -s docs/releases/GMWW-V3.258-audio-audit-20261027.md
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-audio-3258 |"* ]] || { echo "::error::V3.258 không đúng danh sách file Audio"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI V3.258 chưa SUCCESS cùng SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.258 Audio: same-SHA CI, SHA-256, Vietnamese notes, rollback V3.257 and IPA unchanged." >> "$GITHUB_STEP_SUMMARY"
+
       - name: V3.256 — chốt CI hành trình GM và OTA cùng SHA
         id: firewalk3256_release
         shell: bash
@@ -1312,7 +1334,7 @@ jobs:
 
       # Historical V3.236/V3.237 gates are intentionally omitted from the V3.238 release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.firewalk3256_release.outputs.approved != 'true' && steps.drunk255_release.outputs.approved != 'true' && steps.thermal3254_release.outputs.approved != 'true' && steps.motion3253_release.outputs.approved != 'true' && steps.ui3252_release.outputs.approved != 'true' && steps.ui3251_release.outputs.approved != 'true' && steps.role250_release.outputs.approved != 'true' && steps.rule249_release.outputs.approved != 'true' && steps.runtime248_release.outputs.approved != 'true' && steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
+        if: steps.audio3258_release.outputs.approved != 'true' && steps.firewalk3256_release.outputs.approved != 'true' && steps.drunk255_release.outputs.approved != 'true' && steps.thermal3254_release.outputs.approved != 'true' && steps.motion3253_release.outputs.approved != 'true' && steps.ui3252_release.outputs.approved != 'true' && steps.ui3251_release.outputs.approved != 'true' && steps.role250_release.outputs.approved != 'true' && steps.rule249_release.outputs.approved != 'true' && steps.runtime248_release.outputs.approved != 'true' && steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
