@@ -1669,6 +1669,8 @@ function renderPlayBattle(){
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);
+  if(t&&phase==='night'&&!battleState.busy&&!battleState.syncPending&&!playSceneRuntime.busy)
+    battleShowWitchIntel(t);
   if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   // Do not claim a wake-up cue was played during intermediate Server sync, or
   // while the GM is navigating. The first stable role of EVERY night must speak.
