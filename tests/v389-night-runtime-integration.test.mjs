@@ -378,9 +378,10 @@ test('GM undo rejects stale turn and changed state; frozen role owner cannot act
   await h.room.gmTurn(null,{action:'next',expectedTurnId:rt.currentId}); // advance to the next configured role
   assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STALE_TURN');
   const i=await h.data.get('interactions');
-  i.push({id:'freeze-owner',loginId:'carol',type:'frozen',effectActive:true,matchId:'test-match'});
+  i.push({id:'freeze-owner',loginId:'alice',type:'frozen',effectActive:true,matchId:'test-match'});
   h.data.set('interactions',i);
-  const next=await result(await h.room.gmBattleAction(null,{...p,actorId:'carol',turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
+  await h.jump('role'); // After the shared pack turn there may be no second bare-Wolf role.
+  const next=await result(await h.room.gmBattleAction(null,{...p,actorId:'alice',turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
   assert.equal(next.error,'ACTOR_CANNOT_ACT');
 });
 
@@ -444,14 +445,14 @@ test('G4 live DO: frozen actor is blocked on night 1, thawed by morning, acts on
   const success=await result(await h.room.gmBattleAction(null,{...payload,night:2,
     turnId:current.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-night-2-success'}));
   assert.equal(success.ok,true,'once thawed the actor can use their role');
-  const wolfIndex=current.queue.findIndex(row=>
-    ['role','role-group'].includes(row.kind)&&(row.loginIds||[]).includes('carol'));
-  assert.ok(wolfIndex>=0,'wolf waking step exists on night 2');
+  const wolfIndex=current.queue.findIndex(row=>row.kind==='wolf-pack-bite');
+  assert.ok(wolfIndex>=0,'shared Pack Bite step exists when a Wolf was configured');
   await h.room.gmTurn(null,{action:'jump',targetIndex:wolfIndex});
   const wolf=await h.room.getNightRuntime(await h.meta(),2,false);
   const denied=await result(await h.room.gmBattleAction(null,{...payload,actorId:'carol',
-    turnId:wolf.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-dead-wolf-denied',night:2}));
-  assert.equal(denied.error,'ACTOR_CANNOT_ACT','death must persist across night transitions');
+    actionId:'action_wolf_bite',turnId:wolf.currentId,cycleKey:meta2.cycleKey,
+    clientEventId:'g4-dead-wolf-denied',night:2}));
+  assert.equal(denied.error,'INVALID_ACTOR_FOR_TURN','dead wolf has no pack action authority');
 });
 test('G4 live DO: two-night disabled status expires at night 3, not night 2',async()=>{
   const h=harness({artifact:false});
