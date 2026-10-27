@@ -68,6 +68,13 @@ jobs:
           node --test tests/gmww-performance-thermal.test.mjs tests/gm-turn-motion-lowheat.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           test -s docs/releases/GMWW-V3.254-performance-thermal-20261027.md
+      - name: V3.257 — xác minh Production Native và SHA-256 Runtime thủ công
+        if: steps.scope.outputs.mode == 'native-character40-postverify-3257'
+        run: |
+          node --check .github/scripts/verify-character40-production.mjs
+          node --test tests/gmww-v3257-native-character40-postverify.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.257-native-postverify-20261027.md
       - name: V3.254 — Sửa kiểm tra SHA-256 GM và Player Web riêng biệt
         if: steps.scope.outputs.mode == 'character40-postverify-3254'
         run: |
