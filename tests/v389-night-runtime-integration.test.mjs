@@ -16,6 +16,9 @@ import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,r
 import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
 import {oldWitchActionCheck} from '../src/gmww-old-witch-rules.js';
 import {isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
+import {partitionNightSpecialRoles,witchSaveTargetAllowed} from '../src/gmww-witch-drunk-clone-rules.js';
+import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
+import {buildPrivateDeliverySnapshot} from '../src/gmww-delivery-snapshot.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -38,6 +41,7 @@ const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMetho
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,oldWitchActionCheck,
   isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles,
+  partitionNightSpecialRoles,witchSaveTargetAllowed,inheritedRolePlans,buildPrivateDeliverySnapshot,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -660,4 +664,52 @@ test('Delayed alarm never submits expired ballots; it resolves the stage and con
  await h.room.syncDemoClock(meta,await h.storage.get('demoLease'));const clock=h.data.get('demoClock');clock.remainingMs=0;clock.at=Date.now();h.data.set('demoClock',clock);
  await h.storage.put('demoPlan',{key:clock.key,cursor:0,tasks:[{id:'vote:bob',actorId:'bob',kind:'vote'}]});
  await runServerDemo(h.room,meta);assert.equal(h.data.get('gallows:test-match:morning-1').stage,'resolved');assert.equal(h.data.get('demoLease').error||'','');
+});
+
+test('Night 3 actual Durable Object auto-draws dead wolf for Drunk and refreshes private snapshot',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('assignments',[
+    {assignmentIndex:0,loginId:'alice',roleId:'role_drunk',roleName:'Say Rượu',faction:'village'},
+    {assignmentIndex:1,loginId:'bob',roleId:'role_wolf',roleName:'Sói',faction:'wolf'}
+  ]);
+  h.data.set('roles:alice',[{assignmentIndex:0,loginId:'alice',roleId:'role_drunk',
+    roleName:'Say Rượu',faction:'village',matchId:'test-match',roleCard:{functions:[]}}]);
+  h.data.set('roles:bob',[{assignmentIndex:1,loginId:'bob',roleId:'role_wolf',
+    roleName:'Sói',faction:'wolf',matchId:'test-match',
+    roleCard:{factionId:'wolf',functions:[{actionId:'action_wolf_bite',phase:'night'}]}}]);
+  h.data.set('interactions',[{matchId:'test-match',night:2,type:'dead',loginId:'bob',effectActive:true}]);
+  const meta=await h.meta();meta.cycleNight=3;meta.cycleKey='night-3';
+  await h.storage.put('meta',meta);
+  const rt=await h.room.getNightRuntime(meta,3,true);
+  const assigned=await h.storage.get('assignments'),updated=assigned.find(r=>r.loginId==='alice');
+  assert.equal(updated.roleId,'role_wolf');
+  assert.equal(updated.faction,'wolf');
+  assert.ok(rt.queue.some(x=>x.kind==='drunk-draw'&&x.loginIds[0]==='alice'));
+  const snapshot=await h.storage.get('deliverySnapshot:alice');
+  assert.equal(snapshot.roles[0].roleId,'role_wolf');
+  assert.equal(snapshot.deliveryVersion,(await h.meta()).deliveryVersion);
+});
+test('Clone inherits only in next Night after chosen person dies; owner Artifact is unchanged',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('assignments',[
+    {assignmentIndex:0,loginId:'alice',roleId:'role_clone',roleName:'Nhân Bản',faction:'village'},
+    {assignmentIndex:1,loginId:'bob',roleId:'role_witch',roleName:'Phù Thuỷ',faction:'village'}]);
+  h.data.set('roles:alice',[{assignmentIndex:0,loginId:'alice',roleId:'role_clone',
+    roleName:'Nhân Bản',faction:'village',matchId:'test-match',
+    artifact:{artifactId:'owner-asset'},roleCard:{functions:[{actionId:'action_clone_target'}]}}]);
+  h.data.set('roles:bob',[{assignmentIndex:1,loginId:'bob',roleId:'role_witch',
+    roleName:'Phù Thuỷ',faction:'village',matchId:'test-match',
+    artifact:{artifactId:'wrong-donor-asset'},
+    roleCard:{functions:[{actionId:'action_witch_save'}]}}]);
+  h.data.set('interactions',[{matchId:'test-match',night:1,type:'effect_notice',
+    actionId:'action_clone_target',actorId:'alice',loginId:'bob'},
+    {matchId:'test-match',night:1,type:'dead',loginId:'bob',effectActive:true}]);
+  const meta=await h.meta();meta.cycleNight=2;meta.cycleKey='night-2';
+  await h.storage.put('meta',meta);
+  const rt=await h.room.getNightRuntime(meta,2,true);
+  assert.ok(rt.queue.some(x=>x.roleId==='role_witch'));
+  const role=await h.storage.get('role:alice');
+  assert.equal(role.roleId,'role_witch');
+  assert.equal(role.artifact.artifactId,'owner-asset');
+  assert.equal(role.inheritedFromRoleId,'role_clone');
 });

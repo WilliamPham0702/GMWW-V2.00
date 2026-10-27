@@ -22,10 +22,13 @@ export function previousNightTargets(usage,{matchId,roleId,actionId,actorId,nigh
    .flatMap(x=>Array.isArray(x.targetIds)?x.targetIds:[]).map(id).filter(Boolean))];
 }
 export function arrangeNightRoles(roleTurns=[],artifactTurns=[]){
- const roles=Array.isArray(roleTurns)?roleTurns:[],byRole=new Map(roles.map(r=>[r.roleId,r]));
- const fixed=['role_snow_wolf','role_guard'].map(id=>byRole.get(id)).filter(Boolean);
- const wolves=roles.filter(r=>isWolfRole(r)&&r.roleId!=='role_snow_wolf');
- const fairy=byRole.get('role_fairy');
+ const roles=Array.isArray(roleTurns)?roleTurns:[];
+ // Native Snow Wolf acts before Pack Bite. A Drunk who drew Snow Wolf at
+ // Night 3 uses the inherited private power AFTER the shared Pack Bite.
+ const fixed=['role_snow_wolf','role_guard'].map(id=>
+   roles.find(r=>r.roleId===id&&r.drunkInheritedWolf!==true)).filter(Boolean);
+ const wolves=roles.filter(r=>isWolfRole(r)&&!fixed.includes(r));
+ const fairy=roles.find(r=>r.roleId==='role_fairy');
  const rest=roles.filter(r=>!fixed.includes(r)&&!wolves.includes(r)&&r!==fairy);
  const byOrder=(a,b)=>(Number(a.order)||9999)-(Number(b.order)||9999);
  // The caller inserts a shared bite between fixed powers and wolf-only turns.
