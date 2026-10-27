@@ -177,7 +177,8 @@ jobs:
       - name: PR550 focused Snow Wolf Guard Pack Fairy rules regression
         if: steps.scope.outputs.mode == 'night02-rule-regression-550'
         run: |
-          node --test tests/gmww-rule-snow-guard-pack-fairy.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/ci-browser-scope.test.mjs
+          node --test tests/gmww-rule-snow-guard-pack-fairy.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs
+          node --test --test-name-pattern='PR550 focused rules regression only' tests/ci-browser-scope.test.mjs
           node --check src/gmww-pack-night-rules.js
           node --check src/gmww-wolf-night-resolution.js
           node --check src/index.js
