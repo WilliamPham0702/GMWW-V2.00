@@ -3,8 +3,8 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const s=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
 const b=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8'),css=fs.readFileSync('server-game/current/style.css','utf8');
-const levels=[75,100,125,150,175,200];
-test('GM iCon size offers precisely the same six Character levels',()=>{
+const levels=[25,50,75,100,125,150];
+test('GM iCon size offers six approved levels in one row',()=>{
  const section=html.slice(html.indexOf('id="actionIconScaleCard"'),html.indexOf('id="actionIconScaleCard"')+1200);
  assert.match(section,/Kích thước iCon hành động/);
  assert.ok(html.indexOf('id="characterScaleCard"')<html.indexOf('id="actionIconScaleCard"'));
@@ -17,14 +17,14 @@ test('read and update saved iCon size without modifying Character scale',()=>{
  const cssvars={},label={textContent:''},listeners={},memory=new Map([['GMWW_GM_ACTION_ICON_SCALE_V1','150']]);
  const options=levels.map(n=>({dataset:{actionIconScale:String(n)},classList:{toggle(){}},setAttribute(){}}));
  const choices={addEventListener:(e,cb)=>listeners[e]=cb};
- const ctx={CHARACTER_SCALE_OPTIONS:levels,document:{documentElement:{style:{setProperty:(key,val)=>cssvars[key]=val}},querySelectorAll:()=>options,getElementById:id=>id==='actionIconScaleChoices'?choices:id==='actionIconScaleValue'?label:null},
+ const ctx={CHARACTER_SCALE_OPTIONS:[75,100,125,150,175,200],document:{documentElement:{style:{setProperty:(key,val)=>cssvars[key]=val}},querySelectorAll:()=>options,getElementById:id=>id==='actionIconScaleChoices'?choices:id==='actionIconScaleValue'?label:null},
  localStorage:{getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)},console};
  vm.createContext(ctx);new vm.Script(snippet).runInContext(ctx);
  vm.runInContext('initActionIconScaleSetting()',ctx);
  assert.equal(cssvars['--gmww-action-icon-scale'],'1.5');assert.equal(label.textContent,'150%');
- listeners.click({target:{closest:()=>({dataset:{actionIconScale:'200'}})}});
- assert.equal(memory.get('GMWW_GM_ACTION_ICON_SCALE_V1'),'200');
- assert.equal(cssvars['--gmww-action-icon-scale'],'2');
+ listeners.click({target:{closest:()=>({dataset:{actionIconScale:'125'}})}});
+ assert.equal(memory.get('GMWW_GM_ACTION_ICON_SCALE_V1'),'125');
+ assert.equal(cssvars['--gmww-action-icon-scale'],'1.25');
  assert.equal(cssvars['--gmww-character-scale'],undefined);
 });
 test('all icon images and 3-branch Fairy preserve responsive tap boundaries',()=>{

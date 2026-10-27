@@ -522,7 +522,7 @@ function ensurePlayGlobalVillagePoll(){
   playSyncGlobalVillageMotion(true);
   playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy)playSyncGlobalVillageMotion(false)},1500)
 }
-function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN))playSyncRoom(false)},750)}
+function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN))playSyncRoom(false)},2500)}
 function playPlayerRenderSignature(players=playSceneRuntime.players){return (Array.isArray(players)?players:[]).map(p=>[String(p?.loginId||p?.participantId||''),Number(p?.seatId||0),String(p?.gameCharacterId||''),String(p?.movementStatus||''),String(p?.villageActivity||''),String(p?.moveId||''),String(p?.characterAnimation?.state||''),String(p?.characterAnimation?.motion||''),String(p?.characterAnimation?.facing||''),p?.online===false?'0':'1',p?.ready?'1':'0'].join(':')).sort().join('|')+':status:'+JSON.stringify((playSceneRuntime.activeEffects||[]).filter(x=>x?.effectActive!==false).map(x=>[x.loginId,x.type,x.statusId,x.expiresAt]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))))}
 function connectPlaySocket(){
   if(!isLivePlayRoom()){disconnectPlaySocket();setPlayRealtimeState('offline');return}
@@ -534,7 +534,7 @@ function connectPlaySocket(){
   const base=String(GMWW_SERVER_BASE||'').replace(/^http:/,'ws:').replace(/^https:/,'wss:').replace(/\/$/,'');let ws;
   try{ws=new WebSocket(base+'/ws/'+encodeURIComponent(code))}catch{setPlayRealtimeState('offline');return}
   playSceneRuntime.socket=ws;playSceneRuntime.socketRoomCode=code;
-  ws.onopen=()=>{if(playSceneRuntime.socket===ws){setPlayRealtimeState('live');ensurePlayRealtimePoll()}};
+  ws.onopen=()=>{if(playSceneRuntime.socket===ws){playSceneRuntime.socketFailures=0;setPlayRealtimeState('live');ensurePlayRealtimePoll()}};
   ws.onmessage=e=>{try{
     const d=JSON.parse(e.data||'{}');
     if(['demo_event','demo_control','demo_winner'].includes(d.type)&&String(playSceneState.roomCode)===code){void playSyncRoom(true);return}
@@ -580,7 +580,7 @@ function connectPlaySocket(){
     if(movementEvent||d.type==='room_state'){if(playerRenderChanged)renderPlayPlayers();syncPlayMovementTicker();renderPlayRealtimeHeader()}
     else renderPlayScene()
   }catch{}};
-  ws.onclose=()=>{if(playSceneRuntime.socket===ws){playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode='';setPlayRealtimeState('connecting');if(isLivePlayRoom()&&String(playSceneState.roomCode)===code)playSceneRuntime.socketReconnect=setTimeout(connectPlaySocket,650)}};
+  ws.onclose=()=>{if(playSceneRuntime.socket===ws){playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode='';setPlayRealtimeState('connecting');if(isLivePlayRoom()&&String(playSceneState.roomCode)===code){const failures=Math.min(5,Number(playSceneRuntime.socketFailures||0)+1);playSceneRuntime.socketFailures=failures;playSceneRuntime.socketReconnect=setTimeout(connectPlaySocket,Math.min(10000,750*2**failures))}}};
   ws.onerror=()=>{if(playSceneRuntime.socket===ws)setPlayRealtimeState('offline')};
 }
 function playRoomDisplayName(){
@@ -1333,9 +1333,23 @@ async function playCreateRoomNext(){
   document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
   renderPlayScene();
 }
+function playSetupSyncFingerprint(){
+  // Ignore heartbeat timestamps: only rebuild a setup scene when visible state changes.
+  const room=playSceneRuntime.room||{},players=playSceneRuntime.players||[];
+  return JSON.stringify([
+    playSceneState.step,playSceneState.phase,playSceneState.roomMode,
+    room.gmStage,room.phase,room.cyclePhase,room.matchId,room.seatsLocked,room.seatCount,
+    room.mode,room.roomMode,room.roleDealLocked,room.demo,room.statusDisplay,
+    players.map(p=>[p.loginId,p.participantId,p.seatId,p.ready,p.online,p.gameCharacterId,p.villageActivity,p.movementStatus,p.moveId,p.roleId]),
+    (playSceneRuntime.assignments||[]).map(p=>[p.loginId,p.roleId,p.artifactId,p.id]),
+    playSceneRuntime.gameConfig,playSceneRuntime.artifactCycle?.count
+  ]);
+}
 async function playSyncRoom(force=false){
   if(!isLivePlayRoom())return null;
-  if(playSceneRuntime.busy&&!force)return null;
+  if((playSceneRuntime.busy||playSceneRuntime.roomSyncInFlight)&&!force)return null;
+  playSceneRuntime.roomSyncInFlight=true;
+  const beforeRenderKey=playSceneState.step==='battle'?'':playSetupSyncFingerprint();
   const syncSerial=++playSceneRuntime.syncSerial;
   try{
     const data=await playRoomApi('');
@@ -1359,14 +1373,17 @@ async function playSyncRoom(force=false){
     }
     try{await playSyncStatusDisplayDraft()}catch(error){console.warn('Status permissions will retry on next room sync',error)}
     if(typeof demoApplyServerControl==='function')demoApplyServerControl(data.demoControl);
-    savePlayScene();connectPlaySocket();ensurePlayRealtimePoll();renderPlayScene();await playWatchCompletion(data);return data;
+    savePlayScene();connectPlaySocket();ensurePlayRealtimePoll();
+    if(force||playSceneState.step==='battle'||beforeRenderKey!==playSetupSyncFingerprint())renderPlayScene();
+    else renderPlayRealtimeHeader();
+    await playWatchCompletion(data);return data;
   }catch(err){
     if(syncSerial!==playSceneRuntime.syncSerial)return null;
     playSceneRuntime.lastError=String(err.message||err);
     if([401,403,404].includes(Number(err?.status))){forgetPlayRoom(playSceneState.roomCode);clearStalePlayRoom();if(force)playFlashError('Phòng cũ không còn tồn tại. Đã trả GM về Làng hiện tại.');return null}
     if(force)playFlashError('Không đồng bộ được Phòng '+playSceneState.roomCode+'. '+playSceneRuntime.lastError);
     return null;
-  }
+  }finally{if(syncSerial===playSceneRuntime.syncSerial)playSceneRuntime.roomSyncInFlight=false}
 }
 function playMovementPoint(m,pos,now=playNow()){if(m?.movementStatus!=='moving')return pos;const p=globalThis.GMWW_VILLAGE_LAYOUT.interpolate(m,now);return[p.x,p.y]}
 function stopPlayMovementTicker(){if(playSceneRuntime.moveTicker){cancelAnimationFrame(playSceneRuntime.moveTicker);playSceneRuntime.moveTicker=0}}

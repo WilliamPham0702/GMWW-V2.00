@@ -8596,3 +8596,23 @@ body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > but
 #start #playShell[data-step="battle"] .gmww-fairy-panel{
  width:min(calc(276px * var(--gmww-action-icon-scale,1)),calc(100vw - 28px))!important;
 }
+
+/* V3.248: all six iCon size choices on ONE row, including iPhone SE. */
+#settings #actionIconScaleChoices.character-scale-choices{
+ display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+ gap:3px!important;width:100%;max-width:100%;min-width:0;
+}
+#settings #actionIconScaleChoices button{
+ min-width:0!important;min-height:40px!important;padding:4px 1px!important;
+ font-size:clamp(10px,2.55vw,12px)!important;white-space:nowrap!important;letter-spacing:-.2px;
+}
+/* DEMO is a status line of the bottom action box, never a new GM-menu item. */
+#battleDemoPanel[hidden],#battleActionTray[hidden] #battleDemoPanel{display:none!important}
+#battleActionTray #battleDemoPanel.gmww-demo-tray-status{
+ display:block;min-width:0;max-width:100%;padding:0 8px 5px;
+ background:transparent;border:0;box-shadow:none;
+}
+#battleActionTray #battleDemoStatus{
+ margin:0;font-size:11px;line-height:1.3;text-align:center;
+ overflow-wrap:normal;white-space:normal;word-break:normal;
+}
