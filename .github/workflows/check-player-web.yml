@@ -530,6 +530,16 @@ jobs:
           node --check server-game/current/app.js
           test -s docs/releases/GMWW-V3.247-icon-size-20261027.md
 
+      - name: V3.247 — postmerge iCon/OTA đúng phạm vi, không chạy legacy suite
+        if: steps.scope.outputs.mode == 'icon-scale-3247-postmerge'
+        run: |
+          node --test tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs tests/ci-v3247-postmerge.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.247-icon-size-20261027.md
+
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test

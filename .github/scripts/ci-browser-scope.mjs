@@ -1857,7 +1857,32 @@ export function isIcon247Scope(changes){
  }catch{return false}
 }
 
+
+// Only allow the V3.247 recovery CI on an exact four-file follow-up to the
+// already-tested PR #551. The game source, package and IPA must be unchanged.
+const icon247PostMergePaths=new Set([".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","tests/ci-v3247-postmerge.test.mjs"]);
+export function isIcon247PostMergeScope(changes){
+ if(!Array.isArray(changes)||changes.length!==icon247PostMergePaths.size||
+    new Set(changes.map(c=>c.path)).size!==icon247PostMergePaths.size||
+    !changes.every(c=>icon247PostMergePaths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ try{
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+  const settings=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+  const css=fs.readFileSync('server-game/current/style.css','utf8');
+  git('merge-base','--is-ancestor','688d348bc690c26060e3b8344b31f738ee9d1ca9','HEAD');
+  return pkg.version==='3.247.0'&&html.includes('<title>GMWW V3.247</title>')&&
+    html.includes('id="actionIconScaleCard"')&&
+    settings.includes('initActionIconScaleSetting')&&
+    gm.includes('function battleIconScaleRatio()')&&
+    css.includes('--gmww-action-icon-scale')&&
+    fs.existsSync('docs/releases/GMWW-V3.247-icon-size-20261027.md');
+ }catch{return false}
+}
+
 export function classifyBrowserScope(changes){
+  if(isIcon247PostMergeScope(changes))return 'icon-scale-3247-postmerge';
   if(isIcon247Scope(changes))return 'icon-scale-3247';
   if(isRules550Scope(changes))return 'night02-rule-regression-550';
   // A partial/expanded PR550 change must never masquerade as a historic CI-only scope.
@@ -2072,6 +2097,16 @@ function detect(){
       if(icons.count===19&&Array.isArray(icons.icons)&&icons.icons.length===19)
         return{mode:'icon-runtime-3210',reason:'Owner-dispatched V3.210 only, SHA-256 and icon scope verified'};
     }
+  }
+  // Production recovery: all deployed code is identical to merged #551;
+  // only the four CI/release files may change. Unknown diffs remain full.
+  if(process.env.GMWW_CI_EVENT==='push'){
+   try{
+    const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+    const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path}});
+    if(isIcon247PostMergeScope(changes))
+     return{mode:'icon-scale-3247-postmerge',reason:'Exact four-file same-version V3.247 recovery'};
+   }catch{}
   }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
