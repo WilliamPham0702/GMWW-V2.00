@@ -1,0 +1,24 @@
+name: Check GM audio role/day/vote
+on:
+  pull_request:
+    paths:
+      - 'server-game/src/10-library-and-settings.part'
+      - 'server-game/src/30-village-and-setup.part'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/current/app.js'
+      - 'tests/audio-role-day-flow-20261027.test.mjs'
+      - 'tests/audio-binding-integrity-20261027.test.mjs'
+      - '.github/workflows/check-gm-audio-role-day.yml'
+  workflow_dispatch:
+jobs:
+  audio-focused:
+    name: GM Audio flow + bundle only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: JS syntax and assembled bundle
+        run: |
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Audio role/day/countdown/assassin/vote targeted regression
+        run: node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs

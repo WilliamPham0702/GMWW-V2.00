@@ -644,6 +644,17 @@ jobs:
           node --check server-game/current/gmww-shared-motion.js
           node --check src/index.js
           test -s docs/releases/GMWW-V3.253-gm-turn-motion-20261027.md
+      - name: V3.258 — CI đúng phạm vi Audio đêm/ngày/phiếu/role
+        if: steps.scope.outputs.mode == 'gm-audio-3258'
+        run: |
+          node .github/scripts/verify-release-v3258.mjs
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.258-audio-audit-20261027.md
+
       - name: V3.256 — GM đi bộ quanh lửa, hết giờ chạy về, nhiệt thấp
         if: steps.scope.outputs.mode == 'gm-fire-walk-3256'
         run: |
