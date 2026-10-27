@@ -540,6 +540,18 @@ jobs:
           node --check server-game/current/app.js
           test -s docs/releases/GMWW-V3.247-icon-size-20261027.md
 
+      - name: V3.248 — Test iCon, giao diện DEMO/Ngày và tối ưu sáu bước setup
+        if: steps.scope.outputs.mode == 'runtime-3248-setup-ui'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/gmww-v3248-setup-ui-perf.test.mjs tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md
+
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
