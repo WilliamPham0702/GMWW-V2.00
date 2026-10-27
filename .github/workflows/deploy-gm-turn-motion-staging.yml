@@ -81,11 +81,22 @@ jobs:
         run: |
           set -euo pipefail
           BASE="https://gmww-gm-turn-motion-staging.williampham0702.workers.dev"
-          curl --fail --silent --show-error --retry 10 --retry-all-errors --retry-delay 2 "$BASE/api/health" > /tmp/gm-turn-health.json
+          fetch_live() {
+            local suffix="$1" dest="$2" code=''
+            for i in $(seq 1 25); do
+              code=$(curl --location --silent --show-error --max-time 10 -o "$dest" -w '%{http_code}' "$BASE/$suffix" || true)
+              if [ "$code" = '200' ]; then echo "PASS HTTP 200: /$suffix"; return 0; fi
+              echo "STAGING warming up: /$suffix returned ${code:-network error} (try $i)"
+              sleep 2
+            done
+            echo "::error::STAGING route failed: /$suffix HTTP $code"
+            return 1
+          }
+          fetch_live api/health /tmp/gm-turn-health.json
           grep -q '"project":"GMWW-V2.00"' /tmp/gm-turn-health.json
-          curl --fail --silent --show-error "$BASE/gm-turn-stage/GMWW.html" > /tmp/gm-turn-gm.html
+          fetch_live gm-turn-stage/GMWW.html /tmp/gm-turn-gm.html
           grep -q 'battleGMTurnMotion' /tmp/gm-turn-gm.html
-          curl --fail --silent --show-error "$BASE/gm-turn-stage/app.js" > /tmp/gm-turn-app.js
+          fetch_live gm-turn-stage/app.js /tmp/gm-turn-app.js
           grep -q 'GMWW_SERVER_BASE=window.location.origin' /tmp/gm-turn-app.js
           grep -q 'GMWW_GM_TURN_MOTION_V1' /tmp/gm-turn-app.js
           ! grep -q 'gmww-v2-00.williampham0702.workers.dev' /tmp/gm-turn-app.js
