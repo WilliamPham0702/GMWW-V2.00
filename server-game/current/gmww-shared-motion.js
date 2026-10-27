@@ -29,21 +29,28 @@ const CATALOG={"character-01":{"id":"character-01","original":"originals/charact
 const roots=new Set(),images=new Map();let raf=0,last=0;
 // Conserve CPU/GPU power on iPhones: most Atlas poses change far less often
 // than the display's 60 Hz refresh rate. Keep motion time-based, not frame-based.
-const paintInterval=()=>roots.size>=16?1000/24:1000/30;
+// Opt-in low power is supplied exclusively by GM battle UI; Player Web keeps its existing cadence.
+const paintInterval=()=>roots.size&&[...roots].every(r=>r._gmwwLowPower)?1000/15:roots.size>=16?1000/24:1000/30;
 function visualId(id){return id==='character-41'?'character-39':id==='character-42'?'character-40':id;}
 function supports(id){return !!CATALOG[visualId(id)];}
-function imageFor(url){if(!images.has(url)){const im=new Image();im.decoding='async';im.src=url;images.set(url,im);}return images.get(url);}
+function imageFor(url){if(!images.has(url)){const im=new Image();im.decoding='async';im.onload=()=>{if(roots.size&&!raf&&!document.hidden)raf=requestAnimationFrame(loop)};im.src=url;images.set(url,im);}return images.get(url);}
 function actionFor(command){return command.state==='dead'?'idle':command.motion==='turn'?'turn':command.state==='running'?'run':command.state==='walking'?'walk':'idle';}
 function apply(root,command={}){
  const id=command.characterId||root.dataset.characterId,c=CATALOG[visualId(id)];if(!c)return false;
  const changed=root.dataset.characterId!==id;
  if(changed){root.dataset.characterId=id;root._gmwwMotion=createMotion(c);root._gmwwCharacter=c;root._gmwwWantedFacing=undefined;root._gmwwPending=null;root._gmwwFrameScale=0;}
- const s=root._gmwwMotion,action=actionFor(command),facing=command.facing==='left'?'left':'right';
+ const s=root._gmwwMotion,action=actionFor(command),facing=command.facing==='left'?'left':'right',wasPaused=!!root._gmwwPaused,wasAction=s.action;
  if(s.action==='turn'&&root._gmwwPending){root._gmwwPending={action:action==='turn'?'idle':action,facing};}
  else if((root._gmwwWantedFacing!==undefined&&s.facing!==facing)||action==='turn'){root._gmwwPending={action:action==='turn'?'idle':action,facing:action==='turn'&&s.facing===facing?(facing==='left'?'right':'left'):facing};setAction(s,'turn');}
  else {if(s.action!==action)setAction(s,action);s.facing=facing;}
  root._gmwwWantedFacing=facing;
- root._gmwwPaused=command.paused===true||command.state==='dead';root.dataset.state=action==='walk'?'walking':action==='run'?'running':'idle';root.dataset.motion=action;root.dataset.facing=facing;return true;
+ root._gmwwPaused=command.paused===true||command.state==='dead';
+ root._gmwwLowPower=command.lowPower===true;
+ root.dataset.state=action==='walk'?'walking':action==='run'?'running':'idle';root.dataset.motion=action;root.dataset.facing=facing;
+ // First/last static battle pose is painted once, then the entire rAF loop can sleep.
+ if(root._gmwwLowPower&&root._gmwwPaused&&(changed||!wasPaused||wasAction!==s.action))paint(root,0);
+ if(!raf&&roots.has(root)&&!document.hidden&&(!root._gmwwLowPower||!root._gmwwPaused))raf=requestAnimationFrame(loop);
+ return true;
 }
 function paint(root,dt){
  const canvas=root.firstElementChild,c=root._gmwwCharacter,s=root._gmwwMotion;
@@ -67,8 +74,14 @@ function loop(now){
  if(document.hidden){last=0;return;} // visibilitychange resumes the loop.
  if(last&&now-last<paintInterval()-1){if(roots.size)raf=requestAnimationFrame(loop);return;}
  const dt=Math.min(80,Math.max(0,now-(last||now)));last=now;
- for(const root of roots){if(!root.isConnected){roots.delete(root);continue;}paint(root,dt);}
- if(roots.size)raf=requestAnimationFrame(loop);else last=0;
+ for(const root of roots){
+  if(!root.isConnected){roots.delete(root);continue;}
+  if(root._gmwwLowPower&&root._gmwwPaused&&root._gmwwDrawKey)continue;
+  paint(root,dt);
+ }
+ // No 60Hz wakeups for 30 idle GM characters: wake only on target motion or atlas load.
+ if([...roots].some(root=>!root._gmwwLowPower||!root._gmwwPaused))raf=requestAnimationFrame(loop);
+ else last=0;
 }
 // Pausing matters more than FPS throttling when Safari is backgrounded.
 if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{
