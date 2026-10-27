@@ -606,6 +606,16 @@ jobs:
           node --check server-game/current/app.js
           node --check src/index.js
           test -s docs/releases/GMWW-V3.252-uniform-maintenance-boxes-20261027.md
+      - name: V3.253 — chỉ kiểm thử GM Bay/Chạy và giảm nóng máy
+        if: steps.scope.outputs.mode == 'gm-turn-motion-lowheat'
+        run: |
+          node --test tests/gm-turn-motion-lowheat.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check server-game/current/gmww-shared-motion.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.253-gm-turn-motion-20261027.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
