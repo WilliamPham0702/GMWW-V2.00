@@ -1970,7 +1970,9 @@ function isGMTurnMotionScope(changes){
     content('server-game/current/gmww-shared-motion.js').includes('_gmwwLowPower')&&
     content('package.json').includes('"version": "3.253.0"');
 }
+function isGMPerformance3254Scope(changes){const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/scripts/verify-release-v3254.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/build-server-game-ipa.yml","docs/releases/GMWW-V3.254-performance-thermal-20261027.md","server-game/current/GMWW.html","server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","server-game/current/style.css","server-game/current/app.js","server-game/src/00-core-and-library.part","tests/gmww-performance-thermal.test.mjs","tests/gm-turn-motion-lowheat.test.mjs","package.json","package-lock.json","src/index.js"]);return Array.isArray(changes)&&changes.length>0&&changes.every(c=>allowed.has(c.path)&&['M','A'].includes(c.status))&&["server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","server-game/current/GMWW.html","tests/gmww-performance-thermal.test.mjs","src/index.js","package.json","package-lock.json"].every(p=>changes.some(c=>c.path===p))&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.254.0';}
 export function classifyBrowserScope(changes){
+ if(isGMPerformance3254Scope(changes))return 'gm-performance-thermal-3254';
   if(isGMTurnMotionScope(changes))return 'gm-turn-motion-lowheat';
   if(isRuntime248PostMergeScope(changes))return 'runtime-3248-postmerge';
   if(isRuntime248SetupUiScope(changes))return 'runtime-3248-setup-ui';
@@ -2060,6 +2062,18 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+ if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+  try{
+   if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.254.0'){
+    const base=process.env.GMWW_CI_EVENT==='push'||String(process.env.GITHUB_REF||'').startsWith('refs/pull/')?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+    if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+     execFileSync(process.execPath,['.github/scripts/verify-release-v3254.mjs'],{encoding:'utf8',env:{...process.env,GMWW_V3254_BASE:base}});
+     return{mode:'gm-performance-thermal-3254',reason:'V3.254 scoped GM performance after 3.253 motion'};
+    }
+   }
+  }catch{}
+ }
+
   // V3.252: iPhone maintenance grid is flat, all 16 original handlers unchanged.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{

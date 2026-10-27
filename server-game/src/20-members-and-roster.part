@@ -868,14 +868,7 @@ window.addEventListener('message',async event=>{
   const roomCode=String(event.data.roomCode||'').trim().toUpperCase(),
     token=String(event.data.gmToken||'');
   if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(roomCode)||
-     !new RegExp('^[A-Za-z0-9._~+/=:-]{12,256}
-function playLiveMembers(){
-  if(Array.isArray(playSceneRuntime.players)&&playSceneRuntime.players.length)return playSceneRuntime.players.filter(p=>p?.kind==='member');
-  const rows=Array.isArray(memberAdminState?.members)?memberAdminState.members:[],wanted=new Set((playSceneState.selectedMemberIds||[]).map(String));
-  if(wanted.size)return rows.filter(m=>wanted.has(String(m.loginId)));
-  return [];
-}
-).test(token))return;
+     !new RegExp('^[A-Za-z0-9._~+/=:-]{12,256}$').test(token))return;
   const serial=++gmwwArenaAdoptSerial;
   try{
     const response=await fetch(GMWW_SERVER_BASE+'/api/gm/rooms/'+encodeURIComponent(roomCode),{

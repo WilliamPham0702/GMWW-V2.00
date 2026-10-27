@@ -55,7 +55,7 @@ test('GM-only switch, DOM selector and reduce-motion prevent unwanted visuals',(
 test('GM character atlas loop sleeps when no moving target and resumes on motion',()=>{
   assert.match(motion,/root\._gmwwLowPower=command\.lowPower===true/);
   assert.match(motion,/if\(root\._gmwwLowPower&&root\._gmwwPaused&&root\._gmwwDrawKey\)continue/);
-  assert.match(motion,/if\(\[\.\.\.roots\]\.some\(root=>!root\._gmwwLowPower\|\|!root\._gmwwPaused\)\)/);
+  assert.ok(motion.includes('[...roots].some(root=>!root._gmwwLowPower||!root._gmwwPaused)') || motion.includes('[...roots].some(root=>root.isConnected&&(!root._gmwwLowPower||!root._gmwwPaused))'), 'low-power renderer must stop its loop when every root is paused');
   assert.match(motion,/1000\/15/);
   assert.match(motion,/im\.onload=/);
 });
