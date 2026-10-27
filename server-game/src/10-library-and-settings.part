@@ -369,9 +369,10 @@ setTimeout(initCharacterScaleSetting,0);
 
 /* GMWW V3.247: device-local icon size uses the same six Character steps. */
 const ACTION_ICON_SCALE_STORAGE_KEY='GMWW_GM_ACTION_ICON_SCALE_V1';
+const ACTION_ICON_SCALE_OPTIONS=[25,50,75,100,125,150];
 function normalizeActionIconScale(value){
  const n=Number(value);if(!Number.isFinite(n))return 100;
- return CHARACTER_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,100);
+ return ACTION_ICON_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,100);
 }
 function applyActionIconScale(value){
  const n=normalizeActionIconScale(value);

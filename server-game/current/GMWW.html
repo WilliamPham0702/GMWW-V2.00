@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.247</title>
-<link rel="stylesheet" href="style.css?v=gmww-v3247-icon-size">
+<title>GMWW V3.248</title>
+<link rel="stylesheet" href="style.css?v=gmww-v3248-setup-ui-speed">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -246,6 +246,7 @@
         </section>
         <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
           <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><button id="battleAudioReplay" type="button" title="Phát lại Audio của hành động hoặc lượt hiện tại" aria-label="Phát Audio hành động hiện tại">🔊</button></div>
+          <section id="battleDemoPanel" hidden aria-label="Trạng thái DEMO" class="gmww-demo-tray-status"><p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng</p></section>
           <div id="battleActionRail" class="battle-action-rail" role="group" aria-label="Hành động một hàng: vuốt ngang để xem, kéo lên người chơi để tác động">
             <button id="battleActionPrevious" class="battle-action-arrow" type="button" aria-label="Xem hành động phía trước" hidden aria-hidden="true" tabindex="-1">‹</button>
             <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, kéo nút lên người chơi"></div>
@@ -374,9 +375,7 @@
               <button id="battleQuickKill" type="button" aria-pressed="false">Giết</button>
               <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">Thoát</button>
               <button id="battleForceEnd" type="button" title="Kết thúc Ván">Kết Thúc</button>
-              <section id="battleDemoPanel" hidden aria-label="Trạng thái DEMO">
-               <p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng</p>
-             </section>
+              
            </div>
           </div>
           <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
@@ -790,12 +789,13 @@
         <div class="settings-tool-inner character-scale-card" id="actionIconScaleCard">
           <div class="settings-title"><div><h3>Kích thước iCon hành động</h3><small>Chỉ đổi iCon GM trong trận; không đổi Character hoặc gameplay</small></div><b id="actionIconScaleValue">100%</b></div>
           <div id="actionIconScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước iCon hành động">
+            <button type="button" data-action-icon-scale="25">25%</button>
+            <button type="button" data-action-icon-scale="50">50%</button>
             <button type="button" data-action-icon-scale="75">75%</button>
             <button type="button" data-action-icon-scale="100">100%</button>
             <button type="button" data-action-icon-scale="125">125%</button>
             <button type="button" data-action-icon-scale="150">150%</button>
-            <button type="button" data-action-icon-scale="175">175%</button>
-            <button type="button" data-action-icon-scale="200">200%</button>
+          
           </div>
         </div>
         </div>
@@ -1017,7 +1017,7 @@
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
 <script src="action-icon-library.js?v=sea-art-v3"></script>
-<script src="app.js?v=gmww-v3247-icon-size"></script>
+<script src="app.js?v=gmww-v3248-setup-ui-speed"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
