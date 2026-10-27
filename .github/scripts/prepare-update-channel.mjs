@@ -53,6 +53,7 @@ copy('server-game/current/status-visuals.js','status-visuals.js');
 copy('server-game/current/status-visuals.css','status-visuals.css');
 copy('server-game/current/character-renderer.js','character-renderer.js');
 copy('server-game/current/gmww-shared-motion.js','gmww-shared-motion.js');
+copy('server-game/current/gmww-performance.js','gmww-performance.js');
 copy('server-game/current/character-renderer.css','character-renderer.css');
 copy('server-game/current/gmww-village-coast.svg','gmww-village-coast.svg');
 copy('assets/village/village-layout.js','village-layout.js');
