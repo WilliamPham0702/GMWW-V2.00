@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - feature/gm-turn-flight-target-run-lowheat-20261027
+      - fix/gm-fire-walk-visible-position-pr568-20261027
     paths:
       - 'server-game/current/**'
       - 'server-game/src/30-village-and-setup.part'
       - 'server-game/src/40-battle-and-timeline.part'
       - 'tests/gm-turn-motion-lowheat.test.mjs'
+      - 'tests/gm-fire-walk-position.test.mjs'
       - '.github/scripts/build-gm-turn-motion-staging.mjs'
       - '.github/workflows/deploy-gm-turn-motion-staging.yml'
       - 'wrangler.gm-turn-motion-staging.jsonc'
@@ -33,7 +35,7 @@ jobs:
       - run: npm ci
       - name: GM-only tests, source assembly and JS syntax
         run: |
-          node --test tests/gm-turn-motion-lowheat.test.mjs
+          node --test tests/gm-turn-motion-lowheat.test.mjs tests/gm-fire-walk-position.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node --check server-game/current/app.js
           node --check server-game/current/gmww-shared-motion.js
@@ -53,11 +55,13 @@ jobs:
           node --check assets/gm-turn-stage/app.js
           npx wrangler deploy --config wrangler.gm-turn-motion-staging.jsonc --dry-run
       - name: Ensure release notes
-        run: test -s docs/releases/GMWW-GM-TURN-MOTION-20261027.md
+        run: |
+          test -s docs/releases/GMWW-GM-TURN-MOTION-20261027.md
+          if [ "$GITHUB_REF_NAME" = fix/gm-fire-walk-visible-position-pr568-20261027 ]; then test -s docs/releases/GMWW-GM-FIRE-WALK-POSITION-FIX-20261027.md; fi
 
   deploy-staging:
     needs: validate
-    if: github.ref == 'refs/heads/feature/gm-turn-flight-target-run-lowheat-20261027'
+    if: github.ref == 'refs/heads/feature/gm-turn-flight-target-run-lowheat-20261027' || github.ref == 'refs/heads/fix/gm-fire-walk-visible-position-pr568-20261027'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
