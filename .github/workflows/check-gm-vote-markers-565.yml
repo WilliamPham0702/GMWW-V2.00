@@ -8,6 +8,11 @@ on:
       - 'server-game/current/style.css'
       - 'tests/gm-gallows-vote-markers-ui.test.mjs'
       - '.github/workflows/check-gm-vote-markers-565.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-production.yml'
+      - '.github/workflows/check-gm-vote-markers-565.yml'
   workflow_dispatch:
 permissions:
   contents: read
