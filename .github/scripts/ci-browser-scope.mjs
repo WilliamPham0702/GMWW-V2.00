@@ -2071,6 +2071,22 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // Owner-approved V3.255 Drunk/Spiritualist-only release. Any file outside
+  // the verified source allowlist falls back to full checks.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.255.0'){
+        const base=process.env.GMWW_CI_EVENT==='pull_request'?
+          String(process.env.GMWW_CI_BASE_SHA||''):'HEAD^1';
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3255.mjs'],{
+            encoding:'utf8',env:{...process.env,GMWW_V3255_BASE:base}});
+          return {mode:'drunk-spiritualist-3255',
+            reason:'Strict V3.255 Server + private Player Web + GM draw and neutral faction comparison'};
+        }
+      }
+    }catch{} // Fail closed, never waive unrelated source changes.
+  }
  // V3.254 CI-only safety repair: no Runtime, Player or IPA changes.
  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
    try{
