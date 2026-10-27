@@ -55,7 +55,7 @@
     if(!turn||turn.kind==="wolf-introduction"||turn.kind==="village-wakeup")return [];
     if(turn.kind==="wolf-pack-bite")
       return [{id:"wolf-pack:action_wolf_bite",roleId:"wolf-pack",actionId:"action_wolf_bite",name:"Sói Cắn",type:"effect_notice",
-        actorIds:[...(turn.loginIds||[])],targetCount:1,noSelf:false,allowDead:false,noTarget:false,effectIds:["effect_wolf_bite"]}];
+        actorIds:[...(turn.biteActorIds||turn.loginIds||[])],targetCount:1,noSelf:false,allowDead:false,noTarget:false,effectIds:["effect_wolf_bite"]}];
     const roles=Array.isArray(catalog?.cards)?catalog.cards:[],
       artifacts=Array.isArray(catalog?.artifacts)?catalog.artifacts:[],
       definitions=catalog?.actions||[];
