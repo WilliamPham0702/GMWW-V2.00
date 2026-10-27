@@ -1944,7 +1944,23 @@ export function isRuntime248PostMergeScope(changes){
  }catch{return false}
 }
 
+// New GM-only motion is fully local to the GM UI and atlas; never trigger unrelated Player Card/Seat suites.
+const gmTurnMotionPaths=new Set([
+  'server-game/current/app.js','server-game/current/GMWW.html','server-game/current/style.css',
+  'server-game/current/gmww-shared-motion.js',
+  'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-TURN-MOTION-20261027.md',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+]);
+function isGMTurnMotionScope(changes){
+  const paths=new Set((changes||[]).map(c=>c.path));
+  return ['server-game/current/app.js','server-game/current/gmww-shared-motion.js',
+    'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+    'tests/gm-turn-motion-lowheat.test.mjs'].every(p=>paths.has(p))&&
+    changes.every(c=>gmTurnMotionPaths.has(c.path)&&['A','M'].includes(c.status));
+}
 export function classifyBrowserScope(changes){
+  if(isGMTurnMotionScope(changes))return 'gm-turn-motion-lowheat';
   if(isRuntime248PostMergeScope(changes))return 'runtime-3248-postmerge';
   if(isRuntime248SetupUiScope(changes))return 'runtime-3248-setup-ui';
   if(isIcon247PostMergeScope(changes))return 'icon-scale-3247-postmerge';
