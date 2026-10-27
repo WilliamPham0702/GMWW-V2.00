@@ -2787,7 +2787,7 @@ export class RoomDurableObject extends DurableObject {
       const summary=outcome.assignments.find(x=>normalizeLoginId(x.loginId)===actorId);
       if(!picked||!summary)return j({ok:false,error:'DRUNK_ROLE_TRANSFER_INCOMPLETE'},409);
       const pack=runtime.queue.find(x=>x.kind==='wolf-pack-bite');
-      const wolf=String(summary.faction||'').toLowerCase()==='wolf';
+      const wolf=isWolfRole(summary);
       if(wolf&&pack){
         if(!pack.loginIds.includes(actorId))pack.loginIds.push(actorId);
         if(!pack.playerIds.includes('member:'+actorId))pack.playerIds.push('member:'+actorId);
