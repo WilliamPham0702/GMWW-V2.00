@@ -586,6 +586,16 @@ jobs:
           node --check src/index.js
           test -s docs/releases/GMWW-V3.250-approved-role-card-settings-20261027.md
 
+      - name: V3.251 — đồng đều 16 ô bảo trì và giữ nguyên Cloudflare/DO
+        if: steps.scope.outputs.mode == 'cloudflare-tiles-3251'
+        run: |
+          node .github/scripts/verify-release-v3251.mjs
+          node --test tests/gmww-v3251-cloudflare-tiles.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.251-cloudflare-tiles-20261027.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test

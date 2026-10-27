@@ -2033,6 +2033,19 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // V3.251: exact CSS-only GM settings release; keep V3.250 role-card changes.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.251.0'){
+        const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3251.mjs'],{encoding:'utf8',env:{...process.env,GMWW_V3251_BASE:base}});
+          return{mode:'cloudflare-tiles-3251',reason:'V3.251 only 16 uniform maintenance tiles, OTA and gate'};
+        }
+      }
+    }catch{} // Keep full tests if release scope differs unexpectedly.
+  }
+
   // V3.250 owner-approved settings fix: scoped only after strict diff+version
   // verification. Any unexpected changed file uses existing full CI.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
