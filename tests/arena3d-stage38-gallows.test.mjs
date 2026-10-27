@@ -88,7 +88,8 @@ test('GĐ38: GM/Player 3D visual projection shares public candidate only',async(
  const gm=readFileSync('assets/village/arena-3d/live.mjs','utf8');
  const player=readFileSync('assets/village/arena-3d/player.mjs','utf8');
  const field=readFileSync('assets/village/arena-3d/character-atelier.mjs','utf8');
- assert.match(gm,/setGallowsCandidate\(gallowsCandidateActorId\(x,current\)\)/);
+ assert.match(gm,/const gallowsId=gallowsCandidateActorId\(x,current\)/);
+ assert.match(gm,/field\.setGallowsCandidate\(gallowsId\)/);
  assert.match(player,/setGallowsCandidate\(gallowsCandidateActorId\(publicBallot/);
  assert.match(field,/import \{gallowsWorldPose\} from '\.\/stage38-public-gallows\.mjs'/);
  assert.match(field,/setGallowsCandidate/);
