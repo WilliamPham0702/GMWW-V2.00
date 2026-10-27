@@ -22,6 +22,7 @@ import {createArenaSessionTrend,ARENA_STAGE23_25_VERSION} from './stage23-25-mob
 import {validateGmActionTargets,ARENA_STAGE29_VERSION} from './stage29-gm-actions.mjs';
 import {projectAuthorizedGmCoreState} from './production-gm-adapter.mjs';
 import {validateArenaGmContext} from './gm-native-bridge.mjs';
+import {createArenaGmRefreshGate} from './stage37-gm-refresh-gate.mjs';
 const $=id=>document.getElementById(id);
 // STAGING keeps its isolated DO visual endpoint; the official Core hostname
 // uses the existing authenticated GM state. No production credentials cross origin.
@@ -64,6 +65,7 @@ let galleryPage=0,previewRitualKind=null,lastPacingHz=-1;
 const qualityController=createArenaAdaptiveQuality();
 const paintScheduler=createArenaPaintScheduler();
 const mobileQa=createArenaMobileDiagnostics();
+const privateGmRefreshGate=createArenaGmRefreshGate({minGapMs:750});
 const sessionTrend=createArenaSessionTrend({maxMinutes:30});
 let webglLost=false;
 const matchSync=createMatchSyncGate();
@@ -229,13 +231,22 @@ async function refreshPrivateGmEffects(){
   const session={room:code,token:gmToken,matchId:String(current.room.matchId),
     cycleKey:String(current.room.cycleKey)};
   try{
+    await privateGmRefreshGate.run(session,async signal=>{
     const response=await fetch(privateGmUrl(session.room),{
-      headers:{authorization:'Bearer '+session.token},cache:'no-store'
+      headers:{authorization:'Bearer '+session.token},cache:'no-store',signal
     });
-    if(!response.ok)return;
+    if(!response.ok){
+      // Core is the sole authorization source. Revoke stale GM visuals on 401/403.
+      if((response.status===401||response.status===403)&&
+        code===session.room&&gmToken===session.token&&!signal.aborted){
+        gmToken='';visibleGmEffects=0;field.clearEffects();enableGm();
+        notice('Core đã từ chối quyền GM. Hãy xác thực lại để xem hành động riêng tư.');
+      }
+      return;
+    }
     const data=projectGmPayload(await response.json());
     if(!data)return;
-    if(code!==session.room||gmToken!==session.token||
+    if(signal.aborted||code!==session.room||gmToken!==session.token||
       String(current?.room.matchId||'')!==session.matchId||
       String(current?.room.cycleKey||'')!==session.cycleKey)return;
     if(String(data.matchId)!==String(current.room.matchId)||String(data.cycleKey)!==String(current.room.cycleKey))return;
@@ -257,10 +268,12 @@ async function refreshPrivateGmEffects(){
       if(productionCoreView&&data.gallows)showBallot(data.gallows);
       document.body.dataset.gmwwGmTurnActive=data.casting?.actorIds?.length?'true':'false';
     }
+    });
   }catch{}
 }
 // Polling is GM-only. A regular Player Web/anonymous viewer never requests this endpoint.
 setInterval(()=>{if(!document.hidden&&gmToken)void refreshPrivateGmEffects()},3000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)privateGmRefreshGate.reset()});
 
 async function json(url,{method='GET',body,gm=false,token}={}){
   const headers={accept:'application/json'};
@@ -289,11 +302,11 @@ $('open-setup').onclick=()=>{
 };
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
-function enableGm(){if(!gmToken){field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';arenaAudio.stop();localVoice.clear();}
+function enableGm(){if(!gmToken){privateGmRefreshGate.reset();field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';arenaAudio.stop();localVoice.clear();}
   for(const id of ['seed','lock','deal','start','night','day','nominate','vote','end-match','winner-faction'])$(id).disabled=!gmToken||(productionCoreView&&['seed','deal'].includes(id));
   $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
 async function attach(room){
-  field.clearEffects();syntheticCastSeq++;matchSync.reset();
+  privateGmRefreshGate.reset();field.clearEffects();syntheticCastSeq++;matchSync.reset();
   if(feed)feed.close();
   code=room.trim().toUpperCase();$('room').value=code;
   const state=await json(roomUrl());
