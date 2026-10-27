@@ -8734,3 +8734,44 @@ html[data-gmww-perf-reduced="true"] #start .play-core-pearl::after{animation-pla
 #settings #updateManagerCard .update-actions-four>.settings-action{width:100%!important;min-width:0!important;height:48px!important;padding:3px 2px!important;display:flex!important;flex-direction:column;justify-content:center!important;align-items:center!important;gap:3px!important}
 #settings #updateManagerCard .update-actions-four .settings-action span{font-size:14px!important}
 #settings #updateManagerCard .update-actions-four .settings-action b{font-size:8px!important;white-space:nowrap!important;line-height:1.1!important}
+
+
+/* GMWW 27-10: Phiếu đề cử màu đỏ, nảy nhẹ như bóng; emoji Cứu/Giết đứng tự do.
+   Chỉ áp dụng GM battle UI, không can thiệp Player Web hoặc dữ liệu vote. */
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-over>.battle-nomination-pearl,
+body.play-immersive #start #playShell[data-step="battle"] #playPlayerRing .play-player-over>.battle-nomination-pearl{
+  display:inline-block!important;
+  width:auto!important;min-width:0!important;height:auto!important;
+  padding:0 2px!important;margin:0 auto 3px!important;
+  background:transparent!important;background-image:none!important;
+  border:0!important;border-radius:0!important;outline:none!important;
+  box-shadow:none!important;
+  color:#ff3045!important;font-size:21px!important;font-weight:1000!important;
+  line-height:1.1!important;font-variant-numeric:tabular-nums;
+  text-shadow:0 1px 1px #fff7d5,0 2px 4px #32020a!important;
+  animation:gmwwNominationVoteBounce 1.85s ease-out infinite!important;
+  pointer-events:none!important;
+}
+@keyframes gmwwNominationVoteBounce{
+  0%,29%,48%,100%{transform:translateY(0)}
+  13%{transform:translateY(-10px)}
+  22%{transform:translateY(-2px)}
+  38%{transform:translateY(-5px)}
+}
+#start #playShell[data-step="battle"] #playPlayerRing .play-player-over>.battle-gallows-vote-mark{
+  display:block!important;width:auto!important;min-width:0!important;
+  margin:0 auto!important;padding:0!important;
+  font-size:24px!important;line-height:1!important;
+  background:transparent!important;background-image:none!important;
+  border:0!important;outline:none!important;border-radius:0!important;
+  box-shadow:none!important;filter:none!important;
+  pointer-events:none!important;
+}
+html[data-gmww-perf-reduced="true"] #start #playShell[data-step="battle"] #playPlayerRing .play-player-over>.battle-nomination-pearl{
+  animation:none!important;transform:none!important;
+}
+@media(prefers-reduced-motion:reduce){
+  #start #playShell[data-step="battle"] #playPlayerRing .play-player-over>.battle-nomination-pearl{
+    animation:none!important;transform:none!important;
+  }
+}
