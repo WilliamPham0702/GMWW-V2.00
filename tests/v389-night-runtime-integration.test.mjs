@@ -724,3 +724,33 @@ test('Clone inherits only in next Night after chosen person dies; owner Artifact
   assert.equal(role.artifact.artifactId,'owner-asset');
   assert.equal(role.inheritedFromRoleId,'role_clone');
 });
+
+test('Spiritualist compares factions normally when B was expelled in an earlier night turn',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('gameConfig',{roles:[{roleId:'role_spiritualist',order:1}],
+    timing:{defaultActionSec:30}});
+  h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_spiritualist',roleName:'Nhà Tinh Thần Học',faction:'village'},
+    {loginId:'bob',roleId:'role_wolf',roleName:'Sói',faction:'wolf'},
+    {loginId:'carol',roleId:'role_guard',roleName:'Bảo Vệ',faction:'village'}
+  ]);
+  h.data.set('roles:alice',[{loginId:'alice',roleId:'role_spiritualist',
+    matchId:'test-match',roleCard:{flags:{allowMultipleActions:false},functions:[
+      {actionId:'action_compare_faction',phase:'night',targetCount:2,usageMode:'eachNight',usageCount:1}
+    ]}}]);
+  h.data.set('interactions',[{matchId:'test-match',type:'expelled',loginId:'bob',
+    night:1,effectActive:true}]);
+  const rt=await h.room.getNightRuntime(await h.meta(),1,true);
+  const answer=await result(await h.room.gmBattleAction(null,{
+    matchId:'test-match',cycleKey:'night-1',turnId:rt.currentId,
+    actorId:'alice',type:'effect_notice',actionId:'action_compare_faction',
+    targetIds:['bob','carol'],revealTargetIds:['bob','carol'],clientEventId:'spiritualist-compare-1'
+  }));
+  assert.equal(answer.ok,true,JSON.stringify(answer));
+  assert.equal(answer.revelation?.same,false);
+  assert.equal(answer.revelation?.message?.includes('KHÁC'),true);
+  assert.ok((await h.storage.get('interactions')).some(x=>x.type==='expelled'&&x.loginId==='bob'),
+    'Exile is still active; only a neutral informational check was permitted');
+  assert.equal((await h.storage.get('interactions')).filter(x=>x.actionId==='action_compare_faction').length,0,
+    'Faction comparison must not send a harmful effect notification to targets');
+});
