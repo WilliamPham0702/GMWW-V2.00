@@ -8,6 +8,8 @@ const version=JSON.parse(fs.readFileSync('package.json','utf8')).version;
 if(version!=='3.249.0')throw Error('Invalid scoped release version: '+version);
 const allowed=new Set([
  '.github/scripts/prepare-update-channel.mjs',
+ '.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml',
  '.github/scripts/verify-release-v3249.mjs',
  '.github/workflows/check-witch-drunk-clone.yml',
  '.github/workflows/deploy-production.yml',
@@ -22,7 +24,9 @@ const allowed=new Set([
  'tests/witch-drunk-clone-20261027.test.mjs',
  'tests/v389-night-runtime-integration.test.mjs'
 ]);
-const raw=execFileSync('git',['diff','--name-only','HEAD^1','HEAD'],{encoding:'utf8'});
+const base=process.env.GMWW_V3249_BASE||'HEAD^1';
+if(base!=='HEAD^1'&&!/^[0-9a-f]{40}$/i.test(base))throw Error('Invalid V3.249 diff baseline');
+const raw=execFileSync('git',['diff','--name-only',base,'HEAD'],{encoding:'utf8'});
 const changed=raw.trim().split('\n').filter(Boolean);
 const required=['package.json','src/index.js','server-game/current/app.js',
  'src/gmww-role-inheritance-rules.js','src/gmww-witch-drunk-clone-rules.js',
