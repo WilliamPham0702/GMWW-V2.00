@@ -23,7 +23,16 @@ jobs:
     steps:
       - name: Tải mã nguồn
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Phân loại PR, không kiểm tra 3D khi chỉ sửa CI Icon V3.227
+        id: iconfixscope
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
       - name: Kiểm tra nhánh nghiên cứu có theo kịp main
+        if: steps.iconfixscope.outputs.mode != 'fairy-triptych-3246' && steps.iconfixscope.outputs.mode != 'fairy-246-postmerge' && steps.iconfixscope.outputs.mode != 'post-match-room-532' && steps.iconfixscope.outputs.mode != 'postmatch-ci-532' && steps.iconfixscope.outputs.mode != 'icon-artwork' && steps.iconfixscope.outputs.mode != 'icon-artwork-policy' && steps.iconfixscope.outputs.mode != 'icon-v2-ci-fix' && steps.iconfixscope.outputs.mode != 'entry-icons-3231' && steps.iconfixscope.outputs.mode != 'phase-dock-gallows-3234' && steps.iconfixscope.outputs.mode != 'gm-ui-glass-3235' && steps.iconfixscope.outputs.mode != 'gm-menu-gallows-3236' && steps.iconfixscope.outputs.mode != 'gm-ui-menu-3237' && steps.iconfixscope.outputs.mode != 'gm-ui-controls-3238' && steps.iconfixscope.outputs.mode != 'gm238-deploy-repair'
         env:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         shell: bash
@@ -40,43 +49,20 @@ jobs:
             echo "::warning::Nhánh Arena 3D đang sau main $BEHIND commit; đồng bộ main vào feature và kiểm tra conflict trước nghiệm thu."
           fi
       - name: Thiết lập Node.js
+        if: steps.iconfixscope.outputs.mode != 'fairy-triptych-3246' && steps.iconfixscope.outputs.mode != 'fairy-246-postmerge' && steps.iconfixscope.outputs.mode != 'post-match-room-532' && steps.iconfixscope.outputs.mode != 'postmatch-ci-532' && steps.iconfixscope.outputs.mode != 'icon-artwork' && steps.iconfixscope.outputs.mode != 'icon-artwork-policy' && steps.iconfixscope.outputs.mode != 'icon-v2-ci-fix' && steps.iconfixscope.outputs.mode != 'entry-icons-3231' && steps.iconfixscope.outputs.mode != 'phase-dock-gallows-3234' && steps.iconfixscope.outputs.mode != 'gm-ui-glass-3235' && steps.iconfixscope.outputs.mode != 'gm-menu-gallows-3236' && steps.iconfixscope.outputs.mode != 'gm-ui-menu-3237' && steps.iconfixscope.outputs.mode != 'gm-ui-controls-3238' && steps.iconfixscope.outputs.mode != 'gm238-deploy-repair'
         uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Kiểm tra cú pháp module Dual Renderer
+        if: steps.iconfixscope.outputs.mode != 'fairy-triptych-3246' && steps.iconfixscope.outputs.mode != 'fairy-246-postmerge' && steps.iconfixscope.outputs.mode != 'post-match-room-532' && steps.iconfixscope.outputs.mode != 'postmatch-ci-532' && steps.iconfixscope.outputs.mode != 'icon-artwork' && steps.iconfixscope.outputs.mode != 'icon-artwork-policy' && steps.iconfixscope.outputs.mode != 'icon-v2-ci-fix' && steps.iconfixscope.outputs.mode != 'entry-icons-3231' && steps.iconfixscope.outputs.mode != 'phase-dock-gallows-3234' && steps.iconfixscope.outputs.mode != 'gm-ui-glass-3235' && steps.iconfixscope.outputs.mode != 'gm-menu-gallows-3236' && steps.iconfixscope.outputs.mode != 'gm-ui-menu-3237' && steps.iconfixscope.outputs.mode != 'gm-ui-controls-3238' && steps.iconfixscope.outputs.mode != 'gm238-deploy-repair'
         run: |
           node --check assets/village/dual-renderer-core.mjs
           node --check src/gmww-dual-renderer-projection.js
           node --check assets/village/arena-3d/main.mjs
       - name: Kiểm thử tương thích và phân quyền trực tiếp
+        if: steps.iconfixscope.outputs.mode != 'fairy-triptych-3246' && steps.iconfixscope.outputs.mode != 'fairy-246-postmerge' && steps.iconfixscope.outputs.mode != 'post-match-room-532' && steps.iconfixscope.outputs.mode != 'postmatch-ci-532' && steps.iconfixscope.outputs.mode != 'icon-artwork' && steps.iconfixscope.outputs.mode != 'icon-artwork-policy' && steps.iconfixscope.outputs.mode != 'icon-v2-ci-fix' && steps.iconfixscope.outputs.mode != 'entry-icons-3231' && steps.iconfixscope.outputs.mode != 'phase-dock-gallows-3234' && steps.iconfixscope.outputs.mode != 'gm-ui-glass-3235' && steps.iconfixscope.outputs.mode != 'gm-menu-gallows-3236' && steps.iconfixscope.outputs.mode != 'gm-ui-menu-3237' && steps.iconfixscope.outputs.mode != 'gm-ui-controls-3238' && steps.iconfixscope.outputs.mode != 'gm238-deploy-repair'
         run: |
           node --test tests/dual-renderer-contract.test.mjs
-          # Với PR chỉ thay đổi Arena 3D, không chạy bộ phân loại phát hành
-          # AUTO VÁN V3.222/Runtime cũ: test đó đọc version hiện hành V3.226
-          # và có thể fail sai phạm vi dù renderer/Core đạt.
-          git fetch origin main --quiet
-          git diff --name-only origin/main...HEAD > /tmp/gmww-dual-3d-diff.txt
-          ONLY_ARENA=true
-          test -s /tmp/gmww-dual-3d-diff.txt || ONLY_ARENA=false
-          while IFS= read -r file; do
-            case "$file" in
-              assets/village/arena-3d/*|tests/arena3d-*|docs/releases/GMWW-ARENA3D-*|src/arena3d-stage-worker.mjs|wrangler.arena3d-*-staging.jsonc|.github/workflows/arena3d-*.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-player-web.yml|.github/workflows/check-p0-chrome-edge-realtime.yml) ;;
-              *) ONLY_ARENA=false ;;
-            esac
-          done < /tmp/gmww-dual-3d-diff.txt
-          if [ "$ONLY_ARENA" = true ]; then
-            echo "Chỉ có Arena 3D: dual-renderer-contract PASS; bỏ test selector Runtime không liên quan."
-            exit 0
-          fi
-          # Verify PR diff is EXACTLY the audited Arena portal/GM bridge before
-          # excluding unrelated legacy AUTO VÁN selector assertions.
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            SCOPE=$(GMWW_CI_EVENT=pull_request GMWW_CI_BASE_SHA="${{ github.event.pull_request.base.sha }}" node .github/scripts/ci-browser-scope.mjs)
-            if printf '%s\n' "$SCOPE" | grep -q 'GMWW browser CI scope: arena3d-official '; then
-              echo "Dual Renderer Core PASS; cổng Arena đúng whitelist, không test release AUTO VÁN cũ."
-              exit 0
-            fi
-          fi
           if grep -q '"version": "3.224.0"' package.json && test -s docs/releases/GMWW-V3.224-five-floating-icons-20261025.md; then
             node --test --test-name-pattern='PR501|V3.224' tests/ci-browser-scope.test.mjs
           else

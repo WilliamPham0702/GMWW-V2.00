@@ -269,8 +269,8 @@ async function gmwwVerifyMemberBeforeRemoval(){
  replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\n"+GMWW_RECEIPT_ACK_CODE+"\n"+GMWW_MEMBERSHIP_RECHECK_CODE+"\n"+GMWW_LIVE_DELIVERY_WATCH+"\nasync function refreshPrivateRole(force=false){");
  replaceReceipt("if(state.role){rememberActiveRole(state.role);",
    "if(state.role){gmwwAcknowledgePrivateDelivery(d);rememberActiveRole(state.role);");
- replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);",
-   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");
+ replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});",
+   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;");
  replaceReceipt("if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=",
    "if(d?.deliveryManifest){const manifest=d.deliveryManifest;const sameMatch=!manifest.matchId||String(manifest.matchId)===String(d.room?.matchId||state.room?.matchId||'');if(sameMatch){state.privateDeliveryManifest=manifest;state.artifactExpected=manifest.artifactExpected===true}}if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;if(d?.player)state.ready=!!d.player.ready;const oldArtifactId=");
  replaceReceipt("  renderPlayerPrivateDock();\n  bar.hidden=true;",
@@ -364,8 +364,8 @@ async function gmwwVerifyMemberBeforeRemoval(){
  // V3.194: one authoritative public roster + complete private ballot receipt.
  // The legacy private-card patch removed the second /me read from public polling;
  // keep gallows and day interactions in the surviving authenticated receipt.
- offlineReplace("try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);",
-   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");
+ offlineReplace("if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);handleSeatSwapRequests(d?.swapRequests);",
+   "if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");
  offlineReplace("async function autoResumeActiveRoom({stayInVillage=false}={}){",
    "async function gmwwRefreshPublicRoster(code,participantId){\n"+
    "  try{const d=await api('/api/rooms/'+encodeURIComponent(code));\n"+
@@ -465,8 +465,8 @@ function gmwwApplyRoster(rows,origin='http'){
    "let gmwwPublicPollSequence=0,gmwwLastRoomBroadcastAt=0,gmwwLastGallowsBroadcastAt=0;");
  offlineReplace("if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}",
    "if(d.type==='gallows_updated'){gmwwLastGallowsBroadcastAt=Date.now();if(d.room)state.room=d.room;state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}");
- offlineReplace("else if(d.type==='room_cycle'){state.gallows=null;",
-   "else if(d.type==='room_cycle'){gmwwLastGallowsBroadcastAt=Date.now();state.gallows=null;");
+ offlineReplace("else if(d.type==='room_cycle'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);state.gallows=null;",
+   "else if(d.type==='room_cycle'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);gmwwLastGallowsBroadcastAt=Date.now();state.gallows=null;");
  offlineReplace("  const entry={key,promise:null};\n  entry.promise=api(",
    "  const entry={key,promise:null},requestedAt=Date.now();\n  entry.promise=api(");
  offlineReplace("    .then(d=>(state.roomCode===room&&state.participantId===participant&&state.token===token)?d:null)",

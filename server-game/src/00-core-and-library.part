@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.230';
+const VERSION='3.253';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -789,9 +789,9 @@ function applyV226Prefs(p,migrating=false){
 }
 
 function loadState(){
-  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyV226Catalog(applyV210Rules(s),false)}}catch(_){}
-  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyV226Catalog(applyV210Rules(migrateOld(raw)),true);localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
-  return applyV226Catalog(clone(DEFAULT_STATE),false);
+  try{const cur=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(cur){const s=deepMerge(clone(DEFAULT_STATE),cur);s.cards=s.cards.map(x=>normalizeEntity(x,'cards'));s.artifacts=s.artifacts.map(x=>normalizeEntity(x,'artifacts'));return applyApprovedRoleSettings(applyV226Catalog(applyWitchDrunkCloneRules(applyNight02Rules(applyV210Rules(s))),false))}}catch(_){}
+  for(const k of OLD_STATE_KEYS){try{const raw=JSON.parse(localStorage.getItem(k)||'null');if(raw){const s=applyApprovedRoleSettings(applyV226Catalog(applyWitchDrunkCloneRules(applyNight02Rules(applyV210Rules(migrateOld(raw)))),true));localStorage.setItem(STATE_KEY,JSON.stringify(s));return s}}catch(_){}}
+  return applyApprovedRoleSettings(applyV226Catalog(applyWitchDrunkCloneRules(applyNight02Rules(clone(DEFAULT_STATE))),false));
 }
 function loadPrefs(){
   try{const cur=JSON.parse(localStorage.getItem(PREF_KEY)||'null');if(cur)return applyV226Prefs(deepMerge(clone(DEFAULT_PREFS),cur),false)}catch(_){}
@@ -799,6 +799,187 @@ function loadPrefs(){
   return applyV226Prefs(clone(DEFAULT_PREFS),false);
 }
 
+/* NIGHT-02: migrate only the five approved role contracts in previously
+ * saved GM card libraries; preserve all artwork, audio links and other cards. */
+function applyNight02Rules(s){
+  for(const card of s.cards||[]){
+    const role=String(card.id||'');
+    if(card.factionId==='wolf'){
+      card.flags={...(card.flags||{}),allowMultipleActions:true};
+      card.specialRules={...(card.specialRules||{}),usesPackBite:true,
+        ...(role==='role_snow_wolf'?{requiresNoOtherLivingWolf:true}:{})};
+    }
+    if(role==='role_snow_wolf'){
+      card.limits='Đóng Băng không được chọn cùng một người hai đêm liên tiếp.';
+      card.conditions='Ưu tiên Đóng Băng; chỉ Cắn chung khi Sói Tuyết là Sói duy nhất còn sống.';
+      const freeze=(card.functions||[]).find(f=>f.actionId==='action_snow_wolf_freeze');
+      if(freeze)Object.assign(freeze,{usageMode:'eachNight',usageCount:1,phase:'night',
+        cooldownNights:1,allowConsecutive:false,noSelf:true,allowDead:false});
+      const bite=(card.functions||[]).find(f=>f.actionId==='action_wolf_bite');
+      if(bite)Object.assign(bite,{usageMode:'eachNight',usageCount:1,
+        requiresNoOtherLivingWolf:true,usesPackBite:true});
+    }else if(role==='role_guard'){
+      card.limits='Không Bảo Vệ cùng một người hai đêm liên tiếp.';
+      card.conditions='Chỉ chặn vết Cắn của Sói, kể cả khi Yêu Tinh đã dịch chuyển.';
+      const protect=(card.functions||[]).find(f=>f.actionId==='action_protect');
+      if(protect)Object.assign(protect,{usageMode:'eachNight',usageCount:1,
+        cooldownNights:1,allowConsecutive:false,allowDead:false,effectIds:['effect_protected']});
+    }else if(role==='role_alpha_wolf'){
+      card.conditions='Khi Sói Trùm bị Đóng Băng: vết Cắn chung vô hiệu, Phù Thủy không nhận thông tin nạn nhân. Khi Sói Trùm bị Đuổi: không thể thực hiện Sói Cắn.';
+    }else if(role==='role_wolf_seer'){
+      card.conditions='Sói Tiên Tri tham gia lượt Sói Cắn chung, sau đó thức riêng để tìm Tiên Tri theo thứ tự cấu hình.';
+      card.information=String(card.information||'').replace('Không tham gia Sói Cắn cho tới khi là con Sói cuối cùng trong bầy.','Tham gia Sói Cắn chung cùng Phe Sói.');
+    }else if(role==='role_fairy'){
+      card.conditions='Sau khi Bầy Sói Cắn và mọi vai Sói đã thức. Chọn dịch Trái, Phải hoặc Không dịch; bỏ qua người chết từ các chu kỳ trước.';
+      const transfer=(card.functions||[]).find(f=>f.actionId==='action_transfer_bite');
+      if(transfer)Object.assign(transfer,{phase:'night',usageMode:'eachNight',
+        usageCount:1,allowConsecutive:true});
+    }
+  }
+  return s;
+}
+/* Witch/Drunk/Clone contracts for existing saved role libraries. Only the
+ * three selected cards are normalized; all artwork/audio and unrelated cards stay intact. */
+function applyWitchDrunkCloneRules(s){
+  for(const card of s.cards||[]){
+    const role=String(card?.id||'');
+    if(role==='role_witch'){
+      card.flags={...(card.flags||{}),allowMultipleActions:true};
+      card.information='Mỗi đêm biết người nhận vết Sói Cắn cuối cùng sau Yêu Tinh, kể cả khi được Bảo Vệ hoặc Bất Tử Đêm. Không thấy vết Cắn khi Sói Trùm bị Đóng Băng hoặc Đuổi khỏi làng. Có thể dùng bình Cứu và bình Giết trong cùng một đêm.';
+      card.limits='Mỗi bình chỉ dùng 1 lần trong ván. Dùng một bình không tự kết thúc lượt Phù Thuỷ.';
+      card.conditions='Bình Cứu chỉ chọn người nhận vết Sói Cắn cuối cùng; bình Giết độc lập.';
+      for(const fn of card.functions||[])if(['action_witch_save','action_witch_kill'].includes(fn?.actionId))
+        Object.assign(fn,{phase:'night',usageMode:'onceGame',usageCount:1});
+    }else if(role==='role_drunk'){
+      card.limits='Bốc Vai Trò 1 lần duy nhất vào Đêm 3; Đêm 1–2 không thức.';
+      card.conditions='Đêm 3 ưu tiên trước Phù Thuỷ Già. Bốc ngẫu nhiên từ những người đã chết trước đó; không ai chết thì trở thành Dân Làng. Chuyển Phe theo lá bốc.';
+      const fn=(card.functions||[]).find(x=>x.actionId==='action_drunk_draw');
+      if(fn)Object.assign(fn,{phase:'night',usageMode:'onceGame',usageCount:1,fromNight:3,toNight:3});
+    }else if(role==='role_clone'){
+      card.limits='Chỉ chọn 1 mục tiêu còn sống ở Đêm 1, không chọn lại.';
+      card.conditions='Nếu người được chọn chết, kế thừa Vai Trò, Phe và chức năng từ đêm kế tiếp. Nếu chưa chết, Nhân Bản là Dân Làng.';
+      const fn=(card.functions||[]).find(x=>x.actionId==='action_clone_target');
+      if(fn)Object.assign(fn,{phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:1,noSelf:true,allowDead:false});
+    }
+  }
+  return s;
+}
+/* Approved role rules must be written to the actual card editor AFTER the
+ * default catalog is merged; that merge otherwise restores outdated fields.
+ * Restrict edits to rules, action settings and the named cards, not media/theme. */
+function applyApprovedRoleSettings(s){
+  const cards=Array.isArray(s.cards)?s.cards:[];
+  const byId=new Map(cards.map(c=>[String(c?.id||''),c]));
+  const update=(id,fields,actions=[])=>{
+    const c=byId.get(id);if(!c)return;
+    for(const [key,value] of Object.entries(fields)){
+      if(key==='flags')c.flags={...(c.flags||{}),...value};
+      else c[key]=value;
+    }
+    c.functions=Array.isArray(c.functions)?c.functions:[];
+    for(const [actionId,contract] of actions){
+      let fn=c.functions.find(f=>f.actionId===actionId);
+      if(!fn){
+        const base=DEFAULT_STATE.cards.find(row=>row.id===id);
+        const orig=base?.functions?.find(f=>f.actionId===actionId);
+        if(!orig)continue;
+        fn=clone(orig);c.functions.push(fn);
+      }
+      Object.assign(fn,contract);
+    }
+  };
+  update('role_old_witch',{
+    information:'Mỗi đêm sau Bầy Sói nhận diện, Phù Thuỷ Già được chọn một trong hai: Đuổi hoặc Hồi Sinh. Đuổi người khiến các tác động lên họ không có hiệu lực. Hồi Sinh chỉ được dùng một lần cả ván, cho người chết ngày hoặc đêm liền trước và không được tự cứu.',
+    limits:'Mỗi đêm chỉ thực hiện Đuổi hoặc Hồi Sinh, không cả hai. Hồi Sinh 1 lần trong ván.',
+    conditions:'Thức ngay sau Bầy Sói nhận diện (hoặc Artifact nếu không có lượt nhận diện). Không được tự Đuổi; không Đuổi cùng người hai đêm liên tiếp. Hồi Sinh không tự cứu và chỉ chọn người chết ngày/đêm trước.',
+    flags:{allowMultipleActions:false}
+  },[
+    ['action_exile',{description:'Mỗi đêm Đuổi một người khác bản thân, không cùng mục tiêu hai đêm liên tiếp.',phase:'night',usageMode:'eachNight',usageCount:1,targetCount:1,noSelf:true,allowDead:false,allowConsecutive:false,cooldownNights:1}],
+    ['action_revive',{description:'Hồi Sinh một người khác bản thân chết trong ngày hoặc đêm trước; một lần/ván.',phase:'night',usageMode:'onceGame',usageCount:1,targetCount:1,noSelf:true,allowDead:true,targetPreviousCycleOnly:true}]
+  ]);
+  update('role_snow_wolf',{
+    information:'Mỗi đêm ưu tiên Đóng Băng một người. Không Đóng Băng cùng một người hai đêm liên tiếp (đêm thứ ba được chọn lại). Nếu Sói Trùm bị Đóng Băng, vết Sói Cắn chung vô hiệu và Phù Thuỷ không được báo mục tiêu. Sói Tuyết thức cùng bầy, nhưng chỉ tự Cắn khi là Sói duy nhất còn sống.',
+    limits:'Đóng Băng mỗi đêm tối đa một lần; không cùng mục tiêu hai đêm liên tiếp. Đêm thứ ba có thể chọn lại.',
+    conditions:'Đóng Băng trước Bảo Vệ và lượt Sói Cắn chung. Khi có Sói khác sống chỉ dùng Đóng Băng; khi là Sói cuối cùng được cả Đóng Băng và Cắn.',
+    flags:{allowMultipleActions:true}
+  },[
+    ['action_snow_wolf_freeze',{description:'Đóng Băng 1 người, cấm cùng người hai đêm liên tiếp; Sói Trùm trúng Đóng Băng khiến Sói Cắn chung vô hiệu.',phase:'night',usageMode:'eachNight',usageCount:1,targetCount:1,noSelf:true,allowDead:false,cooldownNights:1,allowConsecutive:false}],
+    ['action_wolf_bite',{description:'Tham gia lượt Bầy Sói; chỉ Cắn khi là Sói cuối cùng còn sống.',phase:'night',usageMode:'eachNight',usageCount:1,requiresNoOtherLivingWolf:true,usesPackBite:true}]
+  ]);
+  update('role_guard',{
+    information:'Mỗi đêm Bảo Vệ chọn một người chống vết Sói Cắn trực tiếp hoặc đã được Yêu Tinh dịch chuyển. Không chặn bình Giết của Phù Thuỷ và các nguyên nhân chết khác.',
+    limits:'Mỗi đêm 1 người; không bảo vệ cùng người hai đêm liên tiếp (đêm thứ ba được chọn lại).',
+    conditions:'Thức sau Sói Tuyết, trước Bầy Sói Cắn. Chỉ ngăn cái chết do Sói Cắn; Phù Thuỷ vẫn nhìn thấy mục tiêu bị cắn dù đã bảo vệ.'
+  },[
+    ['action_protect',{description:'Bảo Vệ khỏi Sói Cắn kể cả vết cắn dịch chuyển, không chống bình Giết; không chọn cùng người hai đêm liên tiếp.',phase:'night',usageMode:'eachNight',usageCount:1,targetCount:1,allowDead:false,cooldownNights:1,allowConsecutive:false}]
+  ]);
+  update('role_alpha_wolf',{
+    information:'Sói Trùm cùng thức trong Bầy Sói để thực hiện Sói Cắn chung. Khi bị Đóng Băng hoặc bị Đuổi khỏi làng, vết Sói Cắn không có hiệu lực và Phù Thuỷ không thấy mục tiêu. Tiên Tri soi Sói Trùm cho kết quả KHÔNG PHẢI SÓI.',
+    limits:'Mỗi đêm tối đa một lượt Sói Cắn chung; không có lượt Cắn riêng khi đang bị Đóng Băng hoặc Đuổi.',
+    conditions:'Sói Trùm cùng bầy thức khi có Sói còn sống. Nếu bị Đóng Băng hoặc bị Đuổi thì Sói Cắn chung vô hiệu; năng lực chuyên biệt của Sói khác thức sau Sói Cắn.',
+    flags:{allowMultipleActions:true}
+  },[
+    ['action_wolf_bite',{description:'Tham gia lựa chọn Sói Cắn chung với toàn Bầy Sói; bị Đóng Băng/Đuổi thì vết Cắn vô hiệu.',usesPackBite:true}]
+  ]);
+  update('role_fairy',{
+    information:'Yêu Tinh thức sau toàn bộ hành động của Bầy Sói và các Sói đặc biệt. Có thể chọn Trái, Phải hoặc Không Dịch vết Sói Cắn mà không được biết người đang bị cắn. Khi dịch, phải bỏ qua người đã chết từ ngày hoặc đêm trước; không có vết cắn thì không tạo tác động.',
+    limits:'Mỗi đêm tối đa 1 lần; không chọn hướng đồng nghĩa Không Dịch.',
+    conditions:'Sau tất cả vai Sói, trước Phù Thuỷ. Dịch vết cắn theo người còn sống kế bên (bỏ qua người đã chết); có thể chọn Không Dịch.'
+  },[
+    ['action_transfer_bite',{description:'Chọn Trái/Phải để dịch vết cắn qua người sống; chọn giữa hoặc không chọn thì không dịch; bỏ qua người chết trước đó.',phase:'night',usageMode:'eachNight',usageCount:1,targetCount:0,noTarget:true}]
+  ]);
+  update('role_witch',{
+    information:'Phù Thuỷ thức sau Yêu Tinh, được báo người nhận vết Sói Cắn cuối cùng (MỤC TIÊU trên Character), kể cả khi đã được Bảo Vệ hoặc Bất Tử Ban Đêm. Nếu Sói Trùm bị Đóng Băng/Đuổi khiến cắn vô hiệu thì không báo mục tiêu. Có thể dùng Cứu và Giết trong cùng một đêm.',
+    limits:'Bình Cứu 1 lần/ván, bình Giết 1 lần/ván; có thể dùng cả hai cùng đêm. Dùng một bình không tự kết thúc lượt.',
+    conditions:'Bình Cứu chỉ áp dụng cho người nhận vết Sói Cắn cuối cùng sau Yêu Tinh; bình Giết chọn độc lập. Không có vết cắn hợp lệ thì không được cứu.',
+    flags:{allowMultipleActions:true}
+  },[
+    ['action_witch_save',{description:'Cứu đúng người nhận vết Sói Cắn cuối cùng, kể cả đã được Bảo Vệ hoặc Bất Tử Ban Đêm.',phase:'night',usageMode:'onceGame',usageCount:1,targetCount:1}],
+    ['action_witch_kill',{description:'Dùng bình Giết chọn một người; độc lập với bình Cứu, có thể dùng cùng đêm.',phase:'night',usageMode:'onceGame',usageCount:1,targetCount:1}]
+  ]);
+  update('role_drunk',{
+    information:'Say Rượu ngủ đêm 1 và 2. Đầu đêm thứ 3, trước Phù Thuỷ Già, chỉ một lần bốc ngẫu nhiên lá Vai Trò của người đã chết trước đó. Không ai chết thì thành Dân Làng không có chức năng. Sau khi bốc, chuyển sang Phe và năng lực của lá nhận được.',
+    winCondition:'Trước đêm 3 thắng cùng Phe Dân; từ lúc nhận lá đêm 3 thắng theo Phe của Vai Trò đã bốc.',
+    limits:'Bốc đúng một lần duy nhất ở Đêm 3; không thức đêm 1, 2 hoặc bốc lại.',
+    conditions:'Đêm 3 ưu tiên trước Phù Thuỷ Già; nếu nhận vai Sói sẽ tham gia Bầy Sói và sử dụng năng lực Sói theo timeline sau bước Cắn chung.'
+  },[
+    ['action_drunk_draw',{description:'Chỉ Đêm 3 bốc ngẫu nhiên 1 Vai Trò của người đã chết; nếu chưa có ai chết trở thành Dân Làng.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:3,toNight:3,targetCount:0,noTarget:true}]
+  ]);
+  update('role_clone',{
+    information:'Nhân Bản thuộc Phe Dân và Đêm 1 chọn một người còn sống khác bản thân để liên kết. Nếu mục tiêu chưa chết, Nhân Bản vẫn là Dân thường không có năng lực đặc biệt. Khi mục tiêu chết, từ đêm tiếp theo Nhân Bản nhận Vai Trò, Phe và chức năng của mục tiêu; nếu là Sói, thức cùng Bầy Sói.',
+    winCondition:'Trước khi kế thừa: theo Phe Dân. Sau khi mục tiêu chết và kế thừa: theo Phe của Vai Trò nhận được.',
+    limits:'Chọn một mục tiêu đúng Đêm 1, không được chọn lại.',
+    conditions:'Mục tiêu còn sống, không phải bản thân. Chuyển Vai Trò/Phe/Năng lực từ đêm tiếp sau khi mục tiêu chết; giữ tên, Character và Artifact gốc.'
+  },[
+    ['action_clone_target',{description:'Đêm 1 chọn một người còn sống khác bản thân; chỉ khi mục tiêu chết mới kế thừa vào đêm sau.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:1,toNight:1,targetCount:1,noSelf:true,allowDead:false}]
+  ]);
+  update('role_wolf_seer',{
+    information:'Sói Tiên Tri thức cùng Bầy Sói để chọn Sói Cắn chung, sau đó thức riêng theo thứ tự để tìm Tiên Tri. Mỗi đêm chọn một người sống khác bản thân và nhận kết quả Có/Không là Tiên Tri.',
+    limits:'Sói Cắn chỉ được chọn trong lượt chung của Bầy Sói; năng lực tìm Tiên Tri tối đa 1 lần mỗi đêm.',
+    conditions:'Thức cùng tất cả Sói trong lượt Cắn chung; sau đó dùng năng lực riêng tìm Tiên Tri. Không phải chờ trở thành Sói cuối cùng mới được tham gia Cắn.',
+    flags:{allowMultipleActions:true}
+  },[
+    ['action_find_seer',{description:'Sau lượt Sói Cắn chung, chọn một người còn sống khác mình để tìm Tiên Tri.',phase:'night',usageMode:'eachNight',usageCount:1,targetCount:1,noSelf:true,allowDead:false}]
+  ]);
+  update('role_wolf',{
+    information:'Sói Thường thức với toàn Bầy Sói khi còn ít nhất một Sói sống, cùng chọn một Sói Cắn chung mỗi đêm.',
+    conditions:'Thức chung cùng Bầy Sói và thực hiện Sói Cắn chung. Không có hành động đặc biệt ngoài lượt Cắn.',
+    flags:{allowMultipleActions:true}
+  },[
+    ['action_wolf_bite',{description:'Cùng toàn Bầy Sói chọn một mục tiêu Sói Cắn chung; không Cắn riêng.',usesPackBite:true,allowFriendlyFaction:true}]
+  ]);
+  for(const c of cards){
+    if(c?.factionId!=='wolf'||!c.id)continue;
+    c.specialRules={...(c.specialRules||{}),usesPackBite:true};
+    c.flags={...(c.flags||{}),allowMultipleActions:true};
+    for(const fn of c.functions||[])if(fn?.actionId==='action_wolf_bite')
+      Object.assign(fn,{usesPackBite:true,allowFriendlyFaction:true});
+    const extra='Bầy Sói thức chung để chọn Sói Cắn khi còn ít nhất một Vai Trò Sói sống. Năng lực riêng của từng Sói được gọi sau lượt Sói Cắn chung (Sói Tuyết ưu tiên Đóng Băng trước Bầy Sói).';
+    if(!String(c.conditions||'').includes('Bầy Sói thức chung để chọn Sói Cắn'))
+      c.conditions=[String(c.conditions||'').trim(),extra].filter(Boolean).join(' ');
+  }
+  return s;
+}
 function applyV221AudioGuard(s){
   const keep='ROLE:source-18';
   for(const kind of ['cards','artifacts','actions','system'])for(const a of (s.audio?.[kind]||[])){

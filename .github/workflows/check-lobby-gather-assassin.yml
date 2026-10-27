@@ -1,0 +1,41 @@
+name: Check GM Lobby Gather and Assassin
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server-game/src/20-members-and-roster.part'
+      - 'server-game/src/30-village-and-setup.part'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/50-roles-and-artifacts.part'
+      - 'server-game/current/app.js'
+      - 'server-game/current/GMWW.html'
+      - 'server-game/current/style.css'
+      - 'tests/lobby-gather-mode-assassin-20261027.test.mjs'
+      - '.github/workflows/check-lobby-gather-assassin.yml'
+  pull_request:
+    paths:
+      - 'server-game/src/20-members-and-roster.part'
+      - 'server-game/src/30-village-and-setup.part'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/50-roles-and-artifacts.part'
+      - 'server-game/current/app.js'
+      - 'server-game/current/GMWW.html'
+      - 'server-game/current/style.css'
+      - 'tests/lobby-gather-mode-assassin-20261027.test.mjs'
+      - '.github/workflows/check-lobby-gather-assassin.yml'
+  workflow_dispatch:
+jobs:
+  targeted:
+    name: GM Lobby Gather and Assassin only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node syntax
+        run: node --check server-game/current/app.js
+      - name: GM app bundle integrity and synchronized Runtime version
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+      - name: Lobby Gather and Assassin targeted tests
+        run: node --test tests/lobby-gather-mode-assassin-20261027.test.mjs

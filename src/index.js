@@ -13,6 +13,7 @@ import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlaye
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
 import { resolveWolfNight, readNightAssignments, isNightImmune, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
+import { wolfPackMembers, shouldWakeWolfPack, privateWolfRecognition } from "./gmww-wolf-recognition.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -23,6 +24,10 @@ import { shouldSkipMemberHeartbeat, shouldSkipMemberSessionTouch, shouldSkipGmHe
 import { authorizedPitr } from "./gr01-pitr-auth.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
+import { oldWitchActionCheck } from "./gmww-old-witch-rules.js";
+import { isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles } from "./gmww-pack-night-rules.js";
+import { partitionNightSpecialRoles,witchSaveTargetAllowed } from "./gmww-witch-drunk-clone-rules.js";
+import { inheritedRolePlans } from "./gmww-role-inheritance-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -40,7 +45,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.230",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3230",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.253",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3253",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1588,26 +1593,126 @@ export class RoomDurableObject extends DurableObject {
     if(!runtime&&create)runtime=await this.buildNightRuntime(meta,night);
     return runtime||null
   }
+  // Called only while constructing a new authoritative Night. Converted roles
+  // keep each owner's membership, seat, artifact and player identity unchanged.
+  async applyNightRoleInheritance(meta,night,assignments){
+    const n=Math.max(1,Number(night)||1),matchId=String(meta?.matchId||'');
+    if(!matchId||n<2)return {assignments,drunkNotices:[]};
+    const key='roleInheritanceNight:'+matchId+':'+n;
+    const past=await this.ctx.storage.get(key);
+    if(past)return {assignments:(await this.ctx.storage.get('assignments'))||assignments,
+      drunkNotices:Array.isArray(past.drunkNotices)?past.drunkNotices:[]};
+    const events=await this.ctx.storage.get('interactions')||[];
+    const plans=inheritedRolePlans({assignments,interactions:events,matchId,night:n});
+    if(!plans.length)return {assignments,drunkNotices:[]};
+    let updated=assignments.map(x=>({...x})),drunkNotices=[],applied=0;
+    const changed=new Map(),publishedAt=new Date().toISOString();
+    for(const plan of plans){
+      const original=updated.find(x=>normalizeLoginId(x.loginId)===plan.actorId&&
+        x.roleId===plan.fromRoleId);
+      if(!original)continue;
+      const stored=await this.ctx.storage.get('roles:'+plan.actorId)||[];
+      const owned=Array.isArray(stored)?stored:[];
+      const own=owned.find(x=>String(x.roleId)===plan.fromRoleId&&
+        Number(x.assignmentIndex)===Number(original.assignmentIndex));
+      if(!own)continue;
+      const source=plan.sourceId?updated.find(x=>normalizeLoginId(x.loginId)===plan.sourceId&&
+        x.roleId===plan.sourceRoleId):null;
+      const sourceRoles=source?await this.ctx.storage.get('roles:'+plan.sourceId)||[]:[];
+      let donor=Array.isArray(sourceRoles)?sourceRoles.find(x=>
+        x.roleId===plan.sourceRoleId&&Number(x.assignmentIndex)===Number(source?.assignmentIndex)):null;
+      if(plan.sourceId&&!donor)continue;
+      if(!plan.sourceId){
+        const pkg=await this.ctx.storage.get('roleCatalog:role_villager')||{};
+        donor={...own,roleId:'role_villager',roleName:'Dân Làng',faction:'village',
+          description:'Không có chức năng đặc biệt.',roleImage:pkg.roleImage||own.roleImage,
+          artworkAssetId:pkg.artworkAssetId||own.artworkAssetId,
+          artworkId:pkg.artworkAssetId||own.artworkId,
+          roleCard:pkg.roleCard||{name:'Dân Làng',faction:'village',
+            information:'Không có chức năng đặc biệt.',functions:[],
+            flags:{allowMultipleActions:false,nightImmune:false}}};
+      }
+      const converted={...donor,loginId:plan.actorId,displayName:own.displayName,
+        assignmentIndex:own.assignmentIndex,matchId,matchRevision:own.matchRevision,
+        artifact:own.artifact||null,deliveredAt:publishedAt,viewedAt:null,
+        inheritedFromRoleId:plan.fromRoleId,inheritedFromLoginId:plan.sourceId||null};
+      const nextRoles=owned.map(x=>x===own?converted:x);
+      changed.set(plan.actorId,nextRoles);
+      const index=updated.findIndex(x=>x.assignmentIndex===original.assignmentIndex&&
+        normalizeLoginId(x.loginId)===plan.actorId);
+      if(index<0)continue;
+      updated[index]={...original,roleId:converted.roleId,roleName:converted.roleName,
+        faction:converted.faction,deliveredAt:publishedAt,viewedAt:null,
+        inheritedFromRoleId:plan.fromRoleId};
+      applied++;
+      if(plan.kind==='drunk')drunkNotices.push({id:'drunk-reveal:'+plan.actorId,
+        kind:'drunk-draw',roleId:'role_drunk',loginIds:[plan.actorId],
+        playerIds:['member:'+plan.actorId],label:'Say Rượu · Bốc Vai Trò',
+        drawResult:converted.roleName,order:-2,status:'pending'});
+    }
+    if(applied){
+      await this.ctx.storage.put('assignments',updated);
+      for(const [actorId,roles] of changed){
+        await this.ctx.storage.put('roles:'+actorId,roles);
+        await this.ctx.storage.put('role:'+actorId,roles[0]);
+      }
+      meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
+      meta.roleDeliveredAt=publishedAt;
+      meta.updatedAt=publishedAt;
+      for(const row of updated){
+        const id=normalizeLoginId(row.loginId);
+        if(!id)continue;
+        const roles=changed.get(id)||await this.ctx.storage.get('roles:'+id)||[];
+        if(!Array.isArray(roles)||!roles.length)continue;
+        await this.ctx.storage.put('deliverySnapshot:'+id,
+          buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),
+            deliveryVersion:meta.deliveryVersion,publishedAt,roles}));
+      }
+      await this.ctx.storage.put('meta',meta);
+      this.broadcast({type:'room_state',room:publicRoom(meta),serverTime:Date.now()});
+    }
+    await this.ctx.storage.put(key,{drunkNotices,applied});
+    return {assignments:updated,drunkNotices};
+  }
   async buildNightRuntime(meta,night){
-    const assignments=(await this.ctx.storage.get("assignments"))||[],cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=30,artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
-    if(n===1)queue.push({id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",
-      recognitionIds:[...new Set(assignments.filter(a=>{const faction=String(a?.roleCard?.factionId||a?.factionId||a?.faction||'').toLowerCase();return faction==='wolf'||faction.includes('sói')||faction.includes('soi')||String(a?.roleId||'').includes('wolf')}).map(a=>normalizeLoginId(a?.loginId)).filter(Boolean))],
-      durationSec:wolfDiscussionSec,status:"pending"});
+    let assignments=(await this.ctx.storage.get("assignments"))||[];
+    const cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=30,artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
+    const inheritance=await this.applyNightRoleInheritance(meta,n,assignments);
+    assignments=inheritance.assignments;
+    // ART-01: explicit match disable wins; legacy matches with assigned Artifacts remain compatible.
+    const artifactMode=cfg.artifactsEnabled===true||(cfg.artifactsEnabled!==false&&assignments.some(a=>a?.artifactId));
     const artifactRows=[];
     for(const [index,a] of assignments.entries()){
-      if(!a?.artifactId)continue;
+      if(!artifactMode||!a?.artifactId)continue;
       const loginId=normalizeLoginId(a.loginId),assigned=await this.ctx.storage.get("artifact:"+loginId);
       const singleUse=a.artifactSingleUse===true||assigned?.singleUse===true;
       if(singleUse&&await this.ctx.storage.get("artifactUse:"+loginId+":"+String(a.artifactId)))continue;
       const priorityFirst=typeof a.artifactPriorityFirst==="boolean"?a.artifactPriorityFirst:typeof assigned?.priorityFirst==="boolean"?assigned.priorityFirst:defaultPriorityFirst(a.artifactName);
       artifactRows.push({...a,_index:index,_priorityFirst:priorityFirst});
     }
-    // No configured/assigned Artifact means no opening Artifact turn or countdown.
-    // Never create an empty window: it misleads the GM and blocks the night timeline.
-    if(artifactRows.length>0)
-      queue.push({id:"early-artifact-window",kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec,status:"pending",actions:artifactRows.filter(a=>a._priorityFirst).map(row=>({artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId)}))});
+    // ART-01: Night 1 always opens the Artifact stage when the match enabled it;
+    // later nights only open while an eligible, unconsumed priority Artifact remains.
+    const priorityOwners=artifactRows.filter(a=>a._priorityFirst);
+    if(artifactMode&&(n===1||priorityOwners.length>0))
+      queue.push({id:"early-artifact-window",kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec,status:"pending",actions:priorityOwners.map(row=>({artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId)}))});
+    // WOLF-01: one waking turn only when at least two living wolves can meet.
+    // A newly converted member wakes the pack again on the next night only.
+    const wolfMembers=wolfPackMembers(assignments,await this.ctx.storage.get("interactions")||[],meta.matchId);
+    const previousNight=n>1?await this.getNightRuntime(meta,n-1,false):null;
+    const previousIds=Array.isArray(previousNight?.wolfPackIds)?previousNight.wolfPackIds:wolfMembers.map(a=>a.loginId);
+    if(shouldWakeWolfPack(n,wolfMembers,previousIds))queue.push({
+      id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",
+      recognitionIds:wolfMembers.map(a=>a.loginId),durationSec:wolfDiscussionSec,status:"pending"});
     const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
-    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid)continue;let g=groups.get(rid);if(!g){g={id:"role:"+rid,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,order:Number(roleOrder.get(rid)??a?.order??9999),loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};groups.set(rid,g)}const lid=normalizeLoginId(a?.loginId);if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
+    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid||rid==="role_villager"&&a.inheritedFromRoleId==="role_drunk")continue;
+      const lid=normalizeLoginId(a?.loginId),drunkInheritedWolf=rid==="role_snow_wolf"&&a.inheritedFromRoleId==="role_drunk";
+      const groupId=drunkInheritedWolf?rid+":drunk:"+lid:rid;
+      let g=groups.get(groupId);
+      if(!g){g={id:"role:"+groupId,kind:"role",label:String(a?.roleName||"Vai Trò"),roleId:rid,
+        drunkInheritedWolf,order:Number(roleOrder.get(rid)??a?.order??9999),
+        loginIds:[],playerIds:[],durationSec:roleDuration.get(rid)??defaultActionSec,status:"pending"};
+        groups.set(groupId,g)}
+      if(lid&&!g.loginIds.includes(lid)){g.loginIds.push(lid);g.playerIds.push("member:"+lid)}}
     const roleTurns=[...groups.values()].sort((a,b)=>a.order-b.order||a.label.localeCompare(b.label,"vi"));
     const artifactOrder=new Map((Array.isArray(cfg.artifacts)?cfg.artifacts:[]).map((a,i)=>[String(a?.artifactId||""),Number(a?.order||i+1)]));
     artifactRows.sort((a,b)=>(artifactOrder.get(String(a.artifactId))??9999)-(artifactOrder.get(String(b.artifactId))??9999)||a._index-b._index);
@@ -1622,11 +1727,47 @@ export class RoomDurableObject extends DurableObject {
       });
     }
     const artifactTurns=artifactRows.filter(row=>!attachedArtifacts.has(String(row.artifactId)+":"+normalizeLoginId(row.loginId))).map(row=>({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),order:artifactOrder.get(String(row.artifactId))??9999,skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"}));
-    queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(roleTurns),artifactTurns));
+    // WITCH-01: every Old Witch owner wakes immediately after the optional Wolf
+    // recognition, regardless of the configured order or ties with other roles.
+    // Drunk draws exactly at Night 3, before Old Witch, without changing ART-01/WOLF-01.
+    // Clone selects its target only on Night 1. Regular Witch wakes AFTER Fairy.
+    const specials=partitionNightSpecialRoles(roleTurns,n);
+    queue.push(...inheritance.drunkNotices.map(row=>({...row,durationSec:defaultActionSec})));
+    if(specials.drunk)queue.push(specials.drunk);
+    if(specials.oldWitch)queue.push(specials.oldWitch);
+    // NIGHT-02: Snow Wolf → Guard → shared Pack Bite → other Wolf powers → Fairy → Witch.
+    const arranged=arrangeNightRoles(specials.remaining,artifactTurns);
+    queue.push(...arranged.fixed);
+    const packInteractions=await this.ctx.storage.get("interactions")||[];
+    const eligiblePack=packMembers(assignments,packInteractions,meta.matchId);
+    if(assignments.some(isWolfRole)){
+      const snowCanBite=canSnowWolfBite({assignments,interactions:packInteractions,matchId:meta.matchId});
+      const packOwners=eligiblePack.filter(x=>x.roleId!=="role_snow_wolf"||snowCanBite);
+      queue.push({id:"wolf-pack-bite",kind:"wolf-pack-bite",label:"Bầy Sói Cắn",
+        // Every living Wolf wakes; Snow Wolf observes but cannot submit Bite
+        // while another wolf survives.
+        loginIds:eligiblePack.map(x=>normalizeLoginId(x.loginId)),playerIds:eligiblePack.map(x=>"member:"+normalizeLoginId(x.loginId)),
+        biteActorIds:packOwners.map(x=>normalizeLoginId(x.loginId)),
+        roles:eligiblePack.map(x=>({roleId:String(x.roleId),loginIds:[normalizeLoginId(x.loginId)]})),
+        order:-1,durationSec:defaultActionSec,status:"pending"});
+    }
+    // Data-driven: only Wolfs with a configured non-Bite power need a second
+    // private wake-up. A Wolf with only the shared Bite never wakes twice.
+    const privateAssignments=await readNightAssignments(this.ctx.storage,meta.matchId);
+    const distinctWolf=arranged.wolves.filter(row=>row.artifacts?.length||
+      privateAssignments.filter(a=>String(a.roleId||"")===String(row.roleId||"")).some(a=>
+        (Array.isArray(a.roleCard?.functions)?a.roleCard.functions:[]).some(fn=>
+          fn&&!fn.passive&&String(fn.actionId||fn.id||"")!=="action_wolf_bite"&&
+          (!fn.phase||["night","any"].includes(fn.phase))&&
+          (!fn.fromNight||Number(fn.fromNight)<=n)&&(!fn.toNight||Number(fn.toNight)>=n))));
+    queue.push(...groupConfiguredRoleTurns(distinctWolf));
+    if(arranged.fairy)queue.push(arranged.fairy);
+    if(specials.witch)queue.push(specials.witch);
+    queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(arranged.rest),arranged.artifactTurns));
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
     const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
-    const runtime={matchId:String(meta?.matchId||""),night:n,queue,cursor:0,completed:queue.length===0,currentId:first?.id||null,autoAdvance:autoEnabled,startedAt:now,deadlineAt:autoEnabled&&firstDurationMs>0?new Date(Date.parse(now)+firstDurationMs).toISOString():null,autoPausedRemainingMs:!autoEnabled&&firstDurationMs>0?firstDurationMs:0,createdAt:now,updatedAt:now};
+    const runtime={matchId:String(meta?.matchId||""),night:n,wolfPackIds:wolfMembers.map(a=>a.loginId),queue,cursor:0,completed:queue.length===0,currentId:first?.id||null,autoAdvance:autoEnabled,startedAt:now,deadlineAt:autoEnabled&&firstDurationMs>0?new Date(Date.parse(now)+firstDurationMs).toISOString():null,autoPausedRemainingMs:!autoEnabled&&firstDurationMs>0?firstDurationMs:0,createdAt:now,updatedAt:now};
     await this.ctx.storage.put(this.nightRuntimeKey(meta,n),runtime);return runtime
   }
   async artifactUsedInNight(meta,step){
@@ -2059,6 +2200,10 @@ export class RoomDurableObject extends DurableObject {
     if(!token||!turnId||!actorId||!allowed.has(type)||!targets.length||targets.length>30||
       targets.some(id=>!id)||new Set(targets).size!==targets.length)
       return j({ok:false,error:"INVALID_BATTLE_ACTION"},400);
+    if(String(body?.actionId||"")==="action_transfer_bite"&&
+      (artifactId||type!=="effect_notice"||!["left","none","right"].includes(String(body?.direction||""))||
+       targets.length!==1||targets[0]!==actorId))
+      return j({ok:false,error:"INVALID_FAIRY_DIRECTION"},400);
     // Assassin marks require a GM-selected secret sign and the correct role.
     const assassinAction=String(body?.actionId||"")==="action_assassin_mark";
     if(assassinAction&&(type!=="assassin_mark"||!["👍","👎"].includes(String(body?.assassinChoice||""))))
@@ -2078,6 +2223,10 @@ export class RoomDurableObject extends DurableObject {
       if(!owners.some(a=>String(a.artifactId)===artifactId&&normalizeLoginId(a.loginId)===actorId))
         return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN"},403);
     }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
+    if(step.kind==="wolf-pack-bite"&&
+      (String(body.actionId)!=="action_wolf_bite"||
+        !(step.biteActorIds||[]).map(normalizeLoginId).includes(actorId)))
+      return j({ok:false,error:"INVALID_PACK_ACTION"},403);
     const players=await this.ctx.storage.get("players")||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_BATTLE_TARGET"},400);
     // Validate all private divination targets BEFORE any usage ledger or game-state write.
@@ -2094,6 +2243,11 @@ export class RoomDurableObject extends DurableObject {
       (!row?.expiresAt||Date.parse(row.expiresAt)>Date.now()));
     if(isExpelled(actorId))
       return j({ok:false,error:"ACTOR_EXPELLED",message:"Người thực hiện đã bị đuổi khỏi làng, không thể dùng chức năng."},409);
+    if(step.kind==="wolf-pack-bite"){
+      const members=await this.ctx.storage.get("assignments")||[];
+      const alpha=alphaPackState(members,interactions,matchId,meta.cycleNight);
+      if(alpha.expelled)return j({ok:false,error:"PACK_ALPHA_EXPELLED",message:"Sói Trùm bị đuổi khỏi làng, Bầy Sói không thể Cắn."},409);
+    }
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
@@ -2106,7 +2260,7 @@ export class RoomDurableObject extends DurableObject {
     const usageKey="battleRoleUsage:"+matchId;
     let currentUsage=(await this.ctx.storage.get(usageKey))||[],roleUse=null;
     if(!artifactId){
-      const roleStep=step.kind==="role-group"?(step.roles||[]).find(r=>
+      const roleStep=["role-group","wolf-pack-bite"].includes(step.kind)?(step.roles||[]).find(r=>
         (r.loginIds||[]).map(normalizeLoginId).includes(actorId)):step.kind==="role"?step:null;
       if(!roleStep)return j({ok:false,error:"INVALID_ROLE_FOR_TURN"},403);
       const roleId=String(roleStep.roleId||"");
@@ -2120,10 +2274,63 @@ export class RoomDurableObject extends DurableObject {
       const deliveredRole=privateRoles.find(r=>String(r?.roleId||"")===roleId&&
         (!r?.matchId||String(r.matchId)===matchId));
       const roleCard=deliveredRole?.roleCard||row.roleCard||{},actionId=String(body?.actionId||"");
+      if(roleId==='role_clone'&&actionId==='action_clone_target'&&
+        (Number(meta.cycleNight||0)!==1||targets.includes(actorId)||targets.length!==1))
+        return j({ok:false,error:"CLONE_TARGET_NIGHT_ONE_ONLY"},409);
       if(roleId==='role_snow_wolf'&&actionId==='action_wolf_bite'&&
         !canSnowWolfBite({assignments:assigned,interactions,matchId}))
         return j({ok:false,error:"SNOW_WOLF_PACK_ALIVE",message:"Sói Tuyết chỉ được Cắn khi không còn Sói khác sống trong ván."},409);
-      const policy=resolveRoleActionPolicy(roleCard,roleId,actionId);
+      const packBite=step.kind==="wolf-pack-bite";
+      // Reject forged effect types and invalid frozen/dead targets before the
+      // use ledger or interactions are changed. The UI is not an authority.
+      const expectedType=packBite?"effect_notice":
+        roleId==="role_witch"&&actionId==="action_witch_save"?"effect_notice":
+        roleId==="role_witch"&&actionId==="action_witch_kill"?"dead":
+        roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"?"frozen":
+        roleId==="role_guard"&&actionId==="action_protect"?"effect_notice":
+        roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":"";
+      if(expectedType&&type!==expectedType)
+        return j({ok:false,error:"NIGHT_ACTION_TYPE_MISMATCH"},409);
+      if(roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"&&targets.includes(actorId))
+        return j({ok:false,error:"SNOW_WOLF_SELF_FREEZE"},409);
+      if((roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"||
+          roleId==="role_guard"&&actionId==="action_protect")&&
+        targets.some(id=>interactions.some(x=>String(x?.matchId||"")===matchId&&
+          normalizeLoginId(x?.loginId)===id&&x?.type==="dead"&&x.effectActive!==false)))
+        return j({ok:false,error:"TARGET_ALREADY_DEAD"},409);
+      if(roleId==="role_witch"&&actionId==="action_witch_save"){
+        const finalBite=resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,matchId),
+          interactions,players,matchId,night:Number(meta.cycleNight||1)});
+        if(targets.length!==1||!witchSaveTargetAllowed(finalBite,targets[0]))
+          return j({ok:false,error:"WITCH_SAVE_TARGET_INVALID",
+            message:"Bình Cứu chỉ dùng được cho người nhận vết Sói Cắn cuối cùng hợp lệ."},409);
+      }
+      if(!packBite&&actionId==="action_wolf_bite")
+        return j({ok:false,error:"PACK_BITE_WRONG_TURN"},403);
+      if(packBite&&(!isWolfRole(row)||actionId!=="action_wolf_bite"))
+        return j({ok:false,error:"INVALID_PACK_ACTOR"},403);
+      if(packBite&&currentUsage.some(x=>String(x?.matchId)===matchId&&Number(x?.night)===Number(meta.cycleNight||1)&&
+        x?.actionId==="action_wolf_bite"))
+        return j({ok:false,error:"PACK_BITE_ALREADY_USED"},409);
+      const policy=packBite?{roleId,actionId,singleActionPerNight:false,usageMode:"eachNight",usageCount:1,knownAction:true}:
+        resolveRoleActionPolicy(roleCard,roleId,actionId);
+      // Guard & Snow Wolf may not repeat the exact target two consecutive nights.
+      if(["action_protect","action_snow_wolf_freeze"].includes(actionId)){
+        const correctRole=actionId==="action_protect"?"role_guard":"role_snow_wolf";
+        if(roleId===correctRole&&targets.some(x=>previousNightTargets(currentUsage,{
+          matchId,roleId,actionId,actorId,night:Number(meta.cycleNight||1)}).includes(x)))
+          return j({ok:false,error:"CONSECUTIVE_NIGHT_TARGET_FORBIDDEN"},409);
+      }
+      if(roleId==="role_old_witch"){
+        // GM can submit forged action types or targets; enforce WITCH-01 before
+        // taking snapshots, writing interactions, debiting uses or broadcasting.
+        const required=actionId==="action_revive"?"revive":actionId==="action_exile"?"expelled":"";
+        if(!required||type!==required)return j({ok:false,error:"WITCH_INVALID_ACTION_TYPE"},409);
+        const checked=oldWitchActionCheck({actionId,actorId,targetIds:targets,
+          matchId,night:Number(meta.cycleNight||1),interactions,players,
+          usage:await this.ctx.storage.get("battleRoleUsage:"+matchId)||[]});
+        if(!checked.ok)return j({ok:false,error:checked.error,message:checked.message},409);
+      }
       // Recover older confirmed battle actions in an already-running match.
       const known=new Set(currentUsage.map(x=>String(x?.eventId||"")).filter(Boolean));
       for(const hit of interactions){
@@ -2139,7 +2346,7 @@ export class RoomDurableObject extends DurableObject {
         night:Number(meta.cycleNight||1),actorId,roleId,actionId,policy});
       if(!decision.ok)return j({ok:false,error:decision.error,
         message:decision.message||"Hành động không được phép theo luật vai trò."},409);
-      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,
+      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:targets,
         eventId:token,usedAt:new Date().toISOString(),currentUsage};
     }
     const undoKey="battleLastAction:"+matchId,
@@ -2247,6 +2454,13 @@ export class RoomDurableObject extends DurableObject {
       if(!step||String(step.id)!==String(body.turnId))
         return j({ok:false,error:"STALE_TURN",message:"Lượt chức năng đã thay đổi. Vui lòng chọn lại."},409);
       const claimedActor=normalizeLoginId(body.actorId||"");
+      // Only the battle-action endpoint maintains the per-role nightly ledger,
+      // limits and atomic Undo; never allow legacy GM interaction to bypass it.
+      if(!verifiedAuth&&!body?.artifactId&&
+         (step.kind==="wolf-pack-bite"||
+          step.kind==="role"&&["role_old_witch","role_snow_wolf","role_guard"].includes(step.roleId)||
+          step.kind==="role-group"&&(step.roles||[]).some(r=>["role_old_witch","role_snow_wolf","role_guard"].includes(r.roleId))))
+        return j({ok:false,error:"WITCH_USE_BATTLE_ACTION"},409);
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
       const artifactActions=Array.isArray(step.actions)?step.actions:[];
       if(step.kind==="early-artifact-window"||(["role","role-group"].includes(step.kind)&&body.artifactId)){
@@ -2399,6 +2613,8 @@ export class RoomDurableObject extends DurableObject {
       const players=(await this.ctx.storage.get("players"))||{},nextVersion=currentVersion+1;
       for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.lastSeenAt=now}
       await this.ctx.storage.put("players",players);await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);
+      // A new match must not inherit a previous DEMO owner's lease, clock or plan.
+      for(const key of ["demoLease","demoClock","demoPlan"])await this.ctx.storage.delete(key);
       for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}
       meta.matchId=null;meta.matchRevision=0;meta.deliveryVersion=0;meta.multiAssign=false;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.enabled=roomWasEnabled;meta.startedAt=null;meta.roleDeliveredAt=null;meta.endedAt=null;meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=0;meta.reopenAt=null;meta.deletedAt=null;meta.resetVersion=nextVersion;meta.lastEndedMatchId=null;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.dayDeadlineAt=null;meta.lastResetTransactionId=transactionId||("postgame-"+nextVersion);meta.updatedAt=now;meta.lastUsedAt=now;
       await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}
@@ -2417,6 +2633,8 @@ export class RoomDurableObject extends DurableObject {
     const oldPlayers=(await this.ctx.storage.get("players"))||{},removedPlayers=Object.values(oldPlayers).map(publicPlayer),nextVersion=currentVersion+1;
     await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);await this.ctx.storage.put("seatSwaps",[]);
     await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");
+    // Releasing the room also stops any autonomous DEMO from the previous match.
+    for(const key of ["demoLease","demoClock","demoPlan"])await this.ctx.storage.delete(key);
     for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}
     meta.matchId=null;meta.matchRevision=0;meta.deliveryVersion=0;meta.multiAssign=false;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.seatsLocked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.cycleStartedAt=null;meta.currentNightTurnId=null;meta.autoPausedRemainingMs=null;meta.enabled=roomWasEnabled;meta.gameName="";meta.playerCount=0;meta.startedAt=null;meta.roleDeliveredAt=null;meta.endedAt=null;meta.winnerFaction=null;meta.winnerLabel=null;meta.resultVersion=0;meta.reopenAt=null;meta.deletedAt=null;meta.resetVersion=nextVersion;meta.lastResetTransactionId=transactionId||("reset-"+nextVersion);meta.updatedAt=now;meta.lastUsedAt=now;
     await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}
@@ -2491,7 +2709,13 @@ export class RoomDurableObject extends DurableObject {
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
     deliveryManifest.receivedAt=deliveryAck?.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
     const swapRequests=((await this.ctx.storage.get('seatSwaps'))||[]).filter(x=>x.toId===key&&x.status==='pending'&&x.expiresAt>Date.now()).map(x=>({id:x.id,fromName:x.fromName,fromSeat:x.fromSeat,toSeat:x.toSeat,expiresAt:x.expiresAt}));
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    // WOLF-01: this authenticated /me response is the ONLY delivery path for
+    // pack role labels. Never copy names or faction into public room or websocket.
+    const wolfRuntime=String(meta.cyclePhase)==="night"&&Number(meta.cycleNight)>0?
+      await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
+    const wolfRecognition=privateWolfRecognition(meta,wolfRuntime,loginId,
+      wolfPackMembers(await this.ctx.storage.get("assignments")||[],rows,meta.matchId));
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDeliveryReceived(body){
     const loginId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta");
@@ -2653,7 +2877,14 @@ export class RoomDurableObject extends DurableObject {
   async websocket(request,url){if(request.headers.get("Upgrade")?.toLowerCase()!=="websocket")return new Response("Expected WebSocket upgrade",{status:426});const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt."},423);const participantId=url.searchParams.get("participantId")||null;let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(participantId&&!players[participantId])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},403);const now=new Date().toISOString();if(participantId&&players[participantId]){players[participantId].lastHeartbeatAt=Date.now();players[participantId].lastSeenAt=now;await this.ctx.storage.put("players",players)}const pair=new WebSocketPair(),[client,server]=Object.values(pair);this.ctx.acceptWebSocket(server);server.serializeAttachment({participantId,connectedAt:now});const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer),payload={type:"room_state",room,players:publicPlayers,serverTime:Date.now(),presenceChanged:true};server.send(JSON.stringify(payload));this.broadcast(payload);return new Response(null,{status:101,webSocket:client})}
   async webSocketMessage(ws,message){let d;try{d=JSON.parse(typeof message==="string"?message:new TextDecoder().decode(message))}catch{return}if(d?.type!=="ping")return;const participantId=ws.deserializeAttachment()?.participantId||null,meta=await this.ctx.storage.get("meta"),players=(await this.ctx.storage.get("players"))||{},now=new Date().toISOString();if(participantId&&players[participantId]){players[participantId].lastHeartbeatAt=Date.now();players[participantId].lastSeenAt=now;await this.ctx.storage.put("players",players)}try{ws.send(JSON.stringify({type:"pong",at:now,serverTime:Date.now()}))}catch{}}
   async markSocketDisconnected(ws){const participantId=ws?.deserializeAttachment?.()?.participantId||null;if(!participantId){this.broadcast({type:"presence",connections:this.ctx.getWebSockets().length});return}const other=this.ctx.getWebSockets().some(s=>s!==ws&&s.deserializeAttachment?.()?.participantId===participantId);if(other)return;const players=(await this.ctx.storage.get("players"))||{},meta=await this.ctx.storage.get("meta");if(players[participantId]){players[participantId].lastHeartbeatAt=0;players[participantId].lastSeenAt=new Date().toISOString();await this.ctx.storage.put("players",players)}if(meta)this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now(),presenceChanged:true});this.broadcast({type:"presence",connections:this.ctx.getWebSockets().length})}
-  async webSocketClose(ws){await this.markSocketDisconnected(ws)} async webSocketError(ws){await this.markSocketDisconnected(ws)} broadcast(payload){if(this.demoBroadcastBuffer){this.demoBroadcastBuffer.push(payload);return}const e=JSON.stringify(payload);for(const s of this.ctx.getWebSockets())try{s.send(e)}catch{}}
+  async webSocketClose(ws){await this.markSocketDisconnected(ws)} async webSocketError(ws){await this.markSocketDisconnected(ws)} broadcast(payload){
+    // WOLF-01 fail closed: public WebSocket events MUST NOT carry queue members,
+    // role identities, recognitionIds, or other private GM runtime fields.
+    const safe=payload&&['night_turn','room_cycle'].includes(payload.type)?
+      Object.fromEntries(Object.entries(payload).filter(([key])=>key!=='runtime'&&key!=='nightRuntime')):payload;
+    if(this.demoBroadcastBuffer){this.demoBroadcastBuffer.push(safe);return}
+    const e=JSON.stringify(safe);for(const s of this.ctx.getWebSockets())try{s.send(e)}catch{}
+  }
 }
 
 export default {async fetch(request,env){

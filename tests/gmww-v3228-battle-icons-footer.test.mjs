@@ -20,19 +20,19 @@ test('GM battle source modules are the ones assembled into the Runtime',()=>{
  assert.ok(app.includes(piece(part40,'function battleIconPositionKey(actionId,iconId)','function battleIconClearDrag(){')));
  assert.ok(app.includes(piece(part40,'function battleIconBind(){','// Repaint the current GM turn')));
 });
-test('Two or more concurrent icons start separated at the real GM fire',()=>{
- const code=piece(app,'function battleIconSpawnPoint(','function battleIconFirePoint(){');
+test('Double-sized icons remain separated at village entrance',()=>{
+ const code=piece(app,'function battleIconSpawnPoint(','function battleIconEntryPoint(){');
  const c={globalThis:{visualViewport:{width:390,height:844}},innerWidth:390,innerHeight:844,Math};
  vm.createContext(c);vm.runInContext(code,c);
  for(const count of [2,3,4,6]){
-  const positions=Array.from({length:count},(_,i)=>c.battleIconSpawnPoint({x:195,y:380},i,count));
+  const positions=Array.from({length:count},(_,i)=>c.battleIconSpawnPoint({x:195,y:650},i,count));
   for(let i=0;i<count;i++)for(let j=i+1;j<count;j++){
    const distance=Math.hypot(positions[i].x-positions[j].x,positions[i].y-positions[j].y);
-   assert.ok(distance>=49,'Icons '+count+' '+i+'/'+j+' overlap: '+distance);
+   assert.ok(distance>=92,'Icons '+count+' '+i+'/'+j+' overlap: '+distance);
   }
  }
  assert.match(app,/data-fire-index/);
- assert.match(app,/battleIconSpawnPoint\(fire,slot,eligible\.length\)/);
+ assert.match(app,/battleIconSpawnPoint\(entry,slot,eligible\.length\)/);
 });
 test('Dropping a multi-target action keeps its icon for the next different target',()=>{
  const block=piece(app,'function battleIconBind(){','// Repaint the current GM turn');
@@ -43,11 +43,11 @@ test('Dropping a multi-target action keeps its icon for the next different targe
  assert.match(block,/else void battleConfirm\(true\)/);
  assert.match(block,/if\(!target\|\|!a\.targetCount\)return/);
 });
-test('Icon art is frameless at 40px inside a 50px draggable hit area',()=>{
- const end=css.slice(css.lastIndexOf('/* GMWW V3.229'));
- assert.ok(end.length>1000);
- assert.match(end,/#battleFireIconDock \.battle-fire-icon img\{[\s\S]*?width:40px!important/);
- assert.match(end,/#battleFireIconDock \.battle-fire-icon\{[\s\S]*?width:50px!important/);
+test('Frameless icon art is 80px inside a 92px draggable hit area',()=>{
+ const end=css.slice(css.lastIndexOf('/* V3.231:'));
+ assert.ok(end.length>450);
+ assert.match(end,/#battleFireIconDock \.battle-fire-icon img\{[\s\S]*?width:80px!important/);
+ assert.match(end,/#battleFireIconDock \.battle-fire-icon\{[\s\S]*?width:92px!important/);
  assert.match(css,/#battleFireIconDock \.battle-fire-icon\{[\s\S]*?background:transparent!important/);
 });
 test('Bottom menu has clock, beach/rainbow, action box, gallows and undo in fixed order',()=>{
@@ -67,4 +67,12 @@ test('Clock left/right swipe retains one-minute day adjustment, not a cosmetic t
  assert.match(src,/Math\.abs\(dx\)>=28/);
  assert.match(src,/battleAdjustDayClock\(dx>0\?1:-1\)/);
  assert.match(app,/playRoomApi\('\/day-clock'/);
+});
+
+test('Initial action icons anchor to the village entrance above footer instead of GM fire',()=>{
+ const source=piece(app,'function battleIconEntryPoint(){','function battleIconResetPositions(){');
+ assert.match(source,/getElementById\('battleBottomControls'\)/);
+ assert.match(source,/rect\.top-60/);
+ assert.doesNotMatch(source,/villageFirePosition|play-village-core|play-core-pearl/);
+ assert.match(app,/const entry=battleIconEntryPoint\(\)/);
 });

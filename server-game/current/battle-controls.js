@@ -53,6 +53,9 @@
   // A role turn may contain both role and owned Artifact actions.
   function actionsForTurn(turn,night,catalog,used=[]){
     if(!turn||turn.kind==="wolf-introduction"||turn.kind==="village-wakeup")return [];
+    if(turn.kind==="wolf-pack-bite")
+      return [{id:"wolf-pack:action_wolf_bite",roleId:"wolf-pack",actionId:"action_wolf_bite",name:"Sói Cắn",type:"effect_notice",
+        actorIds:[...(turn.biteActorIds||turn.loginIds||[])],targetCount:1,noSelf:false,allowDead:false,noTarget:false,effectIds:["effect_wolf_bite"]}];
     const roles=Array.isArray(catalog?.cards)?catalog.cards:[],
       artifacts=Array.isArray(catalog?.artifacts)?catalog.artifacts:[],
       definitions=catalog?.actions||[];
@@ -67,7 +70,9 @@
         Array.isArray(chosen?.artifact?.functions)&&chosen.artifact.functions.length?chosen.artifact.functions:
         Array.isArray(chosen?.artifact?.actions)?chosen.artifact.actions:[];
       const actorIds=isArt?[loginOf(owner.loginId)]:(owner.loginIds||[owner.loginId]).filter(Boolean).map(loginOf);
-      const eligible=fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&(!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night)));
+      const eligible=fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&
+        (!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night))&&
+        (isArt||String(fn.actionId||fn.id||"")!=="action_wolf_bite"));
       // Never silently hide an assigned Artifact. Non-night/passive cards
       // are informational and MUST remain disabled to protect server rules.
       if(isArt&&!eligible.length){
@@ -99,7 +104,7 @@
           descName=description.replace(/[.。;:].*$/s,"").trim().slice(0,70),
           name=exactName||knownName||(descName.length>=3&&!isPlaceholder(descName)?descName:"Chưa đặt tên hành động");
         return {id:(isArt?"artifact:"+id+":"+loginOf(owner.loginId)+":":"role:"+id+":")+String(fn.id||fn.actionId||i),
-          actionId:String(fn.actionId||fn.id||""),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
+          actionId:String(fn.actionId||fn.id||""),roleId:isArt?"":String(id),name,type:resolvedType({...fn,name}),noSelf:fn.noSelf!==false,
           allowDead:!!fn.allowDead,noTarget:!!fn.noTarget,
           targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0))),
           effectIds:Array.isArray(fn.effectIds)?fn.effectIds.map(String):[],actorIds,
@@ -131,9 +136,21 @@
       return alreadyUsed(turn)?[]:build(turn,true);
     return [];
   }
+  function oldWitchReviveEligible(action,member,rows=[],night=0){
+    if(action?.roleId!=="role_old_witch"||action?.actionId!=="action_revive")return true;
+    const previous=Math.max(0,Number(night)||0)-1,target=loginOf(member?.loginId);
+    if(previous<1||!target)return false;
+    return (Array.isArray(rows)?rows:[]).some(x=>
+      loginOf(x?.loginId)===target&&x?.type==="dead"&&x?.effectActive!==false&&
+      Number(x?.night)===previous&&
+      (!x?.cycleKey||["night-"+previous,"morning-"+previous,"day-"+previous].includes(String(x.cycleKey))));
+  }
   function targetAllowed(action,member,effect,rows=[],night=0){
     if(!action||!member?.loginId||action.noTarget)return false;
     if(action.noSelf&&action.actorIds.includes(loginOf(member.loginId)))return false;
+    if((action.forbiddenTargets||[]).includes(loginOf(member.loginId)))return false;
+    if(action.roleId==="role_old_witch"&&action.actionId==="action_revive")
+      return effect==="dead"&&oldWitchReviveEligible(action,member,rows,night);
     if(action.type==="revive")return effect==="dead"||effect==="expelled";
     // A night victim is announced at dawn; the Seer may still scan them tonight.
     // Historical deaths remain ineligible on subsequent nights.
@@ -143,6 +160,6 @@
         x?.effectActive!==false&&Number(x?.night)===Number(night)&&night>0);
     return nightVictim||action.allowDead||effect!=="dead";
   }
-  const api=Object.freeze({currentTurn,timeline,displayLabel,artifactUsed,remainingSeconds,formatTime,resolvedType,actionsForTurn,targetAllowed});
+  const api=Object.freeze({currentTurn,timeline,displayLabel,artifactUsed,remainingSeconds,formatTime,resolvedType,actionsForTurn,targetAllowed,oldWitchReviveEligible});
   root.GMWW_BATTLE_CONTROLS=api;
 })(globalThis);

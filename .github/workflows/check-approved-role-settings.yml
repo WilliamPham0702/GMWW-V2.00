@@ -1,0 +1,31 @@
+name: Check Approved Role Card Settings
+
+on:
+  pull_request:
+    paths:
+      - 'server-game/src/00-core-and-library.part'
+      - 'server-game/current/app.js'
+      - 'tests/approved-role-card-settings-20261027.test.mjs'
+      - '.github/workflows/check-approved-role-settings.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  approved-card-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Only approved card settings and dependent night rules
+        run: |
+          node --test tests/approved-role-card-settings-20261027.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/witch01-old-witch-rules.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js

@@ -546,9 +546,22 @@ async function playCompletionNext(choice){
   s.busy=true;renderPlayCompletion();
   try{
     if(choice==='room'||choice==='exit'){
-      disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='room';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
+      // Leave is a real server-side seat release, not a local screen reset.
+      // Match history and the already-recorded winner remain in matchCompletion storage.
+      const reset=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({
+        transactionId:'completed-leave-'+s.matchId,
+        expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),
+        postGame:false,preserveParticipants:false
+      })});
+      if(reset?.hardReset!==true||Number(reset?.playersCount||0)!==0||Number(reset?.assignmentsCount||0)!==0)
+        throw new Error('Server chưa giải phóng hết người chơi và Seat. Không thể rời ván.');
+      playSceneRuntime.room=reset.room||playSceneRuntime.room;
+      rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
+      disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='lobby';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
+      // Otherwise playLiveMembers() reconstructs ghost Seat occupants from GM's stale selection.
+      playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';playSceneState.matchId='';
       playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
-      closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='exit'){exitPlayImmersive({completed:true});return}await openPlayCreateRoomSheet();openPlayRoomEditor(true);return;
+      closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='exit'){exitPlayImmersive({completed:true});return}return;
     }
     const data=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({postGame:true,preserveParticipants:true,expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),transactionId:'next-'+s.matchId})});
     if(data?.ok!==true||data.preserveParticipants!==true)throw Error('Server chưa xác nhận chuẩn bị ván tiếp theo.');
@@ -798,25 +811,37 @@ async function backPlayPhase(){
   }
   if(playSceneState.phase!=='lobby'){await playSyncRoom(true);return}
   if(playSceneState.step==='lobby')return;
-  if(playSceneState.step==='room'){await playReturnToLobby();return}
+  if(playSceneState.step==='seats'||playSceneState.step==='room'){await playReturnToLobby();return}
   advancePlaySetup(-1)
 }
 const PLAY_GAME_CHROME_IDLE_MS=30000;
 let playGameChromeIdleTimer=0;
+const GMWW_CHROME_MENU_KEY='gmww_play_menu_hidden_v3236';
+let gmwwPlayChromeHidden=false;
+try{gmwwPlayChromeHidden=localStorage.getItem(GMWW_CHROME_MENU_KEY)==='1'}catch{}
 function setPlayGameChromeHidden(hidden){
-  if(playSceneState.step==='seats'&&playSceneState.phase==='lobby')hidden=false;
-  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu'),gather=document.getElementById('playGatherToolbar');
-  [top,bottom,gather].forEach(menu=>{if(!menu)return;menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0'});
+  const shell=document.getElementById('playShell');
+  shell?.classList.toggle('gmww-chrome-hidden',!!hidden);
+  for(const id of ['playSetupStrip','gmTopMenu','playBattleTop','battleBottomControls']){
+    const menu=document.getElementById(id);if(!menu)continue;
+    menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0';
+  }
+  const toggle=document.getElementById('battleGMChromeToggle');
+  if(toggle){toggle.setAttribute('aria-pressed',String(!hidden));toggle.textContent='Menu';toggle.title=hidden?'Nhấn để bật hiển thị menu trên và dưới':'Nhấn để tắt hiển thị menu trên và dưới';toggle.setAttribute('aria-label','Menu trên và dưới: '+(hidden?'Tắt':'Bật'))}
+}
+function gmwwTogglePlayChrome(){
+  gmwwPlayChromeHidden=!gmwwPlayChromeHidden;
+  try{localStorage.setItem(GMWW_CHROME_MENU_KEY,gmwwPlayChromeHidden?'1':'0')}catch{}
+  setPlayGameChromeHidden(gmwwPlayChromeHidden);
 }
 function clearPlayGameChromeIdle(){
   if(playGameChromeIdleTimer){clearTimeout(playGameChromeIdleTimer);playGameChromeIdleTimer=0}
 }
 function resetPlayGameChromeIdle(){
-  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
-  if(!top&&!bottom)return;
-  setPlayGameChromeHidden(false);clearPlayGameChromeIdle();
-  if(!document.body.classList.contains('play-immersive'))return;
-  playGameChromeIdleTimer=setTimeout(()=>{if(document.body.classList.contains('play-immersive'))setPlayGameChromeHidden(true)},PLAY_GAME_CHROME_IDLE_MS);
+  // V3.236: GM's explicit toggle owns visibility. Touching the map must not
+  // reveal a deliberately hidden toolbar or auto-hide a deliberately shown one.
+  clearPlayGameChromeIdle();
+  setPlayGameChromeHidden(gmwwPlayChromeHidden);
 }
 function initPlayGameChromeAutoHide(){
   const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
@@ -978,16 +1003,14 @@ async function handlePlayTimelineStep(step){
   if(from<0||target<0)return;
   if(target===from){
     if(step==='seats'){playGatherToolsDismissed=false;renderPlayGatherToolbar();return}
-    if(step==='room')await openPlayCreateRoomSheet();
-    else if(step==='game')await openPlayGameSheet();
+    if(step==='game')await openPlayGameSheet();
     return;
   }
   if(target===from+1){await advancePlayPhase();return}
   if(target<from){
     if(step==='lobby'){await playReturnToLobby();return}
     setPlayStep(step);
-    if(step==='room')await openPlayCreateRoomSheet();
-    else if(step==='game')await openPlayGameSheet();
+    if(step==='game')await openPlayGameSheet();
     return;
   }
   playFlashError('Hãy hoàn tất bước hiện tại trước khi chuyển đến bước này.');
@@ -1024,10 +1047,7 @@ function initPlayScene(){
   document.getElementById('playAutoGM')?.addEventListener('click',togglePlayAutoGM);
   document.getElementById('playRefreshServer')?.addEventListener('click',refreshPlayServerRealtime);
   document.getElementById('playAudioTop')?.addEventListener('click',togglePlayAudio);
-  document.getElementById('playPrimaryAction')?.addEventListener('click',()=>{
-    if(playSceneState.step==='room'){openPlayCreateRoomSheet();return}
-    advancePlayPhase();
-  });
+  document.getElementById('playPrimaryAction')?.addEventListener('click',()=>{void advancePlayPhase()});
   document.getElementById('playEndGame')?.addEventListener('click',()=>{void openPlayCompletionSheet()});
   document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))}));
   document.getElementById('playRoomButton')?.addEventListener('click',openPlayGMSheet);
@@ -1077,7 +1097,8 @@ function initPlayScene(){
   document.getElementById('playEndConfirm')?.addEventListener('click',confirmPlayEndGame);
   document.getElementById('playEndClose')?.addEventListener('click',closePlayEndSheet);document.getElementById('playEndCancel')?.addEventListener('click',closePlayEndSheet);
   document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
-  document.querySelector('.play-core-pearl')?.addEventListener('click',()=>{if(playSceneState.step==='battle'){battleToggleWolfMenu();return}openPlayCreateRoomSheet()});
+  document.querySelector('.play-core-pearl')?.addEventListener('click',()=>battleToggleWolfMenu());
+  document.getElementById('battleGMChromeToggle')?.addEventListener('click',gmwwTogglePlayChrome);
   document.getElementById('playCreateRoomAdd')?.addEventListener('click',()=>openPlayRoomEditor(true));
   document.getElementById('playCreateRoomSave')?.addEventListener('click',savePlayRoomEditor);
   document.getElementById('playCreateRoomSeatCount')?.addEventListener('change',e=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(e.target.value)||12));e.target.value=String(playSceneState.seatCount);savePlayScene();if(isLivePlayRoom())playUpdateRoomSettings({seatCount:playSceneState.seatCount})});

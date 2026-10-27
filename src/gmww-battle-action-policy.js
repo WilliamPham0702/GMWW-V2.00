@@ -7,10 +7,10 @@ export function resolveRoleActionPolicy(card,roleId,actionId){
   // Preserve explicit custom settings; only apply the original Phù Thuỷ Già rule to
   // older already-distributed cards without a serialized flags/functions contract.
   const explicit=card?.flags&&typeof card.flags.allowMultipleActions==='boolean';
-  const singleActionPerNight=explicit?!card.flags.allowMultipleActions:role==='role_old_witch';
+  const singleActionPerNight=role==='role_old_witch'||(explicit?!card.flags.allowMultipleActions:false);
   const mode=String(fn?.usageMode||'').trim();
   const fallbackOnce=role==='role_old_witch'&&action==='action_revive';
-  const usageMode=['eachNight','onceGame','nGame','unlimited'].includes(mode)?mode:(fallbackOnce?'onceGame':'unlimited');
+  const usageMode=fallbackOnce?'onceGame':['eachNight','onceGame','nGame','unlimited'].includes(mode)?mode:'unlimited';
   return {roleId:role,actionId:action,functionId:normalized(fn?.id||action),
     singleActionPerNight,usageMode,usageCount:positive(fn?.usageCount,1),
     knownAction:list.length?!!fn:(Array.isArray(card?.actions)&&card.actions.length?
@@ -25,7 +25,12 @@ export function checkBattleRoleActionUsage(rows,detail){
   if(!rule.knownAction)return{ok:false,error:'INVALID_ROLE_ACTION_FOR_TURN'};
   const own=previous.filter(x=>normalized(x?.matchId)===match&&normalized(x?.roleId)===role&&
     normalized(x?.actorId)===actor);
-  if(rule.singleActionPerNight&&own.some(x=>Number(x.night)===night))
+  // NIGHT-02: a shared Pack Bite is separate from each wolf role's own
+  // night power. Never make a Wolf Seer's private action unavailable because
+  // that same member already participated in the pack bite.
+  const individualUses=role.includes('wolf')&&action!=='action_wolf_bite'?
+    own.filter(x=>normalized(x.actionId)!=='action_wolf_bite'):own;
+  if(rule.singleActionPerNight&&individualUses.some(x=>Number(x.night)===night))
     return{ok:false,error:'ROLE_NIGHT_ACTION_EXHAUSTED',message:'Vai trò đã sử dụng một chức năng trong đêm này.'};
   const uses=own.filter(x=>normalized(x.actionId)===action&&
     (['onceGame','nGame'].includes(rule.usageMode)||Number(x.night)===night)).length;
@@ -38,6 +43,6 @@ export function appendBattleRoleActionUsage(rows,detail){
   return [...(Array.isArray(rows)?rows:[]),{
     matchId:normalized(detail.matchId),night:Math.max(1,Number(detail.night)||1),
     actorId:normalized(detail.actorId),roleId:normalized(detail.roleId),
-    actionId:normalized(detail.actionId),eventId:normalized(detail.eventId),
+    actionId:normalized(detail.actionId),targetIds:(Array.isArray(detail.targetIds)?detail.targetIds:[]).map(normalized),eventId:normalized(detail.eventId),
     usedAt:normalized(detail.usedAt||new Date().toISOString())}].slice(-1000);
 }

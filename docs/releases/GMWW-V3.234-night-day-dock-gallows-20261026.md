@@ -1,0 +1,19 @@
+# GMWW Runtime V3.234 — Menu Đêm/Ngày và danh sách Lên Giàn (26/10/2026)
+
+## Giao diện điều chỉnh
+- Khi **vừa vào trận và Ban Đêm**, thanh dưới giữ đúng ba mục: **Đồng hồ (đếm ngược) – Box Hành động – Khôi phục**. Nút Khôi phục chỉ khả dụng khi Server có hành động để hoàn tác.
+- **Chỉ khi chuyển sang Ban Ngày**, thanh dưới đổi thành **Đồng hồ – 🏖️ Thông cáo – Hành động – ⛱️ Lên Giàn – 🌈 Thống kê phe**. Ẩn Khôi phục trong giao diện ban ngày, không xóa logic hoàn tác.
+- **Trang Lên Giàn:** vùng danh sách hiển thị tối đa **5 người** (5 dòng × 39px = 195px), người thứ 6 trở đi xem bằng cuộn dọc. Giữ toàn bộ danh sách, thứ tự đề cử, thao tác cấm chọn/vote, GM chọn người, kết quả và đồng bộ.
+
+## Kiểm thử và phát hành
+- Chỉ kiểm thử Đêm → Ngày → Đêm, số lượng/nội dung dock, trạng thái Khôi phục, danh sách Lên Giàn 5 người và cuộn, cú pháp/bundle, version guard, OTA manifest/SHA-256 và Worker.
+- Không chạy kiểm thử ngoài phạm vi như Chrome Player Card, Seat, DEMO, Arena 3D, Native IPA.
+- Giữ nguyên gameplay Core, phòng, lịch sử, Player Web, Durable Objects và native IPA. Chỉ thay GM Runtime.
+
+## Rollback
+- Nếu lỗi sau cập nhật, rollback Runtime V3.233 và deployment Cloudflare trước đó. Không xóa dữ liệu Durable Objects hoặc thay IPA.
+
+## CI hậu merge V3.234
+- Sửa phân loại phạm vi trên **push main** để giữ đúng bài kiểm thử V3.234 đã được xác nhận từ PR #522; không chạy lại những bài thử DEMO, Chrome Card hoặc icon nổi không liên quan.
+- Bổ sung test chính sách CI chống mở rộng phạm vi và kiểm tra version guard.
+- Đây là sửa chốt phát hành, không thay đổi bytes ứng dụng sau bản kiểm thử V3.234. Vẫn xác minh đầy đủ manifest OTA SHA-256 từ phiên bản Worker khi phát hành.

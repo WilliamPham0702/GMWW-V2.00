@@ -31,6 +31,17 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
     guards=new Set(actions.filter(row=>['action_protect','action_witch_save'].includes(row.actionId)).map(row=>login(row.loginId)).filter(Boolean)),
     direction=actions.filter(row=>row.actionId==='action_transfer_bite'&&['left','right'].includes(row.direction)).at(-1)?.direction||'';
   if(!bites.length)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
+  // NIGHT-02: an Alpha Wolf frozen by Snow Wolf or expelled from the village
+  // disables the lethal pack bite. Frozen Alpha does not reveal bitten targets
+  // to the Witch; the submitted intent may still be recorded for history.
+  const alphaIds=new Set((Array.isArray(assignments)?assignments:[]).filter(x=>
+    x?.roleId==='role_alpha_wolf'&&!rows.some(y=>isFrom(y,match,cycle)&&y?.type==='dead'&&
+      y.effectActive!==false&&login(y.loginId)===login(x.loginId))).map(x=>login(x.loginId)));
+  const disabledAlpha=rows.some(x=>String(x?.matchId||'')===match&&alphaIds.has(login(x.loginId))&&
+    (x.effectActive!==false||(x.type==='frozen'&&x.expiredReason==='MORNING_START'&&Number(x.night)===cycle))&&
+    ((x.type==='frozen'&&Number(x.night)===cycle)||x.type==='expelled'));
+  if(disabledAlpha)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:bites.length,
+    packDisabled:true,reason:'ALPHA_FROZEN_OR_EXPELLED'};
 
   const targets=Object.values(players&&typeof players==='object'?players:{}),
     byLogin=new Map(targets.filter(x=>login(x?.loginId)).map(x=>[login(x.loginId),x]));
@@ -58,7 +69,14 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       const n=seated.findIndex(x=>x.loginId===origin);
       // Seat IDs increase clockwise in the displayed GM ring: visual right is the previous seat.
       const next=(n+(direction==='right'?-1:1)+seated.length)%seated.length;
-      target=seated[next].loginId;
+      // Do not transfer a bite into a person dead on an earlier day/night.
+      const directionDelta=direction==='right'?-1:1;
+      const eligible=row=>!rows.some(x=>x?.type==='dead'&&x.effectActive!==false&&
+        String(x.matchId||'')===match&&login(x.loginId)===row.loginId);
+      const candidate=Array.from({length:seated.length-1},(_,i)=>
+        seated[(n+directionDelta*(i+1)+seated.length*(i+1))%seated.length]).find(eligible);
+      if(!candidate)continue;
+      target=candidate.loginId;
       transfers.push({from:origin,to:target,direction});
     }
     const protectedTarget=guards.has(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
@@ -124,11 +142,13 @@ export function canSnowWolfBite({assignments=[],interactions=[],matchId}={}){
   const dead=new Set((Array.isArray(interactions)?interactions:[]).filter(row=>
     String(row?.matchId||'')===match&&row?.type==='dead'&&row?.effectActive!==false)
     .map(row=>login(row.loginId)));
-  return !(Array.isArray(assignments)?assignments:[]).some(row=>{
-    const role=String(row?.roleId||''),faction=String(row?.roleCard?.factionId||row?.factionId||row?.faction||'').toLowerCase();
-    const wolf=role==='role_wolf'||role==='role_alpha_wolf'||role==='role_snow_wolf'||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
-    return wolf&&role!=='role_snow_wolf'&&!dead.has(login(row?.loginId));
+  // Even two living Snow Wolves do NOT satisfy "one Snow Wolf alone".
+  const aliveWolves=(Array.isArray(assignments)?assignments:[]).filter(row=>{
+    const role=String(row?.roleId||''),faction=String(row?.faction||row?.factionId||row?.roleCard?.factionId||'').toLowerCase();
+    const wolf=role.includes('wolf')||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
+    return wolf&&!dead.has(login(row?.loginId));
   });
+  return aliveWolves.length===1&&aliveWolves[0]?.roleId==='role_snow_wolf';
 }
 export function resolveMaidenNight({assignments=[],interactions=[],matchId,night}={}){
   const match=String(matchId||''),cycle=Number(night);

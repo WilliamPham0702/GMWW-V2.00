@@ -2323,7 +2323,7 @@ body.play-immersive #start .play-shell[data-step="lobby"] .play-setup-strip,
 body.play-immersive #start .play-shell[data-step="room"] .play-setup-strip{
   display:grid!important;position:absolute!important;z-index:44!important;
   top:calc(env(safe-area-inset-top) + 76px)!important;left:8px!important;right:8px!important;
-  grid-template-columns:repeat(7,minmax(0,1fr))!important;column-gap:2px!important;
+  grid-template-columns:repeat(6,minmax(0,1fr))!important;column-gap:2px!important;
   padding:5px 3px!important;border:1px solid rgba(216,255,255,.3)!important;
   border-radius:14px!important;background:rgba(2,40,57,.75)!important;
   box-shadow:0 4px 18px rgba(0,23,34,.23)!important;
@@ -2336,7 +2336,7 @@ body.play-immersive #start .play-setup-strip span{width:20px;height:20px;font-si
 body.play-immersive #start .play-setup-strip b{font-size:7px;line-height:1.1;white-space:normal}
 body.play-immersive #start .play-shell[data-step="lobby"] .play-card-fan{display:none!important}
 
-/* V3.25: single seven-step top timeline and frosted five-control bottom dock.
+/* V3.244: six centered top timeline steps and frosted five-control bottom dock.
    Frosted chrome only; the village art stays sharp. */
 body.play-immersive #start #playSetupStrip.play-setup-strip,
 body.play-immersive #start .play-shell[data-step="lobby"] #playSetupStrip,
@@ -2344,7 +2344,7 @@ body.play-immersive #start .play-shell[data-step="room"] #playSetupStrip{
  display:grid!important;position:absolute!important;z-index:96!important;
  top:calc(env(safe-area-inset-top) + 10px)!important;bottom:auto!important;
  left:9px!important;right:9px!important;width:auto!important;max-width:900px!important;margin:0 auto!important;
- grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:2px!important;align-items:center!important;
+ grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:2px!important;align-items:center!important;
  min-height:62px!important;padding:7px 5px!important;border-radius:17px!important;
  border:1px solid rgba(186,240,250,.39)!important;
  background:linear-gradient(155deg,rgba(5,39,58,.64),rgba(7,69,87,.54))!important;
@@ -8135,4 +8135,586 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
   #settings #settingsNoticePanel h4{font-size:13px}
   #settings #settingsNoticePanel .settings-notice-head-actions{gap:5px}
   #settings #settingsNoticePanel .settings-notice-entry{gap:6px}
+}
+
+/* V3.231: frameless gameplay action icons doubled 40 → 80px. */
+#battleFireIconDock .battle-fire-icon{width:92px!important;height:92px!important;min-width:92px!important;min-height:92px!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#battleFireIconDock .battle-fire-icon img{width:80px!important;height:80px!important;max-width:80px!important;object-fit:contain!important;background:transparent!important;border:0!important}
+#battleFireIconDock .gmww-icon-rotation{width:80px!important;height:80px!important;font-size:80px!important;line-height:1!important}
+
+
+/* GMWW V3.233: Cloudflare two-line label, same tile dimensions. */
+#settings #settingsGroupHealth #gmwwCloudflareOpen .gmww-cloudflare-label{
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+ gap:1px!important;min-width:0!important;max-width:100%!important;width:100%!important;
+ font-size:10px!important;line-height:1.1!important;white-space:nowrap!important;
+ word-break:normal!important;overflow-wrap:normal!important;letter-spacing:-.15px!important;
+}
+#settings #settingsGroupHealth #gmwwCloudflareOpen .gmww-cloudflare-label>span{
+ display:block!important;font:inherit!important;max-width:100%!important;
+}
+/* Three distinct, equally sized row actions on iPhone. */
+#playGameSheet .play-template-actions-row{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:6px!important;align-items:stretch!important;min-width:0!important;width:100%!important;
+ margin:8px 0 6px!important;
+}
+#playGameSheet .play-template-actions-row .play-template-suggested,
+#playGameSheet .play-template-actions-row .play-auto-game-area,
+#playGameSheet .play-template-actions-row #playGameTemplateAdd{
+ box-sizing:border-box!important;min-width:0!important;width:100%!important;
+ height:58px!important;min-height:58px!important;max-height:58px!important;margin:0!important;
+}
+#playGameSheet .play-template-actions-row .play-template-suggested{
+ display:flex!important;flex-direction:column!important;justify-content:center!important;gap:3px!important;
+ padding:5px 6px!important;border-radius:12px!important;border:1px solid rgba(154,222,245,.55)!important;
+ background:rgba(5,47,74,.86)!important;
+}
+#playGameSheet .play-template-actions-row .play-template-suggested>span{
+ display:block!important;font-size:10px!important;font-weight:900!important;color:#f3edc1!important;
+ white-space:nowrap!important;text-align:center!important;
+}
+#playGameSheet .play-template-actions-row #playGameTemplateSelect{
+ box-sizing:border-box!important;width:100%!important;min-width:0!important;max-width:100%!important;
+ height:27px!important;min-height:27px!important;margin:0!important;
+ padding:2px 10px 2px 3px!important;font-size:11px!important;line-height:1.1!important;
+ text-overflow:ellipsis!important;
+}
+#playGameSheet .play-template-actions-row .play-auto-game-area{display:flex!important;align-items:stretch!important}
+#playGameSheet .play-template-actions-row .play-auto-game-area[hidden]{display:none!important}
+#playGameSheet .play-template-actions-row .play-template-add{
+ box-sizing:border-box!important;min-width:0!important;width:100%!important;
+ height:58px!important;min-height:58px!important;max-height:58px!important;
+ margin:0!important;padding:6px 4px!important;border-radius:12px!important;
+ font-size:11px!important;line-height:1.2!important;white-space:normal!important;
+ text-align:center!important;overflow:hidden!important;
+}
+#playGameSheet .play-game-sheet-card[data-mode="library"] .play-template-actions-row{
+ grid-template-columns:minmax(0,2fr) minmax(0,1fr)!important;
+}
+/* Clock | 🏖️ | Action | ⛱️ | 🌈, never stack or float within the dock. */
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{
+ display:flex!important;flex-flow:row nowrap!important;align-items:stretch!important;
+ gap:4px!important;max-width:100%!important;min-width:0!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeFloat,#battleDayGallowsFloat,#battleFactionStatsFloat){
+ position:relative!important;inset:auto!important;left:auto!important;top:auto!important;
+ right:auto!important;bottom:auto!important;transform:none!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 43px!important;width:43px!important;min-width:43px!important;max-width:43px!important;
+ height:64px!important;min-height:60px!important;max-height:64px!important;
+ padding:0!important;margin:0!important;background:transparent!important;
+ border:0!important;box-shadow:none!important;z-index:auto!important;pointer-events:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeFloat,#battleDayGallowsFloat,#battleFactionStatsFloat)[hidden]{
+ display:none!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeToggle,#battleDayGallowsToggle,#battleFactionStatsToggle){
+ display:grid!important;place-items:center!important;position:static!important;
+ width:43px!important;min-width:43px!important;max-width:43px!important;
+ height:60px!important;min-height:60px!important;max-height:60px!important;
+ padding:0!important;margin:0!important;background:transparent!important;
+ border:0!important;box-shadow:none!important;font-size:32px!important;
+ line-height:1!important;touch-action:manipulation!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #playBattleClockFloat{
+ flex:0 0 57px!important;width:57px!important;min-width:57px!important;max-width:57px!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot{
+ flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;
+ overflow:hidden!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoFloat{
+ display:none!important;pointer-events:none!important;
+}
+@media(max-width:375px){
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{gap:2px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #playBattleClockFloat{
+  flex-basis:52px!important;width:52px!important;min-width:52px!important;max-width:52px!important;
+ }
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeFloat,#battleDayGallowsFloat,#battleFactionStatsFloat){
+  flex-basis:38px!important;width:38px!important;min-width:38px!important;max-width:38px!important;
+ }
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeToggle,#battleDayGallowsToggle,#battleFactionStatsToggle){
+  width:38px!important;min-width:38px!important;max-width:38px!important;font-size:29px!important;
+ }
+}
+
+/* V3.234 — Đêm: Đồng hồ | Hành động | Khôi phục; Ngày: Đồng hồ | 🏖️ | Hành động | ⛱️ | 🌈 */
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="night"] #battleBottomControls #battleUndoFloat:not([hidden]){
+ display:flex!important;position:relative!important;inset:auto!important;
+ left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+ transform:none!important;align-items:stretch!important;justify-content:center!important;
+ flex:0 0 59px!important;width:59px!important;min-width:59px!important;max-width:59px!important;
+ height:64px!important;margin:0!important;padding:0!important;
+ pointer-events:auto!important;z-index:auto!important;
+}
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="night"] #battleBottomControls #battleUndoButton{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex-direction:column!important;width:100%!important;min-width:0!important;
+ min-height:60px!important;height:64px!important;touch-action:manipulation!important;
+}
+@media(max-width:375px){
+ body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="night"] #battleBottomControls #battleUndoFloat:not([hidden]){
+  flex-basis:52px!important;width:52px!important;min-width:52px!important;max-width:52px!important;
+ }
+}
+/* Lên Giàn: giữ 5 người (5 × 39px) trong khung, phần còn lại cuộn dọc. */
+#battleGallowsPanel #battleGallowsMembers{
+ display:block!important;height:auto!important;max-height:195px!important;
+ overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior-y:contain!important;-webkit-overflow-scrolling:touch;
+}
+
+
+/* V3.235 unified GM — use Gather menu's frosted translucent glass for play panels */
+body.play-immersive #start #playShell{--gmww-ui-glass:rgba(9,53,68,.74);--gmww-ui-border:rgba(170,231,240,.52);--gmww-ui-radius:15px}
+body.play-immersive #start #playShell :is(#playSetupStrip,#playGatherToolbar,#gmTopMenu,#playBattleTop,#battleGallowsPanel,#battleDayActionMenu,#battleTargetSheet,#battleMorningReport){
+ border-color:var(--gmww-ui-border)!important;border-radius:var(--gmww-ui-radius)!important;background:var(--gmww-ui-glass)!important;
+ backdrop-filter:blur(15px) saturate(138%)!important;-webkit-backdrop-filter:blur(15px) saturate(138%)!important;
+ box-shadow:0 6px 18px rgba(0,20,32,.18),inset 0 1px rgba(255,255,255,.1)!important;box-sizing:border-box!important;max-width:calc(100vw - 16px)
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{display:flex!important;flex-flow:row nowrap!important;align-items:stretch!important;gap:4px!important;max-width:calc(100vw - 16px)!important;pointer-events:auto!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls > :is(#playBattleClockFloat,#battleDayNoticeFloat,#battleMainActionSlot,#battleDayGallowsFloat,#battleUndoFloat):not([hidden]){
+ position:relative!important;inset:auto!important;transform:none!important;display:flex!important;align-items:stretch!important;justify-content:center!important;
+ flex-shrink:0!important;box-sizing:border-box!important;height:60px!important;min-height:60px!important;max-height:60px!important;
+ padding:0!important;margin:0!important;border:1px solid var(--gmww-ui-border)!important;border-radius:13px!important;background:var(--gmww-ui-glass)!important;
+ backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;box-shadow:0 3px 10px rgba(0,15,29,.16)!important;overflow:hidden!important;pointer-events:auto!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #playBattleClockFloat:not([hidden]){flex:0 0 65px!important;width:65px!important;min-width:65px!important;max-width:65px!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleClockButton{
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;
+ width:100%!important;height:100%!important;min-height:0!important;padding:3px 1px!important;background:transparent!important;border:0!important;box-shadow:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls .battle-clock-grip{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls .battle-clock-caption{display:block!important;color:#f8eed5!important;font-size:9px!important;font-weight:850!important;line-height:1!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleCountdown{
+ display:block!important;font-size:19px!important;line-height:1.1!important;font-weight:900!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important;padding:0!important;border:0!important;background:transparent!important;min-width:0!important
+}
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day"] #battleBottomControls :is(#battleDayNoticeFloat,#battleDayGallowsFloat):not([hidden]){display:flex!important;flex:0 0 56px!important;width:56px!important;min-width:56px!important;max-width:56px!important}
+body.play-immersive #start #playShell[data-step="battle"][data-battle-phase="day"] #battleBottomControls #battleDayGallowsFloat:not([hidden]){flex-basis:68px!important;width:68px!important;min-width:68px!important;max-width:68px!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls :is(#battleDayNoticeToggle,#battleDayGallowsToggle){
+ display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important;
+ padding:3px!important;background:transparent!important;border:0!important;box-shadow:none!important;font-size:11px!important;font-weight:900!important;line-height:1.15!important;color:#fff9dd!important;white-space:nowrap!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot{flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot :is(#battleDayActionFloat,#battleActionTray){
+ flex:1 1 auto!important;min-width:0!important;width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important;
+ padding:1px 3px!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;overflow:hidden!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot #battleDayActionToggle{width:100%!important;height:100%!important;min-width:0!important;padding:3px!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot #battleDayActionToggle :is(span,small){display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot #battleDayActionToggle b{display:block!important;font-size:10px!important;white-space:nowrap!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoFloat:not([hidden]){display:flex!important;flex:0 0 72px!important;width:72px!important;min-width:72px!important;max-width:72px!important;pointer-events:auto!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton{
+ display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;width:100%!important;min-width:0!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important;padding:3px 2px!important;background:transparent!important;border:0!important;box-shadow:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton>span{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton>small{display:block!important;font-size:10px!important;line-height:1.15!important;font-weight:900!important;white-space:nowrap!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton:disabled{opacity:.48!important}
+/* 🌈 is an unboxed draggable and locally positioned floating icon like 🐦‍🔥. */
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStatsFloat.gmww-free-icon{
+ position:fixed!important;z-index:1570!important;inset:auto!important;display:flex!important;align-items:center!important;justify-content:center!important;
+ width:52px!important;min-width:52px!important;max-width:52px!important;height:52px!important;min-height:52px!important;max-height:52px!important;
+ border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important;pointer-events:auto!important;touch-action:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStatsFloat.gmww-free-icon[hidden]{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleFactionStatsFloat.gmww-free-icon #battleFactionStatsToggle{
+ border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;width:52px!important;height:52px!important;min-width:52px!important;min-height:52px!important;font-size:40px!important;touch-action:none!important
+}
+@media(max-width:375px){
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{gap:3px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #playBattleClockFloat:not([hidden]){flex-basis:58px!important;width:58px!important;min-width:58px!important;max-width:58px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoFloat:not([hidden]){flex-basis:63px!important;width:63px!important;min-width:63px!important;max-width:63px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleCountdown{font-size:17px!important}
+}
+#settings #settingsGroupHealth #gmwwCloudflareOpen .gmww-cloudflare-label{display:block!important;min-width:0!important;max-width:100%!important;width:auto!important;font-size:11px!important;line-height:1.25!important;white-space:nowrap!important;text-align:center!important}
+
+
+/* GMWW V3.236 — approved Gather geometry, single-action menu visibility and icon dock */
+body.play-immersive #start #playShell.gmww-chrome-hidden :is(#playSetupStrip,#gmTopMenu,#playBattleTop,#battleBottomControls){
+ visibility:hidden!important;opacity:0!important;pointer-events:none!important;
+ transform:translateY(0)!important;
+}
+/* The campfire and GM menu remain reachable even when both bars are hidden. */
+body.play-immersive #start #playShell #playBattleDock:has(#battleWolfMenu:not([hidden])){
+ pointer-events:none!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu:not([hidden]){
+ display:block!important;position:fixed!important;z-index:1880!important;
+ width:min(calc(100vw - 20px),520px)!important;max-width:calc(100vw - 20px)!important;
+ max-height:148px!important;min-height:0!important;overflow:visible!important;
+ border-radius:16px!important;padding:7px 8px 8px!important;
+ border:1px solid rgba(184,237,242,.61)!important;
+ background:rgba(9,48,62,.77)!important;
+ backdrop-filter:blur(17px) saturate(137%)!important;
+ -webkit-backdrop-filter:blur(17px) saturate(137%)!important;
+ box-shadow:0 9px 23px rgba(0,18,27,.24)!important;
+ pointer-events:auto!important;
+}
+/* Swipe horizontally through all tools; no second row or tall grid. */
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions{
+ display:flex!important;flex-flow:row nowrap!important;gap:7px!important;
+ width:100%!important;max-width:100%!important;min-height:51px!important;
+ overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-inline:contain!important;
+ -webkit-overflow-scrolling:touch!important;scroll-snap-type:x proximity!important;
+ padding:3px 2px 5px!important;align-items:stretch!important;box-sizing:border-box!important;
+ scrollbar-width:thin!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button{
+ display:inline-flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:center!important;
+ min-height:44px!important;height:44px!important;min-width:82px!important;width:auto!important;
+ padding:5px 9px!important;font-size:11px!important;white-space:nowrap!important;
+ border:1px solid rgba(171,226,230,.51)!important;border-radius:12px!important;
+ background:rgba(14,78,97,.64)!important;box-shadow:inset 0 1px rgba(255,255,255,.12)!important;
+ scroll-snap-align:start!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[hidden],
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > span[hidden],
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > section[hidden]{display:none!important}
+body.play-immersive #start #playShell #battleWolfMenu > header{
+ padding:0 1px 4px!important;height:11px!important;min-height:11px!important;
+ display:flex!important;align-items:center!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-menu-grip{
+ display:block!important;width:41px!important;height:4px!important;margin:auto!important;
+ border-radius:9px!important;background:rgba(212,250,252,.63)!important
+}
+body.play-immersive #start #playShell:not([data-step="battle"]) #battleWolfMenu
+ :is(#battleDemoToggle,#battleDemoSpeedWrap,#battleQuickRevive,#battleQuickKill,#battleExit,#battleForceEnd,#battleGMGallowsAnchor,#battleGMActionIcons){
+ display:none!important;
+}
+/* Setup uses the same genuine GM menu, not the Create Room popup. */
+body.play-immersive #start #playShell:not([data-step="battle"]) #playBattleDock:not([hidden]){
+ display:block!important;position:static!important;pointer-events:none!important;
+}
+body.play-immersive #start #playShell:not([data-step="battle"]) #battleWolfMenu:not([hidden]){
+ display:block!important;pointer-events:auto!important
+}
+/* Common compact footer frame, the same 62px envelope as Gather. */
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{
+ min-height:62px!important;max-height:62px!important;height:62px!important;
+ padding:3px!important;gap:4px!important;align-items:center!important;
+ background:rgba(9,53,68,.74)!important;
+ border:1px solid rgba(174,231,238,.52)!important;
+ border-radius:17px!important;
+ box-shadow:0 7px 19px rgba(0,22,34,.20)!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ > :is(#playBattleClockFloat,#battleDayNoticeFloat,#battleMainActionSlot,#battleDayGallowsFloat,#battleUndoFloat):not([hidden]){
+ height:54px!important;min-height:54px!important;max-height:54px!important;
+ border-radius:12px!important;flex-shrink:0!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #playBattleClockFloat:not([hidden]){flex:0 0 65px!important;width:65px!important;min-width:65px!important;max-width:65px!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeFloat,#battleDayGallowsFloat):not([hidden]){
+ flex:0 0 48px!important;width:48px!important;min-width:48px!important;max-width:48px!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleUndoFloat:not([hidden]){
+ flex:0 0 50px!important;width:50px!important;min-width:50px!important;max-width:50px!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeToggle,#battleDayGallowsToggle,#battleUndoButton){
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;min-width:0!important;max-width:100%!important;
+ height:100%!important;min-height:0!important;max-height:100%!important;
+ padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleUndoButton>span{display:flex!important;align-items:center!important;justify-content:center!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ .gmww-footer-hidden-label{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls .gmww-footer-icon{
+ width:27px!important;height:27px!important;min-width:27px!important;min-height:27px!important;
+ display:block!important;color:#fff0c2!important;
+ filter:drop-shadow(0 1px 2px rgba(4,27,36,.55))!important;
+ pointer-events:none!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleClockButton .battle-clock-caption{display:block!important;height:17px!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleClockButton .gmww-footer-icon{width:17px!important;height:17px!important;min-width:17px!important;min-height:17px!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleCountdown{font-size:18px!important;line-height:1!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleMainActionSlot{flex:1 1 0!important;min-width:0!important;max-width:none!important}
+body.play-immersive #start #playShell[data-step="battle"] .battle-nomination-pearl{
+ border:0!important;background:none!important;background-image:none!important;
+ box-shadow:none!important;outline:none!important;border-radius:0!important;
+ min-width:0!important;width:auto!important;height:auto!important;
+ padding:0 1px!important;margin:0 auto 2px!important;
+ color:#fff5c5!important;font-size:20px!important;font-weight:1000!important;
+ line-height:1.1!important;letter-spacing:.02em!important;
+ text-shadow:0 2px 3px #032936,0 0 7px rgba(8,90,97,.9),0 0 14px rgba(255,223,128,.5)!important;
+}
+@media(max-width:375px){
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{gap:2px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #playBattleClockFloat:not([hidden]){flex-basis:61px!important;width:61px!important;min-width:61px!important;max-width:61px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeFloat,#battleDayGallowsFloat):not([hidden]){flex-basis:43px!important;width:43px!important;min-width:43px!important;max-width:43px!important}
+ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleUndoFloat:not([hidden]){flex-basis:44px!important;width:44px!important;min-width:44px!important;max-width:44px!important}
+}
+
+
+/* GMWW V3.237: shared campfire menu + icon-only unframed battle footer. */
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > #battleGMChromeToggle{
+ display:inline-flex!important;flex:0 0 132px!important;width:132px!important;min-width:132px!important;
+ height:44px!important;min-height:44px!important;max-height:44px!important;
+ padding:5px 8px!important;align-items:center!important;justify-content:center!important;
+ color:#fff!important;font-size:12px!important;font-weight:1000!important;
+ letter-spacing:0!important;line-height:1.15!important;text-align:center!important;
+ border-radius:12px!important;opacity:1!important;text-shadow:0 1px 2px #001b1c!important;
+ background:rgba(27,42,53,.76)!important;
+ border:2px solid rgba(129,158,161,.5)!important;
+ box-shadow:none!important;touch-action:manipulation!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > #battleGMChromeToggle[aria-pressed="true"]{
+ background:rgba(12,105,101,.93)!important;
+ border:2px solid rgba(123,252,222,.93)!important;
+ color:#fff!important;font-weight:1000!important;opacity:1!important;
+ box-shadow:inset 0 1px rgba(255,255,255,.15),0 0 7px rgba(99,243,204,.25)!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > #battleGMChromeToggle:focus-visible{
+ outline:2px solid rgba(255,244,181,.95)!important;outline-offset:2px!important;
+}
+/* No outer card: only individual glass icon buttons remain. */
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls{
+ background:none!important;background-color:transparent!important;background-image:none!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;outline:0!important;
+ backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+ padding:0!important;margin:0!important;min-height:54px!important;max-height:54px!important;
+ height:54px!important;overflow:visible!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleUndoButton > small,
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls .gmww-footer-hidden-label,
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleDayActionToggle > small{
+ display:none!important;visibility:hidden!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ :is(#battleDayNoticeToggle,#battleDayGallowsToggle,#battleUndoButton) > .gmww-footer-icon,
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleUndoButton > span .gmww-footer-icon{
+ display:block!important;visibility:visible!important;
+ width:27px!important;height:27px!important;min-width:27px!important;min-height:27px!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls
+ #battleUndoButton > span{
+ display:flex!important;visibility:visible!important;justify-content:center!important;align-items:center!important;
+}
+
+
+/* V3.238 — every GM control uses exactly the Artifact / Vai Trò on/off language. */
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button{
+ display:inline-flex!important;flex:0 0 99px!important;width:99px!important;min-width:99px!important;max-width:99px!important;
+ height:44px!important;min-height:44px!important;max-height:44px!important;
+ align-items:center!important;justify-content:center!important;
+ padding:5px 6px!important;white-space:nowrap!important;
+ border-radius:12px!important;
+ font-family:inherit!important;font-size:12px!important;font-weight:750!important;line-height:1.12!important;
+ text-align:center!important;color:#d0e2e4!important;text-shadow:none!important;
+ background:rgba(27,42,53,.76)!important;border:1px solid rgba(129,158,161,.4)!important;
+ opacity:.67!important;box-shadow:none!important;transition:background .15s ease,border-color .15s ease,opacity .15s ease!important;
+ scroll-snap-align:start!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[aria-pressed="true"]{
+ background:rgba(12,105,101,.93)!important;
+ border:2px solid rgba(123,252,222,.93)!important;
+ color:#fafffc!important;font-size:12px!important;font-weight:1000!important;
+ box-shadow:inset 0 1px 0 #ffffff26,0 0 7px rgba(99,243,204,.25)!important;
+ text-shadow:0 1px 2px #001b1c!important;opacity:1!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[aria-pressed="false"]{
+ background:rgba(27,42,53,.76)!important;color:#aabfc2!important;
+ border:1px solid rgba(129,158,161,.3)!important;font-weight:650!important;
+ box-shadow:none!important;text-shadow:none!important;opacity:.58!important;
+}
+/* Placement, ending and exit are commands rather than persistent switches. */
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button:not([aria-pressed]){
+ color:#f6fffd!important;font-weight:850!important;opacity:.88!important;
+ border:1px solid rgba(173,226,228,.48)!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button:not([aria-pressed]):active{
+ background:rgba(12,105,101,.93)!important;color:#fff!important;
+ border:2px solid rgba(123,252,222,.93)!important;opacity:1!important;
+ box-shadow:0 0 7px rgba(99,243,204,.25)!important;
+}
+body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > button[hidden]{
+ display:none!important;
+}
+
+/* GMWW 2026-10-27: Online/Offline/DEMO belongs to Tập Hợp. */
+#playGatherToolbar .play-gather-mode-row{display:flex;width:100%;margin:0 0 6px}
+#playGatherToolbar .play-gather-mode-row #playRoomModeToggle{flex:1;width:100%;min-width:0;min-height:38px;border-radius:12px;border:1px solid rgba(164,226,240,.58);background:rgba(8,46,64,.76);color:#fff;font-size:12px;font-weight:900;letter-spacing:.05em}
+#playGatherToolbar #playRoomModeToggle[data-mode="offline"]{border-color:rgba(248,193,126,.7);background:rgba(90,52,30,.75)}
+#playGatherToolbar #playRoomModeToggle[data-mode="online"]{border-color:rgba(104,232,190,.7);background:rgba(11,94,75,.75)}
+#playGatherToolbar #playRoomModeToggle[data-mode="demo"]{border-color:rgba(212,173,253,.75);background:rgba(95,45,115,.72)}
+#playGatherToolbar #playRoomModeToggle:disabled{opacity:.5}
+#start #playShell[data-step="battle"] #battleAssassinChoice>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#start #playShell[data-step="battle"] #battleAssassinChoice #battleTargetConfirm{display:block;width:100%;min-height:43px;margin:0;padding:5px;background:rgba(38,158,173,.85);border:1px solid rgba(180,244,246,.85);border-radius:11px;color:#fff;font-weight:900}
+
+/* V3.246: one approved composite illustration, three touch regions. */
+#battleFireIconDock .battle-fire-icon.is-fairy-triptych{width:min(276px,calc(100vw - 22px))!important;height:92px!important;min-width:0!important;min-height:92px!important;padding:0!important;border:0!important;outline:0!important;background:transparent!important;box-shadow:none!important;touch-action:none!important}
+#battleFireIconDock .battle-fire-icon.is-fairy-triptych img{width:100%!important;height:100%!important;max-width:none!important;object-fit:contain!important;pointer-events:none!important;filter:drop-shadow(0 3px 6px #001f2fbb)}
+#battleFireIconDock .battle-fire-icon.is-fairy-triptych[aria-pressed="true"]{background:transparent!important;outline:0!important}
+#start #playShell[data-step="battle"] .gmww-fairy-panel{position:relative;display:block!important;width:min(276px,calc(100vw - 28px));height:auto;border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important}
+#start #playShell[data-step="battle"] .gmww-fairy-panel>img{display:block;width:100%;height:auto;pointer-events:none;filter:drop-shadow(0 3px 6px #001f2fbb)}
+#start #playShell[data-step="battle"] .gmww-fairy-panel .gmww-fairy-hotspot{position:absolute;top:0;bottom:0;width:33.333%;margin:0;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;touch-action:manipulation;cursor:pointer}
+#start #playShell[data-step="battle"] .gmww-fairy-hotspot:nth-of-type(1){left:0}
+#start #playShell[data-step="battle"] .gmww-fairy-hotspot:nth-of-type(2){left:33.333%}
+#start #playShell[data-step="battle"] .gmww-fairy-hotspot:nth-of-type(3){left:66.666%}
+#start #playShell[data-step="battle"] .gmww-fairy-hotspot:focus-visible{outline:2px solid #fbda7d!important;border-radius:12px!important}
+
+/* GMWW V3.247 — Character-style setting for all floating iCon, Fairy remains 3-way tappable. */
+:root{--gmww-action-icon-scale:1}
+#actionIconScaleValue{min-width:52px;text-align:right;color:#f7d38c}
+#battleFireIconDock .battle-fire-icon:not(.is-fairy-triptych){
+ width:calc(92px * var(--gmww-action-icon-scale,1))!important;
+ height:calc(92px * var(--gmww-action-icon-scale,1))!important;
+ min-width:0!important;min-height:0!important;
+}
+#battleFireIconDock .battle-fire-icon:not(.is-fairy-triptych)>img{
+ width:calc(80px * var(--gmww-action-icon-scale,1))!important;
+ height:calc(80px * var(--gmww-action-icon-scale,1))!important;
+ max-width:none!important;
+}
+#battleFireIconDock .battle-fire-icon.is-fairy-triptych{
+ width:min(calc(276px * var(--gmww-action-icon-scale,1)),calc(100vw - 22px))!important;
+ height:auto!important;min-width:0!important;min-height:0!important;aspect-ratio:3/1;
+}
+#battleFireIconDock .battle-fire-icon.is-fairy-triptych>img{
+ width:100%!important;height:100%!important;max-width:none!important;object-fit:contain!important;
+}
+#start #playShell[data-step="battle"] .gmww-fairy-panel{
+ width:min(calc(276px * var(--gmww-action-icon-scale,1)),calc(100vw - 28px))!important;
+}
+
+/* V3.248: all six iCon size choices on ONE row, including iPhone SE. */
+#settings #actionIconScaleChoices.character-scale-choices{
+ display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;
+ gap:3px!important;width:100%;max-width:100%;min-width:0;
+}
+#settings #actionIconScaleChoices button{
+ min-width:0!important;min-height:40px!important;padding:4px 1px!important;
+ font-size:clamp(10px,2.55vw,12px)!important;white-space:nowrap!important;letter-spacing:-.2px;
+}
+/* DEMO is a status line of the bottom action box, never a new GM-menu item. */
+#battleDemoPanel[hidden],#battleActionTray[hidden] #battleDemoPanel{display:none!important}
+#battleActionTray #battleDemoPanel.gmww-demo-tray-status{
+ display:block;min-width:0;max-width:100%;padding:0 8px 5px;
+ background:transparent;border:0;box-shadow:none;
+}
+#battleActionTray #battleDemoStatus{
+ margin:0;font-size:11px;line-height:1.3;text-align:center;
+ overflow-wrap:normal;white-space:normal;word-break:normal;
+}
+
+/* GMWW V3.251: 16 maintenance buttons have the same fixed row height. */
+#settings #settingsToolsRail.settings-operations-tools{
+ grid-auto-rows:82px!important;
+ align-items:stretch!important;
+}
+#settings #settingsToolsRail :is(.settings-action,.ops-auto){
+ height:82px!important;
+ min-height:82px!important;
+ max-height:82px!important;
+ align-self:stretch!important;
+ overflow:hidden!important;
+}
+#settings #settingsToolsRail #gmwwCloudflareOpen>span{
+ font-size:17px!important;
+ line-height:1!important;
+}
+#settings #settingsToolsRail #gmwwCloudflareOpen .gmww-cloudflare-label{
+ font-size:10px!important;
+ line-height:1.2!important;
+ white-space:nowrap!important;
+}
+
+/* GMWW V3.252 — direct-child iPhone grid: one Healthy Check size for every maintenance tile.
+   Avoid iOS WKWebView display:contents nested-card row inflation. */
+#settings #settingsGroupHealth #settingsToolsRail.settings-operations-tools{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-auto-rows:76px!important;
+  gap:9px!important;
+  align-items:stretch!important;
+  justify-items:stretch!important;
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  padding:2px 0 4px!important;
+  overflow:visible!important;
+}
+#settings #settingsGroupHealth #settingsToolsRail > :is(button.settings-action,label.ops-auto){
+  box-sizing:border-box!important;
+  grid-column:auto!important;grid-row:auto!important;
+  display:flex!important;
+  flex:none!important;flex-basis:auto!important;
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  height:76px!important;min-height:76px!important;max-height:76px!important;
+  margin:0!important;padding:6px 4px!important;
+  align-self:stretch!important;
+  flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  gap:4px!important;
+  text-align:center!important;
+  border-radius:13px!important;
+  border:1px solid rgba(170,237,245,.49)!important;
+  color:#f5fcff!important;
+  background:linear-gradient(150deg,rgba(11,95,122,.59),rgba(4,48,79,.70))!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.12)!important;
+  white-space:normal!important;
+  overflow:hidden!important;
+}
+#settings #settingsGroupHealth #settingsToolsRail > button.settings-action > span{
+  display:block!important;font-size:19px!important;line-height:1!important;
+  min-height:19px!important;flex:0 0 auto!important;
+}
+#settings #settingsGroupHealth #settingsToolsRail > button.settings-action > b,
+#settings #settingsGroupHealth #settingsToolsRail > label.ops-auto > span{
+  display:block!important;
+  font-size:10px!important;line-height:1.16!important;font-weight:800!important;
+  white-space:normal!important;overflow-wrap:break-word!important;
+  word-break:normal!important;text-align:center!important;
+}
+#settings #settingsGroupHealth #settingsToolsRail > #gmwwCloudflareOpen > span{
+  font-size:17px!important;min-height:17px!important;
+}
+#settings #settingsGroupHealth #settingsToolsRail > #gmwwCloudflareOpen > b.gmww-cloudflare-label{
+  width:auto!important;max-width:100%!important;
+  font-size:10px!important;line-height:1.16!important;white-space:nowrap!important;
+}
+#settings #settingsGroupHealth #settingsToolsRail > label.ops-auto > input{
+  width:18px!important;height:18px!important;min-height:18px!important;
+  margin:0!important;flex:0 0 18px!important;
+}
+@media(max-width:350px){
+ #settings #settingsGroupHealth #settingsToolsRail.settings-operations-tools{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ }
+}
+@media(min-width:600px){
+ #settings #settingsGroupHealth #settingsToolsRail.settings-operations-tools{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+ }
+}
+
+/* GM-only turn/target scene animation. The seat, role, status and server state never move.
+   Only the selected actor's avatar layer gets a composited translate; no shadow/filter loop. */
+#playShell[data-step="battle"] .play-player-token .play-player-avatar{
+  transition:transform 480ms cubic-bezier(.2,.7,.2,1);
+}
+#playShell[data-step="battle"] .play-player-token.is-gm-turn-floating{z-index:140!important;}
+#playShell[data-step="battle"] .play-player-token.is-gm-turn-floating .play-player-avatar{
+  transform:translate3d(0,-100%,0)!important;
+}
+@media(prefers-reduced-motion:reduce){
+  #playShell[data-step="battle"] .play-player-token .play-player-avatar{transition:none!important}
+  #playShell[data-step="battle"] .play-player-token.is-gm-turn-floating .play-player-avatar{transform:none!important}
 }

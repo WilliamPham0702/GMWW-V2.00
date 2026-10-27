@@ -54,6 +54,80 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
+      - name: Player receipt hotfix — login, join, reconnect and JS integrity
+        if: steps.scope.outputs.mode == 'player-receipt-hotfix'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/gmww-player-private-card-patch.js
+          node --check src/gmww-members-live.js
+          node --test tests/player-web-receipt-patch-hotfix.test.mjs tests/player-web-resume-receipt-runtime.test.mjs
+          test -s docs/releases/GMWW-PLAYER-WEB-RECEIPT-HOTFIX-20261027.md
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-player-receipt-worker.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true' EXIT
+          READY=0
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 4 http://127.0.0.1:8787/api/health > /tmp/player-receipt-health.json 2>/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" != 1 ]; then cat /tmp/gmww-player-receipt-worker.log; exit 1; fi
+          curl --fail --silent --show-error --max-time 30 http://127.0.0.1:8787/gmww-members-live.js > /tmp/gmww-player-receipt-live.js
+          test -s /tmp/gmww-player-receipt-live.js
+          node --check /tmp/gmww-player-receipt-live.js
+          node tests/worker-private-delivery-e2e.mjs
+          echo 'PASS: JS 200, compiled, login/join/receipt/reconnect via local Worker.'
+      - name: PR541 V3.243 — kiểm thử Sảnh Chờ, Tập Hợp, 3 chế độ và Sát Thủ
+        if: steps.scope.outputs.mode == 'lobby-gather-541'
+        run: |
+          node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md
+      - name: V3.246 — xác minh sau merge chỉ icon, audio, Server và ghép Runtime
+        if: steps.scope.outputs.mode == 'fairy-246-postmerge'
+        run: |
+          node --test tests/gmww-v3246-fairy-triptych.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.246-fairy-triptych-audio-20261027.md
+      - name: V3.246 — chỉ kiểm tra Yêu Tinh ba nhánh, audio và Server guard
+        if: steps.scope.outputs.mode == 'fairy-triptych-3246'
+        run: |
+          node --test tests/gmww-v3246-fairy-triptych.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.246-fairy-triptych-audio-20261027.md
+      - name: V3.242 — chỉ audio icon và Yêu Tinh
+        if: steps.scope.outputs.mode == 'fairy-audio-3242'
+        run: |
+          node --test tests/gmww-v3242-icon-audio-fairy.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.242-icon-audio-fairy-20261027.md
+      - name: V3.242 — chỉ kiểm chính sách CI
+        if: steps.scope.outputs.mode == 'fairy-ci-policy'
+        run: node --test tests/ci-v3242-fairy-scope.test.mjs
+      - name: Chỉ kiểm thử bộ chọn phạm vi hình icon
+        if: steps.scope.outputs.mode == 'icon-artwork-policy'
+        run: node --test tests/icon-artwork-ci.test.mjs
+      - name: Kiểm thử ảnh minh họa, ánh xạ và kéo thả icon
+        if: steps.scope.outputs.mode == 'icon-artwork'
+        run: |
+          node --test tests/icon-artwork-v3.test.mjs tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/icon-artwork-ci.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check server-game/current/action-icon-library.js
+          python -m pip install Pillow==11.3.0
+          python tools/icons/package-approved-artwork.py --verify
+
       - name: V3.228 – chỉ kiểm thử giảm ghi DO, quyền GM, Cài đặt và Runtime
         if: steps.scope.outputs.mode == 'do-optimizer-3228'
         run: |
@@ -99,6 +173,172 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node -e "const fs=require('fs'),crypto=require('crypto');let m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json','utf8'));let e=m.icons.find(x=>x.svg==='01_soi_xet.svg');let s=crypto.createHash('sha256').update(fs.readFileSync('assets/action-icons/v2/01_soi_xet.svg')).digest('hex');if(m.count!==49||e.sha256_svg!==s)process.exit(1)"
           test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
+
+      - name: PR550 focused Snow Wolf Guard Pack Fairy rules regression
+        if: steps.scope.outputs.mode == 'night02-rule-regression-550'
+        run: |
+          node --test tests/gmww-rule-snow-guard-pack-fairy.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs
+          node --test --test-name-pattern='PR550 focused rules regression only' tests/ci-browser-scope.test.mjs
+          node --check src/gmww-pack-night-rules.js
+          node --check src/gmww-wolf-night-resolution.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+
+      - name: NIGHT-02 - scoped Snow Guard Wolf Pack Fairy real gameplay and GM bundle
+        if: steps.scope.outputs.mode == 'night02-pack-roles'
+        run: |
+          node --test tests/night02-pack-snow-guard-fairy.test.mjs tests/v389-night-runtime-integration.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check src/gmww-pack-night-rules.js
+          node --check src/gmww-wolf-night-resolution.js
+          node --check src/gmww-battle-action-policy.js
+          node --check server-game/current/app.js
+          node --check server-game/current/battle-controls.js
+          test -s docs/releases/GMWW-V3.245-night02-pack-snow-guard-fairy-20261027.md
+
+      - name: WITCH-01 focused rules and GM integration
+        if: steps.scope.outputs.mode == 'witch01-old-witch'
+        run: |
+          node --test tests/witch01-old-witch-rules.test.mjs tests/v389-night-runtime-integration.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check src/gmww-old-witch-rules.js
+          node --check src/gmww-battle-action-policy.js
+          node --check server-game/current/battle-controls.js
+          test -s docs/releases/GMWW-V3.240-witch01-old-witch-20261026.md
+
+      - name: WOLF-01 — chỉ thử sói nhận diện riêng, đổi phe, quyền xem và đồng bộ Runtime
+        if: steps.scope.outputs.mode == 'wolf01-private-pack'
+        run: |
+          node --test tests/wolf01-private-pack-recognition.test.mjs tests/v389-night-runtime-integration.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check src/gmww-wolf-recognition.js
+          node --check src/gmww-members-live.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.239-wolf01-recognition-20261026.md
+
+      - name: ART-01 — chỉ kiểm tra sửa chốt phát hành Server-only
+        if: steps.scope.outputs.mode == 'art01-deploy-gate'
+        run: |
+          node --test tests/art01-deployment-gate.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          test -s docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md
+
+      - name: ART-01 — chỉ kiểm tra thứ tự Artifact → Bầy Sói và giới hạn sử dụng
+        if: steps.scope.outputs.mode == 'art01-night-flow'
+        run: |
+          node --test tests/artifact-priority-first.test.mjs tests/v389-night-runtime-integration.test.mjs
+          node --check src/index.js
+          node --check src/gmww-game-scene-rules.js
+          node --check src/gmww-night-turn-rules.js
+          test -s docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md
+          node .github/scripts/verify-gmww-versions.mjs
+
+      - name: V3.238 — chỉ kiểm tra sửa workflow Production
+        if: steps.scope.outputs.mode == 'gm238-deploy-repair'
+        run: |
+          node --test --test-name-pattern='V3.238 deployment hotfix' tests/ci-browser-scope.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          test "$(node -p "require('./package.json').version")" = '3.238.0'
+
+      - name: V3.238 — chỉ nút Menu GM thống nhất và nhãn gọn
+        if: steps.scope.outputs.mode == 'gm-ui-controls-3238'
+        run: |
+          node --test tests/gmww-v3238-uniform-gm-controls.test.mjs tests/gmww-v3237-gm-menu-footer.test.mjs
+          node --test --test-name-pattern='V3.238 scoped' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.238-uniform-gm-controls-20261026.md
+
+      - name: V3.237 — chỉ Menu GM và các icon thanh dưới
+        if: steps.scope.outputs.mode == 'gm-ui-menu-3237'
+        run: |
+          node --test tests/gmww-v3237-gm-menu-footer.test.mjs
+          node --test --test-name-pattern='V3.237 scoped' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.237-gm-menu-footer-20261026.md
+
+      - name: V3.236 — Menu GM đống lửa và luật hòa phiếu Lên Giàn
+        if: steps.scope.outputs.mode == 'gm-menu-gallows-3236'
+        run: |
+          node --test tests/gmww-v3236-menu-gallows.test.mjs tests/gallows-panel-60s-controls.test.mjs tests/gallows-redesign-live.test.mjs
+          node --test --test-name-pattern='V3.236 scoped' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.236-menu-gallows-20261026.md
+
+      - name: V3.235 — chỉ GM kính mờ, menu Ngày/Đêm, 🌈 và Cloudflare
+        if: steps.scope.outputs.mode == 'gm-ui-glass-3235'
+        run: |
+          node --test tests/gmww-v3235-unified-glass-dock.test.mjs tests/gmww-v3234-phase-dock-gallows.test.mjs tests/gmww-v3233-audio-templates-dock.test.mjs
+          node --test --test-name-pattern='V3.235 scoped' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.235-ui-glass-dock-20261026.md
+
+      - name: V3.234 — chỉ dock Đêm/Ngày và danh sách Lên Giàn 5 dòng
+        if: steps.scope.outputs.mode == 'phase-dock-gallows-3234'
+        run: |
+          node --test tests/gmww-v3234-phase-dock-gallows.test.mjs tests/gmww-v3233-audio-templates-dock.test.mjs tests/gallows-redesign-live.test.mjs
+          node --test --test-name-pattern='V3.234 post-merge push CI is scoped' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md
+
+      - name: V3.233 — chỉ kiểm thử Audio, 3 ô Ván, Cloudflare và dock 5 nút
+        if: steps.scope.outputs.mode == 'gm-ui-audio-3233'
+        run: |
+          node --test tests/gmww-v3233-audio-templates-dock.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          test -s docs/releases/GMWW-V3.233-audio-templates-footer-20261026.md
+
+      - name: V3.232 — kiểm thử cảnh báo Runtime thật/giả và chốt phiên bản
+        if: steps.scope.outputs.mode == 'runtime-warning-3232'
+        run: |
+          node --test tests/gm-runtime-error-diagnostics.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.232-runtime-warning-20261026.md
+
+      - name: V3.231 — chỉ kiểm thử icon 80px, vị trí cầu thang và chốt Runtime
+        if: steps.scope.outputs.mode == 'entry-icons-3231'
+        run: |
+          node --test tests/gmww-v3228-battle-icons-footer.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.231-entrance-icons-20261026.md
 
       - name: V3.229 – chỉ kiểm thử Icon nhiều hành động, nhiều mục tiêu và menu cố định
         if: steps.scope.outputs.mode == 'gm-footer-3229'
@@ -269,14 +509,127 @@ jobs:
         run: |
           node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
-      - name: "Arena 3D official: Core/Player, GM room token, native portal, phòng thật"
-        if: steps.scope.outputs.mode == 'arena3d-official'
+
+      - name: V3.244 — chỉ menu tiến trình 6 bước căn đều và an toàn Runtime
+        if: steps.scope.outputs.mode == 'timeline-six-center-3244'
         run: |
-          node --test tests/arena3d-ci-focused-scope.test.mjs tests/arena3d-room-adoption.test.mjs tests/arena3d-portal-handoff.test.mjs tests/arena3d-native-gm-bridge.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-gm-end.test.mjs tests/arena3d-player-public.test.mjs tests/dual-renderer-contract.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-stage33-parity.test.mjs
+          node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.244-timeline-center-20261027.md
+
+      - name: V3.247 — iCon GM đúng phạm vi, kích thước, Yêu Tinh và OTA
+        if: steps.scope.outputs.mode == 'icon-scale-3247'
+        run: |
+          node --test tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs tests/ci-v3247-icon-size-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.247-icon-size-20261027.md
+
+      - name: V3.247 — postmerge iCon/OTA đúng phạm vi, không chạy legacy suite
+        if: steps.scope.outputs.mode == 'icon-scale-3247-postmerge'
+        run: |
+          node --test tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs tests/ci-v3247-postmerge.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.247-icon-size-20261027.md
+
+      - name: V3.248 — Test iCon, giao diện DEMO/Ngày và tối ưu sáu bước setup
+        if: steps.scope.outputs.mode == 'runtime-3248-setup-ui'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/gmww-v3248-setup-ui-perf.test.mjs tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md
+
+      - name: V3.248 — postmerge CI release, giữ nguyên Runtime và IPA
+        if: steps.scope.outputs.mode == 'runtime-3248-postmerge'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/ci-v3248-postmerge.test.mjs tests/gmww-v3248-setup-ui-perf.test.mjs tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          echo "V3.248: xác minh bản release notes và rollback V3.247"
+          test -s docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md
+
+      - name: V3.249 — kiểm thử Phù Thuỷ, Say Rượu, Nhân Bản và quyền nhận vai riêng
+        if: steps.scope.outputs.mode == 'witch-drunk-clone-3249'
+        run: |
+          node .github/scripts/verify-release-v3249.mjs
+          node --test tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/v389-night-runtime-integration.test.mjs tests/player-role-receipt-recovery.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.249-witch-drunk-clone-20261027.md
+      - name: V3.250 — Cài đặt từng lá Vai Trò theo luật đã chốt
+        if: steps.scope.outputs.mode == 'approved-role-card-settings-3250'
+        run: |
+          node .github/scripts/verify-release-v3250.mjs
+          node --test tests/approved-role-card-settings-20261027.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/witch01-old-witch-rules.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.250-approved-role-card-settings-20261027.md
+
+      - name: V3.251 — đồng đều 16 ô bảo trì và giữ nguyên Cloudflare/DO
+        if: steps.scope.outputs.mode == 'cloudflare-tiles-3251'
+        run: |
+          node .github/scripts/verify-release-v3251.mjs
+          node --test tests/gmww-v3251-cloudflare-tiles.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.251-cloudflare-tiles-20261027.md
+      - name: V3.252 — 16 ô chuẩn Healthy Check, bố cục iPhone không phình
+        if: steps.scope.outputs.mode == 'uniform-maintenance-3252'
+        run: |
+          node .github/scripts/verify-release-v3252.mjs
+          node --test tests/gmww-v3252-uniform-maintenance-boxes.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.252-uniform-maintenance-boxes-20261027.md
+      - name: V3.253 — chỉ kiểm thử GM Bay/Chạy và giảm nóng máy
+        if: steps.scope.outputs.mode == 'gm-turn-motion-lowheat'
+        run: |
+          node --test tests/gm-turn-motion-lowheat.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check server-game/current/gmww-shared-motion.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.253-gm-turn-motion-20261027.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
+      - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
+        if: steps.scope.outputs.mode == 'post-match-room-532'
+        run: |
+          node --test tests/post-match-room-cleanup.test.mjs tests/forced-end-game.test.mjs tests/match-completion-server.test.mjs tests/v3175-post-create-room-mode.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/post-match-room-demo-seat-20261026.md
+      - name: Chỉ kiểm thử phân loại CI không thay đổi gameplay
+        if: steps.scope.outputs.mode == 'postmatch-ci-532'
+        run: node --test --test-name-pattern='PR532' tests/ci-browser-scope.test.mjs
       - name: Chỉ kiểm thử lỗi ván cũ hiện lại
         if: steps.scope.outputs.mode == 'postgame'
         run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs

@@ -30,6 +30,7 @@ test('private receipt installs Role and Artifact without refresh or legacy seat-
   const state={roomCode:'ABCDEF',participantId:'member:a',token:'t',room:{phase:'lobby'}};
   const role={roleId:'r1'},artifact={artifactId:'a1'};
   const context={state,console,gmwwLastRoomBroadcastAt:0,gmwwLastGallowsBroadcastAt:0,
+    setPrivateWolfRecognition:noop,handleSeatSwapRequests:noop,
     gmwwReadPrivateReceipt:async()=>({__gmwwFetchedAt:1,room:{phase:'role_delivery'},role,artifact}),
     renderGallowsWidget:noop,handlePendingInteractions:noop,syncRoleEffects:noop,
     renderPlayerPrivateDock:noop,gmwwAcknowledgePrivateDelivery:noop,

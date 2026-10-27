@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.230</title>
-<link rel="stylesheet" href="style.css?v=gmww-v3230-settings-notices">
+<title>GMWW V3.253</title>
+<link rel="stylesheet" href="style.css?v=gmww-v3252-compact-tools">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -117,12 +117,11 @@
 
         <section class="play-setup-strip gm-stage-timeline-v330" id="playSetupStrip" aria-label="Luồng vào trận">
           <button class="active" data-play-step="lobby" type="button"><span>1</span><b>Sảnh chờ</b></button>
-          <button data-play-step="room" type="button"><span>2</span><b>Tạo phòng</b></button>
-          <button data-play-step="seats" type="button"><span>3</span><b>Tập hợp</b></button>
-          <button data-play-step="game" type="button"><span>4</span><b>Ván Mẫu</b></button>
-          <button data-play-step="roles" type="button"><span>5</span><b>Phân Vai</b></button>
-          <button data-play-step="deal" type="button"><span>6</span><b>Phát Vai</b></button>
-          <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
+          <button data-play-step="seats" type="button"><span>2</span><b>Tập hợp</b></button>
+          <button data-play-step="game" type="button"><span>3</span><b>Ván Mẫu</b></button>
+          <button data-play-step="roles" type="button"><span>4</span><b>Phân Vai</b></button>
+          <button data-play-step="deal" type="button"><span>5</span><b>Phát Vai</b></button>
+          <button data-play-step="battle" type="button"><span>6</span><b>Vào Trận</b></button>
         </section>
 
         <section id="playBattleTop" class="play-battle-top" aria-label="Điều khiển trong trận" hidden>
@@ -137,6 +136,9 @@
             <b>TẬP HỢP DÂN LÀNG</b>
             <span id="playGatherCount" aria-live="polite">0 người</span>
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
+          </div>
+          <div class="play-gather-mode-row" aria-label="Hình thức chơi">
+            <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Chuyển Online, Offline, Demo"><b>CHẾ ĐỘ</b></button>
           </div>
           <div class="play-seat-shift-controls" aria-label="Giãn cách và khôi phục vị trí Seat">
             <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
@@ -202,7 +204,7 @@
 
           <div class="play-village-core">
             <div class="play-core-halo"></div>
-            <button class="play-core-pearl" type="button" aria-label="Đống lửa · Tạo phòng"></button>
+            <button class="play-core-pearl" type="button" aria-label="Đống lửa · Mở/đóng Menu GM"></button>
             <small id="playCoreKicker">GMWW • SÂN CHƠI</small>
             <b id="playCoreTitle">PHÒNG CHỜ</b>
             <span id="playCoreHint">Chọn Thành Viên để bắt đầu thiết lập ván.</span>
@@ -227,9 +229,9 @@
 
 
 
-        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Hành động · Khôi phục">
+        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Báo · Hành động · Lên Giàn · Khôi phục">
         <section id="playBattleClockFloat" class="battle-clock-float-v396" aria-label="Đồng hồ đếm ngược trong thanh dưới" hidden>
-          <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
+          <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><small class="battle-clock-caption" aria-hidden="true"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M24 13v11l8 5"/></svg></small><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
         </section>
 
         <section id="battleFactionStatsFloat" class="battle-faction-stats-float" aria-label="Thống kê các phe" hidden>
@@ -237,13 +239,14 @@
         </section>
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleDayNoticeFloat" class="battle-day-icon-float" aria-label="Thông cáo Làng" hidden>
-          <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng">🏖️</button>
+          <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 35h20l-3.7-6.2V21c0-5.8-3-9.5-6.3-9.5S17.7 15.2 17.7 21v7.8L14 35Z"/><path d="M21 39h6M24 7v2"/></svg></button>
         </section>
         <section id="battleDayActionFloat" class="battle-day-icon-float" aria-label="Hành động ban ngày" hidden>
           <button id="battleDayActionToggle" type="button" aria-controls="battleDayActionMenu" aria-expanded="false"><span aria-hidden="true">✦</span><b>HÀNH ĐỘNG</b><small>Chọn chức năng</small></button>
         </section>
         <section id="battleActionTray" class="battle-action-tray-v399" aria-label="Hành động của lượt hiện tại" hidden>
           <div class="battle-action-tray-head"><b id="battleActionTrayTitle">HÀNH ĐỘNG</b><button id="battleAudioReplay" type="button" title="Phát lại Audio của hành động hoặc lượt hiện tại" aria-label="Phát Audio hành động hiện tại">🔊</button></div>
+          <section id="battleDemoPanel" hidden aria-label="Trạng thái DEMO" class="gmww-demo-tray-status"><p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng</p></section>
           <div id="battleActionRail" class="battle-action-rail" role="group" aria-label="Hành động một hàng: vuốt ngang để xem, kéo lên người chơi để tác động">
             <button id="battleActionPrevious" class="battle-action-arrow" type="button" aria-label="Xem hành động phía trước" hidden aria-hidden="true" tabindex="-1">‹</button>
             <div id="battleActionBar" class="play-battle-actions battle-action-scroll" role="list" aria-label="Hành động Vai Trò và Artifact, kéo nút lên người chơi"></div>
@@ -251,10 +254,10 @@
           </div>
         </section>
         <section id="battleDayGallowsFloat" class="battle-day-icon-float" aria-label="Lên Giàn" hidden>
-          <button id="battleDayGallowsToggle" type="button" aria-label="Mở hoặc đóng Lên Giàn" aria-controls="battleGallowsPanel" aria-pressed="false" title="Lên Giàn">⛱️</button>
+          <button id="battleDayGallowsToggle" type="button" aria-label="Mở hoặc đóng Lên Giàn" aria-controls="battleGallowsPanel" aria-pressed="false" title="Lên Giàn"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 38V11h22"/><path d="M10 39h29M33 11v8"/><path d="M28 19c0-2.4 2-4 5-4s5 1.6 5 4-2 4-5 4-5-1.6-5-4Z"/><path d="M24 35h18"/><path d="M28 32v3M39 32v3"/></svg></button>
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
-          <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true">↶</span><small>KHÔI PHỤC</small></button>
+          <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 15H7V7"/><path d="M8 15a18 18 0 1 1-1.4 17"/><path d="M7 15c3.5-5.7 9-8.7 16-8.7"/></svg></span><small class="gmww-footer-hidden-label">KHÔI PHỤC</small></button>
         </section>
         </section>
         <section id="battleTargetSheet" class="battle-target-sheet-v399" hidden role="dialog" aria-modal="false" aria-label="Chọn mục tiêu cho hành động">
@@ -263,7 +266,7 @@
           <div id="battleTargetCandidates" class="battle-target-candidates" role="list"></div>
           <div id="battleAssassinChoice" hidden role="group" aria-label="Sát Thủ chọn dấu bí mật">
             <strong>SÁT THỦ CHỌN DẤU BÍ MẬT</strong>
-            <div><button type="button" data-assassin-choice="👍" aria-pressed="false">👍 LIKE</button><button type="button" data-assassin-choice="👎" aria-pressed="false">👎 DISLIKE</button></div>
+            <div><button type="button" data-assassin-choice="👍" aria-pressed="false">👍</button><button type="button" data-assassin-choice="👎" aria-pressed="false">👎</button></div>
           </div>
           <footer><button type="button" id="battleTargetCancel">HỦY</button><button type="button" id="battleTargetConfirm" title="Chạm để xác nhận · Giữ và kéo để di chuyển">OK</button></footer>
         </section>
@@ -354,26 +357,26 @@
           <aside id="battleDemoObserver" hidden aria-label="Quan sát DEMO" role="status" aria-live="polite" aria-atomic="false"><header aria-label="Giữ và kéo bảng quan sát"><span class="battle-menu-grip" aria-hidden="true"></span><strong id="battleDemoTurn"></strong><button type="button" id="battleDemoCollapse" aria-expanded="true" aria-label="Thu gọn bảng hành động DEMO" title="Thu gọn thành 🐦‍🔥">🐦‍🔥<span id="battleDemoCount" aria-hidden="true"></span></button></header><small id="battleDemoEventTurn"></small><p id="battleDemoEvent"></p><details id="battleDemoHistory" hidden><summary id="battleDemoHistoryCount">LỊCH SỬ ĐÊM</summary><ol id="battleDemoHistoryList" aria-label="Các hành động trước đó, mới nhất ở trên"></ol></details><p id="battleDemoObserverError"></p></aside>
           <div id="battleWolfMenu" class="battle-wolf-menu" hidden aria-label="Menu GM" role="dialog" aria-modal="false">
             <header aria-label="Giữ và kéo để di chuyển menu"><span class="battle-menu-grip" aria-hidden="true"></span></header>
-            <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — vuốt ngang để xem các nút" tabindex="0">
+            <div class="battle-wolf-actions" role="group" aria-label="Công cụ GM — lướt ngang để xem tất cả" tabindex="0">
+               <button id="battleGMChromeToggle" type="button" aria-pressed="true" title="Bật hoặc tắt hiển thị menu trên và dưới">Menu</button>
                <button id="battleDemoToggle" type="button" hidden aria-pressed="false" title="Tạm dừng / Tiếp tục DEMO"><span class="demo-clockwise-orbit" aria-hidden="true">↻</span><b>DEMO</b></button>
                <span class="play-demo-speed" id="battleDemoSpeedWrap" hidden><button id="battleDemoSpeed" type="button" data-speed="1" aria-label="Tốc độ DEMO: 1 lần. Chạm để tăng tốc." title="Chạm đổi tốc độ: ×1 → ×2 → ×5 → ×10">×1</button></span>
               <button id="battleLabelArtifact" type="button" aria-pressed="true" title="Ẩn/hiện tên Artifact trên GM Server">Artifact</button>
               <button id="battleLabelRole" type="button" aria-pressed="true" title="Ẩn/hiện tên Vai Trò trên GM Server">Vai Trò</button>
               <button id="battleLabelPlayer" type="button" aria-pressed="true" title="Ẩn/hiện tên Người Chơi trên GM Server">Người Chơi</button>
-              <button id="battleGMActionIcons" type="button" aria-pressed="true" title="Bật/tắt Icon hành động tại đống lửa trên GM, không đổi quyền hoặc luật chơi">ICON: BẬT</button>
-              <button id="battleShowDead" type="button" aria-pressed="true" title="Ẩn/hiện Character người chơi đã chết trên GM, không đổi trạng thái Server">☠️ Hiện người chết</button>
-              <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">🔊 Audio</button>
-               <button id="battleGMFireAnchor" type="button">🔥 Đặt vị trí đống lửa</button>
-               <button id="battleGMGallowsAnchor" type="button" title="Chạm trên bản đồ để lưu vị trí treo của Character và đồng bộ Player Web">⚖️ Đặt vị trí treo</button>
-               <button id="battleGMHaptic" type="button" aria-pressed="false" title="Bật / tắt rung khi xác nhận hành động">📳 Rung</button>
-              <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="battle-auto-spinner" aria-hidden="true">↻</span> Auto GM</button>
-              <button id="battleQuickRevive" type="button" aria-pressed="false">✦ Hồi Sinh</button>
-              <button id="battleQuickKill" type="button" aria-pressed="false">☠ Giết người</button>
-              <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">↩ Thoát game</button>
-              <button id="battleForceEnd" type="button" title="Kết thúc Ván">⏻ Kết thúc Ván</button>
-              <section id="battleDemoPanel" hidden aria-label="Trạng thái DEMO">
-               <p id="battleDemoStatus" role="status" aria-live="polite">Sẵn sàng</p>
-             </section>
+              <button id="battleGMActionIcons" type="button" aria-pressed="true" title="Bật/tắt Icon hành động tại đống lửa trên GM, không đổi quyền hoặc luật chơi">iCon</button>
+               <button id="battleGMTurnMotion" type="button" aria-pressed="true" title="Chỉ GM: nhân vật đến lượt bay lên, mục tiêu chạy tại chỗ; tắt để giảm nóng máy.">Bay/Chạy</button>
+              <button id="battleShowDead" type="button" aria-pressed="true" title="Ẩn/hiện Character người chơi đã chết trên GM, không đổi trạng thái Server">Người Chết</button>
+              <button id="battleGMAudio" type="button" aria-pressed="true" title="Bật / tắt âm thanh">Audio</button>
+               <button id="battleGMFireAnchor" type="button" title="Chạm để đặt lại vị trí Menu GM tại đống lửa">Đặt Menu</button>
+               <button id="battleGMGallowsAnchor" type="button" title="Chạm bản đồ để đặt vị trí treo và đồng bộ Player Web">Đặt ⚖️</button>
+               <button id="battleGMHaptic" type="button" aria-pressed="false" title="Bật / tắt rung khi xác nhận hành động">Rung</button>
+              <button id="battleGMAuto" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM">Auto GM</button>
+              <button id="battleQuickRevive" type="button" aria-pressed="false">Hồi Sinh</button>
+              <button id="battleQuickKill" type="button" aria-pressed="false">Giết</button>
+              <button id="battleExit" type="button" title="Thoát game, giữ nguyên ván đang chơi">Thoát</button>
+              <button id="battleForceEnd" type="button" title="Kết thúc Ván">Kết Thúc</button>
+              
            </div>
           </div>
           <div id="battleDetails" class="battle-menu-details" hidden aria-label="Thông Tin và hành động trong trận">
@@ -660,46 +663,23 @@
           
 <p class="settings-tools-grid-summary" id="settingsToolsGridSummary">16 công cụ · Kết quả hiển thị trong Thông báo hệ thống</p>
           <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="16 công cụ kiểm tra và bảo trì hiển thị theo lưới">
-<div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
-          <div class="health-v236-actions maintenance-actions"><button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button><button class="settings-action settings-action-server" id="settingsOptimizeDO" type="button"><span>🛡️</span><b>TỐI ƯU DO</b></button>
+            <button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button>
+            <button class="settings-action settings-action-server" id="settingsOptimizeDO" type="button"><span>🛡️</span><b>TỐI ƯU DO</b></button>
             <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
             <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
             <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
-          </div>
-
-          
-        </div>
-            <div class="settings-tool-inner gmww-cloudflare-card" id="gmwwCloudflareCard" aria-label="Quản lý Cloudflare">
-              <div class="health-v236-actions">
-                <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>☁</span><b>QUẢN LÝ CLOUDFLARE</b></button>
-                <button class="settings-action settings-action-server" id="gmwwServerTrashOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>♻</span><b>DỌN RÁC SERVER</b></button>
-              </div>
-            </div>
-            <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
-              <b class="settings-operation-tool-heading">Vận hành</b>
-              <div class="ops-tools" role="group" aria-label="Công cụ vận hành">
-                <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
-                <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
-                <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
-                <label class="ops-auto" title="Tự động kiểm tra mỗi 2 phút"><input id="opsAutoCheck" type="checkbox"><span>Tự kiểm tra <b>2 phút</b></span></label>
-              </div>
-            </div>
-            <div class="settings-tool-inner server-health-card health-v236" id="serverHealthCard">
-              <b class="settings-operation-tool-heading">Server</b>
-              <div class="health-v236-actions">
-                <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
-                <button class="settings-action settings-action-server" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
-                <button class="settings-action settings-action-server" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
-              </div>
-            </div>
-            <div class="settings-tool-inner diagnostics-card" id="systemDiagnosticsCard">
-              <b class="settings-operation-tool-heading">Chẩn đoán</b>
-              <div class="health-v236-actions diagnostic-actions">
-                <button class="settings-action settings-action-server" id="runSystemDiagnostics" type="button"><span>⌕</span><b>QUÉT LỖI</b></button>
-                <button class="settings-action settings-action-server" id="quickRepairSystem" type="button"><span>✚</span><b>SỬA NHANH</b></button>
-                <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
-              </div>
-            </div>
+            <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>☁</span><b class="gmww-cloudflare-label">CLOUDFLARE</b></button>
+            <button class="settings-action settings-action-server" id="gmwwServerTrashOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>♻</span><b>DỌN RÁC SERVER</b></button>
+            <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
+            <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
+            <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
+            <label class="ops-auto" title="Tự động kiểm tra mỗi 2 phút"><input id="opsAutoCheck" type="checkbox"><span>Tự kiểm tra <b>2 phút</b></span></label>
+            <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
+            <button class="settings-action settings-action-server" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
+            <button class="settings-action settings-action-server" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
+            <button class="settings-action settings-action-server" id="runSystemDiagnostics" type="button"><span>⌕</span><b>QUÉT LỖI</b></button>
+            <button class="settings-action settings-action-server" id="quickRepairSystem" type="button"><span>✚</span><b>SỬA NHANH</b></button>
+            <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
           </div>
 
           <section class="settings-notice-panel" id="settingsNoticePanel" role="region" aria-labelledby="settingsNoticeTitle">
@@ -784,6 +764,18 @@
             <button type="button" data-character-scale="200">200%</button>
           </div>
         </div>
+        <div class="settings-tool-inner character-scale-card" id="actionIconScaleCard">
+          <div class="settings-title"><div><h3>Kích thước iCon hành động</h3><small>Chỉ đổi iCon GM trong trận; không đổi Character hoặc gameplay</small></div><b id="actionIconScaleValue">100%</b></div>
+          <div id="actionIconScaleChoices" class="character-scale-choices" role="group" aria-label="Kích thước iCon hành động">
+            <button type="button" data-action-icon-scale="25">25%</button>
+            <button type="button" data-action-icon-scale="50">50%</button>
+            <button type="button" data-action-icon-scale="75">75%</button>
+            <button type="button" data-action-icon-scale="100">100%</button>
+            <button type="button" data-action-icon-scale="125">125%</button>
+            <button type="button" data-action-icon-scale="150">150%</button>
+          
+          </div>
+        </div>
         </div>
       </div>
     </section>
@@ -807,9 +799,12 @@
     <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div></div>
     <p id="playGameStatus" class="play-game-status" role="status" aria-live="polite" hidden></p>
     <div class="play-template-scroll">
-      <label class="play-game-name-label" for="playGameTemplateSelect">Ván Mẫu đã lưu</label>
-      <div class="play-template-picker-row"><select id="playGameTemplateSelect" aria-label="Chọn Ván Mẫu đã lưu"><option value="">Tạo Ván Mẫu mới</option></select><button id="playGameTemplateAdd" type="button" class="play-template-add" aria-label="Tạo Ván Mẫu mới" title="Mở trang tạo Ván Mẫu">＋ MỚI</button></div>
-      <div class="play-auto-game-area"><button id="playGameAuto" type="button" class="play-template-add" style="width:100%;margin:10px 0 6px;padding:13px 10px;border-radius:16px" aria-label="Tự động tạo ván Ma Sói cân bằng, nhấn lại để đổi bộ vai">✨ AUTO VÁN · NHẤN ĐỂ ĐỔI</button><div id="playGameAutoSummary" class="play-template-help" role="status" aria-live="polite" style="margin:2px 4px 10px;line-height:1.5" hidden></div></div>
+      <div class="play-template-picker-row play-template-actions-row" role="group" aria-label="Ván gợi ý, Auto Ván, Thêm mới">
+        <label class="play-template-suggested"><span>VÁN GỢI Ý</span><select id="playGameTemplateSelect" aria-label="Chọn Ván Mẫu gợi ý theo số người"><option value="">Chọn Ván Mẫu</option></select></label>
+        <div class="play-auto-game-area"><button id="playGameAuto" type="button" class="play-template-add" aria-label="Tự động tạo ván Ma Sói cân bằng, nhấn lại để đổi bộ vai">✨ AUTO VÁN</button></div>
+        <button id="playGameTemplateAdd" type="button" class="play-template-add" aria-label="Thêm Ván Mẫu mới" title="Mở trang tạo Ván Mẫu">＋ THÊM MỚI</button>
+      </div>
+      <div id="playGameAutoSummary" class="play-template-help" role="status" aria-live="polite" style="margin:6px 4px 10px;line-height:1.5" hidden></div>
       <button id="playGameTemplateBack" type="button" class="play-template-return" hidden>← QUAY LẠI CHỌN VÁN</button>
       <div class="play-template-editor-only">
         <label class="play-game-name-label">Tên Ván Mẫu<input id="playGameName" maxlength="48" value="Ván GMWW" placeholder="Tên Ván Mẫu"></label>
@@ -977,7 +972,6 @@
 
       <section class="play-room-section-card play-room-step hidden" id="playRoomModeStep" aria-label="Chế độ và trạng thái phòng">
         <div class="play-room-control-row">
-          <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Sau khi tạo phòng, nhấn để đổi Offline, Online, Demo"><b>CHẾ ĐỘ</b></button>
           <button id="playCreateRoomEnabled" type="button" aria-pressed="false" aria-label="Bật hoặc tắt phòng"><span></span><b>ON</b></button>
           <button class="play-room-step-next" id="playRoomNextStep" type="button" aria-label="Lưu và sang bước tiếp theo" title="Sang bước tiếp theo">›</button>
         </div>
@@ -1000,8 +994,8 @@
 <script src="battle-controls.js?v=3.175-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
-<script src="action-icon-library.js?v=v3227-icon-action-v2"></script>
-<script src="app.js?v=gmww-v3230-settings-notices"></script>
+<script src="action-icon-library.js?v=sea-art-v3"></script>
+<script src="app.js?v=gmww-v3250-approved-card-settings"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
@@ -1146,9 +1140,8 @@
 </style>
 <script>
 /* Official Arena 3D uses the same Production origin and authoritative Core as 2D.
- * WebKit keeps the 3D world in its own disposable iframe, while native/GMWW host
- * credentials are only transmitted by origin-checked one-frame postMessage.
- * Never send a GM token in URL or across an untrusted origin. */
+ * WebKit keeps the 3D world in its own disposable iframe; GMWW sends room access
+ * only to the origin-checked same-origin child. Core re-verifies GM authority. */
 (function(){
   'use strict';
   const arenaUrl='https://gmww-v2-00.williampham0702.workers.dev/village/arena-3d/live.html';
@@ -1196,20 +1189,6 @@
     frame.src=arenaUrl;
     document.getElementById('gmwwArena3dQaClose')?.focus();
   }
-  // GMWW keeps the one authoritative Role/Artifact editor until native 3D
-  // forms cover every Core rule. A verified Arena child can request the existing
-  // 2D setup screen; it cannot mutate role assignments through postMessage.
-  window.addEventListener('message',event=>{
-    if(event.origin!==new URL(arenaUrl).origin||
-       event.source!==frame?.contentWindow||!overlay||overlay.hidden||
-       event.data?.kind!=='gmww-arena3d-open-setup')return;
-    closeArena(true);
-  });
-  // Room created in Arena must be authenticated by official GMWW Core and
-  // adopted into playSceneState BEFORE returning to role/Artifact setup.
-  window.addEventListener('gmww-arena3d-room-adopted',()=>{
-    if(overlay&&!overlay.hidden)closeArena(true);
-  });
   // Capture BEFORE app.js's target-level legacy "Vào Làng => Trang Chơi" handler.
   document.addEventListener('click',function(event){
     if(!event.target?.closest?.('#gmwwHomeEnterVillage'))return;

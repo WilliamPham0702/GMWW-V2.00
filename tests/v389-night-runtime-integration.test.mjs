@@ -13,6 +13,12 @@ import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
+import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
+import {oldWitchActionCheck} from '../src/gmww-old-witch-rules.js';
+import {isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
+import {partitionNightSpecialRoles,witchSaveTargetAllowed} from '../src/gmww-witch-drunk-clone-rules.js';
+import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
+import {buildPrivateDeliverySnapshot} from '../src/gmww-delivery-snapshot.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -33,7 +39,9 @@ const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+' })',{
   ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
-  resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,
+  resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,oldWitchActionCheck,
+  isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles,
+  partitionNightSpecialRoles,witchSaveTargetAllowed,inheritedRolePlans,buildPrivateDeliverySnapshot,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -59,21 +67,123 @@ function harness({artifact=true,auto=false,singleUse=false}={}){
   if(artifact)data.set('artifact:alice',{matchId:'test-match',artifactId:'mirror',artifactName:'Tráng Gương',priorityFirst:true,singleUse,artifactCard:{actions:[{id:'copy',name:'Tráng Gương'}]}});
   const meta=()=>storage.get('meta');
   const runtime=async()=>room.getNightRuntime(await meta(),1,true);
-  const jump=async kind=>{const rt=await runtime();return room.gmTurn(null,{action:'jump',targetIndex:rt.queue.findIndex(x=>x.kind===kind)})};
+  const jump=async kind=>{const rt=await runtime(),index=rt.queue.findIndex(x=>x.kind===kind);
+    // Night 1 may begin directly on a Role when WOLF-01 omits the solo-Wolf
+    // introduction. In the live room applyCycle initializes this meta pointer.
+    if(index===rt.cursor){const m=await meta();m.currentNightTurnId=rt.currentId;await storage.put('meta',m);return rt}
+    return room.gmTurn(null,{action:'jump',targetIndex:index});
+  };
   const act=async overrides=>{const rt=await runtime();return room.gmInteraction(null,{turnId:rt.currentId,artifactId:'mirror',actorId:'alice',actionId:'copy',actionNonce:'nonce-1',targetIds:['bob'],loginId:'bob',type:'effect_notice',night:1,clientEventId:'nonce-1:bob',...overrides})};
   return{data,room,events,storage,meta,runtime,jump,act};
 }
 async function result(response){return {status:response.status,...await response.json()}}
 
+test('WITCH-01 real Durable Object: wake Old Witch right after optional Wolf recognition regardless of order',async()=>{
+  const h=harness();h.data.set('gameConfig',{roles:[{roleId:'seer',order:1},{roleId:'role_wolf',order:2},{roleId:'role_old_witch',order:99}],timing:{defaultActionSec:30,wolfDiscussionSec:20}});
+  h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_old_witch',roleName:'Phù Thuỷ Già'},
+    {loginId:'bob',roleId:'role_wolf',roleName:'Sói'},
+    {loginId:'carol',roleId:'role_wolf',roleName:'Sói'},
+    {loginId:'dave',roleId:'seer',roleName:'Tiên Tri'}
+  ]);
+  const rt=await h.runtime();
+  assert.deepEqual(Array.from(rt.queue.slice(0,3),x=>x.kind),['wolf-introduction','role','wolf-pack-bite']);
+  assert.equal(rt.queue[1].roleId,'role_old_witch');
+  assert.equal(rt.queue[3].roleId,'seer');
+  const h2=harness({artifact:false});
+  h2.data.set('assignments',[{loginId:'alice',roleId:'role_old_witch',roleName:'Phù Thuỷ Già'},{loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
+  h2.data.set('gameConfig',{roles:[{roleId:'seer',order:1},{roleId:'role_old_witch',order:99}],timing:{defaultActionSec:30}});
+  const alone=await h2.runtime();
+  assert.equal(alone.queue[0].roleId,'role_old_witch');
+});
+
+test('WITCH-01 real Durable Object: reject invalid revive before writes and accept prior-night target',async()=>{
+  const h=harness({artifact:false});h.data.set('gameConfig',{roles:[{roleId:'role_old_witch',order:99}],timing:{defaultActionSec:30}});
+  h.data.set('assignments',[{loginId:'alice',roleId:'role_old_witch',roleName:'Phù Thuỷ Già'}]);
+  h.data.set('roles:alice',[{roleId:'role_old_witch',matchId:'test-match',roleCard:{flags:{allowMultipleActions:false},functions:[
+    {actionId:'action_revive',usageMode:'onceGame',usageCount:1},{actionId:'action_exile',usageMode:'eachNight',usageCount:1}]}}]);
+  h.data.get('meta').cycleNight=2;h.data.get('meta').cycleKey='night-2';
+  const rt=await h.room.getNightRuntime(await h.meta(),2,true),m=await h.meta();
+  m.currentNightTurnId=rt.currentId;h.data.set('meta',m);
+  const act=(targets,nonce,type='revive',actionId='action_revive')=>h.room.gmBattleAction(null,{matchId:'test-match',cycleKey:'night-2',
+    turnId:rt.currentId,actorId:'alice',type,actionId,targetIds:targets,clientEventId:nonce});
+  assert.equal((await result(await act(['bob'],'no-death'))).error,'WITCH_REVIVE_TARGET_INELIGIBLE');
+  assert.equal(h.data.has('battleRoleUsage:test-match'),false);
+  h.data.set('interactions',[{id:'death-1',loginId:'bob',matchId:'test-match',type:'dead',effectActive:true,night:1,cycleKey:'night-1'}]);
+  assert.equal((await result(await act(['alice'],'self'))).error,'WITCH_SELF_TARGET');
+  assert.equal((await result(await act(['bob'],'revive-valid'))).ok,true);
+  assert.equal(h.data.get('interactions')[0].effectActive,false);
+  assert.equal((await result(await act(['bob'],'revive-again'))).error,'WITCH_REVIVE_TARGET_INELIGIBLE');
+  assert.equal((await result(await act(['carol'],'exile-after-revive','expelled','action_exile'))).error,'ROLE_NIGHT_ACTION_EXHAUSTED');
+});
+
+test('NIGHT-02 real DO: Snow Guard pack Wolf specials Fairy precede configured village roles',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('gameConfig',{roles:[
+    {roleId:'role_fairy',order:1},{roleId:'seer',order:2},{roleId:'role_wolf_seer',order:5},
+    {roleId:'role_guard',order:80},{roleId:'role_snow_wolf',order:99},{roleId:'role_wolf',order:1}],
+    timing:{defaultActionSec:35,wolfDiscussionSec:20}});
+  h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_fairy',roleName:'Yêu Tinh'},
+    {loginId:'bob',roleId:'role_guard',roleName:'Bảo Vệ'},
+    {loginId:'carol',roleId:'role_snow_wolf',roleName:'Sói Tuyết',faction:'wolf'},
+    {loginId:'dave',roleId:'role_wolf',roleName:'Sói Thường',faction:'wolf'},
+    {loginId:'eve',roleId:'role_wolf_seer',roleName:'Sói Tiên Tri',faction:'wolf',
+      roleCard:{functions:[{actionId:'action_find_seer',phase:'night'}]}},
+    {loginId:'frank',roleId:'seer',roleName:'Tiên Tri'}
+  ]);
+  const rt=await h.runtime();
+  const seq=rt.queue.map(x=>x.kind==='role'?x.roleId:x.kind);
+  assert.deepEqual(Array.from(seq.slice(0,7)),[
+    'wolf-introduction','role_snow_wolf','role_guard','wolf-pack-bite',
+    'role_wolf_seer','role_fairy','seer']);
+  const bite=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.deepEqual(Array.from(bite.loginIds).sort(),['carol','dave','eve']);
+  assert.deepEqual(Array.from(bite.biteActorIds).sort(),['dave','eve']);
+});
+test('NIGHT-02 real DO: Snow alone is eligible for pack Bite; wolves absent omit pack step',async()=>{
+  const h=harness({artifact:false});h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_snow_wolf',roleName:'Sói Tuyết',faction:'wolf'},
+    {loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
+  const rt=await h.runtime(),bite=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.ok(bite);assert.deepEqual(Array.from(bite.biteActorIds),['alice']);
+  const none=harness({artifact:false});
+  none.data.set('assignments',[{loginId:'alice',roleId:'seer',roleName:'Tiên Tri'}]);
+  assert.equal((await none.runtime()).queue.some(x=>x.kind==='wolf-pack-bite'),false);
+});
 test('no Artifact produces no opening window; configured Artifacts preserve one owned opening window',async()=>{
   const h=harness({artifact:false}),rt=await h.runtime();
-  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-introduction','role','role','village-wakeup']);
+  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-pack-bite','role','village-wakeup']);
   assert.equal(timelineDisplaySteps(rt.queue).filter(x=>x.kind==='early-artifact-window').length,0);
   const h2=harness(),r2=await h2.runtime();
+  assert.deepEqual(Array.from(r2.queue.slice(0,2),x=>x.kind),['early-artifact-window','wolf-pack-bite']);
   assert.equal(r2.queue[2].loginIds.length,2);assert.equal(r2.queue[2].artifacts[0].loginId,'alice');
   assert.equal(h2.data.has('artifactUse:alice:mirror'),false);
   assert.equal(timelineDisplaySteps(r2.queue).filter(x=>x.kind==='early-artifact-window').length,1);
 });
+test('ART-01 skip from night two when priority absent/exhausted; no Artifact mode skips night one',async()=>{
+  const h=harness();
+  h.data.get('gameConfig').artifactsEnabled=false;
+  assert.ok(!(await h.runtime()).queue.some(x=>x.kind==='early-artifact-window'));
+  const prioritized=harness({singleUse:true});
+  prioritized.data.set('artifactUse:alice:mirror',{usedAt:new Date().toISOString()});
+  const second=await prioritized.room.getNightRuntime({...await prioritized.meta(),cycleNight:2},2,true);
+  assert.ok(!second.queue.some(x=>x.kind==='early-artifact-window'));
+  const reusable=harness();
+  const next=await reusable.room.getNightRuntime({...await reusable.meta(),cycleNight:2},2,true);
+  assert.equal(next.queue[0].kind,'early-artifact-window');
+  const unprioritized=harness();
+  unprioritized.data.get('assignments')[0].artifactPriorityFirst=false;
+  unprioritized.data.get('artifact:alice').priorityFirst=false;
+  const first=await unprioritized.runtime();
+  assert.equal(first.queue[0].kind,'early-artifact-window');
+  assert.equal(first.queue[0].actions.length,0);
+  const later=await unprioritized.room.getNightRuntime({...await unprioritized.meta(),cycleNight:2},2,true);
+  assert.equal(later.queue.some(x=>x.kind==='early-artifact-window'),false);
+  const audio=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  assert.match(audio,/audio_system_early_artifacts/);
+});
+
 test('skipping priority window does not consume Artifact; owner uses it at role turn',async()=>{
   const h=harness();await h.jump('role');
   assert.equal(h.data.has('artifactUse:alice:mirror'),false);
@@ -214,7 +324,7 @@ test('request-ID collision across owners cannot reserve or impersonate another A
 });
 
 
-test('roles with identical wake order share a single server turn and keep both owners',async()=>{
+test('NIGHT-02 bare Wolf roles sharing order only wake in the common pack bite turn',async()=>{
   const h=harness({artifact:false});
   h.data.set('gameConfig',{roles:[{roleId:'regular-wolf',order:6},{roleId:'alpha-wolf',order:6}],
     timing:{wolfDiscussionSec:30,earlyArtifactSec:60,defaultActionSec:35}});
@@ -222,11 +332,11 @@ test('roles with identical wake order share a single server turn and keep both o
     {loginId:'alice',roleId:'regular-wolf',roleName:'Sói Thường'},
     {loginId:'bob',roleId:'alpha-wolf',roleName:'Sói Trùm'}
   ]);
-  const rt=await h.runtime(),group=rt.queue.find(x=>x.kind==='role-group');
-  assert.ok(group);assert.equal(group.order,6);
-  assert.deepEqual([...group.loginIds].sort(),['alice','bob']);
-  assert.deepEqual(group.roles.map(r=>r.label),['Sói Thường','Sói Trùm']);
-  assert.equal(rt.queue.filter(x=>x.kind==='role').length,0);
+  const rt=await h.runtime(),pack=rt.queue.find(x=>x.kind==='wolf-pack-bite');
+  assert.ok(pack);assert.equal(pack.order,-1);
+  assert.deepEqual([...pack.loginIds].sort(),['alice','bob']);
+  assert.deepEqual(pack.roles.map(r=>r.roleId),['regular-wolf','alpha-wolf']);
+  assert.equal(rt.queue.filter(x=>['role','role-group'].includes(x.kind)).length,0);
   assert.equal(rt.queue[0].durationSec,30);
   assert.equal(rt.queue[1].durationSec,35);
   assert.ok(!rt.queue.some(x=>x.kind==='early-artifact-window'));
@@ -236,6 +346,9 @@ test('batched GM action reverses both targets and one Artifact use on server',as
   const h=harness({artifact:true,singleUse:true});
   await h.jump('early-artifact-window');
   const meta=await h.meta(),rt=await h.runtime();
+  // Match applyCycle: it saves the first night turn ID even when the first step
+  // is Artifact at index zero (jumping to the same index does not rewrite meta).
+  h.data.get('meta').currentNightTurnId=rt.currentId;
   const payload={turnId:rt.currentId,actorId:'alice',artifactId:'mirror',
     type:'frozen',actionId:'copy',effectId:'freeze',effectName:'Đóng Băng',
     targetIds:['bob','carol'],matchId:meta.matchId,cycleKey:meta.cycleKey,
@@ -269,9 +382,10 @@ test('GM undo rejects stale turn and changed state; frozen role owner cannot act
   await h.room.gmTurn(null,{action:'next',expectedTurnId:rt.currentId}); // advance to the next configured role
   assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STALE_TURN');
   const i=await h.data.get('interactions');
-  i.push({id:'freeze-owner',loginId:'carol',type:'frozen',effectActive:true,matchId:'test-match'});
+  i.push({id:'freeze-owner',loginId:'alice',type:'frozen',effectActive:true,matchId:'test-match'});
   h.data.set('interactions',i);
-  const next=await result(await h.room.gmBattleAction(null,{...p,actorId:'carol',turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
+  await h.jump('role'); // After the shared pack turn there may be no second bare-Wolf role.
+  const next=await result(await h.room.gmBattleAction(null,{...p,actorId:'alice',turnId:(await h.runtime()).currentId,clientEventId:'tx-frozen'}));
   assert.equal(next.error,'ACTOR_CANNOT_ACT');
 });
 
@@ -335,14 +449,14 @@ test('G4 live DO: frozen actor is blocked on night 1, thawed by morning, acts on
   const success=await result(await h.room.gmBattleAction(null,{...payload,night:2,
     turnId:current.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-night-2-success'}));
   assert.equal(success.ok,true,'once thawed the actor can use their role');
-  const wolfIndex=current.queue.findIndex(row=>
-    ['role','role-group'].includes(row.kind)&&(row.loginIds||[]).includes('carol'));
-  assert.ok(wolfIndex>=0,'wolf waking step exists on night 2');
+  const wolfIndex=current.queue.findIndex(row=>row.kind==='wolf-pack-bite');
+  assert.ok(wolfIndex>=0,'shared Pack Bite step exists when a Wolf was configured');
   await h.room.gmTurn(null,{action:'jump',targetIndex:wolfIndex});
   const wolf=await h.room.getNightRuntime(await h.meta(),2,false);
   const denied=await result(await h.room.gmBattleAction(null,{...payload,actorId:'carol',
-    turnId:wolf.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-dead-wolf-denied',night:2}));
-  assert.equal(denied.error,'ACTOR_CANNOT_ACT','death must persist across night transitions');
+    actionId:'action_wolf_bite',turnId:wolf.currentId,cycleKey:meta2.cycleKey,
+    clientEventId:'g4-dead-wolf-denied',night:2}));
+  assert.equal(denied.error,'INVALID_ACTOR_FOR_TURN','dead wolf has no pack action authority');
 });
 test('G4 live DO: two-night disabled status expires at night 3, not night 2',async()=>{
   const h=harness({artifact:false});
@@ -550,4 +664,52 @@ test('Delayed alarm never submits expired ballots; it resolves the stage and con
  await h.room.syncDemoClock(meta,await h.storage.get('demoLease'));const clock=h.data.get('demoClock');clock.remainingMs=0;clock.at=Date.now();h.data.set('demoClock',clock);
  await h.storage.put('demoPlan',{key:clock.key,cursor:0,tasks:[{id:'vote:bob',actorId:'bob',kind:'vote'}]});
  await runServerDemo(h.room,meta);assert.equal(h.data.get('gallows:test-match:morning-1').stage,'resolved');assert.equal(h.data.get('demoLease').error||'','');
+});
+
+test('Night 3 actual Durable Object auto-draws dead wolf for Drunk and refreshes private snapshot',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('assignments',[
+    {assignmentIndex:0,loginId:'alice',roleId:'role_drunk',roleName:'Say Rượu',faction:'village'},
+    {assignmentIndex:1,loginId:'bob',roleId:'role_wolf',roleName:'Sói',faction:'wolf'}
+  ]);
+  h.data.set('roles:alice',[{assignmentIndex:0,loginId:'alice',roleId:'role_drunk',
+    roleName:'Say Rượu',faction:'village',matchId:'test-match',roleCard:{functions:[]}}]);
+  h.data.set('roles:bob',[{assignmentIndex:1,loginId:'bob',roleId:'role_wolf',
+    roleName:'Sói',faction:'wolf',matchId:'test-match',
+    roleCard:{factionId:'wolf',functions:[{actionId:'action_wolf_bite',phase:'night'}]}}]);
+  h.data.set('interactions',[{matchId:'test-match',night:2,type:'dead',loginId:'bob',effectActive:true}]);
+  const meta=await h.meta();meta.cycleNight=3;meta.cycleKey='night-3';
+  await h.storage.put('meta',meta);
+  const rt=await h.room.getNightRuntime(meta,3,true);
+  const assigned=await h.storage.get('assignments'),updated=assigned.find(r=>r.loginId==='alice');
+  assert.equal(updated.roleId,'role_wolf');
+  assert.equal(updated.faction,'wolf');
+  assert.ok(rt.queue.some(x=>x.kind==='drunk-draw'&&x.loginIds[0]==='alice'));
+  const snapshot=await h.storage.get('deliverySnapshot:alice');
+  assert.equal(snapshot.roles[0].roleId,'role_wolf');
+  assert.equal(snapshot.deliveryVersion,(await h.meta()).deliveryVersion);
+});
+test('Clone inherits only in next Night after chosen person dies; owner Artifact is unchanged',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('assignments',[
+    {assignmentIndex:0,loginId:'alice',roleId:'role_clone',roleName:'Nhân Bản',faction:'village'},
+    {assignmentIndex:1,loginId:'bob',roleId:'role_witch',roleName:'Phù Thuỷ',faction:'village'}]);
+  h.data.set('roles:alice',[{assignmentIndex:0,loginId:'alice',roleId:'role_clone',
+    roleName:'Nhân Bản',faction:'village',matchId:'test-match',
+    artifact:{artifactId:'owner-asset'},roleCard:{functions:[{actionId:'action_clone_target'}]}}]);
+  h.data.set('roles:bob',[{assignmentIndex:1,loginId:'bob',roleId:'role_witch',
+    roleName:'Phù Thuỷ',faction:'village',matchId:'test-match',
+    artifact:{artifactId:'wrong-donor-asset'},
+    roleCard:{functions:[{actionId:'action_witch_save'}]}}]);
+  h.data.set('interactions',[{matchId:'test-match',night:1,type:'effect_notice',
+    actionId:'action_clone_target',actorId:'alice',loginId:'bob'},
+    {matchId:'test-match',night:1,type:'dead',loginId:'bob',effectActive:true}]);
+  const meta=await h.meta();meta.cycleNight=2;meta.cycleKey='night-2';
+  await h.storage.put('meta',meta);
+  const rt=await h.room.getNightRuntime(meta,2,true);
+  assert.ok(rt.queue.some(x=>x.roleId==='role_witch'));
+  const role=await h.storage.get('role:alice');
+  assert.equal(role.roleId,'role_witch');
+  assert.equal(role.artifact.artifactId,'owner-asset');
+  assert.equal(role.inheritedFromRoleId,'role_clone');
 });
