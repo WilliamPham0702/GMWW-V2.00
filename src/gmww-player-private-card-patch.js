@@ -364,8 +364,8 @@ async function gmwwVerifyMemberBeforeRemoval(){
  // V3.194: one authoritative public roster + complete private ballot receipt.
  // The legacy private-card patch removed the second /me read from public polling;
  // keep gallows and day interactions in the surviving authenticated receipt.
- offlineReplace("try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);",
-   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");
+ offlineReplace("if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);handleSeatSwapRequests(d?.swapRequests);",
+   "if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");
  offlineReplace("async function autoResumeActiveRoom({stayInVillage=false}={}){",
    "async function gmwwRefreshPublicRoster(code,participantId){\n"+
    "  try{const d=await api('/api/rooms/'+encodeURIComponent(code));\n"+
