@@ -1701,8 +1701,10 @@ export function isPlayerReceiptHotfixScope(changes){
   const newChange='replaceReceipt("'+newCall+'",'+String.fromCharCode(10)+'   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;");';
   const oldChange2='offlineReplace("try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);",'+String.fromCharCode(10)+'   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");';
   const newChange2='offlineReplace("if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);handleSeatSwapRequests(d?.swapRequests);",'+String.fromCharCode(10)+'   "if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);if(d?.room)state.room=d.room;state.gallows=d?.gallows||null;renderGallowsWidget();handleSeatSwapRequests(d?.swapRequests);");';
-  return p.before.includes(oldChange)&&p.before.includes(oldChange2)&&
-    p.after===p.before.replace(oldChange,newChange).replace(oldChange2,newChange2);
+  const oldChange3='offlineReplace("else if(d.type===\'room_cycle\'){state.gallows=null;",'+String.fromCharCode(10)+'   "else if(d.type===\'room_cycle\'){gmwwLastGallowsBroadcastAt=Date.now();state.gallows=null;");';
+  const newChange3='offlineReplace("else if(d.type===\'room_cycle\'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);state.gallows=null;",'+String.fromCharCode(10)+'   "else if(d.type===\'room_cycle\'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);gmwwLastGallowsBroadcastAt=Date.now();state.gallows=null;");';
+  return p.before.includes(oldChange)&&p.before.includes(oldChange2)&&p.before.includes(oldChange3)&&
+    p.after===p.before.replace(oldChange,newChange).replace(oldChange2,newChange2).replace(oldChange3,newChange3);
 }
 
 export function classifyBrowserScope(changes){
