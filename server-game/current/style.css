@@ -8728,3 +8728,9 @@ html[data-gmww-perf-reduced="true"] #start .gmww-sv-snowfall::after,
 html[data-gmww-perf-reduced="true"] #start .gmww-sv-gray-mist,
 html[data-gmww-perf-reduced="true"] #start .gmww-sv-gray-puff,
 html[data-gmww-perf-reduced="true"] #start .play-core-pearl::after{animation-play-state:paused!important}
+
+/* Four update actions stay on one row, including narrow iPhones. */
+#settings #updateManagerCard .update-actions-four{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important;width:100%!important}
+#settings #updateManagerCard .update-actions-four>.settings-action{width:100%!important;min-width:0!important;height:48px!important;padding:3px 2px!important;display:flex!important;flex-direction:column;justify-content:center!important;align-items:center!important;gap:3px!important}
+#settings #updateManagerCard .update-actions-four .settings-action span{font-size:14px!important}
+#settings #updateManagerCard .update-actions-four .settings-action b{font-size:8px!important;white-space:nowrap!important;line-height:1.1!important}
