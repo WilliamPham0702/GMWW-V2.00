@@ -1655,6 +1655,41 @@ export function isFairy3242PolicyScope(changes){
   new Set(changes.map(c=>c.path)).size===paths.size;
 }
 
+
+// V3.244: six equal centered timeline stages, scoped GM Runtime patch only.
+const timeline244Paths=new Set([
+ 'server-game/current/style.css','server-game/current/GMWW.html','server-game/current/app.js',
+ 'server-game/src/00-core-and-library.part','src/index.js','package.json','package-lock.json',
+ 'tests/lobby-gather-mode-assassin-20261027.test.mjs',
+ 'docs/releases/GMWW-V3.244-timeline-center-20261027.md',
+ '.github/workflows/deploy-production.yml','.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml'
+]);
+export function isTimeline244Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==timeline244Paths.size)return false;
+ const seen=new Set();
+ for(const c of changes){
+  if(!timeline244Paths.has(c.path)||seen.has(c.path)||!['A','M'].includes(c.status))return false;
+  seen.add(c.path);
+ }
+ try{
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const css=fs.readFileSync('server-game/current/style.css','utf8');
+  const gm=fs.readFileSync('server-game/current/app.js','utf8');
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const scoped=css.slice(css.indexOf('/* GMWW lobby stage: compact steps'));
+  return pkg.version==='3.244.0'&&lock.version==='3.244.0'&&
+   html.includes('<title>GMWW V3.244</title>')&&
+   (html.match(/data-play-step="/g)||[]).length===6&&
+   gm.includes("const VERSION='3.244'")&&worker.includes('VERSION="V3.244"')&&
+   scoped.includes('grid-template-columns:repeat(6,minmax(0,1fr))!important')&&
+   !scoped.includes('grid-template-columns:repeat(7,minmax(0,1fr))!important')&&
+   fs.existsSync('docs/releases/GMWW-V3.244-timeline-center-20261027.md');
+ }catch{return false;}
+}
+
 // PR541: reviewed GM-only roomless UI, no DO migration or Native IPA changes.
 const lobby541Paths=new Set(["server-game/src/00-core-and-library.part","server-game/src/20-members-and-roster.part","server-game/src/30-village-and-setup.part","server-game/src/40-battle-and-timeline.part","server-game/src/50-roles-and-artifacts.part","server-game/current/app.js","server-game/current/GMWW.html","server-game/current/style.css","src/index.js","package.json","package-lock.json","tests/lobby-gather-mode-assassin-20261027.test.mjs","docs/releases/GMWW-LOBBY-GATHER-ASSASSIN-20261027.md","docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md",".github/workflows/check-lobby-gather-assassin.yml",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-gallows-redesign.yml",".github/workflows/check-gm-free-icons-501.yml",".github/workflows/prepare-runtime-v3202-candidate.yml",".github/workflows/build-server-game-ipa.yml",".github/workflows/deploy-production.yml"]);
 export function isLobbyGather541Scope(changes){
@@ -1710,6 +1745,7 @@ export function isPlayerReceiptHotfixScope(changes){
 
 export function classifyBrowserScope(changes){
   if(isPlayerReceiptHotfixScope(changes))return 'player-receipt-hotfix';
+  if(isTimeline244Scope(changes))return 'timeline-six-center-3244';
   if(isLobbyGather541Scope(changes))return 'lobby-gather-541';
   if(isFairy3242PolicyScope(changes))return 'fairy-ci-policy';
   if(isFairy3242Scope(changes))return 'fairy-audio-3242';
@@ -1797,6 +1833,7 @@ function detect(){
         return{status,path,before,after};
       });
       if(isPlayerReceiptHotfixScope(changes))return{mode:'player-receipt-hotfix',reason:'Exact Player Web private receipt hotfix; no runtime/IPA'};
+      if(isTimeline244Scope(changes))return{mode:'timeline-six-center-3244',reason:'V3.244 exact six-step centered GM timeline only'};
       if(isLobbyGather541Scope(changes))return{mode:'lobby-gather-541',reason:'PR541 V3.243 exact GM Room/Gather UI only'};
        if(isFairy3242PolicyScope(changes))return{mode:'fairy-ci-policy',reason:'CI-only V3.242 routing'};
       if(isFairy3242Scope(changes))return{mode:'fairy-audio-3242',reason:'Exact reviewed V3.242 blobs'};
