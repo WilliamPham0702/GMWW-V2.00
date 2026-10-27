@@ -16,6 +16,9 @@ import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,r
 import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
 import {oldWitchActionCheck} from '../src/gmww-old-witch-rules.js';
 import {isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
+import {partitionNightSpecialRoles,witchSaveTargetAllowed} from '../src/gmww-witch-drunk-clone-rules.js';
+import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
+import {buildPrivateDeliverySnapshot} from '../src/gmww-delivery-snapshot.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -38,6 +41,7 @@ const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMetho
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,oldWitchActionCheck,
   isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles,
+  partitionNightSpecialRoles,witchSaveTargetAllowed,inheritedRolePlans,buildPrivateDeliverySnapshot,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
