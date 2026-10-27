@@ -1944,7 +1944,34 @@ export function isRuntime248PostMergeScope(changes){
  }catch{return false}
 }
 
+// V3.252: narrowly scoped GM-only motion with strict file allowlist.
+const gmTurnMotionPaths=new Set([
+  'server-game/current/app.js','server-game/current/GMWW.html','server-game/current/style.css',
+  'server-game/current/gmww-shared-motion.js','server-game/src/00-core-and-library.part',
+  'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'src/index.js','package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+  'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-TURN-MOTION-20261027.md',
+  'docs/releases/GMWW-V3.252-gm-turn-motion-20261027.md','wrangler.gm-turn-motion-staging.jsonc',
+  '.github/scripts/build-gm-turn-motion-staging.mjs','.github/workflows/deploy-gm-turn-motion-staging.yml',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml'
+]);
+function isGMTurnMotionScope(changes){
+  const paths=new Set((changes||[]).map(c=>c.path));
+  const required=['server-game/current/app.js','server-game/current/gmww-shared-motion.js',
+    'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+    'server-game/src/40-battle-and-timeline.part','src/index.js','package.json',
+    'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-V3.252-gm-turn-motion-20261027.md'];
+  if(!required.every(p=>paths.has(p))||!changes.every(c=>gmTurnMotionPaths.has(c.path)&&['A','M'].includes(c.status)))return false;
+  const value=path=>changes.find(c=>c.path===path)?.after||'';
+  return value('server-game/src/00-core-and-library.part').includes("const VERSION='3.252'")&&
+    value('src/index.js').includes('VERSION="V3.252"')&&
+    value('server-game/current/app.js').includes('GMWW_GM_TURN_MOTION_V1')&&
+    value('server-game/current/gmww-shared-motion.js').includes('_gmwwLowPower')&&
+    value('package.json').includes('"version": "3.252.0"');
+}
 export function classifyBrowserScope(changes){
+  if(isGMTurnMotionScope(changes))return 'gm-turn-motion-lowheat';
   if(isRuntime248PostMergeScope(changes))return 'runtime-3248-postmerge';
   if(isRuntime248SetupUiScope(changes))return 'runtime-3248-setup-ui';
   if(isIcon247PostMergeScope(changes))return 'icon-scale-3247-postmerge';
@@ -2091,6 +2118,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isGMTurnMotionScope(changes))return{mode:'gm-turn-motion-lowheat',reason:'V3.252 exact GM motion and OTA changes only'};
       if(isRuntime248PostMergeScope(changes))return{mode:'runtime-3248-postmerge',reason:'Exact 4-file CI release fix for already tested Runtime V3.248'};
       if(isIcon247PostMergeScope(changes))return{mode:'icon-scale-3247-postmerge',reason:'Audited 2-file V3.247 CI release scope order fix'};
       if(isFairy246PostMergeScope(changes))return{mode:'fairy-246-postmerge',reason:'PR548 V3.246 exact 5-file post-merge CI repair; same Runtime and icon SHA'};
