@@ -2033,6 +2033,22 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // V3.250 owner-approved settings fix: scoped only after strict diff+version
+  // verification. Any unexpected changed file uses existing full CI.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.250.0'){
+        const base=process.env.GMWW_CI_EVENT==='pull_request'?
+          String(process.env.GMWW_CI_BASE_SHA||''):'HEAD^1';
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3250.mjs'],{
+            encoding:'utf8',env:{...process.env,GMWW_V3250_BASE:base}});
+          return{mode:'approved-role-card-settings-3250',
+            reason:'V3.250 strict approved card settings, actions and Runtime files'};
+        }
+      }
+    }catch{} // Fail closed; never pretend arbitrary changes are scoped.
+  }
   // V3.249 scoped release: execute the fail-closed Worker/GM/OTA diff verifier.
   // Any unrecognized file or missing version contract falls back to full checks.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
