@@ -1944,7 +1944,33 @@ export function isRuntime248PostMergeScope(changes){
  }catch{return false}
 }
 
-export function classifyBrowserScope(changes){
+export function isGMPerformanceThermalScope(changes){
+ if(!Array.isArray(changes)||!changes.length)return false;
+ const allowed=new Set([
+  'server-game/current/gmww-performance.js',
+  'server-game/current/gmww-shared-motion.js',
+  'assets/characters/gmww40/runtime.js',
+  'server-game/current/GMWW.html',
+  'server-game/current/style.css',
+  '.github/scripts/prepare-update-channel.mjs',
+  'tests/gmww-performance-thermal.test.mjs',
+  'docs/releases/GMWW-performance-thermal-20261027.md',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml'
+ ]);
+ const required=[
+  'server-game/current/gmww-performance.js',
+  'server-game/current/gmww-shared-motion.js',
+  'assets/characters/gmww40/runtime.js',
+  'server-game/current/GMWW.html',
+  'server-game/current/style.css',
+  'tests/gmww-performance-thermal.test.mjs'
+ ];
+ return changes.every(c=>allowed.has(c.path)&&['A','M'].includes(c.status))&&
+        required.every(p=>changes.some(c=>c.path===p));
+}
+function classifyBrowserScope(changes){
+  if(isGMPerformanceThermalScope(changes))return 'gm-performance-thermal';
   if(isRuntime248PostMergeScope(changes))return 'runtime-3248-postmerge';
   if(isRuntime248SetupUiScope(changes))return 'runtime-3248-setup-ui';
   if(isIcon247PostMergeScope(changes))return 'icon-scale-3247-postmerge';
