@@ -269,8 +269,8 @@ async function gmwwVerifyMemberBeforeRemoval(){
  replaceReceipt("async function refreshPrivateRole(force=false){",GMWW_RECEIPT_READER+"\n"+GMWW_RECEIPT_ACK_CODE+"\n"+GMWW_MEMBERSHIP_RECHECK_CODE+"\n"+GMWW_LIVE_DELIVERY_WATCH+"\nasync function refreshPrivateRole(force=false){");
  replaceReceipt("if(state.role){rememberActiveRole(state.role);",
    "if(state.role){gmwwAcknowledgePrivateDelivery(d);rememberActiveRole(state.role);");
- replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});handleSeatSwapRequests(d?.swapRequests);",
-   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;handleSeatSwapRequests(d?.swapRequests);");
+ replaceReceipt("try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});",
+   "try{const d=await gmwwReadPrivateReceipt();if(!d)return false;");
  replaceReceipt("if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=",
    "if(d?.deliveryManifest){const manifest=d.deliveryManifest;const sameMatch=!manifest.matchId||String(manifest.matchId)===String(d.room?.matchId||state.room?.matchId||'');if(sameMatch){state.privateDeliveryManifest=manifest;state.artifactExpected=manifest.artifactExpected===true}}if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;if(d?.player)state.ready=!!d.player.ready;const oldArtifactId=");
  replaceReceipt("  renderPlayerPrivateDock();\n  bar.hidden=true;",
