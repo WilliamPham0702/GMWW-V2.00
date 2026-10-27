@@ -2033,6 +2033,54 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // V3.250: only uniform Settings tile geometry, version/OTA notes and exact CI gates.
+  // Fail closed on any JS behavior or unknown file change.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.250.0'){
+        const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+          const whitelist=new Set([
+            'package.json','package-lock.json','src/index.js',
+            'server-game/src/00-core-and-library.part','server-game/current/app.js',
+            'server-game/current/GMWW.html','server-game/current/style.css',
+            '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+            '.github/workflows/check-player-web.yml','.github/workflows/deploy-production.yml',
+            'docs/releases/GMWW-V3.250-cloudflare-uniform-tools-20261027.md',
+            'tests/gmww-v3250-cloudflare-tools.test.mjs'
+          ]);
+          const changed=rows.map(row=>{const [status,path]=row.split('\t');return{status,path}});
+          if(changed.length===whitelist.size &&
+             changed.every(x=>whitelist.has(x.path)&&['A','M'].includes(x.status)) &&
+             [...whitelist].every(p=>changed.some(x=>x.path===p))){
+            const versionPairs=[
+              ['package.json',s=>s.replace('"version": "3.250.0"','"version": "3.249.0"')],
+              ['package-lock.json',s=>s.replaceAll('"version": "3.250.0"','"version": "3.249.0"')],
+              ['server-game/src/00-core-and-library.part',s=>s.replace("const VERSION='3.250';","const VERSION='3.249';")],
+              ['server-game/current/app.js',s=>s.replace("const VERSION='3.250';","const VERSION='3.249';")],
+              ['src/index.js',s=>s.replace('VERSION="V3.250",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3250"','VERSION="V3.249",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-3249"')],
+              ['server-game/current/GMWW.html',s=>s.replace('<title>GMWW V3.250</title>','<title>GMWW V3.249</title>').replace('style.css?v=gmww-v3250-cloudflare-uniform-tools','style.css?v=gmww-v3249-witch-drunk-clone')]
+            ];
+            const safeVersionOnly=versionPairs.every(([p,undo])=>undo(fs.readFileSync(p,'utf8'))===git('show',base+':'+p));
+            const cssBefore=git('show',base+':server-game/current/style.css');
+            const cssAfter=fs.readFileSync('server-game/current/style.css','utf8');
+            const cssTail=cssAfter.slice(cssBefore.length);
+            const cssSafe=cssAfter.startsWith(cssBefore)&&cssTail.length<1000&&cssTail.includes('grid-auto-rows:82px!important')&&cssTail.includes('#gmwwCloudflareOpen>span');
+            const noteBefore=git('show',base+':.github/scripts/prepare-update-channel.mjs');
+            const noteAfter=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+            const notesSafe=noteAfter.replace(/"V3[.]250: Đồng bộ chiều cao[^"]+","V3[.]249:/,'"V3.249:')===noteBefore;
+            const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),script=fs.readFileSync('server-game/current/app.js','utf8');
+            const ids=['settingsRunHealth','settingsOptimizeDO','auditLocalData','clearRuntimeCache','reloadApp','gmwwCloudflareOpen','gmwwServerTrashOpen','opsRunFullAudit','opsCheckRoom','opsCheckRelease','checkServerHealth','refreshServerData','openPlayerWeb','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'];
+            const toolsSafe=ids.every(id=>html.includes('id="'+id+'"')&&script.includes(id+':'));
+            if(safeVersionOnly&&cssSafe&&notesSafe&&toolsSafe)
+              return{mode:'cloudflare-tiles-3250',reason:'Exact V3.250 GM Settings CSS, 16 original tools, version and OTA notes'};
+          }
+        }
+      }
+    }catch{} // Unknown changes revert to full mandatory release checks.
+  }
+
   // V3.249 scoped release: execute the fail-closed Worker/GM/OTA diff verifier.
   // Any unrecognized file or missing version contract falls back to full checks.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
