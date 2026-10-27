@@ -972,7 +972,12 @@ function battleAdvanceConfirmedTurn(){
   const id=battleState.pendingNextTurnId;
   if(!id||battleState.syncPending||battleState.busy||battleConfirmAudioGate||document.getElementById('battleResultPopup')?.hidden===false)return;
   battleState.pendingNextTurnId='';
-  if(playSceneState.phase==='night'&&battleTurn()?.id===id)battleNavigateRelative(1);
+  // Phù Thủy has two independent once-per-match potions. Keep this turn open
+  // after either confirmation; only GM navigation or turn deadline advances it.
+  const turn=battleTurn();
+  if(playSceneState.phase==='night'&&turn?.id===id&&
+     (turn.roleId==='role_witch'||(turn.roles||[]).some(x=>x.roleId==='role_witch')))return;
+  if(playSceneState.phase==='night'&&turn?.id===id)battleNavigateRelative(1);
 }
 function battleCloseResultPopup(){
   const popup=document.getElementById('battleResultPopup');
@@ -1262,6 +1267,11 @@ function battlePickTarget(id,actionId){
   if(battleState.busy||battleState.syncPending)return;
   const a=battleActions().find(x=>x.id===(actionId||battleState.actionId));if(!a||a.unavailable)return;
   if(battleState.actionId!==a.id){battleClear();battleState.actionId=a.id}
+  if(a.actionId==='action_witch_save'){
+    const intel=playSceneRuntime.nightIntel;
+    const legal=intel?.ok&&!intel.packDisabled?(intel.attacked||[]).some(x=>String(x.to)===String(id)):false;
+    if(!legal){playFlashError('Bình Cứu chỉ áp dụng cho người bị Sói Cắn cuối cùng.');return}
+  }
   const m=battleMember(id);
   if(!battleRules()?.targetAllowed(a,m,playPlayerEffect(id),playSceneRuntime.activeEffects,playSceneState.night)){playFlashError('Mục tiêu không hợp lệ cho chức năng này.');return}
   id=String(id);const i=battleState.targets.indexOf(id);
@@ -1283,7 +1293,13 @@ function battlePickTargetWithAudio(id,actionId){
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   if(battleState.impacts.size)battleState.impacts.clear();
-  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),chosen=new Set(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),now=Date.now();
+  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])],actors=new Set(actorIds.map(id=>String(id).replace(/^member:/,''))),now=Date.now();
+  const witchAwake=playSceneState.phase==='night'&&
+    (t?.roleId==='role_witch'||(t?.roles||[]).some(row=>row.roleId==='role_witch'));
+  const intel=playSceneRuntime.nightIntel;
+  const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled?
+    (intel.attacked||[]).map(row=>String(row?.to||'').replace(/^member:/,'')).filter(Boolean):[];
+  const chosen=new Set([...(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),...biteTargets]);
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
     const id=String(el.dataset.playPlayerId||'');
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
@@ -1735,7 +1751,11 @@ function renderPlayBattle(){
     const list=document.getElementById('battleRosterList');
     if(list)list.innerHTML=playLiveMembers().filter(m=>m.loginId).map(m=>{
       const id=String(m.loginId),status=playPlayerEffect(id),selected=battleState.targets.includes(id);
-      const allowed=quick?(quick==='revive'?status==='dead':status!=='dead'):!!action&&battleRules().targetAllowed(action,m,status,playSceneRuntime.activeEffects,playSceneState.night);
+      const witchAllowed=action?.actionId!=='action_witch_save'||
+        (playSceneRuntime.nightIntel?.ok&&!playSceneRuntime.nightIntel?.packDisabled&&
+        (playSceneRuntime.nightIntel?.attacked||[]).some(x=>String(x?.to)===id));
+      const allowed=quick?(quick==='revive'?status==='dead':status!=='dead'):
+        !!action&&witchAllowed&&battleRules().targetAllowed(action,m,status,playSceneRuntime.activeEffects,playSceneState.night);
       return '<button data-battle-member="'+playEsc(id)+'" '+(!allowed?'disabled ':'')+'class="'+(selected?'selected':'')+'"><span>'+(selected?'✓':'○')+'</span><b>'+playEsc(m.displayName||id)+'</b><span>'+(selected?'×':'')+'</span></button>';
     }).join('');
   }
