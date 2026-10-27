@@ -26,6 +26,7 @@ import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./
 import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
 import { oldWitchActionCheck } from "./gmww-old-witch-rules.js";
 import { isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles } from "./gmww-pack-night-rules.js";
+import { partitionNightSpecialRoles,witchSaveTargetAllowed } from "./gmww-witch-drunk-clone-rules.js";
 import { gmwwMembersPage } from "./gmww-members-page.js";
 import { gmwwMembersLiveScript } from "./gmww-members-live.js";
 import { patchPrivatePlayerCards } from "./gmww-player-private-card-patch.js";
@@ -1635,12 +1636,13 @@ export class RoomDurableObject extends DurableObject {
     const artifactTurns=artifactRows.filter(row=>!attachedArtifacts.has(String(row.artifactId)+":"+normalizeLoginId(row.loginId))).map(row=>({id:"artifact:"+String(row.artifactId)+":"+normalizeLoginId(row.loginId),kind:"artifact-main",label:String(row.artifactName||"Artifact"),artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId),order:artifactOrder.get(String(row.artifactId))??9999,skipIfEarlyUsed:row._priorityFirst===true,durationSec:artifactActionSec,status:"pending"}));
     // WITCH-01: every Old Witch owner wakes immediately after the optional Wolf
     // recognition, regardless of the configured order or ties with other roles.
-    const witch=roleTurns.find(row=>row.roleId==="role_old_witch");
-    const following=roleTurns.filter(row=>row.roleId!=="role_old_witch");
-    if(witch)queue.push(witch);
-    // NIGHT-02: Snow Wolf → Guard → shared Pack Bite → other Wolf powers →
-    // Fairy → remaining configured turns. Do not rewrite saved template orders.
-    const arranged=arrangeNightRoles(following,artifactTurns);
+    // Drunk draws exactly at Night 3, before Old Witch, without changing ART-01/WOLF-01.
+    // Clone selects its target only on Night 1. Regular Witch wakes AFTER Fairy.
+    const specials=partitionNightSpecialRoles(roleTurns,n);
+    if(specials.drunk)queue.push(specials.drunk);
+    if(specials.oldWitch)queue.push(specials.oldWitch);
+    // NIGHT-02: Snow Wolf → Guard → shared Pack Bite → other Wolf powers → Fairy → Witch.
+    const arranged=arrangeNightRoles(specials.remaining,artifactTurns);
     queue.push(...arranged.fixed);
     const packInteractions=await this.ctx.storage.get("interactions")||[];
     const eligiblePack=packMembers(assignments,packInteractions,meta.matchId);
@@ -1666,6 +1668,7 @@ export class RoomDurableObject extends DurableObject {
           (!fn.fromNight||Number(fn.fromNight)<=n)&&(!fn.toNight||Number(fn.toNight)>=n))));
     queue.push(...groupConfiguredRoleTurns(distinctWolf));
     if(arranged.fairy)queue.push(arranged.fairy);
+    if(specials.witch)queue.push(specials.witch);
     queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(arranged.rest),arranged.artifactTurns));
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
@@ -2183,7 +2186,10 @@ export class RoomDurableObject extends DurableObject {
       const packBite=step.kind==="wolf-pack-bite";
       // Reject forged effect types and invalid frozen/dead targets before the
       // use ledger or interactions are changed. The UI is not an authority.
-      const expectedType=packBite?"effect_notice":roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"?"frozen":
+      const expectedType=packBite?"effect_notice":
+        roleId==="role_witch"&&actionId==="action_witch_save"?"effect_notice":
+        roleId==="role_witch"&&actionId==="action_witch_kill"?"dead":
+        roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"?"frozen":
         roleId==="role_guard"&&actionId==="action_protect"?"effect_notice":
         roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":"";
       if(expectedType&&type!==expectedType)
@@ -2195,6 +2201,13 @@ export class RoomDurableObject extends DurableObject {
         targets.some(id=>interactions.some(x=>String(x?.matchId||"")===matchId&&
           normalizeLoginId(x?.loginId)===id&&x?.type==="dead"&&x.effectActive!==false)))
         return j({ok:false,error:"TARGET_ALREADY_DEAD"},409);
+      if(roleId==="role_witch"&&actionId==="action_witch_save"){
+        const finalBite=resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,matchId),
+          interactions,players,matchId,night:Number(meta.cycleNight||1)});
+        if(targets.length!==1||!witchSaveTargetAllowed(finalBite,targets[0]))
+          return j({ok:false,error:"WITCH_SAVE_TARGET_INVALID",
+            message:"Bình Cứu chỉ dùng được cho người nhận vết Sói Cắn cuối cùng hợp lệ."},409);
+      }
       if(!packBite&&actionId==="action_wolf_bite")
         return j({ok:false,error:"PACK_BITE_WRONG_TURN"},403);
       if(packBite&&(!isWolfRole(row)||actionId!=="action_wolf_bite"))
