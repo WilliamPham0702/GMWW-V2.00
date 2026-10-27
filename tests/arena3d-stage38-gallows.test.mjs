@@ -42,3 +42,56 @@ test('GĐ38: reduced motion disables hanging bob and uses bounded position',()=>
   assert.ok(pose.lift>=0&&pose.lift<1.5);
  }
 });
+
+test('GĐ38: official public WS ballot is retained on polling and rejects stale cycle packets',async()=>{
+ const oldDoc=globalThis.document,oldLoc=globalThis.location;
+ globalThis.document={hidden:false,addEventListener(){},removeEventListener(){}};
+ globalThis.location={protocol:'https:',host:'example.test'};
+ let cycle='morning-1',phase='morning',ws;
+ const seen=[];
+ class FakeWs{
+  constructor(){ws=this} close(){} onopen=null;onmessage=null;onclose=null;onerror=null;
+ }
+ const {connectStagingRoom}=await import('../assets/village/arena-3d/room-realtime.mjs');
+ try{
+  const feed=connectStagingRoom({roomCode:'ROOM5',loadPublicGallows:false,
+   WebSocketImpl:FakeWs,onFrame(){},onGallows:b=>seen.push(b),onError:e=>{throw e},
+   fetchImpl:async url=>{
+    assert.equal(url,'/api/rooms/ROOM5');
+    return {ok:true,json:async()=>({room:{code:'ROOM5',phase:'running',
+      matchId:'m1',cycleKey:cycle,cyclePhase:phase,seatCount:6},players:[]})};
+   }
+  });
+  try{
+   await feed.refresh();
+   const msg=(key,stage='voting')=>ws.onmessage({data:JSON.stringify({type:'gallows_updated',
+    room:{code:'ROOM5',phase:'running',matchId:'m1',cyclePhase:'morning',cycleKey:key},
+    gallows:{stage,candidateId:'alice',voteTotals:{save:1,kill:2}}})});
+   msg('morning-0');assert.equal(feed.state.ballot,null,'older-cycle ballot rejected');
+   msg('morning-1');assert.equal(feed.state.ballot?.candidateId,'alice');
+   await feed.refresh();assert.equal(feed.state.ballot?.candidateId,'alice','poll must not erase WS state');
+   phase='night';cycle='night-2';await feed.refresh();
+   assert.equal(feed.state.ballot,null,'day ended, old candidate removed');
+   msg('morning-1');assert.equal(feed.state.ballot,null,'cannot replay old day into night');
+   phase='morning';cycle='morning-2';await feed.refresh();
+   msg('morning-2');assert.equal(feed.state.ballot?.stage,'voting');
+   ws.onclose();assert.equal(feed.state.ballot,null,'reconnect invalidates stale vote');
+   assert.ok(seen.some(x=>x?.candidateId==='alice'));
+  }finally{feed.close()}
+ }finally{
+  if(oldDoc===undefined)delete globalThis.document;else globalThis.document=oldDoc;
+  if(oldLoc===undefined)delete globalThis.location;else globalThis.location=oldLoc;
+ }
+});
+test('GĐ38: GM/Player 3D visual projection shares public candidate only',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const gm=readFileSync('assets/village/arena-3d/live.mjs','utf8');
+ const player=readFileSync('assets/village/arena-3d/player.mjs','utf8');
+ const field=readFileSync('assets/village/arena-3d/character-atelier.mjs','utf8');
+ assert.match(gm,/setGallowsCandidate\(gallowsCandidateActorId\(x,current\)\)/);
+ assert.match(player,/setGallowsCandidate\(gallowsCandidateActorId\(publicBallot/);
+ assert.match(field,/import \{gallowsWorldPose\} from '\.\/stage38-public-gallows\.mjs'/);
+ assert.match(field,/setGallowsCandidate/);
+ assert.doesNotMatch(player,/\/api\/gm\//);
+ assert.doesNotMatch(player,/gmToken/);
+});
