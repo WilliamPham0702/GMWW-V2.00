@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {partitionNightSpecialRoles,witchVisibleBiteTargets,witchSaveTargetAllowed}
@@ -60,4 +62,41 @@ test('Witch Save and Kill use separate once-per-match ledgers in the same night'
     actionId:'action_witch_kill',policy:kill}).ok,true);
   assert.equal(checkBattleRoleActionUsage(used,{matchId,night:3,roleId:'role_witch',actorId:'witch',
     actionId:'action_witch_save',policy:save}).ok,false);
+});
+
+test('saved GM cards migrate Witch, Drunk and Clone limits without losing artwork/audio',()=>{
+  const source=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+  const start=source.indexOf('function applyWitchDrunkCloneRules(s){');
+  const end=source.indexOf('function applyV221AudioGuard(s){',start);
+  assert.ok(start>=0&&end>start);
+  const migrate=vm.runInNewContext(source.slice(start,end)+'\napplyWitchDrunkCloneRules',{});
+  const cards=[
+    {id:'role_witch',flags:{allowMultipleActions:false},artworkAssetId:'art-witch',audioLinks:['witch.mp3'],
+      functions:[{actionId:'action_witch_save',usageMode:'eachNight'},{actionId:'action_witch_kill',usageMode:'eachNight'}]},
+    {id:'role_drunk',functions:[{actionId:'action_drunk_draw',fromNight:1,toNight:null}]},
+    {id:'role_clone',functions:[{actionId:'action_clone_target',fromNight:1,toNight:null}]},
+    {id:'role_guard',limits:'unchanged'}
+  ];
+  migrate({cards});
+  assert.equal(cards[0].flags.allowMultipleActions,true);
+  assert.equal(cards[0].functions[0].usageMode,'onceGame');
+  assert.equal(cards[0].functions[1].usageMode,'onceGame');
+  assert.match(cards[0].information,/Bảo Vệ hoặc Bất Tử Đêm/);
+  assert.equal(cards[0].artworkAssetId,'art-witch');
+  assert.deepEqual(cards[0].audioLinks,['witch.mp3']);
+  assert.equal(cards[1].functions[0].fromNight,3);
+  assert.equal(cards[1].functions[0].toNight,3);
+  assert.equal(cards[2].functions[0].fromNight,1);
+  assert.equal(cards[2].functions[0].toNight,1);
+  assert.equal(cards[3].limits,'unchanged');
+});
+test('Worker and GM implement authoritative Witch target and do not advance on first potion',()=>{
+  const worker=fs.readFileSync('src/index.js','utf8'),
+    gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+  assert.match(worker,/WITCH_SAVE_TARGET_INVALID/);
+  assert.match(worker,/witchSaveTargetAllowed\(finalBite,targets\[0\]\)/);
+  assert.match(worker,/partitionNightSpecialRoles\(roleTurns,n\)/);
+  assert.match(gm,/turn\.roleId==='role_witch'/);
+  assert.match(gm,/const biteTargets=witchAwake/);
+  assert.match(gm,/textContent='MỤC TIÊU'/);
 });
