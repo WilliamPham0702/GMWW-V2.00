@@ -3120,7 +3120,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
 function battleTurnAudioCue(turn){
   if(!turn)return null;
   const roles=turn.kind==='role-group'?(turn.roles||[]):[turn],
-    wolfPack=turn.kind==='wolf-introduction'||roles.some(r=>['role_wolf','role_alpha_wolf'].includes(String(r?.roleId||'')));
+    wolfPack=turn.kind==='wolf-introduction'||turn.kind==='wolf-pack-bite'||roles.some(r=>['role_wolf','role_alpha_wolf'].includes(String(r?.roleId||'')));
   if(wolfPack)return {kind:'cards',targetId:'audio_group_wolves',name:'Bầy sói ơi dậy đi'};
   if(turn.kind==='village-wakeup')return {kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'};
   if(turn.kind==='early-artifact-window')return {kind:'system',targetId:'audio_system_early_artifacts',name:'Artifact đầu ván'};
