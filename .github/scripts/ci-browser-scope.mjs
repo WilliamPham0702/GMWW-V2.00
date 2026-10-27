@@ -1950,6 +1950,8 @@ const gmTurnMotionPaths=new Set([
   'server-game/current/gmww-shared-motion.js',
   'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
   'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-TURN-MOTION-20261027.md',
+  'wrangler.gm-turn-motion-staging.jsonc','.github/scripts/build-gm-turn-motion-staging.mjs',
+  '.github/workflows/deploy-gm-turn-motion-staging.yml',
   '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
 ]);
 function isGMTurnMotionScope(changes){
