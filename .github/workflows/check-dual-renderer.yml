@@ -63,7 +63,12 @@ jobs:
         if: steps.iconfixscope.outputs.mode != 'fairy-triptych-3246' && steps.iconfixscope.outputs.mode != 'fairy-246-postmerge' && steps.iconfixscope.outputs.mode != 'post-match-room-532' && steps.iconfixscope.outputs.mode != 'postmatch-ci-532' && steps.iconfixscope.outputs.mode != 'icon-artwork' && steps.iconfixscope.outputs.mode != 'icon-artwork-policy' && steps.iconfixscope.outputs.mode != 'icon-v2-ci-fix' && steps.iconfixscope.outputs.mode != 'entry-icons-3231' && steps.iconfixscope.outputs.mode != 'phase-dock-gallows-3234' && steps.iconfixscope.outputs.mode != 'gm-ui-glass-3235' && steps.iconfixscope.outputs.mode != 'gm-menu-gallows-3236' && steps.iconfixscope.outputs.mode != 'gm-ui-menu-3237' && steps.iconfixscope.outputs.mode != 'gm-ui-controls-3238' && steps.iconfixscope.outputs.mode != 'gm238-deploy-repair'
         run: |
           node --test tests/dual-renderer-contract.test.mjs
-          if grep -q '"version": "3.224.0"' package.json && test -s docs/releases/GMWW-V3.224-five-floating-icons-20261025.md; then
+          # Arena 3D official-only changes were already fail-closed classified
+          # by the preceding step. Check its precise GM handoff and secrecy,
+          # never replay historical AUTO VÁN / V3.234 selectors outside scope.
+          if [ "${{ steps.iconfixscope.outputs.mode }}" = "arena3d-official" ]; then
+            node --test tests/arena3d-ci-focused-scope.test.mjs tests/arena3d-room-adoption.test.mjs tests/arena3d-portal-handoff.test.mjs
+          elif grep -q '"version": "3.224.0"' package.json && test -s docs/releases/GMWW-V3.224-five-floating-icons-20261025.md; then
             node --test --test-name-pattern='PR501|V3.224' tests/ci-browser-scope.test.mjs
           else
             node --test tests/ci-browser-scope.test.mjs
