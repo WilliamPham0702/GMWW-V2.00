@@ -1892,7 +1892,7 @@ export function isIcon247PostMergeScope(changes){
 
 /* V3.248 is a tightly scoped GM UI + setup performance runtime change.
    Fail closed on any unexpected path and version; never run unrelated suites. */
-const runtime248Allowed=new Set(["server-game/current/GMWW.html","server-game/src/10-library-and-settings.part","server-game/src/40-battle-and-timeline.part","server-game/src/30-village-and-setup.part","server-game/current/app.js","server-game/current/style.css","server-game/src/00-core-and-library.part","src/index.js","package.json","package-lock.json",".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md","tests/gmww-v3248-setup-ui-perf.test.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml"]);
+const runtime248Allowed=new Set(["server-game/current/GMWW.html","server-game/src/10-library-and-settings.part","server-game/src/40-battle-and-timeline.part","server-game/src/30-village-and-setup.part","server-game/current/app.js","server-game/current/style.css","server-game/src/00-core-and-library.part","src/index.js","package.json","package-lock.json",".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md","tests/gmww-v3248-setup-ui-perf.test.mjs","tests/gmww-action-icon-scale-setting.test.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml"]);
 export function isRuntime248SetupUiScope(changes){
  if(!Array.isArray(changes)||changes.length!==runtime248Allowed.size||
   new Set(changes.map(c=>c.path)).size!==runtime248Allowed.size||
