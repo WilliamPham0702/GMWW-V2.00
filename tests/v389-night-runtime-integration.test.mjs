@@ -124,7 +124,8 @@ test('NIGHT-02 real DO: Snow Guard pack Wolf specials Fairy precede configured v
     {loginId:'bob',roleId:'role_guard',roleName:'Bảo Vệ'},
     {loginId:'carol',roleId:'role_snow_wolf',roleName:'Sói Tuyết',faction:'wolf'},
     {loginId:'dave',roleId:'role_wolf',roleName:'Sói Thường',faction:'wolf'},
-    {loginId:'eve',roleId:'role_wolf_seer',roleName:'Sói Tiên Tri',faction:'wolf'},
+    {loginId:'eve',roleId:'role_wolf_seer',roleName:'Sói Tiên Tri',faction:'wolf',
+      roleCard:{functions:[{actionId:'action_find_seer',phase:'night'}]}},
     {loginId:'frank',roleId:'seer',roleName:'Tiên Tri'}
   ]);
   const rt=await h.runtime();
