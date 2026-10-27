@@ -21,8 +21,8 @@ export function gallowsWorldPose(seat,{progress=0,now=0,reducedMotion=false}={})
  const rise=smooth(clamp((t-.52)/.48,0,1));
  const x=Number(seat?.x)||0,z=Number(seat?.z)||0;
  return Object.freeze({
-  x:x+(0-x)*walk,
-  z:z+(1.35-z)*walk,
+  x:walk===1?0:x+(0-x)*walk,
+  z:walk===1?1.35:z+(1.35-z)*walk,
   lift:rise*(1.32+(reducedMotion||t<1?0:.035*Math.sin(now*.0032))),
   suspended:rise>.05
  });
