@@ -1822,7 +1822,8 @@ function isRules550Scope(changes){
     ['tests/gmww-rule-snow-guard-pack-fairy.test.mjs','A'],
     ['tests/ci-browser-scope.test.mjs','M'],
     ['.github/scripts/ci-browser-scope.mjs','M'],
-    ['.github/workflows/check-player-web.yml','M']
+    ['.github/workflows/check-player-web.yml','M'],
+    ['.github/workflows/deploy-production.yml','M']
   ]);
   if(!Array.isArray(changes)||changes.length!==allowed.size||
     changes.some(c=>allowed.get(c.path)!==c.status))return false;
@@ -1830,7 +1831,8 @@ function isRules550Scope(changes){
   return rows.get('tests/gmww-rule-snow-guard-pack-fairy.test.mjs')?.after?.includes('Snow Wolf: night N target is barred at N+1')&&
     rows.get('tests/ci-browser-scope.test.mjs')?.after?.includes('PR550 focused rules regression only')&&
     rows.get('.github/scripts/ci-browser-scope.mjs')?.after?.includes('function isRules550Scope(changes)')&&
-    rows.get('.github/workflows/check-player-web.yml')?.after?.includes("steps.scope.outputs.mode == 'night02-rule-regression-550'");
+    rows.get('.github/workflows/check-player-web.yml')?.after?.includes("steps.scope.outputs.mode == 'night02-rule-regression-550'")&&
+    rows.get('.github/workflows/deploy-production.yml')?.after?.includes('PR550 test-only rule regression');
 }
 
 export function classifyBrowserScope(changes){
@@ -1934,7 +1936,7 @@ function detect(){
       if(isFairy3242Scope(changes))return{mode:'fairy-audio-3242',reason:'Exact reviewed V3.242 blobs'};
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
-      if(isRules550Scope(changes))return{mode:'night02-rule-regression-550',reason:'PR550 exact four-file test-only merge; no Worker, gameplay, OTA or IPA'};
+      if(isRules550Scope(changes))return{mode:'night02-rule-regression-550',reason:'PR550 exact five-file test-only merge; no Worker, gameplay, OTA or IPA'};
       if(isNight02Scope(changes))return{mode:'night02-pack-roles',reason:'V3.245 NIGHT-02 scoped wolf pack, snow, guard, fairy Core + GM'};
       if(isWITCH01Scope(changes))return{mode:'witch01-old-witch',reason:'V3.240 WITCH-01 authoritative and GM-only tests'};
       if(isWOLF01Scope(changes))return{mode:'wolf01-private-pack',reason:'V3.239 WOLF-01 private recognition; focused Player Web and Worker'};
