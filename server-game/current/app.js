@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.254';
+const VERSION='3.256';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -937,13 +937,20 @@ function applyApprovedRoleSettings(s){
     ['action_witch_save',{description:'Cứu đúng người nhận vết Sói Cắn cuối cùng, kể cả đã được Bảo Vệ hoặc Bất Tử Ban Đêm.',phase:'night',usageMode:'onceGame',usageCount:1,targetCount:1}],
     ['action_witch_kill',{description:'Dùng bình Giết chọn một người; độc lập với bình Cứu, có thể dùng cùng đêm.',phase:'night',usageMode:'onceGame',usageCount:1,targetCount:1}]
   ]);
+  update('role_spiritualist',{
+    information:'Mỗi đêm Nhà Tinh Thần Học chọn hai người để biết CÙNG PHE hoặc KHÁC PHE. Người đang bị Đuổi khỏi làng vẫn được soi so sánh phe; Đuổi chỉ miễn nhiễm với các tác động gây hại như Cắn/Giết hoặc bình Giết.',
+    limits:'Tối đa bốn lượt trong năm đêm đầu; mỗi đêm tối đa một lần.',
+    conditions:'Soi chính xác hai người khác nhau. Vẫn nhận kết quả khi một hoặc cả hai mục tiêu bị Đuổi khỏi làng. Không thông báo vai trò cụ thể của người bị soi.'
+  },[
+    ['action_compare_faction',{description:'Chọn hai người để biết CÙNG PHE hay KHÁC PHE; mục tiêu bị Đuổi vẫn cho kết quả.',phase:'night',targetCount:2,usageMode:'custom',usageCount:4,fromNight:1,toNight:5}]
+  ]);
   update('role_drunk',{
-    information:'Say Rượu ngủ đêm 1 và 2. Đầu đêm thứ 3, trước Phù Thuỷ Già, chỉ một lần bốc ngẫu nhiên lá Vai Trò của người đã chết trước đó. Không ai chết thì thành Dân Làng không có chức năng. Sau khi bốc, chuyển sang Phe và năng lực của lá nhận được.',
+    information:'Say Rượu ngủ đêm 1 và 2. Đầu đêm 3, trước Phù Thuỷ Già, các lá Vai Trò đã chết hiện úp trên Player Web và GM. Say Rượu tự nhấn mở đúng một lá, các lá còn lại lập tức vô hiệu. Nhận Vai Trò/Phe/năng lực của lá chọn; GM được báo kết quả. Nếu không ai chết, trở thành Dân Làng không chức năng.',
     winCondition:'Trước đêm 3 thắng cùng Phe Dân; từ lúc nhận lá đêm 3 thắng theo Phe của Vai Trò đã bốc.',
     limits:'Bốc đúng một lần duy nhất ở Đêm 3; không thức đêm 1, 2 hoặc bốc lại.',
-    conditions:'Đêm 3 ưu tiên trước Phù Thuỷ Già; nếu nhận vai Sói sẽ tham gia Bầy Sói và sử dụng năng lực Sói theo timeline sau bước Cắn chung.'
+    conditions:'Đêm 3 trước Phù Thuỷ Già: Say Rượu tự mở một lá úp của người đã chết trên Player Web. Sau khi chọn không bốc lại. Nếu nhận Sói thì tham gia Sói Cắn chung và chức năng riêng theo timeline.'
   },[
-    ['action_drunk_draw',{description:'Chỉ Đêm 3 bốc ngẫu nhiên 1 Vai Trò của người đã chết; nếu chưa có ai chết trở thành Dân Làng.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:3,toNight:3,targetCount:0,noTarget:true}]
+    ['action_drunk_draw',{description:'Đêm 3 Say Rượu nhấn chọn duy nhất một lá úp của người đã chết trên Player Web; Server khóa các lá còn lại. Nếu không ai chết thành Dân.',phase:'night',usageMode:'onceGame',usageCount:1,fromNight:3,toNight:3,targetCount:0,noTarget:true}]
   ]);
   update('role_clone',{
     information:'Nhân Bản thuộc Phe Dân và Đêm 1 chọn một người còn sống khác bản thân để liên kết. Nếu mục tiêu chưa chết, Nhân Bản vẫn là Dân thường không có năng lực đặc biệt. Khi mục tiêu chết, từ đêm tiếp theo Nhân Bản nhận Vai Trò, Phe và chức năng của mục tiêu; nếu là Sói, thức cùng Bầy Sói.',
@@ -4334,7 +4341,7 @@ async function playSyncRoom(force=false){
     const data=await playRoomApi('');
     if(syncSerial!==playSceneRuntime.syncSerial)return data;
     if(Number.isFinite(Number(data?.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(data.serverTime)-Date.now();
-    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.battleActionUsage=Array.isArray(data.battleActionUsage)?data.battleActionUsage:[];playSceneRuntime.demoControl=data.demoControl||null;playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.battleUndo=data.battleUndo||null;playSceneRuntime.nightIntel=data.nightIntel||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.recentInteractions=Array.isArray(data.interactions)?data.interactions:[];playSceneRuntime.villageHistory=Array.isArray(data.villageHistory)?data.villageHistory:playSceneRuntime.recentInteractions;playSceneRuntime.gallows=data.gallows||null;playSceneRuntime.dayActionUsage=Array.isArray(data.dayActionUsage)?data.dayActionUsage:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
+    playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.battleActionUsage=Array.isArray(data.battleActionUsage)?data.battleActionUsage:[];playSceneRuntime.demoControl=data.demoControl||null;playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.drunkDraws=Array.isArray(data.drunkDraws)?data.drunkDraws:[];playSceneRuntime.battleUndo=data.battleUndo||null;playSceneRuntime.nightIntel=data.nightIntel||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.recentInteractions=Array.isArray(data.interactions)?data.interactions:[];playSceneRuntime.villageHistory=Array.isArray(data.villageHistory)?data.villageHistory:playSceneRuntime.recentInteractions;playSceneRuntime.gallows=data.gallows||null;playSceneRuntime.dayActionUsage=Array.isArray(data.dayActionUsage)?data.dayActionUsage:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
     const syncedServerPhase=String(data?.room?.phase||'lobby').toLowerCase();playSceneState.artifactCount=['running','started','game','playing'].includes(syncedServerPhase)?Math.max(0,Math.min(Number(playSceneRuntime.artifactCycle?.max??3),Number(playSceneRuntime.artifactCycle?.count||0))):0;const serverMemberIds=playSceneRuntime.players.filter(p=>p?.kind==='member'&&p?.loginId).map(p=>String(p.loginId));if(serverMemberIds.length||playSceneState.step!=='members'||playSceneState.roomMode!=='online')playSceneState.selectedMemberIds=serverMemberIds;
     const room=data.room||{},serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight)||0);playSceneState.autoGM=room.autoGM!==false;playSceneState.roomEnabled=room.enabled!==false;playSceneState.roomMode=room.demo===true?'demo':room.roomMode==='offline'?'offline':'online';playSceneState.seatMoveMode=room.seatMoveMode==='walk'?'walk':'instant';playSceneState.seatCount=Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12));
     if(!playStagePublishPending&&['room','seats','game','roles','deal'].includes(room.gmStage))playSceneState.step=room.gmStage==='room'?'lobby':room.gmStage;
@@ -4506,7 +4513,7 @@ function renderPlayPlayers(){
     syncPlayGallowsHanging();
     return;
   }
-  if(playSceneState.step==='battle')gmwwFireWalkDetach(); // release ephemeral WAAPI before DOM rebuild
+  if(playSceneState.step==='battle')gmwwFireWalkDetach();
   ring.dataset.gmwwPlayerDomSig=domSig;
   ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);ring.classList.toggle('is-battle-view',playSceneState.step==='battle');ring.classList.toggle('is-battle-packed',playSceneState.step==='battle'&&members.length>20);
   const make=(m,pos,seatId=null)=>{
@@ -6017,6 +6024,40 @@ function battleWolfOutcomeText(result){
     return (x.direction!=='none'?from+' → '+to:to)+(x.protected?' · ĐƯỢC BẢO VỆ':' · BỊ SÓI CẮN');
   }).join(' · ');
 }
+function battleRenderDrunkDraw(turn){
+  let box=document.getElementById('gmwwGmDrunkDeck');
+  const inNight=playSceneState.step==='battle'&&playSceneState.phase==='night'&&
+    Number(playSceneState.night||0)===3;
+  const draws=inNight?(playSceneRuntime.drunkDraws||[]):[];
+  if(!draws.length){if(box)box.hidden=true;return}
+  if(!box){
+    const css=document.createElement('style');css.id='gmwwGmDrunkDeckCss';
+    css.textContent='#gmwwGmDrunkDeck{position:fixed;z-index:900;right:12px;top:24%;width:min(82vw,320px);max-height:45dvh;overflow:auto;padding:10px;border-radius:16px;border:1px solid #e0bd80;background:#073448ed;color:#fff;box-shadow:0 10px 24px #0008;font-size:12px;text-align:center}'+
+      '#gmwwGmDrunkDeck[hidden]{display:none!important}#gmwwGmDrunkDeck strong{color:#ffe9ac;font-size:14px}#gmwwGmDrunkDeck .deck-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:7px 0 12px}'+
+      '#gmwwGmDrunkDeck .deck-card{position:relative;width:52px;height:72px;border-radius:7px;border:1px solid #ecc98f;background:linear-gradient(145deg,#174968,#081327);display:grid;place-content:center;color:#f4dba9}'+
+      '#gmwwGmDrunkDeck .deck-card.is-picked{border-color:#a5ffc8;background:#14594d}#gmwwGmDrunkDeck .deck-result{font-weight:900;color:#bfffd1}';
+    document.head.appendChild(css);
+    box=document.createElement('section');box.id='gmwwGmDrunkDeck';
+    document.body.appendChild(box);
+  }
+  box.hidden=false;box.replaceChildren();
+  const title=document.createElement('strong');title.textContent='🍻 SAY RƯỢU · LÁ BÀI ĐÃ CHẾT';box.appendChild(title);
+  for(const draw of draws){
+    const name=(playSceneRuntime.players||[]).find(x=>String(x?.loginId||'')===String(draw.actorId||''))?.displayName||'Say Rượu';
+    const owner=document.createElement('p');owner.textContent=name+' · '+(draw.status==='selected'?'ĐÃ BỐC':'ĐANG CHỜ BỐC');box.appendChild(owner);
+    const grid=document.createElement('div');grid.className='deck-row';
+    for(const [i,card] of (draw.cards||[]).entries()){
+      const el=document.createElement('div');el.className='deck-card'+(card.selected?' is-picked':'');
+      el.textContent=card.selected?'✓ '+String(card.roleName||draw.selectedRoleName||'Vai Trò'):'🂠 '+(i+1);
+      grid.appendChild(el);
+    }
+    box.appendChild(grid);
+    if(draw.status==='selected'){
+      const result=document.createElement('div');result.className='deck-result';
+      result.textContent='ĐÃ NHẬN VAI: '+String(draw.selectedRoleName||'');box.appendChild(result);
+    }
+  }
+}
 function battleShowWitchIntel(turn){
   const roles=turn?.kind==='role-group'?(turn.roles||[]):[turn];
   if(!roles.some(row=>String(row?.roleId||'')==='role_witch'))return;
@@ -6711,6 +6752,7 @@ function renderPlayBattle(){
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
   if(battleState.key!==key){battleState.gmwwWalkExpired=false;battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);
+  battleRenderDrunkDraw(t);
   if(t&&phase==='night'&&!battleState.busy&&!battleState.syncPending&&!playSceneRuntime.busy)
     battleShowWitchIntel(t);
   if(phase==='day')battleMorningShow();else{const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}

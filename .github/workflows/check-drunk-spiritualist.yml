@@ -1,0 +1,41 @@
+name: Check Drunk Card Draw and Expelled Spiritualist
+
+on:
+  pull_request:
+    paths:
+      - 'src/index.js'
+      - 'src/gmww-drunk-draw-rules.js'
+      - 'src/gmww-role-inheritance-rules.js'
+      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'src/gmww-members-live.js'
+      - 'server-game/src/30-village-and-setup.part'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/current/app.js'
+      - 'tests/v389-night-runtime-integration.test.mjs'
+      - 'tests/drunk-draw-spiritualist-expelled-20261027.test.mjs'
+      - 'tests/witch-drunk-clone-20261027.test.mjs'
+      - '.github/workflows/check-drunk-spiritualist.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused-role-flow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Test exact card selection, DO inheritance, faction comparison and private Player delivery
+        run: |
+          node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs
+          node --check src/index.js
+          node --check src/gmww-drunk-draw-rules.js
+          node --check src/gmww-role-inheritance-rules.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs

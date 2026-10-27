@@ -5,4 +5,4 @@
 - Chỉ render ở GM; Player Web, Room DTO/Seat, Core gameplay, dữ liệu và IPA không đổi.
 - Nút menu GM đổi nhãn thành **Đi bộ**, tôn trọng chế độ Giảm chuyển động iOS và trạng thái ẩn màn hình.
 - Kiểm thử phù hợp GM walk/return, hết giờ, hoạt ảnh, phiên bản gộp mô-đun, và rollback: revert commit; nếu đã phát hành OTA phải dùng phiên bản khôi phục tăng số, không rollback dữ liệu.
-- Chưa phát hành Production; trên nhánh PR riêng để kiểm tra.
+- Ứng viên Runtime OTA V3.256 trên nền V3.255; chỉ xác nhận phát hành khi Production CI, OTA SHA-256 và HTTP đạt.

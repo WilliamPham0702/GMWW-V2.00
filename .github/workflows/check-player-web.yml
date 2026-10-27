@@ -54,13 +54,6 @@ jobs:
         run: node --check .github/scripts/prepare-update-channel.mjs
       - name: Kiểm tra cú pháp village.mjs
         run: node --check assets/village/village.mjs
-      - name: GM đi bộ tới đống lửa — chỉ CI đúng phạm vi
-        if: steps.scope.outputs.mode == 'gm-fire-walk-lowheat'
-        run: |
-          node --test tests/gm-turn-motion-lowheat.test.mjs
-          node .github/scripts/assemble-gm-app.mjs --verify
-          node --check server-game/current/app.js
-          test -s docs/releases/GMWW-GM-FIRE-WALK-20261027.md
       - name: V3.254 — Hiệu năng & Chống nóng GM
         if: steps.scope.outputs.mode == 'gm-performance-thermal-3254'
         run: |
@@ -640,6 +633,28 @@ jobs:
           node --check server-game/current/gmww-shared-motion.js
           node --check src/index.js
           test -s docs/releases/GMWW-V3.253-gm-turn-motion-20261027.md
+      - name: V3.256 — GM đi bộ quanh lửa, hết giờ chạy về, nhiệt thấp
+        if: steps.scope.outputs.mode == 'gm-fire-walk-3256'
+        run: |
+          node --test tests/gm-turn-motion-lowheat.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          test -s docs/releases/GMWW-V3.256-gm-fire-walk-20261027.md
+      - name: V3.255 — Player Web bốc lá Say Rượu, quyền riêng tư và soi phe mục tiêu bị Đuổi
+        if: steps.scope.outputs.mode == 'drunk-spiritualist-3255'
+        run: |
+          node .github/scripts/verify-release-v3255.mjs
+          node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/player-role-receipt-recovery.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check src/gmww-drunk-draw-rules.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.255-drunk-draw-spiritualist-20261027.md
+
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test

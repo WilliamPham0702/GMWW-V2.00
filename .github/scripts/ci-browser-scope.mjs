@@ -1979,23 +1979,40 @@ function isCharacter40V3254PostverifyScope(changes){
    required.every(p=>changes.some(c=>c.path===p)) &&
    JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.254.0';
 }
-// GM fire procession is presentation-only and must remain an exact scoped diff.
-function isGMFireWalkScope(changes){
- const allowed=new Set(['server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
- 'server-game/current/app.js','server-game/current/style.css','server-game/current/GMWW.html',
- 'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-FIRE-WALK-20261027.md',
- '.github/workflows/deploy-gm-turn-motion-staging.yml','.github/scripts/ci-browser-scope.mjs',
- '.github/workflows/check-player-web.yml']);
- const required=['server-game/current/app.js','server-game/current/style.css',
- 'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
- 'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-FIRE-WALK-20261027.md'];
- const names=new Set((changes||[]).map(x=>x.path));
- if(!required.every(p=>names.has(p))||!changes.every(x=>allowed.has(x.path)&&['A','M'].includes(x.status)))return false;
- const app=changes.find(x=>x.path==='server-game/current/app.js')?.after||'';
- return app.includes('function gmwwFireWalkSync(')&&app.includes('function gmwwFireWalkDestination(')&&!app.includes('is-gm-turn-floating');
+const gmFireWalk3256Files=new Set([
+  'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+  'server-game/current/app.js','server-game/current/GMWW.html','server-game/current/style.css',
+  'src/index.js','package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+  'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-FIRE-WALK-20261027.md',
+  'docs/releases/GMWW-V3.256-gm-fire-walk-20261027.md',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml'
+]);
+function isGMFireWalk3256Scope(changes){
+  if(!Array.isArray(changes)||!changes.length||
+    !changes.every(x=>gmFireWalk3256Files.has(x.path)&&['M','A'].includes(x.status)))return false;
+  const paths=new Set(changes.map(x=>x.path));
+  const required=['server-game/current/app.js','server-game/current/GMWW.html',
+    'server-game/current/style.css','server-game/src/00-core-and-library.part',
+    'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+    'src/index.js','package.json','package-lock.json','tests/gm-turn-motion-lowheat.test.mjs',
+    'docs/releases/GMWW-V3.256-gm-fire-walk-20261027.md'];
+  if(!required.every(p=>paths.has(p)))return false;
+  try{
+    const app=fs.readFileSync('server-game/current/app.js','utf8');
+    const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+    const css=fs.readFileSync('server-game/current/style.css','utf8');
+    const worker=fs.readFileSync('src/index.js','utf8');
+    return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.256.0'&&
+      app.includes("const VERSION='3.256'")&&app.includes('function gmwwFireWalkSync(')&&
+      app.includes('gmwwWalkExpired=expired;battleMarkPlayers()')&&
+      !app.includes('is-gm-turn-floating')&&html.includes('<title>GMWW V3.256</title>')&&
+      html.includes('>Đi bộ</button>')&&css.includes('is-gm-walking-fire')&&
+      worker.includes('VERSION="V3.256"');
+  }catch{return false}
 }
 export function classifyBrowserScope(changes){
- if(isGMFireWalkScope(changes))return 'gm-fire-walk-lowheat';
+  if(isGMFireWalk3256Scope(changes))return 'gm-fire-walk-3256';
  if(isCharacter40V3254PostverifyScope(changes))return 'character40-postverify-3254';
  if(isGMPerformance3254Scope(changes))return 'gm-performance-thermal-3254';
   if(isGMTurnMotionScope(changes))return 'gm-turn-motion-lowheat';
@@ -2087,6 +2104,34 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // Exact GM-only V3.256 release: do not run unrelated Player Card/Seat/3D/IPA suites.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isGMFireWalk3256Scope(changes))
+          return{mode:'gm-fire-walk-3256',reason:'Strict V3.256 GM walk only, OTA release checks preserved'};
+      }
+    }catch{}
+  }
+  // Owner-approved V3.255 Drunk/Spiritualist-only release. Any file outside
+  // the verified source allowlist falls back to full checks.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.255.0'){
+        const base=process.env.GMWW_CI_EVENT==='pull_request'?
+          String(process.env.GMWW_CI_BASE_SHA||''):'HEAD^1';
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3255.mjs'],{
+            encoding:'utf8',env:{...process.env,GMWW_V3255_BASE:base}});
+          return {mode:'drunk-spiritualist-3255',
+            reason:'Strict V3.255 Server + private Player Web + GM draw and neutral faction comparison'};
+        }
+      }
+    }catch{} // Fail closed, never waive unrelated source changes.
+  }
  // V3.254 CI-only safety repair: no Runtime, Player or IPA changes.
  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
    try{

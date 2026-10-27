@@ -4,13 +4,11 @@ on:
   push:
     branches:
       - feature/gm-turn-flight-target-run-lowheat-20261027
-      - feature/gm-fire-walk-return-lowheat-20261027
     paths:
       - 'server-game/current/**'
       - 'server-game/src/30-village-and-setup.part'
       - 'server-game/src/40-battle-and-timeline.part'
       - 'tests/gm-turn-motion-lowheat.test.mjs'
-      - 'docs/releases/GMWW-GM-FIRE-WALK-20261027.md'
       - '.github/scripts/build-gm-turn-motion-staging.mjs'
       - '.github/workflows/deploy-gm-turn-motion-staging.yml'
       - 'wrangler.gm-turn-motion-staging.jsonc'
@@ -55,13 +53,11 @@ jobs:
           node --check assets/gm-turn-stage/app.js
           npx wrangler deploy --config wrangler.gm-turn-motion-staging.jsonc --dry-run
       - name: Ensure release notes
-        run: |
-          test -s docs/releases/GMWW-GM-TURN-MOTION-20261027.md
-          if [ "$GITHUB_REF_NAME" = feature/gm-fire-walk-return-lowheat-20261027 ]; then test -s docs/releases/GMWW-GM-FIRE-WALK-20261027.md; fi
+        run: test -s docs/releases/GMWW-GM-TURN-MOTION-20261027.md
 
   deploy-staging:
     needs: validate
-    if: github.ref == 'refs/heads/feature/gm-turn-flight-target-run-lowheat-20261027' || github.ref == 'refs/heads/feature/gm-fire-walk-return-lowheat-20261027'
+    if: github.ref == 'refs/heads/feature/gm-turn-flight-target-run-lowheat-20261027'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
