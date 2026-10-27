@@ -10,6 +10,7 @@ on:
       - 'server-game/src/00-core-and-library.part'
       - 'server-game/src/40-battle-and-timeline.part'
       - 'tests/witch-drunk-clone-20261027.test.mjs'
+      - 'tests/v389-night-runtime-integration.test.mjs'
       - '.github/workflows/check-witch-drunk-clone.yml'
   workflow_dispatch:
 
@@ -29,7 +30,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Witch / Drunk / Clone + dependent Wolf rules only
         run: |
-          node --test tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs
+          node --test tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/v389-night-runtime-integration.test.mjs
           node --check src/index.js
           node --check src/gmww-witch-drunk-clone-rules.js
           node --check src/gmww-role-inheritance-rules.js
