@@ -1267,6 +1267,744 @@ jobs:
           echo "approved=true" >> "$GITHUB_OUTPUT"
           echo "V3.254 Runtime OTA, SHA-256, release notes tiếng Việt, rollback V3.253; IPA unchanged." >> "$GITHUB_STEP_SUMMARY"
 
+      - name: V3.258 — phát hành cộng dồn Audio và giao diện phiếu PR #565
+        id: gm565_runtime_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p 'require("./package.json").version')" != "3.258.0" ]; then exit 0; fi
+          git merge-base --is-ancestor 3452befefe94c81f6d97c8067b4792e2d9ba521f HEAD || exit 0
+          CHANGES=$(git diff --name-only 3452befefe94c81f6d97c8067b4792e2d9ba521f HEAD)
+          test -n "$CHANGES" || { echo "::error::Recovery CI không có thay đổi"; exit 1; }
+          if printf '%s\n' "$CHANGES" | grep -Ev '^(\.github/workflows/(deploy-production|check-gm-vote-markers-565)\.yml|docs/releases/GMWW-PR565-V3.258-release-gate-20261027\.md)        id: audio3258_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.258.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3258.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          test -s docs/releases/GMWW-V3.258-audio-audit-20261027.md
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-audio-3258 |"* ]] || { echo "::error::V3.258 không đúng danh sách file Audio"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI V3.258 chưa SUCCESS cùng SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.258 Audio: same-SHA CI, SHA-256, Vietnamese notes, rollback V3.257 and IPA unchanged." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.256 — chốt CI hành trình GM và OTA cùng SHA
+        id: firewalk3256_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.256.0" ]; then exit 0; fi
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-turn-motion-lowheat.test.mjs
+          test -s docs/releases/GMWW-V3.256-gm-fire-walk-20261027.md
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-fire-walk-3256 |"* ]] || { echo "::error::V3.256 unexpected changes"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI not SUCCESS on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.256: GM Walk/Run tested on same-SHA Worker; OTA SHA-256 and rollback mandatory." >> "$GITHUB_STEP_SUMMARY"
+
+      # V3.255: Drunk player-owned face-down draw and Spiritualist observation.
+      # Never waive same-SHA Worker CI, role tests, compiled source or OTA SHA.
+      - name: V3.255 — kiểm tra Say Rượu bốc lá và Nhà Tinh Thần Học rồi phát hành
+        id: drunk255_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.255.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3255.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/player-role-receipt-recovery.test.mjs
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI for exact main SHA did not pass"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.255: private Drunk draw + Spiritualist result + Worker CI SUCCESS, OTA SHA-256 required." >> "$GITHUB_STEP_SUMMARY"
+
+      # Historical V3.236/V3.237 gates are intentionally omitted from the V3.238 release.
+      - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
+        if: steps.gm565_runtime_release.outputs.approved != 'true' && steps.audio3258_release.outputs.approved != 'true' && steps.firewalk3256_release.outputs.approved != 'true' && steps.drunk255_release.outputs.approved != 'true' && steps.thermal3254_release.outputs.approved != 'true' && steps.motion3253_release.outputs.approved != 'true' && steps.ui3252_release.outputs.approved != 'true' && steps.ui3251_release.outputs.approved != 'true' && steps.role250_release.outputs.approved != 'true' && steps.rule249_release.outputs.approved != 'true' && steps.runtime248_release.outputs.approved != 'true' && steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          STATUS="missing"
+          for TRY in $(seq 1 40); do
+            RESP=$(curl -fsSL --retry 3 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const runs=JSON.parse(s).workflow_runs||[];
+                const match=runs.filter(r=>r.name==='Check Player Card Browsers'&&r.event==='push'&&r.head_sha===process.env.TESTED_SHA)
+                  .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+                process.stdout.write(match.length?(match[0].conclusion||match[0].status):'missing')
+              })")
+            echo "Chrome/Edge/WebKit gate $TRY/40: $STATUS"
+            if [ "$STATUS" = success ]; then exit 0; fi
+            if [ "$STATUS" = failure ] || [ "$STATUS" = cancelled ] || [ "$STATUS" = timed_out ]; then
+              echo "::error::Browser CI $STATUS for $TESTED_SHA; Production blocked without changing data."
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "::error::Browser CI did not complete SUCCESS for $TESTED_SHA ($STATUS); Production blocked."
+          exit 1
+
+      - name: Thiết lập Node.js và bộ nhớ đệm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cài thư viện theo tệp khóa
+        run: npm ci
+      - name: Kiểm tra mã nguồn Worker
+        run: npm run check
+
+      - name: Phân loại và chuẩn bị kênh cập nhật GMWW
+        id: update
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA="${{ steps.tested.outputs.sha }}"
+          git diff-tree --no-commit-id --name-only -r -m "$SHA" | sort -u > /tmp/gmww-changed-files.txt
+          cat /tmp/gmww-changed-files.txt
+          export GMWW_CHANGED_FILES="$(cat /tmp/gmww-changed-files.txt)"
+          TYPE=$(node .github/scripts/classify-update.mjs | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).releaseType))")
+          if [ "${{ steps.gm565_runtime_release.outputs.approved }}" = "true" ]; then TYPE=runtime; fi
+          # PR #475 was merged BEFORE this CI-only release fix. The current
+          # diff alone is not the full set of unpublished Runtime assets.
+          # Publish the cumulative iPhone OTA once, scoped to the exact
+          # approved V3.207 merged commit (not a generic CI bypass).
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" = "3.207.0" ] && \
+             test -s docs/releases/GMWW-V3.207-demo475-production-20261025.md && \
+             git merge-base --is-ancestor 8772337ab95e7561aeba6d63b2ec2337d7bbee94 HEAD; then
+            TYPE=runtime
+            echo "Cộng dồn bản sửa PR #475 đã merge: phát hành GM Runtime OTA V3.207, không phải server_only." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "release_type=$TYPE" >> "$GITHUB_OUTPUT"
+
+          # Restore the pinned canonical source, then publish ONLY the 63 clean originals.
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="/tmp/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED_SHA="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+          CLEAN_COUNT=0
+          if test -d "$SOURCE/assets/role-artwork-v251/original"; then
+            CLEAN_COUNT=$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')
+          fi
+          if ! test -s "$SOURCE/role-artwork-v251.js" || test "$CLEAN_COUNT" -ne 63; then
+            rm -rf "$SOURCE"
+            curl --fail --location --retry 4 --retry-delay 3 --output "$ARCHIVE" "$URL"
+            echo "$EXPECTED_SHA  $ARCHIVE" | shasum -a 256 -c -
+            unzip -q "$ARCHIVE" -d .
+          fi
+          test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+
+          node .github/scripts/prepare-update-channel.mjs "$TYPE"
+
+      - name: Đóng gói cập nhật thủ công từ đúng bytes OTA
+        run: |
+          VERSION=$(node -p 'require("./package.json").version.replace(/\.0$/, "")')
+          mkdir -p /tmp/gmww-manual-runtime
+          node .github/scripts/build-manual-runtime.mjs "assets/updates/runtime/V$VERSION/manual-manifest.json" "/tmp/gmww-manual-runtime/GMWW-Runtime-V$VERSION.gmwwupdate"
+      - name: Lưu gói Runtime thủ công và SHA-256
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-Manual-Runtime
+          path: /tmp/gmww-manual-runtime/*
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Kiểm tra tăng phiên bản OTA khi Runtime thay đổi
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://gmww-v2-00.williampham0702.workers.dev"
+          LIVE="/tmp/gmww-production-update-manifest.json"
+          OK=0
+          for i in $(seq 1 4); do
+            if curl --connect-timeout 8 --max-time 20 --fail --silent --show-error \
+              "$URL/api/update/manifest?ota-preflight=$(date +%s)-$i" > "$LIVE"; then
+              if node -e "const fs=require('node:fs');const m=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));if(!/^\\d+\\.\\d+(?:\\.\\d+)?$/.test(String(m.releaseVersion||'')))process.exit(2)" "$LIVE"; then
+                OK=1
+                break
+              fi
+            fi
+            sleep 2
+          done
+
+          # An unhealthy legacy OTA manifest is the defect this release repairs.
+          # If it cannot be read, use only the live Worker's health version as the
+          # comparison baseline; never skip version progression or post-deploy SHA checks.
+          if [ "$OK" != "1" ]; then
+            echo "::warning::Production OTA manifest unavailable; falling back to live Worker health version."
+            HEALTH="/tmp/gmww-production-health-preflight.json"
+            HEALTH_OK=0
+            for i in $(seq 1 4); do
+              if curl --connect-timeout 8 --max-time 15 --fail --silent --show-error \
+                "$URL/api/health?ota-preflight=$(date +%s)-$i" > "$HEALTH"; then
+                if node - "$HEALTH" "$LIVE" <<'NODE'
+          const fs=require('node:fs');
+          const health=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          if(health.project!=='GMWW-V2.00'||health.status!=='online')
+            throw new Error('Production Worker health identity/status is not verified');
+          const version=String(health.runtimeVersion||health.version||'').trim().replace(/^V/i,'');
+          if(!/^\d+\.\d+(?:\.\d+)?$/.test(version))
+            throw new Error('Production Worker health has no valid Runtime version');
+          fs.writeFileSync(process.argv[3],JSON.stringify({
+            releaseVersion:version,runtimeVersion:version,
+            source:'verified-live-health-fallback'
+          }));
+          console.log('Using verified live Worker version V'+version+' as OTA progression baseline.');
+          NODE
+                then
+                  HEALTH_OK=1
+                  break
+                fi
+              fi
+              sleep 2
+            done
+            test "$HEALTH_OK" = "1" || {
+              echo "::error::Cannot verify Production OTA manifest or live Worker health; release blocked safely."
+              exit 1
+            }
+          fi
+          node .github/scripts/verify-ota-version-advance.mjs assets/updates/latest.json "$LIVE" /tmp/gmww-changed-files.txt
+
+      - name: Xác minh thông tin kết nối Cloudflare
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+
+      - name: Chặn phát hành phiên bản thấp hơn
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEALTH="https://gmww-v2-00.williampham0702.workers.dev/api/health"
+          for i in $(seq 1 8); do
+            if curl --connect-timeout 8 --max-time 15 -fsS "$HEALTH?version-guard=$i" > /tmp/gmww-live-health.json &&
+               node .github/scripts/verify-gmww-versions.mjs /tmp/gmww-live-health.json; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Deployment blocked: candidate is older than Production, versions are inconsistent or Production health is unavailable."
+          exit 1
+
+      - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
+        shell: bash
+        run: |
+          python3 -m venv /tmp/gmww-avatar-venv
+          /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
+      - name: Triển khai Worker lên Production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+
+      - name: Kiểm tra Production bộ ảnh icon và OTA SHA-256
+        if: steps.icon_artwork_release.outputs.approved == 'true'
+        run: node .github/scripts/verify-icon-artwork-production.mjs
+
+      - name: V3.242 — đối chiếu đủ 50 ảnh icon, OTA SHA-256, audio Runtime và IPA giữ nguyên
+        if: steps.fairy242_release.outputs.approved == 'true'
+        run: node .github/scripts/verify-icon-artwork-production.mjs
+
+      - name: V3.246 — xác minh ảnh Yêu Tinh, OTA SHA-256 và IPA không đổi
+        if: steps.fairy246_release.outputs.approved == 'true'
+        run: node .github/scripts/verify-fairy-triptych-production.mjs
+
+      - name: Kiểm tra Production sau triển khai
+        if: steps.icon_artwork_release.outputs.approved != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://gmww-v2-00.williampham0702.workers.dev"
+          EXPECTED=$(node -e "const p=require('./package.json');process.stdout.write(String(p.version).replace(/\.0$/,''))")
+          OK=0
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/health?verify=$i" > /tmp/health.json &&
+               grep -q '"project":"GMWW-V2.00"' /tmp/health.json &&
+               grep -q "\"version\":\"V$EXPECTED\"" /tmp/health.json; then
+              OK=1
+              break
+            fi
+            sleep 3
+          done
+          cat /tmp/health.json
+          test "$OK" = "1"
+          # Runtime V3.160 can stay unchanged on a server-only deploy. Health version
+          # alone cannot prove the just-uploaded static assets have reached the edge.
+          # Wait for the new portrait bytes, then verify all 40 IDs. Fail closed if
+          # propagation never finishes; retain the previous deployment for rollback.
+          AVATAR_READY=0
+          for TRY in $(seq 1 40); do
+            if curl --fail --location --silent --show-error --max-time 20 \
+              -H 'Cache-Control: no-cache' \
+              "$URL/api/game-characters/character-01/image?rev=c40-4&edge-propagation=$TRY-$(date +%s)" \
+              > /tmp/gmww-live-avatar.webp; then
+              if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/portraits/character-01.webp; then
+                AVATAR_READY=1
+                break
+              fi
+              echo "::warning::Waiting for Character40 portrait edge propagation ($TRY/40); expected bytes $(wc -c < assets/characters/gmww40/portraits/character-01.webp), received $(wc -c < /tmp/gmww-live-avatar.webp)"
+            fi
+            sleep 2
+          done
+          test "$AVATAR_READY" = "1" || {
+            echo "::error::New Worker assets did not propagate; production verification blocked."
+            echo "Expected SHA: $(shasum -a 256 assets/characters/gmww40/portraits/character-01.webp)"
+            echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
+            exit 1
+          }
+          echo "Verify Production: fresh Character40 portrait revision is live."
+
+          for N in $(seq 1 40); do
+            ID=$(printf 'character-%02d' "$N")
+            MATCHED=0
+            for TRY in $(seq 1 5); do
+              if curl --fail --location --silent --show-error --max-time 20 \
+                -H 'Cache-Control: no-cache' \
+                "$URL/api/game-characters/$ID/image?rev=c40-4&verify-avatar=$N-$TRY-$(date +%s)" \
+                > /tmp/gmww-live-avatar.webp && \
+                cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/portraits/$ID.webp"; then
+                MATCHED=1
+                break
+              fi
+              sleep 2
+            done
+            test "$MATCHED" = "1" || {
+              echo "::error::Production avatar/atlas bytes differ for $ID"
+              echo "Expected SHA: $(shasum -a 256 "assets/characters/gmww40/portraits/$ID.webp")"
+              echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
+              exit 1
+            }
+          done
+          echo "Verify Production: all 40 portrait/animation identities and bytes PASS."
+
+          # Safari Player iframe must resolve full village HTML, not the Worker 404 page.
+          curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 30 "$URL/village/?embed=1&v=303" > /tmp/gmww-production-village.html
+          grep -q '<main class="game day"' /tmp/gmww-production-village.html
+          curl --fail --location --silent --show-error --max-time 30 "$URL/village/village.css?v=303" > /tmp/gmww-production-village.css
+          test -s /tmp/gmww-production-village.css
+          echo "Verify Production: Player Web village iframe HTML+CSS PASS."
+          EXPECTED_SHELL=$(node -e "const fs=require('fs'),s=fs.readFileSync('src/index.js','utf8'),m=s.match(/NATIVE_SHELL_VERSION=\\\"([^\\\"]+)\\\"/);if(!m)process.exit(2);process.stdout.write(m[1])")
+          MANIFEST_OK=0
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/update/manifest?verify=$i-$(date +%s)" > /tmp/manifest.json; then
+              if node - "$EXPECTED" "$EXPECTED_SHELL" <<'NODE'
+          const fs=require('fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const expected=process.argv[2],shell=process.argv[3];
+          if(String(m.releaseVersion||'')!==expected)throw new Error('Manifest releaseVersion is stale');
+          if(expected!==shell){
+            if(m.releaseType!=='runtime')throw new Error('Newer runtime was hidden as '+String(m.releaseType||'missing'));
+            if(String(m.shellVersion||'')!==shell)throw new Error('Runtime shellVersion mismatch');
+            if(String(m.runtimeVersion||'')!==expected)throw new Error('Runtime version does not match releaseVersion');
+            if(!Array.isArray(m.runtime?.files)||m.runtime.files.length===0)throw new Error('Runtime update manifest has no files');
+            for(const f of m.runtime.files){
+              if(!String(f?.path||'').trim()||!String(f?.url||'').startsWith('https://')||!/^[a-f0-9]{64}$/i.test(String(f?.sha256||'')))throw new Error('Invalid runtime file entry');
+            }
+            const required=['GMWW.html','app.js','style.css','character-renderer.js','character-renderer.css','gm/gm-white-wolf.webp'];
+            for(const p of required)if(!m.runtime.files.some(x=>String(x?.path||'')===p))throw new Error('Runtime package missing '+p);
+            const rider=m.runtime.files.filter(x=>String(x?.path||'')==='gm/gm-white-wolf.webp');
+            if(rider.length!==1)throw new Error('GM rider asset must appear exactly once in runtime manifest');
+            const clean=m.runtime.files.filter(x=>/^assets\/role-artwork-v251\/original\/[^/]+\.webp$/.test(String(x?.path||'')));
+            const cleanIndex=m.runtime.files.some(x=>String(x?.path||'')==='role-artwork-v251.js');
+            if((cleanIndex||clean.length>0)&&clean.length!==63)throw new Error('Expected 63 clean role artworks in runtime update');
+          }else if(m.releaseType==='native'){
+            if(String(m.ipa?.version||'')!==expected)throw new Error('Native IPA version does not match releaseVersion');
+            if(String(m.ipa?.fileName||'')!=='GMWW-V'+expected+'.ipa')throw new Error('Native IPA filename is stale');
+          }
+          NODE
+              then
+                MANIFEST_OK=1
+                break
+              fi
+            fi
+            sleep 3
+          done
+          cat /tmp/manifest.json
+          test "$MANIFEST_OK" = "1"
+          # Verify the exact installed iPhone update path, not only the
+          # no-current manifest used by server-side smoke tests.
+          if [ "$EXPECTED" = "3.120" ]; then
+            for FROM in 3.119 3.118; do
+              OTA_STATUS=0
+              for CHECK in $(seq 1 10); do
+                if curl --connect-timeout 8 --max-time 25 -fsS                   "$URL/api/update/manifest?current=$FROM&iphone-verify=$CHECK-$(date +%s)"                   > "/tmp/gmww-iphone-$FROM.json"; then
+                  OTA_STATUS=1
+                  break
+                fi
+                sleep 2
+              done
+              test "$OTA_STATUS" = "1" || { echo "::error::OTA not reachable by iPhone Runtime V$FROM"; exit 1; }
+              node - "$FROM" "$EXPECTED" "$EXPECTED_SHELL" <<'NODE'
+          const fs=require('node:fs');
+          const [from,expected,shell]=process.argv.slice(2);
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-iphone-'+from+'.json','utf8'));
+          if(m.ok!==true||m.releaseType!=='runtime'||m.releaseVersion!==expected||
+             m.runtimeVersion!==expected||m.shellVersion!==shell||
+             !Array.isArray(m.runtime?.files)||!m.runtime.files.length||
+             !m.runtime.files.some(f=>f.path==='app.js'&&/^[a-f0-9]{64}$/i.test(f.sha256)))
+            throw Error('Installed Runtime V'+from+' cannot receive verified OTA V'+expected);
+          console.log('Verify Production: iPhone Runtime V'+from+' -> V'+expected+' manifest PASS');
+          NODE
+            done
+          fi
+          # V3.82: installability must be verified from a running V3.80/V3.81 IPA.
+          if [ "$EXPECTED" = "3.82" ]; then
+            for FROM in 3.81 3.80; do
+              curl --fail --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/api/update/manifest?current=$FROM&verify-v382=$(date +%s)" > "/tmp/gmww-v382-$FROM.json"
+              node - "$FROM" <<'NODE'
+          const fs=require('node:fs');
+          const from=process.argv[2],m=JSON.parse(fs.readFileSync('/tmp/gmww-v382-'+from+'.json','utf8'));
+          const req=['GMWW.html','app.js','style.css','gmww-ai-support.js','gmww-ai-support.css'];
+          if(m.ok!==true||m.releaseVersion!=='3.82'||m.runtimeVersion!=='3.82'||
+             m.shellVersion!=='3.17'||m.releaseType!=='runtime'||
+             m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!==from)
+            throw new Error('OTA V3.82 cannot be installed from Runtime V'+from);
+          if(m.delete?.length)throw new Error('V3.82 would unexpectedly delete client files');
+          if(m.runtime?.files?.length!==req.length)throw new Error('Unexpected OTA file count');
+          for(const path of req){
+            const f=m.runtime.files.find(x=>x.path===path);
+            if(!f||f.url!=='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.82/'+path||
+               !/^[a-f0-9]{64}$/i.test(String(f.sha256||'')))
+              throw new Error('Missing verified V3.82 file '+path);
+          }
+          console.log('V3.82 OTA from '+from+': manifest PASS');
+          NODE
+            done
+            for FILE in GMWW.html app.js style.css gmww-ai-support.js gmww-ai-support.css; do
+              # Cloudflare may redirect HTML assets to their canonical URL.
+              # Hash the final response rather than the 301/302 response body.
+              curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/updates/runtime/V3.82/$FILE" > /tmp/gmww-v382-download
+              ACTUAL_SHA=$(shasum -a 256 /tmp/gmww-v382-download | awk '{print $1}')
+              EXPECTED_SHA=$(node - "$FILE" <<'NODE'
+          const fs=require('node:fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-v382-3.81.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===process.argv[2])?.sha256||'');
+          NODE
+              )
+              test -n "$EXPECTED_SHA"
+              if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+                echo "::error::V3.82 SHA mismatch for $FILE"
+                exit 1
+              fi
+              echo "Verified OTA asset: $FILE"
+            done
+            curl --fail --silent --show-error "$URL/api/gm/ai-support/config" > /tmp/gmww-v382-ai-config.json
+            node - <<'NODE'
+          const fs=require('node:fs'),d=JSON.parse(fs.readFileSync('/tmp/gmww-v382-ai-config.json','utf8'));
+          if(d.ok!==true||typeof d.configured!=='boolean'||d.readOnly!==true)
+            throw new Error('AI support status endpoint invalid');
+          console.log('AI Support configured: '+d.configured);
+          NODE
+            AI_AUTH_STATUS=$(curl --silent --output /tmp/gmww-v382-unauthorized.json \
+              --write-out '%{http_code}' -X POST -H 'content-type: application/json' \
+              -d '{"message":"test"}' "$URL/api/gm/ai-support/chat")
+            test "$AI_AUTH_STATUS" = "401" || {
+              echo "::error::AI Support unauthenticated request returned $AI_AUTH_STATUS (expected 401)"
+              exit 1
+            }
+            echo "AI Support authorization PASS"
+          fi
+          # V3.83: verify IPA overlay for V3.82 installations and exact file integrity.
+          if [ "$EXPECTED" = "3.83" ]; then
+            curl --fail --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+              "$URL/api/update/manifest?current=3.82&verify-v383=$(date +%s)" > /tmp/gmww-v383.json
+            node - <<'NODE'
+          const fs=require('node:fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-v383.json','utf8'));
+          const names=['GMWW.html','app.js'];
+          if(m.ok!==true||m.releaseVersion!=='3.83'||m.runtimeVersion!=='3.83'||
+             m.shellVersion!=='3.17'||m.releaseType!=='runtime'||
+             m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!=='3.82'||
+             (m.delete||[]).length!==0||m.runtime?.files?.length!==2)
+            throw new Error('GMWW V3.83 OTA overlay is not ready');
+          for(const path of names){
+            const item=m.runtime.files.find(f=>f.path===path);
+            if(!item||item.url!=='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.83/'+path||
+               !/^[a-f0-9]{64}$/i.test(String(item.sha256)))
+              throw new Error('V3.83 OTA integrity metadata missing for '+path);
+          }
+          console.log('V3.83 overlay manifest verified.');
+          NODE
+            for FILE in GMWW.html app.js; do
+              curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/updates/runtime/V3.83/$FILE" > /tmp/gmww-v383-file
+              ACTUAL_SHA=$(shasum -a 256 /tmp/gmww-v383-file | awk '{print $1}')
+              EXPECTED_SHA=$(node - "$FILE" <<'NODE'
+          const fs=require('node:fs'),m=JSON.parse(fs.readFileSync('/tmp/gmww-v383.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===process.argv[2])?.sha256||'');
+          NODE
+              )
+              test -n "$EXPECTED_SHA"
+              test "$ACTUAL_SHA" = "$EXPECTED_SHA" || { echo "::error::V3.83 file SHA mismatch: $FILE"; exit 1; }
+              echo "Verified V3.83 Runtime asset: $FILE"
+            done
+          fi
+          # V3.72 canonical-image preflight: the exact role_guard WEBP must be
+          # readable from the deployed Worker, not merely rendered as a thumbnail.
+          if [ "$EXPECTED" = "3.72" ]; then
+            ROLE_ART_READY=0
+            for CHECK in $(seq 1 12); do
+              if curl --max-time 20 -fsS "$URL/api/gm/template-role-artwork/role_guard?production-check=$CHECK-$(date +%s)" > /tmp/gmww-role-guard.webp && node - <<'NODE'
+          const b=require('fs').readFileSync('/tmp/gmww-role-guard.webp');
+          if(b.length<32||b.toString('ascii',0,4)!=='RIFF'||b.toString('ascii',8,12)!=='WEBP')process.exit(1);
+          console.log('Verify Production: role_guard canonical WEBP source PASS.');
+          NODE
+              then ROLE_ART_READY=1; break; fi
+              sleep 2
+            done
+            if [ "$ROLE_ART_READY" != "1" ]; then echo "::error::Production role_guard artwork is unavailable"; exit 1; fi
+          fi
+          # Verify that an actually installed IPA V3.17 Runtime receives the correct small OTA,
+          # not just the full package used by deployment validation.
+          if [ "$EXPECTED" = "3.53" ]; then
+            for FROM in 3.51 3.52; do
+              curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/update/manifest?current=$FROM&otacheck=$(date +%s)" > "/tmp/ota-from-$FROM.json"
+              node - "$FROM" <<'NODE'
+          const fs=require('node:fs');
+          const from=process.argv[2],m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          const required=['GMWW.html','app.js','style.css',...(from==='3.51'?['home-art/home-sea-portal-v352.svg']:[])];
+          if(m.ok!==true||m.releaseVersion!=='3.53'||m.runtimeVersion!=='3.53'||m.shellVersion!=='3.17'
+             ||m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!==from
+             ||JSON.stringify(m.runtime?.files?.map(f=>f.path))!==JSON.stringify(required))process.exit(4);
+          if(!m.runtime.files.every(f=>f.url==='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.53/'+f.path
+             && /^[a-f0-9]{64}$/i.test(f.sha256)))process.exit(5);
+          console.log('Production OTA V'+from+' -> V3.53 verified '+required.length+' files PASS.');
+          NODE
+              for REL in GMWW.html app.js style.css; do
+                OTA_URL=$(node - "$FROM" "$REL" <<'NODE'
+          const fs=require('node:fs'),from=process.argv[2],path=process.argv[3];
+          const m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===path)?.url||'');
+          NODE
+                )
+                test -n "$OTA_URL"
+                curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$OTA_URL?sha-check=$(date +%s)" > /tmp/gmww-delta-file
+                LOCAL_SHA=$(shasum -a 256 /tmp/gmww-delta-file | awk '{print $1}')
+                EXPECTED_SHA=$(node - "$FROM" "$REL" <<'NODE'
+          const fs=require('node:fs'),from=process.argv[2],path=process.argv[3];
+          const m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===path)?.sha256||'');
+          NODE
+                )
+                test "$LOCAL_SHA" = "$EXPECTED_SHA"
+              done
+              echo "Verify Production: IPA V3.17 OTA V$FROM SHA-256 PASS."
+            done
+          fi
+          if test "$EXPECTED" != "$EXPECTED_SHELL"; then
+            RIDER_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime.files.find(x=>x.path==='gm/gm-white-wolf.webp')?.url||''))")
+            test -n "$RIDER_URL"
+            echo "Verify Production: downloading immutable GM rider asset."
+            curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$RIDER_URL?verify=$(date +%s)" > /tmp/gm-white-wolf-runtime.webp
+            EXPECTED_RIDER_SHA=$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')
+            ACTUAL_RIDER_SHA=$(shasum -a 256 /tmp/gm-white-wolf-runtime.webp | awk '{print $1}')
+            if test "$EXPECTED_RIDER_SHA" != "$ACTUAL_RIDER_SHA"; then
+              echo "::error::Runtime GM rider hash does not match deployed bytes (expected $EXPECTED_RIDER_SHA, observed $ACTUAL_RIDER_SHA)"
+              exit 1
+            fi
+            echo "Verify Production: GM rider hash PASS."
+            # Artwork must be available as exact bytes after OTA, not merely in GitHub.
+            echo "Verify Production: checking every Trang Chu artwork in live Runtime."
+            for ART in home-fantasy-hero-v337.webp home-v1-book.webp home-v1-members.webp home-v1-action.webp home-sea-portal-v352.svg home-sea-portal-v354.svg home-sea-cards-v354.svg home-sea-members-v354.svg home-sea-templates-v354.svg; do
+              REL="home-art/$ART"
+              ART_URL=$(node - "$REL" <<'NODE'
+          const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const file=m.runtime?.files?.find(f=>f.path===process.argv[2]);
+          if(!file?.url)process.exit(2);
+          process.stdout.write(file.url);
+          NODE
+              )
+              echo "Verify Production: Home artwork $ART via $ART_URL"
+              if ! curl --retry 3 --retry-all-errors --retry-delay 2 -fsS "$ART_URL?verify=$(date +%s)" > "/tmp/$ART"; then
+                echo "::error::Runtime Home artwork unavailable: $REL at $ART_URL (404/5xx). Deployment cannot be marked successful."
+                exit 1
+              fi
+              EXPECTED_ART_SHA=$(shasum -a 256 "server-game/current/$REL" | awk '{print $1}')
+              LIVE_ART_SHA=$(shasum -a 256 "/tmp/$ART" | awk '{print $1}')
+              if test "$EXPECTED_ART_SHA" != "$LIVE_ART_SHA"; then
+                echo "::error::Production Home artwork mismatch: $ART"
+                exit 1
+              fi
+              echo "Verify Production: Home artwork $ART PASS."
+            done
+          fi
+          if test "$EXPECTED" != "$EXPECTED_SHELL"; then
+          echo "Verify Production: checking Cloudflare management and retired workboard UI in versioned runtime."
+          # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
+          TASK_APP_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='app.js')?.url||''))")
+          TASK_HTML_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='GMWW.html')?.url||''))")
+          test -n "$TASK_APP_URL" && test -n "$TASK_HTML_URL"
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_APP_URL?verify=$(date +%s)" > /tmp/gmww-ota-app.js
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_HTML_URL?verify=$(date +%s)" > /tmp/gmww-ota.html
+          echo "Verify Production: OTA app and HTML fetched."
+          echo "Verify Production: checking V3.58 Settings grid directly in deployed Runtime."
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/updates/runtime/V$EXPECTED/style.css?settings-grid-check=$(date +%s)" > /tmp/gmww-ota-settings.css
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const css=fs.readFileSync('/tmp/gmww-ota-settings.css','utf8');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const expected=manifest.runtime.files.find(f=>f.path==='style.css')?.sha256;
+          const ids=['settingsRunHealth','auditLocalData','clearRuntimeCache','reloadApp','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','checkServerHealth','refreshServerData','openPlayerWeb','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'];
+          const settings=html.slice(html.indexOf('id="settingsGroupHealth"'),html.indexOf('id="settingsGroupTasks"'));
+          const checks={
+            '14 distinct tools':ids.every(id=>settings.split('id="'+id+'"').length===2),
+            'single visible grid':settings.includes('id="settingsToolsRail"'),
+            'no horizontal navigation':!settings.includes('id="settingsToolsNext"')&&!settings.includes('id="settingsToolsPrev"'),
+            'three columns':css.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'),
+            'no horizontal clipping':css.includes('overflow-x:visible!important'),
+            'CSS manifest checksum':Boolean(expected)&&sha(css)===expected
+          };
+          for(const [label,pass] of Object.entries(checks))console.log('Production Settings grid: '+label+' '+(pass?'PASS':'FAIL'));
+          if(Object.values(checks).some(pass=>!pass))process.exit(1);
+          NODE
+          echo "Verify Production: Settings tools visible via responsive grid PASS."
+          node - "$EXPECTED" <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const version=process.argv[2],app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8'),html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const sha=text=>crypto.createHash('sha256').update(text).digest('hex');
+          const expectedSha=p=>manifest.runtime.files.find(f=>f.path===p)?.sha256;
+          const checks={
+            'JS version':app.includes("const VERSION='"+version+"';"),
+            'Cloudflare maintenance button':html.includes('id="gmwwCloudflareOpen"'),
+            'embedded Cloudflare panel':html.includes('id="gmwwCloudflarePanel"')&&html.includes('id="gmwwCfNamespaces"')&&html.includes('id="gmwwCfEligible"'),
+            'authenticated cleanup action':html.includes('actions/workflows/cloudflare-maintenance.yml')&&html.includes('window.location.assign(actions)'),
+            'task console removed':!html.includes('id="settingsGroupTasks"')&&!html.includes('id="gmwwTasksOpenList"'),
+            'background task refresh removed':!app.includes('function gmwwTasksRefresh(')&&!app.includes('gmwwTaskReviewReturn'),
+            'Cloudflare paragraphs removed':!html.includes('Namespaces, Preview, quét định kỳ')&&!html.includes('Trang quản trị riêng; GM/Player'),
+            'HTML version':html.includes('GMWW V'+version),
+            'manifest JS SHA':sha(app)===expectedSha('app.js'),
+            'manifest HTML SHA':sha(html)===expectedSha('GMWW.html')
+          };
+          for(const [label,pass] of Object.entries(checks))console.log('GMWW OTA asset check: '+label+' '+(pass?'PASS':'FAIL'));
+          if(Object.values(checks).some(x=>!x))process.exit(1);
+          console.log('Cloudflare management entry verified in live OTA runtime V'+version);
+          NODE
+          echo "Verify Production: connected Theme editor controls on live IPA Runtime."
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8');
+          const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const allowed=['bg.home','bg.play','bg.library','bg.settings',
+            'banner.home','ui.homePortal','ui.exploreDeck','ui.exploreMembers','ui.exploreTemplates','ui.bottomNavArt'];
+          const block=app.match(/const THEME_UI_GROUPS=([\s\S]*?);\n\nconst DEFAULT_STATE=/)?.[1];
+          if(!block)throw Error('Active theme UI control list missing');
+          const actual=[...block.matchAll(/\['([^']+)',/g)].map(m=>m[1]);
+          if(actual.length!==allowed.length||actual.some(x=>!allowed.includes(x)))
+            throw Error('Dead or unlinked theme UI slots visible: '+actual.join(', '));
+          for(const slot of allowed)if(!actual.includes(slot))throw Error('Missing linked theme slot '+slot);
+          for(const marker of ['ACTIVE_THEME_IMAGE_TARGETS','ACTIVE_THEME_BACKGROUND_TARGETS','ACTIVE_THEME_NAV_TARGETS',
+            "ui.exploreTemplates","img.setAttribute('src',src||img.dataset.themeDefaultSrc)"])
+            if(!app.includes(marker))throw Error('Theme consumer missing: '+marker);
+          if(!html.includes('data-home-library-tab="templates"')||!html.includes('id="gmwwHomeEnterVillage"'))
+            throw Error('Homepage does not provide active theme targets');
+          console.log('Verify Production: 10 linked theme slots, 6 homepage image controls and default resets PASS.');
+          NODE
+          fi
+          # A successful Worker deployment is not sufficient: prove that the
+          # installed iPhone IPA V3.110 obtains the small verified OTA from
+          # both previously deployed Runtime versions, including actual SHA.
+          if [ "$EXPECTED" = "3.140" ]; then
+            node .github/scripts/verify-ota-v3140-production.mjs "$URL"
+          fi
+          node .github/scripts/verify-incremental-ota.mjs "$URL" "$EXPECTED"
+          node .github/scripts/verify-character40-production.mjs
+          curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
+          grep -q '"ok":true' /tmp/web-sync.json
+          curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html
+          grep -q 'GMWW PLAYER' /tmp/player.html
+          grep -Fq '.app{width:100%;max-width:none;min-height:100dvh;margin:0' /tmp/player.html
+          ! grep -Fq '.app{width:min(430px,100%)' /tmp/player.html
+          curl -fsS "$URL/village/village.mjs?verify=$(date +%s)" > /tmp/village.mjs
+          node --check /tmp/village.mjs
+          grep -Fq 'document.documentElement.classList.add("embedded")' /tmp/village.mjs
+          grep -Fq 'visualFallbackMoves' /tmp/village.mjs
+          grep -Fq 'bridgeIncomingPositions' /tmp/village.mjs
+          curl -fsS "$URL/village/village.css?verify=$(date +%s)" > /tmp/village.css
+          curl -fsS "$URL/village/seat-leaf.webp?verify=$(date +%s)" > /tmp/seat-leaf.webp
+          test "$(shasum -a 256 assets/village/seat-leaf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/seat-leaf.webp | awk '{print $1}')"
+          grep -Fq '/village/seat-leaf.webp' /tmp/village.css
+          grep -Fq 'html.embedded .panel{display:none!important}' /tmp/village.css
+          curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
+          test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
+          test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
+          # Skip only unchanged, isolated Character V4/V5 labs. All core guards ran above.
+          VERIFY_CHARACTER_LABS=$(node .github/scripts/fast-verify-scope.mjs /tmp/gmww-changed-files.txt | cut -d= -f2)
+          if [ "$VERIFY_CHARACTER_LABS" != "false" ]; then
+            URL="$URL" bash .github/scripts/verify-isolated-character-labs.sh
+          else
+            echo "Unchanged Character V4/V5 lab checks skipped; active Runtime/OTA/SHA guards still PASS."
+          fi
+
+      - name: Đính kèm gói thủ công vào bản phát hành đã xác minh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p 'require("./package.json").version.replace(/\.0$/, "")')
+          TAG="gmww-v$VERSION"
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("assets/updates/latest.json"));fs.writeFileSync("/tmp/gmww-notes.md",m.releaseNotes.join("\n\n"))'
+            gh release create "$TAG" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes-file /tmp/gmww-notes.md
+          fi
+          gh release upload "$TAG" /tmp/gmww-manual-runtime/* --repo "$GITHUB_REPOSITORY" --clobber
+; then
+            echo "::error::V3.258 recovery có file ngoài phạm vi CI"; exit 1
+          fi
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-gallows-vote-markers-ui.test.mjs tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          test -s docs/releases/GMWW-GM-VOTE-BADGES-2026-10-27.md
+          test -s docs/releases/GMWW-V3.258-audio-audit-20261027.md
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="GMWW PR565 — GM vote markers (focused)" and (.event=="push" or .event=="workflow_dispatch"))] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::PR565 CI chưa SUCCESS trên SHA phát hành: $STATUS"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.258 cộng dồn Audio + PR565, kiểm thử đúng phạm vi SUCCESS, OTA SHA-256, rollback V3.257, IPA không đổi." >> "$GITHUB_STEP_SUMMARY"
+
       - name: V3.258 — phát hành Audio OTA theo CI cùng SHA
         id: audio3258_release
         shell: bash
@@ -1276,6 +2014,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.gm565_runtime_release.outputs.approved }}" = "true" ]; then exit 0; fi
           if [ "$(node -p "require('./package.json').version")" != "3.258.0" ]; then exit 0; fi
           node .github/scripts/verify-release-v3258.mjs
           node .github/scripts/verify-gmww-versions.mjs
