@@ -31,6 +31,16 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
     guards=new Set(actions.filter(row=>['action_protect','action_witch_save'].includes(row.actionId)).map(row=>login(row.loginId)).filter(Boolean)),
     direction=actions.filter(row=>row.actionId==='action_transfer_bite'&&['left','right'].includes(row.direction)).at(-1)?.direction||'';
   if(!bites.length)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
+  // NIGHT-02: an Alpha Wolf frozen by Snow Wolf or expelled from the village
+  // disables the lethal pack bite. Frozen Alpha does not reveal bitten targets
+  // to the Witch; the submitted intent may still be recorded for history.
+  const alphaIds=new Set((Array.isArray(assignments)?assignments:[]).filter(x=>
+    x?.roleId==='role_alpha_wolf'&&!rows.some(y=>isFrom(y,match,cycle)&&y?.type==='dead'&&
+      y.effectActive!==false&&login(y.loginId)===login(x.loginId))).map(x=>login(x.loginId)));
+  const disabledAlpha=rows.some(x=>String(x?.matchId||'')===match&&alphaIds.has(login(x.loginId))&&
+    x.effectActive!==false&&((x.type==='frozen'&&Number(x.night)===cycle)||x.type==='expelled'));
+  if(disabledAlpha)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:bites.length,
+    packDisabled:true,reason:'ALPHA_FROZEN_OR_EXPELLED'};
 
   const targets=Object.values(players&&typeof players==='object'?players:{}),
     byLogin=new Map(targets.filter(x=>login(x?.loginId)).map(x=>[login(x.loginId),x]));
@@ -58,7 +68,14 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       const n=seated.findIndex(x=>x.loginId===origin);
       // Seat IDs increase clockwise in the displayed GM ring: visual right is the previous seat.
       const next=(n+(direction==='right'?-1:1)+seated.length)%seated.length;
-      target=seated[next].loginId;
+      // Do not transfer a bite into a person dead on an earlier day/night.
+      const directionDelta=direction==='right'?-1:1;
+      const eligible=row=>!rows.some(x=>x?.type==='dead'&&x.effectActive!==false&&
+        String(x.matchId||'')===match&&login(x.loginId)===row.loginId);
+      const candidate=Array.from({length:seated.length-1},(_,i)=>
+        seated[(n+directionDelta*(i+1)+seated.length*(i+1))%seated.length]).find(eligible);
+      if(!candidate)continue;
+      target=candidate.loginId;
       transfers.push({from:origin,to:target,direction});
     }
     const protectedTarget=guards.has(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
