@@ -1979,7 +1979,23 @@ function isCharacter40V3254PostverifyScope(changes){
    required.every(p=>changes.some(c=>c.path===p)) &&
    JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.254.0';
 }
+// GM fire procession is presentation-only and must remain an exact scoped diff.
+function isGMFireWalkScope(changes){
+ const allowed=new Set(['server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+ 'server-game/current/app.js','server-game/current/style.css','server-game/current/GMWW.html',
+ 'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-FIRE-WALK-20261027.md',
+ '.github/workflows/deploy-gm-turn-motion-staging.yml','.github/scripts/ci-browser-scope.mjs',
+ '.github/workflows/check-player-web.yml']);
+ const required=['server-game/current/app.js','server-game/current/style.css',
+ 'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+ 'tests/gm-turn-motion-lowheat.test.mjs','docs/releases/GMWW-GM-FIRE-WALK-20261027.md'];
+ const names=new Set((changes||[]).map(x=>x.path));
+ if(!required.every(p=>names.has(p))||!changes.every(x=>allowed.has(x.path)&&['A','M'].includes(x.status)))return false;
+ const app=changes.find(x=>x.path==='server-game/current/app.js')?.after||'';
+ return app.includes('function gmwwFireWalkSync(')&&app.includes('function gmwwFireWalkDestination(')&&!app.includes('is-gm-turn-floating');
+}
 export function classifyBrowserScope(changes){
+ if(isGMFireWalkScope(changes))return 'gm-fire-walk-lowheat';
  if(isCharacter40V3254PostverifyScope(changes))return 'character40-postverify-3254';
  if(isGMPerformance3254Scope(changes))return 'gm-performance-thermal-3254';
   if(isGMTurnMotionScope(changes))return 'gm-turn-motion-lowheat';
