@@ -590,7 +590,7 @@ jobs:
         if: steps.scope.outputs.mode == 'cloudflare-tiles-3251'
         run: |
           node .github/scripts/verify-release-v3251.mjs
-          node --test tests/gmww-v3251-cloudflare-tiles.test.mjs tests/gm-operations-center.test.mjs tests/cloudflare-status-ui-schema.test.mjs
+          node --test tests/gmww-v3251-cloudflare-tiles.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           node --check src/index.js

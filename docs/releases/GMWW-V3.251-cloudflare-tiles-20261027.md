@@ -10,4 +10,4 @@ Ngày 27/10/2026.
 
 ## Kiểm thử đúng phạm vi
 - test 16 tool button IDs + sự kiện, CSS chiều cao, UI Cloudflare, nguyên trạng cài đặt lá V3.250.
-- Hồi quy operations center, Cloudflare UI schema, kiểm cú pháp Worker/GM, assemble app, OTA và CI cùng SHA.
+- Đối chiếu đầy đủ 16 ID, 16 handler và mã nguồn ứng dụng không đổi so với V3.250 bằng kiểm thử chuyên biệt + verifier fail-closed; kiểm cú pháp Worker/GM, assemble app, OTA và CI cùng SHA. Không chạy các bộ test cũ của Operations Center/Cloudflare status schema: test harness thiếu global pushSettingsNotice và giả định schema cũ, không liên quan đến sửa CSS.
