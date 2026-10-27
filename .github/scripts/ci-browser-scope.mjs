@@ -2031,6 +2031,21 @@ export function classifyBrowserScope(changes){
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
 function detect(){
+  // V3.249 scoped release: execute the fail-closed Worker/GM/OTA diff verifier.
+  // Any unrecognized file or missing version contract falls back to full checks.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.249.0'){
+        const base=process.env.GMWW_CI_EVENT==='pull_request'?
+          String(process.env.GMWW_CI_BASE_SHA||''):'HEAD^1';
+        if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+          execFileSync(process.execPath,['.github/scripts/verify-release-v3249.mjs'],{
+            encoding:'utf8',env:{...process.env,GMWW_V3249_BASE:base}});
+          return{mode:'witch-drunk-clone-3249',reason:'V3.249 approved files and role rules verified'};
+        }
+      }
+    }catch{} // Fail closed: run full CI for any unreviewed change.
+  }
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
   if(process.env.GMWW_CI_EVENT==='push'){
