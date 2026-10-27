@@ -25,8 +25,7 @@ export function inheritedRolePlans({assignments=[],interactions=[],matchId='',ni
           sourceRoleId:String(target.roleId||''),fromRoleId:roleId,night:n});
       }
     }else if(roleId==='role_drunk'&&n===3){
-      const candidates=allDead.filter(x=>login(x.loginId)!==actorId&&
-        x.roleId!=='role_drunk'&&x.roleId!=='role_clone');
+      const candidates=allDead.filter(x=>login(x.loginId)!==actorId);
       const at=candidates.length?Math.max(0,Math.min(candidates.length-1,
         Math.trunc(Number(chooseIndex(candidates.length))||0))):-1;
       const picked=at>=0?candidates[at]:null;
