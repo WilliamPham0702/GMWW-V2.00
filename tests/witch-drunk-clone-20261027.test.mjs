@@ -1,4 +1,5 @@
 import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
+import {arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
@@ -151,4 +152,16 @@ test('Worker role transfer refreshes private delivery and never copies target ar
   assert.match(worker,/artifact:own.artifact\|\|null/);
   assert.match(worker,/buildPrivateDeliverySnapshot\(\{matchId/);
   assert.match(worker,/deliveryVersion=Math.max/);
+});
+
+test('Drunk draws Snow Wolf and uses Freeze after shared Bite, native Snow Wolf still first',()=>{
+  const turns=[{roleId:'role_snow_wolf',loginIds:['native'],order:1},
+    {roleId:'role_snow_wolf',loginIds:['drunk'],drunkInheritedWolf:true,order:1},
+    {roleId:'role_guard',order:2},{roleId:'role_alpha_wolf',order:3},
+    {roleId:'role_fairy',order:4}];
+  const x=arrangeNightRoles(turns);
+  assert.deepEqual(x.fixed.map(a=>a.roleId),['role_snow_wolf','role_guard']);
+  assert.deepEqual(x.fixed[0].loginIds,['native']);
+  assert.ok(x.wolves.some(a=>a.drunkInheritedWolf&&a.loginIds[0]==='drunk'));
+  assert.equal(x.fairy.roleId,'role_fairy');
 });
