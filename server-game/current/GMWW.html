@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.251</title>
-<link rel="stylesheet" href="style.css?v=gmww-v3251-cloudflare-tiles">
+<title>GMWW V3.252</title>
+<link rel="stylesheet" href="style.css?v=gmww-v3252-compact-tools">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -662,46 +662,23 @@
           
 <p class="settings-tools-grid-summary" id="settingsToolsGridSummary">16 công cụ · Kết quả hiển thị trong Thông báo hệ thống</p>
           <div class="settings-operations-tools" id="settingsToolsRail" role="group" aria-label="16 công cụ kiểm tra và bảo trì hiển thị theo lưới">
-<div class="settings-tool-inner quick-maintenance-card" id="quickMaintenanceCard">
-          <div class="health-v236-actions maintenance-actions"><button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button><button class="settings-action settings-action-server" id="settingsOptimizeDO" type="button"><span>🛡️</span><b>TỐI ƯU DO</b></button>
+            <button class="settings-action settings-action-server" id="settingsRunHealth" type="button"><span>♡</span><b>HEALTHY CHECK</b></button>
+            <button class="settings-action settings-action-server" id="settingsOptimizeDO" type="button"><span>🛡️</span><b>TỐI ƯU DO</b></button>
             <button class="settings-action settings-action-server" id="auditLocalData" type="button"><span>✓</span><b>KIỂM TRA</b></button>
             <button class="settings-action settings-action-server" id="clearRuntimeCache" type="button"><span>♻</span><b>DỌN CACHE</b></button>
             <button class="settings-action settings-action-server" id="reloadApp" type="button"><span>↻</span><b>TẢI LẠI</b></button>
-          </div>
-
-          
-        </div>
-            <div class="settings-tool-inner gmww-cloudflare-card" id="gmwwCloudflareCard" aria-label="Quản lý Cloudflare">
-              <div class="health-v236-actions">
-                <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>☁</span><b class="gmww-cloudflare-label">CLOUDFLARE</b></button>
-                <button class="settings-action settings-action-server" id="gmwwServerTrashOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>♻</span><b>DỌN RÁC SERVER</b></button>
-              </div>
-            </div>
-            <div class="settings-tool-inner gmww-ops-card" id="gmwwOpsCenter" aria-labelledby="gmwwOpsTitle">
-              <b class="settings-operation-tool-heading">Vận hành</b>
-              <div class="ops-tools" role="group" aria-label="Công cụ vận hành">
-                <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
-                <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
-                <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
-                <label class="ops-auto" title="Tự động kiểm tra mỗi 2 phút"><input id="opsAutoCheck" type="checkbox"><span>Tự kiểm tra <b>2 phút</b></span></label>
-              </div>
-            </div>
-            <div class="settings-tool-inner server-health-card health-v236" id="serverHealthCard">
-              <b class="settings-operation-tool-heading">Server</b>
-              <div class="health-v236-actions">
-                <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
-                <button class="settings-action settings-action-server" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
-                <button class="settings-action settings-action-server" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
-              </div>
-            </div>
-            <div class="settings-tool-inner diagnostics-card" id="systemDiagnosticsCard">
-              <b class="settings-operation-tool-heading">Chẩn đoán</b>
-              <div class="health-v236-actions diagnostic-actions">
-                <button class="settings-action settings-action-server" id="runSystemDiagnostics" type="button"><span>⌕</span><b>QUÉT LỖI</b></button>
-                <button class="settings-action settings-action-server" id="quickRepairSystem" type="button"><span>✚</span><b>SỬA NHANH</b></button>
-                <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
-              </div>
-            </div>
+            <button class="settings-action settings-action-server" id="gmwwCloudflareOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>☁</span><b class="gmww-cloudflare-label">CLOUDFLARE</b></button>
+            <button class="settings-action settings-action-server" id="gmwwServerTrashOpen" type="button" aria-controls="gmwwCloudflarePanel" aria-expanded="false"><span>♻</span><b>DỌN RÁC SERVER</b></button>
+            <button class="settings-action settings-action-server" id="opsRunFullAudit" type="button"><span>⌕</span><b>KIỂM TRA TỔNG</b></button>
+            <button class="settings-action settings-action-server" id="opsCheckRoom" type="button"><span>◉</span><b>PHÒNG &amp; REALTIME</b></button>
+            <button class="settings-action settings-action-server" id="opsCheckRelease" type="button"><span>⇄</span><b>PHIÊN BẢN</b></button>
+            <label class="ops-auto" title="Tự động kiểm tra mỗi 2 phút"><input id="opsAutoCheck" type="checkbox"><span>Tự kiểm tra <b>2 phút</b></span></label>
+            <button class="settings-action settings-action-server" id="checkServerHealth" type="button"><span>↻</span><b>KIỂM TRA</b></button>
+            <button class="settings-action settings-action-server" id="refreshServerData" type="button"><span>⟳</span><b>ĐỒNG BỘ</b></button>
+            <button class="settings-action settings-action-server" id="openPlayerWeb" type="button"><span>↗</span><b>MỞ WEB</b></button>
+            <button class="settings-action settings-action-server" id="runSystemDiagnostics" type="button"><span>⌕</span><b>QUÉT LỖI</b></button>
+            <button class="settings-action settings-action-server" id="quickRepairSystem" type="button"><span>✚</span><b>SỬA NHANH</b></button>
+            <button class="settings-action settings-action-server" id="checkPlayerWebNow" type="button"><span>↻</span><b>CHECK WEB</b></button>
           </div>
 
           <section class="settings-notice-panel" id="settingsNoticePanel" role="region" aria-labelledby="settingsNoticeTitle">
