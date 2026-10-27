@@ -22,6 +22,7 @@ import {createArenaSessionTrend,ARENA_STAGE23_25_VERSION} from './stage23-25-mob
 import {validateGmActionTargets,ARENA_STAGE29_VERSION} from './stage29-gm-actions.mjs';
 import {projectAuthorizedGmCoreState} from './production-gm-adapter.mjs';
 import {validateArenaGmContext} from './gm-native-bridge.mjs';
+import {gallowsCandidateActorId} from './stage38-public-gallows.mjs';
 import {createArenaGmRefreshGate} from './stage37-gm-refresh-gate.mjs';
 const $=id=>document.getElementById(id);
 // STAGING keeps its isolated DO visual endpoint; the official Core hostname
@@ -183,6 +184,10 @@ function drawFrame(frame){
     document.body.dataset.gmwwArenaSceneRebuilds=String(sceneRebuilds);
   }
   dashboard.setState(frame);
+  if(changedRoom||previousMatch!==frame.room.matchId||previousCycle!==frame.room.cycleKey||
+    frame.room.cyclePhase!=='morning'){
+    ballot=null;field.setGallowsCandidate(null);dashboard.setBallot(null);
+  }
   if(previousMatch!==undefined&&(previousMatch!==frame.room.matchId||previousCycle!==frame.room.cycleKey)){
     field.clearEffects();visibleGmEffects=0;
   }
@@ -266,7 +271,7 @@ async function refreshPrivateGmEffects(){
       const quality=ritualQuality({players:authorized.length,fps,reducedMotion,lowPower});
       document.body.dataset.gmwwStage8VfxBudget=String(quality.effectTrailSegments);
       dashboard.setNightControl(data.nightControl||null);
-      if(productionCoreView&&data.gallows)showBallot(data.gallows);
+      if(productionCoreView)showBallot(data.gallows||null);
       document.body.dataset.gmwwGmTurnActive=data.casting?.actorIds?.length?'true':'false';
     }
     });
@@ -328,6 +333,7 @@ async function attach(room){
 }
 function showBallot(x){
   dashboard.setBallot(x);
+  field.setGallowsCandidate(gallowsCandidateActorId(x,current));
   if(!x){$('ballot').textContent='Lên Giàn: chưa bắt đầu trong ngày hiện tại';document.body.dataset.gmwwLiveBallot='none';return;}
   const scores=(x.nominationTotals||[]).map(t=>t.loginId+': '+t.votes).join(' · ');
   if(x.candidateId)field.interact('member:'+x.candidateId,{effect:'vote',durationMs:1300});
@@ -611,7 +617,7 @@ canvas.addEventListener('pointercancel',e=>{
 canvas.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(10,Math.min(32,radius+Math.sign(e.deltaY)))},{passive:false});
 window.__GMWW_ARENA_STAGE_READONLY=()=>({count:field.actorCount,room:current?.room.code||null,phase:current?.room.phase||null,
   cyclePhase:current?.room.cyclePhase||null,matchId:current?.room.matchId||null,fps,connected:$('connection').textContent,
-  ballot:ballot?.stage||null,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
+  ballot:ballot?.stage||null,gallowsActorId:field.gallowsActorId,drawCalls:render.info.render.calls,atelier:ARENA_ATELIER_VERSION,
   gmConsole:document.body.dataset.gmwwGmConsole,lowPower,autoQualityEnabled,sceneRebuilds,selectedId:dashboard.selectedId,
   followCaster,activeCaster:gmToken||synthetic?field.activeCaster:null,cameraRadius:radius,
   activeCasterWorld:gmToken||synthetic?field.activeCasterWorld:null,
