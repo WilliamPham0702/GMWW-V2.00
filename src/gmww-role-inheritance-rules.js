@@ -5,7 +5,8 @@ const login=v=>String(v??'').toLowerCase().trim().replace(/^member:/,'');
 const relevant=(rows,matchId)=>(Array.isArray(rows)?rows:[]).filter(x=>
   String(x?.matchId||'')===String(matchId));
 export function inheritedRolePlans({assignments=[],interactions=[],matchId='',night=1,
-  chooseIndex=length=>crypto.getRandomValues(new Uint32Array(1))[0]%length}={}){
+  chooseIndex=length=>crypto.getRandomValues(new Uint32Array(1))[0]%length,
+  drunkChoice=null}={}){
   const n=Math.max(1,Number(night)||1),rows=Array.isArray(assignments)?assignments:[],
     events=relevant(interactions,matchId);
   const dead=new Set(events.filter(x=>x.type==='dead'&&x.effectActive!==false&&
@@ -26,11 +27,15 @@ export function inheritedRolePlans({assignments=[],interactions=[],matchId='',ni
       }
     }else if(roleId==='role_drunk'&&n===3){
       const candidates=allDead.filter(x=>login(x.loginId)!==actorId);
-      const at=candidates.length?Math.max(0,Math.min(candidates.length-1,
-        Math.trunc(Number(chooseIndex(candidates.length))||0))):-1;
-      const picked=at>=0?candidates[at]:null;
-      out.push({kind:'drunk',actorId,sourceId:picked?login(picked.loginId):null,
-        sourceRoleId:picked?String(picked.roleId||''):'role_villager',fromRoleId:roleId,night:n});
+      // No dead roles -> automatic functionless Villager. Otherwise only the
+      // authenticated Player Web's single chosen face-down card can convert.
+      const selected=drunkChoice&&login(drunkChoice.actorId)===actorId?
+        candidates.find(x=>login(x.loginId)===login(drunkChoice.sourceId)):null;
+      if(!candidates.length||selected){
+        const picked=selected||null;
+        out.push({kind:'drunk',actorId,sourceId:picked?login(picked.loginId):null,
+          sourceRoleId:picked?String(picked.roleId||''):'role_villager',fromRoleId:roleId,night:n});
+      }
     }
   }
   return out;

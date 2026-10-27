@@ -18,6 +18,7 @@ import {oldWitchActionCheck} from '../src/gmww-old-witch-rules.js';
 import {isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
 import {partitionNightSpecialRoles,witchSaveTargetAllowed} from '../src/gmww-witch-drunk-clone-rules.js';
 import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
+import {drunkDeadCards,drunkDeckView,isPassiveInformationAction} from '../src/gmww-drunk-draw-rules.js';
 import {buildPrivateDeliverySnapshot} from '../src/gmww-delivery-snapshot.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
@@ -27,6 +28,7 @@ import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 const source=fs.readFileSync('src/index.js','utf8');
 const demoMethods=source.slice(source.indexOf('  async demoClockContext(meta){'),source.indexOf('  async gmAuto(request,body){'));
 const methods=source.slice(source.indexOf('  nightRuntimeKey('),source.indexOf('  async gmRename('));
+const drawMethod=source.slice(source.indexOf('  async playerDrunkDraw(body){'),source.indexOf('  async playerDeliveryReceived(body){'));
 const gallowsMethods=source.slice(source.indexOf('  async gallowsState(meta){'),source.indexOf('  async gmState(request){'));
 const alarmMethods=source.slice(source.indexOf('  async alarm(){'),source.indexOf('  async gmDelete(request){'));
 const activate=source.slice(source.indexOf('  async playerArtifactActivate('),source.indexOf('  async playerSeatSwap('));
@@ -36,12 +38,13 @@ const normalizeLoginId=x=>String(x||'').trim().toLowerCase();
 const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 
 
-const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+' })',{
+const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+drawMethod+' })',{
   ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,oldWitchActionCheck,
   isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles,
   partitionNightSpecialRoles,witchSaveTargetAllowed,inheritedRolePlans,buildPrivateDeliverySnapshot,
+  drunkDeadCards,drunkDeckView,isPassiveInformationAction,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -54,7 +57,7 @@ function harness({artifact=true,auto=false,singleUse=false}={}){
     const before=new Map([...data].map(([k,v])=>[k,clone(v)]));
     try{return await fn(storage)}catch(e){data.clear();for(const [k,v] of before)data.set(k,v);throw e}
   }};
-  room.ctx={storage};room.broadcast=x=>events.push(clone(x));room.roomExpiryDue=()=>Date.now()+86400000;
+  room.ctx={storage,blockConcurrencyWhile:async fn=>fn()};room.broadcast=x=>events.push(clone(x));room.roomExpiryDue=()=>Date.now()+86400000;
   room.gmAuthorized=async()=>({ok:true,meta:await storage.get('meta')});
   data.set('meta',{matchId:'test-match',phase:'running',cyclePhase:'night',cycleNight:1,cycleKey:'night-1',autoGM:auto});
   data.set('players',Object.fromEntries(['alice','bob','carol','dave'].map(loginId=>['member:'+loginId,{loginId}])));
@@ -666,7 +669,7 @@ test('Delayed alarm never submits expired ballots; it resolves the stage and con
  await runServerDemo(h.room,meta);assert.equal(h.data.get('gallows:test-match:morning-1').stage,'resolved');assert.equal(h.data.get('demoLease').error||'','');
 });
 
-test('Night 3 actual Durable Object auto-draws dead wolf for Drunk and refreshes private snapshot',async()=>{
+test('Night 3 actual Durable Object opens selected dead Wolf card and refreshes private snapshot',async()=>{
   const h=harness({artifact:false});
   h.data.set('assignments',[
     {assignmentIndex:0,loginId:'alice',roleId:'role_drunk',roleName:'Say Rượu',faction:'village'},
@@ -681,10 +684,18 @@ test('Night 3 actual Durable Object auto-draws dead wolf for Drunk and refreshes
   const meta=await h.meta();meta.cycleNight=3;meta.cycleKey='night-3';
   await h.storage.put('meta',meta);
   const rt=await h.room.getNightRuntime(meta,3,true);
+  assert.equal((await h.storage.get('assignments')).find(x=>x.loginId==='alice').roleId,'role_drunk');
+  assert.equal(rt.queue[rt.cursor].roleId,'role_drunk');
+  const deck=await h.storage.get('drunkDeck:test-match:3:alice');
+  assert.equal(deck.cards.length,1);
+  assert.equal(drunkDeckView(deck,false).cards[0].roleId,undefined);
+  const reply=await result(await h.room.playerDrunkDraw({loginId:'alice',cardId:deck.cards[0].id}));
+  assert.equal(reply.ok,true);
   const assigned=await h.storage.get('assignments'),updated=assigned.find(r=>r.loginId==='alice');
   assert.equal(updated.roleId,'role_wolf');
   assert.equal(updated.faction,'wolf');
-  assert.ok(rt.queue.some(x=>x.kind==='drunk-draw'&&x.loginIds[0]==='alice'));
+  assert.equal((await h.storage.get('drunkDeck:test-match:3:alice')).selectedId,deck.cards[0].id);
+  assert.equal((await result(await h.room.playerDrunkDraw({loginId:'alice',cardId:deck.cards[0].id}))).error,'DRUNK_ALREADY_CHOSEN');
   const snapshot=await h.storage.get('deliverySnapshot:alice');
   assert.equal(snapshot.roles[0].roleId,'role_wolf');
   assert.equal(snapshot.deliveryVersion,(await h.meta()).deliveryVersion);
@@ -712,4 +723,38 @@ test('Clone inherits only in next Night after chosen person dies; owner Artifact
   assert.equal(role.roleId,'role_witch');
   assert.equal(role.artifact.artifactId,'owner-asset');
   assert.equal(role.inheritedFromRoleId,'role_clone');
+});
+
+test('Spiritualist compares factions normally when B was expelled in an earlier night turn',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('gameConfig',{roles:[{roleId:'role_spiritualist',order:1}],
+    timing:{defaultActionSec:30}});
+  h.data.set('assignments',[
+    {loginId:'alice',roleId:'role_spiritualist',roleName:'Nhà Tinh Thần Học',faction:'village'},
+    {loginId:'bob',roleId:'role_wolf',roleName:'Sói',faction:'wolf'},
+    {loginId:'carol',roleId:'role_guard',roleName:'Bảo Vệ',faction:'village'}
+  ]);
+  h.data.set('roles:alice',[{loginId:'alice',roleId:'role_spiritualist',
+    matchId:'test-match',roleCard:{flags:{allowMultipleActions:false},functions:[
+      {actionId:'action_compare_faction',phase:'night',targetCount:2,usageMode:'eachNight',usageCount:1}
+    ]}}]);
+  h.data.set('interactions',[{matchId:'test-match',type:'expelled',loginId:'bob',
+    night:1,effectActive:true}]);
+  const rt=await h.room.getNightRuntime(await h.meta(),1,true);
+  const spiritualistIndex=rt.queue.findIndex(x=>x.roleId==='role_spiritualist');
+  assert.ok(spiritualistIndex>=0,'Spiritualist turn must exist after shared Wolf bite');
+  rt.cursor=spiritualistIndex;rt.currentId=rt.queue[spiritualistIndex].id;
+  await h.storage.put(h.room.nightRuntimeKey(await h.meta(),1),rt);
+  const answer=await result(await h.room.gmBattleAction(null,{
+    matchId:'test-match',cycleKey:'night-1',turnId:rt.currentId,
+    actorId:'alice',type:'effect_notice',actionId:'action_compare_faction',
+    targetIds:['bob','carol'],revealTargetIds:['bob','carol'],clientEventId:'spiritualist-compare-1'
+  }));
+  assert.equal(answer.ok,true,JSON.stringify(answer));
+  assert.equal(answer.revelation?.same,false);
+  assert.equal(answer.revelation?.message?.includes('KHÁC'),true);
+  assert.ok((await h.storage.get('interactions')).some(x=>x.type==='expelled'&&x.loginId==='bob'),
+    'Exile is still active; only a neutral informational check was permitted');
+  assert.equal((await h.storage.get('interactions')).filter(x=>x.actionId==='action_compare_faction').length,0,
+    'Faction comparison must not send a harmful effect notification to targets');
 });
