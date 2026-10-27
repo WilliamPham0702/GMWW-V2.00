@@ -16,8 +16,35 @@ assert.equal((await json('/api/health?character40-verify='+Date.now())).version,
 const catalog=await json('/api/game-characters');assert.equal(catalog.count,40);assert.equal(catalog.characters.length,40);
 const manifest=await json('/api/character-engine/manifest');assert.deepEqual(manifest.master.motionSet,actions);
 for(const c of manifest.characters)assert.deepEqual(c.motions,actions,c.id);
-const ota=await json('/api/update/manifest?current=3.153&character40-verify='+Date.now());
-assert.equal(ota.releaseType,'runtime');assert.equal(ota.runtimeVersion,version);assert.equal(ota.shellVersion,'3.110');
+const published=await json('/api/update/manifest?current=3.153&character40-verify='+Date.now());
+assert.equal(published.runtimeVersion,version);
+let ota=published;
+if(published.releaseType==='native'){
+ // A new iOS shell must NOT advertise Runtime OTA to older installs.
+ // Verify its separately packaged complete inventory and real edge bytes instead.
+ assert.equal(version,'3.257','Native verification scope is limited to the approved manual updater release');
+ assert.equal(published.shellVersion,version);
+ assert.equal(published.minimumShellVersion,version);
+ assert.equal(published.ipa?.version,version);
+ assert.equal(published.ipa?.fileName,'GMWW-V'+version+'.ipa');
+ assert.deepEqual(published.runtime?.files,[],'Native release must not advertise Runtime OTA');
+ ota=JSON.parse(await readFile('assets/updates/runtime/V'+version+'/manual-manifest.json','utf8'));
+ assert.equal(ota.releaseType,'native');
+ assert.equal(ota.releaseVersion,version);
+ assert.equal(ota.runtimeVersion,version);
+ assert.equal(ota.shellVersion,version);
+ assert.equal(ota.minimumShellVersion,version);
+ assert.ok(Array.isArray(ota.runtime?.files)&&ota.runtime.files.length>0,'Missing verified manual package inventory');
+ const files=ota.runtime.files;
+ assert.equal(new Set(files.map(f=>f.path)).size,files.length,'Duplicate manual package entries');
+ for(const entry of files){
+  assert.match(String(entry.sha256||''),/^[a-f0-9]{64}$/i,'Missing file SHA-256');
+  assert.equal(entry.url,new URL('/updates/runtime/V'+version+'/'+entry.path,base).href,'Untrusted manual package URL');
+ }
+}else{
+ assert.equal(published.releaseType,'runtime');
+ assert.equal(published.shellVersion,'3.110','Legacy Character40 Runtime shell must remain supported');
+}
 const accepted=JSON.parse(await readFile('prototype/character40/catalog.json','utf8')).characters;
 let index=0;
 await Promise.all(Array.from({length:4},async()=>{
@@ -53,4 +80,4 @@ assert.equal(sha(playerBytes),sha(localPlayerBytes),'Player Web controller SHA m
 assert.notEqual(sha(gmBytes),sha(localPlayerBytes),'GM-only low-power controller must remain isolated from Player Web');
 assert.equal(ota.runtime.files.find(f=>f.path==='gmww-shared-motion.js')?.sha256,sha(gmBytes),'GM low-power controller OTA SHA');
 assert.equal(ota.runtime.files.find(f=>f.path==='characters/gmww40/runtime.js')?.sha256,sha(localPlayerBytes),'Player controller OTA SHA');
-console.log('Production Character40 PASS: 40 new portraits + 40 motion atlases SHA-256; four actions only; GM low-power and Player Web controllers verified independently; actual OTA HTML/JS/controller SHA verified; shell 3.110 preserved.');
+console.log('Production Character40 PASS: 40 portraits + 40 motion atlases SHA-256, Player/GM controllers and HTML/JS verified against '+(published.releaseType==='native'?'V3.257 manual inventory, Native IPA':'Runtime OTA')+'.');
