@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.255';
+const VERSION='3.256';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3438,20 +3438,22 @@ const PLAY_SEATED_CHARACTER_URLS=Object.freeze({'character-01':PLAY_SEATED_CHARA
 function playCharacterSitting(member,now=playNow()){return Number(member?.seatId||0)>0||(member?.villageActivity==='sitting'&&Number(member?.sitUntil||0)>now)}
 function playCharacterVisualUrl(member,frame=1,direction='right',now=playNow()){const id=playActiveCharacterId(member?.gameCharacterId),seatedUrl='';return playCharacterSitting(member,now)&&seatedUrl?seatedUrl:playCharacterFrameUrl(id,frame,direction)}
 function playCharacterRendererApi(){return window.GMWW_CHARACTER_RENDERER||null}
-function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive',hanging=false,battleTargetRunning=false}={}){
+function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect='alive',hanging=false,battleTargetRunning=false,battleTurnTravel='',battleTurnFacing=''}={}){
   const base=member?.characterAnimation&&typeof member.characterAnimation==='object'?member.characterAnimation:{};
   const battleStatic=playSceneState.step==='battle';
-  // Only GM drives this local presentation. Running does NOT update Seat or Server coordinates.
-  const runTarget=battleStatic&&battleTargetRunning&&effect!=='dead'&&effect!=='expelled'&&effect!=='frozen';
-  const state=hanging?'walking':runTarget?'running':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle';
+  // Client-only GM effects; neither Seat nor authoritative Server/Player Web coordinates change.
+  const eligible=!['dead','expelled','frozen'].includes(effect);
+  const travel=battleStatic&&eligible&&['out','back'].includes(battleTurnTravel)?battleTurnTravel:'';
+  const runTarget=battleStatic&&battleTargetRunning&&eligible&&!travel;
+  const state=hanging?'walking':travel==='back'?'running':travel==='out'?'walking':runTarget?'running':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle';
   const motion=state==='running'?'run':state==='walking'?'walk':'idle';
   return {...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,
-    facing:moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,
-    paused:effect==='dead'||(battleStatic&&!hanging&&!runTarget),lowPower:battleStatic};
+    facing:travel?(battleTurnFacing==='left'?'left':'right'):moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,
+    paused:effect==='dead'||(battleStatic&&!hanging&&!runTarget&&!travel),lowPower:battleStatic};
 }
 function playRigTextureUrl(characterId,facing='right'){return playCharacterFrameUrl(characterId,1,facing)}
 function playMountCharacterRig(host,member,{moving=false,sitting=false,effect='alive'}={}){const id=playActiveCharacterId(member?.gameCharacterId),api=window.GMWW_SHARED_MOTION;if(!api?.supports(id))return false;api.mount(host,{characterId:id,command:playCharacterAnimationCommand(member,{moving,sitting,effect}),assetBase:location.protocol==='file:'?new URL('.',document.baseURI).href:GMWW_SERVER_BASE});return true}
-function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive',hanging=false,battleTargetRunning=false}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect,hanging,battleTargetRunning}))||false}
+function playUpdateCharacterRig(host,member,{moving=false,sitting=false,effect='alive',hanging=false,battleTargetRunning=false,battleTurnTravel='',battleTurnFacing=''}={}){return window.GMWW_SHARED_MOTION?.update(host,playCharacterAnimationCommand(member,{moving,sitting,effect,hanging,battleTargetRunning,battleTurnTravel,battleTurnFacing}))||false}
 function playNow(){return Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)}
 function playWalkFrame(member,now=playNow()){if(member?.movementStatus!=='moving'||!member?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(member.moveStartedAt))/95)%6)+1}
 function playSeatStats(){
@@ -4498,7 +4500,7 @@ function renderPlayPlayers(){
       for(const status of ['alive','dead','frozen','expelled'])
         token.classList.toggle('is-'+status,status===effect&&status!=='alive');
       token.dataset.gmwwCurrentEffect=effect;
-      playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{moving:playSeatMovementActive(member),sitting:false,effect,battleTargetRunning:token.classList.contains('is-gm-target-running')});
+      playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{moving:playSeatMovementActive(member),sitting:false,effect,battleTargetRunning:token.classList.contains('is-gm-target-running'),battleTurnTravel:token.dataset.gmwwFireWalk||'',battleTurnFacing:token.dataset.gmwwFireFacing||''});
       if(!visual)continue;
       const ids=visual.resolveRows(playSceneRuntime.activeEffects,member.loginId,playNow()),sig=ids.join('|');
       if(token.dataset.gmwwStatuses===sig)continue;
@@ -4511,6 +4513,7 @@ function renderPlayPlayers(){
     syncPlayGallowsHanging();
     return;
   }
+  if(playSceneState.step==='battle')gmwwFireWalkDetach();
   ring.dataset.gmwwPlayerDomSig=domSig;
   ring.innerHTML='';ring.classList.toggle('is-dense',(seating?seatCount:members.length)>16);ring.classList.toggle('is-seating',seating);ring.classList.toggle('is-battle-view',playSceneState.step==='battle');ring.classList.toggle('is-battle-packed',playSceneState.step==='battle'&&members.length>20);
   const make=(m,pos,seatId=null)=>{
@@ -5806,6 +5809,8 @@ function battleTickCountdown(){
       void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
   }
+  const expired=Number.isFinite(seconds)&&seconds<=0;
+  if(Boolean(battleState.gmwwWalkExpired)!==expired){battleState.gmwwWalkExpired=expired;battleMarkPlayers()}
   const formatted=battleRules()?.formatTime(seconds)||'--:--';
   if(clock.textContent!==formatted)clock.textContent=formatted;
   clock.classList.toggle('is-ending',seconds!==null&&seconds<=10);
@@ -6260,6 +6265,100 @@ function battlePickTargetWithAudio(id,actionId){
   if(selected)void battlePlayConfiguredAudio('actions',action.actionId,action.name);
   return selected;
 }
+// GM-only procession around the campfire. Single GPU transform per trip; no new frame loop.
+function gmwwFireWalkDestination(x,y,cx,cy,width,height,used=[]){
+  const rx=Math.min(110,Math.max(80,width*.26)),ry=Math.min(103,Math.max(79,height*.18));
+  let best=Infinity,chosen=null;
+  const sourceAngle=Math.atan2(y-cy,x-cx);
+  for(let i=0;i<16;i++){
+    const angle=2*Math.PI*i/16;
+    const px=Math.min(width-37,Math.max(37,cx+Math.cos(angle)*rx));
+    const py=Math.min(height-56,Math.max(56,cy+Math.sin(angle)*ry));
+    const closest=used.reduce((v,p)=>Math.min(v,Math.hypot(px-p.x,py-p.y)),Infinity);
+    const delta=Math.atan2(Math.sin(angle-sourceAngle),Math.cos(angle-sourceAngle));
+    const score=Math.abs(delta)*42+Math.hypot(px-x,py-y)*.04+(closest<43?1000:0);
+    if(score<best){best=score;chosen={x:px,y:py}}
+  }
+  return chosen;
+}
+function gmwwFireWalkRig(token,member,phase){
+  if(!member)return;
+  playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{
+    effect:playPlayerEffect(member.loginId),battleTurnTravel:phase==='out'||phase==='back'?phase:'',
+    battleTurnFacing:token.dataset.gmwwFireFacing||'right'
+  });
+}
+function gmwwFireWalkCancel(token,member){
+  if(!token)return;
+  token.gmwwFireAnimation?.cancel();token.gmwwFireAnimation=null;
+  token.dataset.gmwwFireWalk='';delete token.dataset.gmwwFireFacing;
+  delete token.dataset.gmwwFireHome;delete token.dataset.gmwwFireDx;
+  delete token.dataset.gmwwFireDy;delete token.dataset.gmwwFireX;delete token.dataset.gmwwFireY;
+  token.style.removeProperty('transform');token.style.removeProperty('transition');
+  token.style.removeProperty('z-index');token.classList.remove('is-gm-walking-fire');
+  if(member)gmwwFireWalkRig(token,member,'');
+}
+function gmwwFireWalkDetach(){
+  document.getElementById('playPlayerRing')?.querySelectorAll('[data-gmww-fire-walk]')?.forEach(el=>gmwwFireWalkCancel(el));
+}
+function gmwwFireWalkTravel(token,member,phase,dx,dy,ms){
+  const originalAnimation=token.gmwwFireAnimation;
+  const from=getComputedStyle(token).transform;
+  originalAnimation?.cancel();
+  if(!token.dataset.gmwwFireHome)token.dataset.gmwwFireHome=from;
+  const target=phase==='back'?token.dataset.gmwwFireHome:
+    'translate(-50%, -50%) translate3d('+dx.toFixed(2)+'px,'+dy.toFixed(2)+'px,0)';
+  token.dataset.gmwwFireWalk=phase;
+  token.dataset.gmwwFireFacing=dx<0?'left':'right';
+  token.style.transition='none';token.style.zIndex='145';token.classList.add('is-gm-walking-fire');
+  gmwwFireWalkRig(token,member,phase);
+  const finish=()=>{
+    if(!token.isConnected||token.dataset.gmwwFireWalk!==phase)return;
+    token.style.transform=target;
+    token.gmwwFireAnimation?.cancel();token.gmwwFireAnimation=null;
+    if(phase==='back')gmwwFireWalkCancel(token,member);
+    else{token.dataset.gmwwFireWalk='hold';gmwwFireWalkRig(token,member,'hold')}
+  };
+  if(typeof token.animate!=='function'){token.style.transform=target;finish();return}
+  const a=token.animate([{transform:from},{transform:target}],{
+    duration:ms,easing:phase==='back'?'ease-in':'ease-out',fill:'forwards'
+  });
+  token.gmwwFireAnimation=a;
+  a.finished.then(()=>{if(token.gmwwFireAnimation===a)finish()}).catch(()=>{});
+}
+function gmwwFireWalkSync(ring,actors,active){
+  const tokens=[...ring.querySelectorAll('[data-play-player-id]')];
+  const r=ring.getBoundingClientRect();if(!r.width||!r.height)return;
+  const f=document.querySelector('#playWorld .play-core-pearl')?.getBoundingClientRect();
+  const cx=f?.width?f.left+f.width/2-r.left:r.width*.5;
+  const cy=f?.height?f.top+f.height/2-r.top:r.height*.46;
+  const used=[];
+  // First reserve destinations of already arrived actors so heartbeats cannot cause collisions.
+  for(const el of tokens)if(['out','hold'].includes(el.dataset.gmwwFireWalk)&&actors.has(el.dataset.playPlayerId))
+    used.push({x:Number(el.dataset.gmwwFireX),y:Number(el.dataset.gmwwFireY)});
+  for(const el of tokens){
+    const id=String(el.dataset.playPlayerId||''),member=battleMember(id),phase=el.dataset.gmwwFireWalk||'';
+    const permitted=active&&actors.has(id)&&member&&!['dead','frozen','expelled'].includes(playPlayerEffect(id));
+    if(!permitted){
+      if(phase==='back'&&(!active||!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))))gmwwFireWalkCancel(el,member);
+      if(phase==='out'||phase==='hold'){
+        if(!active||!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))){gmwwFireWalkCancel(el,member);continue}
+        const dx=Number(el.dataset.gmwwFireDx)||0,dy=Number(el.dataset.gmwwFireDy)||0;
+        gmwwFireWalkTravel(el,member,'back',-dx,-dy,Math.max(350,Math.min(1700,Math.hypot(dx,dy)/.22)));
+      }
+      continue;
+    }
+    if(phase==='out'||phase==='hold')continue;
+    const x=Number.parseFloat(el.style.left)*r.width/100,y=Number.parseFloat(el.style.top)*r.height/100;
+    if(!Number.isFinite(x)||!Number.isFinite(y))continue;
+    const p=gmwwFireWalkDestination(x,y,cx,cy,r.width,r.height,used);if(!p)continue;
+    used.push(p);
+    const dx=p.x-x,dy=p.y-y,distance=Math.hypot(dx,dy);if(distance<5)continue;
+    el.dataset.gmwwFireDx=String(dx);el.dataset.gmwwFireDy=String(dy);
+    el.dataset.gmwwFireX=String(p.x);el.dataset.gmwwFireY=String(p.y);
+    gmwwFireWalkTravel(el,member,'out',dx,dy,Math.max(440,Math.min(2200,distance/.14)));
+  }
+}
 function battleMarkPlayers(){
   const ring=document.getElementById('playPlayerRing');if(!ring)return;
   if(battleState.impacts.size)battleState.impacts.clear();
@@ -6280,9 +6379,7 @@ function battleMarkPlayers(){
     el.classList.toggle('is-battle-target',playSceneState.step==='battle'&&chosen.has(id));
     const actorOn=el.classList.contains('is-battle-actor'),targetOn=el.classList.contains('is-battle-target'),avatar=el.querySelector('.play-player-avatar');
     const effect=playPlayerEffect(id),canAnimate=motionOn&&!['dead','expelled','frozen'].includes(effect);
-    const runTarget=canAnimate&&targetOn;
-    const floatActor=canAnimate&&!runTarget&&actors.has(id);
-    el.classList.toggle('is-gm-turn-floating',floatActor);
+    const runTarget=canAnimate&&targetOn&&!actors.has(id);
     el.classList.toggle('is-gm-target-running',runTarget);
     // Update only on state transitions; a heartbeat must not reset animated rigs.
     if(avatar&&el.dataset.gmwwMotionRun!==String(runTarget)){
@@ -6329,6 +6426,7 @@ function battleMarkPlayers(){
     else orb?.remove();
     for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.remove('battle-impact-'+type);
   });
+  gmwwFireWalkSync(ring,actors,motionOn&&!battleState.gmwwWalkExpired);
   for(const [id,x] of battleState.impacts)if(x.until<=now)battleState.impacts.delete(id)
 }
 
@@ -6616,11 +6714,11 @@ function battleSyncGMMenuControls(){
   on('battleLabelPlayer',gmLabelVisibility.player,'Người Chơi');
   on('battleShowDead',gmLabelVisibility.dead,'Người Chết');
   on('battleGMActionIcons',battleIconOn(),'iCon');
-  on('battleGMTurnMotion',battleMotionOn(),'Bay/Chạy');
+  on('battleGMTurnMotion',battleMotionOn(),'Đi bộ');
   on('battleGMAudio',!playAudioMuted(),'Audio');
   on('battleGMHaptic',gmHapticEnabled(),'Rung');
   on('battleGMAuto',!!playSceneState.autoGM,'Auto GM');
-  for(const [id,label] of [['battleGMChromeToggle','Menu'],['battleGMTurnMotion','Bay/Chạy'],['battleGMActionIcons','iCon'],['battleShowDead','Người Chết'],['battleGMAudio','Audio'],['battleGMHaptic','Rung'],['battleGMAuto','Auto GM']]){
+  for(const [id,label] of [['battleGMChromeToggle','Menu'],['battleGMTurnMotion','Đi bộ'],['battleGMActionIcons','iCon'],['battleShowDead','Người Chết'],['battleGMAudio','Audio'],['battleGMHaptic','Rung'],['battleGMAuto','Auto GM']]){
     const el=document.getElementById(id);if(el)el.textContent=label;
   }
 }
@@ -6640,6 +6738,7 @@ function renderPlayBattle(){
   }
   if(!visible){document.getElementById('battleFireIconDock')?.setAttribute('hidden','');battleIconClearDrag();const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   if(!visible){
+    gmwwFireWalkDetach();
     battleClear();battleState.key='';battleState.details=false;battleState.clockOpen=false;battleState.quickType='';
     const menu=document.getElementById('battleWolfMenu');
     if(menu){menu.hidden=!battleState.wolfOpen;if(!menu.hidden)requestAnimationFrame(()=>gmwwPlaceWolfMenuAtFire(menu));}
@@ -6651,7 +6750,7 @@ function renderPlayBattle(){
   const t=battleTurn(),rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase,night=Math.max(1,Number(playSceneState.night)||1);
   // Visibility of all dock controls follows the current battle phase.
   const key=[playSceneRuntime.room?.matchId||'',phase,night,t?.id||rt?.completed||''].join(':');
-  if(battleState.key!==key){battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
+  if(battleState.key!==key){battleState.gmwwWalkExpired=false;battleCloseResultPopup();battleState.key=key;battleClear();battleState.quickType='';battleState.details=false;battleState.wolfOpen=false;battleState.clockOpen=false;battleState.timelineSig='';battleState.actionSig='';battleState.dayActionsOpen=false;battleState.dayMenuSig='';battleState.gallowsOpen=false;const actionBar=document.getElementById('battleActionBar');if(actionBar)actionBar.scrollLeft=0;}
   battleGallowsRender(phase);
   battleRenderDrunkDraw(t);
   if(t&&phase==='night'&&!battleState.busy&&!battleState.syncPending&&!playSceneRuntime.busy)
