@@ -66,3 +66,33 @@ test('only GM opts into performance policy; shared atlas and OTA remain consiste
  assert.ok(pack.includes("copy('server-game/current/gmww-performance.js','gmww-performance.js')"));
  assert.doesNotMatch(read('assets/village/village.mjs'),/gmww-performance\.js/);
 });
+
+
+test('motion scheduler keeps one pending callback for multiple characters and cancels when hidden',()=>{
+ const callbacks=new Map(),timeouts=new Map(),events={};
+ let nextId=1,framesRequested=0;
+ const draw={clearRect(){},drawImage(){}};
+ const makeNode=()=>({isConnected:true,dataset:{},style:{},firstElementChild:null,
+   append(child){this.firstElementChild??=child;},replaceChildren(){this.firstElementChild=null;},
+   setAttribute(){},closest(){return null},getContext(){return draw}});
+ const document={hidden:false,createElement:makeNode,addEventListener:(event,cb)=>events[event]=cb};
+ const ctx={document,Image:class {constructor(){this.complete=true;this.naturalWidth=2000;}},
+   requestAnimationFrame:cb=>{const id=nextId++;framesRequested++;callbacks.set(id,cb);return id;},
+   cancelAnimationFrame:id=>callbacks.delete(id),
+   setTimeout:(cb,ms)=>{const id=nextId++;timeouts.set(id,{cb,ms});return id;},
+   clearTimeout:id=>timeouts.delete(id),
+   GMWW_PERFORMANCE:{canRender:()=>!document.hidden,frameInterval:()=>750,observeFrame(){},freezeIdle:()=>true}};
+ vm.runInNewContext(read('server-game/current/gmww-shared-motion.js'),ctx);
+ const host1=makeNode(),host2=makeNode();
+ ctx.GMWW_SHARED_MOTION.mount(host1,{characterId:'character-01'});
+ ctx.GMWW_SHARED_MOTION.mount(host2,{characterId:'character-02'});
+ assert.equal(callbacks.size,1,'both actors share one pending animation frame');
+ const pending=callbacks.values().next().value;
+ callbacks.clear();pending(1000);
+ assert.equal(timeouts.size,1,'one timer schedules the next batched draw');
+ assert.equal(framesRequested,1,'no 60Hz idle RAF spin');
+ document.hidden=true;events.visibilitychange();
+ assert.equal(timeouts.size,0,'background transition cancels wake timers');
+ document.hidden=false;events.visibilitychange();
+ assert.equal(callbacks.size,1,'foreground transition resumes a single RAF');
+});
