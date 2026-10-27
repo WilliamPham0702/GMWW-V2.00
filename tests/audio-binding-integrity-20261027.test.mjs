@@ -9,7 +9,7 @@ const core=read('server-game/src/00-core-and-library.part'),
 const cut=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
 
 test('runtime routes on ID only; never selects a coincidentally matching name',()=>{
- const src=cut(battle,'function battleFindAudio(', 'async function battleWarmAudio(');
+ const src=cut(battle,'function battleFindAudioCandidates(', 'async function battleWarmAudio(');
  const ctx={state:{audio:{system:[
    {id:'bad-one',name:'Hết giờ',targetId:'audio_system_confirm',fileName:'wrong.mp3',verifiedBinary:true},
    {id:'real-up',name:'Hết giờ',targetId:'audio_system_time_up',fileName:'time-up.mp3',verifiedBinary:true},
@@ -22,7 +22,7 @@ test('runtime routes on ID only; never selects a coincidentally matching name',(
 });
 
 test('source choice ignores a stale canonical row when a GM-uploaded duplicate exists',async()=>{
- const src=cut(battle,'function battleFindAudio(', 'async function battleWarmAudio(');
+ const src=cut(battle,'function battleFindAudioCandidates(', 'async function battleWarmAudio(');
  const pick=cut(battle,'async function battlePlayConfiguredAudio(', 'function battleTurnAudioCue(');
  const heard=[],ctx={
     state:{cards:[],audio:{system:[
