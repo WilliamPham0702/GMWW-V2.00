@@ -1152,8 +1152,9 @@
 </style>
 <script>
 /* Official Arena 3D uses the same Production origin and authoritative Core as 2D.
- * WebKit keeps the 3D world in its own disposable iframe; GMWW sends room access
- * only to the origin-checked same-origin child. Core re-verifies GM authority. */
+ * WebKit keeps the 3D world in its own disposable iframe, while native/GMWW host
+ * credentials are only transmitted by origin-checked one-frame postMessage.
+ * Never send a GM token in URL or across an untrusted origin. */
 (function(){
   'use strict';
   const arenaUrl='https://gmww-v2-00.williampham0702.workers.dev/village/arena-3d/live.html';
@@ -1201,6 +1202,20 @@
     frame.src=arenaUrl;
     document.getElementById('gmwwArena3dQaClose')?.focus();
   }
+  // GMWW keeps the one authoritative Role/Artifact editor until native 3D
+  // forms cover every Core rule. A verified Arena child can request the existing
+  // 2D setup screen; it cannot mutate role assignments through postMessage.
+  window.addEventListener('message',event=>{
+    if(event.origin!==new URL(arenaUrl).origin||
+       event.source!==frame?.contentWindow||!overlay||overlay.hidden||
+       event.data?.kind!=='gmww-arena3d-open-setup')return;
+    closeArena(true);
+  });
+  // Room created in Arena must be authenticated by official GMWW Core and
+  // adopted into playSceneState BEFORE returning to role/Artifact setup.
+  window.addEventListener('gmww-arena3d-room-adopted',()=>{
+    if(overlay&&!overlay.hidden)closeArena(true);
+  });
   // Capture BEFORE app.js's target-level legacy "Vào Làng => Trang Chơi" handler.
   document.addEventListener('click',function(event){
     if(!event.target?.closest?.('#gmwwHomeEnterVillage'))return;

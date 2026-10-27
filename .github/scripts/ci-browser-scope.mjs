@@ -1971,7 +1971,58 @@ function isGMTurnMotionScope(changes){
     content('package.json').includes('"version": "3.253.0"');
 }
 function isGMPerformance3254Scope(changes){const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/scripts/verify-release-v3254.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/build-server-game-ipa.yml","docs/releases/GMWW-V3.254-performance-thermal-20261027.md","server-game/current/GMWW.html","server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","server-game/current/style.css","server-game/current/app.js","server-game/src/00-core-and-library.part","tests/gmww-performance-thermal.test.mjs","tests/gm-turn-motion-lowheat.test.mjs","package.json","package-lock.json","src/index.js"]);return Array.isArray(changes)&&changes.length>0&&changes.every(c=>allowed.has(c.path)&&['M','A'].includes(c.status))&&["server-game/current/gmww-performance.js","server-game/current/gmww-shared-motion.js","server-game/current/GMWW.html","tests/gmww-performance-thermal.test.mjs","src/index.js","package.json","package-lock.json"].every(p=>changes.some(c=>c.path===p))&&JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.254.0';}
+function isArena3dOfficialPortalScope(changes){
+  if(!Array.isArray(changes)||changes.length<5)return false;
+  const map=new Map(changes.map(row=>[row.path,row]));
+  if(map.size!==changes.length)return false;
+  const required=['server-game/current/app.js','server-game/src/20-members-and-roster.part',
+    'server-game/current/GMWW.html','assets/village/arena-3d/live.mjs',
+    'tests/arena3d-portal-handoff.test.mjs','tests/arena3d-room-adoption.test.mjs'];
+  if(required.some(path=>!map.has(path)))return false;
+  const permitted=path=>path.startsWith('assets/village/arena-3d/')||
+    /^tests\/arena3d-[^/]+\.mjs$/.test(path)||
+    /^docs\/releases\/GMWW-ARENA3D-[^/]+\.md$/.test(path)||
+    ['src/arena3d-stage-worker.mjs','wrangler.arena3d-stage14-staging.jsonc',
+    '.github/workflows/arena3d-stage14-16-research.yml',
+    '.github/workflows/check-dual-renderer.yml',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-gallows-redesign.yml',
+    '.github/workflows/prepare-runtime-v3202-candidate.yml',
+    '.github/scripts/ci-browser-scope.mjs',
+    ...required].includes(path);
+  if(changes.some(row=>!permitted(row.path)||!['A','M'].includes(row.status)))return false;
+  const approvedBridge="const GMWW_ARENA_OFFICIAL_ORIGIN='https://gmww-v2-00.williampham0702.workers.dev';\nwindow.addEventListener('message',event=>{\n  if(event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN||\n     event.data?.kind!=='gmww-arena3d-ready')return;\n  const frame=document.getElementById('gmwwArena3dQaFrame');\n  if(!frame||!frame.isConnected||frame.closest('[hidden]')||\n     event.source!==frame.contentWindow)return;\n  const roomCode=String(playSceneState.roomCode||'').trim(),\n    gmToken=String(playSceneState.gmToken||'').trim();\n  if(!isLivePlayRoom()||!/^[A-Za-z0-9._~+\\/=:-]{12,256}$/.test(gmToken))return;\n  frame.contentWindow.postMessage(\n    {kind:'gmww-arena3d-gm-context',roomCode,gmToken},\n    GMWW_ARENA_OFFICIAL_ORIGIN);\n});\n// Adopt a room CREATED inside official Arena 3D into GMWW's existing setup.\n// Only this exact same-origin child iframe may request adoption. Revalidate\n// bearer permission on the official Core before mutating any selected room.\nlet gmwwArenaAdoptSerial=0;\nwindow.addEventListener('message',async event=>{\n  if(event.origin!==GMWW_ARENA_OFFICIAL_ORIGIN||\n     event.data?.kind!=='gmww-arena3d-adopt-room')return;\n  const frame=document.getElementById('gmwwArena3dQaFrame');\n  if(!frame||!frame.isConnected||frame.closest('[hidden]')||\n     event.source!==frame.contentWindow)return;\n  const roomCode=String(event.data.roomCode||'').trim().toUpperCase(),\n    token=String(event.data.gmToken||'');\n  if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(roomCode)||\n     !new RegExp('^[A-Za-z0-9._~+/=:-]{12,256}$').test(token))return;\n  const serial=++gmwwArenaAdoptSerial;\n  try{\n    const response=await fetch(GMWW_SERVER_BASE+'/api/gm/rooms/'+encodeURIComponent(roomCode),{\n      headers:{Authorization:'Bearer '+token},cache:'no-store'\n    });\n    if(!response.ok)throw Error('Core từ chối quyền GM');\n    const verified=await response.json();\n    if(verified?.ok!==true||String(verified.room?.code||verified.room?.roomCode||roomCode)!==roomCode)\n      throw Error('Core không xác nhận đúng phòng');\n    if(serial!==gmwwArenaAdoptSerial||!frame.isConnected||frame.closest('[hidden]')||\n       event.source!==frame.contentWindow)return;\n    const room=verified.room||{};\n    if(isLivePlayRoom()&&playSceneState.gmToken&&playSceneState.roomCode!==roomCode)\n      rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});\n    playSceneState.roomCode=roomCode;\n    playSceneState.gmToken=token;\n    playSceneState.roomMode=room.roomMode==='offline'?'offline':'online';\n    playSceneState.roomEnabled=room.enabled!==false;\n    playSceneState.seatCount=Math.max(6,Math.min(30,Number(room.seatCount)||12));\n    playSceneState.step='room';\n    playRoomUiState.selectedCode=roomCode;\n    playRoomUiState.stage='mode';\n    playRoomUiState.modeTouched=true;\n    playRoomUiState.editorMode='';\n    savePlayScene();\n    rememberPlayRoom(roomCode,token,room);\n    await playSyncRoom(true);\n    if(serial!==gmwwArenaAdoptSerial||!frame.isConnected||frame.closest('[hidden]'))return;\n    renderPlayScene();\n    window.dispatchEvent(new Event('gmww-arena3d-room-adopted'));\n  }catch(error){\n    if(serial!==gmwwArenaAdoptSerial||!frame.isConnected||frame.closest('[hidden]'))return;\n    frame.contentWindow.postMessage({kind:'gmww-arena3d-adopt-failed'},GMWW_ARENA_OFFICIAL_ORIGIN);\n  }\n});";
+  for(const path of ['server-game/current/app.js','server-game/src/20-members-and-roster.part']){
+    const row=map.get(path),value=row?.after;
+    if(row?.status!=='M'||typeof row.before!=='string'||typeof value!=='string')return false;
+    const start=value.indexOf('const GMWW_ARENA_OFFICIAL_ORIGIN=');
+    const end=value.indexOf('\nfunction playLiveMembers()',start);
+    if(start<0||end<0||value.indexOf('const GMWW_ARENA_OFFICIAL_ORIGIN=',start+1)>=0||
+      value.slice(start,end).trim()!==approvedBridge)return false;
+    const restored=value.slice(0,start).replace(/\n$/,'')+value.slice(end);
+    if(restored!==row.before)return false;
+  }
+  const entry=map.get('server-game/current/GMWW.html');
+  if(entry?.status!=='M'||typeof entry.before!=='string'||typeof entry.after!=='string')return false;
+  let expected=entry.before;
+  const labels=[
+    ['aria-label="Vào Làng và thử nghiệm Arena 3D STAGING"','aria-label="Vào Làng Arena 3D chính thức"'],
+    ['<small>THỬ NGHIỆM ARENA 3D</small>','<small>CHƠI ARENA 3D</small>']
+  ];
+  for(const [oldText,newText] of labels){
+    if(expected.split(oldText).length!==2)return false;
+    expected=expected.replace(oldText,()=>newText);
+  }
+  const marker='/* This Runtime-only experiment keeps the 2D menu/game untouched.';
+  const begin=expected.indexOf(marker),end=expected.indexOf('</script>',begin);
+  if(begin<0||end<0)return false;
+  const approvedPortalScript="/* Official Arena 3D uses the same Production origin and authoritative Core as 2D.\n * WebKit keeps the 3D world in its own disposable iframe, while native/GMWW host\n * credentials are only transmitted by origin-checked one-frame postMessage.\n * Never send a GM token in URL or across an untrusted origin. */\n(function(){\n  'use strict';\n  const arenaUrl='https://gmww-v2-00.williampham0702.workers.dev/village/arena-3d/live.html';\n  const button=document.getElementById('gmwwHomeEnterVillage');\n  if(!button)return;\n  let overlay=null,frame=null,lastFocus=null,originalOverflow='';\n  function closeArena(go2d){\n    if(!overlay||overlay.hidden)return;\n    overlay.hidden=true;\n    if(frame)frame.src='about:blank'; // unload 3D GPU scene/audio when leaving\n    document.body.style.overflow=originalOverflow;\n    if(go2d){\n      document.querySelector('#bottomNav .nav[data-page=\"start\"]')?.click();\n    }else{\n      lastFocus?.focus?.();\n    }\n  }\n  function create(){\n    overlay=document.createElement('section');\n    overlay.id='gmwwArena3dQaPortal';\n    overlay.hidden=true;\n    overlay.setAttribute('role','dialog');\n    overlay.setAttribute('aria-modal','true');\n    overlay.setAttribute('aria-label','GMWW Arena 3D · Phòng chơi thật');\n    const bar=document.createElement('div');bar.className='gmww-arena-qa-bar';\n    const title=document.createElement('strong');title.textContent='🌊 ARENA 3D';\n    const back=document.createElement('button');back.type='button';back.textContent='‹ Trang Chủ';\n    back.id='gmwwArena3dQaClose';back.addEventListener('click',()=>closeArena(false));\n    const to2d=document.createElement('button');to2d.type='button';to2d.textContent='Chơi 2D';\n    to2d.id='gmwwArena3dQa2d';to2d.addEventListener('click',()=>closeArena(true));\n    bar.append(back,title,to2d);\n    frame=document.createElement('iframe');frame.id='gmwwArena3dQaFrame';\n    frame.title='GMWW Arena 3D — kết nối phòng chơi thật';\n    frame.setAttribute('referrerpolicy','no-referrer');\n    frame.setAttribute('allow','fullscreen; autoplay');\n    overlay.append(bar,frame);\n    document.body.appendChild(overlay);\n  }\n  function openArena(){\n    if(!overlay)create();\n    lastFocus=document.activeElement;\n    originalOverflow=document.body.style.overflow;\n    document.body.style.overflow='hidden';\n    overlay.hidden=false;\n    frame.src=arenaUrl;\n    document.getElementById('gmwwArena3dQaClose')?.focus();\n  }\n  // GMWW keeps the one authoritative Role/Artifact editor until native 3D\n  // forms cover every Core rule. A verified Arena child can request the existing\n  // 2D setup screen; it cannot mutate role assignments through postMessage.\n  window.addEventListener('message',event=>{\n    if(event.origin!==new URL(arenaUrl).origin||\n       event.source!==frame?.contentWindow||!overlay||overlay.hidden||\n       event.data?.kind!=='gmww-arena3d-open-setup')return;\n    closeArena(true);\n  });\n  // Room created in Arena must be authenticated by official GMWW Core and\n  // adopted into playSceneState BEFORE returning to role/Artifact setup.\n  window.addEventListener('gmww-arena3d-room-adopted',()=>{\n    if(overlay&&!overlay.hidden)closeArena(true);\n  });\n  // Capture BEFORE app.js's target-level legacy \"Vào Làng => Trang Chơi\" handler.\n  document.addEventListener('click',function(event){\n    if(!event.target?.closest?.('#gmwwHomeEnterVillage'))return;\n    event.preventDefault();\n    event.stopPropagation();\n    event.stopImmediatePropagation();\n    openArena();\n  },true);\n  document.addEventListener('keydown',event=>{\n    if(event.key==='Escape'&&overlay&&!overlay.hidden)closeArena(false);\n  });\n})();\n";
+  expected=expected.slice(0,begin)+approvedPortalScript+expected.slice(end);
+  return entry.after===expected;
+}
+
 export function classifyBrowserScope(changes){
+  if(isArena3dOfficialPortalScope(changes))return 'arena3d-official';
  if(isGMPerformance3254Scope(changes))return 'gm-performance-thermal-3254';
   if(isGMTurnMotionScope(changes))return 'gm-turn-motion-lowheat';
   if(isRuntime248PostMergeScope(changes))return 'runtime-3248-postmerge';
