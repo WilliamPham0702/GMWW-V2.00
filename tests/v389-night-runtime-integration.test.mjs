@@ -15,6 +15,7 @@ import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
 import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
 import {oldWitchActionCheck} from '../src/gmww-old-witch-rules.js';
+import {isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -36,6 +37,7 @@ const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMetho
   ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,oldWitchActionCheck,
+  isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -81,9 +83,9 @@ test('WITCH-01 real Durable Object: wake Old Witch right after optional Wolf rec
     {loginId:'dave',roleId:'seer',roleName:'Tiên Tri'}
   ]);
   const rt=await h.runtime();
-  assert.deepEqual(Array.from(rt.queue.slice(0,3),x=>x.kind),['wolf-introduction','role','role']);
+  assert.deepEqual(Array.from(rt.queue.slice(0,3),x=>x.kind),['wolf-introduction','role','wolf-pack-bite']);
   assert.equal(rt.queue[1].roleId,'role_old_witch');
-  assert.equal(rt.queue[2].roleId,'seer');
+  assert.equal(rt.queue[3].roleId,'seer');
   const h2=harness({artifact:false});
   h2.data.set('assignments',[{loginId:'alice',roleId:'role_old_witch',roleName:'Phù Thuỷ Già'},{loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
   h2.data.set('gameConfig',{roles:[{roleId:'seer',order:1},{roleId:'role_old_witch',order:99}],timing:{defaultActionSec:30}});
@@ -113,11 +115,11 @@ test('WITCH-01 real Durable Object: reject invalid revive before writes and acce
 
 test('no Artifact produces no opening window; configured Artifacts preserve one owned opening window',async()=>{
   const h=harness({artifact:false}),rt=await h.runtime();
-  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['role','role','village-wakeup']);
+  assert.deepEqual(Array.from(rt.queue,x=>x.kind),['wolf-pack-bite','role','village-wakeup']);
   assert.equal(timelineDisplaySteps(rt.queue).filter(x=>x.kind==='early-artifact-window').length,0);
   const h2=harness(),r2=await h2.runtime();
-  assert.deepEqual(Array.from(r2.queue.slice(0,2),x=>x.kind),['early-artifact-window','role']);
-  assert.equal(r2.queue[1].loginIds.length,2);assert.equal(r2.queue[1].artifacts[0].loginId,'alice');
+  assert.deepEqual(Array.from(r2.queue.slice(0,2),x=>x.kind),['early-artifact-window','wolf-pack-bite']);
+  assert.equal(r2.queue[2].loginIds.length,2);assert.equal(r2.queue[2].artifacts[0].loginId,'alice');
   assert.equal(h2.data.has('artifactUse:alice:mirror'),false);
   assert.equal(timelineDisplaySteps(r2.queue).filter(x=>x.kind==='early-artifact-window').length,1);
 });
