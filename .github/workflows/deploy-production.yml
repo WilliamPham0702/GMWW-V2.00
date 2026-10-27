@@ -71,6 +71,8 @@ jobs:
           if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* || "$SCOPE" == "GMWW browser CI scope: fairy-ci-policy |"* ]]; then SHOULD_DEPLOY=false; fi
           # Worker-only Player receipt recovery uses its dedicated same-SHA gated workflow.
           if [[ "$SCOPE" == "GMWW browser CI scope: player-receipt-hotfix |"* ]]; then SHOULD_DEPLOY=false; fi
+          # PR550 test-only rule regression: exact verified five-file scope, no Worker/GM/IPA change.
+          if [[ "$SCOPE" == "GMWW browser CI scope: night02-rule-regression-550 |"* ]]; then SHOULD_DEPLOY=false; fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
