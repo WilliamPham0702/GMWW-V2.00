@@ -1837,6 +1837,10 @@ function isRules550Scope(changes){
 
 export function classifyBrowserScope(changes){
   if(isRules550Scope(changes))return 'night02-rule-regression-550';
+  // A partial/expanded PR550 change must never masquerade as a historic CI-only scope.
+  if(Array.isArray(changes)&&changes.some(c=>
+    c?.path==='tests/gmww-rule-snow-guard-pack-fairy.test.mjs'||
+    String(c?.after||'').includes('PR550 test-only rule regression')))return 'full';
   if(isFairy246PostMergeScope(changes))return 'fairy-246-postmerge';
   if(isFairy246Scope(changes))return 'fairy-triptych-3246';
   if(isNight02Scope(changes))return 'night02-pack-roles';
@@ -1937,6 +1941,9 @@ function detect(){
       if(isPostMatch532Scope(changes))return{mode:'post-match-room-532',reason:'PR532 approved post-match room reset and Demo isolation only'};
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
       if(isRules550Scope(changes))return{mode:'night02-rule-regression-550',reason:'PR550 exact five-file test-only merge; no Worker, gameplay, OTA or IPA'};
+      if(changes.some(c=>c?.path==='tests/gmww-rule-snow-guard-pack-fairy.test.mjs'||
+        String(c?.after||'').includes('PR550 test-only rule regression')))
+        return{mode:'full',reason:'PR550 changes are not the exact approved test-only release scope'};
       if(isNight02Scope(changes))return{mode:'night02-pack-roles',reason:'V3.245 NIGHT-02 scoped wolf pack, snow, guard, fairy Core + GM'};
       if(isWITCH01Scope(changes))return{mode:'witch01-old-witch',reason:'V3.240 WITCH-01 authoritative and GM-only tests'};
       if(isWOLF01Scope(changes))return{mode:'wolf01-private-pack',reason:'V3.239 WOLF-01 private recognition; focused Player Web and Worker'};
