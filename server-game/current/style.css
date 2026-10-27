@@ -8560,3 +8560,15 @@ body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > but
 #playGatherToolbar #playRoomModeToggle:disabled{opacity:.5}
 #start #playShell[data-step="battle"] #battleAssassinChoice>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
 #start #playShell[data-step="battle"] #battleAssassinChoice #battleTargetConfirm{display:block;width:100%;min-height:43px;margin:0;padding:5px;background:rgba(38,158,173,.85);border:1px solid rgba(180,244,246,.85);border-radius:11px;color:#fff;font-weight:900}
+
+/* V3.245: one approved composite illustration, three touch regions. */
+#battleFireIconDock .battle-fire-icon.is-fairy-triptych{width:min(276px,calc(100vw - 22px))!important;height:92px!important;min-width:0!important;min-height:92px!important;padding:0!important;border:0!important;outline:0!important;background:transparent!important;box-shadow:none!important;touch-action:none!important}
+#battleFireIconDock .battle-fire-icon.is-fairy-triptych img{width:100%!important;height:100%!important;max-width:none!important;object-fit:contain!important;pointer-events:none!important;filter:drop-shadow(0 3px 6px #001f2fbb)}
+#battleFireIconDock .battle-fire-icon.is-fairy-triptych[aria-pressed="true"]{background:transparent!important;outline:0!important}
+#start #playShell[data-step="battle"] .gmww-fairy-panel{position:relative;display:block!important;width:min(276px,calc(100vw - 28px));height:auto;border:0!important;padding:0!important;background:transparent!important;box-shadow:none!important}
+#start #playShell[data-step="battle"] .gmww-fairy-panel>img{display:block;width:100%;height:auto;pointer-events:none;filter:drop-shadow(0 3px 6px #001f2fbb)}
+#start #playShell[data-step="battle"] .gmww-fairy-panel .gmww-fairy-hotspot{position:absolute;top:0;bottom:0;width:33.333%;margin:0;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;touch-action:manipulation;cursor:pointer}
+#start #playShell[data-step="battle"] .gmww-fairy-hotspot:nth-of-type(1){left:0}
+#start #playShell[data-step="battle"] .gmww-fairy-hotspot:nth-of-type(2){left:33.333%}
+#start #playShell[data-step="battle"] .gmww-fairy-hotspot:nth-of-type(3){left:66.666%}
+#start #playShell[data-step="battle"] .gmww-fairy-hotspot:focus-visible{outline:2px solid #fbda7d!important;border-radius:12px!important}

@@ -137,11 +137,11 @@ test('Icon Action V2: drag may end anywhere, button stays floating, no Core acti
  assert.equal(dock.btn.style.left,'287px');
  assert.equal(dock.btn.style.top,'387px');
 });
-test('Yêu Tinh has one illustrated rotation action icon; Core still owns direction choices',()=>{
+test('Yêu Tinh has one approved single triptych icon and touch zones',()=>{
  const{ctx,dock,actions}=dockContext();
  actions[0].actionId='action_transfer_bite';
  ctx.globalThis.GMWWActionIconLibrary.resolve=id=>id==='action_transfer_bite'?{id:'dich-trai',assetId:'11_dich_trai.png'}:null;
  vm.runInContext("battleIconDock(battleActions(),'night')",ctx);
  assert.equal((dock.innerHTML.match(/data-fire-icon=/g)||[]).length,1);
- assert.doesNotMatch(dock.innerHTML,/🔄/);assert.match(dock.innerHTML,/50_yeu_tinh_xoay\.webp/);
+ assert.doesNotMatch(dock.innerHTML,/🔄/);assert.match(dock.innerHTML,/51_yeu_tinh_three_way\.webp/);
 });
