@@ -44,6 +44,12 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Chốt Native V3.257 — xác minh manifest và gói thủ công đúng phạm vi
+        if: steps.scope.outputs.mode == 'native-manual-release-verify'
+        run: |
+          node --check .github/scripts/verify-character40-production.mjs
+          node --test tests/native-v3257-release-verify.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
       - name: Cập nhật Runtime thủ công — kiểm tra đúng phạm vi
         if: steps.scope.outputs.mode == 'manual-runtime'
         run: |
