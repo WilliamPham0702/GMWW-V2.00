@@ -1,0 +1,73 @@
+name: Verify PR562 V3.253 Production OTA SHA-256 (GM only)
+on:
+  push:
+    branches:
+      - ci/verify-pr562-runtime-3253
+    paths:
+      - .github/workflows/verify-pr562-runtime-production.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Read exact merged Production commit
+        uses: actions/checkout@v4
+        with:
+          ref: 7481f4b3e634892b5e036cfa2266da8d4c7e4c97
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check live Runtime V3.253, 4 OTA SHA-256 files and unchanged IPA shell
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {readFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          const base='https://gmww-v2-00.williampham0702.workers.dev';
+          const hash=x=>createHash('sha256').update(x).digest('hex');
+          async function read(url){
+            let last;
+            for(let i=0;i<10;i++){
+              try{
+                const response=await fetch(url,{headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(15000)});
+                if(response.ok)return Buffer.from(await response.arrayBuffer());
+                last=new Error('HTTP '+response.status+' '+url);
+              }catch(e){last=e;}
+              await new Promise(r=>setTimeout(r,1500));
+            }
+            throw last;
+          }
+          const health=JSON.parse((await read(base+'/api/health?verify-pr562='+Date.now())).toString());
+          assert.equal(health.version,'V3.253');
+          assert.equal(health.runtimeVersion,'V3.253');
+          const manifest=JSON.parse((await read(base+'/api/update/manifest?current=3.252&verify-pr562='+Date.now())).toString());
+          assert.equal(manifest.releaseType,'runtime');
+          assert.equal(manifest.releaseVersion,'3.253');
+          assert.equal(manifest.runtimeVersion,'3.253');
+          assert.equal(manifest.shellVersion,'3.110');
+          assert.equal(manifest.restartRequired,true);
+          assert.ok((manifest.releaseNotes||[]).some(s=>/Bay\/Chạy/.test(s)));
+          assert.equal(manifest.ipa?.fileName?.includes('3.253.ipa'),false,'No new IPA should be published');
+          const targets=['GMWW.html','app.js','style.css','gmww-shared-motion.js'];
+          for(const path of targets){
+            const entry=manifest.runtime?.files?.find(f=>f.path===path);
+            assert.ok(entry,'Missing OTA file '+path);
+            assert.match(entry.sha256,/^[a-f\d]{64}$/i);
+            const local=readFileSync('server-game/current/'+path);
+            assert.equal(hash(local),entry.sha256,'Local source SHA '+path);
+            const asset=await read(entry.url);
+            assert.equal(hash(asset),entry.sha256,'Production CDN SHA '+path);
+            const line=path+' SHA-256 PASS '+entry.sha256;
+            console.log(line);
+            await import('node:fs/promises').then(fs=>fs.appendFile(process.env.GITHUB_STEP_SUMMARY||'/tmp/pr562-summary',line+'\n'));
+          }
+          const app=readFileSync('server-game/current/app.js','utf8');
+          assert.ok(app.includes('GMWW_GM_TURN_MOTION_V1'));
+          assert.ok(app.includes('is-gm-target-running'));
+          assert.ok(readFileSync('server-game/current/style.css','utf8').includes('is-gm-turn-floating'));
+          assert.ok(readFileSync('server-game/current/gmww-shared-motion.js','utf8').includes('_gmwwLowPower'));
+          console.log('PASS: Production V3.253 GM only, OTA SHA-256 x4, release notes and unchanged native shell; rollback base V3.252 commit 6e87e5821fda538451534d9d8f9cdd7da28f206d.');
+          NODE
