@@ -118,17 +118,23 @@ function playCycleActiveArtifact(){
   const pool=playFavoriteArtifacts(),rows=playSceneState.assignmentsPreview||[],idx=rows.findIndex(r=>String(r.loginId)===String(playSceneState.activePlayerId));if(idx<0||!pool.length){playFlashError('Hãy chọn Người Chơi trước.');return}
   const current=String(rows[idx].artifactId||''),p=Math.max(-1,pool.findIndex(a=>String(a.id)===current)),next=pool[(p+1)%pool.length];rows[idx]={...rows[idx],artifactId:next.id,artifactName:next.name};playSceneState.assignmentsPreview=rows;playSceneState.artifactId=next.id;savePlayScene();renderPlayScene();
 }
+function playFunctionRulePayload(fn){
+  const out={};
+  for(const key of ['phase','usageMode','usageCount','targetCount','noSelf','allowDead','noTarget','passive','fromNight','toNight','cooldownNights','allowConsecutive','targetPreviousCycleOnly','perUserLimit','activation','pushToPlayerWeb','systemRequired','usesPackBite','requiresNoOtherLivingWolf','actorMayBeDead','allowFriendlyFaction','replacesWolfBite','effectIds'])
+    if(fn[key]!==undefined)out[key]=fn[key];
+  return out;
+}
 function playRoleCardPayload(role){
   const actions=(role.functions||[]).map(fn=>{const act=(state.actions?.role||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:role.limits||null}});
   return{version:7,name:role.name||'Vai Trò',faction:playFactionLabel(role),information:role.information||'',objective:role.winCondition||'',actions,
     flags:{allowMultipleActions:role.flags?.allowMultipleActions===true,nightImmune:role.flags?.nightImmune===true},
-    functions:(role.functions||[]).map(fn=>({id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||''),
+    functions:(role.functions||[]).map(fn=>({...playFunctionRulePayload(fn),id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||''),
       usageMode:String(fn.usageMode||'eachNight'),usageCount:Math.max(1,Number(fn.usageCount)||1)})),
     limits:role.limits||null,artworkAssetId:'role:'+role.id,artworkId:'role:'+role.id};
 }
 function playArtifactCardPayload(artifact){
   const actions=(artifact?.functions||[]).map(fn=>{const act=(state.actions?.artifacts||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:artifact?.limits||null,...(fn.targetCount!==undefined?{targetCount:fn.targetCount}:{}),...(typeof fn.noSelf==='boolean'?{noSelf:fn.noSelf}:{}),...(typeof fn.allowDead==='boolean'?{allowDead:fn.allowDead}:{})}});
-  return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,limits:artifact?.limits||null,singleUse:artifact?.singleUse===true||artifact?.artifact?.singleUse===true,priorityFirst:artifact?.artifact?.priorityFirst===true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
+  return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,functions:(artifact?.functions||[]).map(fn=>({...playFunctionRulePayload(fn),id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||'')})),limits:artifact?.limits||null,singleUse:typeof (artifact?.singleUse??artifact?.artifact?.singleUse)==='boolean'?(artifact.singleUse??artifact.artifact.singleUse):!!(artifact?.functions?.length===1&&artifact.functions[0].usageMode==='onceGame'&&Number(artifact.functions[0].usageCount||1)===1),priorityFirst:artifact?.artifact?.priorityFirst===true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
 }
 
 async function playBlobDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=()=>reject(r.error||new Error('Không đọc được Artwork'));r.readAsDataURL(blob)})}

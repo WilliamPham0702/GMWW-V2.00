@@ -906,6 +906,82 @@ function applyApprovedRoleSettings(s){
       Object.assign(fn,contract);
     }
   };
+  // User ruling 28/10: Aura reads the Role name (V1.11), not function names.
+  update('role_aura_seer',{
+    information:'Trong 4 đêm đầu tiên, bạn có tổng cộng 2 lần sử dụng chức năng để đọc tên Vai Trò của một Người Chơi.',
+    limits:'Tối đa 2 lần trong 4 đêm đầu.',
+    conditions:'Kết quả là tên Vai Trò của người được soi, theo luật V1.11 đã chốt.'
+  },[['action_aura_read',{description:'Đọc tên Vai Trò của người được soi.'}]]);
+  // User rulings 28/10: these are authoritative descriptions, NOT an executor.
+  // Keep the original Artwork, function Action ID and usage ledger unchanged.
+  update('role_elder',{
+    information:'Già Làng có 2 mạng. Trong 4 đêm đầu, mỗi lần Rung Chuông vô hiệu mọi tác động gây chết của đêm đó và Già Làng mất 1 mạng. Nếu số mạng về 0, Già Làng chết.',
+    limits:'Rung Chuông tối đa 1 lần mỗi đêm trong 4 đêm đầu; mỗi lần mất 1 mạng (ban đầu có 2 mạng).',
+    conditions:'Rung Chuông ngăn toàn bộ tác động chết trong đêm kích hoạt. Khi Già Làng hết mạng, Già Làng chết.'
+  },[['18',{description:'Rung Chuông: chặn mọi tác động gây chết đêm này; trừ 1 mạng Già Làng và chết nếu còn 0 mạng.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:4,targetCount:0,noTarget:true}]]);
+  const artifactRulings={
+    artifact_07:{
+      information:'Hơi Thở Lão Già đánh dấu một người; người bị đánh dấu sẽ chết vào đêm hôm sau.',
+      limits:'1 lần trong cả ván.',
+      conditions:'Cái chết được lên lịch cho đêm kế tiếp, không xảy ra ngay trong đêm đánh dấu.',
+      action:'action-grudge-designate',
+      description:'Đánh dấu một người để chết vào đêm hôm sau.'
+    },
+    artifact_13:{
+      information:'Đồng Xu Tuổi Trẻ yêu cầu người giữ công bố Vai Trò thật mỗi ngày; nếu không công bố thì chết.',
+      conditions:'Hậu quả của việc không công bố Vai Trò thật là chết; thời điểm xử lý cần được gắn với vòng ngày/đêm.',
+      action:'artifact_action_reveal_role',
+      description:'Công bố Vai Trò thật mỗi ngày; nếu không công bố thì chết.'
+    },
+    artifact_15:{
+      information:'Kim Cương Phủ Nhận loại bỏ khỏi ván một Artifact loại dùng mãi mãi đã được sử dụng.',
+      limits:'1 lần trong cả ván.',
+      conditions:'Chỉ nhắm Artifact dùng mãi mãi đã sử dụng, không loại Artifact chưa dùng hoặc loại chỉ dùng một lần.',
+      action:'artifact_action_negate',
+      description:'Loại khỏi ván một Artifact dùng mãi mãi đã được sử dụng.'
+    },
+    artifact_19:{
+      information:'Bình Giấc Mơ khóa chức năng đặc biệt của một người trong 2 ngày đêm.',
+      limits:'1 lần trong cả ván; hiệu lực khóa kéo dài 2 ngày đêm.',
+      conditions:'Hết 2 ngày đêm, chức năng được mở lại; cần quản lý mốc bắt đầu/kết thúc khóa.',
+      action:'artifact_action_lock_function',
+      description:'Khóa chức năng đặc biệt của mục tiêu trong 2 ngày đêm.'
+    },
+    artifact_23:{
+      information:'Sao chép chức năng của một người, bổ sung thành chức năng số 2. Người nhận được cấp lại đầy đủ lượt sử dụng mới cho chức năng sao chép.'
+    },
+    artifact_30:{
+      information:'Trượng Luân Hồi được dùng khi chủ sở hữu chết để hồi sinh, tiếp tục sống với chính Vai Trò trước khi chết.',
+      limits:'1 lần trong cả ván.',
+      conditions:'Chỉ dùng khi chủ sở hữu chết; không bốc hay đổi sang Vai Trò mới.',
+      action:'action-maid-inherit',
+      description:'Khi bị chết, hồi sinh với đúng Vai Trò trước khi chết.'
+    },
+    artifact_32:{
+      information:'Lam Ngọc Định Mệnh sao chép Artifact của một người chơi khác; người sử dụng Lam Ngọc có thể cùng sử dụng Artifact được sao chép.',
+      limits:'1 lần trong cả ván.',
+      conditions:'Sao chép để cùng sử dụng, không cướp hoặc chuyển quyền sở hữu Artifact gốc.',
+      action:'artifact_action_link',
+      description:'Sao chép Artifact của một người khác để cùng sử dụng.'
+    },
+    artifact_40:{
+      information:'Hoán đổi vai trò của bản thân với một người chơi khác. Người nhận Vai Trò được cấp lại đầy đủ lượt sử dụng mới.'
+    },
+    artifact_42:{
+      information:'Hư Không Vô Tận là Artifact sáng tạo do GM trực tiếp giao luật và giải quyết thủ công khi chơi Offline.',
+      limits:'1 lần trong cả ván; GM tự điều phối Offline.',
+      conditions:'Không tự động suy diễn tác động. Chỉ GM trực tiếp giao và xử lý theo luật tùy chỉnh Offline.',
+      action:'artifact_action_custom',
+      description:'GM giao luật và xử lý thủ công khi chơi Offline.'
+    }
+  };
+  for(const a of Array.isArray(s.artifacts)?s.artifacts:[]){
+    const rule=artifactRulings[a?.id];if(!rule)continue;
+    for(const field of ['information','limits','conditions'])
+      if(Object.prototype.hasOwnProperty.call(rule,field))a[field]=rule[field];
+    if(rule.action && Array.isArray(a.functions))
+      for(const fn of a.functions)if(fn?.actionId===rule.action)fn.description=rule.description;
+  }
   update('role_old_witch',{
     information:'Mỗi đêm sau Bầy Sói nhận diện, Phù Thuỷ Già được chọn một trong hai: Đuổi hoặc Hồi Sinh. Đuổi người khiến các tác động lên họ không có hiệu lực. Hồi Sinh chỉ được dùng một lần cả ván, cho người chết ngày hoặc đêm liền trước và không được tự cứu.',
     limits:'Mỗi đêm chỉ thực hiện Đuổi hoặc Hồi Sinh, không cả hai. Hồi Sinh 1 lần trong ván.',
@@ -1235,8 +1311,8 @@ function functionHtml(fn,index){
     '<div class="function-grid">'+
       '<label class="full">Hành Động<select data-f="actionId">'+actionOptions(fn.actionId)+'</select></label>'+
       '<label class="full">Mô tả riêng trên Lá<textarea class="function-description" data-t="description">'+esc(fn.description||'')+'</textarea></label>'+
-      '<label>Phase<select data-f="phase">'+selectOptions([['night','Ban Đêm'],['day','Ban Ngày'],['setup','Đầu Ván / Setup'],['trigger','Theo sự kiện']],fn.phase||'night')+'</select></label>'+
-      '<label>Giới hạn sử dụng<select data-f="usageMode">'+selectOptions([['unlimited','Không giới hạn'],['eachNight','Mỗi đêm'],['eachDay','Mỗi ngày'],['onceGame','1 lần / ván'],['nGame','N lần / ván'],['nPerNight','N lần / đêm']],fn.usageMode||'unlimited')+'</select></label>'+
+      '<label>Phase<select data-f="phase">'+selectOptions([['night','Ban Đêm'],['day','Ban Ngày'],['any','Ngày và Đêm'],['both','Ngày và Đêm (cũ)'],['setup','Đầu Ván / Setup'],['trigger','Theo sự kiện']],fn.phase||'night')+'</select></label>'+
+      '<label>Giới hạn sử dụng<select data-f="usageMode">'+selectOptions([['unlimited','Không giới hạn'],['eachNight','Mỗi đêm'],['eachDay','Mỗi ngày'],['onceGame','1 lần / ván'],['nGame','N lần / ván'],['custom','N lần trong khoảng đêm'],['nPerNight','N lần / đêm']],fn.usageMode||'unlimited')+'</select></label>'+
       '<label>Số lần<select data-f="usageCount">'+numOptions(1,10,fn.usageCount||1)+'</select></label>'+
       '<label>Cooldown (đêm)<select data-f="cooldownNights">'+numOptions(0,10,fn.cooldownNights||0)+'</select></label>'+
       '<label>Số mục tiêu<select data-f="targetCount">'+numOptions(0,8,fn.targetCount??1)+'</select></label>'+
@@ -5416,7 +5492,7 @@ async function demoExecuteNight(action,actorId,t,signature,epoch){
       if(chosen.length!==count){demoObserve(action.name+' · Không đủ mục tiêu hợp lệ',actorId,[],'skipped');return}
       if(chosen.length===count){
         const seer=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three',
-          'action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer']
+          'action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check']
           .includes(action.actionId)&&!action.artifactId;
         const transfer=String(action.actionId)==='action_transfer_bite'&&!action.artifactId;
         const direction=transfer?demoPick(['left','right','none']):'';
@@ -5806,7 +5882,7 @@ const battleDayActions=()=>{
   const catalog=(kind)=>Array.isArray(state.actions)?state.actions:Array.isArray(state.actions?.[kind])?state.actions[kind]:[];
   const roleActions=[];
   const add=(fn,owner,card,isArtifact)=>{
-    if(!fn||fn.passive||!['day','any'].includes(String(fn.phase||''))||
+    if(!fn||fn.passive||!['day','any','both'].includes(String(fn.phase||''))||
       (fn.fromNight!=null&&night<Number(fn.fromNight))||
       (fn.toNight!=null&&night>Number(fn.toNight)))return;
     const actorId=String(owner.loginId||''),roleId=isArtifact?'':String(owner.roleId||''),
@@ -5825,8 +5901,8 @@ const battleDayActions=()=>{
     if(!isArtifact){
       if(card?.flags?.allowMultipleActions===false&&own.some(x=>Number(x.day)===night)){
         blocked=true;reason='Đã thực hiện một chức năng trong ngày.'}
-      if((['onceGame','nGame'].includes(mode)&&hits.length>=quota)||
-        (mode==='eachNight'&&hits.filter(x=>Number(x.day)===night).length>=quota)){
+      if((['onceGame','nGame','custom'].includes(mode)&&hits.length>=quota)||
+        (['eachNight','eachDay','nPerNight'].includes(mode)&&hits.filter(x=>Number(x.day)===night).length>=quota)){
         blocked=true;reason='Hết lượt dùng chức năng.'}
       if(actionId==='action_bear_scan'&&hits.some(x=>Number(x.day)===night)){
         blocked=true;reason='Thần Gấu chỉ soi một lần mỗi ngày.'}
@@ -5909,9 +5985,9 @@ const battleActions=()=>{
       if(fn){
         const mode=String(fn.usageMode||''),quota=Math.max(1,Number(fn.usageCount)||1);
         const hits=own.filter(row=>String(row.actionId)===String(action.actionId)&&
-          (['onceGame','nGame'].includes(mode)||Number(row.night)===night)).length;
-        if((['onceGame','nGame','eachNight'].includes(mode))&&hits>=quota){
-          unavailableReason=['onceGame','nGame'].includes(mode)?'Chức năng đã hết lượt trong ván.':'Chức năng đã hết lượt trong đêm.';
+          (['onceGame','nGame','custom'].includes(mode)||Number(row.night)===night)).length;
+        if((['onceGame','nGame','custom','eachNight','eachDay','nPerNight'].includes(mode))&&hits>=quota){
+          unavailableReason=['onceGame','nGame','custom'].includes(mode)?'Chức năng đã hết lượt trong ván.':'Chức năng đã hết lượt trong đêm.';
           return false
         }
       }else if(roleId==='role_old_witch'&&String(action.actionId)==='action_revive'&&
@@ -7181,7 +7257,7 @@ async function battleConfirm(confirmed=false){
   battleState.busy=true;if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());renderPlayBattle();
   const targets=[...battleState.targets],startedAt=globalThis.performance?.now?.()??Date.now();
   try{
-    const seerReveal=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer'].includes(a.actionId)&&!a.artifactId;
+    const seerReveal=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(a.actionId)&&!a.artifactId;
     const payload={targetIds:(seerReveal||transferAct)?[a.actorIds[0]||'']:targets,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',
       ...(a.artifactId?{artifactId:a.artifactId}:{}),...(seerReveal?{revealTargetIds:targets}:{}),effectId:a.effectIds[0]||'',effectName:a.name,
       matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',
@@ -8485,17 +8561,23 @@ function playCycleActiveArtifact(){
   const pool=playFavoriteArtifacts(),rows=playSceneState.assignmentsPreview||[],idx=rows.findIndex(r=>String(r.loginId)===String(playSceneState.activePlayerId));if(idx<0||!pool.length){playFlashError('Hãy chọn Người Chơi trước.');return}
   const current=String(rows[idx].artifactId||''),p=Math.max(-1,pool.findIndex(a=>String(a.id)===current)),next=pool[(p+1)%pool.length];rows[idx]={...rows[idx],artifactId:next.id,artifactName:next.name};playSceneState.assignmentsPreview=rows;playSceneState.artifactId=next.id;savePlayScene();renderPlayScene();
 }
+function playFunctionRulePayload(fn){
+  const out={};
+  for(const key of ['phase','usageMode','usageCount','targetCount','noSelf','allowDead','noTarget','passive','fromNight','toNight','cooldownNights','allowConsecutive','targetPreviousCycleOnly','perUserLimit','activation','pushToPlayerWeb','systemRequired','usesPackBite','requiresNoOtherLivingWolf','actorMayBeDead','allowFriendlyFaction','replacesWolfBite','effectIds'])
+    if(fn[key]!==undefined)out[key]=fn[key];
+  return out;
+}
 function playRoleCardPayload(role){
   const actions=(role.functions||[]).map(fn=>{const act=(state.actions?.role||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:role.limits||null}});
   return{version:7,name:role.name||'Vai Trò',faction:playFactionLabel(role),information:role.information||'',objective:role.winCondition||'',actions,
     flags:{allowMultipleActions:role.flags?.allowMultipleActions===true,nightImmune:role.flags?.nightImmune===true},
-    functions:(role.functions||[]).map(fn=>({id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||''),
+    functions:(role.functions||[]).map(fn=>({...playFunctionRulePayload(fn),id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||''),
       usageMode:String(fn.usageMode||'eachNight'),usageCount:Math.max(1,Number(fn.usageCount)||1)})),
     limits:role.limits||null,artworkAssetId:'role:'+role.id,artworkId:'role:'+role.id};
 }
 function playArtifactCardPayload(artifact){
   const actions=(artifact?.functions||[]).map(fn=>{const act=(state.actions?.artifacts||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:artifact?.limits||null,...(fn.targetCount!==undefined?{targetCount:fn.targetCount}:{}),...(typeof fn.noSelf==='boolean'?{noSelf:fn.noSelf}:{}),...(typeof fn.allowDead==='boolean'?{allowDead:fn.allowDead}:{})}});
-  return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,limits:artifact?.limits||null,singleUse:artifact?.singleUse===true||artifact?.artifact?.singleUse===true,priorityFirst:artifact?.artifact?.priorityFirst===true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
+  return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,functions:(artifact?.functions||[]).map(fn=>({...playFunctionRulePayload(fn),id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||'')})),limits:artifact?.limits||null,singleUse:typeof (artifact?.singleUse??artifact?.artifact?.singleUse)==='boolean'?(artifact.singleUse??artifact.artifact.singleUse):!!(artifact?.functions?.length===1&&artifact.functions[0].usageMode==='onceGame'&&Number(artifact.functions[0].usageCount||1)===1),priorityFirst:artifact?.artifact?.priorityFirst===true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
 }
 
 async function playBlobDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=()=>reject(r.error||new Error('Không đọc được Artwork'));r.readAsDataURL(blob)})}
