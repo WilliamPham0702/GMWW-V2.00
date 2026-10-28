@@ -1,5 +1,6 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
+import {resolveLinkedDeaths} from "./gmww-linked-death-rules.js";
 import {resolveElderBell} from "./gmww-elder-bell-rules.js";
 import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversionsDue,apprenticeSeersDue,bigfootWolfDue,factionRoleTransitionsDue,activePackAtNight} from "./gmww-card-night-passives.js";
 import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
@@ -885,9 +886,19 @@ export class RoomDurableObject extends DurableObject {
       this.broadcast({type:"player_status_changed",loginId:death.loginId,
         statusId:"dead",active:true,serverTime:Date.now()});
     }
-    // A linked death can itself meet a resurrection trigger.
-    if(linked.length)await this.applyAutomaticArtifactRevive(meta,rows,now);
-    return linked;
+    // Cupid, Sect and Cult relationships form a finite death graph;
+    // process it after other fatal effects and before persisting/broadcast.
+    const chain=resolveLinkedDeaths({assignments,interactions:rows,
+      matchId:String(meta.matchId||""),night:Number(meta.cycleNight||1)});
+    for(const consequence of chain){
+      if(rows.some(x=>x.id===consequence.id))continue;
+      const hit={...consequence,cycleKey:String(meta.cycleKey||""),createdAt:now};
+      rows.push(hit);await this.ctx.storage.put(this.actionLogKey(hit),hit);
+      this.broadcast({type:"player_status_changed",loginId:hit.loginId,
+        statusId:"dead",active:true,serverTime:Date.now()});
+    }
+    if(linked.length||chain.length)await this.applyAutomaticArtifactRevive(meta,rows,now);
+    return [...linked,...chain];
   }
   async villageHistoryForMatch(meta,latest=[]){
     const matchId=String(meta.matchId||"");
@@ -2948,6 +2959,9 @@ export class RoomDurableObject extends DurableObject {
         roleId==="role_hunter"&&actionId==="action_hunt"?"effect_notice":
         roleId==="role_crow"&&actionId==="action-g7-crow-votes"?"effect_notice":
         roleId==="role_elder"&&actionId==="18"?"effect_notice":
+        roleId==="role_cupid"&&actionId==="action-cupid-pair"?"effect_notice":
+        roleId==="role_sect_leader"&&actionId==="25"?"effect_notice":
+        roleId==="role_cult"&&actionId==="action-cult-add"?"effect_notice":
         roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":
         ['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?"effect_notice":
         roleId==='role_destroyer'&&actionId==='action_destroyer_kill'?'dead':"";
