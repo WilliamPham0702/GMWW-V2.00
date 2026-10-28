@@ -61,6 +61,11 @@ jobs:
           if [ "${{ needs.scope.outputs.mode }}" = "manual-runtime" ]; then
             node --test tests/manual-runtime-package.test.mjs
             node .github/scripts/assemble-gm-app.mjs --verify
+          elif [ "${{ needs.scope.outputs.mode }}" = "ipa-ota-lean-3264" ]; then
+            node --test tests/ipa-ota-lean-assets-v3264.test.mjs tests/action-icon-library.test.mjs tests/manual-runtime-package.test.mjs tests/native-ipa-startup.test.mjs tests/fast-g2-generic-delta.test.mjs
+            node .github/scripts/assemble-gm-app.mjs --verify
+            node --check src/index.js
+            node --check .github/scripts/prepare-update-channel.mjs
           else
             npm test
           fi
@@ -129,7 +134,9 @@ jobs:
           cp server-game/current/artifact-sea-import.js "$APPDIR/Web/artifact-sea-import.js"
           cp server-game/current/gmww-performance.js "$APPDIR/Web/gmww-performance.js"
           cp server-game/current/action-icon-library.js "$APPDIR/Web/action-icon-library.js"
-          cp -R server-game/current/action-icons "$APPDIR/Web/action-icons"
+          # Native IPA includes only 51 active V3 WebP action icons.
+          mkdir -p "$APPDIR/Web/action-icons"
+          cp -R server-game/current/action-icons/v3 "$APPDIR/Web/action-icons/v3"
           cp server-game/current/gmww-shared-motion.js "$APPDIR/Web/gmww-shared-motion.js"
           mkdir -p "$APPDIR/Web/characters/gmww40"
           cp -R assets/characters/gmww40/. "$APPDIR/Web/characters/gmww40/"
