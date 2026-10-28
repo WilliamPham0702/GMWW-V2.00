@@ -39,3 +39,24 @@ test('V3.273 Online Chat resume does not break the served login JavaScript',()=>
   assert.ok(served.includes('await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)])'),'room resume refreshes public roster');
   assert.ok(served.includes('renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();'),'Online timeline and action UI survive the fix');
 });
+
+test('V3.273 top menu remains callable after login and during reconnect',()=>{
+  const begin=gmwwMembersLiveScript.indexOf('function updatePlayerTopMenu(){');
+  const end=gmwwMembersLiveScript.indexOf('\n}\n',begin);
+  assert.ok(begin>=0&&end>begin,'top menu function is present');
+  const expression=gmwwMembersLiveScript.slice(begin,end+2);
+  const state={room:{phase:'running'},roomCode:'ABCD',member:{},participantId:null,audioCue:{label:'Sói gọi dậy'}};
+  const turn={textContent:''},info={textContent:''},hint={textContent:''};
+  const menu={querySelector(selector){
+    if(selector==='.gmww-player-menu-info b')return info;
+    if(selector==='.gmww-player-menu-info small')return hint;
+    if(selector==='.gmww-player-menu-turn')return turn;
+    return null;
+  },hidden:false};
+  const view=new Function('state','$','playerTopMenuStatus','currentRoomPlayer','playerScenePolicy','gameCharacterImageUrl','ensureCharacterPreviewTicker',expression+'; return updatePlayerTopMenu;')(
+    state,()=>menu,()=> 'ĐÊM 1',()=>null,r=>({mode:r?.phase==='running'?'battle':'lobby'}),()=>'',()=>{}
+  );
+  assert.doesNotThrow(()=>view(),'top menu must not reference an undefined room variable');
+  assert.equal(turn.textContent,'Sói gọi dậy');
+  assert.equal(menu.hidden,false);
+});
