@@ -1,5 +1,13 @@
 name: Check GM Chat Flamingo and 3 Persistent Actions
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'server-game/current/app.js'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/45-online-chat.part'
+      - 'src/index.js'
+      - 'package.json'
   pull_request:
     branches: [main]
     paths:
