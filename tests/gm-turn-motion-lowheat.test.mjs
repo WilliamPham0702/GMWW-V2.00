@@ -54,7 +54,8 @@ test('GPU two-trip animation, clock expiry and switch restore seats; no levitati
  assert.doesNotMatch(code,/requestAnimationFrame\(|setInterval\(/);
  assert.match(app,/gmwwWalkExpired=expired;battleMarkPlayers\(\)/);
  assert.match(app,/gmwwFireWalkSync\(ring,actors,motionOn&&!battleState\.gmwwWalkExpired\)/);
- assert.match(app,/if\(!active\|\|!member/);
+ assert.match(app,/if\(!member\|\|\['dead','frozen','expelled'\]\.includes\(playPlayerEffect\(id\)\)\)\{gmwwFireWalkCancel/);
+ assert.match(app,/gmwwFireWalkTravel\(el,member,'back'/); // timer expiry initiates run-home, never snaps
  assert.doesNotMatch(app,/is-gm-turn-floating/);
  assert.doesNotMatch(css,/is-gm-turn-floating|translate3d\(0,-100%,0\)/);
  assert.match(css,/is-gm-walking-fire/);
