@@ -13,6 +13,9 @@ on:
       - 'server-game/current/app.js'
       - 'tests/v389-night-runtime-integration.test.mjs'
       - 'tests/drunk-draw-spiritualist-expelled-20261027.test.mjs'
+      - 'tests/drunk-card-overlay-match-cleanup-20261028.test.mjs'
+      - 'assets/role-card-back.webp'
+      - 'src/player-web-src/50-privacy-and-runtime.part'
       - 'tests/witch-drunk-clone-20261027.test.mjs'
       - '.github/workflows/check-drunk-spiritualist.yml'
   workflow_dispatch:
@@ -31,7 +34,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Test exact card selection, DO inheritance, faction comparison and private Player delivery
         run: |
-          node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs
+          node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/member-ranking-games-first-v3221.test.mjs
           node --check src/index.js
           node --check src/gmww-drunk-draw-rules.js
           node --check src/gmww-role-inheritance-rules.js
