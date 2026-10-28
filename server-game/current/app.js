@@ -6547,9 +6547,9 @@ function gmwwFireWalkSync(ring,actors,active){
     const id=String(el.dataset.playPlayerId||''),member=battleMember(id),phase=el.dataset.gmwwFireWalk||'';
     const permitted=active&&actors.has(id)&&member&&!['dead','frozen','expelled'].includes(playPlayerEffect(id));
     if(!permitted){
-      if(phase==='back'&&(!active||!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))))gmwwFireWalkCancel(el,member);
+      if(phase==='back'&&(!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))))gmwwFireWalkCancel(el,member);
       if(phase==='out'||phase==='hold'){
-        if(!active||!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))){gmwwFireWalkCancel(el,member);continue}
+        if(!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))){gmwwFireWalkCancel(el,member);continue}
         const dx=Number(el.dataset.gmwwFireDx)||0,dy=Number(el.dataset.gmwwFireDy)||0;
         gmwwFireWalkTravel(el,member,'back',-dx,-dy,Math.max(350,Math.min(1700,Math.hypot(dx,dy)/.22)));
       }
