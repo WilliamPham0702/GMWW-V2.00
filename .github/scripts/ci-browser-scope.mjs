@@ -2345,7 +2345,38 @@ function isDemoAudioSync3270Scope(changes){
       fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8').includes('gallowsStageAudioKey');
   }catch{return false}
 }
+// PR #594: fail-closed V3.271 live DEMO admission and Player Web sync only.
+const demoPlayerLive3271Paths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-demo-player-live-v3271.yml',
+  'docs/releases/GMWW-DEMO-PLAYER-V3.271-20261028.md',
+  'package.json','package-lock.json',
+  'src/index.js','src/gmww-members-live.js',
+  'src/player-web-src/20-village-and-profile.part',
+  'src/player-web-src/30-rooms-and-realtime.part',
+  'server-game/current/GMWW.html','server-game/current/app.js',
+  'server-game/src/00-core-and-library.part',
+  'tests/demo-player-live-join-v3271.test.mjs'
+]);
+function isDemoPlayerLive3271Scope(changes){
+  if(!Array.isArray(changes)||changes.length<12||
+    changes.some(c=>!demoPlayerLive3271Paths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const changed=new Set(changes.map(c=>c.path));
+  const required=['src/index.js','src/gmww-members-live.js',
+    'src/player-web-src/20-village-and-profile.part',
+    'src/player-web-src/30-rooms-and-realtime.part',
+    'tests/demo-player-live-join-v3271.test.mjs',
+    'docs/releases/GMWW-DEMO-PLAYER-V3.271-20261028.md'];
+  if(!required.every(p=>changed.has(p)))return false;
+  try{
+    return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.271.0'&&
+      fs.readFileSync('src/index.js','utf8').includes('UPDATE_CHANNEL_REV="runtime-3271-demo-player-live-join"');
+  }catch{return false}
+}
 function classifyBrowserScope(changes){
+  if(isDemoPlayerLive3271Scope(changes))return 'demo-player-live-3271';
   if(isDemoAudioSync3270Scope(changes))return 'demo-audio-sync-3270';
   if(isHybridDemo587Scope(changes))return 'demo-hybrid-587';
   if(isMorningAudio3267Scope(changes))return 'gm-audio-morning-3267';
@@ -2585,6 +2616,20 @@ function isTemplateDock3268Scope(changes){
 }
 
 function detect(){
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+          .split('\n').filter(Boolean).map(line=>{
+            const [status,path]=line.split('\t');return{status,path};
+          });
+        if(isDemoPlayerLive3271Scope(changes))
+          return{mode:'demo-player-live-3271',reason:'PR594 V3.271 authenticated DEMO joining, Player Web sync, Worker and OTA only'};
+      }
+    }catch{}
+  }
+
   // PR #593: use the same fail-closed focused check on PR and merged main.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
