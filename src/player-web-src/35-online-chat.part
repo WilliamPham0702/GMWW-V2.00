@@ -189,6 +189,7 @@ function renderOnlineActionDock(){
  if(!document.getElementById('gmwwOnlineDockStyle')){
    const css=document.createElement('style');css.id='gmwwOnlineDockStyle';
    css.textContent='#gmwwOnlineDock{position:fixed;z-index:236;left:50%;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 70px);transform:translateX(-50%);display:flex;gap:6px;max-width:94vw;overflow-x:auto;scrollbar-width:none}'+
+     '#gmwwOnlineDock.is-idle-hidden{opacity:0;pointer-events:none}'+
      '#gmwwOnlineDock button{flex:0 0 auto;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none}'+
      '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
      '#game:not(.active)~#gmwwOnlineDock{display:none!important}'+
@@ -198,7 +199,7 @@ function renderOnlineActionDock(){
      '#gmwwOnlinePick button{min-height:36px;background:#16506c;color:white;border:1px solid #7196a9;border-radius:9px;font-weight:700}';
    document.head.appendChild(css)
  }
- if(!dock){dock=document.createElement('div');dock.id='gmwwOnlineDock';document.body.appendChild(dock)}
+ if(!dock){dock=document.createElement('div');dock.id='gmwwOnlineDock';document.body.appendChild(dock);if(document.getElementById('gmwwPlayerTopMenu')?.classList.contains('is-idle-hidden'))dock.classList.add('is-idle-hidden')}
  const scale=[25,50,75,100,125,150].includes(Number(state.room?.actionIconScale))?Number(state.room.actionIconScale):100;
  dock.style.setProperty('--online-action-scale',String(scale/100));
  const sig=[state.roomCode,state.room?.matchId,state.room?.cycleKey,...offers.map(a=>a.key+':'+a.iconUrl)].join('|');
