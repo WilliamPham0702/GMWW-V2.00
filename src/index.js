@@ -1,4 +1,4 @@
-import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions} from "./gmww-demo-runner.js";
+import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
 import {chatPolicy,chatNormalizeText} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
@@ -87,7 +87,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST")||(path==="/global-settings/village-scene/reset"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/player/action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
       const response=await this.handleFetch(request),meta=await this.ctx.storage.get("meta");
       if(meta?.demo&&response.ok){
         if(path==="/gm/gallows")await this.ctx.storage.delete("demoPlan");
@@ -228,6 +228,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/player/interaction/respond"&&request.method==="POST")return this.playerInteractionRespond(await safeJson(request));
     if(url.pathname==="/player/gallows"&&request.method==="POST")return this.playerGallows(await safeJson(request));
     if(url.pathname==="/player/demo-action"&&request.method==="POST")return this.playerDemoAction(await safeJson(request));
+    if(url.pathname==="/player/action"&&request.method==="POST")return this.playerDemoAction(await safeJson(request),true);
     if(url.pathname==="/player/setup"&&request.method==="POST")return this.playerSetup(await safeJson(request));
     if(url.pathname==="/player/move"&&request.method==="POST")return this.playerMove(await safeJson(request));
     if(url.pathname==="/player/move-complete"&&request.method==="POST")return this.playerMoveComplete(await safeJson(request));
@@ -1023,23 +1024,24 @@ export class RoomDurableObject extends DurableObject {
   }
   // Member session is verified at the public route; loginId cannot be forged by Player Web.
   // The SAME GM action handlers enforce target legality, role limits, use ledger and receipts.
-  async playerDemoAction(body){
+  async playerDemoAction(body,online=false){
     const meta=await this.ctx.storage.get("meta"),loginId=normalizeLoginId(body?.loginId);
-    if(meta?.demo!==true||meta?.phase!=="running")return j({ok:false,error:"DEMO_ACTION_NOT_RUNNING"},409);
+    if(online?(meta?.demo===true||meta?.phase!=="running"||String(meta?.roomMode||"").toLowerCase()!=="online"):(meta?.demo!==true||meta?.phase!=="running"))
+      return j({ok:false,error:online?"ONLINE_ACTION_NOT_RUNNING":"DEMO_ACTION_NOT_RUNNING"},409);
     const players=await this.ctx.storage.get("players")||{};
-    if(!loginId||players["member:"+loginId]?.humanControlled!==true)
-      return j({ok:false,error:"DEMO_PLAYER_NOT_JOINED"},403);
+    if(!loginId||!players["member:"+loginId]||(!online&&players["member:"+loginId]?.humanControlled!==true))
+      return j({ok:false,error:online?"ONLINE_PLAYER_NOT_JOINED":"DEMO_PLAYER_NOT_JOINED"},403);
     if(String(body?.matchId||"")!==String(meta.matchId||"")||
       String(body?.cycleKey||"")!==String(meta.cycleKey||""))
       return j({ok:false,error:"DEMO_ACTION_STALE"},409);
-    const actions=await demoPlayerActions(this,meta,loginId),
+    const actions=online?await playerOfferedActions(this,meta,loginId):await demoPlayerActions(this,meta,loginId),
       action=actions.find(a=>a.key===String(body?.actionKey||""));
     if(!action)return j({ok:false,error:"DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN"},409);
     const targets=Array.isArray(body?.targetIds)?body.targetIds.map(normalizeLoginId):[];
     if(targets.length!==action.targetCount||new Set(targets).size!==targets.length||
       targets.some(id=>!id||!players["member:"+id]||(action.noSelf&&id===loginId)))
       return j({ok:false,error:"DEMO_TARGET_INVALID"},400);
-    const request=this.demoInternalRequest(),token="human-demo-"+crypto.randomUUID();
+    const request=this.demoInternalRequest(),token=(online?"human-online-":"human-demo-")+crypto.randomUUID();
     let response;
     if(meta.cyclePhase==="morning"){
       response=await this.gmDayAction(request,{matchId:meta.matchId,cycleKey:meta.cycleKey,
@@ -1060,7 +1062,7 @@ export class RoomDurableObject extends DurableObject {
         actionId:action.actionId,type:action.type,effectId:"",effectName:action.name,
         targetIds:seer||transfer||action.noTarget?[loginId]:targets,
         ...(seer?{revealTargetIds:targets}:{}),...(transfer?{direction}:{}),
-        ...(assassin?{assassinChoice:choice}:{}),clientEventId:token,source:"demo-human"});
+        ...(assassin?{assassinChoice:choice}:{}),clientEventId:token,source:online?"online-human":"demo-human"});
     }else return j({ok:false,error:"DEMO_PHASE_INVALID"},409);
     if(!response.ok)return response;
     const result=await response.json();
@@ -3011,7 +3013,8 @@ export class RoomDurableObject extends DurableObject {
       turn?.roleId==='role_drunk'&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId))?
       drunkDeckView(drawn,false):null;
     const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,drunkDraw,demoActions,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,drunkDraw,demoActions,onlineActions,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
@@ -3602,6 +3605,7 @@ export default {async fetch(request,env){
   const playerInteraction=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/interaction\/respond$/);if(playerInteraction&&request.method==="POST")return playerInteractionRespondApi(env,playerInteraction[1],request);
   const playerGallowsRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(playerGallowsRoute&&request.method==="POST")return playerGallowsApi(env,playerGallowsRoute[1],request);
   const playerDemoRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/demo-action$/);if(playerDemoRoute&&request.method==="POST")return playerDemoActionApi(env,playerDemoRoute[1],request);
+  const playerOnlineRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/action$/);if(playerOnlineRoute&&request.method==="POST")return playerOnlineActionApi(env,playerOnlineRoute[1],request);
   const playerSetup=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/setup$/);if(playerSetup&&request.method==="POST")return playerRoomSetupApi(env,playerSetup[1],request);
   const playerMove=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/move$/);if(playerMove&&request.method==="POST")return playerRoomMoveApi(env,playerMove[1],request);
   const playerMoveComplete=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/move\/complete$/);if(playerMoveComplete&&request.method==="POST")return playerRoomMoveCompleteApi(env,playerMoveComplete[1],request);
@@ -3736,6 +3740,15 @@ async function playerDemoActionApi(env,raw,request){
   if(!session.ok)return session;
   const data=await session.json(),body=await safeJson(request)||{};
   return roomStub(env,code).fetch("https://room.internal/player/demo-action",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({...body,loginId:data.member.loginId})});
+}
+async function playerOnlineActionApi(env,raw,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch("https://room.internal/player/action",{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({...body,loginId:data.member.loginId})});
 }
