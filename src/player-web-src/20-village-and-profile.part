@@ -165,12 +165,22 @@ async function followGmRoomCall(){
     const me=await api('/api/members/me',{headers:auth()});
     if(state.roomCode||state.participantId)return false;
     const code=String(me?.member?.currentRoomCode||'').trim().toUpperCase();
-    if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code))return false;
+    if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code)){
+      // Single active DEMO may be joined while the GM is already running it.
+      // Only an authenticated member is admitted; no private role is granted.
+      const list=await api('/api/rooms');
+      const demos=(list?.rooms||[]).filter(r=>r?.demo===true&&r?.enabled!==false&&String(r?.phase||'').toLowerCase()==='running');
+      if(demos.length!==1)return false;
+      return await joinRoom(demos[0].code);
+    }
     const roster=await api('/api/rooms/'+encodeURIComponent(code));
     if(!roster?.room||roster.room.enabled===false||!Array.isArray(roster.players))return false;
     const loginId=String(state.member.loginId||'').trim().toLowerCase();
     const called=roster.players.some(p=>String(p?.loginId||'').trim().toLowerCase()===loginId&&p?.reservedByGM===true);
-    if(!called||state.roomCode||state.participantId)return false;
+    if(!called||state.roomCode||state.participantId){
+      if(roster.room.demo===true&&roster.room.phase==='running'&&!state.roomCode&&!state.participantId)return await joinRoom(code);
+      return false;
+    }
     return await joinRoom(code);
   }catch{return false}
   finally{gmRoomCallWatchBusy=false}
