@@ -2244,6 +2244,7 @@ const onlineChatPaths=new Set([
   '.github/scripts/assemble-player-web.mjs','.github/scripts/assemble-gm-app.mjs',
   '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
   'tests/online-chat-authority.test.mjs',
+  'tests/audio-role-day-flow-20261027.test.mjs',
   'docs/releases/GMWW-ONLINE-CHAT-20261028.md'
 ]);
 function isOnlineChatScope(changes){
