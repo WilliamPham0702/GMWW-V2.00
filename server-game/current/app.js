@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.261';
+const VERSION='3.262';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -6455,16 +6455,20 @@ function battlePickTargetWithAudio(id,actionId){
 }
 // GM-only procession around the campfire. Single GPU transform per trip; no new frame loop.
 function gmwwFireWalkDestination(x,y,cx,cy,width,height,used=[]){
-  const rx=Math.min(110,Math.max(80,width*.26)),ry=Math.min(103,Math.max(79,height*.18));
+  // One SCREEN-SPACE radius for all directions; the old rx/ry ellipse and
+  // per-point clamping left the upper actors visibly farther from the fire.
+  // Fit the whole circle inside the court instead of clamping single points.
+  const edge=Math.min(cx-37,width-cx-37,cy-56,height-cy-56);
+  const radius=Math.min(88,Math.max(80,width*.23),Math.max(80,height*.13),edge);
+  if(!Number.isFinite(radius)||radius<74)return null; // never place inside flames
   let best=Infinity,chosen=null;
   const sourceAngle=Math.atan2(y-cy,x-cx);
-  for(let i=0;i<16;i++){
-    const angle=2*Math.PI*i/16;
-    const px=Math.min(width-37,Math.max(37,cx+Math.cos(angle)*rx));
-    const py=Math.min(height-56,Math.max(56,cy+Math.sin(angle)*ry));
+  for(let i=0;i<24;i++){
+    const angle=2*Math.PI*i/24;
+    const px=cx+Math.cos(angle)*radius,py=cy+Math.sin(angle)*radius;
     const closest=used.reduce((v,p)=>Math.min(v,Math.hypot(px-p.x,py-p.y)),Infinity);
     const delta=Math.atan2(Math.sin(angle-sourceAngle),Math.cos(angle-sourceAngle));
-    const score=Math.abs(delta)*42+Math.hypot(px-x,py-y)*.04+(closest<43?1000:0);
+    const score=Math.abs(delta)*42+Math.hypot(px-x,py-y)*.04+(closest<40?1000:0);
     if(score<best){best=score;chosen={x:px,y:py}}
   }
   return chosen;
