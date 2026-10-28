@@ -22,6 +22,8 @@ export function renderQualityBudget({characters=6,fps=60,lowPower=false,reducedM
  const tier=lowPower||f<20?'eco':f<35||n>20?'balanced':'quality';
  return Object.freeze({tier,particles:tier==='eco'?4:tier==='balanced'?8:16,
   animationHz:reducedMotion?12:tier==='eco'?24:tier==='balanced'?30:60,
-  pixelRatioCap:tier==='eco'?1:tier==='balanced'?1.25:1.75,
+  // Crowd framebuffer cap applies even in Smooth mode, without hiding status/VFX.
+  pixelRatioCap:Math.min(tier==='eco'?1:tier==='balanced'?1.25:1.75,
+    n>=24?.85:n>=20?1:Infinity),
   maxCharacters:n});
 }
