@@ -2085,7 +2085,32 @@ function isGMWWAudio3258Scope(changes){
  }catch{return false}
 }
 
+// V3.260: fail-closed, exact GM fire-walk iPhone hotfix scope.
+const fireWalk3260Required=new Set([
+ 'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+ 'server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
+ 'server-game/current/style.css','server-game/current/GMWW.html',
+ 'src/index.js','package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+ 'tests/gm-fire-walk-position.test.mjs','docs/releases/GMWW-V3.260-gm-walk-position-hotfix-20261028.md'
+]);
+const fireWalk3260Allowed=new Set([...fireWalk3260Required,
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+ '.github/workflows/deploy-gm-turn-motion-staging.yml','.github/workflows/deploy-production.yml']);
+function isGMFireWalk3260Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==fireWalk3260Allowed.size)return false;
+ const names=new Set(changes.map(c=>c.path));
+ if(![...fireWalk3260Allowed].every(p=>names.has(p)))return false;
+ if(!changes.every(c=>fireWalk3260Allowed.has(c.path)&&['A','M'].includes(c.status)))return false;
+ const get=p=>changes.find(c=>c.path===p)?.after||'';
+ return get('server-game/current/app.js').includes("const VERSION='3.260'")&&
+  get('server-game/current/app.js').includes('GMWW_GM_FIRE_WALK_V2')&&
+  get('server-game/current/app.js').includes('token.animate([{translate:from},{translate:target}]')&&
+  get('src/index.js').includes('VERSION="V3.260"')&&
+  get('package.json').includes('"version": "3.260.0"');
+}
+
 export function classifyBrowserScope(changes){
+  if(isGMFireWalk3260Scope(changes))return 'gm-fire-walk-3260';
   if(isGMVote3259PostverifyScope(changes))return 'gm-vote-postverify-3259';
   if(isGMVote3259Scope(changes))return 'gm-vote-3259';
   if(isGMWWAudio3258Scope(changes))return 'gm-audio-3258';
@@ -2336,6 +2361,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isGMFireWalk3260Scope(changes))return{mode:'gm-fire-walk-3260',reason:'V3.260 GM-only fire walk real CSS position, exact release files'};
       if(isGMTurnMotionScope(changes))return{mode:'gm-turn-motion-lowheat',reason:'V3.253 exact GM motion and OTA changes only'};
       if(isRuntime248PostMergeScope(changes))return{mode:'runtime-3248-postmerge',reason:'Exact 4-file CI release fix for already tested Runtime V3.248'};
       if(isIcon247PostMergeScope(changes))return{mode:'icon-scale-3247-postmerge',reason:'Audited 2-file V3.247 CI release scope order fix'};
