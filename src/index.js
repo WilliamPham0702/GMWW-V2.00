@@ -12,7 +12,7 @@ import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalize
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
-import { resolveWolfNight, readNightAssignments, isNightImmune, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
+import { resolveWolfNight, readNightAssignments, isNightImmune, resolveNightReveal, canSnowWolfBite, resolveMaidenNight, resolveStrongmanWolfBite } from "./gmww-wolf-night-resolution.js";
 import { wolfPackMembers, shouldWakeWolfPack, privateWolfRecognition } from "./gmww-wolf-recognition.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
@@ -1924,9 +1924,27 @@ export class RoomDurableObject extends DurableObject {
     // At dawn resolve confirmed wolf-bite/Guard/Fairy notices in the SAME match
     // and night. Guards block final, potentially transferred bite destinations.
     // An absent bite or a malformed seating ring never manufactures a death.
-    const wolfResolution=p==="morning"&&n>0?
+    const wolfResolutionRaw=p==="morning"&&n>0?
       resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,players:(await this.ctx.storage.get("players"))||{},
         matchId:String(meta.matchId||""),night:n}):null;
+    const strongman=wolfResolutionRaw?.ok?resolveStrongmanWolfBite({
+      wolfResolution:wolfResolutionRaw,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),
+      interactions:rows,matchId:String(meta.matchId||""),night:n}):null;
+    const wolfResolution=strongman?{...wolfResolutionRaw,...strongman}:wolfResolutionRaw;
+    // Record the one-time survival and public role announcement durably.
+    if(strongman)for(const loginId of strongman.absorbed){
+      const id="strongman-bite:"+String(meta.matchId)+":"+loginId;
+      if(rows.some(row=>String(row.id)===id))continue;
+      const reveal={id,type:"effect_notice",loginId,matchId:String(meta.matchId),
+        night:n,cycleKey:key,effectActive:true,roleId:"role_strongman",
+        actionId:"action_strongman_bite",source:"strongman-passive-engine",
+        message:"Lực Sỹ đã công khai vai trò và sống sót qua một lần Sói Cắn.",
+        createdAt:now};
+      rows.push(reveal);
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,reveal);
+      this.broadcast({type:"role_revealed",loginId,roleId:"role_strongman",
+        roleName:"Lực Sỹ",matchId:String(meta.matchId),serverTime:Date.now()});
+    }
     if(wolfResolution?.ok)for(const loginId of wolfResolution.victims){
       const id="wolf-bite:"+String(meta.matchId)+":"+n+":"+loginId;
       if(rows.some(row=>String(row?.id||"")===id))continue;

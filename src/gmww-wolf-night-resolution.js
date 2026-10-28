@@ -90,6 +90,23 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
   return {ok:true,victims:distinct(victims),blocked:distinct(protectedTargets),transfers,attacked,biteCount:bites.length};
 }
 
+
+/* Lực Sỹ: exactly one lethal Wolf Bite is absorbed per match. An earlier
+ * Guard/Witch prevention never spends the passive ability. Persistent
+ * absorption events make retries and reconnect deterministic. */
+export function resolveStrongmanWolfBite({wolfResolution,assignments=[],interactions=[],matchId,night}={}){
+  const victims=[...(wolfResolution?.ok?wolfResolution.victims||[]:[])];
+  const strongmen=new Set((Array.isArray(assignments)?assignments:[])
+    .filter(row=>row?.roleId==='role_strongman').map(row=>login(row.loginId)));
+  const used=new Set((Array.isArray(interactions)?interactions:[])
+    .filter(row=>String(row.matchId||'')===String(matchId||'')&&
+      row.actionId==='action_strongman_bite'&&row.effectActive!==false)
+    .map(row=>login(row.loginId)));
+  const absorbed=victims.filter(id=>strongmen.has(login(id))&&!used.has(login(id)));
+  const blocked=new Set(absorbed.map(login));
+  return {victims:victims.filter(id=>!blocked.has(login(id))),absorbed};
+}
+
 // All real scan actions in the V2 card catalog. Keep this GM-only:
  // faction, role and function information must never be projected to Player Web.
 export const DIVINATION_ACTION_IDS=Object.freeze([
