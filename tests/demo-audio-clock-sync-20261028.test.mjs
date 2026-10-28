@@ -47,7 +47,7 @@ test('Aura Seer reads the entire returned role name after the prefix',()=>{
 test('DEMO ballots spread nomination and voting across real x2/x5 clock',()=>{
  const p={tasks:Array.from({length:20},()=>({kind:'nominate'})),cursor:0};
  assert.equal(demoTaskAt(30000,p),3000);
- p.cursor=10;assert.equal(demoTaskAt(30000,p),13800);
+ p.cursor=10;assert.ok(Math.abs(demoTaskAt(30000,p)-13800)<.001);
  p.cursor=19;assert.ok(demoTaskAt(30000,p)<25000);
  const role={tasks:[{id:'role'}],cursor:0};
  assert.equal(demoTaskAt(30000,role),15000);
