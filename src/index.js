@@ -802,6 +802,23 @@ export class RoomDurableObject extends DurableObject {
     for(const a of Array.isArray(assignments)?assignments:[]){const lid=normalizeLoginId(a?.loginId);if(!lid||dead.has(lid))continue;const row=byPlayer.get(lid)||{loginId:lid,factions:new Set()};row.factions.add(normalizeWinnerFaction(a?.faction||""));byPlayer.set(lid,row)}
     const alive=[...byPlayer.values()];if(!alive.length)return null;
     const wolves=alive.filter(p=>p.factions.has("Phe Sói")).length,third=alive.filter(p=>p.factions.has("Phe Ba")).length,others=alive.length-wolves;
+    const original=Array.isArray(assignments)?assignments:[],
+      livingRole=role=>original.some(a=>a.roleId===role&&
+        !dead.has(normalizeLoginId(a.loginId))),
+      livingAny=roles=>original.some(a=>roles.includes(a.roleId)&&
+        !dead.has(normalizeLoginId(a.loginId)));
+    // Independent third-faction wins outrank default "no Wolves => Village".
+    // Sát Thủ only wins if alive and ALL Wolves and Destroyers have died.
+    if(livingRole("role_assassin")&&wolves===0&&!livingRole("role_destroyer"))
+      return {winnerFaction:"Phe Ba",winnerLabel:"Sát Thủ",
+        reason:"Toàn bộ Sói và Kẻ Hủy Diệt đã chết; Sát Thủ còn sống.",
+        confidence:"special-role"};
+    // Kẻ Hủy Diệt has its own victim checklist, not general Wolf parity.
+    const destroyerTargets=["role_seer","role_witch","role_hunter","role_guard","role_assassin"];
+    if(livingRole("role_destroyer")&&!livingAny(destroyerTargets))
+      return {winnerFaction:"Phe Ba",winnerLabel:"Kẻ Hủy Diệt",
+        reason:"Các Vai Trò bắt buộc phải chết của Kẻ Hủy Diệt không còn sống.",
+        confidence:"special-role"};
     if(alive.length===1&&third===1)return{winnerFaction:"Phe Ba",winnerLabel:"Phe Ba",reason:"Chỉ còn một Người Chơi Phe Ba còn sống.",confidence:"basic-rule"};
     if(wolves===0)return{winnerFaction:"Phe Dân",winnerLabel:"Phe Dân",reason:"Không còn Người Chơi Phe Sói còn sống.",confidence:"basic-rule"};
     if(wolves>=others)return{winnerFaction:"Phe Sói",winnerLabel:"Phe Sói",reason:"Số Người Chơi Phe Sói còn sống đã bằng hoặc nhiều hơn các phe còn lại.",confidence:"basic-rule"};
