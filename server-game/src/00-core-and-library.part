@@ -896,9 +896,23 @@ function applyApprovedRoleSettings(s){
   s.cards=Array.isArray(s.cards)?s.cards:[];
   s.artifacts=Array.isArray(s.artifacts)?s.artifacts:[];
   const ensureMissing=(target,fallbacks)=>{
-    const ids=new Set(target.map(x=>String(x?.id||'')));
-    for(const fallback of fallbacks)if(!ids.has(fallback.id)){
-      target.push(clone(fallback));ids.add(fallback.id);
+    const byId=new Map(target.map(x=>[String(x?.id||''),x]));
+    for(const fallback of fallbacks){
+      const original=byId.get(fallback.id);
+      if(!original){
+        const added=clone(fallback);target.push(added);byId.set(fallback.id,added);
+        continue;
+      }
+      // Migrated saved cards may have their original media and custom actions
+      // but lack a built-in action. Restore only missing canonical Action IDs.
+      const sourceFunctions=Array.isArray(fallback.functions)?fallback.functions:[];
+      const owned=Array.isArray(original.functions)?original.functions:[];
+      const ids=new Set(owned.map(x=>String(x?.actionId||'')));
+      for(const fn of sourceFunctions){
+        const actionId=String(fn?.actionId||'');
+        if(actionId&&!ids.has(actionId)){owned.push(clone(fn));ids.add(actionId)}
+      }
+      if(sourceFunctions.length&&!Array.isArray(original.functions))original.functions=owned;
     }
   };
   // The source rule catalog tags first-night choices as setup. Make them

@@ -23,7 +23,10 @@ const defaults=[
 ].map(([id,factionId,actions])=>({
  id,factionId,functions:actions.map(actionId=>({id:'fn-'+actionId,actionId,usageMode:'unlimited'}))
 }));
-const migrate=vm.runInNewContext(source.slice(start,end)+'\napplyApprovedRoleSettings',
+// Load the canonical fallback declarations along with the tested migration.
+const fallbackStart=source.indexOf('const GMWW_AUDITED_ROLE_FALLBACKS=');
+assert.ok(fallbackStart>=0&&fallbackStart<start,'canonical catalog declarations exist');
+const migrate=vm.runInNewContext(source.slice(fallbackStart,end)+'\napplyApprovedRoleSettings',
   {DEFAULT_STATE:{cards:defaults},clone:v=>JSON.parse(JSON.stringify(v))});
 const fixture=()=>{
  const cards=defaults.map(x=>({...JSON.parse(JSON.stringify(x)),information:'LUẬT CŨ',
@@ -81,14 +84,15 @@ test('actual editable function settings enforce nighttime limits, cooldown, and 
 });
 test('saved custom artwork/audio, unrelated roles, artifacts and themes survive migration',()=>{
  const s=fixture(),unrelated=JSON.stringify(card(s,'role_seer'));
- const audio=JSON.stringify(s.audio),themes=JSON.stringify(s.themes),arts=JSON.stringify(s.artifacts);
+ const audio=JSON.stringify(s.audio),themes=JSON.stringify(s.themes),owned=JSON.stringify(s.artifacts[0]);
  migrate(s);
  assert.equal(card(s,'role_witch').artworkAssetId,'user-custom-art');
  assert.equal(card(s,'role_witch').media.audio,'user-role.mp3');
  assert.equal(JSON.stringify(card(s,'role_seer')),unrelated);
  assert.equal(JSON.stringify(s.audio),audio);
  assert.equal(JSON.stringify(s.themes),themes);
- assert.equal(JSON.stringify(s.artifacts),arts);
+ assert.equal(JSON.stringify(s.artifacts.find(x=>x.id==='artifact-1')),owned);
+ assert.ok(s.artifacts.some(x=>x.id==='artifact_44'),'migration fills missing catalog cards');
 });
 test('migration is idempotent on repeatedly opening GMWW',()=>{
  const s=fixture();migrate(s);const first=JSON.stringify(s);migrate(s);
@@ -109,4 +113,21 @@ test('existing and legacy saved libraries apply contract AFTER canonical default
  for(const binding of ['entityInformation','specialLimits','specialConditions','functionList'])
    assert.ok(ui.includes(binding),'Settings editor must display '+binding);
  assert.match(source,/let state=loadState\(\),prefs=loadPrefs\(\);\s*saveState\(\)/);
+});
+
+test('existing incomplete Role and Artifact cards recover only missing canonical actions',()=>{
+ const s=fixture();
+ s.cards.push({id:'role_cupid',name:'Cupid',artworkAssetId:'custom-cupid',functions:[
+   {id:'custom',actionId:'action_custom_cupid',description:'GM function retained'}]});
+ s.artifacts.push({id:'artifact_24',name:'Sương Hào Quang',artworkAssetId:'custom-aura',
+   functions:[{id:'custom',actionId:'action_custom_aura'}]});
+ migrate(s);
+ const cupid=card(s,'role_cupid'),aura=s.artifacts.find(x=>x.id==='artifact_24');
+ assert.equal(cupid.artworkAssetId,'custom-cupid');
+ assert.ok(cupid.functions.some(x=>x.actionId==='action-cupid-pair'));
+ assert.ok(cupid.functions.some(x=>x.actionId==='action_custom_cupid'));
+ assert.ok(aura.functions.some(x=>x.actionId==='artifact_action_check_third_faction'));
+ assert.ok(aura.functions.some(x=>x.actionId==='action_custom_aura'));
+ const first=JSON.stringify(s);
+ migrate(s);assert.equal(JSON.stringify(s),first);
 });
