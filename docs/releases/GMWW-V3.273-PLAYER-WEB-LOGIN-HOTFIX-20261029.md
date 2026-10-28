@@ -5,6 +5,9 @@
 - Sau khi V3.273 thêm `renderPlayerTimeline`, `state.onlineActions` và `renderOnlineActionDock` vào luồng khôi phục phòng Online, điểm chèn trong `src/gmww-player-private-card-patch.js` vẫn dò chuỗi cũ.
 - Bộ ghép ném lỗi `Offline private-card policy drift`, có thể khiến trang login hiển thị nhưng nút ĐĂNG NHẬP không hoạt động vì mã trang không tải được.
 
+## Phát hiện bổ sung khi kiểm tra Chrome/Edge
+- Kiểm thử trình duyệt ghi nhận `ReferenceError: room is not defined` trong `updatePlayerTopMenu()`, gây gián đoạn hiển thị sau đăng nhập/reconnect. Chuyển sang `playerScenePolicy(state.room)` và bổ sung bài test thực thi hàm với mô phỏng menu đang hoạt động.
+
 ## Điều chỉnh
 - Đồng bộ đúng điểm chèn cho cả chuỗi nguồn và chuỗi đã được biến đổi; không thay đổi thuật toán xác thực, token, phòng, vai trò hoặc quyền riêng tư.
 - Giữ nguyên cập nhật roster khi reconnect, Timeline, các hành động Online, Chat và DEMO.
