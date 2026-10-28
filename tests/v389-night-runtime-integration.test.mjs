@@ -825,7 +825,10 @@ test('Dream Flask: day Artifact creates a real two-cycle block; disabled actor c
   Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
   h.data.set('artifact:alice',{artifactId:'artifact_19',matchId:'test-match',singleUse:true,
     artifactCard:{functions:[{actionId:'artifact_action_lock_function',phase:'both',targetCount:1,noSelf:false,usageMode:'onceGame',usageCount:1}]}});
-  h.data.set('roles:bob',[{roleId:'seer',matchId:'test-match',
+  // The real handler accepts Bear God scans, not a forged Seer scan.
+  h.data.set('assignments',h.data.get('assignments').map(x=>
+    x.loginId==='bob'?{...x,roleId:'role_bear_god'}:x));
+  h.data.set('roles:bob',[{roleId:'role_bear_god',matchId:'test-match',
     roleCard:{functions:[{actionId:'action_bear_scan',phase:'day',targetCount:2,noSelf:false}]}}]);
   const b={matchId:'test-match',cycleKey:'morning-1',actorId:'alice',
     artifactId:'artifact_19',actionId:'artifact_action_lock_function',
@@ -835,7 +838,7 @@ test('Dream Flask: day Artifact creates a real two-cycle block; disabled actor c
   const lock=h.data.get('interactions').find(x=>x.statusId==='disabled_2n');
   assert.ok(lock);assert.equal(lock.loginId,'bob');assert.equal(lock.activationPhase,'morning');
   const blocked=await result(await h.room.gmDayAction(null,{
-    matchId:'test-match',cycleKey:'morning-1',actorId:'bob',roleId:'seer',
+    matchId:'test-match',cycleKey:'morning-1',actorId:'bob',roleId:'role_bear_god',
     actionId:'action_bear_scan',targetIds:['alice','carol'],clientEventId:'dream-bob-blocked'}));
   assert.equal(blocked.error,'DAY_ACTOR_BLOCKED');
   assert.equal(h.data.has('dayRoleUsage:test-match'),false);
@@ -848,7 +851,7 @@ test('Dream Flask: day Artifact creates a real two-cycle block; disabled actor c
   const m=await h.meta();await h.room.applyCycle(m,'morning',3,'morning-3');
   assert.equal(h.data.get('interactions').find(x=>x.id===lock.id).effectActive,false);
   assert.equal((await result(await h.room.gmDayAction(null,{
-    matchId:'test-match',cycleKey:'morning-3',actorId:'bob',roleId:'seer',
+    matchId:'test-match',cycleKey:'morning-3',actorId:'bob',roleId:'role_bear_god',
     actionId:'action_bear_scan',targetIds:['alice','carol'],clientEventId:'dream-bob-after'}))).ok,true);
 });
 
