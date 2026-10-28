@@ -84,7 +84,7 @@
 | Máu Dịch Bệnh | action-disease-self | Chưa hoàn thiện executor chuyên biệt. Thiếu nhiễm bệnh và sự kiện Cắn chết khiến đàn mất Cắn đêm sau. |
 | Cung Săn Mệnh | action-grudge-designate | Chưa hoàn thiện executor chuyên biệt. Thiếu yêu cầu mục tiêu chỉ định nạn nhân và xử lý phản hồi. |
 | Ấn Dân Làng | artifact_action_disable_function | Chưa hoàn thiện executor chuyên biệt. Thiếu khóa chức năng và thu hồi quyền đã phát. |
-| Hơi Thở Lão Già | action-grudge-designate | Đã chốt: người bị đánh dấu chết vào đêm hôm sau. **Chưa có executor hẹn lịch và giải quyết chết.** |
+| Hơi Thở Lão Già | action-grudge-designate | **Đã có executor Server ngày/đêm:** đánh dấu tại chu kỳ N, chỉ giải quyết chết vào bình minh sau đêm N+1, tôn trọng miễn nhiễm/Đuổi, giữ idempotent và hoàn tác ban đêm. Chờ nghiệm thu trên thiết bị. |
 | Mũ Ngốc | artifact_action_force_vote | Chưa hoàn thiện executor chuyên biệt. Thiếu cưỡng chế phiếu GIẾT trên Server. |
 | Vạc Ma Thuật | artifact_action_check_villager | Chưa hoàn thiện executor chuyên biệt. Thiếu xác nhận Dân thường và kết quả riêng. |
 | Ngọc May Mắn | artifact_action_exchange | Chưa hoàn thiện executor chuyên biệt. Thiếu đổi lá/kích hoạt lá mới trong cùng chuỗi giao dịch. |

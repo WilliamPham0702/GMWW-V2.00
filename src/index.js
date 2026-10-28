@@ -1888,6 +1888,22 @@ export class RoomDurableObject extends DurableObject {
     // original receipt so undo, usage and retry handling remain transactional.
     if(p==="morning"&&n>0)for(const row of rows){
       if(row.pendingDeath!==true||String(row.matchId)!==String(meta.matchId)||Number(row.night)!==n)continue;
+      // Hơi Thở Lão Già is marked in cycle N and becomes lethal after
+      // NIGHT N+1. Resolve exactly once; respect existing night immunity,
+      // exile and death so this Artifact never bypasses normal protection.
+      if(row.deferredArtifact==="artifact_07"){
+        const id=normalizeLoginId(row.loginId),
+          excluded=rows.some(x=>x!==row&&normalizeLoginId(x.loginId)===id&&
+            (!x.matchId||String(x.matchId)===String(meta.matchId))&&
+            x.effectActive!==false&&["dead","expelled"].includes(String(x.type))),
+          immune=isNightImmune(await readNightAssignments(this.ctx.storage,meta.matchId),id);
+        if(excluded||immune){
+          row.pendingDeath=false;row.effectActive=false;row.resolvedAt=now;
+          row.expiredReason=immune?"NIGHT_IMMUNE":"ALREADY_DEAD_OR_EXPELLED";
+          await this.ctx.storage.put("actionLog:"+String(Date.parse(row.createdAt)).padStart(13,"0")+":"+row.id,row);
+          continue;
+        }
+      }
       row.pendingDeath=false;row.type="dead";row.effectActive=true;row.resolvedAt=now;
       row.message="Bạn đã chết vì "+(row.effectName||"tác động ban đêm")+".";
       await this.ctx.storage.put("actionLog:"+String(Date.parse(row.createdAt)).padStart(13,"0")+":"+row.id,row);
@@ -2165,6 +2181,15 @@ export class RoomDurableObject extends DurableObject {
       }else if(actionId==='action_exile'||effects.includes('effect_exile')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
+      }else if(artifactId==="artifact_07"&&actionId==="action-grudge-designate"){
+        if(effectiveTargets.some(id=>affected(id,"dead")||
+          interactions.some(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
+            x.deferredArtifact==="artifact_07"&&x.pendingDeath===true)))
+          return j({ok:false,error:"DAY_GRUDGE_TARGET_INELIGIBLE",
+            message:"Mục tiêu đã chết hoặc đã bị đánh dấu; chưa trừ lượt."},409);
+        for(const id of effectiveTargets)changes.push({kind:"grudge_schedule",
+          loginId:id,type:"effect_notice"});
+        message="Hơi Thở Lão Già đã đánh dấu. Tác động chết sẽ xét ở sáng sau đêm kế tiếp.";
       }else if(actionId==='artifact_action_lock_function'){
         // Bình Giấc Mơ: an actual server-side block for two whole day/night
         // cycles, rather than an acknowledgement with no effect.
@@ -2200,7 +2225,12 @@ export class RoomDurableObject extends DurableObject {
       const log={id:"ix-"+crypto.randomUUID(),type:effect.type,
         ...(effect.statusId?{statusId:effect.statusId}:{}),
         ...(effect.statusId==="disabled_2n"?{activationPhase:"morning"}:{}),
-        loginId:effect.loginId,matchId,cycleKey,night:day,actorId,artifactId,roleId,actionId,
+        ...(effect.kind==="grudge_schedule"?{
+          pendingDeath:true,deferredArtifact:"artifact_07",scheduledFromNight:day,
+          effectName:"Hơi Thở Lão Già"
+        }:{}),
+        loginId:effect.loginId,matchId,cycleKey,
+        night:effect.kind==="grudge_schedule"?day+1:day,actorId,artifactId,roleId,actionId,
         source:"day-action",effectActive:effect.type!=="effect_notice",
         message:message||"Hành động Ban ngày",createdAt:time};
       interactions.push(log);
@@ -2548,6 +2578,42 @@ export class RoomDurableObject extends DurableObject {
       const statusId=String(body?.statusId||"").trim();if(!STATUS_VISUAL_IDS.has(statusId))return j({ok:false,error:"INVALID_STATUS"},400);
       const display={...(meta.statusDisplay&&typeof meta.statusDisplay==="object"?meta.statusDisplay:{})};display[statusId]=body?.visible===true;meta.statusDisplay=display;meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);
       this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now()});return j({ok:true,statusDisplay:display})
+    }
+    // Hơi Thở Lão Già: do not turn the marker into an immediate death.
+    // Only this specific Artifact may schedule the shared grudge Action ID,
+    // which is also used by unrelated cards.
+    if(String(body?.artifactId||"")==="artifact_07"&&
+       String(body?.actionId||"")==="action-grudge-designate"){
+      if(!gmArtifactStep||!["effect_notice","dead"].includes(type))
+        return j({ok:false,error:"GRUDGE_ARTIFACT_REQUIRES_VALID_TURN"},409);
+      if(!loginId||!players["member:"+loginId])
+        return j({ok:false,error:"INVALID_GRUDGE_TARGET"},400);
+      const rows=(await this.ctx.storage.get("interactions"))||[],
+        matchId=String(meta.matchId||""),night=Math.max(1,Number(meta.cycleNight)||1);
+      const sameMatch=x=>!x.matchId||String(x.matchId)===matchId;
+      if(rows.some(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===loginId&&
+        (x.effectActive!==false&&x.type==="dead"||
+          x.deferredArtifact==="artifact_07"&&x.pendingDeath===true)))
+        return j({ok:false,error:"GRUDGE_TARGET_INELIGIBLE",
+          message:"Mục tiêu đã chết hoặc đã bị đánh dấu; chưa trừ lượt."},409);
+      const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);
+      if(useError)return useError;
+      const now=new Date().toISOString(),interaction={
+        id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),
+        clientEventId:String(body.clientEventId||""),type:"effect_notice",
+        loginId,matchId,night:night+1,scheduledFromNight:night,
+        cycleKey:String(meta.cycleKey||""),effectActive:false,pendingDeath:true,
+        deferredArtifact:"artifact_07",effectName:"Hơi Thở Lão Già",
+        actionId:"action-grudge-designate",artifactId:"artifact_07",
+        actorId:normalizeLoginId(body.actorId),source:"artifact-night-engine",
+        message:"Đã đánh dấu; tác động chết được xét sau đêm kế tiếp.",
+        createdAt:now
+      };
+      rows.push(interaction);
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+interaction.id,interaction);
+      // The target is never informed of the pending death before resolution.
+      return j({ok:true,interaction});
     }
     // Only a validated, currently-owned Artifact turn may create this power
     // block. The GM's generic notice would otherwise appear successful while

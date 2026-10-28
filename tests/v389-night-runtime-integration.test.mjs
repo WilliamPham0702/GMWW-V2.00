@@ -895,3 +895,82 @@ test('Dream Flask: night Artifact turn applies status and GM undo restores actor
   assert.equal(h.data.get('interactions')?.some(x=>x.statusId==='disabled_2n')||false,false);
   assert.equal(h.data.has('artifactUse:alice:artifact_19'),false);
 });
+
+test('Old Breath: day marker kills only after the following night, never on marking day',async()=>{
+  const h=harness({artifact:false});
+  Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
+  h.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_07',singleUse:true,
+    artifactCard:{functions:[{actionId:'action-grudge-designate',phase:'both',targetCount:1}]}});
+  const body={matchId:'test-match',cycleKey:'morning-1',actorId:'alice',
+    artifactId:'artifact_07',actionId:'action-grudge-designate',
+    targetIds:['bob'],clientEventId:'breath-day-1'};
+  const recorded=await result(await h.room.gmDayAction(null,body));
+  assert.equal(recorded.ok,true,JSON.stringify(recorded));
+  assert.equal(h.data.get('interactions')[0].type,'effect_notice');
+  assert.equal(h.data.get('interactions')[0].night,2);
+  assert.equal(h.data.get('interactions')[0].pendingDeath,true);
+  const replay=await result(await h.room.gmDayAction(null,body));
+  assert.equal(replay.idempotent,true);
+  let meta=await h.meta();await h.room.applyCycle(meta,'night',2,'night-2');
+  assert.equal(h.data.get('interactions')[0].type,'effect_notice');
+  meta=await h.meta();await h.room.applyCycle(meta,'morning',2,'morning-2');
+  const dead=h.data.get('interactions')[0];
+  assert.equal(dead.type,'dead');assert.equal(dead.effectActive,true);
+  assert.equal(dead.pendingDeath,false);
+  meta=await h.meta();await h.room.applyCycle(meta,'morning',2,'morning-2');
+  assert.equal(h.data.get('interactions').filter(x=>x.deferredArtifact==='artifact_07').length,1);
+});
+
+test('Old Breath: unrelated shared Action ID is not a death executor and does not spend Artifact',async()=>{
+  const h=harness({artifact:false});
+  Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
+  h.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_05',singleUse:true,
+    artifactCard:{functions:[{actionId:'action-grudge-designate',phase:'both',targetCount:1}]}});
+  const r=await result(await h.room.gmDayAction(null,{matchId:'test-match',
+    cycleKey:'morning-1',actorId:'alice',artifactId:'artifact_05',
+    actionId:'action-grudge-designate',targetIds:['bob'],clientEventId:'breath-not07'}));
+  assert.equal(r.error,'DAY_ARTIFACT_EFFECT_NOT_IMPLEMENTED');
+  assert.equal(h.data.has('artifactUse:alice:artifact_05'),false);
+});
+
+test('Old Breath: immune target survives next-night resolution without leaking death',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('roles:bob',[{roleId:'seer',matchId:'test-match',
+    roleCard:{flags:{nightImmune:true}}}]);
+  Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
+  h.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_07',singleUse:true,
+    artifactCard:{functions:[{actionId:'action-grudge-designate',phase:'both',targetCount:1}]}});
+  assert.equal((await result(await h.room.gmDayAction(null,{
+    matchId:'test-match',cycleKey:'morning-1',actorId:'alice',artifactId:'artifact_07',
+    actionId:'action-grudge-designate',targetIds:['bob'],clientEventId:'breath-immune'}))).ok,true);
+  let meta=await h.meta();await h.room.applyCycle(meta,'night',2,'night-2');
+  meta=await h.meta();await h.room.applyCycle(meta,'morning',2,'morning-2');
+  const row=h.data.get('interactions')[0];
+  assert.equal(row.pendingDeath,false);assert.equal(row.effectActive,false);
+  assert.equal(row.expiredReason,'NIGHT_IMMUNE');
+  assert.equal(h.data.get('interactions').some(x=>x.type==='dead'&&x.loginId==='bob'),false);
+});
+
+test('Old Breath: night marker is reversible and cannot kill on initial dawn',async()=>{
+  const h=harness(),assigned=h.data.get('assignments')[0];
+  assigned.artifactId='artifact_07';assigned.artifactName='Hơi Thở Lão Già';
+  h.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_07',
+    artifactName:'Hơi Thở Lão Già',priorityFirst:true,singleUse:true,
+    artifactCard:{actions:[{id:'action-grudge-designate',phase:'both',targetCount:1}],
+      functions:[{actionId:'action-grudge-designate',phase:'both',targetCount:1}]}});
+  await h.jump('early-artifact-window');
+  const rt=await h.runtime(),m=await h.meta();
+  const body={matchId:m.matchId,cycleKey:m.cycleKey,turnId:rt.currentId,
+    actorId:'alice',artifactId:'artifact_07',actionId:'action-grudge-designate',
+    type:'effect_notice',targetIds:['bob'],clientEventId:'breath-night-1'};
+  const marked=await result(await h.room.gmBattleAction(null,body));
+  assert.equal(marked.ok,true,JSON.stringify(marked));
+  let rows=h.data.get('interactions');
+  assert.equal(rows.find(x=>x.deferredArtifact==='artifact_07').pendingDeath,true);
+  assert.equal(rows.find(x=>x.deferredArtifact==='artifact_07').night,2);
+  const undo=await result(await h.room.gmBattleUndo(null,{undoToken:marked.undoToken}));
+  assert.equal(undo.ok,true,JSON.stringify(undo));
+  rows=h.data.get('interactions')||[];
+  assert.equal(rows.some(x=>x.deferredArtifact==='artifact_07'),false);
+  assert.equal(h.data.has('artifactUse:alice:artifact_07'),false);
+});
