@@ -32,7 +32,9 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TESTED_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TESTED_SHA"
-          git log -1 --format=%B | grep -qE 'Merge pull request #599|HOTFIX V3.273: khôi phục đăng nhập Player Web'
+          git merge-base --is-ancestor 3e3773c5cf96fd3fff13b1dbdd0339deeca9c5d7 HEAD
+          # Restrict this one-time release to the owner-approved hotfix/rollout merges.
+          git log -1 --format=%B | grep -qE 'Merge PR #599|Merge pull request #599|Merge PR #RELEASE_PR|Merge pull request #RELEASE_PR'
           test "$(node -p 'require("./package.json").version')" = "3.273.0"
           test -s docs/releases/GMWW-V3.273-PLAYER-WEB-LOGIN-HOTFIX-20261029.md
           git diff --name-only HEAD^1 HEAD > /tmp/changed-files.txt
@@ -40,9 +42,11 @@ jobs:
             echo "::error::Unexpected runtime change; Worker-only release blocked"
             exit 1
           fi
-          for f in src/gmww-player-private-card-patch.js src/gmww-members-live.js src/player-web-src/20-village-and-profile.part; do
-            grep -Fxq "$f" /tmp/changed-files.txt || { echo "::error::Missing expected hotfix: $f"; exit 1; }
-          done
+          # Code was merged in PR 599; the follow-up merge only repairs its deploy gate.
+          # Both revisions must contain exactly the approved test-verified source.
+          grep -Fq "playerScenePolicy(state.room).mode==='battle'" src/player-web-src/20-village-and-profile.part
+          grep -Fq 'Offline private-card policy drift' src/gmww-player-private-card-patch.js
+          node .github/scripts/assemble-player-web.mjs --verify
           echo "PASS: PR #599 exact approved Worker-only scope and same-SHA CI."
       - uses: actions/setup-node@v4
         with:
@@ -102,7 +106,8 @@ jobs:
           test "$PASS" = 1 || { echo "::error::Player JS syntax, HTTP 200 or health failed"; exit 1; }
           # A deliberate unknown login must return the documented MEMBER_NOT_FOUND response.
           # This does not create or alter any member.
-          curl -fsS --max-time 15 -o /tmp/unknown-member.json -w '%{http_code}' -H 'content-type: application/json' -d '{"loginId":"gmww_ci_no_such_user_599"}' "$URL/api/members/login" > /tmp/unknown-member-status.txt || test "$(cat /tmp/unknown-member-status.txt)" = 404
+          curl -sS --max-time 15 -o /tmp/unknown-member.json -w '%{http_code}' -H 'content-type: application/json' -d '{"loginId":"gmww_ci_no_such_user_599"}' "$URL/api/members/login" > /tmp/unknown-member-status.txt
+          test "$(cat /tmp/unknown-member-status.txt)" = 404
           node - <<'NODE'
           const fs=require('fs'),body=JSON.parse(fs.readFileSync('/tmp/unknown-member.json','utf8'));
           if(body.error!=='MEMBER_NOT_FOUND')throw Error('Login API did not return expected negative authorization result');
