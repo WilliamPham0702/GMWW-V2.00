@@ -1,0 +1,28 @@
+name: Check DEMO Player Web Live Join V3.271
+on:
+  pull_request:
+    paths:
+      - 'src/index.js'
+      - 'src/player-web-src/20-village-and-profile.part'
+      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'src/gmww-members-live.js'
+      - 'tests/demo-player-live-join-v3271.test.mjs'
+      - '.github/workflows/check-demo-player-live-v3271.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check src/index.js
+      - run: node .github/scripts/assemble-player-web.mjs --verify
+      - run: node .github/scripts/assemble-gm-app.mjs --verify
+      - run: node --test tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs
+      - run: npm run check
