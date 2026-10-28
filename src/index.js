@@ -3030,7 +3030,13 @@ export class RoomDurableObject extends DurableObject {
       artifactKey=artifactId?"artifact:"+actorId:null,
       useKey=artifactId?"artifactUse:"+actorId+":"+artifactId:null,
       cycleUseKey=artifactId?"artifactCycle:"+currentArtifactCycleKey(meta):null;
-    const keys=["interactions","assignments",...([roleUse?usageKey:null,artifactKey,useKey,cycleUseKey].filter(Boolean))];
+    // Cupid swaps the faction of both linked players. Include their private
+    // deliveries plus room revision in the same authorized Undo snapshot.
+    const cupidTargets=roleUse?.roleId==="role_cupid"&&roleUse.actionId==="action-cupid-pair"?
+      targets:[],privateKeys=cupidTargets.flatMap(id=>[
+        "role:"+id,"roles:"+id,"deliverySnapshot:"+id]);
+    const keys=["interactions","assignments",...privateKeys,
+      ...([cupidTargets.length?"meta":null,roleUse?usageKey:null,artifactKey,useKey,cycleUseKey].filter(Boolean))];
     const snapshot=async()=>{const entries=[];for(const key of keys){
       const value=await this.ctx.storage.get(key);
       entries.push({key,exists:value!==undefined&&value!==null,value:value===undefined?null:value});
@@ -3108,6 +3114,30 @@ export class RoomDurableObject extends DurableObject {
         }
       }
       await this.ctx.storage.put("interactions",pruneInteractions(updated));
+    }
+    // Cupid: two participants become Phe Ba but keep their own Role and
+    // ability package. Their updated private snapshots survive reconnect.
+    if(cupidTargets.length===2&&effectiveTargets.length===2){
+      const assigned=await this.ctx.storage.get("assignments")||[],
+        changed=assigned.map(a=>cupidTargets.includes(normalizeLoginId(a.loginId))?
+          {...a,faction:"third",factionId:"third",inheritedFromFaction:"village"}:a);
+      const date=new Date().toISOString();
+      await this.ctx.storage.put("assignments",changed);
+      meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
+      meta.roleDeliveredAt=date;meta.updatedAt=date;
+      for(const id of cupidTargets){
+        const roles=await this.ctx.storage.get("roles:"+id)||[];
+        if(!Array.isArray(roles)||!roles.length)continue;
+        const converted=roles.map(x=>({...x,faction:"third",
+          roleCard:{...x.roleCard,factionId:"third"},viewedAt:null}));
+        await this.ctx.storage.put("roles:"+id,converted);
+        await this.ctx.storage.put("role:"+id,converted[0]);
+        await this.ctx.storage.put("deliverySnapshot:"+id,
+          buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),
+            deliveryVersion:meta.deliveryVersion,publishedAt:date,roles:converted}));
+      }
+      await this.ctx.storage.put("meta",meta);
+      this.broadcast({type:"room_state",room:publicRoom(meta),serverTime:Date.now()});
     }
     if(roleUse)await this.ctx.storage.put(usageKey,appendBattleRoleActionUsage(roleUse.currentUsage,roleUse));
     const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
