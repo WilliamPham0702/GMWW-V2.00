@@ -1,11 +1,11 @@
 function hasCompletedRoomResult(room){return String(room?.phase||'').toLowerCase()==='ended'||!!(room?.endedAt&&room?.winnerFaction&&room?.lastEndedMatchId)}
 function renderRooms(){
   const list=$('#rooms .room-list');if(!list)return;list.innerHTML='';
-  if(!state.rooms.length){list.innerHTML='<article class="room-card"><div class="wait-note">Hiện chưa có phòng Online đang mở.</div></article>';return}
+  if(!state.rooms.length){list.innerHTML='<article class="room-card"><div class="wait-note">Hiện chưa có phòng Online hoặc DEMO đang mở.</div></article>';return}
   for(const r of state.rooms){
     const card=document.createElement('article');card.className='room-card';card.dataset.roomCode=r.code;
     card.innerHTML='<div class="room-head"><div><h3></h3><small></small></div><span class="live">● LIVE</span></div><div class="room-metrics"><div class="metric"><b></b><span>Đã cấu hình cho ván</span></div><div class="metric"><b></b><span>Người đã tham gia</span></div></div><button class="primary join-btn">THAM GIA</button><div class="room-detail"><div class="section-title" style="margin-top:0">Thành viên</div><div class="joinedPlayers"></div><div class="wait-note"></div><div class="room-actions"><button class="secondary leaveButton">RỜI ĐI</button></div></div>';
-    card.querySelector('h3').textContent=r.roomName||('Phòng '+r.code);card.querySelector('small').textContent=(String(r.roomMode||'online').toLowerCase()==='offline'?'OFFLINE':'ONLINE')+' • Mã '+r.code+(r.gameName?' • '+r.gameName:'');const metrics=card.querySelectorAll('.metric b'),current=state.roomCode===r.code&&!!state.participantId,slots=Number(r.seatCount||0)||Number(current?state.room?.seatCount:0)||12,joined=current?state.players.length:Number(r.joinedCount||0);metrics[0].textContent=slots+' Vị trí';metrics[1].textContent=joined+' / '+slots;
+    card.querySelector('h3').textContent=r.roomName||('Phòng '+r.code);card.querySelector('small').textContent=(r.demo===true?'DEMO':String(r.roomMode||'online').toLowerCase()==='offline'?'OFFLINE':'ONLINE')+' • Mã '+r.code+(r.gameName?' • '+r.gameName:'');const metrics=card.querySelectorAll('.metric b'),current=state.roomCode===r.code&&!!state.participantId,slots=Number(r.seatCount||0)||Number(current?state.room?.seatCount:0)||12,joined=current?state.players.length:Number(r.joinedCount||0);metrics[0].textContent=slots+' Vị trí';metrics[1].textContent=joined+' / '+slots;
     const join=card.querySelector('.join-btn');if(r.locked){join.disabled=true;join.textContent='PHÒNG ĐÃ KHÓA';join.classList.add('loading')}else join.onclick=()=>joinRoom(r.code);
     if(state.roomCode===r.code&&state.participantId){card.classList.add('joined');join.style.display='none';renderRoomMembers(card)}
     list.appendChild(card);
@@ -35,7 +35,7 @@ window.leaveRoom=leaveRoom;
 function disconnectRoom(){
   clearDrunkDraw();
   try{state.ws?.close(1000,'PLAYER_LEFT_ROOM')}catch{};if(state.wsPingTimer){clearInterval(state.wsPingTimer);state.wsPingTimer=null}if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}if(state.gameStateTimer){clearInterval(state.gameStateTimer);state.gameStateTimer=null}
-  clearMovementCompletionTimer();state.lobbyMotionPaused=false;state.lobbySeatWalkPending=null;resetLobbyMotionPlan();state.ws=null;state.roomCode='';state.room=null;state.participantId=null;state.players=[];state.ready=false;state.selectedGameCharacterId='';state.selectedSeatId=null;state.roomSetupOpen=false;$('#gmwwRoomSetup')?.classList.remove('open');$('#gmwwVillageReadyDock')?.classList.remove('show');state.role=null;state.roleOpen=false;state.lastResultKey='';state.dead=false;
+  clearMovementCompletionTimer();state.lobbyMotionPaused=false;state.lobbySeatWalkPending=null;resetLobbyMotionPlan();state.ws=null;state.roomCode='';state.room=null;state.participantId=null;state.players=[];state.ready=false;state.selectedGameCharacterId='';state.selectedSeatId=null;state.roomSetupOpen=false;$('#gmwwRoomSetup')?.classList.remove('open');$('#gmwwVillageReadyDock')?.classList.remove('show');state.role=null;state.roleOpen=false;state.lastResultKey='';state.dead=false;state.demoActions=[];renderDemoActions();
 }
 async function handleRoomMembershipLost(message='Bạn đã rời Phòng.'){
   if(!state.participantId&&!state.roomCode)return;
@@ -168,7 +168,7 @@ async function pollRoomState(){
     const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/me',{headers:auth()});
     if(d?.room){state.room=d.room;if(String(d.room.phase||'').toLowerCase()!=='ended')maybeOpenGame()}if(d?.cardBackImage){state.cardBackImage=d.cardBackImage;applyRoleCardBack()}
     if(d?.player){const me=d.player;state.ready=!!me.ready}
-    handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);renderDrunkDraw(d?.drunkDraw);state.gallows=d?.gallows||null;renderGallowsWidget();
+    handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);renderDrunkDraw(d?.drunkDraw);state.gallows=d?.gallows||null;renderGallowsWidget();state.demoActions=d?.demoActions||[];renderDemoActions();
     if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d.room||state.room);syncVillageFrame();
     if(d?.role){state.role=d.role;renderRole();maybeOpenGame()}
     if(hasCompletedRoomResult(d?.room))showResult(d.room.winnerFaction||d.room.winnerLabel||'',d.room.matchId||'');
@@ -382,7 +382,7 @@ async function refreshPrivateRole(force=false){
   if(!state.roomCode||!state.token||!state.participantId)return false;
   const wolfWakeEpoch=Number(state.wolfWakeEpoch||0);
   try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});
-    if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);renderDrunkDraw(d?.drunkDraw);if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=String(state.artifact?.artifactId||'');state.artifact=d?.artifact||null;state.artifactCycle=d?.artifactCycle||{cycleKey:'',count:0,max:3};if(oldArtifactId&&state.artifact&&oldArtifactId!==String(state.artifact.artifactId||'')){state.artifactOpen=false;state.artifactFocus='';clearArtifactDraft()}const incoming=Array.isArray(d?.roles)&&d.roles.length?d.roles:(d?.role?[d.role]:[]),previous=state.role,prevKey=previous?String(previous.assignmentIndex??previous.roleId??''):'';state.roles=incoming;if(incoming.length){let ix=incoming.findIndex(x=>String(x?.assignmentIndex??x?.roleId??'')===prevKey);if(ix<0)ix=Math.min(Math.max(0,Number(state.roleIndex||0)),incoming.length-1);state.roleIndex=ix;state.role=incoming[ix]||incoming[0]}else{state.roleIndex=0;state.role=null}state.room=d.room||state.room;if(String(d.room?.phase||'').toLowerCase()==='ended'){showResult(d.room?.winnerFaction||d.room?.winnerLabel||'',d.room?.matchId||'');return false}if(state.role){rememberActiveRole(state.role);if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}else if(['role_delivery','running'].includes(d.room?.phase)&&!state.rolePoll){restoreCachedRole();state.rolePoll=setInterval(()=>refreshPrivateRole(true),1800)}return !!state.role}catch(e){if(e?.status===403){await handleRoomMembershipLost();return false}if(e?.status===404){restoreCachedRole();return !!state.role}if(force)console.warn('[GMWW role]',e);restoreCachedRole();return !!state.role}
+    if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);renderDrunkDraw(d?.drunkDraw);if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=String(state.artifact?.artifactId||'');state.artifact=d?.artifact||null;state.artifactCycle=d?.artifactCycle||{cycleKey:'',count:0,max:3};if(oldArtifactId&&state.artifact&&oldArtifactId!==String(state.artifact.artifactId||'')){state.artifactOpen=false;state.artifactFocus='';clearArtifactDraft()}const incoming=Array.isArray(d?.roles)&&d.roles.length?d.roles:(d?.role?[d.role]:[]),previous=state.role,prevKey=previous?String(previous.assignmentIndex??previous.roleId??''):'';state.roles=incoming;if(incoming.length){let ix=incoming.findIndex(x=>String(x?.assignmentIndex??x?.roleId??'')===prevKey);if(ix<0)ix=Math.min(Math.max(0,Number(state.roleIndex||0)),incoming.length-1);state.roleIndex=ix;state.role=incoming[ix]||incoming[0]}else{state.roleIndex=0;state.role=null}state.room=d.room||state.room;state.demoActions=d?.demoActions||[];renderDemoActions();if(String(d.room?.phase||'').toLowerCase()==='ended'){showResult(d.room?.winnerFaction||d.room?.winnerLabel||'',d.room?.matchId||'');return false}if(state.role){rememberActiveRole(state.role);if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}else if(['role_delivery','running'].includes(d.room?.phase)&&!state.rolePoll){restoreCachedRole();state.rolePoll=setInterval(()=>refreshPrivateRole(true),1800)}return !!state.role}catch(e){if(e?.status===403){await handleRoomMembershipLost();return false}if(e?.status===404){restoreCachedRole();return !!state.role}if(force)console.warn('[GMWW role]',e);restoreCachedRole();return !!state.role}
 }
 async function ensureRoleGameView(timeoutMs=5200){const phase=String(state.room?.phase||'').toLowerCase();if(!['role_delivery','running'].includes(phase))return false;if(state.role||restoreCachedRole()){maybeOpenGame();return true}const end=Date.now()+Math.max(1200,Number(timeoutMs)||5200);while(Date.now()<end&&state.roomCode&&state.participantId){const ok=await refreshPrivateRole(true);if(ok&&state.role){maybeOpenGame();return true}await new Promise(r=>setTimeout(r,450))}restoreCachedRole();if(state.role){maybeOpenGame();return true}return false}
 function ensureMultiRoleNav(){
@@ -493,3 +493,70 @@ async function activateArtifact(){
   }finally{state.artifactBusy=false;renderArtifactStack()}
 }
 window.toggleArtifact=toggleArtifact;
+
+/* Hybrid DEMO: only action offers from the authenticated /me response are rendered.
+ * The client never receives other roles' turns, GM tokens, or action ledgers. */
+function renderDemoActions(){
+  let panel=document.getElementById('gmwwDemoHumanActions');
+  const offered=state.room?.demo===true&&state.room?.phase==='running'?
+    (Array.isArray(state.demoActions)?state.demoActions:[]):[];
+  if(!offered.length){if(panel)panel.hidden=true;state.demoUiKey='';return}
+  if(!panel){
+    const style=document.createElement('style');style.id='gmwwDemoHumanStyle';
+    style.textContent='#gmwwDemoHumanActions{position:fixed;z-index:985;left:50%;bottom:max(86px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,420px);box-sizing:border-box;padding:11px;max-height:53dvh;overflow:auto;border-radius:16px;border:1px solid #d8ad66;background:rgba(10,37,51,.96);color:#fff;box-shadow:0 12px 32px #0009;font-size:13px}#gmwwDemoHumanActions[hidden]{display:none!important}#gmwwDemoHumanActions h3{font-size:15px;margin:0 0 7px}#gmwwDemoHumanActions label{display:block;margin:6px 0}#gmwwDemoHumanActions select{width:100%;margin-top:4px;min-height:39px;border-radius:9px;padding:5px;background:#123a4b;color:white;border:1px solid #679ba9}#gmwwDemoHumanActions button{width:100%;min-height:44px;background:#d6a052;color:#13262b;font-weight:900;border:0;border-radius:11px;margin-top:9px}#gmwwDemoHumanActions button:disabled{opacity:.55}';
+    document.head.appendChild(style);panel=document.createElement('section');
+    panel.id='gmwwDemoHumanActions';panel.setAttribute('aria-label','Hành động DEMO người chơi');
+    document.body.appendChild(panel);
+  }
+  panel.hidden=false;
+  const key=[state.roomCode,state.room?.matchId,state.room?.cycleKey,
+    ...offered.map(a=>a.key)].join('|');
+  if(state.demoUiKey===key)return;
+  state.demoUiKey=key;panel.replaceChildren();
+  const heading=document.createElement('h3');heading.textContent='🎮 DEMO · ĐẾN LƯỢT BẠN';panel.appendChild(heading);
+  const pick=document.createElement('select'),actionLabel=document.createElement('label');
+  actionLabel.textContent='Hành động';actionLabel.appendChild(pick);panel.appendChild(actionLabel);
+  for(const a of offered){const option=document.createElement('option');option.value=a.key;option.textContent=a.name||a.actionId;pick.appendChild(option)}
+  const inputs=document.createElement('div');panel.appendChild(inputs);
+  const submit=document.createElement('button');submit.type='button';submit.textContent='✓ XÁC NHẬN';panel.appendChild(submit);
+  const fill=()=>{
+    inputs.replaceChildren();const a=offered.find(x=>x.key===pick.value)||offered[0];
+    const count=Math.max(0,Math.min(30,Number(a.targetCount)||0));
+    for(let i=0;i<count;i++){
+      const label=document.createElement('label');label.textContent='Mục tiêu '+(i+1);
+      const select=document.createElement('select');select.dataset.target='1';
+      const initial=document.createElement('option');initial.value='';initial.textContent='Chọn người chơi';select.appendChild(initial);
+      for(const player of state.players||[]){
+        const id=String(player.loginId||'');if(!id||(a.noSelf&&id===state.member?.loginId))continue;
+        const option=document.createElement('option');option.value=id;option.textContent=player.displayName||id;select.appendChild(option);
+      }label.appendChild(select);inputs.appendChild(label);
+    }
+    if(a.actionId==='action_transfer_bite'||a.actionId==='action_assassin_mark'){
+      const label=document.createElement('label'),select=document.createElement('select');
+      select.dataset.special=a.actionId==='action_transfer_bite'?'direction':'assassinChoice';
+      label.textContent=a.actionId==='action_transfer_bite'?'Hướng dịch':'Dấu bí mật';
+      const choices=a.actionId==='action_transfer_bite'?[['left','← Trái'],['none','• Không dịch'],['right','Phải →']]:[['👍','👍'],['👎','👎']];
+      for(const [value,name] of choices){const option=document.createElement('option');option.value=value;option.textContent=name;select.appendChild(option)}
+      label.appendChild(select);inputs.appendChild(label);
+    }
+  };
+  pick.onchange=fill;fill();
+  submit.onclick=async()=>{
+    if(state.demoSubmitPending)return;
+    const a=offered.find(x=>x.key===pick.value);if(!a)return;
+    const targetIds=[...inputs.querySelectorAll('select[data-target]')].map(el=>el.value);
+    if(targetIds.some(id=>!id)||new Set(targetIds).size!==targetIds.length){toast('Hãy chọn đủ mục tiêu khác nhau.');return}
+    const direction=inputs.querySelector('[data-special="direction"]')?.value;
+    const assassinChoice=inputs.querySelector('[data-special="assassinChoice"]')?.value;
+    state.demoSubmitPending=true;submit.disabled=true;
+    try{
+      const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/demo-action',{
+        method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,
+          cycleKey:state.room?.cycleKey,actionKey:a.key,targetIds,direction,assassinChoice})});
+      toast('Đã ghi nhận: '+(a.name||'Hành động'));
+      state.demoUiKey='';if(d.revelation)toast('Kết quả: '+JSON.stringify(d.revelation).slice(0,260));
+      await refreshPrivateRole(true);
+    }catch(e){toast(e?.message||'Hành động chưa được ghi nhận.');await refreshPrivateRole(true)}
+    finally{state.demoSubmitPending=false;submit.disabled=false}
+  };
+}
