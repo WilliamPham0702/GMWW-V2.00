@@ -6,7 +6,7 @@ import {rendererCommands} from '../dual-renderer-core.mjs';
 import {connectStagingRoom} from './room-realtime.mjs';
 import {createArenaCharacterField} from './character-atelier.mjs';
 import {createCoastalVillage} from './coastal-village.mjs';
-import {arenaSceneSignature,arenaTargetFrameHz,createArenaPaintScheduler} from './render-optimization.mjs';
+import {arenaSceneSignature,arenaTargetFrameHz,createArenaPaintScheduler,arenaPlayerPixelRatio} from './render-optimization.mjs';
 import {gallowsCandidateActorId} from './stage38-public-gallows.mjs';
 
 const $=id=>document.getElementById(id);
@@ -50,7 +50,7 @@ function drawFrame(frame){
   room=frame.room;
   // Crowd scenes use a smaller GPU framebuffer; Core/network cadence is unchanged.
   // Set only on roster transitions, never in the per-frame animation loop.
-  const pixelRatio=Math.min(window.devicePixelRatio||1,items.length>=20?.85:1.1);
+  const pixelRatio=arenaPlayerPixelRatio({characters:items.length,devicePixelRatio:window.devicePixelRatio});
   if(pixelRatio!==lastPixelRatio){
     lastPixelRatio=pixelRatio;renderer.setPixelRatio(pixelRatio);lastSize='';
   }
@@ -149,7 +149,7 @@ window.__GMWW_ARENA_PLAYER_READONLY=()=>({
   room:room?.code||null,count:field.actorCount,phase:room?.phase||null,
   cyclePhase:room?.cyclePhase||null,gallowsActorId:field.gallowsActorId,
   cardOpen:$('card').classList.contains('open'),
-  fps,connection,renderPaused,paintFrames,drawCalls:renderer.info.render.calls
+  fps,connection,renderPaused,paintFrames,pixelRatio:renderer.getPixelRatio(),drawCalls:renderer.info.render.calls
 });
 requestAnimationFrame(frame);
 if(!validCode){$('state').textContent='Thiếu mã phòng';message('Mở trang từ liên kết phòng của GM, hoặc thêm ?room=MÃPHÒNG.');}
