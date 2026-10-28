@@ -2324,7 +2324,8 @@ const demoAudio3270Paths=new Set([
   'server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
   'server-game/current/GMWW.html','package.json','package-lock.json',
   'tests/audio-role-day-flow-20261027.test.mjs',
-  'tests/demo-audio-clock-sync-20261028.test.mjs'
+  'tests/demo-audio-clock-sync-20261028.test.mjs',
+  'tests/demo-assassin-gallows-divination.test.mjs'
 ]);
 function isDemoAudioSync3270Scope(changes){
   if(!Array.isArray(changes)||changes.length<14||
