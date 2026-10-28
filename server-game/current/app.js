@@ -7123,10 +7123,14 @@ function gmwwGMAdminMount(){
   if(!bar){
     bar=document.createElement('div');bar.id='gmwwGMAdminDock';
     bar.setAttribute('role','group');bar.setAttribute('aria-label','Hành động riêng của GM');
-    bar.innerHTML='<button type="button" data-gm-admin="dead" aria-label="GM Giết" title="GM • Giết">☠️</button>'+
-      '<button type="button" data-gm-admin="revive" aria-label="GM Cứu" title="GM • Cứu / Hồi Sinh">❤️‍🩹</button>'+
-      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat">🤐</button>';
-    top.appendChild(bar);
+    bar.innerHTML='<button type="button" data-gm-admin="dead" aria-label="GM Giết" title="GM • Giết"><img src="/assets/action-icons/v3/15_san_giet.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="revive" aria-label="GM Cứu" title="GM • Cứu / Hồi Sinh"><img src="/assets/action-icons/v3/13_hoi_sinh.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat"><img src="/assets/action-icons/v3/39_cam_noi.webp" alt=""></button>'+ 
+      '<button type="button" data-gm-admin="open-chat" aria-label="GM Mở Chat" title="GM • Mở Chat">🦩</button>';
+    document.body.appendChild(bar);
+    for(const button of bar.querySelectorAll('[data-gm-admin]')){
+      try{const saved=JSON.parse(localStorage.getItem('gmww-admin-icon-'+button.dataset.gmAdmin)||'null');if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){button.style.left=Math.max(0,Math.min(window.innerWidth-44,saved.x))+'px';button.style.top=Math.max(0,Math.min(window.innerHeight-44,saved.y))+'px'}}catch{}
+    }
     bar.addEventListener('pointerdown',event=>{
       const button=event.target.closest('[data-gm-admin]');
       if(!button||button.disabled||(event.button!==0&&event.pointerType!=='touch'))return;
@@ -7141,10 +7145,11 @@ function gmwwGMAdminMount(){
       drag.moved=true;
       if(!drag.ghost){
         drag.ghost=document.createElement('span');drag.ghost.className='gmww-gm-admin-ghost';
-        drag.ghost.textContent=drag.button.textContent;document.body.appendChild(drag.ghost);
+        drag.ghost.innerHTML=drag.button.innerHTML;document.body.appendChild(drag.ghost);
       }
       drag.ghost.style.left=event.clientX+'px';drag.ghost.style.top=event.clientY+'px';
       const target=gmwwGMAdminTargetAt(event.clientX,event.clientY,drag.type);
+      if(!target){drag.button.style.left=Math.max(0,Math.min(window.innerWidth-44,event.clientX-22))+'px';drag.button.style.top=Math.max(0,Math.min(window.innerHeight-44,event.clientY-22))+'px'}
       if(target!==drag.target){drag.target?.classList.remove('gmww-battle-icon-snap');
         drag.target=target;target?.classList.add('gmww-battle-icon-snap')}
       drag.ghost.classList.toggle('is-sucked',!!target);
@@ -7156,7 +7161,8 @@ function gmwwGMAdminMount(){
       drag.target?.classList.remove('gmww-battle-icon-snap');drag.ghost?.remove();
       gmwwGMAdminPointer=null;
       if(event.type==='pointerup'&&!drag.button.disabled){
-        if(drag.moved){if(target)void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type)}
+        if(drag.moved){if(target&&drag.type!=='open-chat')void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type);else{try{localStorage.setItem('gmww-admin-icon-'+drag.type,JSON.stringify({x:parseFloat(drag.button.style.left),y:parseFloat(drag.button.style.top)}))}catch{}}}
+        else if(drag.type==='open-chat')document.getElementById('gmwwGMChatLaunch')?.click();
         else battleQuickSelect(drag.type);
       }
       event.preventDefault();event.stopPropagation();
@@ -7167,7 +7173,7 @@ function gmwwGMAdminMount(){
       // Keyboard activation has detail=0. Touch/mouse activation is handled on pointerup.
       if(event.detail!==0)return;
       const button=event.target.closest('[data-gm-admin]');
-      if(button&&!button.disabled)battleQuickSelect(button.dataset.gmAdmin);
+      if(button&&!button.disabled){if(button.dataset.gmAdmin==='open-chat')document.getElementById('gmwwGMChatLaunch')?.click();else battleQuickSelect(button.dataset.gmAdmin)}
     });
   }
   bar.hidden=playSceneState.step!=='battle';
@@ -8631,11 +8637,36 @@ function playAssignmentSwapRole(loginId,wantedId){
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
 // Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
 window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&playSceneState.step==='battle')void gmwwGMChatRefresh()},7000);
+function gmwwGMChatMakeMovable(trigger){
+  let drag=null;
+  trigger.addEventListener('pointerdown',event=>{
+    if(event.button!==0&&event.pointerType!=='touch')return;
+    const rect=trigger.getBoundingClientRect();
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false};
+    trigger.setPointerCapture(event.pointerId);
+  });
+  trigger.addEventListener('pointermove',event=>{
+    if(!drag||drag.id!==event.pointerId)return;
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if(!drag.moved&&Math.hypot(dx,dy)<7)return;
+    drag.moved=true;
+    trigger.style.left=Math.max(0,Math.min(window.innerWidth-trigger.offsetWidth,drag.left+dx))+'px';
+    trigger.style.top=Math.max(0,Math.min(window.innerHeight-trigger.offsetHeight,drag.top+dy))+'px';
+    trigger.style.right='auto';
+  });
+  const finish=event=>{
+    if(!drag||drag.id!==event.pointerId)return;
+    if(drag.moved){trigger.dataset.dragged='1';try{localStorage.setItem('gmww-gm-chat-icon-position',JSON.stringify({left:trigger.style.left,top:trigger.style.top}))}catch{}}
+    drag=null;
+  };
+  trigger.addEventListener('pointerup',finish);trigger.addEventListener('pointercancel',finish);
+  try{const p=JSON.parse(localStorage.getItem('gmww-gm-chat-icon-position')||'null');if(p&&/^\\d+(?:\\.\\d+)?px$/.test(p.left)&&/^\\d+(?:\\.\\d+)?px$/.test(p.top)){trigger.style.left=p.left;trigger.style.top=p.top;trigger.style.right='auto'}}catch{}
+}
 function gmwwGMChatMount(){
   const active=playSceneState.step==='battle'&&!!playSceneState.roomCode;
   if(!document.getElementById('gmwwGMChatStyle')){
     const st=document.createElement('style');st.id='gmwwGMChatStyle';st.textContent=`
-#gmwwGMChatLaunch{position:fixed;right:12px;top:max(65px,calc(env(safe-area-inset-top) + 65px));z-index:99993;width:44px;height:44px;border:0;border-radius:0;background:transparent;color:#fff;font-size:30px;box-shadow:none;text-shadow:0 3px 9px #001a2f;touch-action:manipulation}
+#gmwwGMChatLaunch{position:fixed;right:12px;top:max(65px,calc(env(safe-area-inset-top) + 65px));z-index:99993;width:44px;height:44px;border:0;border-radius:0;background:transparent;color:#fff;font-size:30px;box-shadow:none;text-shadow:0 3px 9px #001a2f;touch-action:none;cursor:grab}
 #gmwwGMChatPanel{display:none;position:fixed;z-index:100004;inset:9vh 7px auto 7px;max-width:520px;max-height:76dvh;margin:auto;background:#071826;color:#e5f3ff;border:1px solid #527a87;border-radius:18px;box-shadow:0 20px 55px #000c;flex-direction:column;overflow:hidden;font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
 #gmwwGMChatPanel.open{display:flex}#gmwwGMChatPanel header{display:flex;align-items:center;padding:9px;gap:7px;background:#12364b}#gmwwGMChatPanel header strong{flex:1}
 #gmwwGMChatPanel header button{background:#1b4e63;border:1px solid #5f879a;border-radius:9px;min-height:34px;color:white;padding:6px 10px}
@@ -8643,32 +8674,26 @@ function gmwwGMChatMount(){
 .gmwwGmChannel{border:1px solid #365c6c;border-radius:10px;padding:9px;display:grid;gap:5px}
 .gmwwGmChannel.secret{border-color:#795ca9;background:#251c3c}.gmwwGmChannel h4{font-size:12px;font-weight:800;color:#f0dbff;margin:0}
 .gmwwGmChannel p{font-size:12px;margin:0;overflow-wrap:anywhere}
-#gmwwGMChatMute{padding:10px;border-top:1px solid #365b6c;display:flex;gap:8px;flex-wrap:wrap}
-#gmwwGMChatMute button{border-radius:9px;border:1px solid #5d7a87;background:#163d50;color:white;padding:7px;font-size:11px}
 `;document.head.appendChild(st)
   }
   let trigger=document.getElementById('gmwwGMChatLaunch');
   if(!trigger){
-    trigger=document.createElement('button');trigger.id='gmwwGMChatLaunch';trigger.type='button';trigger.textContent='🦩';trigger.title='GM • Mở Chat';trigger.setAttribute('aria-label','GM • Mở Chat');trigger.onclick=()=>{gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);if(gmwwGMChatOpen)void gmwwGMChatRefresh()};document.body.appendChild(trigger);
+    trigger=document.createElement('button');trigger.id='gmwwGMChatLaunch';trigger.type='button';trigger.textContent='🦩';trigger.title='GM • Mở Chat';trigger.setAttribute('aria-label','GM • Mở Chat');trigger.onclick=()=>{if(trigger.dataset.dragged==='1'){trigger.dataset.dragged='';return}gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);if(gmwwGMChatOpen)void gmwwGMChatRefresh()};gmwwGMChatMakeMovable(trigger);document.body.appendChild(trigger);
     const panel=document.createElement('section');panel.id='gmwwGMChatPanel';panel.setAttribute('aria-label','GM quản lý Chat');
-    panel.innerHTML='<header><strong>GM • Quản lý Chat</strong><button id="gmwwGMChatReload" type="button">↻</button><button id="gmwwGMChatClose" type="button">Đóng</button></header><div id="gmwwGMChatContent"></div><div id="gmwwGMChatMute"></div>';document.body.appendChild(panel);
+    panel.innerHTML='<header><strong>GM • Quản lý Chat</strong><button id="gmwwGMChatReload" type="button">↻</button><button id="gmwwGMChatClose" type="button">Đóng</button></header><div id="gmwwGMChatContent"></div>';document.body.appendChild(panel);
     document.getElementById('gmwwGMChatClose').onclick=()=>{gmwwGMChatOpen=false;panel.classList.remove('open')};
     document.getElementById('gmwwGMChatReload').onclick=()=>void gmwwGMChatRefresh();
   }
-  trigger.hidden=!active;if(!active){gmwwGMChatOpen=false;document.getElementById('gmwwGMChatPanel')?.classList.remove('open')}
+  trigger.hidden=true;if(!active){gmwwGMChatOpen=false;document.getElementById('gmwwGMChatPanel')?.classList.remove('open')}
   if(active&&gmwwGMChatOpen&&gmwwGMChatLastRoom!==String(playSceneState.roomCode)){
     gmwwGMChatLastRoom=String(playSceneState.roomCode);void gmwwGMChatRefresh();
   }
 }
-async function gmwwGMChatMute(loginId,muted){
-  try{await playRoomApi('/chat/moderate',{method:'POST',body:JSON.stringify({loginId,muted})});await gmwwGMChatRefresh()}
-  catch(error){playFlashError('Chat: '+String(error.message||error))}
-}
 async function gmwwGMChatRefresh(){
   if(!gmwwGMChatOpen||playSceneState.step!=='battle'||!isLivePlayRoom())return;
   try{
-    const res=await playRoomApi('/chat',{method:'GET'}),content=document.getElementById('gmwwGMChatContent'),mute=document.getElementById('gmwwGMChatMute');
-    if(!content||!mute)return;content.replaceChildren();mute.replaceChildren();
+    const res=await playRoomApi('/chat',{method:'GET'}),content=document.getElementById('gmwwGMChatContent');
+    if(!content)return;content.replaceChildren();
     const channels=(res.channels||[]).filter(x=>x.messages?.length).slice(-25);
     if(!channels.length)content.textContent='Chưa có tin nhắn trong ván.';
     for(const ch of channels){
@@ -8677,11 +8702,6 @@ async function gmwwGMChatRefresh(){
       for(const msg of (ch.messages||[]).slice(-20)){
         const line=document.createElement('p');line.textContent=String(msg.senderName||msg.senderId||'')+': '+String(msg.text||'');box.appendChild(line)
       }content.appendChild(box)
-    }
-    for(const member of playLiveMembers().filter(x=>x.loginId)){
-      const b=document.createElement('button');const banned=res.bans?.[String(member.loginId).toLowerCase()]===true;
-      b.textContent=(banned?'🔓 Mở Chat ':'🔇 Cấm Chat ')+String(member.displayName||member.loginId).slice(0,24);
-      b.onclick=()=>void gmwwGMChatMute(member.loginId,!banned);mute.appendChild(b)
     }
   }catch(error){const el=document.getElementById('gmwwGMChatContent');if(el)el.textContent='Lỗi đồng bộ Chat: '+String(error.message||error)}
 }
