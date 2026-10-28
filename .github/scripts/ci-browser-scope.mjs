@@ -2312,7 +2312,41 @@ function isHybridDemo587Scope(changes){
     'docs/releases/GMWW-DEMO-HYBRID-20261028.md'];
   return required.every(p=>names.has(p))&&changes.every(c=>
     HYBRID_DEMO_587_FILES.has(c.path)&&['A','M'].includes(c.status));
-}function classifyBrowserScope(changes){
+}// V3.270: exclusively Audio/DEMO/Seer/Gallows + release markers.
+ // An expanded diff or a mismatched Runtime version falls back to full CI.
+const demoAudio3270Paths=new Set([
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  '.github/workflows/check-gm-audio-role-day.yml',
+  '.github/scripts/prepare-update-channel.mjs',
+  'docs/releases/GMWW-V3.270-audio-demo-gallows-20261028.md',
+  'src/index.js','src/gmww-demo-runner.js','src/gmww-wolf-night-resolution.js',
+  'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+  'server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
+  'server-game/current/GMWW.html','package.json','package-lock.json',
+  'tests/audio-role-day-flow-20261027.test.mjs',
+  'tests/demo-audio-clock-sync-20261028.test.mjs',
+  'tests/demo-assassin-gallows-divination.test.mjs'
+]);
+function isDemoAudioSync3270Scope(changes){
+  if(!Array.isArray(changes)||changes.length<14||
+     changes.some(c=>!demoAudio3270Paths.has(c.path)||!['M','A'].includes(c.status)))return false;
+  const touched=new Set(changes.map(c=>c.path));
+  const required=['.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+    'src/index.js','src/gmww-demo-runner.js','src/gmww-wolf-night-resolution.js',
+    'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
+    'server-game/current/app.js','tests/demo-audio-clock-sync-20261028.test.mjs',
+    'docs/releases/GMWW-V3.270-audio-demo-gallows-20261028.md'];
+  if(!required.every(p=>touched.has(p)))return false;
+  try{
+    return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.270.0'&&
+      fs.readFileSync('server-game/current/app.js','utf8').includes("const VERSION='3.270'")&&
+      fs.readFileSync('src/index.js','utf8').includes('VERSION="V3.270"')&&
+      fs.readFileSync('src/gmww-wolf-night-resolution.js','utf8').includes('expelledIds=[]')&&
+      fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8').includes('gallowsStageAudioKey');
+  }catch{return false}
+}
+function classifyBrowserScope(changes){
+  if(isDemoAudioSync3270Scope(changes))return 'demo-audio-sync-3270';
   if(isHybridDemo587Scope(changes))return 'demo-hybrid-587';
   if(isMorningAudio3267Scope(changes))return 'gm-audio-morning-3267';
   if(isOnlineChatScope(changes))return 'online-chat-audio';
@@ -2551,6 +2585,21 @@ function isTemplateDock3268Scope(changes){
 }
 
 function detect(){
+  // PR #593: use the same fail-closed focused check on PR and merged main.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+          .split(String.fromCharCode(10)).filter(Boolean).map(line=>{
+            const [status,path]=line.split(String.fromCharCode(9));return{status,path};
+          });
+        if(isDemoAudioSync3270Scope(changes))
+          return{mode:'demo-audio-sync-3270',reason:'V3.270: Audio/DEMO x2,x5, Seer, Aura, Gallows timing and Worker only'};
+      }
+    }catch{}
+  }
+
   // Exact PR/main same-diff audio fix; keep the unrelated historical test
   // suites out of the release gate while preserving Worker/OTA validation.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){

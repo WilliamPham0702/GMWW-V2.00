@@ -44,6 +44,18 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: V3.270 — kiểm Audio DEMO x2/x5, Tiên Tri và Lên Giàn đúng phạm vi
+        if: steps.scope.outputs.mode == 'demo-audio-sync-3270'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check src/gmww-wolf-night-resolution.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs tests/demo-audio-clock-sync-20261028.test.mjs tests/demo-assassin-gallows-divination.test.mjs tests/demo-server-runner.test.mjs tests/demo-room-lease-phases.test.mjs
+          test -s docs/releases/GMWW-V3.270-audio-demo-gallows-20261028.md
       - name: V3.268 — Ván Mẫu hít menu dưới, bảo toàn Online Chat và Runtime
         if: steps.scope.outputs.mode == 'template-dock-3268'
         run: |

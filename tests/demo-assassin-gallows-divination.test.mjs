@@ -58,11 +58,12 @@ test('GM audio honors an excerpt instead of playing a full role wake-up file',as
  const start=audio.indexOf('async function battlePlayConfiguredAudio('),end=audio.indexOf('function battleTurnAudioCue(',start);
  assert.ok(start>=0&&end>start);
  let calls=0,last;
- const ctx={playAudioMuted:()=>false,battleFindAudio:()=>({id:'clip',roleNameEnd:4}),
+ const ctx={battleState:{key:''},battleUnlockedAudioContext:null,playSceneRuntime:{room:{demo:false}},state:{cards:[]},
+  setTimeout:()=>1,clearTimeout:()=>{},playAudioMuted:()=>false,battleFindAudio:()=>({id:'clip',roleNameEnd:4}),
   battleAudioLast:{key:'',at:0},battleAudioReady:new Map([['cards:clip','role.m4a']]),
   battleAudioRequestId:0,battleActiveAudio:null,battleWarmAudio:async()=>null,
   battlePlayWebAudioFallback:async()=>false,battleSpeakCue:()=>false,Date,
-  Audio:class{constructor(src){this.src=src;last=this}async play(){this.currentTime=4;this.ontimeupdate?.();return true}pause(){this.paused=true}}};
+  Audio:class{constructor(src){this.src=src;this.readyState=0;last=this}addEventListener(){}async play(){this.currentTime=4;this.ontimeupdate?.();return true}pause(){this.paused=true}}};
  const play=vm.runInNewContext(audio.slice(start,end)+';battlePlayConfiguredAudio',ctx);
  await play('cards','role_wolf','Sói',false,()=>calls++,4);
  assert.equal(last.src,'role.m4a');assert.equal(last.paused,true);assert.equal(calls,1);
