@@ -65,8 +65,8 @@ test('audio replay still resolves Old Witch audio by canonical role and V1 sourc
   assert.equal(ctx.find('cards','source-18','Phù Thuỷ Già').targetId,'role_old_witch');
 });
 
-test('GM generated app remains the exact six-part bundle',()=>{
-  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
+test('GM generated app remains the exact seven-part bundle',()=>{
+  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
   assert.equal(fs.readFileSync('server-game/current/app.js','utf8'),parts.map(p=>fs.readFileSync('server-game/src/'+p,'utf8')).join(''));
 });
 
@@ -95,6 +95,7 @@ test('countdown triggers in manual mode and does not duplicate on refresh',()=>{
   const clock={textContent:'',classList:{toggle(){}},title:''};
   const ctx={
     battleGallowsTick(){},
+    battleMarkPlayers(){},
     document:{getElementById:id=>id==='battleCountdown'?clock:id==='playBattleDock'?{hidden:false}:null},
     playSceneState:{phase:'day',night:1},
     playSceneRuntime:{room:{matchId:'m1',cycleStartedAt:new Date(start).toISOString(),autoGM:false,dayDeadlineAt:new Date(start+26000).toISOString()},nightRuntime:null,serverClockOffsetMs:0,gameConfig:{timing:{villageDiscussionSec:90}}},

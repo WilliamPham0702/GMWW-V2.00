@@ -1829,7 +1829,7 @@ function battleSyncGMMenuControls(){
   }
 }
 function renderPlayBattle(){
-  demoSyncScreenAwake();
+  demoSyncScreenAwake();gmwwGMChatMount();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible&&!battleState.wolfOpen;
   gmwwSetupFreeBattleIcons();

@@ -2233,7 +2233,33 @@ function isLeanPackaging3264Scope(changes){
  !native.includes('cp -R server-game/current/action-icons "$APPDIR/Web/action-icons"');
 }
 
-export function classifyBrowserScope(changes){
+export // Online Chat/GM monitoring/announcement audio only: no IPA, seat, 3D, card-audit tests.
+const onlineChatPaths=new Set([
+  'src/index.js','src/gmww-online-chat-policy.js','src/gmww-members-live.js',
+  'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+  'server-game/src/00-core-and-library.part','server-game/current/GMWW.html',
+  'src/player-web-src/30-rooms-and-realtime.part',
+  'src/player-web-src/35-online-chat.part',
+  'src/player-web-src/50-privacy-and-runtime.part',
+  'server-game/src/40-battle-and-timeline.part',
+  'server-game/src/45-online-chat.part','server-game/current/app.js',
+  '.github/scripts/assemble-player-web.mjs','.github/scripts/assemble-gm-app.mjs',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  'tests/online-chat-authority.test.mjs',
+  'tests/audio-role-day-flow-20261027.test.mjs',
+  'tests/audio-binding-integrity-20261027.test.mjs',
+  'docs/releases/GMWW-ONLINE-CHAT-20261028.md'
+]);
+function isOnlineChatScope(changes){
+  const paths=new Set(changes.map(c=>c.path));
+  return paths.has('src/gmww-online-chat-policy.js')&&
+    paths.has('tests/online-chat-authority.test.mjs')&&
+    paths.has('src/index.js')&&paths.has('src/player-web-src/35-online-chat.part')&&
+    changes.every(c=>onlineChatPaths.has(c.path)&&['A','M'].includes(c.status));
+}
+
+function classifyBrowserScope(changes){
+  if(isOnlineChatScope(changes))return 'online-chat-audio';
   if(isLeanPackaging3264Scope(changes))return 'ipa-ota-lean-3264';
   if(isGMFireRadius3262Scope(changes))return 'gm-fire-radius-3262';
   if(isGMFireWalk3261Scope(changes))return 'gm-fire-walk-3261';
@@ -2428,6 +2454,18 @@ function isGatherPinch3265Scope(changes){
 }
 
 function detect(){
+  // Respect the same focused scope on both the PR and the approved merged commit.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(line=>{const [status,path]=line.split('\t');return{status,path}});
+        if(isOnlineChatScope(changes))return{mode:'online-chat-audio',reason:'Online Chat/GM moderation/Player announcements, focused privacy and bundle checks'};
+      }
+    }catch{}
+  }
+
   // Scope only the exact, reviewed V3.265 seat-pinch files, both PR and main.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{

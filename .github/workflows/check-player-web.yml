@@ -55,6 +55,18 @@ jobs:
           node --check src/index.js
           node --check server-game/current/app.js
           test -s docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md
+      - name: Online Chat — kiểm tra riêng tư theo lượt, mute, audio và hai bundle
+        if: steps.scope.outputs.mode == 'online-chat-audio'
+        run: |
+          node --test tests/online-chat-authority.test.mjs tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          node --check src/index.js
+          node --check src/gmww-online-chat-policy.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node -e "import('./src/gmww-members-live.js').then(m=>require('fs').writeFileSync('/tmp/gmww-online-chat-player.js',m.gmwwMembersLiveScript))"
+          node --check /tmp/gmww-online-chat-player.js
+          test -s docs/releases/GMWW-ONLINE-CHAT-20261028.md
       - name: V3.263 — kiểm RULE Bình Giấc Mơ, Hơi Thở Lão Già, Kim Cương Phủ Nhận
         if: steps.scope.outputs.mode == 'card-rule-3263'
         run: |
