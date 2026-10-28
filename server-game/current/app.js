@@ -8627,8 +8627,6 @@ function playAssignmentSwapRole(loginId,wantedId){
   savePlayScene();renderPlayScene();
 }
 
-
-
 /* GM Chat monitor: available only with GM-authorized room API. No public history path. */
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
 // Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
@@ -8701,7 +8699,6 @@ async function gmwwGMChatRefresh(){
     }
   }catch(error){const el=document.getElementById('gmwwGMChatContent');if(el)el.textContent='Lỗi đồng bộ Chat: '+String(error.message||error)}
 }
-
 function playAssignmentSetArtifact(loginId,artifactId){
   if(!playSceneState.artifactsEnabled)return;
   const row=(playSceneState.assignmentsPreview||[]).find(r=>String(r.loginId)===String(loginId));
