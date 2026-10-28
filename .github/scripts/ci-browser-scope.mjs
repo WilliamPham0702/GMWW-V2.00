@@ -2509,6 +2509,47 @@ function isGatherPinch3265Scope(changes){
     layout.includes('Math.max(50,Math.min(300,Math.round(n)))');
 }
 
+// V3.268 is a narrowly bounded GM template layout fix. Old Player receipt,
+// unrelated gameplay, 3D and Native IPA checks must not gate this OTA.
+const templateDock3268Paths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-game-template-dock-v3268.yml',
+  'docs/releases/GMWW-V3.268-game-template-magnetic-dock-20261028.md',
+  'package.json','package-lock.json',
+  'server-game/current/GMWW.html','server-game/current/app.js','server-game/current/style.css',
+  'server-game/src/00-core-and-library.part',
+  'server-game/src/40-battle-and-timeline.part',
+  'server-game/src/50-roles-and-artifacts.part',
+  'src/index.js','tests/gmww-v3268-game-sheet-bottom-dock.test.mjs',
+  'tests/lobby-gather-mode-assassin-20261027.test.mjs'
+]);
+function isTemplateDock3268Scope(changes){
+  if(!Array.isArray(changes)||!changes.length||
+      changes.some(c=>!templateDock3268Paths.has(c.path)||!['M','A'].includes(c.status)))return false;
+  const touched=new Set(changes.map(c=>c.path));
+  for(const required of [
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+    'server-game/src/50-roles-and-artifacts.part','server-game/src/40-battle-and-timeline.part',
+    'server-game/current/app.js','server-game/current/GMWW.html',
+    'src/index.js','tests/gmww-v3268-game-sheet-bottom-dock.test.mjs',
+    'docs/releases/GMWW-V3.268-game-template-magnetic-dock-20261028.md'
+  ])if(!touched.has(required))return false;
+  try{
+    const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+    const worker=fs.readFileSync('src/index.js','utf8');
+    const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+    const source=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+    return pkg.version==='3.268.0'&&
+      worker.includes('VERSION="V3.268",NATIVE_SHELL_VERSION="3.264"')&&
+      html.includes('<title>GMWW V3.268</title>')&&
+      html.includes('id="playGameDockToggle"')&&
+      source.includes("GMWW_GAME_SHEET_DOCK_KEY='gmww_game_template_dock_v2'")&&
+      fs.existsSync('docs/releases/GMWW-V3.268-game-template-magnetic-dock-20261028.md');
+  }catch{return false}
+}
+
 function detect(){
   // Exact PR/main same-diff audio fix; keep the unrelated historical test
   // suites out of the release gate while preserving Worker/OTA validation.
@@ -2538,6 +2579,18 @@ function detect(){
     }catch{}
   }
 
+  // Isolate the exact Runtime V3.268 game-template dock from unrelated suites.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split(String.fromCharCode(10)).filter(Boolean);
+        const changes=rows.map(line=>{const [status,path]=line.split(String.fromCharCode(9));return{status,path}});
+        if(isTemplateDock3268Scope(changes))return{mode:'template-dock-3268',reason:'V3.268 GM template dock, Worker syntax, two bundles and related UI regression only'};
+      }
+    }catch{} // Fail closed: unknown diffs run full CI.
+  }
+
   // Scope only the exact, reviewed V3.265 seat-pinch files, both PR and main.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
@@ -2564,7 +2617,7 @@ function detect(){
     }catch{}
   }
 
-  // Recognize the exact merged Hybrid DEMO 587 change set on main as well as
+// Recognize the exact merged Hybrid DEMO 587 change set on main as well as
   // on its PR. An expanded diff falls back to full release validation.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
@@ -2894,7 +2947,6 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='audio-fix-3217')console.log('Chỉ kiểm thử ba lỗi âm thanh V3.217, không kiểm Seat/Card/3D.');
   if(result.mode==='audio-gallows-3209')console.log('Chỉ xác minh cú pháp, assembled bundles và phiên bản/OTA; không chạy bộ test gameplay mở rộng.');
   if(result.mode==='audio-v3208')console.log('Chỉ xác minh cú pháp, SHA và luồng Audio/Tiên Tri/Thông cáo liên quan V3.208; bỏ kiểm thử khác.');
-  if(result.mode==='demo-hybrid-587')console.log('PR587: chỉ DEMO lai, Player Web private patch, version guard, Worker and OTA integrity.');
   if(result.mode==='demo-475')console.log('PR #475: chi kiem DEMO Sat Thu/soi xet/audio/Len Gian, bao toan Worker/Player Web; khong kiem Card, Seat, OTA, IPA.');
   if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
   if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');

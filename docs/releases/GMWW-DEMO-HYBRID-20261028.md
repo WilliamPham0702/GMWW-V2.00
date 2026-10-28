@@ -25,9 +25,11 @@
 - Rollback: deploy lại commit Production trước PR; các trường `humanControlled` là bổ sung tương thích, các ván lịch sử vẫn giữ nguyên.
 
 ## Phiên bản phát hành
-- Runtime/Server/Player Web: **V3.268**; phiên bản Production trước PR #587 là **V3.267** (commit `6247a47a2d7c53fad99e0910575ca8733b3e4405`).
+- Runtime/Server/Player Web: **V3.269**; phiên bản Production trước PR #587 là **V3.268** (commit `58a627ab41b3864393edbf800cdb2adb898dc0ef`).
 - IPA Shell: **V3.264**, không build/cập nhật IPA, không thay đổi Native.
 - Tối ưu tương thích: cập nhật cơ chế vá lá bài riêng tư để Player Web không trả lỗi HTTP 500 với bảng thao tác DEMO mới.
-- Sau CI SUCCESS: phát hành gói Runtime OTA **V3.268** và manifest SHA-256; đối chiếu checksum gói với manifest và xác minh endpoint Production trước khi nghiệm thu.
-- Rollback an toàn: đưa Worker + Player Web + Runtime OTA về bản Production **V3.267** (`6247a47a2d7c53fad99e0910575ca8733b3e4405`) qua quy trình phát hành hiện có; không xóa Durable Objects, lịch sử, hay tài khoản. Nếu `main` tiếp tục đổi trước merge, lưu lại commit Production thực tế ngay trước khi phát hành.
+- Sau CI SUCCESS: phát hành gói Runtime OTA **V3.269** và manifest SHA-256; đối chiếu checksum gói với manifest và xác minh endpoint Production trước khi nghiệm thu.
+- Rollback an toàn: đưa Worker + Player Web + Runtime OTA về bản Production **V3.268** (`58a627ab41b3864393edbf800cdb2adb898dc0ef`) qua quy trình phát hành hiện có; không xóa Durable Objects, lịch sử, hay tài khoản. Nếu `main` tiếp tục đổi trước merge, lưu lại commit Production thực tế ngay trước khi phát hành.
 - Tích hợp giữ nguyên Chat Online và thông báo audio của V3.266–V3.267; kiểm thử DEMO lai và xác thực /me riêng tư. Các kiểm thử ngoài phạm vi không dùng làm chốt phát hành PR.
+
+- V3.269 tích hợp lên V3.268 hiện hành: giữ nguyên thanh hít Menu dưới của Ván Mẫu, giao diện và CSS mới nhất; chỉ bổ sung DEMO lai, không làm mất thay đổi vừa phát hành.

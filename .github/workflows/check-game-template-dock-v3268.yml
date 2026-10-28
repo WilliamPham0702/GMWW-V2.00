@@ -1,0 +1,39 @@
+name: Check GM Template Bottom Dock V3.268
+on:
+  pull_request:
+    paths:
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/50-roles-and-artifacts.part'
+      - 'server-game/src/00-core-and-library.part'
+      - 'server-game/current/app.js'
+      - 'server-game/current/GMWW.html'
+      - 'server-game/current/style.css'
+      - 'tests/gmww-v3268-game-sheet-bottom-dock.test.mjs'
+      - '.github/workflows/check-game-template-dock-v3268.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/50-roles-and-artifacts.part'
+      - 'server-game/src/00-core-and-library.part'
+      - 'server-game/current/app.js'
+      - 'server-game/current/GMWW.html'
+      - 'server-game/current/style.css'
+      - 'tests/gmww-v3268-game-sheet-bottom-dock.test.mjs'
+      - '.github/workflows/check-game-template-dock-v3268.yml'
+  workflow_dispatch:
+jobs:
+  targeted:
+    name: Game Sheet Drag / Snap / Restore
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate runtime syntax and version
+        run: |
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+      - name: Only affected game-template and dock regressions
+        run: |
+          node --test tests/gmww-v3268-game-sheet-bottom-dock.test.mjs tests/v3177-room-mode-glass-dock.test.mjs tests/v368-template-save-select-reliability.test.mjs tests/v367-choose-game-artifact-feedback.test.mjs
