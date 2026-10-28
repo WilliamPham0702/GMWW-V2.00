@@ -2479,7 +2479,7 @@ const templateDock3268Paths=new Set([
   '.github/scripts/ci-browser-scope.mjs',
   '.github/scripts/prepare-update-channel.mjs',
   '.github/workflows/check-player-web.yml',
-  '.github/workflows/check-game-template-dock-v3267.yml',
+  '.github/workflows/check-game-template-dock-v3268.yml',
   'docs/releases/GMWW-V3.268-game-template-magnetic-dock-20261028.md',
   'package.json','package-lock.json',
   'server-game/current/GMWW.html','server-game/current/app.js','server-game/current/style.css',
