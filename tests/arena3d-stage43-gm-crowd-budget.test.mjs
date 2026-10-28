@@ -31,6 +31,6 @@ test('GĐ43: all 30 Core actors retain interactive silhouettes and status/VFX',(
 
 test('GĐ43: quality budget remains purely visual without gameplay secrets',()=>{
  const s=readFileSync('assets/village/arena-3d/stage7-expression-motion.mjs','utf8')
-  .replace(/^\\s*\\/\\/.*$/gm,'');
+  .replace(/^\s*\/\/.*$/gm,'');
  for(const secret of [/\/api\/gm\//,/gmToken/,/faction/,/roleId/,/artifactId/,/localStorage/])assert.doesNotMatch(s,secret);
 });
