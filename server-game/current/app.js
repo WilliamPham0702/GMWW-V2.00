@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.265';
+const VERSION='3.268';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5010,27 +5010,20 @@ function renderPlayContext(){
 }
 let playStagePublishQueue=Promise.resolve(),playStagePublishPending=0;
 function initPlayGatherSpacing(){
-  const input=document.getElementById('playGatherSpacing');if(!input)return;
-  const layout=globalThis.GMWW_VILLAGE_LAYOUT,output=document.getElementById('playGatherSpacingValue');
-  if(!input.dataset.bound){
-    input.dataset.bound='1';
-    input.addEventListener('input',()=>{
-      const value=layout.normalizeSeatSpacing(input.value);
-      playSeatSpacingPreview=value;if(output)output.textContent=value+'%';
-      renderPlayPlayers();
-    });
-    input.addEventListener('change',async()=>{
-      const value=layout.normalizeSeatSpacing(input.value);
-      try{await playUpdateRoomSettings({seatSpacing:value})}finally{
-        playSeatSpacingPreview=null;
-        const real=layout.normalizeSeatSpacing(playSceneRuntime.room?.seatSpacing);
-        input.value=String(real);if(output)output.textContent=real+'%';
-        renderPlayPlayers();
-      }
-    });
+  const output=document.getElementById('playGatherSpacingValue');
+  if(output)output.textContent=globalThis.GMWW_VILLAGE_LAYOUT.normalizeSeatSpacing(
+    playSeatSpacingPreview??playSceneRuntime.room?.seatSpacing)+'%';
+}
+// Update seat-anchor CSS only during a pinch; do not remount 6–30 Character rigs.
+function playPreviewPinchSeats(){
+  const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  const positions=playSeatPositions(playSeatStats().seatCount);
+  for(const seat of ring.querySelectorAll('[data-seat-id]')){
+    const p=positions[Number(seat.dataset.seatId)-1];if(!p)continue;
+    const pt=playMapDisplay(p[0],p[1]);
+    seat.style.left=pt[0]+'%';seat.style.top=pt[1]+'%';seat.style.zIndex=String(10+Math.round(pt[1]));
   }
-  if(playSeatSpacingPreview==null)input.value=String(layout.normalizeSeatSpacing(playSceneRuntime.room?.seatSpacing));
-  if(output)output.textContent=String(layout.normalizeSeatSpacing(playSeatSpacingPreview??playSceneRuntime.room?.seatSpacing))+'%';
+  initPlayGatherSpacing();
 }
 function initPlaySeatOffsetControls(){
   const layout=globalThis.GMWW_VILLAGE_LAYOUT;
@@ -5062,14 +5055,45 @@ function initPlaySeatOffsetControls(){
   world.classList.toggle('is-seat-drag-enabled',adjustable());
   if(world.dataset.seatDragBound)return;
   world.dataset.seatDragBound='1';
-  let gesture=null,suppressClick=false,committing=false;
+  let gesture=null,pinch=null,suppressClick=false,committing=false,previewFrame=0;
+  const pointers=new Map();
+  const distance=()=>{const [a,b]=[...pointers.values()];return Math.hypot(a.x-b.x,a.y-b.y)};
+  const indicator=document.getElementById('playGatherSpacingValue');
+  const preview=()=>{
+    if(previewFrame)return;
+    previewFrame=requestAnimationFrame(()=>{previewFrame=0;if(pinch)playPreviewPinchSeats()});
+  };
   world.addEventListener('pointerdown',event=>{
     if(!adjustable()||committing||(event.button!=null&&event.button!==0)||
       event.target?.closest?.('button:not(.play-player-token), input, select, textarea, a, summary'))return;
-    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,offset:offset(),dragged:false};
+    if(pointers.size>=2)return;
+    pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
     try{world.setPointerCapture(event.pointerId)}catch{}
+    if(pointers.size===2){
+      pinch={startDistance:Math.max(1,distance()),startSpacing:layout.normalizeSeatSpacing(
+        playSceneRuntime.room?.seatSpacing),startOffset:offset()};
+      gesture=null;playSeatOffsetPreview=null;
+      if(indicator)indicator.hidden=false;
+      world.classList.add('is-seat-pinching');
+      playSceneRuntime.ignoreSeatClickUntil=Date.now()+650;
+      event.preventDefault();return;
+    }
+    if(pointers.size===1)gesture={id:event.pointerId,x:event.clientX,y:event.clientY,offset:offset(),dragged:false};
   });
   world.addEventListener('pointermove',event=>{
+    if(!pointers.has(event.pointerId))return;
+    pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+    if(pinch){
+      if(!adjustable()||pointers.size!==2)return;
+      const next=layout.normalizeSeatSpacing(pinch.startSpacing*distance()/pinch.startDistance);
+      if(next!==playSeatSpacingPreview){
+        playSeatSpacingPreview=next;
+        playSeatOffsetPreview=layout.resolveSeatOffset(playSeatStats().seatCount,
+          playSceneRuntime.room?.seatLayout,pinch.startOffset,next);
+        preview();
+      }
+      event.preventDefault();return;
+    }
     if(!gesture||gesture.id!==event.pointerId||!adjustable())return;
     const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;
     if(!gesture.dragged&&Math.hypot(dx,dy)<6)return;
@@ -5082,10 +5106,28 @@ function initPlaySeatOffsetControls(){
     renderPlayPlayers();event.preventDefault();
   },{passive:false});
   const finish=async(event,cancelled)=>{
+    if(!pointers.has(event.pointerId))return;
+    pointers.delete(event.pointerId);
+    try{world.releasePointerCapture(event.pointerId)}catch{}
+    if(pinch){
+      const initial=pinch,finalValue=layout.normalizeSeatSpacing(
+        playSeatSpacingPreview??initial.startSpacing),finalOffset=playSeatOffsetPreview;
+      pinch=null;gesture=null;pointers.clear();
+      if(previewFrame){cancelAnimationFrame(previewFrame);previewFrame=0;}
+      if(indicator)indicator.hidden=true;
+      world.classList.remove('is-seat-pinching');
+      suppressClick=true;playSceneRuntime.ignoreSeatClickUntil=Date.now()+650;
+      if(cancelled||!adjustable()||finalValue===initial.startSpacing){
+        playSeatSpacingPreview=null;playSeatOffsetPreview=null;renderPlayPlayers();return;
+      }
+      committing=true;
+      try{await playUpdateRoomSettings({seatSpacing:finalValue,seatOffset:finalOffset||initial.startOffset})}
+      finally{committing=false;playSeatSpacingPreview=null;playSeatOffsetPreview=null;renderPlayScene()}
+      return;
+    }
     if(!gesture||event.pointerId!==gesture.id)return;
-    const initial=gesture.offset,moved=gesture.dragged;
-    const next=playSeatOffsetPreview;
-    gesture=null;try{world.releasePointerCapture(event.pointerId)}catch{}
+    const initial=gesture.offset,moved=gesture.dragged,next=playSeatOffsetPreview;
+    gesture=null;
     if(!moved)return;
     suppressClick=true;
     playSceneRuntime.ignoreSeatClickUntil=Date.now()+650;
@@ -5113,7 +5155,6 @@ function renderPlayGatherToolbar(){
   initPlayGatherSpacing();initPlaySeatOffsetControls();
   const members=playLiveMembers(),st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
   if(locked)closePlaySeatPresetPanel();
-  const spacing=document.getElementById('playGatherSpacing');if(spacing)spacing.disabled=locked;
   const count=document.getElementById('playGatherCount');
   if(count)count.textContent=members.length+' người • '+st.occupied+'/'+st.seatCount+' vị trí';
   for(const id of ['playGatherCall','playGatherSeatPreset','playGatherRandom','playGatherManual']){
@@ -6234,9 +6275,13 @@ function battleMorningPlayAudio(){
   // Guaranteed day-entry event: the server may skip the optional final
   // village-wakeup NIGHT turn, so speak Làng ơi dậy đi HERE on Day transition.
   queue.push(['audio_system_day_wakeup','Làng ơi dậy đi']);
-  queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
-  queue.push(['audio_system_morning_number_'+dead,String(dead)]);
-  queue.push(['audio_system_morning_dead_noun','người chết']);
+  // When nobody died, omit the whole death-count announcement. An absent
+  // number-0 clip could otherwise stall the iPhone queue after the intro.
+  if(dead>0){
+    queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
+    queue.push(['audio_system_morning_number_'+dead,String(dead)]);
+    queue.push(['audio_system_morning_dead_noun','người chết']);
+  }
   for(const row of notices){
     if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
     else if(row.kind==='assassin_mark'||row.kind==='marked')
@@ -7013,7 +7058,7 @@ function battleSyncGMMenuControls(){
   }
 }
 function renderPlayBattle(){
-  demoSyncScreenAwake();
+  demoSyncScreenAwake();gmwwGMChatMount();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible&&!battleState.wolfOpen;
   gmwwSetupFreeBattleIcons();
@@ -8440,6 +8485,65 @@ function playAssignmentSwapRole(loginId,wantedId){
   playSceneState.roleId=String(rows[index].roleId||'');
   playSceneState.artifactId=String(rows[index].artifactId||'');
   savePlayScene();renderPlayScene();
+}
+
+/* GM Chat monitor: available only with GM-authorized room API. No public history path. */
+let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
+// Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
+window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&playSceneState.step==='battle')void gmwwGMChatRefresh()},7000);
+function gmwwGMChatMount(){
+  const active=playSceneState.step==='battle'&&!!playSceneState.roomCode;
+  if(!document.getElementById('gmwwGMChatStyle')){
+    const st=document.createElement('style');st.id='gmwwGMChatStyle';st.textContent=`
+#gmwwGMChatLaunch{position:fixed;right:12px;top:max(58px,env(safe-area-inset-top));z-index:99993;width:44px;height:44px;border:1px solid #6baab9;border-radius:14px;background:#134259;color:#fff;font-size:21px;box-shadow:0 7px 20px #0007}
+#gmwwGMChatPanel{display:none;position:fixed;z-index:100004;inset:9vh 7px auto 7px;max-width:520px;max-height:76dvh;margin:auto;background:#071826;color:#e5f3ff;border:1px solid #527a87;border-radius:18px;box-shadow:0 20px 55px #000c;flex-direction:column;overflow:hidden;font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
+#gmwwGMChatPanel.open{display:flex}#gmwwGMChatPanel header{display:flex;align-items:center;padding:9px;gap:7px;background:#12364b}#gmwwGMChatPanel header strong{flex:1}
+#gmwwGMChatPanel header button{background:#1b4e63;border:1px solid #5f879a;border-radius:9px;min-height:34px;color:white;padding:6px 10px}
+#gmwwGMChatContent{overflow-y:auto;padding:10px;display:grid;gap:10px}
+.gmwwGmChannel{border:1px solid #365c6c;border-radius:10px;padding:9px;display:grid;gap:5px}
+.gmwwGmChannel.secret{border-color:#795ca9;background:#251c3c}.gmwwGmChannel h4{font-size:12px;font-weight:800;color:#f0dbff;margin:0}
+.gmwwGmChannel p{font-size:12px;margin:0;overflow-wrap:anywhere}
+#gmwwGMChatMute{padding:10px;border-top:1px solid #365b6c;display:flex;gap:8px;flex-wrap:wrap}
+#gmwwGMChatMute button{border-radius:9px;border:1px solid #5d7a87;background:#163d50;color:white;padding:7px;font-size:11px}
+`;document.head.appendChild(st)
+  }
+  let trigger=document.getElementById('gmwwGMChatLaunch');
+  if(!trigger){
+    trigger=document.createElement('button');trigger.id='gmwwGMChatLaunch';trigger.type='button';trigger.textContent='💬';trigger.title='Theo dõi Chat';trigger.onclick=()=>{gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);if(gmwwGMChatOpen)void gmwwGMChatRefresh()};document.body.appendChild(trigger);
+    const panel=document.createElement('section');panel.id='gmwwGMChatPanel';panel.setAttribute('aria-label','GM quản lý Chat');
+    panel.innerHTML='<header><strong>GM • Quản lý Chat</strong><button id="gmwwGMChatReload" type="button">↻</button><button id="gmwwGMChatClose" type="button">Đóng</button></header><div id="gmwwGMChatContent"></div><div id="gmwwGMChatMute"></div>';document.body.appendChild(panel);
+    document.getElementById('gmwwGMChatClose').onclick=()=>{gmwwGMChatOpen=false;panel.classList.remove('open')};
+    document.getElementById('gmwwGMChatReload').onclick=()=>void gmwwGMChatRefresh();
+  }
+  trigger.hidden=!active;if(!active){gmwwGMChatOpen=false;document.getElementById('gmwwGMChatPanel')?.classList.remove('open')}
+  if(active&&gmwwGMChatOpen&&gmwwGMChatLastRoom!==String(playSceneState.roomCode)){
+    gmwwGMChatLastRoom=String(playSceneState.roomCode);void gmwwGMChatRefresh();
+  }
+}
+async function gmwwGMChatMute(loginId,muted){
+  try{await playRoomApi('/chat/moderate',{method:'POST',body:JSON.stringify({loginId,muted})});await gmwwGMChatRefresh()}
+  catch(error){playFlashError('Chat: '+String(error.message||error))}
+}
+async function gmwwGMChatRefresh(){
+  if(!gmwwGMChatOpen||playSceneState.step!=='battle'||!isLivePlayRoom())return;
+  try{
+    const res=await playRoomApi('/chat',{method:'GET'}),content=document.getElementById('gmwwGMChatContent'),mute=document.getElementById('gmwwGMChatMute');
+    if(!content||!mute)return;content.replaceChildren();mute.replaceChildren();
+    const channels=(res.channels||[]).filter(x=>x.messages?.length).slice(-25);
+    if(!channels.length)content.textContent='Chưa có tin nhắn trong ván.';
+    for(const ch of channels){
+      const box=document.createElement('div');box.className='gmwwGmChannel'+(String(ch.channel).startsWith('night:')?' secret':'');
+      const h=document.createElement('h4');h.textContent=String(ch.channel).startsWith('night:')?'🌙 Chat bí mật • '+String(ch.channel).slice(0,75):'☀️ Chat Làng';box.appendChild(h);
+      for(const msg of (ch.messages||[]).slice(-20)){
+        const line=document.createElement('p');line.textContent=String(msg.senderName||msg.senderId||'')+': '+String(msg.text||'');box.appendChild(line)
+      }content.appendChild(box)
+    }
+    for(const member of playLiveMembers().filter(x=>x.loginId)){
+      const b=document.createElement('button');const banned=res.bans?.[String(member.loginId).toLowerCase()]===true;
+      b.textContent=(banned?'🔓 Mở Chat ':'🔇 Cấm Chat ')+String(member.displayName||member.loginId).slice(0,24);
+      b.onclick=()=>void gmwwGMChatMute(member.loginId,!banned);mute.appendChild(b)
+    }
+  }catch(error){const el=document.getElementById('gmwwGMChatContent');if(el)el.textContent='Lỗi đồng bộ Chat: '+String(error.message||error)}
 }
 function playAssignmentSetArtifact(loginId,artifactId){
   if(!playSceneState.artifactsEnabled)return;

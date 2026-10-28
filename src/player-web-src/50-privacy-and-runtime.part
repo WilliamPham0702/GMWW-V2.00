@@ -85,7 +85,7 @@ async function autoResumeActiveRoom({stayInVillage=false}={}){
     applyRoleCardBack();renderDrunkDraw(d?.drunkDraw);handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);
     rememberActiveRoom(code,state.participantId);state.roomNavigationAuthorized=true;
     try{await loadRooms(false)}catch{}
-    renderRooms();connectWS();startRoomStateWatch();sendPresence();
+    renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);connectWS();startRoomStateWatch();sendPresence();
     if(stayInVillage){await enterVillage();return true}
     if(ph==='ended'){showResult(d.room.winnerFaction||d.room.winnerLabel||'',d.room.matchId||'');return true}
     if(['role_delivery','running'].includes(ph)){

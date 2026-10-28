@@ -70,8 +70,8 @@ test('a name-only reveal without exact cut NEVER plays first 5 seconds of wake-u
  assert.match(src,/battleSpeakCue\(String\(name\|\|''\)\.trim\(\),showError,onFinished\)/);
 });
 
-test('GM assembly still matches six source files byte-for-byte',()=>{
- const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
+test('GM assembly still matches seven source files byte-for-byte',()=>{
+ const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
  assert.equal(read('server-game/current/app.js'),parts.map(p=>read('server-game/src/'+p)).join(''));
 });
 

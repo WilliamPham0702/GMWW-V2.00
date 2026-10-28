@@ -492,7 +492,6 @@ function wave3213Asset(path){
 function isIconWave3213Scope(changes){
  const names=new Map(changes.map(x=>[x.path,x]));
  for(const p of ['src/index.js','package.json','server-game/current/app.js','server-game/current/GMWW.html',
-  'server-game/src/00-core-and-library.part',
   'server-game/current/action-icon-library.js','tests/action-icon-library.test.mjs','assets/action-icons/sea-v1/manifest.json',
   'docs/releases/GMWW-V3.213-icons-wave3-20261025.md'])if(!names.has(p))return false;
  if(!changes.every(x=>['A','M'].includes(x.status)&&(wave3213Files.has(x.path)||wave3213Asset(x.path))))return false;
@@ -2234,6 +2233,50 @@ function isLeanPackaging3264Scope(changes){
  !native.includes('cp -R server-game/current/action-icons "$APPDIR/Web/action-icons"');
 }
 
+export // Online Chat/GM monitoring/announcement audio only: no IPA, seat, 3D, card-audit tests.
+const onlineChatPaths=new Set([
+  'src/index.js','src/gmww-online-chat-policy.js','src/gmww-members-live.js',
+  'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+  'server-game/src/00-core-and-library.part','server-game/current/GMWW.html',
+  'src/player-web-src/30-rooms-and-realtime.part',
+  'src/player-web-src/35-online-chat.part',
+  'src/player-web-src/50-privacy-and-runtime.part',
+  'server-game/src/40-battle-and-timeline.part',
+  'server-game/src/45-online-chat.part','server-game/current/app.js',
+  '.github/scripts/assemble-player-web.mjs','.github/scripts/assemble-gm-app.mjs',
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  'tests/online-chat-authority.test.mjs',
+  'tests/audio-role-day-flow-20261027.test.mjs',
+  'tests/audio-binding-integrity-20261027.test.mjs',
+  'docs/releases/GMWW-ONLINE-CHAT-20261028.md'
+]);
+function isOnlineChatScope(changes){
+  const paths=new Set(changes.map(c=>c.path));
+  return paths.has('src/gmww-online-chat-policy.js')&&
+    paths.has('tests/online-chat-authority.test.mjs')&&
+    paths.has('src/index.js')&&paths.has('src/player-web-src/35-online-chat.part')&&
+    changes.every(c=>onlineChatPaths.has(c.path)&&['A','M'].includes(c.status));
+}
+
+
+function isMorningAudio3267Scope(changes){
+  // V3.267 is a tiny dawn-only Audio fix. Unknown or expanded changes must
+  // NOT inherit this narrow Worker release gate.
+  const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-V3.267-morning-zero-deaths-20261028.md","package.json","package-lock.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","src/index.js","tests/audio-role-day-flow-20261027.test.mjs"]);
+  if(changes.length!==allowed.size||changes.some(c=>!allowed.has(c.path)||!['M','A'].includes(c.status)))return false;
+  try{
+    const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+    const app=fs.readFileSync('server-game/current/app.js','utf8');
+    const worker=fs.readFileSync('src/index.js','utf8');
+    const ver=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+    return ver==='3.267.0'&&worker.includes('VERSION="V3.267"')&&
+      app.includes("const VERSION='3.267'")&&
+      gm.includes("if(dead>0){")&&
+      gm.includes("queue.push(['audio_system_morning_deaths_intro'")&&
+      fs.existsSync('docs/releases/GMWW-V3.267-morning-zero-deaths-20261028.md');
+  }catch{return false}
+}
+
 // PR #587: Hybrid DEMO is a self-contained, server-authoritative Player Web
 // feature. No unrelated 3D, IPA, card-art or gallows browser suite is required.
 // Fail closed if ANY extra source path is modified.
@@ -2255,7 +2298,8 @@ const HYBRID_DEMO_587_FILES=new Set([
   'tests/demo-room-lease-phases.test.mjs',
   'tests/demo-server-autonomous-e2e.mjs',
   'package.json','package-lock.json',
-  'server-game/current/app.js','server-game/current/GMWW.html'
+  'server-game/current/app.js','server-game/current/GMWW.html',
+  'server-game/src/00-core-and-library.part'
 ]);
 function isHybridDemo587Scope(changes){
   if(!Array.isArray(changes)||changes.length<8)return false;
@@ -2266,10 +2310,10 @@ function isHybridDemo587Scope(changes){
     'docs/releases/GMWW-DEMO-HYBRID-20261028.md'];
   return required.every(p=>names.has(p))&&changes.every(c=>
     HYBRID_DEMO_587_FILES.has(c.path)&&['A','M'].includes(c.status));
-}
-
-export function classifyBrowserScope(changes){
+}function classifyBrowserScope(changes){
   if(isHybridDemo587Scope(changes))return 'demo-hybrid-587';
+  if(isMorningAudio3267Scope(changes))return 'gm-audio-morning-3267';
+  if(isOnlineChatScope(changes))return 'online-chat-audio';
   if(isLeanPackaging3264Scope(changes))return 'ipa-ota-lean-3264';
   if(isGMFireRadius3262Scope(changes))return 'gm-fire-radius-3262';
   if(isGMFireWalk3261Scope(changes))return 'gm-fire-walk-3261';
@@ -2422,7 +2466,87 @@ function cardRule3263MainScope(){
   }catch{return false}
 }
 
+
+const gatherPinch3265Files=new Set([
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-lobby-gather-assassin.yml',
+  '.github/workflows/check-player-web.yml',
+  'assets/village/village-layout.js',
+  'docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md',
+  'package-lock.json','package.json',
+  'server-game/current/GMWW.html','server-game/current/app.js',
+  'server-game/current/style.css',
+  'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+  'src/index.js',
+  'tests/gather-spacing-gm-menu.test.mjs',
+  'tests/gm-gather-pinch-spacing-v3265.test.mjs',
+  'tests/seat-free-map-drag-v3198.test.mjs',
+  'tests/gmww-v3128-seat-geofence-rewrite.test.mjs',
+  'tests/gmww-v3129-seat-anchor-sync.test.mjs',
+  'tests/v3183-seat-perimeter-contract.test.mjs'
+]);
+function isGatherPinch3265Scope(changes){
+  if(!changes?.length||changes.some(c=>!gatherPinch3265Files.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const touched=new Set(changes.map(c=>c.path));
+  for(const required of [
+    'assets/village/village-layout.js','server-game/src/30-village-and-setup.part',
+    'server-game/current/app.js','server-game/current/GMWW.html',
+    'src/index.js','tests/gm-gather-pinch-spacing-v3265.test.mjs',
+    'docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+  ])if(!touched.has(required))return false;
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const layout=fs.readFileSync('assets/village/village-layout.js','utf8');
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  return pkg.version==='3.265.0' &&
+    worker.includes('VERSION="V3.265",NATIVE_SHELL_VERSION="3.264"') &&
+    html.includes('<title>GMWW V3.265</title>') &&
+    !html.includes('id="playGatherSpacing" type="range"') &&
+    layout.includes('Math.max(50,Math.min(300,Math.round(n)))');
+}
+
 function detect(){
+  // Exact PR/main same-diff audio fix; keep the unrelated historical test
+  // suites out of the release gate while preserving Worker/OTA validation.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD')
+          .trim().split('\n').filter(Boolean).map(line=>{
+            const [status,path]=line.split('\t');return {status,path};
+          });
+        if(isMorningAudio3267Scope(changes))
+          return {mode:'gm-audio-morning-3267',reason:'V3.267 only: no-death dawn cue, Audio regression, bundle and Worker gate'};
+      }
+    }catch{}
+  }
+
+  // Respect the same focused scope on both the PR and the approved merged commit.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(line=>{const [status,path]=line.split('\t');return{status,path}});
+        if(isOnlineChatScope(changes))return{mode:'online-chat-audio',reason:'Online Chat/GM moderation/Player announcements, focused privacy and bundle checks'};
+      }
+    }catch{}
+  }
+
+  // Scope only the exact, reviewed V3.265 seat-pinch files, both PR and main.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isGatherPinch3265Scope(changes))return {mode:'gather-pinch-3265',reason:'Exact V3.265 shared seat geometry, pinch UI, Worker guard, OTA and related regression only'};
+      }
+    }catch{} // Fail closed: unknown changes run the normal broader checks.
+  }
   if(cardRule3263MainScope())return{mode:'card-rule-3263',reason:'V3.263 approved 3 Artifact executors; exact 3.262 base, strict scope and GM radius preserved'};
   // CI-only fix after the approved V3.260 merge: retain exact-scope
   // Worker + Say Rượu checks; unrelated legacy tests must not block OTA.

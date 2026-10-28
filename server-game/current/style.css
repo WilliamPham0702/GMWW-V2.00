@@ -8776,3 +8776,11 @@ html[data-gmww-perf-reduced="true"] #start #playShell[data-step="battle"] #playP
     animation:none!important;transform:none!important;
   }
 }
+
+/* V3.265: Gather pinch/spread on iPhone; no slider, no new animation loop. */
+#playGatherToolbar .play-gather-mode-row{align-items:center;gap:8px}
+#playGatherToolbar .play-gather-mode-row #playRoomModeToggle{width:auto;flex:1 1 auto}
+#playGatherToolbar .play-gather-mode-row .play-seat-shift-buttons{flex:none}
+#playGatherToolbar .play-gather-mode-row [data-seat-shift="reset"]{width:40px;height:38px}
+#playWorld .play-pinch-indicator{position:absolute;z-index:35;top:43%;left:50%;transform:translate(-50%,-50%);font:900 16px system-ui,sans-serif;letter-spacing:.04em;padding:7px 15px;border-radius:12px;border:1px solid rgba(174,241,236,.7);background:rgba(7,42,55,.86);color:#fff;pointer-events:none;white-space:nowrap;box-shadow:0 3px 12px #082e35a6}
+#playWorld .play-pinch-indicator[hidden]{display:none!important}

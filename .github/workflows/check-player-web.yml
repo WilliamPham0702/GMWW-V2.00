@@ -44,6 +44,39 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: V3.267 — Audio sáng không người chết và chốt Worker/Runtime liên quan
+        if: steps.scope.outputs.mode == 'gm-audio-morning-3267'
+        run: |
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          test -s docs/releases/GMWW-V3.267-morning-zero-deaths-20261028.md
+      - name: V3.265 — Tập hợp chụm/banh 50–300%, đồng bộ Worker/GM/Player và OTA
+        if: steps.scope.outputs.mode == 'gather-pinch-3265'
+        run: |
+          node --test tests/gm-gather-pinch-spacing-v3265.test.mjs tests/gather-spacing-gm-menu.test.mjs tests/seat-free-map-drag-v3198.test.mjs tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node --test tests/v3183-seat-perimeter-contract.test.mjs tests/seat-presets-fire-v399.test.mjs tests/seat-presets-v397.test.mjs tests/gmww-v3128-seat-geofence-rewrite.test.mjs tests/gmww-v3129-seat-anchor-sync.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md
+      - name: Online Chat — kiểm tra riêng tư theo lượt, mute, audio và hai bundle
+        if: steps.scope.outputs.mode == 'online-chat-audio'
+        run: |
+          node --test tests/online-chat-authority.test.mjs tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          node --check src/index.js
+          node --check src/gmww-online-chat-policy.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node -e "import('./src/gmww-members-live.js').then(m=>require('fs').writeFileSync('/tmp/gmww-online-chat-player.js',m.gmwwMembersLiveScript))"
+          node --check /tmp/gmww-online-chat-player.js
+          test -s docs/releases/GMWW-ONLINE-CHAT-20261028.md
       - name: V3.263 — kiểm RULE Bình Giấc Mơ, Hơi Thở Lão Già, Kim Cương Phủ Nhận
         if: steps.scope.outputs.mode == 'card-rule-3263'
         run: |
