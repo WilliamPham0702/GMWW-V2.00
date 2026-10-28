@@ -629,7 +629,7 @@ function auth(){return state.token?{Authorization:'Bearer '+state.token}:{}}
 function avatarUrl(id){return '/api/avatars/'+encodeURIComponent(id)+'/image'}
 async function loadUiSettings(force=false){
   if(!force&&Date.now()-Number(state.uiSettingsLoadedAt||0)<10000)return state.characterScale;
-  try{const d=await api('/api/ui-settings');state.characterScale=normalizeCharacterScale(d?.characterScale,100);state.uiSettingsLoadedAt=Date.now();syncVillageFrame();return state.characterScale}catch{return state.characterScale}
+  try{const d=await api('/api/ui-settings');state.characterScale=normalizeCharacterScale(d?.characterScale,100);state.actionIconScale=[25,50,75,100,125,150].includes(Number(d?.actionIconScale))?Number(d.actionIconScale):100;state.uiSettingsLoadedAt=Date.now();syncVillageFrame();renderOnlineActionDock();return state.characterScale}catch{return state.characterScale}
 }
 
 function saveSession(d){
