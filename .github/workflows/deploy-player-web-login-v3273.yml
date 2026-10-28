@@ -1,5 +1,9 @@
 name: Deploy V3.273 Player Web Login Hotfix (Worker-only)
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-player-web-login-v3273.yml'
   workflow_run:
     workflows: ["Check V3.273 Player Web Login Hotfix (focused)"]
     types: [completed]
@@ -13,29 +17,32 @@ permissions:
 jobs:
   deploy:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event_name == 'push' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact CI-success main commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          ref: ${{ github.event_name == 'push' && github.sha || github.event.workflow_run.head_sha }}
+          fetch-depth: 20
       - name: Guard owner-approved PR 599 and reject stale main
         id: gate
         shell: bash
         env:
-          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          TESTED_SHA: ${{ github.event_name == 'push' && github.sha || github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TESTED_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TESTED_SHA"
-          git log -1 --format=%B | grep -qE 'Merge pull request #599|HOTFIX V3.273: khôi phục đăng nhập Player Web'
+          HOTFIX_SHA="$(git log --format='%H%x09%B%x00' -20 | tr '\\0' '\\n' | grep -m1 -E 'Merge pull request #599|Merge PR #599|HOTFIX V3.273: khôi phục đăng nhập Player Web' | cut -f1)"
+          test -n "$HOTFIX_SHA"
+          git merge-base --is-ancestor "$HOTFIX_SHA" HEAD
           test "$(node -p 'require("./package.json").version')" = "3.273.0"
           test -s docs/releases/GMWW-V3.273-PLAYER-WEB-LOGIN-HOTFIX-20261029.md
-          git diff --name-only HEAD^1 HEAD > /tmp/changed-files.txt
+          git diff --name-only "$HOTFIX_SHA^1" "$HOTFIX_SHA" > /tmp/changed-files.txt
           if grep -Ev '^(src/gmww-player-private-card-patch[.]js|src/gmww-members-live[.]js|src/player-web-src/20-village-and-profile[.]part|tests/player-web-receipt-patch-hotfix[.]test[.]mjs|docs/releases/GMWW-V3[.]273-PLAYER-WEB-LOGIN-HOTFIX-20261029[.]md|[.]github/workflows/check-player-web-login-v3273[.]yml|[.]github/workflows/deploy-player-web-login-v3273[.]yml|[.]github/workflows/deploy-production[.]yml)$' /tmp/changed-files.txt; then
             echo "::error::Unexpected runtime change; Worker-only release blocked"
             exit 1
