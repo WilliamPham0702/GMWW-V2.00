@@ -684,11 +684,20 @@ export class RoomDurableObject extends DurableObject {
 
   async globalUiSettingsGet(){
     const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=normalizeCharacterScale(raw,100);
-    return j({ok:true,characterScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
+    const actionIconScale=[25,50,75,100,125,150].includes(Number(rec?.actionIconScale))?Number(rec.actionIconScale):100;
+    return j({ok:true,characterScale,actionIconScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
   }
   async globalUiSettingsPut(body){
-    const raw=Number(body?.characterScale);if(!Number.isFinite(raw))return j({ok:false,error:"INVALID_CHARACTER_SCALE"},400);
-    const characterScale=normalizeCharacterScale(raw,100),rec={characterScale,backgroundDim:0,updatedAt:new Date().toISOString()};
+    const hasCharacter=Object.prototype.hasOwnProperty.call(body||{},"characterScale"),
+      hasIcon=Object.prototype.hasOwnProperty.call(body||{},"actionIconScale");
+    if(!hasCharacter&&!hasIcon)return j({ok:false,error:"INVALID_UI_SETTINGS"},400);
+    if(hasCharacter&&!Number.isFinite(Number(body.characterScale)))return j({ok:false,error:"INVALID_CHARACTER_SCALE"},400);
+    if(hasIcon&&![25,50,75,100,125,150].includes(Number(body.actionIconScale)))
+      return j({ok:false,error:"INVALID_ACTION_ICON_SCALE"},400);
+    const prior=await this.ctx.storage.get("globalSetting:ui")||{},
+      characterScale=hasCharacter?normalizeCharacterScale(Number(body.characterScale),100):normalizeCharacterScale(Number(prior.characterScale),100),
+      actionIconScale=hasIcon?Number(body.actionIconScale):([25,50,75,100,125,150].includes(Number(prior.actionIconScale))?Number(prior.actionIconScale):100),
+      rec={...prior,characterScale,actionIconScale,backgroundDim:0,updatedAt:new Date().toISOString()};
     await this.ctx.storage.put("globalSetting:ui",rec);await this.ctx.storage.delete("globalSetting:webVeil");return j({ok:true,...rec});
   }
   async globalWebSyncGet(){
