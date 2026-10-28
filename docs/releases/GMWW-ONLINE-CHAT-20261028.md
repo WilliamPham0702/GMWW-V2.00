@@ -1,4 +1,4 @@
-# GMWW Online – Chat theo lượt và audio hệ thống (28/10/2026)
+# GMWW Runtime OTA V3.266 – Online Chat theo lượt và audio hệ thống (28/10/2026)
 
 ## Đã thay đổi trên nhánh tính năng
 - Chế độ Online sử dụng Chat văn bản trên Player Web và giao diện quản lý của GM, không thêm dịch vụ Chat thứ ba.
