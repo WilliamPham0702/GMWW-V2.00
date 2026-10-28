@@ -19,7 +19,7 @@ import {isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightR
 import {partitionNightSpecialRoles,witchSaveTargetAllowed} from '../src/gmww-witch-drunk-clone-rules.js';
 import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
 import {drunkDeadCards,drunkDeckView,isPassiveInformationAction} from '../src/gmww-drunk-draw-rules.js';
-import {buildPrivateDeliverySnapshot} from '../src/gmww-delivery-snapshot.js';
+import {buildPrivateDeliverySnapshot,privateDeliveryArtifact} from '../src/gmww-delivery-snapshot.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
@@ -973,4 +973,81 @@ test('Old Breath: night marker is reversible and cannot kill on initial dawn',as
   rows=h.data.get('interactions')||[];
   assert.equal(rows.some(x=>x.deferredArtifact==='artifact_07'),false);
   assert.equal(h.data.has('artifactUse:alice:artifact_07'),false);
+});
+
+test('Kim Cương Phủ Nhận: removes only already-used unlimited Artifact without losing role or historical use',async()=>{
+  const h=harness({artifact:false});
+  Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-2',cycleNight:2});
+  const artifactCard={functions:[{actionId:'action_always',usageMode:'unlimited',phase:'day'}]};
+  h.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_15',singleUse:true,
+    artifactCard:{functions:[{actionId:'artifact_action_negate',phase:'day',
+      usageMode:'onceGame',targetCount:1,noSelf:false}]}});
+  h.data.set('artifact:bob',{matchId:'test-match',artifactId:'artifact_20',
+    singleUse:false,usedAt:'2026-10-28T07:00:00Z',artifactCard});
+  const assignments=h.data.get('assignments');
+  assignments.find(x=>x.loginId==='bob').artifactId='artifact_20';
+  assignments.find(x=>x.loginId==='bob').artifactName='Trái Tim Vô Tâm';
+  const archivedUse={usedAt:'2026-10-28T07:00:00Z',requestId:'prior'};
+  h.data.set('artifactUse:bob:artifact_20',archivedUse);
+  const b={matchId:'test-match',cycleKey:'morning-2',actorId:'alice',
+    artifactId:'artifact_15',actionId:'artifact_action_negate',
+    targetIds:['bob'],clientEventId:'negate-diamond-1'};
+  const r=await result(await h.room.gmDayAction(null,b));
+  assert.equal(r.ok,true,JSON.stringify(r));
+  assert.equal(h.data.get('artifact:bob').removedFromMatch,true);
+  assert.equal(h.data.get('artifact:bob').removedByArtifactId,'artifact_15');
+  const summary=h.data.get('assignments').find(x=>x.loginId==='bob');
+  assert.equal(summary.roleId,'seer');
+  assert.equal(summary.artifactId,null);
+  assert.deepEqual(h.data.get('artifactUse:bob:artifact_20'),archivedUse);
+  const snapshot=buildPrivateDeliverySnapshot({matchId:'test-match',roles:[
+    {roleId:'seer',artifact:{matchId:'test-match',artifactId:'artifact_20'}}]});
+  assert.equal(privateDeliveryArtifact(snapshot,h.data.get('artifact:bob')),null);
+  assert.equal((await result(await h.room.playerArtifactActivate({
+    loginId:'bob',requestId:'try-removed',targetId:'member:alice'}))).error,
+    'ARTIFACT_REMOVED_FROM_MATCH');
+  assert.equal((await result(await h.room.gmDayAction(null,b))).idempotent,true);
+});
+
+test('Kim Cương Phủ Nhận: unspent and onceGame Artifact cannot be removed, no debit',async()=>{
+  for(const [singleUse,usedAt,mode] of [[false,null,'unlimited'],
+    [true,'2026-10-28T07:00:00Z','onceGame'],
+    [false,'2026-10-28T07:00:00Z','eachNight']]){
+    const h=harness({artifact:false});
+    Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-2',cycleNight:2});
+    h.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_15',singleUse:true,
+      artifactCard:{functions:[{actionId:'artifact_action_negate',phase:'day',
+        targetCount:1,noSelf:false}]}});
+    h.data.set('artifact:bob',{matchId:'test-match',artifactId:'artifact_20',
+      singleUse,usedAt,artifactCard:{functions:[{actionId:'block_vote',usageMode:mode}]}});
+    h.data.get('assignments').find(x=>x.loginId==='bob').artifactId='artifact_20';
+    const r=await result(await h.room.gmDayAction(null,{
+      matchId:'test-match',cycleKey:'morning-2',actorId:'alice',
+      artifactId:'artifact_15',actionId:'artifact_action_negate',
+      targetIds:['bob'],clientEventId:'negative-target'}));
+    assert.equal(r.error,'NEGATE_TARGET_NOT_ELIGIBLE');
+    assert.equal(h.data.has('artifactUse:alice:artifact_15'),false);
+    assert.equal(h.data.get('artifact:bob').removedFromMatch,undefined);
+  }
+});
+
+test('Kim Cương Phủ Nhận: only artifact_15 is executor; snapshot still shows untouched cards',async()=>{
+  const h=harness({artifact:false});
+  Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-2',cycleNight:2});
+  h.data.set('artifact:alice',{matchId:'test-match',artifactId:'other',
+    artifactCard:{functions:[{actionId:'artifact_action_negate',phase:'day',targetCount:1}]}});
+  h.data.set('artifact:bob',{matchId:'test-match',artifactId:'artifact_20',singleUse:false,
+    usedAt:'2026-10-28T07:00:00Z',
+    artifactCard:{functions:[{actionId:'foo',usageMode:'unlimited'}]}});
+  h.data.get('assignments').find(x=>x.loginId==='bob').artifactId='artifact_20';
+  const r=await result(await h.room.gmDayAction(null,{
+    matchId:'test-match',cycleKey:'morning-2',actorId:'alice',
+    artifactId:'other',actionId:'artifact_action_negate',
+    targetIds:['bob'],clientEventId:'other-negate'}));
+  assert.equal(r.error,'DAY_ARTIFACT_EFFECT_NOT_IMPLEMENTED');
+  assert.equal(h.data.has('artifactUse:alice:other'),false);
+  assert.equal(h.data.get('artifact:bob').removedFromMatch,undefined);
+  const snap=buildPrivateDeliverySnapshot({matchId:'test-match',roles:[{
+    roleId:'seer',artifact:{matchId:'test-match',artifactId:'artifact_20'}}]});
+  assert.equal(privateDeliveryArtifact(snap,h.data.get('artifact:bob')).artifactId,'artifact_20');
 });

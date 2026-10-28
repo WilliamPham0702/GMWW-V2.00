@@ -16,3 +16,5 @@ Spec: yêu cầu người dùng kiểm tra/sửa mọi rule theo mô tả, hỏi
 
 Môi trường scratch đã bị reset sau trả lời tương tác; code được khôi phục theo các patch đã kiểm chứng và chạy lại toàn bộ 131 test liên quan. Base được giữ cố định. Sau khi người dùng cho phép, tiếp tục trên cùng nhánh; không thay đổi main/Production khi chưa đủ điều kiện.
 \n- [x] Tích hợp executor Bình Giấc Mơ trên Server ngày/đêm với status disabled_2n, expiry 2 chu kỳ, chặn actor, chống dùng trùng, undo.\n- [ ] Kiểm thử CI thay đổi executor và nghiệm thu trước khi đánh dấu hoàn thành lá.\n\n- [x] Xây dựng executor Hơi Thở Lão Già (artifact_07) đánh dấu và kết toán N+1, test miễn nhiễm / chống nhầm Action ID / undo.\n- [ ] Chốt CI sau thay đổi.\n
+- [x] Xử lý Kim Cương Phủ Nhận: thu hồi Artifact vĩnh viễn đã dùng, chặn kích hoạt + snapshot resurrection, bảo toàn history/role.
+- [ ] CI kiểm toán sau executor Kim Cương; chưa deploy.

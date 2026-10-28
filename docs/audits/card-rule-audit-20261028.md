@@ -92,7 +92,7 @@
 | Áo Choàng Hoàng Tử | action-fool-escape | Chưa hoàn thiện executor chuyên biệt. Thiếu miễn chết do Treo Cổ; không tương đương Kẻ Ngốc một lần. |
 | Đồng Xu Tuổi Trẻ | artifact_action_reveal_role | Đã chốt: không công bố Vai Trò thật thì chết. **Chưa có executor theo dõi công bố và giải quyết hậu quả.** |
 | Gậy Mụ Già | action-black-woman-leave | Chưa hoàn thiện executor chuyên biệt. Thiếu rời làng đúng ngày, khóa quyền và tự trở về. |
-| Kim Cương Phủ Nhận | artifact_action_negate | Đã chốt: loại khỏi ván Artifact dùng mãi mãi đã sử dụng. **Chưa có executor thu hồi và xử lý hiệu ứng đang tồn tại.** |
+| Kim Cương Phủ Nhận | artifact_action_negate | **Đã có executor Server Ban Ngày:** chỉ thu hồi Artifact dùng không giới hạn đã thực sự kích hoạt; tombstone chống tái xuất hiện sau reconnect, chặn tiếp tục sử dụng, không xóa lịch sử. Hiệu ứng đã thực thi trước đó không bị hồi tố. Chưa nghiệm thu GM/Player Web trên thiết bị. |
 | Nhật Ký Mất Ngủ | artifact_action_check_awake | Chưa hoàn thiện executor chuyên biệt. Thiếu lịch sử ai thực sự thức và xác định hàng xóm. |
 | Ngọc Ghen Tuông | artifact_action_steal | Chưa hoàn thiện executor chuyên biệt. Thiếu đổi chủ lá chưa lật/cấp lá mới/ledger theo chủ. |
 | Mắt Tiên Tri | action_find_seer | Chưa hoàn thiện executor chuyên biệt. Thiếu gắn vào lượt Tiên Tri/chia sẻ cùng kết quả; action_find_seer hiện không đúng ý nghĩa này. |

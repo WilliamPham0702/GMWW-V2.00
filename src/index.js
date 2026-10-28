@@ -1694,6 +1694,7 @@ export class RoomDurableObject extends DurableObject {
       if(!artifactMode||!a?.artifactId)continue;
       const loginId=normalizeLoginId(a.loginId),assigned=await this.ctx.storage.get("artifact:"+loginId);
       const singleUse=a.artifactSingleUse===true||assigned?.singleUse===true;
+      if(assigned?.removedFromMatch===true)continue;
       if(singleUse&&await this.ctx.storage.get("artifactUse:"+loginId+":"+String(a.artifactId)))continue;
       const priorityFirst=typeof a.artifactPriorityFirst==="boolean"?a.artifactPriorityFirst:typeof assigned?.priorityFirst==="boolean"?assigned.priorityFirst:defaultPriorityFirst(a.artifactName);
       artifactRows.push({...a,_index:index,_priorityFirst:priorityFirst});
@@ -1806,6 +1807,7 @@ export class RoomDurableObject extends DurableObject {
     const nonce=String(actionNonce||"").trim().slice(0,100);
     const owned=await this.ctx.storage.get("artifact:"+normalizeLoginId(step.loginId));
     if(!owned||String(owned.artifactId)!==String(step.artifactId))return j({ok:false,error:"INVALID_ARTIFACT_OWNER"},403);
+    if(owned.removedFromMatch===true)return j({ok:false,error:"ARTIFACT_REMOVED_FROM_MATCH"},409);
     const configuredFunction=(owned.artifactCard?.functions||[]).find(a=>String(a.actionId||a.id)===String(confirmation.actionId||""));
     const legacyAction=(owned.artifactCard?.actions||[]).find(a=>String(a.id)===String(confirmation.actionId||""));
     const configuredAction=configuredFunction?{...legacyAction,...configuredFunction}:legacyAction;
@@ -2071,6 +2073,8 @@ export class RoomDurableObject extends DurableObject {
       if(!owned||String(owned.artifactId)!==artifactId||
         (owned.matchId&&String(owned.matchId)!==matchId))
         return j({ok:false,error:"DAY_ARTIFACT_NOT_OWNED"},403);
+      if(owned.removedFromMatch===true)
+        return j({ok:false,error:"ARTIFACT_REMOVED_FROM_MATCH"},409);
       card=owned.artifactCard||{};
       const fns=Array.isArray(card.functions)&&card.functions.length?card.functions:card.actions||[];
       fn=fns.find(x=>String(x?.actionId||x?.id)===actionId);
@@ -2181,6 +2185,28 @@ export class RoomDurableObject extends DurableObject {
       }else if(actionId==='action_exile'||effects.includes('effect_exile')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
+      }else if(artifactId==="artifact_15"&&actionId==="artifact_action_negate"){
+        // Only a previously used, truly unlimited Artifact qualifies. Do not
+        // confuse a one-time Artifact or merely assigned card with "used".
+        const id=effectiveTargets[0],
+          targetArtifact=id?await this.ctx.storage.get("artifact:"+id):null,
+          summary=assignments.find(x=>normalizeLoginId(x.loginId)===id),
+          permanent=targetArtifact?.singleUse===false&&
+            Array.isArray(targetArtifact?.artifactCard?.functions)&&
+            targetArtifact.artifactCard.functions.some(fn=>
+              String(fn?.usageMode)==="unlimited"),
+          wasUsed=!!targetArtifact?.usedAt||
+            (targetArtifact?.artifactId&&!!(await this.ctx.storage.get(
+              "artifactUse:"+id+":"+String(targetArtifact.artifactId))));
+        if(!id||!targetArtifact||targetArtifact.removedFromMatch===true||
+          (targetArtifact.matchId&&String(targetArtifact.matchId)!==matchId)||
+          !summary||String(summary.artifactId||"")!==String(targetArtifact.artifactId||"")||
+          !permanent||!wasUsed)
+          return j({ok:false,error:"NEGATE_TARGET_NOT_ELIGIBLE",
+            message:"Chỉ được loại Artifact dùng mãi mãi đã sử dụng và còn trong ván; chưa trừ lượt."},409);
+        changes.push({kind:"remove_artifact",loginId:id,
+          artifactId:String(targetArtifact.artifactId)});
+        message="Kim Cương Phủ Nhận đã loại khỏi ván Artifact dùng mãi mãi đã sử dụng.";
       }else if(artifactId==="artifact_07"&&actionId==="action-grudge-designate"){
         if(effectiveTargets.some(id=>affected(id,"dead")||
           interactions.some(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
@@ -2214,6 +2240,32 @@ export class RoomDurableObject extends DurableObject {
     }else return j({ok:false,error:"DAY_ROLE_EFFECT_NOT_IMPLEMENTED"},409);
     for(const id of deadVictims)changes.push({kind:"status",loginId:id,type:"dead"});
     for(const effect of changes){
+      if(effect.kind==="remove_artifact"){
+        const removed=await this.ctx.storage.transaction(async txn=>{
+          const target=await txn.get("artifact:"+effect.loginId),
+            rows=await txn.get("assignments")||[],
+            assigned=rows.find(x=>normalizeLoginId(x.loginId)===effect.loginId);
+          if(!target||target.removedFromMatch===true||
+            String(target.artifactId||"")!==effect.artifactId||
+            (target.matchId&&String(target.matchId)!==matchId)||
+            !assigned||String(assigned.artifactId||"")!==effect.artifactId)
+            return {ok:false};
+          target.removedFromMatch=true;target.removedAt=time;
+          target.removedByArtifactId=artifactId;
+          await txn.put("artifact:"+effect.loginId,target);
+          for(const row of rows){
+            if(normalizeLoginId(row.loginId)!==effect.loginId||
+              String(row.artifactId||"")!==effect.artifactId)continue;
+            row.artifactId=null;row.artifactName=null;
+            row.artifactUsedAt=null;row.artifactViewedAt=null;
+            row.artifactPriorityFirst=null;row.artifactSingleUse=null;
+          }
+          await txn.put("assignments",rows);
+          return {ok:true};
+        });
+        if(!removed.ok)return j({ok:false,error:"NEGATE_TARGET_CHANGED"},409);
+        continue;
+      }
       if(effect.kind==="knight_pending"){await this.ctx.storage.put(effect.key,effect.value);continue}
       if(effect.kind==="revived")continue;
       // Multiple distinct status IDs may coexist (e.g. Mute and Artifact vote ban).
@@ -2860,7 +2912,7 @@ export class RoomDurableObject extends DurableObject {
       // A role assignment also contains the committed artifact. Use it if the
       // legacy standalone Artifact key is absent; do not hide an assigned card.
       attachedArtifact=roleRows.find(r=>r?.artifact&&(!meta.matchId||String(r.matchId||"")===String(meta.matchId)))?.artifact||null,
-      currentArtifact=activeSnapshot?privateDeliveryArtifact(activeSnapshot,storedArtifact):(storedArtifact&&(!meta.matchId||String(storedArtifact.matchId||"")===String(meta.matchId))?storedArtifact:attachedArtifact),
+      currentArtifact=activeSnapshot?privateDeliveryArtifact(activeSnapshot,storedArtifact):(storedArtifact?.removedFromMatch===true?null:storedArtifact&&(!meta.matchId||String(storedArtifact.matchId||"")===String(meta.matchId))?storedArtifact:attachedArtifact),
       artifact=currentArtifact?privateArtifact(currentArtifact):null,artifactCycleKey=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKey))||{accepted:[]};
     const deliveryManifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments:(await this.ctx.storage.get("assignments"))||[],roles:roleRows,artifact:currentArtifact});
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
@@ -2951,7 +3003,7 @@ export class RoomDurableObject extends DurableObject {
     if(!["role_delivery","running"].includes(String(meta.phase||"").toLowerCase()))return j({ok:false,error:"ROLE_DELIVERY_NOT_STARTED"},409);
     const stored=(await this.ctx.storage.get("roles:"+loginId))||[],legacy=await this.ctx.storage.get("role:"+loginId),legacyRows=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]);
     const snapshot=currentPrivateDeliverySnapshot(await this.ctx.storage.get("deliverySnapshot:"+loginId),meta),roles=privateDeliveryRoles(snapshot,legacyRows);
-    const savedArtifact=await this.ctx.storage.get("artifact:"+loginId),artifact=snapshot?privateDeliveryArtifact(snapshot,savedArtifact):(savedArtifact||roles.find(row=>row?.artifact)?.artifact||null);
+    const savedArtifact=await this.ctx.storage.get("artifact:"+loginId),artifact=snapshot?privateDeliveryArtifact(snapshot,savedArtifact):(savedArtifact?.removedFromMatch===true?null:savedArtifact||roles.find(row=>row?.artifact)?.artifact||null);
     const assignments=(await this.ctx.storage.get("assignments"))||[];
     const manifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments,roles,artifact});
     if(!validPrivateDeliveryAcknowledgment(manifest,body))return j({ok:false,error:"DELIVERY_RECEIPT_MISMATCH"},409);
@@ -2972,7 +3024,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async playerArtifactViewed(body){
     const loginId=normalizeLoginId(body?.loginId),artifact=await this.ctx.storage.get("artifact:"+loginId);
-    if(!artifact)return j({ok:false,error:"ARTIFACT_NOT_FOUND"},404);
+    if(!artifact||artifact.removedFromMatch===true)return j({ok:false,error:"ARTIFACT_NOT_FOUND"},404);
     if(!artifact.viewedAt){
       artifact.viewedAt=new Date().toISOString();await this.ctx.storage.put("artifact:"+loginId,artifact);
       const rows=(await this.ctx.storage.get("assignments"))||[],row=rows.find(x=>normalizeLoginId(x?.loginId)===loginId);
@@ -2991,6 +3043,7 @@ export class RoomDurableObject extends DurableObject {
     const result=await this.ctx.storage.transaction(async txn=>{
       const artifact=await txn.get("artifact:"+loginId);
       if(!artifact)return{ok:false,status:404,error:"ARTIFACT_NOT_FOUND"};
+      if(artifact.removedFromMatch===true)return{ok:false,status:409,error:"ARTIFACT_REMOVED_FROM_MATCH"};
       const targetId=String(body?.targetId||body?.originalTargetId||"").slice(0,160);if(targetId){const players=(await txn.get("players"))||{};if(!players[targetId])return{ok:false,status:400,error:"INVALID_ARTIFACT_TARGET"}}
       if(meta.matchId&&artifact.matchId&&String(meta.matchId)!==String(artifact.matchId))return{ok:false,status:409,error:"STALE_ARTIFACT"};
       const artifactId=String(artifact.artifactId||""),playerId="member:"+loginId,useKey="artifactUse:"+loginId+":"+artifactId,oldUse=await txn.get(useKey),cycle=(await txn.get("artifactCycle:"+cycleKey))||{cycleKey,accepted:[]};
