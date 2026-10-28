@@ -26,7 +26,7 @@ const scheduler=createArenaPaintScheduler();
 let orbit=.5,elevation=.75,radius=20,lastSize='',lastSignature='',room=null;
 let selected=null,activePointer=null,pinchSize=0,contextLost=false,lastPaintHz=0;
 let frameCount=0,fps=0,fpsSince=performance.now(),connection=null,publicBallot=null;
-let paintFrames=0,renderPaused=false;
+let paintFrames=0,renderPaused=false,lastPixelRatio=0;
 const pointers=new Map();
 
 function showState(frame){
@@ -48,6 +48,12 @@ function drawFrame(frame){
     field.setCastingTurn(null);
   }
   room=frame.room;
+  // Crowd scenes use a smaller GPU framebuffer; Core/network cadence is unchanged.
+  // Set only on roster transitions, never in the per-frame animation loop.
+  const pixelRatio=Math.min(window.devicePixelRatio||1,items.length>=20?.85:1.1);
+  if(pixelRatio!==lastPixelRatio){
+    lastPixelRatio=pixelRatio;renderer.setPixelRatio(pixelRatio);lastSize='';
+  }
   field.setGallowsCandidate(gallowsCandidateActorId(publicBallot,frame));
   village.setNight(room.cyclePhase==='night');
   showState(frame);
@@ -70,7 +76,7 @@ function frame(now){
     document.body.dataset.arenaPlayerRenderPaused=String(paused);
   }
   const hz=arenaTargetFrameHz({visible:!paused,
-    active:field.hasActiveMotion(now),interacting:pointers.size>0,
+    active:!paused&&field.hasActiveMotion(now),interacting:pointers.size>0,
     lowPower:field.actorCount>=20,reducedMotion});
   if(hz!==lastPaintHz){lastPaintHz=hz;document.body.dataset.arenaPlayerHz=String(hz)}
   if(scheduler.shouldPaint(now,hz,{paused})){
