@@ -2386,7 +2386,59 @@ function cardRule3263MainScope(){
   }catch{return false}
 }
 
+
+const gatherPinch3265Files=new Set([
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-lobby-gather-assassin.yml',
+  '.github/workflows/check-player-web.yml',
+  'assets/village/village-layout.js',
+  'docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md',
+  'package-lock.json','package.json',
+  'server-game/current/GMWW.html','server-game/current/app.js',
+  'server-game/current/style.css',
+  'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+  'src/index.js',
+  'tests/gather-spacing-gm-menu.test.mjs',
+  'tests/gm-gather-pinch-spacing-v3265.test.mjs',
+  'tests/seat-free-map-drag-v3198.test.mjs',
+  'tests/gmww-v3128-seat-geofence-rewrite.test.mjs',
+  'tests/gmww-v3129-seat-anchor-sync.test.mjs',
+  'tests/v3183-seat-perimeter-contract.test.mjs'
+]);
+function isGatherPinch3265Scope(changes){
+  if(!changes?.length||changes.some(c=>!gatherPinch3265Files.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const touched=new Set(changes.map(c=>c.path));
+  for(const required of [
+    'assets/village/village-layout.js','server-game/src/30-village-and-setup.part',
+    'server-game/current/app.js','server-game/current/GMWW.html',
+    'src/index.js','tests/gm-gather-pinch-spacing-v3265.test.mjs',
+    'docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+  ])if(!touched.has(required))return false;
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const layout=fs.readFileSync('assets/village/village-layout.js','utf8');
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  return pkg.version==='3.265.0' &&
+    worker.includes('VERSION="V3.265",NATIVE_SHELL_VERSION="3.264"') &&
+    html.includes('<title>GMWW V3.265</title>') &&
+    !html.includes('id="playGatherSpacing" type="range"') &&
+    layout.includes('Math.max(50,Math.min(300,Math.round(n)))');
+}
+
 function detect(){
+  // Scope only the exact, reviewed V3.265 seat-pinch files, both PR and main.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isGatherPinch3265Scope(changes))return {mode:'gather-pinch-3265',reason:'Exact V3.265 shared seat geometry, pinch UI, Worker guard, OTA and related regression only'};
+      }
+    }catch{} // Fail closed: unknown changes run the normal broader checks.
+  }
   if(cardRule3263MainScope())return{mode:'card-rule-3263',reason:'V3.263 approved 3 Artifact executors; exact 3.262 base, strict scope and GM radius preserved'};
   // CI-only fix after the approved V3.260 merge: retain exact-scope
   // Worker + Say Rượu checks; unrelated legacy tests must not block OTA.
