@@ -2615,7 +2615,54 @@ function isTemplateDock3268Scope(changes){
   }catch{return false}
 }
 
+function gmAdmin3272Scope(changes){
+  const allowed=new Set([
+    'server-game/src/00-core-and-library.part',
+    'server-game/src/40-battle-and-timeline.part',
+    'server-game/src/45-online-chat.part',
+    'server-game/current/app.js','server-game/current/style.css',
+    'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json',
+    '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml','.github/workflows/deploy-production.yml',
+    '.github/workflows/check-gm-admin-top-chat.yml','.github/workflows/build-server-game-ipa.yml',
+    'tests/gm-admin-top-chat-20261028.test.mjs',
+    'docs/releases/gm-admin-top-chat-20261028.md'
+  ]);
+  const names=new Set(changes.map(c=>c.path));
+  const required=['server-game/current/app.js','server-game/src/40-battle-and-timeline.part',
+    'server-game/src/45-online-chat.part','server-game/current/style.css','src/index.js',
+    'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+    'tests/gm-admin-top-chat-20261028.test.mjs'];
+  if(changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status))||
+     required.some(p=>!names.has(p)))return false;
+  const get=p=>fs.readFileSync(p,'utf8');
+  return JSON.parse(get('package.json')).version==='3.272.0'&&
+    get('src/index.js').includes('VERSION="V3.272",NATIVE_SHELL_VERSION="3.264"')&&
+    get('server-game/src/00-core-and-library.part').includes("const VERSION='3.272'")&&
+    get('server-game/current/app.js').includes("const VERSION='3.272'")&&
+    get('server-game/current/app.js').includes('function gmwwGMAdminMount()')&&
+    get('server-game/current/app.js').includes("trigger.textContent='🦩'")&&
+    get('server-game/current/GMWW.html').includes('<title>GMWW V3.272</title>')&&
+    get('.github/scripts/prepare-update-channel.mjs').includes('V3.272 PR595:')&&
+    get('docs/releases/gm-admin-top-chat-20261028.md').includes('Giết');
+}
 function detect(){
+  // Owner-approved PR595 Runtime V3.272: verify every changed path and
+  // the version/GM/chat contract. Unknown changes always run the full suite.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+          .split('\n').filter(Boolean).map(line=>{
+            const [status,path]=line.split('\t');return{status,path};
+          });
+        if(gmAdmin3272Scope(changes))
+          return{mode:'gm-admin-top-chat-3272',reason:'PR595 verified 3 GM actions, chat authority, no IPA, exact V3.272 Runtime OTA'};
+      }
+    }catch{} // Fail closed.
+  }
+
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');

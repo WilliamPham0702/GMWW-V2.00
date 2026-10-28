@@ -8807,3 +8807,28 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 #playGameSheet.gmww-template-compact .play-game-sheet-card[data-mode="play"] .sheet-head{
   margin:0!important;padding-bottom:0!important;border-bottom:0!important;
 }
+
+/* GM 3 permanent administrative icon actions — right side of the top timeline. */
+#start #playBattleTop:has(#gmwwGMAdminDock){
+  grid-template-columns:auto minmax(0,1fr) 42px auto!important;
+}
+#start #gmwwGMAdminDock{display:flex;align-items:center;justify-content:flex-end;gap:1px;min-width:0;pointer-events:auto}
+#start #gmwwGMAdminDock[hidden]{display:none!important}
+#start #gmwwGMAdminDock button{
+  display:grid;place-items:center;flex:0 0 32px;width:32px;height:42px;min-width:0;min-height:0;
+  background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;
+  padding:0!important;margin:0!important;font-size:24px;line-height:1;cursor:grab;
+  touch-action:none;-webkit-user-select:none;user-select:none;
+}
+#start #gmwwGMAdminDock button[aria-pressed="true"]{filter:drop-shadow(0 0 6px #aaf5ff);transform:translateY(-2px)}
+#start #gmwwGMAdminDock button:disabled{opacity:.45;cursor:default}
+.gmww-gm-admin-ghost{
+  position:fixed;z-index:100006;transform:translate(-50%,-50%);
+  pointer-events:none;font-size:38px;line-height:1;
+  filter:drop-shadow(0 6px 9px rgba(0,0,0,.6))
+}
+.gmww-gm-admin-ghost.is-sucked{filter:drop-shadow(0 0 12px #f5ed79)}
+@media(max-width:390px){
+  #start #playBattleTop:has(#gmwwGMAdminDock){gap:2px!important;padding:5px 3px!important}
+  #start #gmwwGMAdminDock button{flex-basis:30px;width:30px;font-size:22px}
+}
