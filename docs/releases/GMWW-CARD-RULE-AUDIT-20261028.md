@@ -22,10 +22,12 @@ Review độc lập phát hiện hai lỗi tương thích (function mặc địn
 
 Chưa CI GitHub/chưa STAGING/chưa Server/chưa Production/chưa iPhone. Không tuyên bố toàn bộ 107 lá hoàn thiện: mạng phụ/biến phe/đổi lá/hiệu ứng thụ động/phiên bỏ phiếu thứ hai/điều kiện thắng riêng và cooldown/trigger còn backlog chi tiết trong ma trận. Export cũ không chứng minh mọi chỉnh sửa mới trên iPhone đã được kiểm tra.
 
-## Rule còn cần bổ sung
+## Luật người dùng đã chốt — 28/10/2026
 
-Già Làng (phạm vi/quota Rung Chuông); Hơi Thở Lão Già (độ trễ/mốc chết); Bình Giấc Mơ (thời hạn khóa); Đồng Xu Tuổi Trẻ (hậu quả không công bố); Kim Cương Phủ Nhận (ngoại lệ); Trượng Luân Hồi (nguồn vai mới); Lam Ngọc Định Mệnh (phạm vi liên kết); Hư Không Vô Tận (rule tự động riêng hay GM xử lý).
+Đồng bộ mô tả thật trong GM migration, phần function và ma trận 107 lá: Già Làng (chặn mọi chết đêm đó, trừ 1 mạng, 0 mạng chết); Hơi Thở Lão Già (chết đêm kế tiếp); Bình Giấc Mơ (khóa 2 ngày đêm); Đồng Xu Tuổi Trẻ (không công bố vai thì chết); Kim Cương Phủ Nhận (loại Artifact dùng mãi mãi đã sử dụng); Trượng Luân Hồi (hồi sinh với vai cũ); Lam Ngọc Định Mệnh (copy Artifact và dùng cùng); Hư Không Vô Tận (GM giao luật Offline). Thêm kiểm thử migration/idempotence và giữ Action ID/media.
+
+**Chưa hoàn thiện executor thực thi các luật vừa chốt; tuyệt đối không coi đã vận hành hoặc phát hành Production.**
 
 ## GitHub và rollback
 
-Base `58195b2796c7e29e9007a5d1bcf8e06d4405d584`, branch dự kiến `fix/card-rule-contract-audit-20261028`. Auto-review từ chối push: user chưa xác nhận quyền gửi payload lên GitHub. Không dùng đường vòng. Chỉ có bản local và gói báo cáo/patch để review. Nếu được phép push, phải rebase lên main mới trước khi CI vì main đã có thay đổi không liên quan. Workflow chỉ test/dry-run, không deploy. Không migration/xóa phòng/DO/lịch sử. Bỏ/revert commit khi chưa phát hành là rollback; Production hiện chưa đổi.
+Base `58195b2796c7e29e9007a5d1bcf8e06d4405d584`, branch dự kiến `fix/card-rule-contract-audit-20261028`. Đã được chủ repo cho phép và đẩy nhánh riêng qua GitHub; không mở PR mới. Chưa deploy. Nếu được phép push, phải rebase lên main mới trước khi CI vì main đã có thay đổi không liên quan. Workflow chỉ test/dry-run, không deploy. Không migration/xóa phòng/DO/lịch sử. Bỏ/revert commit khi chưa phát hành là rollback; Production hiện chưa đổi.

@@ -9,7 +9,9 @@ Spec: yêu cầu người dùng kiểm tra/sửa mọi rule theo mô tả, hỏi
 - [x] Review độc lập, sửa hai lỗi tương thích bằng test RED→GREEN.
 - [x] Chốt với người dùng: Aura đọc tên Vai Trò; Mirror/Swap nhận quota mới. Đồng bộ mô tả, không coi executor hai Artifact đã hoàn thiện.
 - [x] 131 test liên quan PASS, syntax/assembly/diff PASS.
-- [ ] GitHub push/CI: chặn bởi auto-review, chờ người dùng xác nhận đích/payload. Không vượt chặn.
+- [x] Đã push nhánh kiểm toán cũ bằng kết nối GitHub, không tạo PR mới.
+- [x] Đồng bộ 8 luật mới chốt vào migration GM, ma trận audit và kiểm thử hợp đồng mô tả.
+- [ ] CI GitHub SUCCESS và xác nhận phạm vi thay đổi; chưa deploy.
 - [ ] Còn nhiều executor chưa xây dựng: chi tiết báo cáo, không báo full completion.
 
-Môi trường scratch đã bị reset sau trả lời tương tác; code được khôi phục theo các patch đã kiểm chứng và chạy lại toàn bộ 131 test liên quan. Base được giữ cố định. Không thử lại push hoặc dùng connector để vượt chặn.
+Môi trường scratch đã bị reset sau trả lời tương tác; code được khôi phục theo các patch đã kiểm chứng và chạy lại toàn bộ 131 test liên quan. Base được giữ cố định. Sau khi người dùng cho phép, tiếp tục trên cùng nhánh; không thay đổi main/Production khi chưa đủ điều kiện.

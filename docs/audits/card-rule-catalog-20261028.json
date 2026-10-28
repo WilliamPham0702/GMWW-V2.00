@@ -7,7 +7,15 @@
   },
   "userRulings": {
     "aura": "Đọc tên Vai Trò",
-    "mirrorSwap": "Cấp lại lượt sử dụng mới"
+    "mirrorSwap": "Cấp lại lượt sử dụng mới",
+    "elder": "Rung Chuông chặn mọi chết đêm đó; mỗi lần mất một mạng, 0 mạng thì chết",
+    "oldBreath": "Đánh dấu; chết vào đêm hôm sau",
+    "dream": "Khóa chức năng 2 ngày đêm",
+    "youngCoin": "Không công bố Vai Trò thật thì chết",
+    "negation": "Loại khỏi ván Artifact dùng mãi mãi đã sử dụng",
+    "reincarnation": "Khi chết hồi sinh giữ nguyên Vai Trò trước khi chết",
+    "sapphire": "Sao chép Artifact của người khác và cùng sử dụng",
+    "void": "GM giao luật thủ công khi Offline"
   },
   "notComplete": true,
   "cards": [
@@ -1173,7 +1181,7 @@
       "kind": "role",
       "id": "role_elder",
       "name": "Già Làng",
-      "information": "Bạn thuộc Phe Dân Làng và có 2 mạng. Trong bốn đêm đầu tiên, bạn có thể Rung Chuông để ngăn những tác động gây chết theo quy tắc của vai trò. Khi chịu tác động chết không được ngăn chặn, bạn mất mạng.",
+      "information": "Già Làng có 2 mạng. Trong 4 đêm đầu, mỗi lần Rung Chuông vô hiệu mọi tác động gây chết của đêm đó và Già Làng mất 1 mạng. Nếu số mạng về 0, Già Làng chết.",
       "limits": "",
       "conditions": "",
       "functions": [
@@ -1200,8 +1208,8 @@
           ]
         }
       ],
-      "status": "Chưa có executor chuyên biệt",
-      "gap": "Cần xây dựng thực thi đầy đủ: Bạn thuộc Phe Dân Làng và có 2 mạng. Trong bốn đêm đầu tiên, bạn có thể Rung Chuông để ngăn những tác động gây chết theo quy tắc của vai trò. Khi chịu tác động chết không được ngăn chặn, bạn mất mạng.",
+      "status": "Đã chốt mô tả; chưa hoàn thiện executor",
+      "gap": "Thiếu executor chặn chết toàn đêm/trừ mạng/chết khi hết mạng.",
       "missingActionDefinitions": [],
       "missingEffectDefinitions": []
     },
@@ -2720,7 +2728,7 @@
       "kind": "artifact",
       "id": "artifact_07",
       "name": "Hơi Thở Lão Già",
-      "information": "Đánh dấu một người bị loại sau thời gian trì hoãn.",
+      "information": "Hơi Thở Lão Già đánh dấu một người; người bị đánh dấu sẽ chết vào đêm hôm sau.",
       "limits": "1 lần trong cả ván.",
       "conditions": "",
       "functions": [
@@ -2748,8 +2756,8 @@
           ]
         }
       ],
-      "status": "Chưa hoàn thiện executor chuyên biệt",
-      "gap": "Thiếu số ngày/đêm trì hoãn, mốc chết và khả năng ngăn/hủy.",
+      "status": "Đã chốt mô tả; chưa hoàn thiện executor",
+      "gap": "Thiếu executor hẹn lịch và thực thi chết đêm kế tiếp.",
       "missingActionDefinitions": [],
       "missingEffectDefinitions": []
     },
@@ -2938,7 +2946,7 @@
       "kind": "artifact",
       "id": "artifact_13",
       "name": "Đồng Xu Tuổi Trẻ",
-      "information": "Mỗi ngày phải công bố vai trò thật, nếu không chịu hậu quả ban đêm.",
+      "information": "Đồng Xu Tuổi Trẻ yêu cầu người giữ công bố Vai Trò thật mỗi ngày; nếu không công bố thì chết.",
       "limits": "Có thể sử dụng nhiều lần theo luật Artifact.",
       "conditions": "",
       "functions": [
@@ -2965,8 +2973,8 @@
           ]
         }
       ],
-      "status": "Chưa hoàn thiện executor chuyên biệt",
-      "gap": "Thiếu hậu quả không công bố vai và mốc xử lý.",
+      "status": "Đã chốt mô tả; chưa hoàn thiện executor",
+      "gap": "Thiếu executor ghi nhận công bố, xử lý hậu quả chết.",
       "missingActionDefinitions": [],
       "missingEffectDefinitions": []
     },
@@ -3010,7 +3018,7 @@
       "kind": "artifact",
       "id": "artifact_15",
       "name": "Kim Cương Phủ Nhận",
-      "information": "Vô hiệu hóa Artifact liên tục đã lật, theo ngoại lệ.",
+      "information": "Kim Cương Phủ Nhận loại bỏ khỏi ván một Artifact loại dùng mãi mãi đã được sử dụng.",
       "limits": "1 lần trong cả ván.",
       "conditions": "",
       "functions": [
@@ -3037,8 +3045,8 @@
           ]
         }
       ],
-      "status": "Chưa hoàn thiện executor chuyên biệt",
-      "gap": "Thiếu danh sách ngoại lệ và xử lý hiệu ứng đã sinh.",
+      "status": "Đã chốt mô tả; chưa hoàn thiện executor",
+      "gap": "Thiếu executor nhận diện, loại Artifact và xử lý tác động.",
       "missingActionDefinitions": [],
       "missingEffectDefinitions": []
     },
@@ -3154,7 +3162,7 @@
       "kind": "artifact",
       "id": "artifact_19",
       "name": "Bình Giấc Mơ",
-      "information": "Vô hiệu chức năng đặc biệt của một người trong thời hạn quy định.",
+      "information": "Bình Giấc Mơ khóa chức năng đặc biệt của một người trong 2 ngày đêm.",
       "limits": "1 lần trong cả ván.",
       "conditions": "",
       "functions": [
@@ -3181,8 +3189,8 @@
           ]
         }
       ],
-      "status": "Chưa hoàn thiện executor chuyên biệt",
-      "gap": "Thiếu thời hạn và mốc hết khóa chức năng.",
+      "status": "Đã chốt mô tả; chưa hoàn thiện executor",
+      "gap": "Thiếu executor khóa chức năng và tự hết hạn.",
       "missingActionDefinitions": [],
       "missingEffectDefinitions": []
     },
@@ -3550,7 +3558,7 @@
       "kind": "artifact",
       "id": "artifact_30",
       "name": "Trượng Luân Hồi",
-      "information": "Khi bị loại, tiếp tục sống với vai trò thay đổi theo luật.",
+      "information": "Trượng Luân Hồi được dùng khi chủ sở hữu chết để hồi sinh, tiếp tục sống với chính Vai Trò trước khi chết.",
       "limits": "1 lần trong cả ván.",
       "conditions": "",
       "functions": [
@@ -3577,8 +3585,8 @@
           ]
         }
       ],
-      "status": "Chưa hoàn thiện executor chuyên biệt",
-      "gap": "Thiếu nguồn vai mới/quota khi tái sinh.",
+      "status": "Đã chốt mô tả; chưa hoàn thiện executor",
+      "gap": "Thiếu executor trigger chết và hồi sinh giữ vai cũ.",
       "missingActionDefinitions": [],
       "missingEffectDefinitions": []
     },
@@ -3622,7 +3630,7 @@
       "kind": "artifact",
       "id": "artifact_32",
       "name": "Lam Ngọc Định Mệnh",
-      "information": "Xem Artifact người khác; cùng giải quyết khi lá đó được lật.",
+      "information": "Lam Ngọc Định Mệnh sao chép Artifact của một người chơi khác; người sử dụng Lam Ngọc có thể cùng sử dụng Artifact được sao chép.",
       "limits": "1 lần trong cả ván.",
       "conditions": "",
       "functions": [
@@ -3649,8 +3657,8 @@
           ]
         }
       ],
-      "status": "Chưa hoàn thiện executor chuyên biệt",
-      "gap": "Thiếu liên kết/giải quyết khi lá kia lật; cần chốt phạm vi.",
+      "status": "Đã chốt mô tả; chưa hoàn thiện executor",
+      "gap": "Thiếu executor sao chép và cùng dùng Artifact.",
       "missingActionDefinitions": [],
       "missingEffectDefinitions": []
     },
@@ -3982,7 +3990,7 @@
       "kind": "artifact",
       "id": "artifact_42",
       "name": "Hư Không Vô Tận",
-      "information": "Lá sáng tạo của Quản Trò.",
+      "information": "Hư Không Vô Tận là Artifact sáng tạo do GM trực tiếp giao luật và giải quyết thủ công khi chơi Offline.",
       "limits": "1 lần trong cả ván.",
       "conditions": "",
       "functions": [
@@ -4009,8 +4017,8 @@
           ]
         }
       ],
-      "status": "Chưa hoàn thiện executor chuyên biệt",
-      "gap": "Cần rule riêng nếu muốn tự động hóa lá GM sáng tạo.",
+      "status": "Đã chốt mô tả; chưa hoàn thiện executor",
+      "gap": "GM thủ công Offline; không tự động suy diễn executor.",
       "missingActionDefinitions": [],
       "missingEffectDefinitions": []
     },

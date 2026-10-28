@@ -41,7 +41,7 @@
 | Oan Nhân | action-grudge-designate | Chưa có executor chuyên biệt. Cần xây dựng thực thi đầy đủ: Vào buổi sáng khi bị lên giàn treo cổ, nếu bạn bị vote chết, bạn có quyền chọn 1 người chơi khác chết vào sáng hôm sau. Nếu mục tiêu chết trước thời điểm xử lý, hiệu ứng bị hủy. |
 | Tiên Tri Tập Sự | action-apprentice-seer-inherit | Chưa có executor chuyên biệt. Cần xây dựng thực thi đầy đủ: Bạn thuộc Phe Dân Làng. Khi tất cả Tiên Tri trong ván đã chết, nếu bạn vẫn còn sống, bạn sẽ kế nhiệm thành Tiên Tri và bắt đầu sử dụng chức năng từ đêm kế tiếp. Nếu ván bắt đầu không có Tiên Tri, bạn kế nhiệm ngay từ Đêm 1. Tiên Tri được hồi sinh sau đó không làm mất chức năng đã kế nhiệm. |
 | Cupid | action-cupid-pair | Chưa có executor chuyên biệt. Cần xây dựng thực thi đầy đủ: Đêm đầu tiên, bạn chọn hai người để ghép thành một cặp tình nhân. Bạn có thể chọn chính mình. Hai người được ghép sẽ trở thành Phe Ba và có sinh mạng liên kết. |
-| Già Làng | 18 | Chưa có executor chuyên biệt. Cần xây dựng thực thi đầy đủ: Bạn thuộc Phe Dân Làng và có 2 mạng. Trong bốn đêm đầu tiên, bạn có thể Rung Chuông để ngăn những tác động gây chết theo quy tắc của vai trò. Khi chịu tác động chết không được ngăn chặn, bạn mất mạng. |
+| Già Làng | 18 | Đã chốt: 2 mạng, trong 4 đêm đầu Rung Chuông chặn mọi tác động gây chết trong đêm, mỗi lần mất 1 mạng, còn 0 mạng thì chết. **Chưa có executor bảo vệ toàn đêm, trừ mạng và xử lý chết.** |
 | Kẻ Ngốc | action-fool-escape | Chưa có executor chuyên biệt. Cần xây dựng thực thi đầy đủ: Nếu bạn bị Treo Cổ lần đầu, bạn không chết nhưng sẽ mất quyền bỏ phiếu đến hết ván. Nếu bị Treo Cổ lần nữa, bạn sẽ chết. |
 | Cô Bé Ti Hí | action-peek | Chưa có executor chuyên biệt. Cần xây dựng thực thi đầy đủ: Từ Đêm 1, mỗi đêm bạn có thể Hí Mắt để quan sát những Sói thức dậy trong đêm đó. Bầy Sói quyết định trên Player Web bạn có bị phát hiện hay không. Nếu bị phát hiện, bạn chết ngay; Bảo Vệ và Bất Tử Ban Đêm không ngăn được cái chết này. |
 | Trưởng Phái | 25 | Chưa có executor chuyên biệt. Cần xây dựng thực thi đầy đủ: Mỗi đêm, bạn chọn một người chơi khác để kết nạp thành Giáo Dân. Người được kết nạp giữ Phe hiện tại và nhận trạng thái Giáo Dân. Khi bạn chết, tất cả Giáo Dân do bạn kết nạp sẽ chết theo. Giáo Dân chết không ảnh hưởng đến bạn. |
@@ -84,19 +84,19 @@
 | Máu Dịch Bệnh | action-disease-self | Chưa hoàn thiện executor chuyên biệt. Thiếu nhiễm bệnh và sự kiện Cắn chết khiến đàn mất Cắn đêm sau. |
 | Cung Săn Mệnh | action-grudge-designate | Chưa hoàn thiện executor chuyên biệt. Thiếu yêu cầu mục tiêu chỉ định nạn nhân và xử lý phản hồi. |
 | Ấn Dân Làng | artifact_action_disable_function | Chưa hoàn thiện executor chuyên biệt. Thiếu khóa chức năng và thu hồi quyền đã phát. |
-| Hơi Thở Lão Già | action-grudge-designate | Chưa hoàn thiện executor chuyên biệt. Thiếu số ngày/đêm trì hoãn, mốc chết và khả năng ngăn/hủy. |
+| Hơi Thở Lão Già | action-grudge-designate | Đã chốt: người bị đánh dấu chết vào đêm hôm sau. **Chưa có executor hẹn lịch và giải quyết chết.** |
 | Mũ Ngốc | artifact_action_force_vote | Chưa hoàn thiện executor chuyên biệt. Thiếu cưỡng chế phiếu GIẾT trên Server. |
 | Vạc Ma Thuật | artifact_action_check_villager | Chưa hoàn thiện executor chuyên biệt. Thiếu xác nhận Dân thường và kết quả riêng. |
 | Ngọc May Mắn | artifact_action_exchange | Chưa hoàn thiện executor chuyên biệt. Thiếu đổi lá/kích hoạt lá mới trong cùng chuỗi giao dịch. |
 | Vuốt Sói | action-lone-wolf-join | Chưa hoàn thiện executor chuyên biệt. Thiếu nhập Phe Sói giữ chức năng gốc. |
 | Áo Choàng Hoàng Tử | action-fool-escape | Chưa hoàn thiện executor chuyên biệt. Thiếu miễn chết do Treo Cổ; không tương đương Kẻ Ngốc một lần. |
-| Đồng Xu Tuổi Trẻ | artifact_action_reveal_role | Chưa hoàn thiện executor chuyên biệt. Thiếu hậu quả không công bố vai và mốc xử lý. |
+| Đồng Xu Tuổi Trẻ | artifact_action_reveal_role | Đã chốt: không công bố Vai Trò thật thì chết. **Chưa có executor theo dõi công bố và giải quyết hậu quả.** |
 | Gậy Mụ Già | action-black-woman-leave | Chưa hoàn thiện executor chuyên biệt. Thiếu rời làng đúng ngày, khóa quyền và tự trở về. |
-| Kim Cương Phủ Nhận | artifact_action_negate | Chưa hoàn thiện executor chuyên biệt. Thiếu danh sách ngoại lệ và xử lý hiệu ứng đã sinh. |
+| Kim Cương Phủ Nhận | artifact_action_negate | Đã chốt: loại khỏi ván Artifact dùng mãi mãi đã sử dụng. **Chưa có executor thu hồi và xử lý hiệu ứng đang tồn tại.** |
 | Nhật Ký Mất Ngủ | artifact_action_check_awake | Chưa hoàn thiện executor chuyên biệt. Thiếu lịch sử ai thực sự thức và xác định hàng xóm. |
 | Ngọc Ghen Tuông | artifact_action_steal | Chưa hoàn thiện executor chuyên biệt. Thiếu đổi chủ lá chưa lật/cấp lá mới/ledger theo chủ. |
 | Mắt Tiên Tri | action_find_seer | Chưa hoàn thiện executor chuyên biệt. Thiếu gắn vào lượt Tiên Tri/chia sẻ cùng kết quả; action_find_seer hiện không đúng ý nghĩa này. |
-| Bình Giấc Mơ | artifact_action_lock_function | Chưa hoàn thiện executor chuyên biệt. Thiếu thời hạn và mốc hết khóa chức năng. |
+| Bình Giấc Mơ | artifact_action_lock_function | Đã chốt: khóa chức năng trong 2 ngày đêm. **Chưa có executor áp dụng và tự hết hạn.** |
 | Trái Tim Vô Tâm | artifact_action_block_vote | Chưa hoàn thiện executor chuyên biệt. Có vote_ban Ban Ngày; cần hoàn thiện flow bình minh và giới hạn sở hữu. |
 | Ấn Thị Trưởng | artifact_action_double_vote | Chưa hoàn thiện executor chuyên biệt. Thiếu trọng số hai phiếu trong gallows. |
 | Mặt Nạ Câm Lặng | artifact_action_silence | Chưa hoàn thiện executor chuyên biệt. Thiếu Câm và khóa quyền nói đúng ngày. |
@@ -107,9 +107,9 @@
 | Mặt Dây Chuyền Kiêu Hãnh | action-ghost-message | Chưa hoàn thiện executor chuyên biệt. Thiếu chia sẻ riêng vai thật của chủ; không tương đương Hồn Ma. |
 | Lăng Kính Quyền Năng | artifact_action_limit_wolf_targets | Chưa hoàn thiện executor chuyên biệt. Thiếu ràng buộc Cắn vào đúng ba người và thời hạn. |
 | Nhẫn Sự Thật | action_seer | Chưa hoàn thiện executor chuyên biệt. Thiếu xác nhận Sói đúng nghĩa Artifact trong day handler. |
-| Trượng Luân Hồi | action-maid-inherit | Chưa hoàn thiện executor chuyên biệt. Thiếu nguồn vai mới/quota khi tái sinh. |
+| Trượng Luân Hồi | action-maid-inherit | Đã chốt: khi chết sử dụng Artifact để hồi sinh, giữ nguyên Vai Trò trước khi chết. **Chưa có executor hồi sinh tại trigger chết.** |
 | Hồng Ngọc Cơ Duyên | artifact_action_activate_two | Chưa hoàn thiện executor chuyên biệt. Thiếu chuỗi lần lượt lật và giải quyết hai Artifact. |
-| Lam Ngọc Định Mệnh | artifact_action_link | Chưa hoàn thiện executor chuyên biệt. Thiếu liên kết/giải quyết khi lá kia lật; cần chốt phạm vi. |
+| Lam Ngọc Định Mệnh | artifact_action_link | Đã chốt: sao chép Artifact người khác và được dùng cùng. **Chưa có executor cấp bản sao và giải quyết hai người sử dụng.** |
 | Quyền Trượng Phục Sinh | action_revive | Chưa hoàn thiện executor chuyên biệt. Thiếu tự hồi sinh khi bị loại; noTarget hiện mâu thuẫn validation yêu cầu mục tiêu chết. |
 | Khăn Hồn Ma | action-ghost-message | Chưa hoàn thiện executor chuyên biệt. Thiếu nhập một chữ cái từ người bị loại hôm trước. |
 | Khiên Bảo Hộ | action_protect | Chưa hoàn thiện executor chuyên biệt. Thiếu lưu bảo vệ đêm kế tiếp; không dùng effect_notice ban ngày như bảo vệ đêm. |
@@ -119,21 +119,16 @@
 | Trượng Tiên Tri | action_destroyer_scry | Chưa hoàn thiện executor chuyên biệt. Thiếu soi riêng Vai Trò trong day handler. |
 | Đá Hoán Đổi | artifact_action_swap_role | Chưa hoàn thiện executor chuyên biệt. Đã chốt cấp lại lượt mới; còn thiếu executor hoán đổi hai vai/phe/quyền/snapshot/timeline. |
 | Bùa Tai Ương | action-judge-double | Chưa hoàn thiện executor chuyên biệt. Thiếu phiên Treo Cổ thứ hai đầy đủ. |
-| Hư Không Vô Tận | artifact_action_custom | Chưa hoàn thiện executor chuyên biệt. Cần rule riêng nếu muốn tự động hóa lá GM sáng tạo. |
+| Hư Không Vô Tận | artifact_action_custom | Đã chốt: GM giao luật và xử lý thủ công khi Offline. **Không tự động thực thi luật chưa được GM giao.** |
 | Lá Phiếu Âm Giới | artifact_action_dead_vote | Chưa hoàn thiện executor chuyên biệt. Thiếu cho người chết bỏ phiếu; đã sửa nguy cơ hiểu dead_vote thành kill. |
 | Vòng Hoa Hòa Bình | action-peace-lover-save | Chưa hoàn thiện executor chuyên biệt. Thiếu cấm phiếu GIẾT đúng chủ và thời hạn; không tương đương cấm mọi phiếu. |
 
-## Cần bổ sung luật
+## Các luật vừa chốt (28/10) — còn thiếu executor
 
-- Già Làng: Rung Chuông chặn nguồn chết nào, cho ai, bao lâu và bao nhiêu lượt?
-- Hơi Thở Lão Già: chết sau mấy ngày/đêm, tại mốc nào, có thể ngăn/hủy không?
-- Bình Giấc Mơ: khóa bao lâu, hết hạn lúc nào?
-- Đồng Xu Tuổi Trẻ: không công bố vai thì chịu hậu quả gì và khi nào?
-- Kim Cương Phủ Nhận: ngoại lệ cụ thể, cách xử lý hiệu ứng đã sinh ra?
-- Trượng Luân Hồi: vai mới lấy từ đâu, chuyển phe và quota thế nào?
-- Lam Ngọc Định Mệnh: giới hạn/đối tượng/kết quả khi giải quyết liên kết?
-- Hư Không Vô Tận: xử lý thủ công hay cung cấp rule tự động riêng?
+Già Làng: 2 mạng, Rung Chuông chặn mọi chết đêm đó, mất 1 mạng/lần, 0 mạng thì chết; Hơi Thở Lão Già: đánh dấu, chết đêm hôm sau; Bình Giấc Mơ: khóa 2 ngày đêm; Đồng Xu Tuổi Trẻ: không công bố Vai Trò thì chết; Kim Cương Phủ Nhận: loại Artifact dùng mãi mãi đã sử dụng khỏi ván; Trượng Luân Hồi: hồi sinh khi chết với Vai Trò cũ; Lam Ngọc Định Mệnh: sao chép Artifact để dùng cùng; Hư Không Vô Tận: GM tự giao luật khi chơi Offline.
+
+Đã đồng bộ thông tin lá/function trong migration, nhưng **chưa** xác nhận các tác động/gameplay nêu trên hoạt động. Các mốc/chi tiết chưa chốt rõ không được tự suy diễn thành rule engine.
 
 ## Các hạn chế chung còn lại
 
-Cooldown/trigger, mạng phụ, nhiều lần kế thừa, quota các chức năng độc lập của Artifact và điều kiện thắng đặc biệt chưa hoàn chỉnh. Giữ field trong payload không đồng nghĩa đã thực thi. Các executor chưa có ở Ban Ngày trả lỗi rõ ràng thay vì trừ lượt/báo thành công giả. Nhánh chưa được push do auto-review từ chối; chưa CI/Server/Production/iPhone.
+Cooldown/trigger, mạng phụ, nhiều lần kế thừa, quota các chức năng độc lập của Artifact và điều kiện thắng đặc biệt chưa hoàn chỉnh. Giữ field trong payload không đồng nghĩa đã thực thi. Các executor chưa có ở Ban Ngày trả lỗi rõ ràng thay vì trừ lượt/báo thành công giả. Nhánh đã được push qua kết nối GitHub; chưa CI SUCCESS/Server/Production/iPhone.

@@ -69,3 +69,25 @@ test('user ruling: Aura reads role name and Mirror/Swap grant fresh function use
  assert.equal(s.cards[0].media.audio,'keep');assert.equal(s.artifacts[0].media.image,'keep');
  const once=JSON.stringify(s);migrate(s);assert.equal(JSON.stringify(s),once);
 });
+
+test('approved 28/10: elder bell and seven Artifact rulings persist without changing action metadata or media',()=>{
+ const core=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+ const a=core.indexOf('function applyApprovedRoleSettings(s){'),b=core.indexOf('function applyV221AudioGuard(s){',a);
+ const apply=vm.runInNewContext(core.slice(a,b)+';applyApprovedRoleSettings',{DEFAULT_STATE:{cards:[]},clone:structuredClone});
+ const role={id:'role_elder',functions:[{actionId:'18',phase:'night',effectIds:['effect-bell']}],media:{image:'elder-image'}};
+ const ids=['07','13','15','19','30','32','42'];const actionIds=['action-grudge-designate','artifact_action_reveal_role','artifact_action_negate','artifact_action_lock_function','action-maid-inherit','artifact_action_link','artifact_action_custom'];
+ const artifacts=ids.map((id,i)=>({id:'artifact_'+id,functions:[{actionId:actionIds[i],usageMode:'onceGame',effectIds:['existing']}],media:{image:id}}));
+ const state={cards:[role],artifacts};apply(state);
+ assert.match(role.information,/mọi tác động gây chết/);assert.match(role.information,/0/);assert.equal(role.functions[0].toNight,4);
+ const rules=Object.fromEntries(artifacts.map(x=>[x.id,x]));
+ assert.match(rules.artifact_07.information,/đêm hôm sau/);
+ assert.match(rules.artifact_13.information,/không công bố thì chết/);
+ assert.match(rules.artifact_15.information,/dùng mãi mãi đã được sử dụng/);
+ assert.match(rules.artifact_19.information,/2 ngày đêm/);
+ assert.match(rules.artifact_30.information,/chính Vai Trò trước khi chết/);
+ assert.match(rules.artifact_32.information,/cùng sử dụng/);
+ assert.match(rules.artifact_42.information,/Offline/);
+ for(let i=0;i<ids.length;i++){assert.equal(artifacts[i].functions[0].actionId,actionIds[i]);assert.equal(artifacts[i].media.image,ids[i]);assert.deepEqual(artifacts[i].functions[0].effectIds,['existing']);}
+ assert.equal(role.media.image,'elder-image');
+ const snapshot=JSON.stringify(state);apply(state);assert.equal(JSON.stringify(state),snapshot);
+});
