@@ -8708,7 +8708,8 @@ body.play-immersive #start #playShell #battleWolfMenu .battle-wolf-actions > but
 /* GM only: walk around the campfire along one composited transform, never over it. */
 #playShell[data-step="battle"] .play-player-token.is-gm-walking-fire{z-index:145!important}
 #playShell[data-step="battle"] .play-player-token.is-gm-walking-fire[data-gmww-fire-walk="out"],
-#playShell[data-step="battle"] .play-player-token.is-gm-walking-fire[data-gmww-fire-walk="back"]{will-change:transform}
+#playShell[data-step="battle"] .play-player-token.is-gm-walking-fire[data-gmww-fire-walk="back"]{will-change:translate}
+#playShell[data-step="battle"] #playPlayerRing:has(.is-gm-walking-fire){z-index:5}
 @media(prefers-reduced-motion:reduce){
  #playShell[data-step="battle"] .play-player-token.is-gm-walking-fire{animation:none!important;will-change:auto}
 }
