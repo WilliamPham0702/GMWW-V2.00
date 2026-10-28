@@ -44,8 +44,8 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
-      - name: V3.272 — Player Web Online trên nền Làng và hành động xác thực
-        if: steps.scope.outputs.mode == 'player-online-village-3272'
+      - name: V3.273 — Player Web Online trên nền Làng và hành động xác thực
+        if: steps.scope.outputs.mode == 'player-online-village-3273'
         run: |
           node --check src/index.js
           node --check src/gmww-demo-runner.js
