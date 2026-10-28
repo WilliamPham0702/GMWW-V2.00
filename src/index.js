@@ -2874,7 +2874,7 @@ export class RoomDurableObject extends DurableObject {
       if(roleUse.actionId==='action-news-role'){
         const targetRole=(await this.ctx.storage.get("assignments")||[])
           .find(x=>normalizeLoginId(x.loginId)===id);
-        const confirmed=updated.find(x=>x.actionNonce===token&&
+        const confirmed=updated.find(x=>x.clientEventId===token+":"+id&&
           x.actionId===roleUse.actionId&&normalizeLoginId(x.loginId)===id);
         if(confirmed&&targetRole){
           confirmed.snapshotRoleId=String(targetRole.roleId||"");
