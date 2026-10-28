@@ -38,7 +38,7 @@ try{
  assert.ok(actions.includes('action_wolf_bite'),'wolf bite via real handler');assert.ok(actions.includes('action_seer'),'mandatory seer');assert.ok(actions.includes('action_protect'),'mandatory guard');/* Witch kill is optional; night-one use is forbidden. */assert.ok(winner,'autonomous game reaches winner');
  const end=await gm('/end',{matchId,winnerFaction:(await gm('')).winProposal.winnerFaction});assert.equal(end.ok,true);
  assert.deepEqual(accountSnapshot((await req('/api/gm/members')).members),before,'Demo never changes member stats/history/presence');
- assert.ok(!(await req('/api/rooms')).rooms.some(r=>r.code===code));
+ assert.ok((await req('/api/rooms')).rooms.some(r=>r.code===code&&r.demo===true));
  // Separate day fixture exercises voting regardless of how early the first game ends.
  const dayRoom=await req('/api/rooms',{demo:true,roomName:'Server day test',roomMode:'online',seatCount:8,gameConfig:cfg}),day=(p,b)=>req('/api/gm/rooms/'+dayRoom.roomCode+p,b),dayMatch='day-'+serial;
  try{
