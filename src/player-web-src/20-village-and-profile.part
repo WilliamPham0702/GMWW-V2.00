@@ -85,11 +85,12 @@ function renderPlayerTimeline(timeline){
 function hidePlayerTopMenu(){
   const menu=$('#gmwwPlayerTopMenu');if(menu&&state.member)menu.classList.add('is-idle-hidden');
   document.getElementById('gmwwChatLaunch')?.classList.add('is-idle-hidden');
+  document.getElementById('gmwwOnlineDock')?.classList.add('is-idle-hidden');
 }
 function revealPlayerTopMenu(force=false){
   const menu=$('#gmwwPlayerTopMenu');if(!menu||!state.member)return;
   const now=Date.now();if(!force&&now-gmwwPlayerTopMenuLastActivity<450)return;gmwwPlayerTopMenuLastActivity=now;
-  menu.classList.remove('is-idle-hidden');document.getElementById('gmwwChatLaunch')?.classList.remove('is-idle-hidden');clearTimeout(gmwwPlayerTopMenuTimer);gmwwPlayerTopMenuTimer=setTimeout(hidePlayerTopMenu,30000);
+  menu.classList.remove('is-idle-hidden');document.getElementById('gmwwChatLaunch')?.classList.remove('is-idle-hidden');document.getElementById('gmwwOnlineDock')?.classList.remove('is-idle-hidden');clearTimeout(gmwwPlayerTopMenuTimer);gmwwPlayerTopMenuTimer=setTimeout(hidePlayerTopMenu,30000);
 }
 function ensurePlayerTopMenu(){
   let menu=$('#gmwwPlayerTopMenu');
