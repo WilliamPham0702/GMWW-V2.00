@@ -2164,7 +2164,34 @@ function isGMFireWalk3261Scope(changes){
   after('package.json').includes('"version": "3.261.0"');
 }
 
+// V3.262: exact GM-only equal-radius patch. Unknown changes fall back to full tests.
+const gmFireRadius3262Paths=new Set([
+ 'server-game/src/00-core-and-library.part',
+ 'server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
+ 'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json',
+ '.github/scripts/prepare-update-channel.mjs',
+ 'tests/gm-fire-walk-position.test.mjs',
+ 'docs/releases/GMWW-V3.262-equal-campfire-radius-20261028.md',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+ '.github/workflows/deploy-gm-turn-motion-staging.yml','.github/workflows/deploy-production.yml'
+]);
+function isGMFireRadius3262Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==gmFireRadius3262Paths.size)return false;
+ const paths=new Set(changes.map(c=>c.path));
+ if(![...gmFireRadius3262Paths].every(p=>paths.has(p))||
+    !changes.every(c=>gmFireRadius3262Paths.has(c.path)&&['A','M'].includes(c.status)))return false;
+ const after=p=>changes.find(c=>c.path===p)?.after||'';
+ return after('server-game/current/app.js').includes("const VERSION='3.262'")&&
+   after('server-game/current/app.js').includes('const radius=Math.min(88')&&
+   after('server-game/current/app.js').includes('cx+Math.cos(angle)*radius')&&
+   after('server-game/current/app.js').includes('cy+Math.sin(angle)*radius')&&
+   after('server-game/current/app.js').includes('GMWW_GM_FIRE_WALK_V2')&&
+   after('src/index.js').includes('VERSION="V3.262"')&&
+   after('package.json').includes('"version": "3.262.0"');
+}
+
 export function classifyBrowserScope(changes){
+  if(isGMFireRadius3262Scope(changes))return 'gm-fire-radius-3262';
   if(isGMFireWalk3261Scope(changes))return 'gm-fire-walk-3261';
   if(isDrunkCardOverlayScope(changes))return 'drunk-card-overlay-20261028';
   if(isGMVote3259PostverifyScope(changes))return 'gm-vote-postverify-3259';
@@ -2459,6 +2486,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isGMFireRadius3262Scope(changes))return{mode:'gm-fire-radius-3262',reason:'V3.262 exact GM campfire equal-radius motion patch'};
       if(isGMFireWalk3261Scope(changes))return{mode:'gm-fire-walk-3261',reason:'V3.261 exact GM fire walk hotfix with return home and immutable version'};
       if(isGMTurnMotionScope(changes))return{mode:'gm-turn-motion-lowheat',reason:'V3.253 exact GM motion and OTA changes only'};
       if(isRuntime248PostMergeScope(changes))return{mode:'runtime-3248-postmerge',reason:'Exact 4-file CI release fix for already tested Runtime V3.248'};
