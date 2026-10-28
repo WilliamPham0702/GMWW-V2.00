@@ -68,9 +68,9 @@ function dayActions(ctx,meta,usage,ballot){
 // Only the authenticated actor's current, unused powers reach Player Web.
 // The private response does not expose other actors or the full night queue.
 export async function demoPlayerActions(room,meta,loginId){
- if(meta?.demo!==true||meta?.phase!=='running'||!loginId)return [];
+ if(!(meta?.demo===true||meta?.roomMode==='online')||meta?.phase!=='running'||!loginId)return [];
  const ctx=await context(room,meta);
- if(ctx.players['member:'+loginId]?.humanControlled!==true||
+ if(!ctx.players['member:'+loginId]||(meta.demo===true&&ctx.players['member:'+loginId]?.humanControlled!==true)||
     !ctx.assignments.some(a=>a.loginId===loginId))return [];
  let actions=[];
  if(meta.cyclePhase==='night'){
