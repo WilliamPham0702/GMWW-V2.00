@@ -2895,6 +2895,11 @@ export class RoomDurableObject extends DurableObject {
       const deliveredRole=privateRoles.find(r=>String(r?.roleId||"")===roleId&&
         (!r?.matchId||String(r.matchId)===matchId));
       const roleCard=deliveredRole?.roleCard||row.roleCard||{},actionId=String(body?.actionId||"");
+      if(roleId==='role_cult'&&actionId==='action-cult-add'&&Number(meta.cycleNight)>5)
+        return j({ok:false,error:'CULT_RECRUITMENT_FIRST_FIVE_NIGHTS_ONLY'},409);
+      if(roleId==='role_avenger'&&actionId==='action-avenger-target'&&
+        (Number(meta.cycleNight)!==1||targets.includes(actorId)))
+        return j({ok:false,error:'AVENGER_NIGHT_ONE_TARGET_INVALID'},409);
       if(roleId==='role_cupid'&&actionId==='action-cupid-pair'&&
         (Number(meta.cycleNight||0)!==1||targets.length!==2||
           targets.some(id=>isExpelled(id))))
@@ -2966,6 +2971,7 @@ export class RoomDurableObject extends DurableObject {
         roleId==="role_cupid"&&actionId==="action-cupid-pair"?"effect_notice":
         roleId==="role_sect_leader"&&actionId==="25"?"effect_notice":
         roleId==="role_cult"&&actionId==="action-cult-add"?"effect_notice":
+        roleId==="role_avenger"&&actionId==="action-avenger-target"?"effect_notice":
         roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":
         ['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?"effect_notice":
         roleId==='role_destroyer'&&actionId==='action_destroyer_kill'?'dead':"";
@@ -3037,10 +3043,11 @@ export class RoomDurableObject extends DurableObject {
     // Cupid swaps the faction of both linked players. Include their private
     // deliveries plus room revision in the same authorized Undo snapshot.
     const cupidTargets=roleUse?.roleId==="role_cupid"&&roleUse.actionId==="action-cupid-pair"?
-      targets:[],privateKeys=cupidTargets.flatMap(id=>[
+      targets:[],avengerTargets=roleUse?.roleId==="role_avenger"&&roleUse.actionId==="action-avenger-target"?
+      [actorId]:[],privateKeys=[...cupidTargets,...avengerTargets].flatMap(id=>[
         "role:"+id,"roles:"+id,"deliverySnapshot:"+id]);
     const keys=["interactions","assignments",...privateKeys,
-      ...([cupidTargets.length?"meta":null,roleUse?usageKey:null,artifactKey,useKey,cycleUseKey].filter(Boolean))];
+      ...([(cupidTargets.length||avengerTargets.length)?"meta":null,roleUse?usageKey:null,artifactKey,useKey,cycleUseKey].filter(Boolean))];
     const snapshot=async()=>{const entries=[];for(const key of keys){
       const value=await this.ctx.storage.get(key);
       entries.push({key,exists:value!==undefined&&value!==null,value:value===undefined?null:value});
@@ -3142,6 +3149,46 @@ export class RoomDurableObject extends DurableObject {
       }
       await this.ctx.storage.put("meta",meta);
       this.broadcast({type:"room_state",room:publicRoom(meta),serverTime:Date.now()});
+    }
+    if(avengerTargets.length===1&&effectiveTargets.length===1){
+      const assigned=await this.ctx.storage.get("assignments")||[],
+        target=assigned.find(x=>normalizeLoginId(x.loginId)===effectiveTargets[0]);
+      if(target){
+        const faction=String(target.faction||target.factionId||"village");
+        const converted=assigned.map(x=>normalizeLoginId(x.loginId)===actorId?
+          {...x,faction,factionId:faction}:x);
+        await this.ctx.storage.put("assignments",converted);
+        const roles=await this.ctx.storage.get("roles:"+actorId)||[];
+        if(Array.isArray(roles)&&roles.length){
+          const changed=roles.map(x=>({...x,faction,
+            roleCard:{...x.roleCard,factionId:faction},viewedAt:null}));
+          await this.ctx.storage.put("roles:"+actorId,changed);
+          await this.ctx.storage.put("role:"+actorId,changed[0]);
+          meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
+          const publishedAt=new Date().toISOString();
+          meta.roleDeliveredAt=publishedAt;meta.updatedAt=publishedAt;
+          await this.ctx.storage.put("meta",meta);
+          await this.ctx.storage.put("deliverySnapshot:"+actorId,
+            buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),
+              deliveryVersion:meta.deliveryVersion,publishedAt,roles:changed}));
+        }
+      }
+    }
+    if(roleUse&&['25','action-cult-add'].includes(roleUse.actionId)){
+      const rows=await this.ctx.storage.get("interactions")||[],time=new Date().toISOString();
+      const statusId=roleUse.actionId==='25'?'sect_member':'disabled_permanent';
+      for(const loginId of effectiveTargets){
+        const id="member-status:"+matchId+":"+statusId+":"+actorId+":"+loginId;
+        if(rows.some(x=>x.id===id))continue;
+        const event={id,type:"status",statusId,loginId,matchId,
+          night:Number(meta.cycleNight),cycleKey,effectActive:true,actorId,
+          roleId:roleUse.roleId,actionId:roleUse.actionId,
+          source:"linked-member-engine",createdAt:time,
+          message:roleUse.actionId==='25'?
+            "Người chơi đã trở thành Giáo Dân.":"Người chơi đã gia nhập Tà Đạo và mất năng lực."};
+        rows.push(event);await this.ctx.storage.put(this.actionLogKey(event),event);
+      }
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));
     }
     if(roleUse)await this.ctx.storage.put(usageKey,appendBattleRoleActionUsage(roleUse.currentUsage,roleUse));
     const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),

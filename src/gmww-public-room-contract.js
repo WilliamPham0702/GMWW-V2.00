@@ -12,7 +12,8 @@ export function roomUiStage(m){
   return ["room","seats","game","roles","deal"].includes(stage)?stage:"room";
 }
 // V3.112 · Trạng thái mở rộng. "exiled/frozen/dead" dùng luồng cũ; các mục dưới đây dùng type "status" + statusId.
-export const STATUS_DEFS={wolf_bitten:{label:"Bị sói cắn",icon:"🐺",blocks:false,duration:"morning"},marked:{label:"Bị đánh dấu",icon:"🎯",blocks:false,duration:"morning"},infected:{label:"Bị nhiễm bệnh",icon:"🦠",blocks:false,duration:"permanent"},mute:{label:"Bị câm",icon:"🤐",blocks:false,duration:"permanent"},disabled_permanent:{label:"Mất năng lực vĩnh viễn",icon:"⛔",blocks:true,duration:"permanent"},disabled_2n:{label:"Mất năng lực 2 đêm",icon:"⏳",blocks:true,duration:"nights",nights:2}};
+export const STATUS_DEFS={wolf_bitten:{label:"Bị sói cắn",icon:"🐺",blocks:false,duration:"morning"},marked:{label:"Bị đánh dấu",icon:"🎯",blocks:false,duration:"morning"},infected:{label:"Bị nhiễm bệnh",icon:"🦠",blocks:false,duration:"permanent"},mute:{label:"Bị câm",icon:"🤐",blocks:false,duration:"permanent"},sect_member:{label:"Giáo Dân",icon:"✝️",blocks:false,duration:"permanent"},
+disabled_permanent:{label:"Mất năng lực vĩnh viễn",icon:"⛔",blocks:true,duration:"permanent"},disabled_2n:{label:"Mất năng lực 2 đêm",icon:"⏳",blocks:true,duration:"nights",nights:2}};
 export function activeStatusRows(rows,loginId,matchId){return (Array.isArray(rows)?rows:[]).filter(x=>x?.type==="status"&&x?.effectActive!==false&&normalizeLoginId(x?.loginId)===normalizeLoginId(loginId)&&(!x?.matchId||!matchId||String(x.matchId)===String(matchId)))}
 // Visual display permission IDs do not define gameplay status, duration, or priority.
 export const STATUS_VISUAL_IDS=new Set(["frozen","protected","wolf_bitten","marked","dead","expelled","infected","mute","disabled_permanent","linked","recover","transform","attack","inspect","hunt","visited","disabled_2n"]);
