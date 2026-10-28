@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.259';
+const VERSION='3.260';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -6241,7 +6241,7 @@ function battleRenderDrunkDraw(turn){
   const cards=document.createElement('div');cards.className='deck-row';
   for(const draw of draws)for(const card of draw.cards||[]){
     const img=document.createElement('img');img.className='deck-card';
-    img.src='/role-card-back.webp';img.alt='Lá Vai Trò úp';img.draggable=false;
+    img.src='role-card-back.webp';img.alt='Lá Vai Trò úp';img.draggable=false;
     cards.appendChild(img);
   }
   deck.appendChild(cards);
