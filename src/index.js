@@ -2999,6 +2999,18 @@ export class RoomDurableObject extends DurableObject {
       wolfPackMembers(privateAssignments,rows,meta.matchId))||
       privateRoleGroupRecognition(meta,wolfRuntime,loginId,privateAssignments,rows);
     const turn=wolfRuntime?.queue?.[wolfRuntime.cursor];
+    // Mirror the GM's current schedule without sending actor IDs, targets,
+    // permissions, or private role assignments to other players.
+    const publicTimeline=String(meta.phase)==="running"?
+      String(meta.cyclePhase)==="night"&&wolfRuntime?
+        {phase:"night",activeIndex:Math.max(0,Number(wolfRuntime.cursor)||0),
+          steps:(wolfRuntime.queue||[]).slice(0,150).map((step,index)=>({
+            label:String(step?.label||"Lượt Vai Trò").slice(0,110),
+            status:index<Number(wolfRuntime.cursor)?"done":index===Number(wolfRuntime.cursor)?"active":"upcoming"
+          }))}:
+        {phase:String(meta.cyclePhase||"morning"),activeIndex:0,
+          steps:[{label:"Làng ơi dậy đi",status:"active"},{label:"Thông cáo Làng",status:"upcoming"},{label:"Lên Giàn",status:"upcoming"}]}
+      :null;
     // Public role call only. Never reveal the actor, role owner or hidden target.
     const audioCue=String(meta.phase)==="running"?
       String(meta.cyclePhase)==="night"&&turn?
@@ -3014,7 +3026,7 @@ export class RoomDurableObject extends DurableObject {
       drunkDeckView(drawn,false):null;
     const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
     const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,drunkDraw,demoActions,onlineActions,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
