@@ -71,7 +71,7 @@ jobs:
           if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* || "$SCOPE" == "GMWW browser CI scope: fairy-ci-policy |"* ]]; then SHOULD_DEPLOY=false; fi
           # PR #599 V3.273 Player Web login is Worker-only. Its dedicated same-SHA
           # release preserves existing IPA and OTA; prevent generic Runtime deployment.
-          if git log -1 --format=%B | grep -qE 'Merge PR #599|Merge pull request #599|Merge PR #RELEASE_PR|Merge pull request #RELEASE_PR'; then
+          if git log -1 --format=%B | grep -qE 'Merge PR #599|Merge pull request #599|Merge PR #600|Merge pull request #600'; then
             if [ "$(node -p 'require("./package.json").version')" = '3.273.0' ] &&
                [ -s docs/releases/GMWW-V3.273-PLAYER-WEB-LOGIN-HOTFIX-20261029.md ]; then
               SHOULD_DEPLOY=false
