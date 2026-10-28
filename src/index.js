@@ -2895,6 +2895,10 @@ export class RoomDurableObject extends DurableObject {
       const deliveredRole=privateRoles.find(r=>String(r?.roleId||"")===roleId&&
         (!r?.matchId||String(r.matchId)===matchId));
       const roleCard=deliveredRole?.roleCard||row.roleCard||{},actionId=String(body?.actionId||"");
+      if(roleId==='role_cupid'&&actionId==='action-cupid-pair'&&
+        (Number(meta.cycleNight||0)!==1||targets.length!==2||
+          targets.some(id=>isExpelled(id))))
+        return j({ok:false,error:'CUPID_PAIR_NIGHT_ONE_TARGET_INVALID'},409);
       if(roleId==='role_mad_doctor'&&actionId==='action-mad-doctor-cure'&&
         !targets.some(id=>interactions.some(x=>String(x.matchId||'')===matchId&&
           x.type==='status'&&x.statusId==='infected'&&x.effectActive!==false&&

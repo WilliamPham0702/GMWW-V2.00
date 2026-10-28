@@ -901,7 +901,12 @@ function applyApprovedRoleSettings(s){
       target.push(clone(fallback));ids.add(fallback.id);
     }
   };
-  ensureMissing(s.cards,GMWW_AUDITED_ROLE_FALLBACKS);
+  // The source rule catalog tags first-night choices as setup. Make them
+  // actual GM/Player night actions in this server-driven card flow.
+  const actionableFallbacks=GMWW_AUDITED_ROLE_FALLBACKS.map(card=>
+    ['role_avenger','role_wild_child'].includes(card.id)?{...card,
+      functions:(card.functions||[]).map(fn=>({...fn,phase:'night',fromNight:1,toNight:1}))}:card);
+  ensureMissing(s.cards,actionableFallbacks);
   ensureMissing(s.artifacts,GMWW_AUDITED_ARTIFACT_FALLBACKS);
   s.actions=s.actions||{role:[],artifacts:[]};
   s.actions.role=Array.isArray(s.actions.role)?s.actions.role:[];
