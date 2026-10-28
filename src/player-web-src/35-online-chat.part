@@ -47,7 +47,7 @@ function gmwwChatMount(){
     document.documentElement.dataset.gmwwChatDismiss='1';
     document.addEventListener('pointerdown',event=>{
       const target=event.target;if(!gmwwChatOpen)return;
-      if(panel.contains(target)){gmwwChatTouch();return}
+      if(document.getElementById('gmwwChatPanel')?.contains(target)){gmwwChatTouch();return}
       if(!document.getElementById('gmwwChatLaunch')?.contains(target))gmwwChatClosePanel();
     },{capture:true,passive:true});
   }
