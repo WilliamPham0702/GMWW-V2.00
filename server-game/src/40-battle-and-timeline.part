@@ -882,6 +882,12 @@ function battleTickCountdown(){
       void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
   }
+  // Edge-triggered: returning from campfire happens exactly when the night turn reaches 0.
+  // No new timer or rAF; preserves server-clock ownership and works across refetches.
+  const expired=phase==='night'&&Number.isFinite(seconds)&&seconds<=0;
+  if(battleState.gmwwWalkExpired!==expired){
+    battleState.gmwwWalkExpired=expired;battleMarkPlayers();
+  }
   const formatted=battleRules()?.formatTime(seconds)||'--:--';
   if(clock.textContent!==formatted)clock.textContent=formatted;
   clock.classList.toggle('is-ending',seconds!==null&&seconds<=10);
