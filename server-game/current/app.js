@@ -8444,6 +8444,8 @@ function playAssignmentSwapRole(loginId,wantedId){
 
 /* GM Chat monitor: available only with GM-authorized room API. No public history path. */
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
+// Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
+window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&playSceneState.step==='battle')void gmwwGMChatRefresh()},7000);
 function gmwwGMChatMount(){
   const active=playSceneState.step==='battle'&&!!playSceneState.roomCode;
   if(!document.getElementById('gmwwGMChatStyle')){
