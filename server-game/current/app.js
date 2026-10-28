@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.266';
+const VERSION='3.267';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -6275,9 +6275,13 @@ function battleMorningPlayAudio(){
   // Guaranteed day-entry event: the server may skip the optional final
   // village-wakeup NIGHT turn, so speak Làng ơi dậy đi HERE on Day transition.
   queue.push(['audio_system_day_wakeup','Làng ơi dậy đi']);
-  queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
-  queue.push(['audio_system_morning_number_'+dead,String(dead)]);
-  queue.push(['audio_system_morning_dead_noun','người chết']);
+  // When nobody died, omit the whole death-count announcement. An absent
+  // number-0 clip could otherwise stall the iPhone queue after the intro.
+  if(dead>0){
+    queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
+    queue.push(['audio_system_morning_number_'+dead,String(dead)]);
+    queue.push(['audio_system_morning_dead_noun','người chết']);
+  }
   for(const row of notices){
     if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
     else if(row.kind==='assassin_mark'||row.kind==='marked')

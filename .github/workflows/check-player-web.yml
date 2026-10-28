@@ -44,6 +44,16 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: V3.267 — Audio sáng không người chết và chốt Worker/Runtime liên quan
+        if: steps.scope.outputs.mode == 'gm-audio-morning-3267'
+        run: |
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          test -s docs/releases/GMWW-V3.267-morning-zero-deaths-20261028.md
       - name: V3.265 — Tập hợp chụm/banh 50–300%, đồng bộ Worker/GM/Player và OTA
         if: steps.scope.outputs.mode == 'gather-pinch-3265'
         run: |

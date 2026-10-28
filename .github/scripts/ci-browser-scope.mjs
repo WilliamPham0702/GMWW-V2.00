@@ -2258,7 +2258,27 @@ function isOnlineChatScope(changes){
     changes.every(c=>onlineChatPaths.has(c.path)&&['A','M'].includes(c.status));
 }
 
+
+function isMorningAudio3267Scope(changes){
+  // V3.267 is a tiny dawn-only Audio fix. Unknown or expanded changes must
+  // NOT inherit this narrow Worker release gate.
+  const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/scripts/prepare-update-channel.mjs","docs/releases/GMWW-V3.267-morning-zero-deaths-20261028.md","package.json","package-lock.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","src/index.js","tests/audio-role-day-flow-20261027.test.mjs"]);
+  if(changes.length!==allowed.size||changes.some(c=>!allowed.has(c.path)||!['M','A'].includes(c.status)))return false;
+  try{
+    const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+    const app=fs.readFileSync('server-game/current/app.js','utf8');
+    const worker=fs.readFileSync('src/index.js','utf8');
+    const ver=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+    return ver==='3.267.0'&&worker.includes('VERSION="V3.267"')&&
+      app.includes("const VERSION='3.267'")&&
+      gm.includes("if(dead>0){")&&
+      gm.includes("queue.push(['audio_system_morning_deaths_intro'")&&
+      fs.existsSync('docs/releases/GMWW-V3.267-morning-zero-deaths-20261028.md');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isMorningAudio3267Scope(changes))return 'gm-audio-morning-3267';
   if(isOnlineChatScope(changes))return 'online-chat-audio';
   if(isLeanPackaging3264Scope(changes))return 'ipa-ota-lean-3264';
   if(isGMFireRadius3262Scope(changes))return 'gm-fire-radius-3262';
@@ -2454,6 +2474,22 @@ function isGatherPinch3265Scope(changes){
 }
 
 function detect(){
+  // Exact PR/main same-diff audio fix; keep the unrelated historical test
+  // suites out of the release gate while preserving Worker/OTA validation.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD')
+          .trim().split('\n').filter(Boolean).map(line=>{
+            const [status,path]=line.split('\t');return {status,path};
+          });
+        if(isMorningAudio3267Scope(changes))
+          return {mode:'gm-audio-morning-3267',reason:'V3.267 only: no-death dawn cue, Audio regression, bundle and Worker gate'};
+      }
+    }catch{}
+  }
+
   // Respect the same focused scope on both the PR and the approved merged commit.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
