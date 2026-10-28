@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - feature/gm-turn-flight-target-run-lowheat-20261027
+      - fix/gm-fire-walk-visible-v3260-20261028
     paths:
       - 'server-game/current/**'
       - 'server-game/src/30-village-and-setup.part'
       - 'server-game/src/40-battle-and-timeline.part'
       - 'tests/gm-turn-motion-lowheat.test.mjs'
+      - 'tests/gm-fire-walk-position.test.mjs'
       - '.github/scripts/build-gm-turn-motion-staging.mjs'
       - '.github/workflows/deploy-gm-turn-motion-staging.yml'
       - 'wrangler.gm-turn-motion-staging.jsonc'
@@ -33,7 +35,7 @@ jobs:
       - run: npm ci
       - name: GM-only tests, source assembly and JS syntax
         run: |
-          node --test tests/gm-turn-motion-lowheat.test.mjs
+          if [ -s tests/gm-fire-walk-position.test.mjs ]; then node --test tests/gm-turn-motion-lowheat.test.mjs tests/gm-fire-walk-position.test.mjs; else node --test tests/gm-turn-motion-lowheat.test.mjs; fi
           node .github/scripts/assemble-gm-app.mjs --verify
           node --check server-game/current/app.js
           node --check server-game/current/gmww-shared-motion.js
@@ -53,11 +55,13 @@ jobs:
           node --check assets/gm-turn-stage/app.js
           npx wrangler deploy --config wrangler.gm-turn-motion-staging.jsonc --dry-run
       - name: Ensure release notes
-        run: test -s docs/releases/GMWW-GM-TURN-MOTION-20261027.md
+        run: |
+          test -s docs/releases/GMWW-GM-TURN-MOTION-20261027.md
+          if [ "$GITHUB_REF_NAME" = 'fix/gm-fire-walk-visible-v3260-20261028' ]; then test -s docs/releases/GMWW-V3.260-gm-walk-position-hotfix-20261028.md; fi
 
   deploy-staging:
     needs: validate
-    if: github.ref == 'refs/heads/feature/gm-turn-flight-target-run-lowheat-20261027'
+    if: github.ref == 'refs/heads/feature/gm-turn-flight-target-run-lowheat-20261027' || github.ref == 'refs/heads/fix/gm-fire-walk-visible-v3260-20261028'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -98,7 +102,7 @@ jobs:
           grep -q 'battleGMTurnMotion' /tmp/gm-turn-gm.html
           fetch_live gm-turn-stage/app.js /tmp/gm-turn-app.js
           grep -q 'GMWW_SERVER_BASE=window.location.origin' /tmp/gm-turn-app.js
-          grep -q 'GMWW_GM_TURN_MOTION_V1' /tmp/gm-turn-app.js
+          if [ "$GITHUB_REF_NAME" = 'fix/gm-fire-walk-visible-v3260-20261028' ]; then grep -q 'GMWW_GM_FIRE_WALK_V2' /tmp/gm-turn-app.js; else grep -q 'GMWW_GM_TURN_MOTION_V1' /tmp/gm-turn-app.js; fi
           ! grep -q 'gmww-v2-00.williampham0702.workers.dev' /tmp/gm-turn-app.js
           echo 'STAGING GM iPhone: '"$BASE"'/gm-turn-stage/GMWW.html' >> "$GITHUB_STEP_SUMMARY"
           echo 'PASS GM game/Worker smoke. Production, rooms, history and IPA untouched.' >> "$GITHUB_STEP_SUMMARY"
