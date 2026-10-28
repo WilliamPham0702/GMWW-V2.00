@@ -24,7 +24,7 @@ test('GĐ40: resumed camera painting has a fresh budget and no frame catch-up',(
  assert.equal(schedule.shouldPaint(10090,12),true);
 });
 test('GĐ40: anonymous public diagnostics never expose private role/GM auth',()=>{
- assert.match(player,/renderPaused,paintFrames,drawCalls/);
+ assert.match(player,/renderPaused,paintFrames,pixelRatio:renderer\.getPixelRatio\(\),drawCalls/);
  for(const item of [/\/api\/gm\//,/gmToken/,/sessionStorage/,/localStorage/,/Authorization\s*:/]){
   assert.doesNotMatch(player,item);
  }
