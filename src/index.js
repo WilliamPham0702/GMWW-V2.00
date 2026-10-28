@@ -1,6 +1,7 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {resolveElderBell} from "./gmww-elder-bell-rules.js";
+import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversionsDue} from "./gmww-card-night-passives.js";
 import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -1699,9 +1700,53 @@ export class RoomDurableObject extends DurableObject {
     if(!drunkChoice)await this.ctx.storage.put(key,{drunkNotices,applied});
     return {assignments:updated,drunkNotices,applied};
   }
+  async applyCursedRoleConversions(meta,night,assignments){
+    const matchId=String(meta.matchId||""),events=await this.ctx.storage.get("interactions")||[],
+      targets=cursedConversionsDue({assignments,interactions:events,matchId,night});
+    if(!targets.length)return {assignments,converted:[]};
+    const canonical=await this.ctx.storage.get("roleCatalog:role_wolf");
+    // Do not invent a Wolf power from an empty card: the real catalog must
+    // supply the role's authoritative functions, artwork and faction.
+    if(!canonical?.roleCard?.functions?.length)return {assignments,converted:[],error:"WOLF_ROLE_PACKAGE_MISSING"};
+    let result=assignments.map(x=>({...x})),converted=[],publishedAt=new Date().toISOString();
+    for(const loginId of targets){
+      const index=result.findIndex(x=>normalizeLoginId(x.loginId)===loginId&&x.roleId==="role_cursed");
+      if(index<0)continue;
+      const prior=await this.ctx.storage.get("roles:"+loginId)||[];
+      if(!Array.isArray(prior)||!prior.length)continue;
+      const own=prior.find(x=>x.roleId==="role_cursed"&&
+        Number(x.assignmentIndex)===Number(result[index].assignmentIndex));
+      if(!own)continue;
+      const updated={...own,roleId:"role_wolf",roleName:String(canonical.roleName||"Sói Thường"),
+        faction:"wolf",roleCard:canonical.roleCard,roleImage:canonical.roleImage||own.roleImage,
+        artworkAssetId:canonical.artworkAssetId||own.artworkAssetId,
+        artworkId:canonical.artworkAssetId||own.artworkId,
+        deliveredAt:publishedAt,viewedAt:null,inheritedFromRoleId:"role_cursed"};
+      const roles=prior.map(x=>x===own?updated:x);
+      result[index]={...result[index],roleId:"role_wolf",roleName:updated.roleName,
+        faction:"wolf",deliveredAt:publishedAt,viewedAt:null,inheritedFromRoleId:"role_cursed"};
+      await this.ctx.storage.put("roles:"+loginId,roles);
+      await this.ctx.storage.put("role:"+loginId,roles[0]);
+      converted.push({loginId,roles});
+    }
+    if(converted.length){
+      await this.ctx.storage.put("assignments",result);
+      meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
+      meta.roleDeliveredAt=publishedAt;meta.updatedAt=publishedAt;
+      for(const {loginId,roles} of converted)
+        await this.ctx.storage.put("deliverySnapshot:"+loginId,buildPrivateDeliverySnapshot({
+          matchId,matchRevision:Number(meta.matchRevision||0),deliveryVersion:meta.deliveryVersion,
+          publishedAt,roles}));
+      await this.ctx.storage.put("meta",meta);
+      this.broadcast({type:"room_state",room:publicRoom(meta),serverTime:Date.now()});
+    }
+    return {assignments:result,converted:converted.map(x=>x.loginId)};
+  }
   async buildNightRuntime(meta,night){
     let assignments=(await this.ctx.storage.get("assignments"))||[];
     const cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=30,artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
+    const converted=await this.applyCursedRoleConversions(meta,n,assignments);
+    assignments=converted.assignments;
     const inheritance=await this.applyNightRoleInheritance(meta,n,assignments);
     assignments=inheritance.assignments;
     // ART-01: explicit match disable wins; legacy matches with assigned Artifacts remain compatible.
@@ -1787,7 +1832,9 @@ export class RoomDurableObject extends DurableObject {
     if(assignments.some(isWolfRole)){
       const snowCanBite=canSnowWolfBite({assignments,interactions:packInteractions,matchId:meta.matchId});
       const packOwners=eligiblePack.filter(x=>x.roleId!=="role_snow_wolf"||snowCanBite);
+      const biteQuota=wolfCubBiteQuota({assignments,interactions:packInteractions,matchId:meta.matchId,night:n});
       queue.push({id:"wolf-pack-bite",kind:"wolf-pack-bite",label:"Bầy Sói Cắn",
+        targetCount:biteQuota,
         // Every living Wolf wakes; Snow Wolf observes but cannot submit Bite
         // while another wolf survives.
         loginIds:eligiblePack.map(x=>normalizeLoginId(x.loginId)),playerIds:eligiblePack.map(x=>"member:"+normalizeLoginId(x.loginId)),
@@ -1898,7 +1945,15 @@ export class RoomDurableObject extends DurableObject {
     // Replayed completion must not restart day timers or expire effects twice.
     if(meta.cycleKey===key&&meta.cyclePhase===p&&Number(meta.cycleNight)===n)
       return{ok:true,idempotent:true,cycleKey:key,phase:p,night:n,expired:[],matchId:String(meta.matchId||""),nightRuntime:p==="night"?await this.getNightRuntime(meta,n,false):null,room:publicRoom(meta)};
-    meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.cycleStartedAt=now;meta.autoPausedRemainingMs=null;meta.dayDeadlineAt=null;
+    // Fix the initial Wolf count before any role conversion; never recalculate.
+    if(p==="night"&&n===1&&meta.matchId){
+      const baselineKey="ruleInitialWolfCount:"+String(meta.matchId);
+      if(await this.ctx.storage.get(baselineKey)===undefined){
+        const initial=(await this.ctx.storage.get("assignments"))||[];
+        await this.ctx.storage.put(baselineKey,initial.filter(isWolfRole).length);
+      }
+    }
+    meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.autoPausedRemainingMs=null;meta.dayDeadlineAt=null;
     if(p==='morning'){const cfg=(await this.ctx.storage.get('gameConfig'))||{},ms=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0)*1000;meta.dayDeadlineAt=ms>0?new Date(Date.parse(now)+ms).toISOString():null;if(meta.autoGM===false&&!meta.demo)meta.autoPausedRemainingMs=ms}
     meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[];
@@ -1949,7 +2004,23 @@ export class RoomDurableObject extends DurableObject {
     const strongman=wolfResolutionRaw?.ok?resolveStrongmanWolfBite({
       wolfResolution:wolfResolutionRaw,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),
       interactions:rows,matchId:String(meta.matchId||""),night:n}):null;
-    const wolfResolution=strongman?{...wolfResolutionRaw,...strongman}:wolfResolutionRaw;
+    const afterStrongman=strongman?{...wolfResolutionRaw,...strongman}:wolfResolutionRaw;
+    const passive=afterStrongman?.ok?resolvePassiveWolfBite({
+      resolution:afterStrongman,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),
+      interactions:rows,matchId:String(meta.matchId||"")}):null;
+    const wolfResolution=passive?{...afterStrongman,victims:passive.victims,
+      cursed:passive.cursed,stoneAbsorbed:passive.stoneAbsorbed}:afterStrongman;
+    for(const [actionId,people,msg] of [
+      ["action_cursed_bite",passive?.cursed||[],"Kẻ Bị Nguyền sẽ chuyển sang Sói ở đêm kế tiếp."],
+      ["action_stone_wolf_life",passive?.stoneAbsorbed||[],"Sói Đá đã tiêu hao lớp Da Đá để sống sót."]
+    ])for(const loginId of people){
+      const id="passive:"+String(meta.matchId)+":"+actionId+":"+loginId;
+      if(rows.some(x=>String(x.id)===id))continue;
+      const hit={id,type:"effect_notice",loginId,matchId:String(meta.matchId),
+        night:n,cycleKey:key,effectActive:true,actionId,source:"rule-passive-engine",
+        message:msg,createdAt:now};
+      rows.push(hit);await this.ctx.storage.put(this.actionLogKey(hit),hit);
+    }
     // Record the one-time survival and public role announcement durably.
     if(strongman)for(const loginId of strongman.absorbed){
       const id="strongman-bite:"+String(meta.matchId)+":"+loginId;
@@ -2038,6 +2109,22 @@ export class RoomDurableObject extends DurableObject {
         Number(shield.protectNight)!==n)continue;
       shield.effectActive=false;shield.expiredAt=now;shield.expiredReason="NEXT_NIGHT_PROTECTION_FINISHED";
       if(shield.id)await this.ctx.storage.put(this.actionLogKey(shield),shield);
+    }
+    // Ông Già's age is anchored to initial Wolf headcount, not changing
+    // factions. Resurrection never restarts his age timer.
+    if(p==="morning"&&n>0&&!elderBell.blocked){
+      const wolves=await this.ctx.storage.get("ruleInitialWolfCount:"+String(meta.matchId));
+      const due=oldManAgeVictims({assignments:await this.ctx.storage.get("assignments")||[],
+        interactions:rows,matchId:String(meta.matchId),night:n,initialWolfCount:wolves});
+      for(const loginId of due){
+        const id="old-man-age:"+String(meta.matchId)+":"+loginId;
+        if(rows.some(x=>x.id===id))continue;
+        const fatal={id,type:"dead",loginId,matchId:String(meta.matchId),night:n,
+          cycleKey:key,effectActive:true,source:"old-man-age-engine",
+          actionId:"action-old-man-lifespan",message:"Ông Già đã qua đời vì tuổi già.",
+          createdAt:now};
+        rows.push(fatal);await this.ctx.storage.put(this.actionLogKey(fatal),fatal);
+      }
     }
     if(p==="morning"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
@@ -2430,6 +2517,9 @@ export class RoomDurableObject extends DurableObject {
       if(!owners.some(a=>String(a.artifactId)===artifactId&&normalizeLoginId(a.loginId)===actorId))
         return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN"},403);
     }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
+    if(step.kind==="wolf-pack-bite"&&targets.length!==Number(step.targetCount||1))
+      return j({ok:false,error:"WOLF_PACK_BITE_TARGET_COUNT_INVALID",
+        expected:Number(step.targetCount||1)},409);
     if(step.kind==="wolf-pack-bite"&&
       (String(body.actionId)!=="action_wolf_bite"||
         !(step.biteActorIds||[]).map(normalizeLoginId).includes(actorId)))
