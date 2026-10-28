@@ -200,7 +200,7 @@ function renderOnlineActionDock(){
    document.head.appendChild(css)
  }
  if(!dock){dock=document.createElement('div');dock.id='gmwwOnlineDock';document.body.appendChild(dock);if(document.getElementById('gmwwPlayerTopMenu')?.classList.contains('is-idle-hidden'))dock.classList.add('is-idle-hidden')}
- const scale=[25,50,75,100,125,150].includes(Number(state.room?.actionIconScale))?Number(state.room.actionIconScale):100;
+ const scale=[25,50,75,100,125,150].includes(Number(state.actionIconScale))?Number(state.actionIconScale):100;
  dock.style.setProperty('--online-action-scale',String(scale/100));
  const sig=[state.roomCode,state.room?.matchId,state.room?.cycleKey,...offers.map(a=>a.key+':'+a.iconUrl)].join('|');
  if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();
