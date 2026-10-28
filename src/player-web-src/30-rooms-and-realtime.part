@@ -468,7 +468,7 @@ function renderArtifactStack(){
   if(slots)slots.textContent=count+'/'+max;
   if(status)status.textContent=used.singleUsed?'Đã dùng trong ván • vẫn có thể xem lại':used.usedThisCycle?'Đã dùng trong chu kỳ này • sẽ mở lại ở chu kỳ sau':(!a.viewedAt?'Chưa xem Artifact':'Đã xem • sẵn sàng sử dụng');
   if(activate){activate.disabled=state.artifactBusy||used.singleUsed||used.usedThisCycle||count>=max||String(state.room?.phase||'')!=='running';activate.textContent=state.artifactBusy?'ĐANG GỬI…':used.singleUsed?'ĐÃ DÙNG TRONG VÁN':used.usedThisCycle?'ĐÃ DÙNG CHU KỲ NÀY':count>=max?'ĐỦ '+max+'/'+max:'KÍCH HOẠT'}
-  renderArtifactTargets()
+  renderArtifactTargets();syncPlayerMiniCards()
 }
 function toggleArtifact(){
   if(!state.artifact)return;state.artifactFocus='artifact';state.artifactOpen=!state.artifactOpen;renderArtifactStack();
