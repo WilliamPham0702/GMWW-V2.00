@@ -1,6 +1,7 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {resolveElderBell} from "./gmww-elder-bell-rules.js";
+import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -2231,6 +2232,12 @@ export class RoomDurableObject extends DurableObject {
         targetId:effectiveTargets[0],createdAt:time,resolveDay:day+1}});
       message="Hiệp Sĩ đã chọn mục tiêu. Hiệu lực vào sáng ngày tiếp theo.";
       result={message};
+    }else if(artifactId&&['artifact_09','artifact_24','artifact_29','artifact_39'].includes(artifactId)){
+      const inspection=resolveDayArtifactInspection({artifactId,actionId,
+        targetId:effectiveTargets[0],assignments});
+      if(!inspection)return j({ok:false,error:'DAY_ARTIFACT_INSPECTION_INVALID',
+        message:'Artifact không có mục tiêu soi hợp lệ hoặc sai chức năng; chưa trừ lượt.'},409);
+      message=inspection.message;result=inspection;
     }else if(artifactId){
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
       if(actionId==='action_revive'||effects.includes('effect_revive')){
