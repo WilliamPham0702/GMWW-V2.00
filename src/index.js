@@ -2810,7 +2810,16 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     // Sát Thủ is secret at night: never broadcast the GM choice or open the player prompt early.
     // The player receives a sanitized private interaction from playerState only in the morning.
-    if(type!=="assassin_mark"&&!interaction.pendingDeath)this.broadcast({type:"player_interaction",interaction});
+    if(type!=="assassin_mark"&&!interaction.pendingDeath){
+      if(meta.demo===true){
+        // A player's role effect is private: deliver only to the affected member's socket.
+        const {gmChoice,actorId,playerId,...visible}=interaction;
+        const event=JSON.stringify({type:"player_interaction",interaction:visible});
+        for(const ws of this.ctx.getWebSockets())try{
+          if(ws.deserializeAttachment()?.participantId==="member:"+loginId)ws.send(event);
+        }catch{}
+      }else this.broadcast({type:"player_interaction",interaction});
+    }
     return j({ok:true,interaction});
   }
   async playerInteractionRespond(body){
@@ -2858,7 +2867,14 @@ export class RoomDurableObject extends DurableObject {
       {id:logId,type:"player_response",loginId,matchId:String(meta?.matchId||""),
        message:"Người chơi phản hồi: "+response+(assassinOutcome?" · Kết quả: "+assassinOutcome:""),
        createdAt:now,source:"player"});
-    this.broadcast({type:"player_interaction_response",interaction:{...row,gmChoice:undefined},
+    if(meta.demo===true){
+      const {gmChoice,actorId,playerId,...visible}=row;
+      const event=JSON.stringify({type:"player_interaction_response",
+        interaction:visible,assassinOutcome,serverTime:Date.now()});
+      for(const ws of this.ctx.getWebSockets())try{
+        if(ws.deserializeAttachment()?.participantId==="member:"+loginId)ws.send(event);
+      }catch{}
+    }else this.broadcast({type:"player_interaction_response",interaction:{...row,gmChoice:undefined},
       assassinOutcome,serverTime:Date.now()});
     if(assassinOutcome==="dead")this.broadcast({type:"player_status_changed",loginId,
       statusId:"dead",active:true,serverTime:Date.now()});
