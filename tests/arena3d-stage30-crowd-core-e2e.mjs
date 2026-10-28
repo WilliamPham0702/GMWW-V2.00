@@ -26,6 +26,26 @@ try{
  await wait(gm,()=>document.getElementById('log')?.textContent?.includes('Đã bổ sung 30 người'),null,240000);
  await wait(gm,()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===30,null);
  await wait(viewer,()=>window.__GMWW_ARENA_STAGE_READONLY?.().count===30,null,90000);
+ // GĐ42: 30-person crowd must use the actual Player 3D public scene,
+ // not only the authorized GM preview. This viewer has no GM credentials.
+ const crowdPlayer=await context.newPage();
+ crowdPlayer.on('pageerror',e=>errors.push(e.message));
+ const crowdRequests=[];
+ crowdPlayer.on('request',request=>{
+  if(new URL(request.url()).pathname.startsWith('/api/gm/'))crowdRequests.push(request.url());
+ });
+ await crowdPlayer.goto(base+'/village/arena-3d/player.html?room='+code,
+  {waitUntil:'domcontentloaded',timeout:60000});
+ await wait(crowdPlayer,()=>window.__GMWW_ARENA_PLAYER_READONLY?.().count===30,null,90000);
+ const crowdState=await crowdPlayer.evaluate(()=>window.__GMWW_ARENA_PLAYER_READONLY());
+ assert.equal(crowdState.pixelRatio,.85,'30 players must use capped framebuffer density');
+ assert.equal(crowdState.room,code);
+ assert.deepEqual(crowdRequests,[],'anonymous 3D Player never calls GM APIs');
+ await crowdPlayer.locator('#open-card').click();
+ await wait(crowdPlayer,()=>window.__GMWW_ARENA_PLAYER_READONLY?.().renderPaused===true,null);
+ await crowdPlayer.locator('#close-card').click();
+ await wait(crowdPlayer,()=>window.__GMWW_ARENA_PLAYER_READONLY?.().renderPaused===false,null);
+ await crowdPlayer.close();
  await gm.locator('#lock').click();
  await wait(gm,()=>document.getElementById('log')?.textContent?.includes('Đã khóa Seat'),null);
  await gm.locator('#deal').click();
@@ -85,6 +105,6 @@ try{
  assert.equal((await viewer.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY())).privateOverlayCount,0);
  assert.deepEqual(errors,[]);
  console.log('STAGE30_CROWD_CORE_PASS',JSON.stringify({players:30,dealReconnect:true,
-  fullCoreMatch:true,night:true,morning:true,gallows:'nominating-to-voting',
+  fullCoreMatch:true,player3dCrowdPixelRatio:.85,night:true,morning:true,gallows:'nominating-to-voting',
   end:true,viewerDenied:noRoleLeaks.http,production:false,physicalIphone:false}));
 }finally{await context.close();await browser.close()}
