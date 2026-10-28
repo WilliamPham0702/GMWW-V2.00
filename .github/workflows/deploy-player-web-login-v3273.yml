@@ -109,7 +109,9 @@ jobs:
           test "$PASS" = 1 || { echo "::error::Player JS syntax, HTTP 200 or health failed"; exit 1; }
           # A deliberate unknown login must return the documented MEMBER_NOT_FOUND response.
           # This does not create or alter any member.
-          curl -fsS --max-time 15 -o /tmp/unknown-member.json -w '%{http_code}' -H 'content-type: application/json' -d '{"loginId":"gmww_ci_no_such_user_599"}' "$URL/api/members/login" > /tmp/unknown-member-status.txt || test "$(cat /tmp/unknown-member-status.txt)" = 404
+          curl -sS --max-time 15 -o /tmp/unknown-member.json -w '%{http_code}' -H 'content-type: application/json' -d '{"loginId":"gmww_ci_no_such_user_599"}' "$URL/api/members/login" > /tmp/unknown-member-status.txt
+          test "$(cat /tmp/unknown-member-status.txt)" = 404
+          test -s /tmp/unknown-member.json
           node - <<'NODE'
           const fs=require('fs'),body=JSON.parse(fs.readFileSync('/tmp/unknown-member.json','utf8'));
           if(body.error!=='MEMBER_NOT_FOUND')throw Error('Login API did not return expected negative authorization result');
