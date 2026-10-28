@@ -793,6 +793,11 @@ export class RoomDurableObject extends DurableObject {
     return{ok:true,meta,admin:token===GM_SYNC_TOKEN}}
   computeWinProposal(meta,assignments,interactions){
     if(String(meta?.phase||"").toLowerCase()!=="running")return null;
+    if((Array.isArray(interactions)?interactions:[]).some(x=>
+      x?.type==="artifact_win"&&x.artifactId==="artifact_26"&&
+      x.effectActive!==false&&String(x.matchId||"")===String(meta.matchId||"")))
+      return {winnerFaction:"Phe Dân",winnerLabel:"Phe Dân",
+        reason:"Quả Cầu Phán Đoán xác nhận đúng hai Sói.",confidence:"artifact-rule"};
     const dead=new Set((Array.isArray(interactions)?interactions:[]).filter(x=>String(x?.type||"")==="dead"&&x?.effectActive!==false&&(!x?.matchId||!meta?.matchId||String(x.matchId)===String(meta.matchId))).map(x=>normalizeLoginId(x?.loginId)).filter(Boolean)),byPlayer=new Map();
     for(const a of Array.isArray(assignments)?assignments:[]){const lid=normalizeLoginId(a?.loginId);if(!lid||dead.has(lid))continue;const row=byPlayer.get(lid)||{loginId:lid,factions:new Set()};row.factions.add(normalizeWinnerFaction(a?.faction||""));byPlayer.set(lid,row)}
     const alive=[...byPlayer.values()];if(!alive.length)return null;
@@ -885,6 +890,8 @@ export class RoomDurableObject extends DurableObject {
       x.artifactId==='artifact_44').map(x=>normalizeLoginId(x.loginId));
     const doubleVoteVoters=assignments.filter(x=>x.artifactId==='artifact_21')
       .map(x=>normalizeLoginId(x.loginId));
+    const forcedKillVoters=assignments.filter(x=>x.artifactId==='artifact_08')
+      .map(x=>normalizeLoginId(x.loginId));
     const crowActors=new Set(assignments.filter(x=>x.roleId==='role_crow')
       .map(x=>normalizeLoginId(x.loginId)));
     const crowMarks=interactions.filter(x=>x.actionId==='action-g7-crow-votes'&&
@@ -912,7 +919,7 @@ export class RoomDurableObject extends DurableObject {
     // has a valid Save/Kill vote, including in older persisted ballots.
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow;
-    let current={...ballot,eligible,saveOnlyVoters,doubleVoteVoters,crowMarks,foolVoteBans,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+    let current={...ballot,eligible,saveOnlyVoters,doubleVoteVoters,forcedKillVoters,crowMarks,foolVoteBans,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
     const now=Date.now();
@@ -1999,6 +2006,13 @@ export class RoomDurableObject extends DurableObject {
     const rows=(await this.ctx.storage.get("interactions"))||[];
     const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
     if(p==="night")for(const old of rows){
+      if(old.type!=="status"||old.statusId!=="mute"||
+        old.artifactId!=="artifact_22"||old.effectActive===false||
+        String(old.matchId||"")!==String(meta.matchId)||Number(old.night)>=n)continue;
+      old.effectActive=false;old.expiredAt=now;old.expiredReason="MUTE_DAY_FINISHED";
+      if(old.id)await this.ctx.storage.put(this.actionLogKey(old),old);
+    }
+    if(p==="night")for(const old of rows){
       if(old.type!=="expelled"||!['black-woman','artifact-elder-stick'].includes(old.source)||
         String(old.matchId||"")!==String(meta.matchId)||old.effectActive===false||
         Number(old.night)>=n)continue;
@@ -2449,6 +2463,38 @@ export class RoomDurableObject extends DurableObject {
         targetId:effectiveTargets[0],createdAt:time,resolveDay:day+1}});
       message="Hiệp Sĩ đã chọn mục tiêu. Hiệu lực vào sáng ngày tiếp theo.";
       result={message};
+    }else if(artifactId==="artifact_14"&&actionId==="action-black-woman-leave"){
+      for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,
+        type:"expelled",source:"artifact-elder-stick"});
+      message="Gậy Mụ Già đã buộc người chơi rời làng trong ngày hiện tại.";
+      result={message};
+    }else if(artifactId==="artifact_22"&&actionId==="artifact_action_silence"){
+      for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,
+        type:"status",statusId:"mute"});
+      message="Mặt Nạ Câm Lặng đã áp dụng Câm trong ngày này.";
+      result={message};
+    }else if(artifactId==="artifact_38"&&actionId==="action_witch_kill"){
+      deadVictims=effectiveTargets;
+      message="Thương Cuồng Nộ đã gây chết và công khai chủ Artifact.";
+      result={message,artifactOwnerPublic:true};
+    }else if(artifactId==="artifact_42"&&actionId==="artifact_action_custom"){
+      // Deliberate GM-only Offline ritual; its rule is chosen and resolved by GM.
+      // Do not invent random outcomes or claim an automatic kill/revive.
+      if(String(meta.roomMode||"offline").toLowerCase()==="online")
+        return j({ok:false,error:"VOID_ARTIFACT_OFFLINE_ONLY"},409);
+      message="Hư Không Vô Tận: GM nhận quyền điều phối thủ công theo luật đã giao.";
+      result={message,manualOnly:true};
+    }else if(artifactId==="artifact_26"&&actionId==="artifact_action_judge_two_wolves"){
+      const correct=effectiveTargets.length===2&&effectiveTargets.every(id=>
+        assignments.some(row=>normalizeLoginId(row.loginId)===id&&isWolf(row)));
+      if(correct){
+        changes.push({kind:"artifact_win",loginId:actorId});
+        message="Quả Cầu Phán Đoán đã soi đúng hai Sói: Phe Dân Làng chiến thắng.";
+      }else{
+        deadVictims=[actorId];
+        message="Quả Cầu Phán Đoán soi sai: người sở hữu phải chết.";
+      }
+      result={message,correct};
     }else if(artifactId&&['artifact_09','artifact_24','artifact_29','artifact_39'].includes(artifactId)){
       const inspection=resolveDayArtifactInspection({artifactId,actionId,
         targetId:effectiveTargets[0],assignments});
@@ -2556,6 +2602,15 @@ export class RoomDurableObject extends DurableObject {
         continue;
       }
       if(effect.kind==="knight_pending"){await this.ctx.storage.put(effect.key,effect.value);continue}
+      if(effect.kind==="artifact_win"){
+        const id="artifact-judgement:"+matchId+":"+token;
+        const victory={id,type:"artifact_win",loginId:actorId,matchId,night:day,
+          cycleKey,artifactId:"artifact_26",actionId:"artifact_action_judge_two_wolves",
+          source:"artifact-judgement",effectActive:true,createdAt:time,
+          message:"Phe Dân chiến thắng nhờ Quả Cầu Phán Đoán."};
+        interactions.push(victory);await this.ctx.storage.put(this.actionLogKey(victory),victory);
+        continue;
+      }
       if(effect.kind==="revived")continue;
       // Multiple distinct status IDs may coexist (e.g. Mute and Artifact vote ban).
       const sameStatus=effect.type==="status"&&interactions.some(row=>
@@ -2573,7 +2628,7 @@ export class RoomDurableObject extends DurableObject {
         }:{}),
         loginId:effect.loginId,matchId,cycleKey,
         night:effect.kind==="grudge_schedule"?day+1:day,actorId,artifactId,roleId,actionId,
-        source:"day-action",effectActive:effect.type!=="effect_notice",
+        source:effect.source||"day-action",effectActive:effect.type!=="effect_notice",
         message:message||"Hành động Ban ngày",createdAt:time};
       interactions.push(log);
       await this.ctx.storage.put("actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+log.id,log);
@@ -2582,6 +2637,11 @@ export class RoomDurableObject extends DurableObject {
     }
     if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,interactions,time);
     await this.ctx.storage.put("interactions",pruneInteractions(interactions));
+    if(artifactId==="artifact_38"&&result?.artifactOwnerPublic){
+      this.broadcast({type:"artifact_owner_revealed",loginId:actorId,
+        artifactId:"artifact_38",artifactName:"Thương Cuồng Nộ",matchId,
+        serverTime:Date.now()});
+    }
     if(!artifactId&&result?.revealedActorRole){
       const reveal={id:"role-reveal:"+matchId+":"+actorId,type:"role_revealed",
         loginId:actorId,actorId,roleId,matchId,night:day,createdAt:time,

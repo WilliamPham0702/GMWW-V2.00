@@ -167,6 +167,8 @@ export function gallowsCast(ballot,voter,choice,now=Date.now()){
   if(ballot.stage!=='voting'||now>=ballot.deadlineAt)return {ok:false,error:'VOTE_DEADLINE_PASSED'};
   if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(gallowsBlockedVotes(ballot).includes(voter))return {ok:false,error:'VOTER_BANNED'};
+  if(choice==='👍'&&(ballot?.forcedKillVoters||[]).includes(voter))
+    return {ok:false,error:'FOOL_HAT_REQUIRES_KILL_VOTE'};
   if(choice==='👎'&&(ballot?.saveOnlyVoters||[]).includes(voter))
     return {ok:false,error:'PEACE_LOVER_KILL_VOTE_FORBIDDEN'};
   if(!(ballot.eligible||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
@@ -216,6 +218,8 @@ export function gallowsManualVote(ballot,voter,choice,now=Date.now()){
     return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(!['👍','👎',null].includes(choice))return {ok:false,error:'INVALID_VOTE'};
+  if(choice==='👍'&&(ballot?.forcedKillVoters||[]).includes(voter))
+    return {ok:false,error:'FOOL_HAT_REQUIRES_KILL_VOTE'};
   if(choice==='👎'&&(ballot?.saveOnlyVoters||[]).includes(voter))
     return {ok:false,error:'PEACE_LOVER_KILL_VOTE_FORBIDDEN'};
   const votes={...(ballot.votes||{})};
