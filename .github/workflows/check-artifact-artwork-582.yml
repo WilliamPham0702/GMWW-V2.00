@@ -1,0 +1,35 @@
+name: Check Artifact artwork preview centering (PR582)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server-game/src/10-library-and-settings.part"
+      - "server-game/current/app.js"
+      - "tests/artifact-preview-horizontal-centering-20261028.test.mjs"
+      - "docs/releases/GMWW-PR582-artifact-preview-centering-20261028.md"
+      - ".github/workflows/check-artifact-artwork-582.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  artifact-centering:
+    name: Artifact preview and GM source integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Only run Artifact preview regression tests
+        run: node --test tests/artifact-preview-horizontal-centering-20261028.test.mjs
+      - name: Verify six-part GM app and compiled bundle agree
+        run: |
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Verify release note exists (Vietnamese)
+        run: test -s docs/releases/GMWW-PR582-artifact-preview-centering-20261028.md
