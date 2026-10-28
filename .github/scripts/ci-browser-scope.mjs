@@ -2375,7 +2375,26 @@ function isDemoPlayerLive3271Scope(changes){
       fs.readFileSync('src/index.js','utf8').includes('UPDATE_CHANNEL_REV="runtime-3271-demo-player-live-join"');
   }catch{return false}
 }
+
+/* PR #596 — fail-closed V3.272 Player Web Online village and 7 required features. */
+const onlineVillage3272Paths=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-player-web-online-village.yml","docs/releases/GMWW-player-web-online-village-20261028.md","package.json","package-lock.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/src/10-library-and-settings.part","src/gmww-demo-runner.js","src/gmww-members-live.js","src/gmww-online-action-icons.js","src/gmww-wolf-recognition.js","src/index.js","src/player-web-src/20-village-and-profile.part","src/player-web-src/30-rooms-and-realtime.part","src/player-web-src/35-online-chat.part","src/player-web-src/40-cards-and-game.part","src/player-web-src/50-privacy-and-runtime.part","tests/player-web-online-actions-20261028.test.mjs","tests/player-web-online-village-20261028.test.mjs"]);
+function isOnlineVillage3272Scope(changes){
+ if(!Array.isArray(changes)||changes.length<20||
+    changes.some(c=>!onlineVillage3272Paths.has(c.path)||!['A','M'].includes(c.status)))return false;
+ const paths=new Set(changes.map(c=>c.path));
+ const mandatory=['src/index.js','src/gmww-members-live.js','src/gmww-demo-runner.js',
+   'src/gmww-online-action-icons.js','src/player-web-src/35-online-chat.part',
+   'tests/player-web-online-actions-20261028.test.mjs',
+   'docs/releases/GMWW-player-web-online-village-20261028.md'];
+ if(!mandatory.every(x=>paths.has(x)))return false;
+ try{
+  return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.272.0'&&
+   fs.readFileSync('src/index.js','utf8').includes('UPDATE_CHANNEL_REV="runtime-3272-player-online-village"');
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isOnlineVillage3272Scope(changes))return 'player-online-village-3272';
   if(isDemoPlayerLive3271Scope(changes))return 'demo-player-live-3271';
   if(isDemoAudioSync3270Scope(changes))return 'demo-audio-sync-3270';
   if(isHybridDemo587Scope(changes))return 'demo-hybrid-587';
@@ -2616,6 +2635,17 @@ function isTemplateDock3268Scope(changes){
 }
 
 function detect(){
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean)
+          .map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isOnlineVillage3272Scope(changes))
+          return{mode:'player-online-village-3272',reason:'PR596 V3.272 Online action and Player Web Server authenticated scope'};
+      }
+    }catch{}
+  }
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
