@@ -6,25 +6,28 @@ const clean=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g
 const id=value=>String(value??'').trim().replace(/^member:/,'');
 export const isHunterRole=assignment=>{
   const role=clean(assignment?.roleId||''),name=clean(assignment?.roleName||assignment?.roleCard?.name||'');
-  return ['role hunter','role huntsman','hunter','huntsman'].includes(role)||
-    name==='tho san'||name.startsWith('tho san ');
+  return ['role hunter','role huntsman','hunter','huntsman','role wolf hunter'].includes(role)||
+    name==='tho san'||name.startsWith('tho san ')||name==='soi tho san';
 };
 export function hunterLinkedDeaths({assignments=[],interactions=[],matchId='',night=Infinity}={}){
   const rows=Array.isArray(interactions)?interactions:[],match=String(matchId||'');
   if(!match)return [];
   const matches=r=>r&&String(r.matchId||'')===match;
-  const hunters=new Set((Array.isArray(assignments)?assignments:[])
-    .filter(isHunterRole).map(x=>id(x.loginId)).filter(Boolean));
+  const hunters=new Map((Array.isArray(assignments)?assignments:[])
+    .filter(isHunterRole).map(x=>[id(x.loginId),x]).filter(([login])=>Boolean(login)));
   const result=[];
-  for(const hunter of hunters){
+  for(const [hunter,assignment] of hunters){
     const deaths=rows.filter(r=>matches(r)&&r.type==='dead'&&r.effectActive!==false&&
       id(r.loginId)===hunter&&Number(r.night||0)<=night);
     if(!deaths.length)continue;
+    // Wolf Pack Bite and unrelated effects must never become a hunter mark.
+    const markAction=String(assignment.roleId)==='role_wolf_hunter'?'action_hunter_mark':'action_hunt';
     const marks=rows.filter(r=>matches(r)&&id(r.actorId)===hunter&&id(r.loginId)!==hunter&&
-      id(r.loginId)&&!r.artifactId&&
-      r.type!=='dead'&&r.noEffect!==true&&r.status!=='skipped'&&
-      String(r.actionId||r.effectId||r.effectName||'').trim()&&
-      Number(r.night||0)>0&&Number(r.night||0)<=night);
+      id(r.loginId)&&!r.artifactId&&r.actionId===markAction&&
+      r.type!=='dead'&&r.noEffect!==true&&r.status!=='skipped'&&r.undone!==true&&
+      Number(r.night||0)>0&&Number(r.night||0)<=night&&
+      deaths.some(d=>Number(d.night||0)>Number(r.night||0)||
+        (Number(d.night||0)===Number(r.night||0)&&String(d.createdAt||'')>=String(r.createdAt||''))));
     if(!marks.length)continue;
     marks.sort((a,b)=>Number(a.night||0)-Number(b.night||0)||
       String(a.createdAt||'').localeCompare(String(b.createdAt||'')));

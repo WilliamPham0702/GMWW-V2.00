@@ -2400,6 +2400,29 @@ export class RoomDurableObject extends DurableObject {
       const deliveredRole=privateRoles.find(r=>String(r?.roleId||"")===roleId&&
         (!r?.matchId||String(r.matchId)===matchId));
       const roleCard=deliveredRole?.roleCard||row.roleCard||{},actionId=String(body?.actionId||"");
+      // Server-side special restrictions precede all usage and effect writes.
+      if(roleId==='role_hunter'&&actionId==='action_hunt'){
+        const target=assigned.find(a=>normalizeLoginId(a.loginId)===targets[0]);
+        const faction=String(target?.factionId||target?.faction||target?.roleCard?.factionId||'').toLowerCase();
+        if(faction==='third'||faction.includes('phe ba'))
+          return j({ok:false,error:'HUNTER_THIRD_FACTION_FORBIDDEN'},409);
+      }
+      if(roleId==='role_wolf_hunter'&&actionId==='action_hunter_mark'){
+        if(type!=='effect_notice')return j({ok:false,error:'WOLF_HUNTER_MARK_TYPE_INVALID'},409);
+        const oldMarks=interactions.filter(x=>String(x.matchId)===matchId&&
+          normalizeLoginId(x.actorId)===actorId&&x.actionId==='action_hunter_mark'&&
+          x.undone!==true&&x.noEffect!==true&&x.status!=='skipped'&&
+          Number(x.night||0)<=Number(meta.cycleNight||1))
+          .sort((x,y)=>Number(x.night||0)-Number(y.night||0)||
+            String(x.createdAt||'').localeCompare(String(y.createdAt||'')));
+        const previousMark=oldMarks.at(-1);
+        if((!previousMark&&Number(meta.cycleNight||1)>1)||
+          (previousMark&&!interactions.some(x=>String(x.matchId)===matchId&&
+            x.type==='dead'&&x.effectActive!==false&&
+            normalizeLoginId(x.loginId)===normalizeLoginId(previousMark.loginId)&&
+            Number(x.night||0)<Number(meta.cycleNight||1))))
+          return j({ok:false,error:'WOLF_HUNTER_REMARK_REQUIRES_PREVIOUS_TARGET_DEATH'},409);
+      }
       if(roleId==='role_clone'&&actionId==='action_clone_target'&&
         (Number(meta.cycleNight||0)!==1||targets.includes(actorId)||targets.length!==1))
         return j({ok:false,error:"CLONE_TARGET_NIGHT_ONE_ONLY"},409);
@@ -2414,6 +2437,8 @@ export class RoomDurableObject extends DurableObject {
         roleId==="role_witch"&&actionId==="action_witch_kill"?"dead":
         roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"?"frozen":
         roleId==="role_guard"&&actionId==="action_protect"?"effect_notice":
+        roleId==="role_wolf_hunter"&&actionId==="action_hunter_mark"?"effect_notice":
+        roleId==="role_hunter"&&actionId==="action_hunt"?"effect_notice":
         roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":
         ['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?"effect_notice":
         roleId==='role_destroyer'&&actionId==='action_destroyer_kill'?'dead':"";
