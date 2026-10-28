@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.267';
+const VERSION='3.268';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -8311,7 +8311,7 @@ async function openPlayGameSheet(){
     if(sel.value)await applyPlayGameTemplate(sel.value);
   }if(openSeq!==playGameSheetOpenSeq||card.dataset.mode!=='play')return;
   renderPlayGameRoleTimings();updatePlayArtifactToggle();updatePlayGameRoleCount();
-  sheet.classList.remove('hidden');
+  sheet.classList.remove('hidden');gmwwGameSheetSetFloating(true);
 }
 let playGameSheetOpenSeq=0;
 let playGameReturnToSelection=false;
@@ -8325,10 +8325,10 @@ async function openLibraryGameTemplate(id=''){
     if(nominationInput)nominationInput.value=10;
     if(voteInput)voteInput.value=10;
     if(w)w.value=30;const earlySec=document.getElementById('playEarlyArtifactSec');if(earlySec)earlySec.value=30;if(d)d.value=30;const artifactSec=document.getElementById('playArtifactActionSec');if(artifactSec)artifactSec.value=30;if(a)a.checked=true;if(quota)quota.value=3}
-  sheet.classList.remove('hidden');await loadPlayGameTemplates();const sel=document.getElementById('playGameTemplateSelect');if(sel){sel.onchange=e=>{const v=e.target.value;if(v)applyPlayGameTemplate(v);else openLibraryGameTemplate('')};sel.value=id||''}if(id){await applyPlayGameTemplate(id);const del=document.getElementById('playGameDelete');if(del)del.hidden=false}else{document.getElementById('playGameName').value='Ván GMWW';await renderPlayGameRoles();updatePlayGameRoleCount()}
+  gmwwGameSheetSetFloating(false);sheet.classList.remove('hidden');await loadPlayGameTemplates();const sel=document.getElementById('playGameTemplateSelect');if(sel){sel.onchange=e=>{const v=e.target.value;if(v)applyPlayGameTemplate(v);else openLibraryGameTemplate('')};sel.value=id||''}if(id){await applyPlayGameTemplate(id);const del=document.getElementById('playGameDelete');if(del)del.hidden=false}else{document.getElementById('playGameName').value='Ván GMWW';await renderPlayGameRoles();updatePlayGameRoleCount()}
   updatePlayArtifactToggle();
 }
-function closePlayGameSheet(){++playGameSheetOpenSeq;document.getElementById('playGameSheet')?.classList.add('hidden')}
+function closePlayGameSheet(){++playGameSheetOpenSeq;document.getElementById('playGameSheet')?.classList.add('hidden');gmwwGameSheetSetFloating(false)}
 function suggestPlayGameRoles(){
   const mode=document.querySelector('.play-game-sheet-card')?.dataset.mode||'play',need=mode==='library'?Math.max(1,playRolePlanTotal()||12):playLiveMembers().length,roles=playSortedRoles();playSceneState.rolePlan={};for(let i=0;i<need&&i<roles.length;i++)playSceneState.rolePlan[roles[i].id]=(playSceneState.rolePlan[roles[i].id]||0)+1;savePlayScene();renderPlayGameRoles();updatePlayGameRoleCount();
 }
@@ -9510,8 +9510,105 @@ function initDraggablePlayGatherToolbar(){
   window.visualViewport?.addEventListener('resize',clampOnscreen,{passive:true});
   requestAnimationFrame(clampOnscreen);
 }
+/* V3.266 — Game-template sheet belongs to the bottom GM dock, not an
+   always-centered full-screen modal. Saved docking is local to this iPhone;
+   the Library editor deliberately remains a normal modal. */
+const GMWW_GAME_SHEET_DOCK_KEY='gmww_game_template_dock_v2';
+function gmwwGameSheetReadDock(){
+  try{const state=JSON.parse(localStorage.getItem(GMWW_GAME_SHEET_DOCK_KEY)||'null');
+    return state&&['bottom','free'].includes(state.mode)?state:{mode:'bottom',collapsed:true}}
+  catch{return{mode:'bottom',collapsed:true}}
+}
+function gmwwGameSheetSaveDock(next){
+  try{localStorage.setItem(GMWW_GAME_SHEET_DOCK_KEY,JSON.stringify(next))}catch{}
+}
+function gmwwGameSheetLayout(){
+  const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');
+  if(!card||sheet.classList.contains('hidden')||card.dataset.mode!=='play')return;
+  const dock=document.getElementById('gmTopMenu'),top=document.getElementById('playSetupStrip');
+  const bar=dock?.getBoundingClientRect(),header=top?.getBoundingClientRect();
+  const bottomY=bar?.width>60&&bar.top>0?bar.top-5:innerHeight-85;
+  const upperY=Math.max(8,(header?.bottom||70)+8);
+  const maxHeight=Math.max(130,Math.min(innerHeight-20,bottomY-upperY));
+  const availableWidth=Math.max(100,innerWidth-16),width=Math.min(availableWidth,bar?.width>60?bar.width:availableWidth);
+  card.style.setProperty('max-height',maxHeight+'px','important');
+  card.style.setProperty('width',width+'px','important');
+  const saved=gmwwGameSheetReadDock();
+  // The compact panel changes its intrinsic height: measure AFTER hiding body.
+  sheet.classList.toggle('gmww-template-compact',saved.collapsed===true);
+  const rect=card.getBoundingClientRect();
+  const clamp=(v,min,max)=>Math.max(min,Math.min(Math.max(min,max),v));
+  const left=saved.mode==='free'?clamp(Number(saved.x)||8,8,innerWidth-rect.width-8):clamp((bar?.left??8)+((bar?.width??width)-rect.width)/2,8,innerWidth-rect.width-8);
+  const upper=8,lower=Math.max(8,innerHeight-rect.height-8);
+  const rawTop=saved.mode==='free'?(Number(saved.y)||upperY):bottomY-rect.height;
+  const y=clamp(rawTop,upper,lower);
+  card.style.setProperty('left',left+'px','important');
+  card.style.setProperty('top',y+'px','important');
+  card.style.setProperty('right','auto','important');card.style.setProperty('bottom','auto','important');
+  card.style.setProperty('transform','none','important');
+  card.classList.toggle('gmww-dock-snapped',saved.mode==='bottom');
+  card.dataset.dockEdge=saved.mode==='bottom'?'bottom':'';
+  const toggle=document.getElementById('playGameDockToggle');
+  if(toggle){toggle.textContent=saved.collapsed?'⌃':'⌄';toggle.setAttribute('aria-expanded',String(!saved.collapsed));toggle.setAttribute('aria-label',saved.collapsed?'Mở bảng Chọn Ván Mẫu':'Thu gọn Ván Mẫu vào menu dưới')}
+}
+function gmwwGameSheetSetFloating(enabled){
+  const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;
+  sheet.classList.toggle('gmww-template-floating',!!enabled);
+  if(enabled){gmwwGameSheetLayout();return}
+  sheet.classList.remove('gmww-template-compact');card.classList.remove('gmww-dock-snapped','gmww-dock-near');
+  for(const k of ['left','top','right','bottom','transform','max-height','width'])card.style.removeProperty(k);
+  delete card.dataset.dockEdge;
+}
+function initPlayGameSheetDock(){
+  const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card'),handle=card?.querySelector('.sheet-head');
+  if(!sheet||!card||!handle||card.dataset.gameDockReady)return;
+  card.dataset.gameDockReady='1';
+  handle.style.touchAction='none';handle.style.cursor='grab';
+  const toggle=document.getElementById('playGameDockToggle');
+  toggle?.addEventListener('click',()=>{
+    if(card.dataset.mode!=='play')return;
+    const saved=gmwwGameSheetReadDock();saved.mode='bottom';saved.collapsed=!saved.collapsed;
+    gmwwGameSheetSaveDock(saved);gmwwGameSheetLayout();
+  });
+  let drag=null;
+  handle.addEventListener('pointerdown',event=>{
+    if(card.dataset.mode!=='play'||sheet.classList.contains('hidden')||event.target.closest('button,input,select,textarea,a')||(event.pointerType==='mouse'&&event.button!==0))return;
+    const rect=card.getBoundingClientRect();
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false};
+    try{handle.setPointerCapture(event.pointerId)}catch{}
+    event.preventDefault();
+  });
+  handle.addEventListener('pointermove',event=>{
+    if(!drag||event.pointerId!==drag.id)return;
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if(!drag.moved&&Math.hypot(dx,dy)<5)return;
+    drag.moved=true;
+    const x=Math.max(8,Math.min(innerWidth-card.offsetWidth-8,drag.left+dx));
+    const y=Math.max(8,Math.min(innerHeight-card.offsetHeight-8,drag.top+dy));
+    card.style.setProperty('left',x+'px','important');card.style.setProperty('top',y+'px','important');
+    card.classList.remove('gmww-dock-snapped');
+    const menu=document.getElementById('gmTopMenu')?.getBoundingClientRect();
+    card.classList.toggle('gmww-dock-near',!!menu&&Math.abs(card.getBoundingClientRect().bottom-(menu.top-5))<=48);
+    event.preventDefault();
+  },{passive:false});
+  const finish=event=>{
+    if(!drag||event.pointerId!==drag.id)return;
+    const moved=drag.moved;drag=null;
+    try{handle.releasePointerCapture(event.pointerId)}catch{}
+    if(!moved)return;
+    const menu=document.getElementById('gmTopMenu')?.getBoundingClientRect(),rect=card.getBoundingClientRect();
+    const snapped=event.type==='pointerup'&&menu&&Math.abs(rect.bottom-(menu.top-5))<=48;
+    const old=gmwwGameSheetReadDock();
+    const next=snapped?{mode:'bottom',collapsed:old.collapsed}:{mode:'free',collapsed:old.collapsed,x:Math.round(rect.left),y:Math.round(rect.top)};
+    gmwwGameSheetSaveDock(next);card.classList.remove('gmww-dock-near');gmwwGameSheetLayout();
+  };
+  handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish);
+  window.addEventListener('resize',()=>gmwwGameSheetLayout(),{passive:true});
+  window.visualViewport?.addEventListener('resize',()=>gmwwGameSheetLayout(),{passive:true});
+}
 function initDraggablePlaySheets(){
   document.querySelectorAll('.sheet .sheet-card').forEach(card=>{
+    if(card.closest('#playGameSheet'))return; // Dedicated bottom-dock controller below.
     if(card.dataset.dragBound==='1')return;card.dataset.dragBound='1';
     const handle=card.querySelector('.sheet-head');if(!handle)return;
     handle.style.touchAction='none';handle.style.cursor='grab';
@@ -9573,7 +9670,7 @@ function initPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;
   initBattleControls();
   initPlayGameChromeAutoHide();
-  initDraggablePlaySheets();
+  initDraggablePlaySheets();initPlayGameSheetDock();
   initDraggablePlayGatherToolbar();
   document.getElementById('playAssignmentRandom')?.addEventListener('click',()=>{try{playBuildAssignments({random:true})}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentInOrder')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(err){playFlashError(err.message)}});
