@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TESTED_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TESTED_SHA"
-          HOTFIX_SHA="$(git log --format='%H %s' -20 | grep -m1 -E 'Merge pull request #599|Merge PR #599|HOTFIX V3.273: khôi phục đăng nhập Player Web' | cut -d' ' -f1)"
+          HOTFIX_SHA="3e3773c5cf96fd3fff13b1dbdd0339deeca9c5d7"
           test -n "$HOTFIX_SHA"
           git merge-base --is-ancestor "$HOTFIX_SHA" HEAD
           test "$(node -p 'require("./package.json").version')" = "3.273.0"
