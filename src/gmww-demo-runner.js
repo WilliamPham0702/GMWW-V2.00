@@ -83,7 +83,7 @@ export async function demoPlayerActions(room,meta,loginId){
  }
  return actions.filter(a=>a.actorIds.includes(loginId)).map(a=>({
   key:a.id,actionId:a.actionId,name:a.name,type:a.type,roleId:a.roleId||'',
-  artifactId:a.artifactId||'',targetCount:a.noTarget?0:a.targetCount,
+  artifactId:a.artifactId||'',targetCount:a.noTarget||a.actionId==='action_transfer_bite'?0:a.targetCount,
   noSelf:a.noSelf,allowDead:a.allowDead,noTarget:a.noTarget,phase:meta.cyclePhase
  }));
 }
@@ -111,7 +111,11 @@ async function observe(room,meta,lease,action,actorId='',targets=[],status='acce
  // Keep the accepted/skipped DEMO event ledger on the Server across GM reloads.
  // The existing MAX_STEPS limit bounds storage while retaining the full DEMO run.
  lease.history=appendDemoHistory(lease.history,event);
- await room.ctx.storage.put('demoLease',lease);const {revelation,...publicEvent}=event;room.broadcast({type:'demo_event',demoEvent:publicEvent,serverTime:Date.now()});
+ await room.ctx.storage.put('demoLease',lease);
+ // The same WebSocket is visible to Players. Never publish secret actors,
+ // targets, or night role labels. GM reads the full event from authorized /gm/state.
+ room.broadcast({type:'demo_event',demoEvent:{id:event.id,matchId:event.matchId,
+  status:event.status,at:event.at},serverTime:Date.now()});
 }
 async function checked(response){const data=await response.json();if(!response.ok||!data.ok){const e=new Error(data.message||data.error||'DEMO_ACTION_FAILED');e.code=data.detail||data.error;throw e}return data}
 async function ballotAction(room,body){
