@@ -1879,10 +1879,13 @@ function gmwwGMAdminMount(){
   if(!bar){
     bar=document.createElement('div');bar.id='gmwwGMAdminDock';
     bar.setAttribute('role','group');bar.setAttribute('aria-label','Hành động riêng của GM');
-    bar.innerHTML='<button type="button" data-gm-admin="dead" aria-label="GM Giết" title="GM • Giết">☠️</button>'+
-      '<button type="button" data-gm-admin="revive" aria-label="GM Cứu" title="GM • Cứu / Hồi Sinh">❤️‍🩹</button>'+
-      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat">🤐</button>';
-    top.appendChild(bar);
+    bar.innerHTML='<button type="button" data-gm-admin="dead" aria-label="GM Giết" title="GM • Giết"><img src="/assets/action-icons/v3/15_san_giet.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="revive" aria-label="GM Cứu" title="GM • Cứu / Hồi Sinh"><img src="/assets/action-icons/v3/13_hoi_sinh.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat"><img src="/assets/action-icons/v3/39_cam_noi.webp" alt=""></button>';
+    document.body.appendChild(bar);
+    for(const button of bar.querySelectorAll('[data-gm-admin]')){
+      try{const saved=JSON.parse(localStorage.getItem('gmww-admin-icon-'+button.dataset.gmAdmin)||'null');if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){button.style.left=Math.max(0,Math.min(window.innerWidth-44,saved.x))+'px';button.style.top=Math.max(0,Math.min(window.innerHeight-44,saved.y))+'px'}}catch{}
+    }
     bar.addEventListener('pointerdown',event=>{
       const button=event.target.closest('[data-gm-admin]');
       if(!button||button.disabled||(event.button!==0&&event.pointerType!=='touch'))return;
@@ -1897,10 +1900,11 @@ function gmwwGMAdminMount(){
       drag.moved=true;
       if(!drag.ghost){
         drag.ghost=document.createElement('span');drag.ghost.className='gmww-gm-admin-ghost';
-        drag.ghost.textContent=drag.button.textContent;document.body.appendChild(drag.ghost);
+        drag.ghost.innerHTML=drag.button.innerHTML;document.body.appendChild(drag.ghost);
       }
       drag.ghost.style.left=event.clientX+'px';drag.ghost.style.top=event.clientY+'px';
       const target=gmwwGMAdminTargetAt(event.clientX,event.clientY,drag.type);
+      if(!target){drag.button.style.left=Math.max(0,Math.min(window.innerWidth-44,event.clientX-22))+'px';drag.button.style.top=Math.max(0,Math.min(window.innerHeight-44,event.clientY-22))+'px'}
       if(target!==drag.target){drag.target?.classList.remove('gmww-battle-icon-snap');
         drag.target=target;target?.classList.add('gmww-battle-icon-snap')}
       drag.ghost.classList.toggle('is-sucked',!!target);
@@ -1912,7 +1916,7 @@ function gmwwGMAdminMount(){
       drag.target?.classList.remove('gmww-battle-icon-snap');drag.ghost?.remove();
       gmwwGMAdminPointer=null;
       if(event.type==='pointerup'&&!drag.button.disabled){
-        if(drag.moved){if(target)void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type)}
+        if(drag.moved){if(target)void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type);else{try{localStorage.setItem('gmww-admin-icon-'+drag.type,JSON.stringify({x:parseFloat(drag.button.style.left),y:parseFloat(drag.button.style.top)}))}catch{}}}
         else battleQuickSelect(drag.type);
       }
       event.preventDefault();event.stopPropagation();
