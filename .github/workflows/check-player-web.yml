@@ -160,6 +160,31 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           test -s docs/releases/GMWW-V3.254-character40-postverify-20261027.md
+      - name: Player Web V3.266 Online Chat — đăng nhập và JS endpoint
+        if: steps.scope.outputs.mode == 'player-login-chat-hotfix'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/player-web-receipt-patch-hotfix.test.mjs tests/player-web-resume-receipt-runtime.test.mjs tests/online-chat-authority.test.mjs
+          node --check src/gmww-player-private-card-patch.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          test -s docs/releases/GMWW-PLAYER-LOGIN-ONLINE-CHAT-HOTFIX-20261028.md
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-player-login-chat.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true' EXIT
+          READY=0
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 4 http://127.0.0.1:8787/api/health > /tmp/player-login-health.json 2>/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" != 1 ]; then cat /tmp/gmww-player-login-chat.log; exit 1; fi
+          curl --fail --silent --show-error --max-time 30 http://127.0.0.1:8787/gmww-members-live.js > /tmp/gmww-player-login-online.js
+          test -s /tmp/gmww-player-login-online.js
+          node --check /tmp/gmww-player-login-online.js
+          grep -q 'window.login=login' /tmp/gmww-player-login-online.js
+          grep -q 'gmwwChatMount()' /tmp/gmww-player-login-online.js
+          node tests/worker-private-delivery-e2e.mjs
       - name: Player receipt hotfix — login, join, reconnect and JS integrity
         if: steps.scope.outputs.mode == 'player-receipt-hotfix'
         shell: bash
