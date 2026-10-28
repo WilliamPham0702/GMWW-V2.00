@@ -47,7 +47,7 @@ test('audio list uses multiple-element selectors for every list row',()=>{
   const value="$$('["+selector+"]').forEach";
   assert.ok(gm.includes(value));
   assert.ok(audio.includes(value));
-  assert.ok(!gm.includes("$('["+selector+"]').forEach"));
+  assert.ok(!gm.split('\n').some(line=>line.trimStart().startsWith("$('["+selector+"]').forEach")));
  }
 });
 test('40 characters, fallback motion, all original role images and audio remain',()=>{
