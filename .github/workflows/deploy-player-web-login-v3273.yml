@@ -157,3 +157,5 @@ jobs:
           echo "ROLLBACK: previous Worker restored to 100%; no IPA, OTA, Durable Objects, rooms or history changed." >> "$GITHUB_STEP_SUMMARY"
 
 # PR599 Worker-only re-trigger after production gate isolation
+
+# Retry after PR599 gate stabilization: 2026-10-29T06:53+07:00
