@@ -59,6 +59,29 @@ function syncPlayerMiniCards(){
   if(state.artifact)setImage('[data-mini="artifact"] img',String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''));
 }
 
+
+function renderPlayerTimeline(timeline){
+ const menu=document.getElementById('gmwwPlayerTopMenu');if(!menu)return;
+ let strip=document.getElementById('gmwwPlayerTimeline');
+ if(!timeline?.steps?.length){strip?.remove();return}
+ if(!document.getElementById('gmwwPlayerTimelineCss')){
+   const style=document.createElement('style');style.id='gmwwPlayerTimelineCss';
+   style.textContent='#gmwwPlayerTimeline{position:absolute;top:calc(100% + 2px);left:52px;right:52px;max-width:calc(100% - 104px);display:flex;justify-content:flex-start;gap:4px;overflow-x:auto;scrollbar-width:none;pointer-events:auto;padding:2px 0 4px}'+
+     '#gmwwPlayerTimeline span{flex:0 0 auto;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;padding:4px 6px;border:1px solid #ffffff44;border-radius:7px;background:#06273bc9;color:#b7e0e4;font:700 9px/1.2 system-ui}'+
+     '#gmwwPlayerTimeline span.active{border-color:#ffdd91;background:#9d6220e6;color:white}'+
+     '#gmwwPlayerTimeline span.done{opacity:.65}';
+   document.head.appendChild(style);
+ }
+ if(!strip){strip=document.createElement('div');strip.id='gmwwPlayerTimeline';strip.setAttribute('aria-label','Timeline đồng bộ Quản Trò');menu.appendChild(strip)}
+ const steps=timeline.steps.slice(0,150),key=[state.roomCode,state.room?.matchId,timeline.phase,timeline.activeIndex,...steps.map(x=>x.label+':'+x.status)].join('|');
+ if(strip.dataset.sig===key)return;strip.dataset.sig=key;strip.replaceChildren();
+ for(const step of steps){
+   const node=document.createElement('span');node.className=['done','active'].includes(step.status)?step.status:'';
+   node.textContent=String(step.label||'Lượt').slice(0,110);strip.appendChild(node);
+ }
+ strip.querySelector('.active')?.scrollIntoView({behavior:'instant',inline:'center',block:'nearest'});
+}
+
 function hidePlayerTopMenu(){
   const menu=$('#gmwwPlayerTopMenu');if(menu&&state.member)menu.classList.add('is-idle-hidden');
   document.getElementById('gmwwChatLaunch')?.classList.add('is-idle-hidden');
