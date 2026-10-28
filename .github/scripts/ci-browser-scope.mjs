@@ -2318,7 +2318,32 @@ function isDrunkV3260PostMergeScope(changes){
   }catch{return false}
 }
 
+function cardRule3263MainScope(){
+  try{
+    if(process.env.GMWW_CI_EVENT!=='push'||process.env.GITHUB_REF!=='refs/heads/main'||
+       JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.263.0')return false;
+    // Inspect the full actual release diff, not just a version-bump follow-up.
+    // V3.262 is the pinned, already-shipped and immutable release baseline.
+    const base='ad501902144aee1eb4e679f8b4f1334eda73099d';
+    git('merge-base','--is-ancestor',base,'HEAD');
+    const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+    const changes=rows.map(s=>s.split('\t'));
+    const allowed=new Set([".github/workflows/check-card-rule-audit.yml","docs/audits/card-rule-audit-20261028.md","docs/audits/card-rule-catalog-20261028.json","docs/releases/GMWW-CARD-RULE-AUDIT-20261028.md","docs/superpowers/plans/2026-10-28-card-rule-audit.md","server-game/current/app.js","server-game/current/battle-controls.js","server-game/src/00-core-and-library.part","server-game/src/10-library-and-settings.part","server-game/src/40-battle-and-timeline.part","server-game/src/50-roles-and-artifacts.part","src/gmww-battle-action-policy.js","src/gmww-cycle-effect-expiry.js","src/gmww-delivery-snapshot.js","src/gmww-pack-night-rules.js","src/gmww-private-card-contract.js","src/gmww-wolf-night-resolution.js","src/gmww-wolf-recognition.js","src/index.js","tests/card-divination-audit-20261028.test.mjs","tests/card-rule-contract-audit-20261028.test.mjs","tests/v389-night-runtime-integration.test.mjs",".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","package.json","package-lock.json","server-game/current/GMWW.html","docs/releases/GMWW-V3.263-card-rule-executors-20261028.md"]);
+    const files=changes.map(c=>c[1]);
+    if(changes.length<10||changes.some(c=>!['M','A'].includes(c[0])||!allowed.has(c[1]))||
+       !["src/index.js","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","src/gmww-cycle-effect-expiry.js","src/gmww-delivery-snapshot.js","tests/v389-night-runtime-integration.test.mjs","package.json","package-lock.json","docs/releases/GMWW-V3.263-card-rule-executors-20261028.md"].every(p=>files.includes(p)))return false;
+    const worker=fs.readFileSync('src/index.js','utf8'),gm=fs.readFileSync('server-game/current/app.js','utf8');
+    return worker.includes('VERSION="V3.263"')&&gm.includes("const VERSION='3.263'")&&
+       gm.includes('cy+Math.sin(angle)*radius')&&
+       worker.includes('artifact_action_lock_function')&&
+       worker.includes('deferredArtifact==="artifact_07"')&&
+       worker.includes('removedFromMatch=true')&&
+       fs.existsSync('docs/releases/GMWW-V3.263-card-rule-executors-20261028.md');
+  }catch{return false}
+}
+
 function detect(){
+  if(cardRule3263MainScope())return{mode:'card-rule-3263',reason:'V3.263 approved 3 Artifact executors; exact 3.262 base, strict scope and GM radius preserved'};
   // CI-only fix after the approved V3.260 merge: retain exact-scope
   // Worker + Say Rượu checks; unrelated legacy tests must not block OTA.
   if(process.env.GMWW_CI_EVENT==='push'){

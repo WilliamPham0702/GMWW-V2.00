@@ -24,6 +24,8 @@ jobs:
       - name: Syntax, assembly and dry-run only
         run: |
           node --check src/index.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/gm-fire-walk-position.test.mjs tests/gm-turn-motion-lowheat.test.mjs
           node --check server-game/current/app.js
           node --check server-game/current/battle-controls.js
           node .github/scripts/assemble-gm-app.mjs --verify

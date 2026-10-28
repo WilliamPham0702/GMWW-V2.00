@@ -44,6 +44,15 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: V3.263 — kiểm RULE Bình Giấc Mơ, Hơi Thở Lão Già, Kim Cương Phủ Nhận
+        if: steps.scope.outputs.mode == 'card-rule-3263'
+        run: |
+          node --test tests/card-rule-contract-audit-20261028.test.mjs tests/card-divination-audit-20261028.test.mjs tests/v389-night-runtime-integration.test.mjs tests/approved-role-card-settings-20261027.test.mjs tests/witch01-old-witch-rules.test.mjs
+          node --test tests/gm-fire-walk-position.test.mjs tests/gm-turn-motion-lowheat.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.263-card-rule-executors-20261028.md
       - name: Chốt Native V3.257 — xác minh manifest và gói thủ công đúng phạm vi
         if: steps.scope.outputs.mode == 'native-manual-release-verify'
         run: |
