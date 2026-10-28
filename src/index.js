@@ -877,7 +877,11 @@ export class RoomDurableObject extends DurableObject {
     const players=await this.ctx.storage.get("players")||{};
     const interactions=await this.ctx.storage.get("interactions")||[];
     const assignments=await this.ctx.storage.get("assignments")||[];
-    const saveOnlyVoters=assignments.filter(x=>x.roleId==='role_peace_lover')
+    // Peace Lover and Vòng Hoa Hòa Bình are passive, so both restrict
+    // votes while the wearer remains an eligible current-match owner.
+    const saveOnlyVoters=assignments.filter(x=>x.roleId==='role_peace_lover'||
+      x.artifactId==='artifact_44').map(x=>normalizeLoginId(x.loginId));
+    const doubleVoteVoters=assignments.filter(x=>x.artifactId==='artifact_21')
       .map(x=>normalizeLoginId(x.loginId));
     const crowActors=new Set(assignments.filter(x=>x.roleId==='role_crow')
       .map(x=>normalizeLoginId(x.loginId)));
@@ -902,7 +906,7 @@ export class RoomDurableObject extends DurableObject {
     // has a valid Save/Kill vote, including in older persisted ballots.
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow;
-    let current={...ballot,eligible,saveOnlyVoters,crowMarks,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+    let current={...ballot,eligible,saveOnlyVoters,doubleVoteVoters,crowMarks,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
     const now=Date.now();

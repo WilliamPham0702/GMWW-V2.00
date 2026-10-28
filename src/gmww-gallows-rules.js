@@ -72,7 +72,12 @@ export function gallowsVoteTotals(ballot){
   // Each confirmed Crow mark contributes exactly two adverse votes only
   // when its target reaches the gallows; these aren't fabricated voters.
   const crowPenalty=(ballot?.crowMarks||[]).filter(id=>id===String(ballot?.candidateId||'')).length*2;
-  return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length+crowPenalty,cast:votes.length,
+  // Ấn Thị Trưởng makes each accepted vote by its holder count twice,
+  // without adding a fake voter or increasing ballot eligibility.
+  const doubles=new Set(ballot?.doubleVoteVoters||[]),
+    weight=([id])=>doubles.has(id)?2:1;
+  return {save:votes.filter(([,choice])=>choice==='👍').reduce((sum,v)=>sum+weight(v),0),
+    kill:votes.filter(([,choice])=>choice==='👎').reduce((sum,v)=>sum+weight(v),0)+crowPenalty,cast:votes.length,
     eligible:[...eligible].filter(id=>id!==String(ballot?.candidateId||'')&&!blocked.has(id)).length};
 }
 export function gallowsAutomaticOutcome(ballot){
