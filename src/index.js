@@ -1002,9 +1002,14 @@ export class RoomDurableObject extends DurableObject {
                 type:"dead",loginId,matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),
                 night:Number(meta.cycleNight),source:"gallows",gallowsId:current.id,effectActive:true,
                 message:"Người chơi đã bị hành quyết theo kết quả bỏ phiếu tự động.",createdAt};
-              rows.push(fatal);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+              rows.push(fatal);
               await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
-              this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
+              // Automatic and manual Gallows MUST run the same artifact
+              // resurrection, hunter-link, and death-chain adjudication.
+              await this.applyHunterDeathConsequences(meta,rows,createdAt);
+              await this.ctx.storage.put("interactions",pruneInteractions(rows));
+              if(fatal.effectActive!==false)this.broadcast({type:"player_status_changed",
+                loginId,statusId:"dead",active:true,serverTime:now});
             }
           }
         }
@@ -1096,7 +1101,8 @@ export class RoomDurableObject extends DurableObject {
           await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
           if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,createdAt);
           await this.ctx.storage.put("interactions",pruneInteractions(rows));
-          this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
+          if(fatal.effectActive!==false)this.broadcast({type:"player_status_changed",
+            loginId,statusId:"dead",active:true,serverTime:now});
         }
       }
     }else if(command==="restore"){
