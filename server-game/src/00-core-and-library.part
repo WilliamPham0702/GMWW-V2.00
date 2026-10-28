@@ -903,6 +903,34 @@ function applyApprovedRoleSettings(s){
   };
   ensureMissing(s.cards,GMWW_AUDITED_ROLE_FALLBACKS);
   ensureMissing(s.artifacts,GMWW_AUDITED_ARTIFACT_FALLBACKS);
+  s.actions=s.actions||{role:[],artifacts:[]};
+  s.actions.role=Array.isArray(s.actions.role)?s.actions.role:[];
+  s.actions.artifacts=Array.isArray(s.actions.artifacts)?s.actions.artifacts:[];
+  s.effects=Array.isArray(s.effects)?s.effects:[];
+  const existingEffects=new Set(s.effects.map(x=>String(x?.id||'')));
+  const ensureActionCatalog=(cards,kind)=>{
+    const actions=s.actions[kind],existingActions=new Set(actions.map(x=>String(x?.id||'')));
+    for(const card of cards)for(const fn of Array.isArray(card?.functions)?card.functions:[]){
+      const actionId=String(fn?.actionId||'');
+      if(!actionId)continue;
+      const label=String(fn?.description||card.name||actionId);
+      if(!existingActions.has(actionId)){
+        actions.push({id:actionId,name:label.slice(0,100),
+          description:label,effectIds:Array.isArray(fn.effectIds)?fn.effectIds:[]});
+        existingActions.add(actionId);
+      }
+      for(const effectId of Array.isArray(fn.effectIds)?fn.effectIds:[]){
+        if(!effectId||existingEffects.has(String(effectId)))continue;
+        s.effects.push({id:String(effectId),name:String(card.name||effectId),
+          primitive:'CUSTOM',duration:'instant',description:label});
+        existingEffects.add(String(effectId));
+      }
+    }
+  };
+  // Fill missing Action/Effect references; preserve existing user-created
+  // definitions, media bindings, effect templates and customized names.
+  ensureActionCatalog(s.cards,'role');
+  ensureActionCatalog(s.artifacts,'artifacts');
   const cards=s.cards;
   const byId=new Map(cards.map(c=>[String(c?.id||''),c]));
   const update=(id,fields,actions=[])=>{
