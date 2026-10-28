@@ -2236,6 +2236,8 @@ function isLeanPackaging3264Scope(changes){
 export // Online Chat/GM monitoring/announcement audio only: no IPA, seat, 3D, card-audit tests.
 const onlineChatPaths=new Set([
   'src/index.js','src/gmww-online-chat-policy.js','src/gmww-members-live.js',
+  'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+  'server-game/src/00-core-and-library.part','server-game/current/GMWW.html',
   'src/player-web-src/30-rooms-and-realtime.part',
   'src/player-web-src/35-online-chat.part',
   'src/player-web-src/50-privacy-and-runtime.part',
