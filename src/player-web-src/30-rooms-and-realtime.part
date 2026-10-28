@@ -83,6 +83,12 @@ function ensureInteractionUi(){
 function interactionMeta(type){return type==='frozen'?['❄️','BỊ ĐÓNG BĂNG','frozen']:type==='expelled'?['🚪','BỊ ĐUỔI KHỎI LÀNG','expelled']:type==='dead'?['💀','BẠN ĐÃ CHẾT','dead']:type==='assassin_mark'?['🎯','BỊ ĐÁNH DẤU','marked']:type==='thumb_vote'?['⚖️','HÃY CHỌN DẤU','vote']:['✨','HIỆU ỨNG','notice']}
 function showPlayerInteraction(ix){
   if(!ix||!ix.id||ix.status&&ix.status!=='pending')return;if(String(ix.loginId||'').toLowerCase()!==String(state.member?.loginId||'').toLowerCase())return;
+  // Visual-only receipts are audit events, not player prompts. Old pending
+  // receipts from previous Runtime versions are acknowledged silently once.
+  // Explicit acknowledgements / gameplay choices still require interaction.
+  if(ix.type==='effect_notice'&&ix.requireAck!==true&&ix.requireResponse!==true){
+    void respondInteraction(ix.id,'ĐÃ HIỂU',true);return;
+  }
   // GM's secret choice is never provided by the server. This is the public morning answer prompt.
   if(ix.type==='assassin_mark')setRoleEffect(ix);
   if(['frozen','expelled','dead'].includes(ix.type)){setRoleEffect(ix);respondInteraction(ix.id,'ĐÃ HIỂU',true);return}
