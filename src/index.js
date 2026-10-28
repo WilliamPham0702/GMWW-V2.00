@@ -1770,7 +1770,7 @@ export class RoomDurableObject extends DurableObject {
       id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",
       recognitionIds:wolfMembers.map(a=>a.loginId),durationSec:wolfDiscussionSec,status:"pending"});
     const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
-    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid||rid==="role_villager"&&a.inheritedFromRoleId==="role_drunk")continue;
+    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid||rid==="role_villager")continue; // Ordinary villagers never have a night wake-up turn; their Artifacts are scheduled separately.
       const lid=normalizeLoginId(a?.loginId),drunkInheritedWolf=rid==="role_snow_wolf"&&a.inheritedFromRoleId==="role_drunk";
       const groupId=drunkInheritedWolf?rid+":drunk:"+lid:rid;
       let g=groups.get(groupId);
