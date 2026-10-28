@@ -1,0 +1,32 @@
+name: Check RULE Executors 107 (focused)
+on:
+  push:
+    branches:
+      - feat/card-executors-completion-20261028
+  pull_request:
+    paths:
+      - 'src/gmww-*-rules.js'
+      - 'src/gmww-wolf-night-resolution.js'
+      - 'src/index.js'
+      - 'tests/card-executors-*.test.mjs'
+      - '.github/workflows/check-rule-executors-107.yml'
+permissions:
+  contents: read
+jobs:
+  focused-rule-executors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax of the Worker and pure executor modules
+        run: |
+          node --check src/index.js
+          node --check src/gmww-hunter-death-rules.js
+          node --check src/gmww-gallows-rules.js
+          node --check src/gmww-wolf-night-resolution.js
+          node --check src/gmww-elder-bell-rules.js
+      - name: Run only matching executor regressions
+        run: node --test tests/card-executors-*.test.mjs tests/v3193-seat-history-hunter.test.mjs
