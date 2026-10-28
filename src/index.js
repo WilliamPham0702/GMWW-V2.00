@@ -2031,6 +2031,14 @@ export class RoomDurableObject extends DurableObject {
       this.broadcast({type:"player_status_changed",loginId:spend.actorId,
         statusId:"dead",active:true,serverTime:Date.now()});
     }
+    // End protection only AFTER resolving the protected night.
+    if(p==="morning")for(const shield of rows){
+      if(shield.type!=="status"||shield.statusId!=="artifact_next_night_protect"||
+        shield.effectActive===false||String(shield.matchId||"")!==String(meta.matchId||"")||
+        Number(shield.protectNight)!==n)continue;
+      shield.effectActive=false;shield.expiredAt=now;shield.expiredReason="NEXT_NIGHT_PROTECTION_FINISHED";
+      if(shield.id)await this.ctx.storage.put(this.actionLogKey(shield),shield);
+    }
     if(p==="morning"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
@@ -2253,6 +2261,10 @@ export class RoomDurableObject extends DurableObject {
       }else if(actionId==='action_exile'||effects.includes('effect_exile')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
+      }else if(artifactId==="artifact_35"&&actionId==="action_protect"){
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,
+          type:"status",statusId:"artifact_next_night_protect",protectNight:day+1});
+        message="Khiên Bảo Hộ sẽ bảo vệ mục tiêu trong đêm kế tiếp.";
       }else if(artifactId==="artifact_15"&&actionId==="artifact_action_negate"){
         // Only a previously used, truly unlimited Artifact qualifies. Do not
         // confuse a one-time Artifact or merely assigned card with "used".
@@ -2344,6 +2356,7 @@ export class RoomDurableObject extends DurableObject {
       if(effect.type!=="effect_notice"&&(effect.type==="status"?sameStatus:affected(effect.loginId,effect.type)))continue;
       const log={id:"ix-"+crypto.randomUUID(),type:effect.type,
         ...(effect.statusId?{statusId:effect.statusId}:{}),
+        ...(effect.protectNight?{protectNight:effect.protectNight}:{}),
         ...(effect.statusId==="disabled_2n"?{activationPhase:"morning"}:{}),
         ...(effect.kind==="grudge_schedule"?{
           pendingDeath:true,deferredArtifact:"artifact_07",scheduledFromNight:day,

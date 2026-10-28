@@ -62,6 +62,12 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
     byLogin.has(login(row.actorId))&&byLogin.has(login(row.loginId))&&
     assignments.some(a=>login(a.loginId)===login(row.actorId)&&a.roleId==='role_maiden'))
     .map(row=>login(row.actorId)));
+  // A daytime Shield protects in the following exact night, not the day
+  // when it was used. Never consume the shield on a guarded bite.
+  const artifactShields=new Set(rows.filter(x=>
+    x?.type==='status'&&x.statusId==='artifact_next_night_protect'&&
+    x.effectActive!==false&&String(x.matchId||'')===match&&
+    Number(x.protectNight)===cycle).map(x=>login(x.loginId)));
   const protectedTargets=[],transfers=[],victims=[],attacked=[];
   for(const origin of bites){
     if(!byLogin.has(origin))continue;
@@ -80,7 +86,8 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       target=candidate.loginId;
       transfers.push({from:origin,to:target,direction});
     }
-    const protectedTarget=guards.has(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
+    const protectedTarget=guards.has(target)||artifactShields.has(target)||
+      isNightImmune(assignments,target)||visitingMaidens.has(target);
     attacked.push({from:origin,to:target,direction:direction||'none',protected:protectedTarget});
     if(protectedTarget){protectedTargets.push(target);continue}
     if(rows.some(row=>String(row?.matchId||'')===match&&login(row?.loginId)===target&&
