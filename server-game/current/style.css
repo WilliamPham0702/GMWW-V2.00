@@ -8784,3 +8784,26 @@ html[data-gmww-perf-reduced="true"] #start #playShell[data-step="battle"] #playP
 #playGatherToolbar .play-gather-mode-row [data-seat-shift="reset"]{width:40px;height:38px}
 #playWorld .play-pinch-indicator{position:absolute;z-index:35;top:43%;left:50%;transform:translate(-50%,-50%);font:900 16px system-ui,sans-serif;letter-spacing:.04em;padding:7px 15px;border-radius:12px;border:1px solid rgba(174,241,236,.7);background:rgba(7,42,55,.86);color:#fff;pointer-events:none;white-space:nowrap;box-shadow:0 3px 12px #082e35a6}
 #playWorld .play-pinch-indicator[hidden]{display:none!important}
+
+/* V3.266: game template attaches to the lower GM menu, without a modal scrim. */
+body.play-immersive #playGameSheet.gmww-template-floating:not(.hidden){
+  display:block!important;background:transparent!important;pointer-events:none!important;
+}
+body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[data-mode="play"]{
+  position:fixed!important;box-sizing:border-box!important;pointer-events:auto!important;
+  overflow:hidden!important;margin:0!important;transform:none!important;
+  max-width:calc(100vw - 16px)!important;
+}
+#playGameSheet .play-game-sheet-card[data-mode="play"] #playGameDockToggle{
+  display:grid!important;place-items:center!important;flex:0 0 36px;
+  position:static!important;width:36px!important;height:36px!important;
+  font-size:22px!important;touch-action:manipulation;
+}
+#playGameSheet .play-game-sheet-card[data-mode="library"] #playGameDockToggle{display:none!important}
+#playGameSheet.gmww-template-floating.gmww-template-compact .play-game-sheet-card[data-mode="play"]{
+  max-height:70px!important;padding:7px 12px!important;
+}
+#playGameSheet.gmww-template-compact .play-game-sheet-card[data-mode="play"] > :not(.sheet-head){display:none!important}
+#playGameSheet.gmww-template-compact .play-game-sheet-card[data-mode="play"] .sheet-head{
+  margin:0!important;padding-bottom:0!important;border-bottom:0!important;
+}
