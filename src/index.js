@@ -1,5 +1,6 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
+import {resolveElderBell} from "./gmww-elder-bell-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -1897,9 +1898,22 @@ export class RoomDurableObject extends DurableObject {
     meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[];
     const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
+    // Rung Chuông Già Làng suppresses EVERY death effect of the same night,
+    // regardless of source. The bell's own second-life cost is not suppressed.
+    const elderBell=p==="morning"&&n>0?resolveElderBell({
+      assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,
+      matchId:String(meta.matchId||""),night:n}):{blocked:false,spends:[]};
+    if(elderBell.blocked)for(const row of rows){
+      if(String(row.matchId||"")!==String(meta.matchId||"")||Number(row.night)!==n)continue;
+      if(row.type!=="dead"&&row.pendingDeath!==true)continue;
+      if(row.source==="elder-bell-engine")continue;
+      row.effectActive=false;row.pendingDeath=false;row.expiredAt=now;
+      row.expiredReason="ELDER_BELL_PREVENTED_DEATH";
+      if(row.id)await this.ctx.storage.put(this.actionLogKey(row),row);
+    }
     // Night powers record intent; only dawn activates lethal outcomes. Keep the
     // original receipt so undo, usage and retry handling remain transactional.
-    if(p==="morning"&&n>0)for(const row of rows){
+    if(p==="morning"&&n>0&&!elderBell.blocked)for(const row of rows){
       if(row.pendingDeath!==true||String(row.matchId)!==String(meta.matchId)||Number(row.night)!==n)continue;
       // Hơi Thở Lão Già is marked in cycle N and becomes lethal after
       // NIGHT N+1. Resolve exactly once; respect existing night immunity,
@@ -1924,7 +1938,7 @@ export class RoomDurableObject extends DurableObject {
     // At dawn resolve confirmed wolf-bite/Guard/Fairy notices in the SAME match
     // and night. Guards block final, potentially transferred bite destinations.
     // An absent bite or a malformed seating ring never manufactures a death.
-    const wolfResolutionRaw=p==="morning"&&n>0?
+    const wolfResolutionRaw=p==="morning"&&n>0&&!elderBell.blocked?
       resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,players:(await this.ctx.storage.get("players"))||{},
         matchId:String(meta.matchId||""),night:n}):null;
     const strongman=wolfResolutionRaw?.ok?resolveStrongmanWolfBite({
@@ -1956,7 +1970,7 @@ export class RoomDurableObject extends DurableObject {
     }
     // Resolve Maiden only at dawn after all confirmed night attacks and wolf deaths.
     // Retain the same idempotent death event contract used by wolf-night-engine.
-    if(p==="morning"&&n>0){
+    if(p==="morning"&&n>0&&!elderBell.blocked){
       const maidenVictims=resolveMaidenNight({assignments:(await this.ctx.storage.get("assignments"))||[],
         interactions:rows,matchId:String(meta.matchId||""),night:n});
       for(const loginId of maidenVictims){
@@ -1979,7 +1993,7 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     // Queue from a lynched Knight becomes a real death only on the next dawn.
-    if(p==="morning"&&n>0){
+    if(p==="morning"&&n>0&&!elderBell.blocked){
       const pending=await this.ctx.storage.list({prefix:"knightPending:"+String(meta.matchId||"")+":"+n+":"});
       for(const [storageKey,action] of pending.entries()){
         const loginId=normalizeLoginId(action?.targetId);
@@ -1997,6 +2011,20 @@ export class RoomDurableObject extends DurableObject {
         }
         await this.ctx.storage.delete(storageKey);
       }
+    }
+    // Each used bell spends one of Già Làng's two lives; the second use
+    // creates a deterministic fatal event. It cannot revive attacks it blocked.
+    for(const spend of elderBell.spends){
+      if(!spend.exhausted)continue;
+      const id="elder-bell:"+String(meta.matchId)+":"+spend.actorId;
+      if(rows.some(row=>String(row.id)===id))continue;
+      const fatal={id,type:"dead",loginId:spend.actorId,matchId:String(meta.matchId),
+        night:n,cycleKey:key,effectActive:true,source:"elder-bell-engine",
+        actionId:"18",roleId:"role_elder",message:"Già Làng đã Rung Chuông lần thứ hai và hết mạng.",
+        createdAt:now};
+      rows.push(fatal);await this.ctx.storage.put(this.actionLogKey(fatal),fatal);
+      this.broadcast({type:"player_status_changed",loginId:spend.actorId,
+        statusId:"dead",active:true,serverTime:Date.now()});
     }
     if(p==="morning"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
@@ -2430,6 +2458,19 @@ export class RoomDurableObject extends DurableObject {
         (!r?.matchId||String(r.matchId)===matchId));
       const roleCard=deliveredRole?.roleCard||row.roleCard||{},actionId=String(body?.actionId||"");
       // Server-side special restrictions precede all usage and effect writes.
+      if(roleId==='role_elder'&&actionId==='18'){
+        if(type!=='effect_notice'||Number(meta.cycleNight||0)>4)
+          return j({ok:false,error:'ELDER_BELL_NIGHT_OR_TYPE_INVALID'},409);
+        const used=resolveElderBell({assignments:assigned,interactions,
+          matchId,night:Math.max(1,Number(meta.cycleNight||1))}).spends;
+        const previousBells=new Set(interactions.filter(x=>
+          String(x.matchId)===matchId&&x.actionId==='18'&&
+          normalizeLoginId(x.actorId)===actorId&&x.undone!==true&&
+          x.noEffect!==true&&x.status!=='skipped')
+          .map(x=>Number(x.night)));
+        if(previousBells.size>=2||used.some(x=>x.actorId===actorId&&x.livesRemaining===0))
+          return j({ok:false,error:'ELDER_BELL_LIVES_EXHAUSTED'},409);
+      }
       if(roleId==='role_hunter'&&actionId==='action_hunt'){
         const target=assigned.find(a=>normalizeLoginId(a.loginId)===targets[0]);
         const faction=String(target?.factionId||target?.faction||target?.roleCard?.factionId||'').toLowerCase();
@@ -2469,6 +2510,7 @@ export class RoomDurableObject extends DurableObject {
         roleId==="role_wolf_hunter"&&actionId==="action_hunter_mark"?"effect_notice":
         roleId==="role_hunter"&&actionId==="action_hunt"?"effect_notice":
         roleId==="role_crow"&&actionId==="action-g7-crow-votes"?"effect_notice":
+        roleId==="role_elder"&&actionId==="18"?"effect_notice":
         roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":
         ['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?"effect_notice":
         roleId==='role_destroyer'&&actionId==='action_destroyer_kill'?'dead':"";
