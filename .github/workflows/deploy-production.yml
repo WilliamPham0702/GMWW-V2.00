@@ -69,6 +69,16 @@ jobs:
           # Separate artwork CI-policy PR never publishes a duplicate Runtime.
           SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
           if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* || "$SCOPE" == "GMWW browser CI scope: fairy-ci-policy |"* ]]; then SHOULD_DEPLOY=false; fi
+          # V3.273 Player Web login PR #599: deploy by dedicated Worker-only workflow.
+          # Never publish Runtime OTA/IPA from the corresponding CI-only release repair.
+          if [ "$(node -p 'require("./package.json").version')" = "3.273.0" ]; then
+            if git log -1 --format=%B | grep -qE 'Merge PR #599|Merge pull request #599'; then
+              SHOULD_DEPLOY=false
+            elif [ "$(wc -l < /tmp/gmww-production-change-scope.txt | tr -d ' ')" = "1" ] &&
+                 grep -Fxq '.github/workflows/deploy-player-web-login-v3273.yml' /tmp/gmww-production-change-scope.txt; then
+              SHOULD_DEPLOY=false
+            fi
+          fi
           # Worker-only Player receipt recovery uses its dedicated same-SHA gated workflow.
           if [[ "$SCOPE" == "GMWW browser CI scope: player-receipt-hotfix |"* ]]; then SHOULD_DEPLOY=false; fi
           # PR550 test-only rule regression: exact verified five-file scope, no Worker/GM/IPA change.
