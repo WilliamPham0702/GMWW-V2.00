@@ -155,3 +155,5 @@ jobs:
           curl -fsS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/rollback-v3273.json "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments" > /tmp/rollback-result-v3273.json
           node -e "if(!require('/tmp/rollback-result-v3273.json').success)process.exit(1)"
           echo "ROLLBACK: previous Worker restored to 100%; no IPA, OTA, Durable Objects, rooms or history changed." >> "$GITHUB_STEP_SUMMARY"
+
+# PR599 Worker-only re-trigger after production gate isolation
