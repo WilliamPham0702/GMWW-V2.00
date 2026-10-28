@@ -29,4 +29,6 @@ jobs:
           node --check src/gmww-wolf-night-resolution.js
           node --check src/gmww-elder-bell-rules.js
       - name: Run only matching executor regressions
-        run: node --test tests/card-executors-*.test.mjs tests/v3193-seat-history-hunter.test.mjs
+        run: |
+          node --test tests/card-executors-*.test.mjs
+          node --test --test-name-pattern='Hunter' tests/v3193-seat-history-hunter.test.mjs
