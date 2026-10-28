@@ -33,6 +33,7 @@ async function leaveRoom(){
 window.leaveRoom=leaveRoom;
 
 function disconnectRoom(){
+  clearDrunkDraw();
   try{state.ws?.close(1000,'PLAYER_LEFT_ROOM')}catch{};if(state.wsPingTimer){clearInterval(state.wsPingTimer);state.wsPingTimer=null}if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}if(state.gameStateTimer){clearInterval(state.gameStateTimer);state.gameStateTimer=null}
   clearMovementCompletionTimer();state.lobbyMotionPaused=false;state.lobbySeatWalkPending=null;resetLobbyMotionPlan();state.ws=null;state.roomCode='';state.room=null;state.participantId=null;state.players=[];state.ready=false;state.selectedGameCharacterId='';state.selectedSeatId=null;state.roomSetupOpen=false;$('#gmwwRoomSetup')?.classList.remove('open');$('#gmwwVillageReadyDock')?.classList.remove('show');state.role=null;state.roleOpen=false;state.lastResultKey='';state.dead=false;
 }
@@ -97,57 +98,57 @@ async function respondInteraction(id,response,silent=false){
   try{const ack=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/interaction/respond',{method:'POST',headers:auth(),body:JSON.stringify({interactionId:id,response})});if(state.roleEffects?.assassin_mark?.id===id){delete state.roleEffects.assassin_mark;renderRoleEffects()}const el=$('#gmwwPlayerInteraction');if(el)el.classList.remove('show');state.activeInteractionId='';state.activeInteraction=null;if(!silent)toast(ack?.assassinOutcome==='dead'?'Sát Thủ: Bạn đã chết.':ack?.assassinOutcome==='survived'?'Sát Thủ: Bạn đã sống sót.':response==='👍'||response==='👎'?'Đã gửi '+response+' cho Quản Trò.':'Đã xác nhận.');setTimeout(()=>pollRoomState(),120)}catch(e){if(!silent)toast(e.message||'Không gửi được phản hồi.')}
 }
 window.GMWWPlayerInteraction={show:showPlayerInteraction,respond:respondInteraction};
-// Only the authenticated Say Rượu sees opaque face-down cards. The role and
-// faction never appear in public room, websocket or unselected HTML attributes.
+// Say Rượu opens the exact existing role-card back, without a separate box.
 let drunkDrawBusy=false;
+function clearDrunkDraw(){
+  drunkDrawBusy=false;state.drunkDraw=null;state.drunkDrawDismissed='';
+  document.getElementById('gmwwDrunkDraw')?.remove();
+}
 function renderDrunkDraw(draw){
+  const room=state.room||{};
+  const inTurn=!!state.roomCode&&String(room.phase||'')==='running'&&
+    String(room.cyclePhase||'')==='night'&&Number(room.cycleNight||0)===3&&
+    String(draw?.matchId||'')===String(room.matchId||'');
+  if(!inTurn&&!['running'].includes(String(room.phase||''))){
+    clearDrunkDraw();return;
+  }
   state.drunkDraw=draw||null;
   let panel=document.getElementById('gmwwDrunkDraw');
-  const visible=!!draw&&Array.isArray(draw.cards)&&draw.cards.length>0&&
-    !(draw.status==='selected'&&state.drunkDrawDismissed===draw.matchId+':'+draw.selectedId);
+  const visible=inTurn&&draw?.status==='pending'&&Array.isArray(draw.cards)&&
+    draw.cards.length>0&&document.getElementById('game')?.classList.contains('active');
   if(!visible){if(panel)panel.hidden=true;return}
   if(!panel){
     const css=document.createElement('style');css.id='gmwwDrunkDrawStyle';
-    css.textContent=`#gmwwDrunkDraw{position:fixed;inset:0;z-index:100030;background:rgba(1,13,27,.93);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
-#gmwwDrunkDraw[hidden]{display:none!important}#gmwwDrunkDraw .dd-body{max-width:520px;width:100%;max-height:88dvh;overflow-y:auto;padding:16px 14px;border:1px solid #e5c48b;border-radius:20px;background:linear-gradient(160deg,#0d4359,#061c34);box-shadow:0 10px 38px #0009;color:white;text-align:center}
-#gmwwDrunkDraw h2{margin:0 0 8px;font-size:21px;color:#ffe7aa}#gmwwDrunkDraw p{font-size:13px;line-height:1.4;color:#c6e9f0}#gmwwDrunkDraw .dd-deck{display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));gap:12px;margin:18px 0}
-#gmwwDrunkDraw .dd-card{position:relative;aspect-ratio:3/4;min-height:112px;overflow:hidden;background:linear-gradient(145deg,#174461,#071126);border:2px solid #e8c481;border-radius:12px;color:#f7eac8;box-shadow:0 5px 17px #0007;padding:0;font-weight:850}
-#gmwwDrunkDraw .dd-card img{width:100%;height:100%;object-fit:cover}#gmwwDrunkDraw .dd-card span{position:absolute;inset:auto 0 4px;display:block;font-size:11px;text-shadow:0 1px 3px #000}
-#gmwwDrunkDraw .dd-card:disabled{opacity:.3;filter:grayscale(1)}#gmwwDrunkDraw .dd-card.dd-picked{opacity:1;filter:none;border-color:#b7ffcb;box-shadow:0 0 0 2px #b7ffcb50,0 9px 25px #000b}
-#gmwwDrunkDraw .dd-result{font-size:18px;color:#ffe5a4;font-weight:900}#gmwwDrunkDraw .dd-finish{padding:12px 28px;border-radius:12px;background:#b5812d;color:white;border:1px solid #ffe3a2;font-weight:900}`;
+    css.textContent='#gmwwDrunkDraw{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:16px;background:#00122266;pointer-events:auto}'+
+      '#gmwwDrunkDraw[hidden]{display:none!important}'+
+      '#gmwwDrunkDraw .dd-deck{max-width:min(96vw,620px);max-height:82dvh;overflow-y:auto;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:12px;touch-action:pan-y}'+
+      '#gmwwDrunkDraw .dd-card{display:block;flex:0 0 auto;width:clamp(84px,34vw,178px);aspect-ratio:3/4;padding:0;border:0;border-radius:9px;overflow:hidden;background:#081d37;box-shadow:0 10px 24px #0008;cursor:pointer;touch-action:manipulation}'+
+      '#gmwwDrunkDraw .dd-card img{display:block;width:100%;height:100%;object-fit:cover}'+
+      '#gmwwDrunkDraw .dd-card:disabled{opacity:.7}';
     document.head.appendChild(css);
     panel=document.createElement('section');panel.id='gmwwDrunkDraw';
-    panel.innerHTML='<div class="dd-body"><h2>🍻 SAY RƯỢU · BỐC VAI TRÒ</h2><p></p><div class="dd-deck"></div><div class="dd-result" aria-live="polite"></div><button class="dd-finish" type="button" hidden>HOÀN TẤT</button></div>';
+    panel.setAttribute('aria-label','Say Rượu chọn một lá Vai Trò');
+    panel.innerHTML='<div class="dd-deck" role="group" aria-label="Chọn một lá Vai Trò úp"></div>';
     document.body.appendChild(panel);
   }
   panel.hidden=false;
-  panel.querySelector('p').textContent=draw.status==='selected'?
-    'Lá được mở đã quyết định Vai Trò của bạn. Các lá còn lại bị khóa.':
-    'Hãy chạm một lá úp của người đã chết. Bạn chỉ được mở đúng một lá.';
   const grid=panel.querySelector('.dd-deck');grid.replaceChildren();
-  const image=document.querySelector('#roleCard .gmww-card-back-img')?.src||'';
+  const image=document.querySelector('#roleCard .gmww-card-back-img')?.src||'/role-card-back.webp';
   for(const [i,c] of draw.cards.entries()){
-    const b=document.createElement('button');b.type='button';
-    b.className='dd-card'+(c.selected?' dd-picked':'');b.disabled=drunkDrawBusy||draw.status==='selected';
-    b.setAttribute('aria-label','Mở lá úp số '+(i+1));
-    if(image){const img=document.createElement('img');img.src=image;img.alt='Mặt lưng Vai Trò';b.appendChild(img)}
-    const number=document.createElement('span');number.textContent=c.selected?'✓ ĐÃ CHỌN':'LÁ '+(i+1);
-    b.appendChild(number);b.onclick=()=>submitDrunkDraw(c.id);grid.appendChild(b);
+    const card=document.createElement('button');card.type='button';card.className='dd-card';
+    card.disabled=drunkDrawBusy;card.setAttribute('aria-label','Mở lá úp số '+(i+1));
+    const img=document.createElement('img');img.src=image;img.alt='Mặt lưng Vai Trò';img.draggable=false;
+    card.appendChild(img);card.onclick=()=>submitDrunkDraw(c.id);grid.appendChild(card);
   }
-  panel.querySelector('.dd-result').textContent=draw.status==='selected'?
-    'Bạn nhận vai: '+String(draw.selectedRoleName||'Vai Trò đã chọn'):'';
-  const done=panel.querySelector('.dd-finish');done.hidden=draw.status!=='selected';
-  done.onclick=()=>{state.drunkDrawDismissed=draw.matchId+':'+draw.selectedId;panel.hidden=true};
 }
 async function submitDrunkDraw(cardId){
-  if(drunkDrawBusy||!state.drunkDraw||state.drunkDraw.status==='selected'||!state.roomCode)return;
+  if(drunkDrawBusy||!state.drunkDraw||state.drunkDraw.status!=='pending'||!state.roomCode)return;
   drunkDrawBusy=true;renderDrunkDraw(state.drunkDraw);
   try{
-    const result=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/drunk/draw',{
+    const response=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/drunk/draw',{
       method:'POST',headers:auth(),body:JSON.stringify({cardId})});
-    drunkDrawBusy=false;state.drunkDrawDismissed='';
-    renderDrunkDraw(result.draw);
-    await refreshPrivateRole(true);
+    if(response?.ok!==true)throw Error('Chưa thể xác nhận lá đã mở.');
+    clearDrunkDraw();await refreshPrivateRole(true);
   }catch(err){
     drunkDrawBusy=false;renderDrunkDraw(state.drunkDraw);
     toast(err?.message||'Chưa thể mở lá, vui lòng thử lại.');
@@ -160,7 +161,7 @@ async function pollRoomState(){
   await loadUiSettings();
   try{
     const pub=await api('/api/rooms/'+encodeURIComponent(state.roomCode));
-    if(pub?.room){if(pub.room.enabled===false){await handleRoomMembershipLost('Phòng đã Tắt. Bạn đã được đưa về Phòng chờ.');return}state.room=pub.room;if(Array.isArray(pub.players)){state.players=pub.players;if(!state.players.some(p=>p.participantId===state.participantId)){await handleRoomMembershipLost('GM đã giải tán Phòng. Bạn đã trở về Sảnh chờ.');return}}if(hasCompletedRoomResult(pub.room)){showResult(pub.room.winnerFaction||pub.room.winnerLabel||'',pub.room.matchId||'');return}maybeOpenGame();syncPlayerSetupState();ensureVillageReadyDock();syncVillageFrame()}
+    if(pub?.room){if(pub.room.enabled===false){await handleRoomMembershipLost('Phòng đã Tắt. Bạn đã được đưa về Phòng chờ.');return}state.room=pub.room;if(Array.isArray(pub.players)){state.players=pub.players;if(!state.players.some(p=>p.participantId===state.participantId)){await handleRoomMembershipLost('GM đã giải tán Phòng. Bạn đã trở về Sảnh chờ.');return}}if(hasCompletedRoomResult(pub.room)){clearDrunkDraw();showResult(pub.room.winnerFaction||pub.room.winnerLabel||'',pub.room.matchId||'');return}maybeOpenGame();syncPlayerSetupState();ensureVillageReadyDock();syncVillageFrame()}
   }catch(_){}
   if(!state.token)return;
   try{
