@@ -77,3 +77,18 @@ test('two small compositor animations, no background movement loop',()=>{
  assert.doesNotMatch(code,/requestAnimationFrame\(|setInterval\(/);
  assert.doesNotMatch(code,/token\.style\.transform=/);
 });
+
+test('when timer expires, actor RUNS home instead of snapping instantly',async()=>{
+ const a=actor(),ring={getBoundingClientRect:()=>({left:0,top:0,width:400,height:700}),
+   querySelectorAll:()=>[a.token]};
+ const actors=new Set(['yeu-tinh']);
+ walker.gmwwFireWalkSync(ring,actors,true);
+ a.animations[0].complete();await flush();
+ assert.equal(a.token.dataset.gmwwFireWalk,'hold');
+ walker.gmwwFireWalkSync(ring,actors,false);
+ assert.equal(a.animations.length,2,'expiry must create a Run-home animation');
+ assert.equal(a.token.dataset.gmwwFireWalk,'back','must not immediately snap to seat');
+ assert.equal(a.token.style.translate,a.animations[0].frames[1].translate,'remain off seat while running home');
+ a.animations[1].complete();await flush();
+ assert.equal(a.token.style.translate,'','home offset cleared after Run completes');
+});
