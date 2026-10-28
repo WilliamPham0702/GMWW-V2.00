@@ -14,6 +14,6 @@ Ngày: 28/10/2026
 - `node .github/scripts/assemble-gm-app.mjs --verify`
 
 ## Phát hành và khôi phục
-- PR kiểm tra giao diện GM; chưa phát hành Runtime OTA và chưa thay đổi IPA.
-- Khi phát hành cần tăng phiên bản Runtime, tạo manifest SHA-256 từ đúng bytes đã build, kiểm tra Production và chuẩn bị gói rollback.
+- Dự kiến phát hành **Runtime OTA V3.263** sau khi focused CI SUCCESS. Không thay đổi IPA V3.257.
+- Pipeline phát hành tạo manifest SHA-256 từ đúng bytes đã build, gói cập nhật thủ công, kiểm tra Production và chuẩn bị rollback về V3.262.
 - Nếu hình ảnh bị cắt ở lá có nền tối thật, có thể tắt phần hiệu chỉnh bằng cách hoàn tác commit của PR #582; ảnh gốc không bị thay đổi.
