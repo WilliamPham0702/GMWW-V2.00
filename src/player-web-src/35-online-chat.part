@@ -1,9 +1,13 @@
 
 /* Online-first Chat: all reads are authenticated; the WebSocket carries only a generic tick.
  * DO NOT use public room_state to transport chat messages or secret group membership. */
-let gmwwChatOpen=false,gmwwChatSeq=0,gmwwPlayerCueKey='';
+let gmwwChatOpen=false,gmwwChatSeq=0,gmwwPlayerCueKey='',gmwwChatIdleTimer=null;
+function gmwwChatClosePanel(){gmwwChatOpen=false;clearTimeout(gmwwChatIdleTimer);document.getElementById('gmwwChatPanel')?.classList.remove('open')}
+function gmwwChatTouch(){clearTimeout(gmwwChatIdleTimer);if(gmwwChatOpen)gmwwChatIdleTimer=setTimeout(gmwwChatClosePanel,30000)}
 const gmwwChatAudioOff=()=>{try{return localStorage.getItem('gmww_player_announcement_audio_off')==='1'}catch{return false}};
 function gmwwChatAnnounce(cue){
+  state.audioCue=cue?.key&&cue?.label?{key:String(cue.key),label:String(cue.label).slice(0,120)}:null;
+  updatePlayerTopMenu();
   if(!cue?.key||!cue?.label||!state.roomCode||!state.participantId)return;
   const key=state.roomCode+':'+cue.key;
   if(key===gmwwPlayerCueKey)return;gmwwPlayerCueKey=key;
@@ -17,8 +21,8 @@ function gmwwChatMount(){
   if(!document.getElementById('gmwwChatStyle')){
     const style=document.createElement('style');style.id='gmwwChatStyle';
     style.textContent=`
-#gmwwChatLaunch{position:fixed;z-index:99991;right:12px;bottom:max(16px,env(safe-area-inset-bottom));width:48px;height:48px;border:1px solid #5dbaca;border-radius:50%;background:#0e4057;color:white;font-size:23px;box-shadow:0 4px 18px #0009}
-#gmwwChatPanel{display:none;position:fixed;z-index:100003;inset:auto 8px max(8px,env(safe-area-inset-bottom)) 8px;height:min(66dvh,570px);max-width:470px;margin:auto;background:#071b2a;border:1px solid #527e8b;border-radius:18px;box-shadow:0 12px 55px #000d;color:#e9f5ff;flex-direction:column;overflow:hidden}
+#gmwwChatLaunch{position:fixed;z-index:99991;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);width:50px;height:48px;padding:0;border:0;border-radius:0;background:transparent;color:white;font-size:30px;text-shadow:0 3px 8px #000e;box-shadow:none;transition:opacity .2s ease}#gmwwChatLaunch.is-idle-hidden{opacity:0;pointer-events:none}
+#gmwwChatPanel{display:none;position:fixed;z-index:100003;inset:auto 8px max(8px,env(safe-area-inset-bottom)) 8px;height:min(46dvh,380px);max-width:470px;margin:auto;background:#071b2a;border:1px solid #527e8b;border-radius:18px;box-shadow:0 12px 55px #000d;color:#e9f5ff;flex-direction:column;overflow:hidden}
 #gmwwChatPanel.open{display:flex}#gmwwChatPanel header{display:flex;gap:9px;align-items:center;padding:9px 11px;background:#12364a}#gmwwChatPanel header b{flex:1;font-size:14px}
 #gmwwChatPanel header button{border:1px solid #56798c;border-radius:9px;min-width:34px;min-height:34px;background:#1a4052;color:#fff}
 #gmwwChatLines{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:11px}
@@ -33,12 +37,20 @@ function gmwwChatMount(){
   }
   if(document.getElementById('gmwwChatLaunch'))return;
   const launch=document.createElement('button');launch.id='gmwwChatLaunch';launch.type='button';launch.textContent='💬';launch.title='Chat GMWW';
-  launch.onclick=()=>{gmwwChatOpen=!gmwwChatOpen;document.getElementById('gmwwChatPanel')?.classList.toggle('open',gmwwChatOpen);if(gmwwChatOpen)void gmwwChatRefresh()};
+  launch.onclick=()=>{gmwwChatOpen=!gmwwChatOpen;document.getElementById('gmwwChatPanel')?.classList.toggle('open',gmwwChatOpen);gmwwChatTouch();if(gmwwChatOpen)void gmwwChatRefresh()};
   document.body.appendChild(launch);
   const panel=document.createElement('section');panel.id='gmwwChatPanel';panel.setAttribute('aria-label','Chat GMWW');
   panel.innerHTML='<header><b id="gmwwChatHeading">Chat Làng</b><button type="button" id="gmwwChatAudio" aria-label="Audio thông báo"></button><button type="button" id="gmwwChatClose" aria-label="Đóng">✕</button></header><div id="gmwwChatLines"></div><div id="gmwwChatHelp">Đang tải quyền Chat…</div><form id="gmwwChatForm"><input id="gmwwChatText" maxlength="280" autocomplete="off" aria-label="Tin nhắn" placeholder="Nhập tin nhắn…"><button type="submit" id="gmwwChatSubmit">Gửi</button></form>';
   document.body.appendChild(panel);
-  document.getElementById('gmwwChatClose').onclick=()=>{gmwwChatOpen=false;panel.classList.remove('open')};
+  document.getElementById('gmwwChatClose').onclick=gmwwChatClosePanel;
+  if(!document.documentElement.dataset.gmwwChatDismiss){
+    document.documentElement.dataset.gmwwChatDismiss='1';
+    document.addEventListener('pointerdown',event=>{
+      const target=event.target;if(!gmwwChatOpen)return;
+      if(panel.contains(target)){gmwwChatTouch();return}
+      if(!document.getElementById('gmwwChatLaunch')?.contains(target))gmwwChatClosePanel();
+    },{capture:true,passive:true});
+  }
   const audio=document.getElementById('gmwwChatAudio');audio.onclick=()=>{
     try{localStorage.setItem('gmww_player_announcement_audio_off',gmwwChatAudioOff()?'0':'1')}catch{}
     gmwwChatAudioButton();if(gmwwChatAudioOff())try{speechSynthesis.cancel()}catch{}
@@ -52,7 +64,7 @@ function gmwwChatClear(){
   const note=document.getElementById('gmwwChatHelp');if(note)note.textContent='Đang kiểm tra quyền Chat cho lượt mới…';
 }
 function gmwwChatUnmount(){
-  gmwwChatClear();gmwwChatOpen=false;gmwwPlayerCueKey='';
+  gmwwChatClear();gmwwChatClosePanel();gmwwPlayerCueKey='';state.audioCue=null;document.getElementById('gmwwPlayerMiniCards')?.remove();
   document.getElementById('gmwwChatLaunch')?.remove();document.getElementById('gmwwChatPanel')?.remove();
   try{speechSynthesis.cancel()}catch{}
 }
