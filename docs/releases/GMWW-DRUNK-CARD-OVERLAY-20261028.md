@@ -15,3 +15,8 @@
 - Cần CI của Worker và quy trình phát hành Runtime/OTA đúng phiên bản trước khi merge và triển khai Production.
 
 **Trạng thái:** PR sửa lỗi, không công bố Production cho đến khi CI/OTA SHA-256 và rollback được xác minh. Không thay đổi IPA.
+
+## Phát hành V3.260
+- Runtime V3.260, IPA shell V3.257 không đổi.
+- Bao gồm mặt lưng role-card-back.webp trong gói OTA và bản cập nhật thủ công, xác minh SHA-256.
+- Rollback V3.259; giữ nguyên dữ liệu, lịch sử và luật xếp hạng số ván trước tỷ lệ thắng.
