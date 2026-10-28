@@ -2481,8 +2481,8 @@ function detect(){
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
         const changes=git('diff','--name-status','--no-renames',base,'HEAD')
-          .trim().split('\\n').filter(Boolean).map(line=>{
-            const [status,path]=line.split('\\t');return {status,path};
+          .trim().split('\n').filter(Boolean).map(line=>{
+            const [status,path]=line.split('\t');return {status,path};
           });
         if(isMorningAudio3267Scope(changes))
           return {mode:'gm-audio-morning-3267',reason:'V3.267 only: no-death dawn cue, Audio regression, bundle and Worker gate'};
