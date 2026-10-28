@@ -55,8 +55,18 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
-          node --test tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/wolf-recognition.test.mjs
+          node --test tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/wolf-recognition.test.mjs tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs
           test -s docs/releases/GMWW-player-web-online-village-20261028.md
+      - name: V3.272 PR595 — GM Chat 🦩, Giết/Cứu/Cấm chat, Runtime OTA
+        if: steps.scope.outputs.mode == 'gm-admin-top-chat-3272'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/gm-admin-top-chat-20261028.test.mjs tests/online-chat-authority.test.mjs
+          test -s docs/releases/gm-admin-top-chat-20261028.md
       - name: V3.271 — khắc phục Player Web theo DEMO đang chạy
         if: steps.scope.outputs.mode == 'demo-player-live-3271'
         run: |
