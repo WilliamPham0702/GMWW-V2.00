@@ -2090,6 +2090,12 @@ function isGMWWAudio3258Scope(changes){
 function isDrunkCardOverlayScope(changes){
   const expected=new Map([
     ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/scripts/prepare-update-channel.mjs','M'],
+    ['.github/workflows/deploy-production.yml','M'],
+    ['package.json','M'],
+    ['package-lock.json','M'],
+    ['server-game/current/GMWW.html','M'],
+    ['server-game/src/00-core-and-library.part','M'],
     ['.github/workflows/check-player-web.yml','M'],
     ['.github/workflows/check-drunk-spiritualist.yml','M'],
     ['assets/role-card-back.webp','A'],
@@ -2105,7 +2111,7 @@ function isDrunkCardOverlayScope(changes){
   if(!Array.isArray(changes)||changes.length!==expected.size||
      changes.some(c=>expected.get(c.path)!==c.status))return false;
   try{
-    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.259.0')return false;
+    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.260.0')return false;
     const back=fs.readFileSync('src/player-web-src/10-role-card-artwork.part','utf8')
       .match(/const src='data:image\/webp;base64,([A-Za-z0-9+/=]+)'/)?.[1];
     if(!back||!fs.readFileSync('assets/role-card-back.webp').equals(Buffer.from(back,'base64')))return false;
@@ -2123,7 +2129,10 @@ function isDrunkCardOverlayScope(changes){
     const worker=fs.readFileSync('src/index.js','utf8');
     const ui=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
     const scene=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-    return worker.includes('prefix:"drunkDeck:"+endedMatchId+":"')&&
+    return worker.includes('VERSION="V3.260"')&&worker.includes('NATIVE_SHELL_VERSION="3.257"')&&
+      fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8').includes("copy('assets/role-card-back.webp','role-card-back.webp')")&&
+      fs.readFileSync('server-game/current/GMWW.html','utf8').includes('GMWW V3.260')&&
+      worker.includes('prefix:"drunkDeck:"+endedMatchId+":"')&&
       ui.includes("document.getElementById('game').appendChild(panel)")&&
       scene.includes("shell.appendChild(deck)")&&
       fs.existsSync('tests/drunk-card-overlay-match-cleanup-20261028.test.mjs');
