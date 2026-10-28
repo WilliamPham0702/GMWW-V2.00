@@ -45,11 +45,12 @@ test('Any 6–30 Seat formation can be dragged to all four map edges, never spli
   }
 });
 
-test('Only spacing 70–135% and restore button remain; drag commits the full formation once',()=>{
+test('Pinch spacing 50–300%, restore button and one-pointer drag coexist',()=>{
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const src=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
   const bundled=fs.readFileSync('server-game/current/app.js','utf8');
-  assert.match(html,/id="playGatherSpacing" type="range" min="70" max="135"/);
+  assert.doesNotMatch(html,/id="playGatherSpacing" type="range"/);
+  assert.match(html,/id="playGatherSpacingValue"/);
   assert.match(html,/data-seat-shift="reset"[^>]*>🔄<\/button>/);
   assert.doesNotMatch(html,/data-seat-shift="(?:left|right|up|down)"/);
   assert.doesNotMatch(html,/id="playSeatOffsetValue"/);

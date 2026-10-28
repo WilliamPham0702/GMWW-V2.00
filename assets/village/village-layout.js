@@ -100,19 +100,22 @@
     }
     return result;
   }
-  function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(70,Math.min(135,Math.round(n/5)*5)):100}
+  function normalizeSeatSpacing(value){const n=Number(value);return Number.isFinite(n)?Math.max(50,Math.min(300,Math.round(n))):100}
   function normalizeSeatOffset(value){
     // Offset is a world-frame gesture, not an arbitrary ±30 drag cap.
     // The actual bounds come from the full Seat formation below.
-    const safe=n=>Number.isFinite(Number(n))?Math.max(-100,Math.min(100,Math.round(Number(n)*10)/10)):0;
+    const safe=n=>Number.isFinite(Number(n))?Math.max(-200,Math.min(200,Math.round(Number(n)*10)/10)):0;
     return {x:safe(value?.x),y:safe(value?.y)};
   }
   function seatFormationBase(count,shape='',spacing=100){
     const n=Math.max(1,Math.min(30,Math.trunc(Number(count)||12)));
     const template=seatTemplatePositions(n,normalizeSeatLayout(shape)||recommendedSeatShape(n));
-    const scale=normalizeSeatSpacing(spacing)/100;
-    // Preserve the historical 2.5D spacing limits and character size.
-    const scaleX=Math.max(.94,Math.min(scale,1.06)),scaleY=Math.max(.96,Math.min(scale,1.08));
+    const value=normalizeSeatSpacing(spacing);
+    // Keep existing 70–135% rooms visually unchanged. Outside that legacy
+    // interval, open the real seat radius all the way from 50% to 300%.
+    const interpolate=(low,high,start,end)=>start+(value-low)/(high-low)*(end-start);
+    const scaleX=value<70?interpolate(50,70,.5,.94):value<=100?interpolate(70,100,.94,1):value<=135?interpolate(100,135,1,1.06):interpolate(135,300,1.06,3);
+    const scaleY=value<70?interpolate(50,70,.5,.96):value<=100?interpolate(70,100,.96,1):value<=135?interpolate(100,135,1,1.08):interpolate(135,300,1.08,3);
     return template.map(p=>({x:fire.x+(p.x-fire.x)*scaleX,
       y:fire.y+(p.y-fire.y)*scaleY,ring:0,depth:p.depth}));
   }
@@ -124,10 +127,16 @@
     // Bound each axis by the extreme Seat anchors, never by individual clamps.
     // This makes the entire map reachable while preventing off-map Seats.
     const margin=2;
-    const minX=Math.ceil((margin-Math.min(...base.map(p=>p.x)))*10)/10;
-    const maxX=Math.floor((100-margin-Math.max(...base.map(p=>p.x)))*10)/10;
-    const minY=Math.ceil((margin-Math.min(...base.map(p=>p.y)))*10)/10;
-    const maxY=Math.floor((100-margin-Math.max(...base.map(p=>p.y)))*10)/10;
+    // At high spacing, the ring may exceed the viewport. Allow panning
+    // between both extremes instead of collapsing the 300% radius.
+    const axisBounds=values=>{
+      const lo=Math.min(...values),hi=Math.max(...values);
+      return hi-lo<=100-2*margin
+        ?[Math.ceil((margin-lo)*10)/10,Math.floor((100-margin-hi)*10)/10]
+        :[Math.ceil((margin-hi)*10)/10,Math.floor((100-margin-lo)*10)/10];
+    };
+    const [minX,maxX]=axisBounds(base.map(p=>p.x));
+    const [minY,maxY]=axisBounds(base.map(p=>p.y));
     return {
       x:Math.max(minX,Math.min(maxX,target.x)),
       y:Math.max(minY,Math.min(maxY,target.y))
