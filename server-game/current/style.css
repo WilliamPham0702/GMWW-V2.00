@@ -8842,3 +8842,5 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 #start #gmwwGMAdminDock button img,.gmww-gm-admin-ghost img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .gmww-gm-admin-ghost{width:44px;height:44px}
 #start #playBattleTop:has(#gmwwGMAdminDock){grid-template-columns:revert!important}
+
+#start #gmwwGMAdminDock button[data-gm-admin="open-chat"]{left:calc(100vw - 202px);font-size:32px!important}
