@@ -2376,7 +2376,38 @@ function isDemoPlayerLive3271Scope(changes){
   }catch{return false}
 }
 
-/* PR #596 — fail-closed V3.272 Player Web Online village and 7 required features. */
+function gmAdmin3272Scope(changes){
+  const allowed=new Set([
+    'server-game/src/00-core-and-library.part',
+    'server-game/src/40-battle-and-timeline.part',
+    'server-game/src/45-online-chat.part',
+    'server-game/current/app.js','server-game/current/style.css',
+    'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json',
+    '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml','.github/workflows/deploy-production.yml',
+    '.github/workflows/check-gm-admin-top-chat.yml','.github/workflows/build-server-game-ipa.yml',
+    'tests/gm-admin-top-chat-20261028.test.mjs',
+    'docs/releases/gm-admin-top-chat-20261028.md'
+  ]);
+  const names=new Set(changes.map(c=>c.path));
+  const required=['server-game/current/app.js','server-game/src/40-battle-and-timeline.part',
+    'server-game/src/45-online-chat.part','server-game/current/style.css','src/index.js',
+    'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+    'tests/gm-admin-top-chat-20261028.test.mjs'];
+  if(changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status))||
+     required.some(p=>!names.has(p)))return false;
+  const get=p=>fs.readFileSync(p,'utf8');
+  return JSON.parse(get('package.json')).version==='3.272.0'&&
+    get('src/index.js').includes('VERSION="V3.272",NATIVE_SHELL_VERSION="3.264"')&&
+    get('server-game/src/00-core-and-library.part').includes("const VERSION='3.272'")&&
+    get('server-game/current/app.js').includes("const VERSION='3.272'")&&
+    get('server-game/current/app.js').includes('function gmwwGMAdminMount()')&&
+    get('server-game/current/app.js').includes("trigger.textContent='🦩'")&&
+    get('server-game/current/GMWW.html').includes('<title>GMWW V3.272</title>')&&
+    get('.github/scripts/prepare-update-channel.mjs').includes('V3.272 PR595:')&&
+    get('docs/releases/gm-admin-top-chat-20261028.md').includes('Giết');
+}
+/* PR #596 — fail-closed V3.273 Player Web Online village and 7 required features. */
 const onlineVillage3273Paths=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-player-web-online-village.yml","docs/releases/GMWW-player-web-online-village-20261028.md","package.json","package-lock.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/src/10-library-and-settings.part","src/gmww-demo-runner.js","src/gmww-members-live.js","src/gmww-online-action-icons.js","src/gmww-wolf-recognition.js","src/index.js","src/player-web-src/20-village-and-profile.part","src/player-web-src/30-rooms-and-realtime.part","src/player-web-src/35-online-chat.part","src/player-web-src/40-cards-and-game.part","src/player-web-src/50-privacy-and-runtime.part","tests/player-web-online-actions-20261028.test.mjs","tests/player-web-online-village-20261028.test.mjs"]);
 function isOnlineVillage3273Scope(changes){
  if(!Array.isArray(changes)||changes.length<20||
@@ -2388,12 +2419,13 @@ function isOnlineVillage3273Scope(changes){
    'docs/releases/GMWW-player-web-online-village-20261028.md'];
  if(!mandatory.every(x=>paths.has(x)))return false;
  try{
-  return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.272.0'&&
+  return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.273.0'&&
    fs.readFileSync('src/index.js','utf8').includes('UPDATE_CHANNEL_REV="runtime-3273-player-online-village"');
  }catch{return false}
 }
 
 function classifyBrowserScope(changes){
+  if(gmAdmin3272Scope(changes))return 'gm-admin-top-chat-3272';
   if(isOnlineVillage3273Scope(changes))return 'player-online-village-3273';
   if(isDemoPlayerLive3271Scope(changes))return 'demo-player-live-3271';
   if(isDemoAudioSync3270Scope(changes))return 'demo-audio-sync-3270';
@@ -2635,6 +2667,23 @@ function isTemplateDock3268Scope(changes){
 }
 
 function detect(){
+  // Owner-approved PR595 Runtime V3.272: verify every changed path and
+  // the version/GM/chat contract. Unknown changes always run the full suite.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+          .split('\n').filter(Boolean).map(line=>{
+            const [status,path]=line.split('\t');return{status,path};
+          });
+        if(gmAdmin3272Scope(changes))
+          return{mode:'gm-admin-top-chat-3272',reason:'PR595 verified 3 GM actions, chat authority, no IPA, exact V3.272 Runtime OTA'};
+      }
+    }catch{} // Fail closed.
+  }
+
+
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
@@ -2642,7 +2691,7 @@ function detect(){
         const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean)
           .map(row=>{const [status,path]=row.split('\t');return{status,path}});
         if(isOnlineVillage3273Scope(changes))
-          return{mode:'player-online-village-3273',reason:'PR596 V3.272 Online action and Player Web Server authenticated scope'};
+          return{mode:'player-online-village-3273',reason:'PR596 V3.273 Online action and Player Web Server authenticated scope'};
       }
     }catch{}
   }
