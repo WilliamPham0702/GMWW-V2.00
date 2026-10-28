@@ -7119,7 +7119,8 @@ function gmwwGMAdminMount(){
     bar.setAttribute('role','group');bar.setAttribute('aria-label','Hành động riêng của GM');
     bar.innerHTML='<button type="button" data-gm-admin="dead" aria-label="GM Giết" title="GM • Giết"><img src="/assets/action-icons/v3/15_san_giet.webp" alt=""></button>'+
       '<button type="button" data-gm-admin="revive" aria-label="GM Cứu" title="GM • Cứu / Hồi Sinh"><img src="/assets/action-icons/v3/13_hoi_sinh.webp" alt=""></button>'+
-      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat"><img src="/assets/action-icons/v3/39_cam_noi.webp" alt=""></button>';
+      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat"><img src="/assets/action-icons/v3/39_cam_noi.webp" alt=""></button>'+ 
+      '<button type="button" data-gm-admin="open-chat" aria-label="GM Mở Chat" title="GM • Mở Chat">🦩</button>';
     document.body.appendChild(bar);
     for(const button of bar.querySelectorAll('[data-gm-admin]')){
       try{const saved=JSON.parse(localStorage.getItem('gmww-admin-icon-'+button.dataset.gmAdmin)||'null');if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){button.style.left=Math.max(0,Math.min(window.innerWidth-44,saved.x))+'px';button.style.top=Math.max(0,Math.min(window.innerHeight-44,saved.y))+'px'}}catch{}
@@ -7154,7 +7155,8 @@ function gmwwGMAdminMount(){
       drag.target?.classList.remove('gmww-battle-icon-snap');drag.ghost?.remove();
       gmwwGMAdminPointer=null;
       if(event.type==='pointerup'&&!drag.button.disabled){
-        if(drag.moved){if(target)void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type);else{try{localStorage.setItem('gmww-admin-icon-'+drag.type,JSON.stringify({x:parseFloat(drag.button.style.left),y:parseFloat(drag.button.style.top)}))}catch{}}}
+        if(drag.moved){if(target&&drag.type!=='open-chat')void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type);else{try{localStorage.setItem('gmww-admin-icon-'+drag.type,JSON.stringify({x:parseFloat(drag.button.style.left),y:parseFloat(drag.button.style.top)}))}catch{}}}
+        else if(drag.type==='open-chat')document.getElementById('gmwwGMChatLaunch')?.click();
         else battleQuickSelect(drag.type);
       }
       event.preventDefault();event.stopPropagation();
@@ -7165,7 +7167,7 @@ function gmwwGMAdminMount(){
       // Keyboard activation has detail=0. Touch/mouse activation is handled on pointerup.
       if(event.detail!==0)return;
       const button=event.target.closest('[data-gm-admin]');
-      if(button&&!button.disabled)battleQuickSelect(button.dataset.gmAdmin);
+      if(button&&!button.disabled){if(button.dataset.gmAdmin==='open-chat')document.getElementById('gmwwGMChatLaunch')?.click();else battleQuickSelect(button.dataset.gmAdmin)}
     });
   }
   bar.hidden=playSceneState.step!=='battle';
@@ -8626,6 +8628,7 @@ function playAssignmentSwapRole(loginId,wantedId){
 }
 
 
+
 /* GM Chat monitor: available only with GM-authorized room API. No public history path. */
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
 // Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
@@ -8677,7 +8680,7 @@ function gmwwGMChatMount(){
     document.getElementById('gmwwGMChatClose').onclick=()=>{gmwwGMChatOpen=false;panel.classList.remove('open')};
     document.getElementById('gmwwGMChatReload').onclick=()=>void gmwwGMChatRefresh();
   }
-  trigger.hidden=!active;if(!active){gmwwGMChatOpen=false;document.getElementById('gmwwGMChatPanel')?.classList.remove('open')}
+  trigger.hidden=true;if(!active){gmwwGMChatOpen=false;document.getElementById('gmwwGMChatPanel')?.classList.remove('open')}
   if(active&&gmwwGMChatOpen&&gmwwGMChatLastRoom!==String(playSceneState.roomCode)){
     gmwwGMChatLastRoom=String(playSceneState.roomCode);void gmwwGMChatRefresh();
   }
