@@ -375,7 +375,7 @@ async function gmwwVerifyMemberBeforeRemoval(){
    "  }catch(e){console.warn('[GMWW roster refresh]',e)}\n"+
    "  return false;\n"+
    "}\nasync function autoResumeActiveRoom({stayInVillage=false}={}){");
- offlineReplace("    try{await loadRooms(false)}catch{}\n    renderRooms();connectWS();startRoomStateWatch();sendPresence();",
+ offlineReplace("    try{await loadRooms(false)}catch{}\n    renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);connectWS();startRoomStateWatch();sendPresence();",
    "    await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)]);\n    renderRooms();connectWS();startRoomStateWatch();sendPresence();");
  offlineReplace("await sendPresence();connectWS();startRoomStateWatch();await refreshPrivateRole(true);",
    "await sendPresence();await gmwwRefreshPublicRoster(code,state.participantId);connectWS();startRoomStateWatch();await refreshPrivateRole(true);");
@@ -465,7 +465,7 @@ function gmwwApplyRoster(rows,origin='http'){
    "let gmwwPublicPollSequence=0,gmwwLastRoomBroadcastAt=0,gmwwLastGallowsBroadcastAt=0;");
  offlineReplace("if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}",
    "if(d.type==='gallows_updated'){gmwwLastGallowsBroadcastAt=Date.now();if(d.room)state.room=d.room;state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}");
- offlineReplace("else if(d.type==='room_cycle'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);state.gallows=null;",
+ offlineReplace("else if(d.type==='room_cycle'){gmwwChatClear();void gmwwChatRefresh();state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);state.gallows=null;",
    "else if(d.type==='room_cycle'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);gmwwLastGallowsBroadcastAt=Date.now();state.gallows=null;");
  offlineReplace("  const entry={key,promise:null};\n  entry.promise=api(",
    "  const entry={key,promise:null},requestedAt=Date.now();\n  entry.promise=api(");
