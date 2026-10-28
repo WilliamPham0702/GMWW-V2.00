@@ -28,3 +28,15 @@ test('unknown receipt source must fail closed instead of serving broken JavaScri
   assert.notEqual(corrupted,gmwwMembersLiveScript);
   assert.throws(()=>patchPrivatePlayerCards(corrupted),error=>String(error).includes('Player receipt patch mismatch'));
 });
+
+test('V3.266 Online Chat hooks do not break the login entry script',()=>{
+  const authored=gmwwMembersLiveScript;
+  assert.ok(authored.includes("renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);connectWS();"));
+  assert.ok(authored.includes("else if(d.type==='room_cycle'){gmwwChatClear();void gmwwChatRefresh();"));
+  const deployed=patchPrivatePlayerCards(authored);
+  assert.doesNotThrow(()=>new Function(deployed));
+  assert.ok(deployed.includes('window.login=login;'),'login handler must be registered');
+  assert.ok(deployed.includes("renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);connectWS();"));
+  assert.ok(deployed.includes("else if(d.type==='room_cycle'){gmwwChatClear();void gmwwChatRefresh();"));
+  assert.ok(deployed.includes("await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)]);"));
+});
