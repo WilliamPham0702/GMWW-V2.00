@@ -814,7 +814,49 @@ export class RoomDurableObject extends DurableObject {
     const when=Date.parse(String(row?.createdAt||"")),ts=Number.isFinite(when)?when:Date.now();
     return "actionLog:"+String(ts).padStart(13,"0")+":"+String(row?.id||"").slice(0,140);
   }
+  // One-shot death-triggered Artifacts: revive the OWNER, never change their
+  // Role. The match-scoped use receipt survives reconnect and prevents a
+  // second resurrection. Run before Hunter death-link propagation.
+  async applyAutomaticArtifactRevive(meta,rows,now=new Date().toISOString()){
+    const matchId=String(meta.matchId||""),assignments=await this.ctx.storage.get("assignments")||[];
+    const saved=[];
+    for(const row of assignments){
+      const artifactId=String(row.artifactId||"");
+      if(!["artifact_30","artifact_33"].includes(artifactId))continue;
+      const loginId=normalizeLoginId(row.loginId),key="artifactUse:"+loginId+":"+artifactId;
+      if(await this.ctx.storage.get(key))continue;
+      const owned=await this.ctx.storage.get("artifact:"+loginId);
+      if(!owned||String(owned.artifactId)!==artifactId||
+        owned.removedFromMatch===true||owned.matchId&&String(owned.matchId)!==matchId)continue;
+      const deaths=rows.filter(x=>x.type==="dead"&&x.effectActive!==false&&
+        String(x.matchId||"")===matchId&&normalizeLoginId(x.loginId)===loginId);
+      if(!deaths.length)continue;
+      for(const death of deaths){
+        death.effectActive=false;death.expiredAt=now;
+        death.expiredReason="AUTOMATIC_ARTIFACT_REVIVAL";
+        if(death.id)await this.ctx.storage.put(this.actionLogKey(death),death);
+      }
+      const event={id:"artifact-revival:"+matchId+":"+artifactId+":"+loginId,
+        type:"revive",loginId,matchId,night:Number(meta.cycleNight||1),
+        cycleKey:String(meta.cycleKey||""),artifactId,
+        actionId:"artifact_auto_revive",effectActive:true,
+        createdAt:now,source:"artifact-life-engine",
+        message:artifactId==="artifact_30"?
+          "Trượng Luân Hồi hồi sinh chủ với chính Vai Trò trước khi chết.":
+          "Quyền Trượng Phục Sinh đã tự hồi sinh chủ."};
+      if(!rows.some(x=>x.id===event.id)){
+        rows.push(event);await this.ctx.storage.put(this.actionLogKey(event),event);
+      }
+      await this.ctx.storage.put(key,{requestId:event.id,matchId,usedAt:now,artifactId,actorId:loginId});
+      owned.usedAt=now;await this.ctx.storage.put("artifact:"+loginId,owned);
+      saved.push(loginId);
+      this.broadcast({type:"player_revived",loginId,reason:"ARTIFACT_REVIVAL",
+        artifactId,serverTime:Date.now()});
+    }
+    return saved;
+  }
   async applyHunterDeathConsequences(meta,rows,now=new Date().toISOString()){
+    await this.applyAutomaticArtifactRevive(meta,rows,now);
     const assignments=(await this.ctx.storage.get("assignments"))||[];
     const history=await this.villageHistoryForMatch(meta,rows);
     const linked=hunterLinkedDeaths({assignments,interactions:history,
@@ -826,6 +868,8 @@ export class RoomDurableObject extends DurableObject {
       this.broadcast({type:"player_status_changed",loginId:death.loginId,
         statusId:"dead",active:true,serverTime:Date.now()});
     }
+    // A linked death can itself meet a resurrection trigger.
+    if(linked.length)await this.applyAutomaticArtifactRevive(meta,rows,now);
     return linked;
   }
   async villageHistoryForMatch(meta,latest=[]){

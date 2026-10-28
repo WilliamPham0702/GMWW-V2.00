@@ -87,6 +87,10 @@ export function resolveFoolGallows({candidateId,outcome,assignments=[],interacti
   if(outcome!=='dead'||!target||!match)return {outcome,escaped:false};
   const role=(Array.isArray(assignments)?assignments:[]).find(x=>
     String(x.loginId||'').replace(/^member:/,'')===target);
+  // Áo Choàng Hoàng Tử repeatedly prevents execution by gallows. It does
+  // not consume the Fool's first escape (if that role also owns the cloak).
+  if(role?.artifactId==='artifact_12')
+    return {outcome:'alive',escaped:false,protectedBy:'artifact_12'};
   if(role?.roleId!=='role_fool')return {outcome,escaped:false};
   const previously=(Array.isArray(interactions)?interactions:[]).some(x=>
     String(x.matchId||'')===match&&x.actionId==='action-fool-escape'&&
