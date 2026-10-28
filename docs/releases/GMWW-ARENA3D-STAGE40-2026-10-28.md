@@ -14,3 +14,6 @@
 ## Triển khai và hoàn nguyên
 - Chỉ nhánh [PR #581](https://github.com/WilliamPham0702/GMWW-V2.00/pull/581) và Worker STAGING độc lập; không thay Production/IPA/Runtime OTA.
 - Rollback: hoàn nguyên commit GĐ40; nếu đã lên STAGING có thể quay về Cloudflare Worker version trước GĐ40. Không đụng dữ liệu Core Production.
+
+## Chốt kiểm thử STAGING
+- Trigger phát hành thử bằng GitHub Actions của PR #581 sau CI unit thành công; điều kiện đánh giá là Chrome/WebKit và Core 30 người thực sự SUCCESS, không tính commit này là đã phát hành Production.
