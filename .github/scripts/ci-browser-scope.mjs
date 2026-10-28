@@ -1711,6 +1711,33 @@ export function isLobbyGather541Scope(changes){
 }
 
 
+
+const playerLoginChatHotfixPaths=new Set([
+  'src/gmww-player-private-card-patch.js',
+  'tests/player-web-receipt-patch-hotfix.test.mjs',
+  'docs/releases/GMWW-PLAYER-LOGIN-ONLINE-CHAT-HOTFIX-20261028.md',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml'
+]);
+export function isPlayerLoginChatHotfixScope(changes){
+  if(!Array.isArray(changes)||changes.length!==playerLoginChatHotfixPaths.size)return false;
+  const seen=new Set();
+  for(const c of changes){
+    if(!playerLoginChatHotfixPaths.has(c.path)||seen.has(c.path))return false;
+    if(c.path.startsWith('docs/')){if(c.status!=='A')return false}
+    else if(c.status!=='M')return false;
+    seen.add(c.path);
+  }
+  const patch=changes.find(c=>c.path==='src/gmww-player-private-card-patch.js');
+  if(typeof patch?.before!=='string'||typeof patch?.after!=='string')return false;
+  const oldResume='    renderRooms();connectWS();startRoomStateWatch();sendPresence();';
+  const newResume='    renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);connectWS();startRoomStateWatch();sendPresence();';
+  const oldCycle="else if(d.type==='room_cycle'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);state.gallows=null;";
+  const newCycle="else if(d.type==='room_cycle'){gmwwChatClear();void gmwwChatRefresh();state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);state.gallows=null;";
+  return patch.before.includes(oldResume)&&patch.before.includes(oldCycle)&&
+    patch.after===patch.before.replace(oldResume,newResume).replace(oldCycle,newCycle);
+}
+
 const playerReceiptHotfixPaths=new Set([
   'src/gmww-player-private-card-patch.js',
   'tests/player-web-receipt-patch-hotfix.test.mjs',
@@ -2305,6 +2332,7 @@ function classifyBrowserScope(changes){
   if(isFairy246PostMergeScope(changes))return 'fairy-246-postmerge';
   if(isFairy246Scope(changes))return 'fairy-triptych-3246';
   if(isNight02Scope(changes))return 'night02-pack-roles';
+  if(isPlayerLoginChatHotfixScope(changes))return 'player-login-chat-hotfix';
   if(isPlayerReceiptHotfixScope(changes))return 'player-receipt-hotfix';
   if(isTimeline244Scope(changes))return 'timeline-six-center-3244';
   if(isLobbyGather541Scope(changes))return 'lobby-gather-541';
@@ -2688,6 +2716,7 @@ function detect(){
       if(isRuntime248PostMergeScope(changes))return{mode:'runtime-3248-postmerge',reason:'Exact 4-file CI release fix for already tested Runtime V3.248'};
       if(isIcon247PostMergeScope(changes))return{mode:'icon-scale-3247-postmerge',reason:'Audited 2-file V3.247 CI release scope order fix'};
       if(isFairy246PostMergeScope(changes))return{mode:'fairy-246-postmerge',reason:'PR548 V3.246 exact 5-file post-merge CI repair; same Runtime and icon SHA'};
+      if(isPlayerLoginChatHotfixScope(changes))return{mode:'player-login-chat-hotfix',reason:'Exact Player Web login JS patch with Online Chat hooks; no runtime/IPA'};
       if(isPlayerReceiptHotfixScope(changes))return{mode:'player-receipt-hotfix',reason:'Exact Player Web private receipt hotfix; no runtime/IPA'};
       if(isTimeline244Scope(changes))return{mode:'timeline-six-center-3244',reason:'V3.244 exact six-step centered GM timeline only'};
       if(isLobbyGather541Scope(changes))return{mode:'lobby-gather-541',reason:'PR541 V3.243 exact GM Room/Gather UI only'};
