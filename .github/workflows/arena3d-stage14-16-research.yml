@@ -20,6 +20,7 @@ on:
       - "tests/arena3d-stage33-*"
       - "tests/arena3d-stage37-*"
       - "tests/arena3d-stage38-*"
+      - "tests/arena3d-stage39-*"
       - "tests/arena3d-casting.test.mjs"
       - "tests/arena3d-gm-end.test.mjs"
       - "tests/arena3d-player-public.test.mjs"
@@ -48,6 +49,7 @@ on:
       - "tests/arena3d-stage33-*"
       - "tests/arena3d-stage37-*"
       - "tests/arena3d-stage38-*"
+      - "tests/arena3d-stage39-*"
       - ".github/workflows/arena3d-stage14-16-research.yml"
   workflow_dispatch:
     inputs:
@@ -93,6 +95,7 @@ jobs:
           node --check tests/arena3d-stage37-gm-refresh.test.mjs
           node --check assets/village/arena-3d/stage38-public-gallows.mjs
           node --check tests/arena3d-stage38-gallows.test.mjs
+          node --check tests/arena3d-stage39-main-first.test.mjs
           node --check tests/arena3d-casting.test.mjs
           node --check assets/village/arena-3d/player.mjs
           node --check tests/arena3d-player-public.test.mjs
@@ -110,7 +113,7 @@ jobs:
           node --check tests/arena3d-stage30-crowd-core-e2e.mjs
       - name: "Kiểm thử GĐ14–16 và chuyển động phép"
         run: |
-          node --test tests/arena3d-stage38-gallows.test.mjs tests/arena3d-stage37-gm-refresh.test.mjs tests/arena3d-room-adoption.test.mjs tests/arena3d-ci-focused-scope.test.mjs tests/arena3d-gm-end.test.mjs tests/arena3d-native-gm-bridge.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-player-public.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage33-parity.test.mjs tests/arena3d-stage26-28.test.mjs tests/arena3d-stage29-31.test.mjs tests/arena3d-stage22-frame-pacing.test.mjs tests/arena3d-stage19-21.test.mjs tests/arena3d-stage18-performance.test.mjs tests/arena3d-stage17-undo.test.mjs tests/arena3d-stage14-dynamic.test.mjs tests/arena3d-stage15-voice.test.mjs tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
+          node --test tests/arena3d-stage39-main-first.test.mjs tests/arena3d-stage38-gallows.test.mjs tests/arena3d-stage37-gm-refresh.test.mjs tests/arena3d-gm-end.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-player-public.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage33-parity.test.mjs tests/arena3d-stage26-28.test.mjs tests/arena3d-stage29-31.test.mjs tests/arena3d-stage22-frame-pacing.test.mjs tests/arena3d-stage19-21.test.mjs tests/arena3d-stage18-performance.test.mjs tests/arena3d-stage17-undo.test.mjs tests/arena3d-stage14-dynamic.test.mjs tests/arena3d-stage15-voice.test.mjs tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
       - name: "Xác minh GMWW nguồn/bundle không lệch sau bridge Arena 3D"
         run: |
           node .github/scripts/assemble-gm-app.mjs --verify
