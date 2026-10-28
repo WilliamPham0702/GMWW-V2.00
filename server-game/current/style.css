@@ -8832,3 +8832,13 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
   #start #playBattleTop:has(#gmwwGMAdminDock){gap:2px!important;padding:5px 3px!important}
   #start #gmwwGMAdminDock button{flex-basis:30px;width:30px;font-size:22px}
 }
+
+/* GM administrative actions: four independent free-floating icons, no dock frame. */
+#start #gmwwGMAdminDock{position:fixed!important;inset:0!important;width:0!important;height:0!important;z-index:99992!important;display:block!important;pointer-events:none!important}
+#start #gmwwGMAdminDock button{position:fixed!important;top:calc(env(safe-area-inset-top) + 112px);width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;padding:0!important;pointer-events:auto!important;touch-action:none!important}
+#start #gmwwGMAdminDock button[data-gm-admin="dead"]{left:calc(100vw - 152px)}
+#start #gmwwGMAdminDock button[data-gm-admin="revive"]{left:calc(100vw - 102px)}
+#start #gmwwGMAdminDock button[data-gm-admin="mute-chat"]{left:calc(100vw - 52px)}
+#start #gmwwGMAdminDock button img,.gmww-gm-admin-ghost img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.gmww-gm-admin-ghost{width:44px;height:44px}
+#start #playBattleTop:has(#gmwwGMAdminDock){grid-template-columns:revert!important}
