@@ -11,6 +11,7 @@ on:
       - 'assets/role-card-back.webp'
       - 'tests/drunk-card-overlay-match-cleanup-20261028.test.mjs'
       - '.github/workflows/check-drunk-spiritualist.yml'
+      - '.github/scripts/ci-browser-scope.mjs'
   pull_request:
     paths:
       - 'src/index.js'

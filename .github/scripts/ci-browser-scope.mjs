@@ -2237,7 +2237,49 @@ export function classifyBrowserScope(changes){
 }
 
 function git(...args){return execFileSync('git',args,{encoding:'utf8',maxBuffer:20*1024*1024})}
+function isDrunkV3260PostMergeScope(changes){
+  const exact=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-drunk-spiritualist.yml','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==exact.size||
+    changes.some(c=>exact.get(c.path)!==c.status))return false;
+  try{
+    const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+    const worker=fs.readFileSync('src/index.js','utf8');
+    const gm=fs.readFileSync('server-game/current/app.js','utf8');
+    const web=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+    const ota=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+    const original=fs.readFileSync('src/player-web-src/10-role-card-artwork.part','utf8')
+      .match(/const src='data:image\/webp;base64,([A-Za-z0-9+/=]+)'/)?.[1];
+    execFileSync('git',['merge-base','--is-ancestor',
+      'a5488dcc3ee249c416da43183a075d258c095c3e','HEAD']);
+    return pkg.version==='3.260.0'&&worker.includes('VERSION="V3.260"')&&
+      worker.includes('NATIVE_SHELL_VERSION="3.257"')&&
+      gm.includes("const VERSION='3.260'")&&
+      web.includes("document.getElementById('game').appendChild(panel)")&&
+      !!original&&fs.readFileSync('assets/role-card-back.webp')
+        .equals(Buffer.from(original,'base64'))&&
+      ota.includes("copy('assets/role-card-back.webp','role-card-back.webp')")&&
+      fs.existsSync('docs/releases/GMWW-DRUNK-CARD-OVERLAY-20261028.md');
+  }catch{return false}
+}
+
 function detect(){
+  // CI-only fix after the approved V3.260 merge: retain exact-scope
+  // Worker + Say Rượu checks; unrelated legacy tests must not block OTA.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try{
+      const changed=git('diff','--name-status','--no-renames','HEAD^1','HEAD')
+        .trim().split('\n').filter(Boolean).map(s=>{
+          const [status,path]=s.split('\t');return{status,path};
+        });
+      if(isDrunkV3260PostMergeScope(changed))
+        return{mode:'drunk-card-overlay-20261028',
+          reason:'V3.260 postmerge CI scope only; exact prior merge and same-SHA focused checks'};
+    }catch{}
+  }
+
   // Deterministic 3.258 classification on PR or main push; full tests for
   // unknown diffs. PR merge with exact same files is intentionally supported.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
