@@ -7054,7 +7054,7 @@ function battleSyncGMMenuControls(){
   }
 }
 function renderPlayBattle(){
-  demoSyncScreenAwake();
+  demoSyncScreenAwake();gmwwGMChatMount();
   const top=document.getElementById('playBattleTop'),dock=document.getElementById('playBattleDock');if(!top||!dock)return;
   const visible=playSceneState.step==='battle';top.hidden=!visible;dock.hidden=!visible&&!battleState.wolfOpen;
   gmwwSetupFreeBattleIcons();
@@ -8481,6 +8481,66 @@ function playAssignmentSwapRole(loginId,wantedId){
   playSceneState.roleId=String(rows[index].roleId||'');
   playSceneState.artifactId=String(rows[index].artifactId||'');
   savePlayScene();renderPlayScene();
+}
+
+
+/* GM Chat monitor: available only with GM-authorized room API. No public history path. */
+let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
+// Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
+window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&playSceneState.step==='battle')void gmwwGMChatRefresh()},7000);
+function gmwwGMChatMount(){
+  const active=playSceneState.step==='battle'&&!!playSceneState.roomCode;
+  if(!document.getElementById('gmwwGMChatStyle')){
+    const st=document.createElement('style');st.id='gmwwGMChatStyle';st.textContent=`
+#gmwwGMChatLaunch{position:fixed;right:12px;top:max(58px,env(safe-area-inset-top));z-index:99993;width:44px;height:44px;border:1px solid #6baab9;border-radius:14px;background:#134259;color:#fff;font-size:21px;box-shadow:0 7px 20px #0007}
+#gmwwGMChatPanel{display:none;position:fixed;z-index:100004;inset:9vh 7px auto 7px;max-width:520px;max-height:76dvh;margin:auto;background:#071826;color:#e5f3ff;border:1px solid #527a87;border-radius:18px;box-shadow:0 20px 55px #000c;flex-direction:column;overflow:hidden;font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif}
+#gmwwGMChatPanel.open{display:flex}#gmwwGMChatPanel header{display:flex;align-items:center;padding:9px;gap:7px;background:#12364b}#gmwwGMChatPanel header strong{flex:1}
+#gmwwGMChatPanel header button{background:#1b4e63;border:1px solid #5f879a;border-radius:9px;min-height:34px;color:white;padding:6px 10px}
+#gmwwGMChatContent{overflow-y:auto;padding:10px;display:grid;gap:10px}
+.gmwwGmChannel{border:1px solid #365c6c;border-radius:10px;padding:9px;display:grid;gap:5px}
+.gmwwGmChannel.secret{border-color:#795ca9;background:#251c3c}.gmwwGmChannel h4{font-size:12px;font-weight:800;color:#f0dbff;margin:0}
+.gmwwGmChannel p{font-size:12px;margin:0;overflow-wrap:anywhere}
+#gmwwGMChatMute{padding:10px;border-top:1px solid #365b6c;display:flex;gap:8px;flex-wrap:wrap}
+#gmwwGMChatMute button{border-radius:9px;border:1px solid #5d7a87;background:#163d50;color:white;padding:7px;font-size:11px}
+`;document.head.appendChild(st)
+  }
+  let trigger=document.getElementById('gmwwGMChatLaunch');
+  if(!trigger){
+    trigger=document.createElement('button');trigger.id='gmwwGMChatLaunch';trigger.type='button';trigger.textContent='💬';trigger.title='Theo dõi Chat';trigger.onclick=()=>{gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);if(gmwwGMChatOpen)void gmwwGMChatRefresh()};document.body.appendChild(trigger);
+    const panel=document.createElement('section');panel.id='gmwwGMChatPanel';panel.setAttribute('aria-label','GM quản lý Chat');
+    panel.innerHTML='<header><strong>GM • Quản lý Chat</strong><button id="gmwwGMChatReload" type="button">↻</button><button id="gmwwGMChatClose" type="button">Đóng</button></header><div id="gmwwGMChatContent"></div><div id="gmwwGMChatMute"></div>';document.body.appendChild(panel);
+    document.getElementById('gmwwGMChatClose').onclick=()=>{gmwwGMChatOpen=false;panel.classList.remove('open')};
+    document.getElementById('gmwwGMChatReload').onclick=()=>void gmwwGMChatRefresh();
+  }
+  trigger.hidden=!active;if(!active){gmwwGMChatOpen=false;document.getElementById('gmwwGMChatPanel')?.classList.remove('open')}
+  if(active&&gmwwGMChatOpen&&gmwwGMChatLastRoom!==String(playSceneState.roomCode)){
+    gmwwGMChatLastRoom=String(playSceneState.roomCode);void gmwwGMChatRefresh();
+  }
+}
+async function gmwwGMChatMute(loginId,muted){
+  try{await playRoomApi('/chat/moderate',{method:'POST',body:JSON.stringify({loginId,muted})});await gmwwGMChatRefresh()}
+  catch(error){playFlashError('Chat: '+String(error.message||error))}
+}
+async function gmwwGMChatRefresh(){
+  if(!gmwwGMChatOpen||playSceneState.step!=='battle'||!isLivePlayRoom())return;
+  try{
+    const res=await playRoomApi('/chat',{method:'GET'}),content=document.getElementById('gmwwGMChatContent'),mute=document.getElementById('gmwwGMChatMute');
+    if(!content||!mute)return;content.replaceChildren();mute.replaceChildren();
+    const channels=(res.channels||[]).filter(x=>x.messages?.length).slice(-25);
+    if(!channels.length)content.textContent='Chưa có tin nhắn trong ván.';
+    for(const ch of channels){
+      const box=document.createElement('div');box.className='gmwwGmChannel'+(String(ch.channel).startsWith('night:')?' secret':'');
+      const h=document.createElement('h4');h.textContent=String(ch.channel).startsWith('night:')?'🌙 Chat bí mật • '+String(ch.channel).slice(0,75):'☀️ Chat Làng';box.appendChild(h);
+      for(const msg of (ch.messages||[]).slice(-20)){
+        const line=document.createElement('p');line.textContent=String(msg.senderName||msg.senderId||'')+': '+String(msg.text||'');box.appendChild(line)
+      }content.appendChild(box)
+    }
+    for(const member of playLiveMembers().filter(x=>x.loginId)){
+      const b=document.createElement('button');const banned=res.bans?.[String(member.loginId).toLowerCase()]===true;
+      b.textContent=(banned?'🔓 Mở Chat ':'🔇 Cấm Chat ')+String(member.displayName||member.loginId).slice(0,24);
+      b.onclick=()=>void gmwwGMChatMute(member.loginId,!banned);mute.appendChild(b)
+    }
+  }catch(error){const el=document.getElementById('gmwwGMChatContent');if(el)el.textContent='Lỗi đồng bộ Chat: '+String(error.message||error)}
 }
 function playAssignmentSetArtifact(loginId,artifactId){
   if(!playSceneState.artifactsEnabled)return;
