@@ -375,8 +375,8 @@ async function gmwwVerifyMemberBeforeRemoval(){
    "  }catch(e){console.warn('[GMWW roster refresh]',e)}\n"+
    "  return false;\n"+
    "}\nasync function autoResumeActiveRoom({stayInVillage=false}={}){");
- offlineReplace("    try{await loadRooms(false)}catch{}\n    renderRooms();connectWS();startRoomStateWatch();sendPresence();",
-   "    await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)]);\n    renderRooms();connectWS();startRoomStateWatch();sendPresence();");
+ offlineReplace("    try{await loadRooms(false)}catch{}\n    renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);connectWS();startRoomStateWatch();sendPresence();",
+   "    await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)]);\n    renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);connectWS();startRoomStateWatch();sendPresence();");
  offlineReplace("await sendPresence();connectWS();startRoomStateWatch();await refreshPrivateRole(true);",
    "await sendPresence();await gmwwRefreshPublicRoster(code,state.participantId);connectWS();startRoomStateWatch();await refreshPrivateRole(true);");
 

@@ -2290,6 +2290,8 @@ const HYBRID_DEMO_587_FILES=new Set([
   'src/gmww-player-private-card-patch.js',
   'src/index.js',
   'src/player-web-src/30-rooms-and-realtime.part',
+  'tests/gmww-player-web-source-modules.test.mjs',
+  'tests/player-web-receipt-patch-hotfix.test.mjs',
   'tests/demo-hybrid-live-e2e.mjs',
   'tests/demo-hybrid-real-players.test.mjs',
   'tests/demo-pr367-369-reconciliation.test.mjs',
