@@ -46,7 +46,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.262",NATIVE_SHELL_VERSION="3.257",UPDATE_CHANNEL_REV="runtime-3262",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.265",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3265-seat-pinch",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1694,6 +1694,7 @@ export class RoomDurableObject extends DurableObject {
       if(!artifactMode||!a?.artifactId)continue;
       const loginId=normalizeLoginId(a.loginId),assigned=await this.ctx.storage.get("artifact:"+loginId);
       const singleUse=a.artifactSingleUse===true||assigned?.singleUse===true;
+      if(assigned?.removedFromMatch===true)continue;
       if(singleUse&&await this.ctx.storage.get("artifactUse:"+loginId+":"+String(a.artifactId)))continue;
       const priorityFirst=typeof a.artifactPriorityFirst==="boolean"?a.artifactPriorityFirst:typeof assigned?.priorityFirst==="boolean"?assigned.priorityFirst:defaultPriorityFirst(a.artifactName);
       artifactRows.push({...a,_index:index,_priorityFirst:priorityFirst});
@@ -1806,18 +1807,24 @@ export class RoomDurableObject extends DurableObject {
     const nonce=String(actionNonce||"").trim().slice(0,100);
     const owned=await this.ctx.storage.get("artifact:"+normalizeLoginId(step.loginId));
     if(!owned||String(owned.artifactId)!==String(step.artifactId))return j({ok:false,error:"INVALID_ARTIFACT_OWNER"},403);
-    const configuredAction=(owned.artifactCard?.actions||[]).find(a=>String(a.id)===String(confirmation.actionId||""));
+    if(owned.removedFromMatch===true)return j({ok:false,error:"ARTIFACT_REMOVED_FROM_MATCH"},409);
+    const configuredFunction=(owned.artifactCard?.functions||[]).find(a=>String(a.actionId||a.id)===String(confirmation.actionId||""));
+    const legacyAction=(owned.artifactCard?.actions||[]).find(a=>String(a.id)===String(confirmation.actionId||""));
+    const configuredAction=configuredFunction?{...legacyAction,...configuredFunction}:legacyAction;
     if(!configuredAction)return j({ok:false,error:"INVALID_ARTIFACT_ACTION"},400);
+    if(configuredAction.passive===true||(configuredAction.phase&&!["night","any","both"].includes(configuredAction.phase)))return j({ok:false,error:"ARTIFACT_ACTION_WRONG_PHASE"},409);
+    if((configuredAction.fromNight!=null&&Number(meta.cycleNight)<Number(configuredAction.fromNight))||(configuredAction.toNight!=null&&Number(meta.cycleNight)>Number(configuredAction.toNight)))return j({ok:false,error:"ARTIFACT_OUTSIDE_NIGHT_WINDOW"},409);
     const targets=Array.isArray(confirmation.targetIds)?confirmation.targetIds.map(normalizeLoginId):[normalizeLoginId(targetLoginId)];
     if(!targets.length||targets.length>30||new Set(targets).size!==targets.length||!targets.includes(normalizeLoginId(targetLoginId)))return j({ok:false,error:"INVALID_ARTIFACT_TARGETS"},400);
     // Enforce explicit per-action limits on the server, not just the GM UI.
     // Older Artifact cards without targetCount retain their existing behavior.
     if(configuredAction.targetCount!==undefined&&configuredAction.targetCount!==null){
       const count=Number(configuredAction.targetCount);
-      if(!Number.isInteger(count)||count<1||count>30||targets.length!==count)
+      const noTarget=configuredAction.noTarget===true&&count===0&&targets.length===1&&targets[0]===normalizeLoginId(step.loginId);
+      if(!noTarget&&(!Number.isInteger(count)||count<1||count>30||targets.length!==count))
         return j({ok:false,error:"INVALID_ARTIFACT_TARGET_COUNT"},400);
     }
-    if(configuredAction.noSelf!==false&&targets.includes(normalizeLoginId(step.loginId)))
+    if(!configuredAction.noTarget&&configuredAction.noSelf!==false&&targets.includes(normalizeLoginId(step.loginId)))
       return j({ok:false,error:"ARTIFACT_SELF_TARGET_FORBIDDEN"},403);
     const players=(await this.ctx.storage.get("players"))||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_ARTIFACT_TARGET"},400);
@@ -1883,6 +1890,22 @@ export class RoomDurableObject extends DurableObject {
     // original receipt so undo, usage and retry handling remain transactional.
     if(p==="morning"&&n>0)for(const row of rows){
       if(row.pendingDeath!==true||String(row.matchId)!==String(meta.matchId)||Number(row.night)!==n)continue;
+      // Hơi Thở Lão Già is marked in cycle N and becomes lethal after
+      // NIGHT N+1. Resolve exactly once; respect existing night immunity,
+      // exile and death so this Artifact never bypasses normal protection.
+      if(row.deferredArtifact==="artifact_07"){
+        const id=normalizeLoginId(row.loginId),
+          excluded=rows.some(x=>x!==row&&normalizeLoginId(x.loginId)===id&&
+            (!x.matchId||String(x.matchId)===String(meta.matchId))&&
+            x.effectActive!==false&&["dead","expelled"].includes(String(x.type))),
+          immune=isNightImmune(await readNightAssignments(this.ctx.storage,meta.matchId),id);
+        if(excluded||immune){
+          row.pendingDeath=false;row.effectActive=false;row.resolvedAt=now;
+          row.expiredReason=immune?"NIGHT_IMMUNE":"ALREADY_DEAD_OR_EXPELLED";
+          await this.ctx.storage.put("actionLog:"+String(Date.parse(row.createdAt)).padStart(13,"0")+":"+row.id,row);
+          continue;
+        }
+      }
       row.pendingDeath=false;row.type="dead";row.effectActive=true;row.resolvedAt=now;
       row.message="Bạn đã chết vì "+(row.effectName||"tác động ban đêm")+".";
       await this.ctx.storage.put("actionLog:"+String(Date.parse(row.createdAt)).padStart(13,"0")+":"+row.id,row);
@@ -2050,9 +2073,12 @@ export class RoomDurableObject extends DurableObject {
       if(!owned||String(owned.artifactId)!==artifactId||
         (owned.matchId&&String(owned.matchId)!==matchId))
         return j({ok:false,error:"DAY_ARTIFACT_NOT_OWNED"},403);
+      if(owned.removedFromMatch===true)
+        return j({ok:false,error:"ARTIFACT_REMOVED_FROM_MATCH"},409);
       card=owned.artifactCard||{};
       const fns=Array.isArray(card.functions)&&card.functions.length?card.functions:card.actions||[];
       fn=fns.find(x=>String(x?.actionId||x?.id)===actionId);
+      if(fn){const legacy=(card.actions||[]).find(x=>String(x?.actionId||x?.id)===actionId);fn={...legacy,...fn}}
     }else{
       owned=assignments.find(x=>normalizeLoginId(x.loginId)===actorId&&String(x.roleId)===roleId);
       if(!owned)return j({ok:false,error:"DAY_ROLE_NOT_OWNED"},403);
@@ -2063,7 +2089,7 @@ export class RoomDurableObject extends DurableObject {
       card=privateRow?.roleCard||owned.roleCard||{};
       fn=(card.functions||[]).find(x=>String(x?.actionId||x?.id)===actionId);
     }
-    if(!fn||!["day","any"].includes(String(fn.phase||""))||fn.passive===true||
+    if(!fn||!["day","any","both"].includes(String(fn.phase||""))||fn.passive===true||
       (fn.fromNight!=null&&Number(fn.fromNight)>day)||
       (fn.toNight!=null&&Number(fn.toNight)<day))
       return j({ok:false,error:"DAY_ACTION_NOT_CONFIGURED"},403);
@@ -2077,7 +2103,9 @@ export class RoomDurableObject extends DurableObject {
       gallows.candidateId===actorId;
     if(roleKnight&&!lynched)return j({ok:false,error:"KNIGHT_REQUIRES_LYNCH"},409);
     if((affected(actorId,"dead")&&!fn.actorMayBeDead&&!lynched)||
-      affected(actorId,"expelled")||affected(actorId,"frozen"))
+      affected(actorId,"expelled")||affected(actorId,"frozen")||
+      interactions.some(x=>normalizeLoginId(x?.loginId)===actorId&&sameMatch(x)&&
+        x?.effectActive!==false&&x?.type==="status"&&STATUS_DEFS[x.statusId]?.blocks===true))
       return j({ok:false,error:"DAY_ACTOR_BLOCKED"},409);
     // Expelled players remain targetable, but every effect on them is inert.
     if(targets.some(x=>!affected(x,"expelled")&&fn.allowDead!==true&&affected(x,"dead")&&
@@ -2095,8 +2123,8 @@ export class RoomDurableObject extends DurableObject {
     if(!artifactId){
       if(card.flags?.allowMultipleActions===false&&own.some(x=>x.day===day))
         return j({ok:false,error:"DAY_ROLE_LIMIT_PER_DAY"},409);
-      if((["onceGame","nGame"].includes(mode)&&used.length>=usageCount)||
-        (mode==="eachNight"&&used.filter(x=>x.day===day).length>=usageCount))
+      if((["onceGame","nGame","custom"].includes(mode)&&used.length>=usageCount)||
+        (["eachNight","eachDay","nPerNight"].includes(mode)&&used.filter(x=>x.day===day).length>=usageCount))
         return j({ok:false,error:"DAY_ROLE_QUOTA_REACHED"},409);
       if(actionId==="action_bear_scan"&&own.some(x=>x.actionId===actionId&&x.day===day))
         return j({ok:false,error:"BEAR_SCAN_ALREADY_USED_TODAY"},409);
@@ -2130,7 +2158,7 @@ export class RoomDurableObject extends DurableObject {
       deadVictims=[correctlyStabbed?effectiveTargets[0]:actorId];
       message=correctlyStabbed?"Du Côn đâm đúng Sói/Phe Ba.":"Du Côn đâm nhầm Dân Làng và bị chết.";
       result={message,correctlyStabbed};
-    }else if(!artifactId&&actionId==="action_bear_scan"&&roleId==="role_bear"){
+    }else if(!artifactId&&actionId==="action_bear_scan"&&["role_bear","role_bear_god"].includes(roleId)){
       const hasWolf=effectiveTargets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
       message=hasWolf?"CÓ SÓI":"KHÔNG CÓ SÓI";
       result={message,hasWolf};
@@ -2144,8 +2172,7 @@ export class RoomDurableObject extends DurableObject {
       result={message};
     }else if(artifactId){
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
-      const terms=[actionId,...effects].join(" ").toLowerCase();
-      if(/revive|hoi_sinh/.test(terms)){
+      if(actionId==='action_revive'||effects.includes('effect_revive')){
         for(const id of effectiveTargets){
           const changed=interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
             String(x.type)==="dead"&&x.effectActive!==false);
@@ -2153,26 +2180,92 @@ export class RoomDurableObject extends DurableObject {
           changes.push({kind:"revived",loginId:id});
         }
         message="Artifact hồi sinh đã được ghi nhận.";
-      }else if(/kill|dead|giet|chet|poison/.test(terms)){
+      }else if(['action_witch_kill','action_day_kill'].includes(actionId)||effects.includes('effect_kill')){
         deadVictims=effectiveTargets;message="Artifact đã gây tác động Chết.";
-      }else if(/expel|exile|duoi/.test(terms)){
+      }else if(actionId==='action_exile'||effects.includes('effect_exile')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
-      }else if(/(?:ban|block|disable|forbid|cam)[_-]?(?:vote|voting|bo[_-]?phieu)|(?:vote|voting)[_-]?(?:ban|block)|no[_-]?vote/.test(terms)||
+      }else if(artifactId==="artifact_15"&&actionId==="artifact_action_negate"){
+        // Only a previously used, truly unlimited Artifact qualifies. Do not
+        // confuse a one-time Artifact or merely assigned card with "used".
+        const id=effectiveTargets[0],
+          targetArtifact=id?await this.ctx.storage.get("artifact:"+id):null,
+          summary=assignments.find(x=>normalizeLoginId(x.loginId)===id),
+          permanent=targetArtifact?.singleUse===false&&
+            Array.isArray(targetArtifact?.artifactCard?.functions)&&
+            targetArtifact.artifactCard.functions.some(fn=>
+              String(fn?.usageMode)==="unlimited"),
+          wasUsed=!!targetArtifact?.usedAt||
+            (targetArtifact?.artifactId&&!!(await this.ctx.storage.get(
+              "artifactUse:"+id+":"+String(targetArtifact.artifactId))));
+        if(!id||!targetArtifact||targetArtifact.removedFromMatch===true||
+          (targetArtifact.matchId&&String(targetArtifact.matchId)!==matchId)||
+          !summary||String(summary.artifactId||"")!==String(targetArtifact.artifactId||"")||
+          !permanent||!wasUsed)
+          return j({ok:false,error:"NEGATE_TARGET_NOT_ELIGIBLE",
+            message:"Chỉ được loại Artifact dùng mãi mãi đã sử dụng và còn trong ván; chưa trừ lượt."},409);
+        changes.push({kind:"remove_artifact",loginId:id,
+          artifactId:String(targetArtifact.artifactId)});
+        message="Kim Cương Phủ Nhận đã loại khỏi ván Artifact dùng mãi mãi đã sử dụng.";
+      }else if(artifactId==="artifact_07"&&actionId==="action-grudge-designate"){
+        if(effectiveTargets.some(id=>affected(id,"dead")||
+          interactions.some(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
+            x.deferredArtifact==="artifact_07"&&x.pendingDeath===true)))
+          return j({ok:false,error:"DAY_GRUDGE_TARGET_INELIGIBLE",
+            message:"Mục tiêu đã chết hoặc đã bị đánh dấu; chưa trừ lượt."},409);
+        for(const id of effectiveTargets)changes.push({kind:"grudge_schedule",
+          loginId:id,type:"effect_notice"});
+        message="Hơi Thở Lão Già đã đánh dấu. Tác động chết sẽ xét ở sáng sau đêm kế tiếp.";
+      }else if(actionId==='artifact_action_lock_function'){
+        // Bình Giấc Mơ: an actual server-side block for two whole day/night
+        // cycles, rather than an acknowledgement with no effect.
+        if(effectiveTargets.some(id=>interactions.some(x=>sameMatch(x)&&
+          normalizeLoginId(x.loginId)===id&&x.type==="status"&&
+          x.statusId==="disabled_2n"&&x.effectActive!==false)))
+          return j({ok:false,error:"DAY_DREAM_ALREADY_LOCKED",message:"Mục tiêu đang bị khóa chức năng; không tiêu hao lượt."},409);
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,
+          type:"status",statusId:"disabled_2n"});
+        message="Bình Giấc Mơ đã khóa chức năng mục tiêu trong 2 ngày đêm.";
+      }else if(['artifact_action_block_vote','action_block_vote'].includes(actionId)||effects.includes('effect-artifact-block-vote')||
           /cấm\s*(?:bỏ\s*)?phiếu|cấm\s*vote/i.test(String(fn.name||fn.label||''))){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"status",statusId:"vote_ban"});
         message="Artifact đã cấm bỏ phiếu Lên Giàn trong ngày hiện tại.";
-      }else if(/freeze|frozen|dong_bang/.test(terms)){
+      }else if(actionId==='action_snow_wolf_freeze'||effects.includes('effect_snow_wolf_freeze')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"frozen"});
         message="Artifact đã thực hiện Đóng Băng.";
       }else{
-        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"effect_notice"});
-        message="Artifact đã ghi nhận hành động. Hiệu ứng đặc biệt chờ GM xử lý theo luật đã cấu hình.";
+        return j({ok:false,error:"DAY_ARTIFACT_EFFECT_NOT_IMPLEMENTED",message:"Artifact này chưa có xử lý hiệu ứng trên Server; chưa tiêu hao lượt sử dụng."},409);
       }
       result={message};
     }else return j({ok:false,error:"DAY_ROLE_EFFECT_NOT_IMPLEMENTED"},409);
     for(const id of deadVictims)changes.push({kind:"status",loginId:id,type:"dead"});
     for(const effect of changes){
+      if(effect.kind==="remove_artifact"){
+        const removed=await this.ctx.storage.transaction(async txn=>{
+          const target=await txn.get("artifact:"+effect.loginId),
+            rows=await txn.get("assignments")||[],
+            assigned=rows.find(x=>normalizeLoginId(x.loginId)===effect.loginId);
+          if(!target||target.removedFromMatch===true||
+            String(target.artifactId||"")!==effect.artifactId||
+            (target.matchId&&String(target.matchId)!==matchId)||
+            !assigned||String(assigned.artifactId||"")!==effect.artifactId)
+            return {ok:false};
+          target.removedFromMatch=true;target.removedAt=time;
+          target.removedByArtifactId=artifactId;
+          await txn.put("artifact:"+effect.loginId,target);
+          for(const row of rows){
+            if(normalizeLoginId(row.loginId)!==effect.loginId||
+              String(row.artifactId||"")!==effect.artifactId)continue;
+            row.artifactId=null;row.artifactName=null;
+            row.artifactUsedAt=null;row.artifactViewedAt=null;
+            row.artifactPriorityFirst=null;row.artifactSingleUse=null;
+          }
+          await txn.put("assignments",rows);
+          return {ok:true};
+        });
+        if(!removed.ok)return j({ok:false,error:"NEGATE_TARGET_CHANGED"},409);
+        continue;
+      }
       if(effect.kind==="knight_pending"){await this.ctx.storage.put(effect.key,effect.value);continue}
       if(effect.kind==="revived")continue;
       // Multiple distinct status IDs may coexist (e.g. Mute and Artifact vote ban).
@@ -2182,7 +2275,14 @@ export class RoomDurableObject extends DurableObject {
         Number(row.night)===day);
       if(effect.type!=="effect_notice"&&(effect.type==="status"?sameStatus:affected(effect.loginId,effect.type)))continue;
       const log={id:"ix-"+crypto.randomUUID(),type:effect.type,
-        ...(effect.statusId?{statusId:effect.statusId}:{}),loginId:effect.loginId,matchId,cycleKey,night:day,actorId,artifactId,roleId,actionId,
+        ...(effect.statusId?{statusId:effect.statusId}:{}),
+        ...(effect.statusId==="disabled_2n"?{activationPhase:"morning"}:{}),
+        ...(effect.kind==="grudge_schedule"?{
+          pendingDeath:true,deferredArtifact:"artifact_07",scheduledFromNight:day,
+          effectName:"Hơi Thở Lão Già"
+        }:{}),
+        loginId:effect.loginId,matchId,cycleKey,
+        night:effect.kind==="grudge_schedule"?day+1:day,actorId,artifactId,roleId,actionId,
         source:"day-action",effectActive:effect.type!=="effect_notice",
         message:message||"Hành động Ban ngày",createdAt:time};
       interactions.push(log);
@@ -2258,7 +2358,7 @@ export class RoomDurableObject extends DurableObject {
     // Validate all private divination targets BEFORE any usage ledger or game-state write.
     const inspectIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?
       body.revealTargetIds.map(normalizeLoginId):(body?.revealTargetId?[normalizeLoginId(body.revealTargetId)]:targets);
-    const expectedInspectCount=({action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3})[String(body?.actionId||'')];
+    const expectedInspectCount=({action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3,'action-vampire-check':3})[String(body?.actionId||'')];
     if(!artifactId&&expectedInspectCount&&(inspectIds.length!==expectedInspectCount||
       new Set(inspectIds).size!==expectedInspectCount||inspectIds.some(id=>!players['member:'+id])))
       return j({ok:false,error:'DIVINATION_TARGET_COUNT',message:'Soi xét phải chọn đủ các mục tiêu khác nhau.'},400);
@@ -2314,7 +2414,9 @@ export class RoomDurableObject extends DurableObject {
         roleId==="role_witch"&&actionId==="action_witch_kill"?"dead":
         roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"?"frozen":
         roleId==="role_guard"&&actionId==="action_protect"?"effect_notice":
-        roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":"";
+        roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":
+        ['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?"effect_notice":
+        roleId==='role_destroyer'&&actionId==='action_destroyer_kill'?'dead':"";
       if(expectedType&&type!==expectedType)
         return j({ok:false,error:"NIGHT_ACTION_TYPE_MISMATCH"},409);
       if(roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"&&targets.includes(actorId))
@@ -2368,11 +2470,12 @@ export class RoomDurableObject extends DurableObject {
           actorId,roleId,actionId:String(hit.actionId),eventId,usedAt:hit.createdAt});
         known.add(eventId);
       }
+      const ruleTargets=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?inspectIds:targets;
       const decision=checkBattleRoleActionUsage(currentUsage,{matchId,
-        night:Number(meta.cycleNight||1),actorId,roleId,actionId,policy});
+        night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:ruleTargets,policy});
       if(!decision.ok)return j({ok:false,error:decision.error,
         message:decision.message||"Hành động không được phép theo luật vai trò."},409);
-      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:targets,
+      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:ruleTargets,
         eventId:token,usedAt:new Date().toISOString(),currentUsage};
     }
     const undoKey="battleLastAction:"+matchId,
@@ -2393,8 +2496,14 @@ export class RoomDurableObject extends DurableObject {
     // actor's normal action, but never applies gameplay effects to those targets.
     const isFactionCompare=String(body?.actionId||'')==='action_compare_faction';
     // Observation is not a harmful effect: Exile must not suppress faction comparison.
-    const effectiveTargets=isFactionCompare?targets:targets.filter(id=>!isExpelled(id));
-    for(const id of targets){
+    let actionTargets=targets;
+    if(roleUse?.roleId==='role_destroyer'&&body.actionId==='action_destroyer_kill'&&!targets.some(isExpelled)){
+      const assigned=await this.ctx.storage.get('assignments')||[];
+      const succeeds=targets.every(id=>assigned.some(row=>normalizeLoginId(row.loginId)===id&&['role_seer','role_witch','role_hunter','role_guard','role_assassin'].includes(row.roleId)));
+      if(!succeeds)actionTargets=[actorId];
+    }
+    const effectiveTargets=isFactionCompare?actionTargets:actionTargets.filter(id=>!isExpelled(id));
+    for(const id of actionTargets){
       if(isFactionCompare){
         results.push({ok:true,loginId:id,observed:true});continue;
       }
@@ -2521,6 +2630,75 @@ export class RoomDurableObject extends DurableObject {
       const statusId=String(body?.statusId||"").trim();if(!STATUS_VISUAL_IDS.has(statusId))return j({ok:false,error:"INVALID_STATUS"},400);
       const display={...(meta.statusDisplay&&typeof meta.statusDisplay==="object"?meta.statusDisplay:{})};display[statusId]=body?.visible===true;meta.statusDisplay=display;meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);
       this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now()});return j({ok:true,statusDisplay:display})
+    }
+    // Hơi Thở Lão Già: do not turn the marker into an immediate death.
+    // Only this specific Artifact may schedule the shared grudge Action ID,
+    // which is also used by unrelated cards.
+    if(String(body?.artifactId||"")==="artifact_07"&&
+       String(body?.actionId||"")==="action-grudge-designate"){
+      if(!gmArtifactStep||!["effect_notice","dead"].includes(type))
+        return j({ok:false,error:"GRUDGE_ARTIFACT_REQUIRES_VALID_TURN"},409);
+      if(!loginId||!players["member:"+loginId])
+        return j({ok:false,error:"INVALID_GRUDGE_TARGET"},400);
+      const rows=(await this.ctx.storage.get("interactions"))||[],
+        matchId=String(meta.matchId||""),night=Math.max(1,Number(meta.cycleNight)||1);
+      const sameMatch=x=>!x.matchId||String(x.matchId)===matchId;
+      if(rows.some(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===loginId&&
+        (x.effectActive!==false&&x.type==="dead"||
+          x.deferredArtifact==="artifact_07"&&x.pendingDeath===true)))
+        return j({ok:false,error:"GRUDGE_TARGET_INELIGIBLE",
+          message:"Mục tiêu đã chết hoặc đã bị đánh dấu; chưa trừ lượt."},409);
+      const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);
+      if(useError)return useError;
+      const now=new Date().toISOString(),interaction={
+        id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),
+        clientEventId:String(body.clientEventId||""),type:"effect_notice",
+        loginId,matchId,night:night+1,scheduledFromNight:night,
+        cycleKey:String(meta.cycleKey||""),effectActive:false,pendingDeath:true,
+        deferredArtifact:"artifact_07",effectName:"Hơi Thở Lão Già",
+        actionId:"action-grudge-designate",artifactId:"artifact_07",
+        actorId:normalizeLoginId(body.actorId),source:"artifact-night-engine",
+        message:"Đã đánh dấu; tác động chết được xét sau đêm kế tiếp.",
+        createdAt:now
+      };
+      rows.push(interaction);
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+interaction.id,interaction);
+      // The target is never informed of the pending death before resolution.
+      return j({ok:true,interaction});
+    }
+    // Only a validated, currently-owned Artifact turn may create this power
+    // block. The GM's generic notice would otherwise appear successful while
+    // leaving the target able to act.
+    if(String(body?.actionId||"")==="artifact_action_lock_function"){
+      if(!gmArtifactStep||type!=="effect_notice")
+        return j({ok:false,error:"DREAM_ARTIFACT_REQUIRES_VALID_TURN"},409);
+      if(!loginId||!players["member:"+loginId])
+        return j({ok:false,error:"INVALID_DREAM_TARGET"},400);
+      const rows=(await this.ctx.storage.get("interactions"))||[],
+        matchId=String(meta.matchId||""),night=Math.max(1,Number(meta.cycleNight)||1);
+      const sameMatch=x=>!x.matchId||String(x.matchId)===matchId;
+      if(rows.some(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===loginId&&
+        x.effectActive!==false&&(x.type==="dead"||
+          (x.type==="status"&&x.statusId==="disabled_2n"))))
+        return j({ok:false,error:"DREAM_TARGET_INELIGIBLE",message:"Mục tiêu đã chết hoặc đang bị khóa chức năng."},409);
+      const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);
+      if(useError)return useError;
+      const now=new Date().toISOString(),interaction={
+        id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),
+        clientEventId:String(body.clientEventId||""),type:"status",
+        statusId:"disabled_2n",loginId,matchId,night,cycleKey:String(meta.cycleKey||""),
+        activationPhase:"night",effectActive:true,
+        actionId:"artifact_action_lock_function",artifactId:String(body.artifactId||""),
+        actorId:normalizeLoginId(body.actorId),source:"artifact-night-engine",
+        message:"Bình Giấc Mơ khóa chức năng trong 2 ngày đêm.",createdAt:now
+      };
+      rows.push(interaction);
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+interaction.id,interaction);
+      this.broadcast({type:"player_status_changed",loginId,statusId:"disabled_2n",
+        active:true,serverTime:Date.now()});
+      return j({ok:true,interaction});
     }
     if(type==="status"){
       const statusId=String(body?.statusId||"").trim();if(!loginId||!STATUS_DEFS[statusId])return j({ok:false,error:"INVALID_STATUS",message:"Trạng thái không hợp lệ."},400);
@@ -2734,7 +2912,7 @@ export class RoomDurableObject extends DurableObject {
       // A role assignment also contains the committed artifact. Use it if the
       // legacy standalone Artifact key is absent; do not hide an assigned card.
       attachedArtifact=roleRows.find(r=>r?.artifact&&(!meta.matchId||String(r.matchId||"")===String(meta.matchId)))?.artifact||null,
-      currentArtifact=activeSnapshot?privateDeliveryArtifact(activeSnapshot,storedArtifact):(storedArtifact&&(!meta.matchId||String(storedArtifact.matchId||"")===String(meta.matchId))?storedArtifact:attachedArtifact),
+      currentArtifact=activeSnapshot?privateDeliveryArtifact(activeSnapshot,storedArtifact):(storedArtifact?.removedFromMatch===true?null:storedArtifact&&(!meta.matchId||String(storedArtifact.matchId||"")===String(meta.matchId))?storedArtifact:attachedArtifact),
       artifact=currentArtifact?privateArtifact(currentArtifact):null,artifactCycleKey=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKey))||{accepted:[]};
     const deliveryManifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments:(await this.ctx.storage.get("assignments"))||[],roles:roleRows,artifact:currentArtifact});
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
@@ -2825,7 +3003,7 @@ export class RoomDurableObject extends DurableObject {
     if(!["role_delivery","running"].includes(String(meta.phase||"").toLowerCase()))return j({ok:false,error:"ROLE_DELIVERY_NOT_STARTED"},409);
     const stored=(await this.ctx.storage.get("roles:"+loginId))||[],legacy=await this.ctx.storage.get("role:"+loginId),legacyRows=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]);
     const snapshot=currentPrivateDeliverySnapshot(await this.ctx.storage.get("deliverySnapshot:"+loginId),meta),roles=privateDeliveryRoles(snapshot,legacyRows);
-    const savedArtifact=await this.ctx.storage.get("artifact:"+loginId),artifact=snapshot?privateDeliveryArtifact(snapshot,savedArtifact):(savedArtifact||roles.find(row=>row?.artifact)?.artifact||null);
+    const savedArtifact=await this.ctx.storage.get("artifact:"+loginId),artifact=snapshot?privateDeliveryArtifact(snapshot,savedArtifact):(savedArtifact?.removedFromMatch===true?null:savedArtifact||roles.find(row=>row?.artifact)?.artifact||null);
     const assignments=(await this.ctx.storage.get("assignments"))||[];
     const manifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments,roles,artifact});
     if(!validPrivateDeliveryAcknowledgment(manifest,body))return j({ok:false,error:"DELIVERY_RECEIPT_MISMATCH"},409);
@@ -2846,7 +3024,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async playerArtifactViewed(body){
     const loginId=normalizeLoginId(body?.loginId),artifact=await this.ctx.storage.get("artifact:"+loginId);
-    if(!artifact)return j({ok:false,error:"ARTIFACT_NOT_FOUND"},404);
+    if(!artifact||artifact.removedFromMatch===true)return j({ok:false,error:"ARTIFACT_NOT_FOUND"},404);
     if(!artifact.viewedAt){
       artifact.viewedAt=new Date().toISOString();await this.ctx.storage.put("artifact:"+loginId,artifact);
       const rows=(await this.ctx.storage.get("assignments"))||[],row=rows.find(x=>normalizeLoginId(x?.loginId)===loginId);
@@ -2865,6 +3043,7 @@ export class RoomDurableObject extends DurableObject {
     const result=await this.ctx.storage.transaction(async txn=>{
       const artifact=await txn.get("artifact:"+loginId);
       if(!artifact)return{ok:false,status:404,error:"ARTIFACT_NOT_FOUND"};
+      if(artifact.removedFromMatch===true)return{ok:false,status:409,error:"ARTIFACT_REMOVED_FROM_MATCH"};
       const targetId=String(body?.targetId||body?.originalTargetId||"").slice(0,160);if(targetId){const players=(await txn.get("players"))||{};if(!players[targetId])return{ok:false,status:400,error:"INVALID_ARTIFACT_TARGET"}}
       if(meta.matchId&&artifact.matchId&&String(meta.matchId)!==String(artifact.matchId))return{ok:false,status:409,error:"STALE_ARTIFACT"};
       const artifactId=String(artifact.artifactId||""),playerId="member:"+loginId,useKey="artifactUse:"+loginId+":"+artifactId,oldUse=await txn.get(useKey),cycle=(await txn.get("artifactCycle:"+cycleKey))||{cycleKey,accepted:[]};

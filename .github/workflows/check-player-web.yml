@@ -44,6 +44,26 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: V3.265 — Tập hợp chụm/banh 50–300%, đồng bộ Worker/GM/Player và OTA
+        if: steps.scope.outputs.mode == 'gather-pinch-3265'
+        run: |
+          node --test tests/gm-gather-pinch-spacing-v3265.test.mjs tests/gather-spacing-gm-menu.test.mjs tests/seat-free-map-drag-v3198.test.mjs tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node --test tests/v3183-seat-perimeter-contract.test.mjs tests/seat-presets-fire-v399.test.mjs tests/seat-presets-v397.test.mjs tests/gmww-v3128-seat-geofence-rewrite.test.mjs tests/gmww-v3129-seat-anchor-sync.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md
+      - name: V3.263 — kiểm RULE Bình Giấc Mơ, Hơi Thở Lão Già, Kim Cương Phủ Nhận
+        if: steps.scope.outputs.mode == 'card-rule-3263'
+        run: |
+          node --test tests/card-rule-contract-audit-20261028.test.mjs tests/card-divination-audit-20261028.test.mjs tests/v389-night-runtime-integration.test.mjs tests/approved-role-card-settings-20261027.test.mjs tests/witch01-old-witch-rules.test.mjs
+          node --test tests/gm-fire-walk-position.test.mjs tests/gm-turn-motion-lowheat.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.263-card-rule-executors-20261028.md
       - name: Chốt Native V3.257 — xác minh manifest và gói thủ công đúng phạm vi
         if: steps.scope.outputs.mode == 'native-manual-release-verify'
         run: |
@@ -55,6 +75,16 @@ jobs:
         run: |
           node --test tests/manual-runtime-package.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
+      - name: V3.264 — chỉ kiểm thử đóng gói IPA/OTA và SHA-256
+        if: steps.scope.outputs.mode == 'ipa-ota-lean-3264'
+        run: |
+          node --test tests/ipa-ota-lean-assets-v3264.test.mjs tests/action-icon-library.test.mjs tests/manual-runtime-package.test.mjs tests/native-ipa-startup.test.mjs tests/fast-g2-generic-delta.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          test -s docs/releases/GMWW-V3.264-ipa-ota-lean-assets-20261028.md
       - name: PR577 — chỉ test Say Rượu, dọn ván và luật Xếp hạng không đổi
         if: steps.scope.outputs.mode == 'drunk-card-overlay-20261028'
         run: |

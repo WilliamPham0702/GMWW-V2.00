@@ -2190,7 +2190,51 @@ function isGMFireRadius3262Scope(changes){
    after('package.json').includes('"version": "3.262.0"');
 }
 
+// V3.264 native IPA + OTA optimization: fail closed on all unrelated feature changes.
+function isLeanPackaging3264Scope(changes){
+ const allowed=new Set([
+ '.github/scripts/prepare-update-channel.mjs','.github/scripts/verify-native-web.mjs',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/build-server-game-ipa.yml',
+ '.github/workflows/check-player-web.yml','package.json','package-lock.json',
+ 'src/index.js','server-game/current/app.js','server-game/src/00-core-and-library.part',
+ 'server-game/src/10-library-and-settings.part','server-game/current/GMWW.html',
+ 'server-game/GMWW-Server.xcodeproj/project.pbxproj',
+ 'tests/manual-runtime-package.test.mjs','tests/ipa-ota-lean-assets-v3264.test.mjs',
+ 'docs/releases/GMWW-V3.264-ipa-ota-lean-assets-20261028.md']);
+ if(!Array.isArray(changes)||changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status)))return false;
+ const map=new Map(changes.map(c=>[c.path,c]));
+ const required=['.github/scripts/prepare-update-channel.mjs','.github/workflows/build-server-game-ipa.yml',
+  'src/index.js','server-game/current/app.js','server-game/src/00-core-and-library.part',
+  'server-game/src/10-library-and-settings.part','server-game/GMWW-Server.xcodeproj/project.pbxproj',
+  'tests/ipa-ota-lean-assets-v3264.test.mjs'];
+ if(!required.every(x=>map.has(x)))return false;
+ const exact=(p,oldText,newText)=>{
+  const c=map.get(p);return c?.status==='M'&&typeof c.before==='string'&&
+   typeof c.after==='string'&&c.before.includes(oldText)&&
+   c.after===c.before.replaceAll(oldText,()=>newText);
+ };
+ const audioFixed=s=>s.replaceAll("$('[data-audio-id]').forEach",()=> "$$('[data-audio-id]').forEach")
+  .replaceAll("$('[data-system-sound-slot]').forEach",()=> "$$('[data-system-sound-slot]').forEach");
+ const app=map.get('server-game/current/app.js');
+ if(!app?.before||app.after!==audioFixed(app.before.replaceAll("const VERSION='3.263';",()=> "const VERSION='3.264';")))return false;
+ const audio=map.get('server-game/src/10-library-and-settings.part');
+ if(!audio?.before||audio.after!==audioFixed(audio.before))return false;
+ if(!exact('server-game/src/00-core-and-library.part',"const VERSION='3.263';","const VERSION='3.264';"))return false;
+ if(!exact('src/index.js','VERSION="V3.263",NATIVE_SHELL_VERSION="3.257",UPDATE_CHANNEL_REV="runtime-3263"',
+  'VERSION="V3.264",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="native-3264-lean-assets"'))return false;
+ if(!exact('server-game/current/GMWW.html','<title>GMWW V3.263</title>','<title>GMWW V3.264</title>'))return false;
+ const project=map.get('server-game/GMWW-Server.xcodeproj/project.pbxproj');
+ if(!project?.before||project.after!==project.before.replaceAll('MARKETING_VERSION = 3.257;',()=> 'MARKETING_VERSION = 3.264;').replaceAll('CURRENT_PROJECT_VERSION = 3110;',()=> 'CURRENT_PROJECT_VERSION = 3264;'))return false;
+ const pack=map.get('.github/scripts/prepare-update-channel.mjs')?.after||'';
+ const native=map.get('.github/workflows/build-server-game-ipa.yml')?.after||'';
+ return pack.includes("copyDir('server-game/current/action-icons/v3','action-icons/v3')")&&
+ pack.includes('V3.264: Tối ưu IPA/Runtime OTA')&&
+ native.includes('cp -R server-game/current/action-icons/v3 "$APPDIR/Web/action-icons/v3"')&&
+ !native.includes('cp -R server-game/current/action-icons "$APPDIR/Web/action-icons"');
+}
+
 export function classifyBrowserScope(changes){
+  if(isLeanPackaging3264Scope(changes))return 'ipa-ota-lean-3264';
   if(isGMFireRadius3262Scope(changes))return 'gm-fire-radius-3262';
   if(isGMFireWalk3261Scope(changes))return 'gm-fire-walk-3261';
   if(isDrunkCardOverlayScope(changes))return 'drunk-card-overlay-20261028';
@@ -2318,7 +2362,84 @@ function isDrunkV3260PostMergeScope(changes){
   }catch{return false}
 }
 
+function cardRule3263MainScope(){
+  try{
+    if(process.env.GMWW_CI_EVENT!=='push'||process.env.GITHUB_REF!=='refs/heads/main'||
+       JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.263.0')return false;
+    // Inspect the full actual release diff, not just a version-bump follow-up.
+    // V3.262 is the pinned, already-shipped and immutable release baseline.
+    const base='ad501902144aee1eb4e679f8b4f1334eda73099d';
+    git('merge-base','--is-ancestor',base,'HEAD');
+    const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+    const changes=rows.map(s=>s.split('\t'));
+    const allowed=new Set([".github/workflows/check-card-rule-audit.yml","docs/audits/card-rule-audit-20261028.md","docs/audits/card-rule-catalog-20261028.json","docs/releases/GMWW-CARD-RULE-AUDIT-20261028.md","docs/superpowers/plans/2026-10-28-card-rule-audit.md","server-game/current/app.js","server-game/current/battle-controls.js","server-game/src/00-core-and-library.part","server-game/src/10-library-and-settings.part","server-game/src/40-battle-and-timeline.part","server-game/src/50-roles-and-artifacts.part","src/gmww-battle-action-policy.js","src/gmww-cycle-effect-expiry.js","src/gmww-delivery-snapshot.js","src/gmww-pack-night-rules.js","src/gmww-private-card-contract.js","src/gmww-wolf-night-resolution.js","src/gmww-wolf-recognition.js","src/index.js","tests/card-divination-audit-20261028.test.mjs","tests/card-rule-contract-audit-20261028.test.mjs","tests/v389-night-runtime-integration.test.mjs",".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml","package.json","package-lock.json","server-game/current/GMWW.html","docs/releases/GMWW-V3.263-card-rule-executors-20261028.md"]);
+    const files=changes.map(c=>c[1]);
+    if(changes.length<10||changes.some(c=>!['M','A'].includes(c[0])||!allowed.has(c[1]))||
+       !["src/index.js","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","src/gmww-cycle-effect-expiry.js","src/gmww-delivery-snapshot.js","tests/v389-night-runtime-integration.test.mjs","package.json","package-lock.json","docs/releases/GMWW-V3.263-card-rule-executors-20261028.md"].every(p=>files.includes(p)))return false;
+    const worker=fs.readFileSync('src/index.js','utf8'),gm=fs.readFileSync('server-game/current/app.js','utf8');
+    return worker.includes('VERSION="V3.263"')&&gm.includes("const VERSION='3.263'")&&
+       gm.includes('cy+Math.sin(angle)*radius')&&
+       worker.includes('artifact_action_lock_function')&&
+       worker.includes('deferredArtifact==="artifact_07"')&&
+       worker.includes('removedFromMatch=true')&&
+       fs.existsSync('docs/releases/GMWW-V3.263-card-rule-executors-20261028.md');
+  }catch{return false}
+}
+
+
+const gatherPinch3265Files=new Set([
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-lobby-gather-assassin.yml',
+  '.github/workflows/check-player-web.yml',
+  'assets/village/village-layout.js',
+  'docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md',
+  'package-lock.json','package.json',
+  'server-game/current/GMWW.html','server-game/current/app.js',
+  'server-game/current/style.css',
+  'server-game/src/00-core-and-library.part','server-game/src/30-village-and-setup.part',
+  'src/index.js',
+  'tests/gather-spacing-gm-menu.test.mjs',
+  'tests/gm-gather-pinch-spacing-v3265.test.mjs',
+  'tests/seat-free-map-drag-v3198.test.mjs',
+  'tests/gmww-v3128-seat-geofence-rewrite.test.mjs',
+  'tests/gmww-v3129-seat-anchor-sync.test.mjs',
+  'tests/v3183-seat-perimeter-contract.test.mjs'
+]);
+function isGatherPinch3265Scope(changes){
+  if(!changes?.length||changes.some(c=>!gatherPinch3265Files.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const touched=new Set(changes.map(c=>c.path));
+  for(const required of [
+    'assets/village/village-layout.js','server-game/src/30-village-and-setup.part',
+    'server-game/current/app.js','server-game/current/GMWW.html',
+    'src/index.js','tests/gm-gather-pinch-spacing-v3265.test.mjs',
+    'docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md',
+    '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
+  ])if(!touched.has(required))return false;
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const layout=fs.readFileSync('assets/village/village-layout.js','utf8');
+  const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+  return pkg.version==='3.265.0' &&
+    worker.includes('VERSION="V3.265",NATIVE_SHELL_VERSION="3.264"') &&
+    html.includes('<title>GMWW V3.265</title>') &&
+    !html.includes('id="playGatherSpacing" type="range"') &&
+    layout.includes('Math.max(50,Math.min(300,Math.round(n)))');
+}
+
 function detect(){
+  // Scope only the exact, reviewed V3.265 seat-pinch files, both PR and main.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isGatherPinch3265Scope(changes))return {mode:'gather-pinch-3265',reason:'Exact V3.265 shared seat geometry, pinch UI, Worker guard, OTA and related regression only'};
+      }
+    }catch{} // Fail closed: unknown changes run the normal broader checks.
+  }
+  if(cardRule3263MainScope())return{mode:'card-rule-3263',reason:'V3.263 approved 3 Artifact executors; exact 3.262 base, strict scope and GM radius preserved'};
   // CI-only fix after the approved V3.260 merge: retain exact-scope
   // Worker + Say Rượu checks; unrelated legacy tests must not block OTA.
   if(process.env.GMWW_CI_EVENT==='push'){
@@ -2486,6 +2607,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isLeanPackaging3264Scope(changes))return{mode:'ipa-ota-lean-3264',reason:'V3.264 exact IPA/OTA icon packaging and two Audio selector fixes'};
       if(isGMFireRadius3262Scope(changes))return{mode:'gm-fire-radius-3262',reason:'V3.262 exact GM campfire equal-radius motion patch'};
       if(isGMFireWalk3261Scope(changes))return{mode:'gm-fire-walk-3261',reason:'V3.261 exact GM fire walk hotfix with return home and immutable version'};
       if(isGMTurnMotionScope(changes))return{mode:'gm-turn-motion-lowheat',reason:'V3.253 exact GM motion and OTA changes only'};

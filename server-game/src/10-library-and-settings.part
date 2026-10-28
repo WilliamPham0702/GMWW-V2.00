@@ -44,8 +44,8 @@ function functionHtml(fn,index){
     '<div class="function-grid">'+
       '<label class="full">Hành Động<select data-f="actionId">'+actionOptions(fn.actionId)+'</select></label>'+
       '<label class="full">Mô tả riêng trên Lá<textarea class="function-description" data-t="description">'+esc(fn.description||'')+'</textarea></label>'+
-      '<label>Phase<select data-f="phase">'+selectOptions([['night','Ban Đêm'],['day','Ban Ngày'],['setup','Đầu Ván / Setup'],['trigger','Theo sự kiện']],fn.phase||'night')+'</select></label>'+
-      '<label>Giới hạn sử dụng<select data-f="usageMode">'+selectOptions([['unlimited','Không giới hạn'],['eachNight','Mỗi đêm'],['eachDay','Mỗi ngày'],['onceGame','1 lần / ván'],['nGame','N lần / ván'],['nPerNight','N lần / đêm']],fn.usageMode||'unlimited')+'</select></label>'+
+      '<label>Phase<select data-f="phase">'+selectOptions([['night','Ban Đêm'],['day','Ban Ngày'],['any','Ngày và Đêm'],['both','Ngày và Đêm (cũ)'],['setup','Đầu Ván / Setup'],['trigger','Theo sự kiện']],fn.phase||'night')+'</select></label>'+
+      '<label>Giới hạn sử dụng<select data-f="usageMode">'+selectOptions([['unlimited','Không giới hạn'],['eachNight','Mỗi đêm'],['eachDay','Mỗi ngày'],['onceGame','1 lần / ván'],['nGame','N lần / ván'],['custom','N lần trong khoảng đêm'],['nPerNight','N lần / đêm']],fn.usageMode||'unlimited')+'</select></label>'+
       '<label>Số lần<select data-f="usageCount">'+numOptions(1,10,fn.usageCount||1)+'</select></label>'+
       '<label>Cooldown (đêm)<select data-f="cooldownNights">'+numOptions(0,10,fn.cooldownNights||0)+'</select></label>'+
       '<label>Số mục tiêu<select data-f="targetCount">'+numOptions(0,8,fn.targetCount??1)+'</select></label>'+
@@ -289,7 +289,7 @@ async function renderAudio(){
       return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
     }).join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
-  $('[data-audio-id]').forEach(row=>{
+  $$('[data-audio-id]').forEach(row=>{
     const a=list.find(x=>String(x.id)===String(row.dataset.audioId));
     $('[data-audio-play]',row).onclick=()=>playAudioItem(a);
     $('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);
@@ -300,7 +300,7 @@ async function renderAudio(){
       button.addEventListener('click',()=>{const now=Date.now();if(now-lastTap<400){lastTap=0;void gmwwOpenAudioNameEditor(a)}else lastTap=now});
     }
   });
-  $('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
+  $$('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
     const id=String(button.dataset.systemSoundSlot||'');
     const item=(state.audio.system||[]).find(x=>String(x.targetId||x.id)===id);
     if(item)replaceAudioItem(item,'system');
