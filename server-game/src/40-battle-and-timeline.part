@@ -308,7 +308,7 @@ async function demoExecuteNight(action,actorId,t,signature,epoch){
       if(chosen.length!==count){demoObserve(action.name+' · Không đủ mục tiêu hợp lệ',actorId,[],'skipped');return}
       if(chosen.length===count){
         const seer=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three',
-          'action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer']
+          'action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check']
           .includes(action.actionId)&&!action.artifactId;
         const transfer=String(action.actionId)==='action_transfer_bite'&&!action.artifactId;
         const direction=transfer?demoPick(['left','right','none']):'';
@@ -698,7 +698,7 @@ const battleDayActions=()=>{
   const catalog=(kind)=>Array.isArray(state.actions)?state.actions:Array.isArray(state.actions?.[kind])?state.actions[kind]:[];
   const roleActions=[];
   const add=(fn,owner,card,isArtifact)=>{
-    if(!fn||fn.passive||!['day','any'].includes(String(fn.phase||''))||
+    if(!fn||fn.passive||!['day','any','both'].includes(String(fn.phase||''))||
       (fn.fromNight!=null&&night<Number(fn.fromNight))||
       (fn.toNight!=null&&night>Number(fn.toNight)))return;
     const actorId=String(owner.loginId||''),roleId=isArtifact?'':String(owner.roleId||''),
@@ -717,8 +717,8 @@ const battleDayActions=()=>{
     if(!isArtifact){
       if(card?.flags?.allowMultipleActions===false&&own.some(x=>Number(x.day)===night)){
         blocked=true;reason='Đã thực hiện một chức năng trong ngày.'}
-      if((['onceGame','nGame'].includes(mode)&&hits.length>=quota)||
-        (mode==='eachNight'&&hits.filter(x=>Number(x.day)===night).length>=quota)){
+      if((['onceGame','nGame','custom'].includes(mode)&&hits.length>=quota)||
+        (['eachNight','eachDay','nPerNight'].includes(mode)&&hits.filter(x=>Number(x.day)===night).length>=quota)){
         blocked=true;reason='Hết lượt dùng chức năng.'}
       if(actionId==='action_bear_scan'&&hits.some(x=>Number(x.day)===night)){
         blocked=true;reason='Thần Gấu chỉ soi một lần mỗi ngày.'}
@@ -801,9 +801,9 @@ const battleActions=()=>{
       if(fn){
         const mode=String(fn.usageMode||''),quota=Math.max(1,Number(fn.usageCount)||1);
         const hits=own.filter(row=>String(row.actionId)===String(action.actionId)&&
-          (['onceGame','nGame'].includes(mode)||Number(row.night)===night)).length;
-        if((['onceGame','nGame','eachNight'].includes(mode))&&hits>=quota){
-          unavailableReason=['onceGame','nGame'].includes(mode)?'Chức năng đã hết lượt trong ván.':'Chức năng đã hết lượt trong đêm.';
+          (['onceGame','nGame','custom'].includes(mode)||Number(row.night)===night)).length;
+        if((['onceGame','nGame','custom','eachNight','eachDay','nPerNight'].includes(mode))&&hits>=quota){
+          unavailableReason=['onceGame','nGame','custom'].includes(mode)?'Chức năng đã hết lượt trong ván.':'Chức năng đã hết lượt trong đêm.';
           return false
         }
       }else if(roleId==='role_old_witch'&&String(action.actionId)==='action_revive'&&
@@ -2069,7 +2069,7 @@ async function battleConfirm(confirmed=false){
   battleState.busy=true;if(!battleState.nonce)battleState.nonce=globalThis.crypto?.randomUUID?.()||String(Date.now());renderPlayBattle();
   const targets=[...battleState.targets],startedAt=globalThis.performance?.now?.()??Date.now();
   try{
-    const seerReveal=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer'].includes(a.actionId)&&!a.artifactId;
+    const seerReveal=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(a.actionId)&&!a.artifactId;
     const payload={targetIds:(seerReveal||transferAct)?[a.actorIds[0]||'']:targets,type:a.type,turnId:t.id,actionId:a.actionId,actorId:a.actorIds[0]||'',
       ...(a.artifactId?{artifactId:a.artifactId}:{}),...(seerReveal?{revealTargetIds:targets}:{}),effectId:a.effectIds[0]||'',effectName:a.name,
       matchId:playSceneRuntime.room?.matchId||'',cycleKey:playSceneRuntime.room?.cycleKey||'',

@@ -1806,18 +1806,23 @@ export class RoomDurableObject extends DurableObject {
     const nonce=String(actionNonce||"").trim().slice(0,100);
     const owned=await this.ctx.storage.get("artifact:"+normalizeLoginId(step.loginId));
     if(!owned||String(owned.artifactId)!==String(step.artifactId))return j({ok:false,error:"INVALID_ARTIFACT_OWNER"},403);
-    const configuredAction=(owned.artifactCard?.actions||[]).find(a=>String(a.id)===String(confirmation.actionId||""));
+    const configuredFunction=(owned.artifactCard?.functions||[]).find(a=>String(a.actionId||a.id)===String(confirmation.actionId||""));
+    const legacyAction=(owned.artifactCard?.actions||[]).find(a=>String(a.id)===String(confirmation.actionId||""));
+    const configuredAction=configuredFunction?{...legacyAction,...configuredFunction}:legacyAction;
     if(!configuredAction)return j({ok:false,error:"INVALID_ARTIFACT_ACTION"},400);
+    if(configuredAction.passive===true||(configuredAction.phase&&!["night","any","both"].includes(configuredAction.phase)))return j({ok:false,error:"ARTIFACT_ACTION_WRONG_PHASE"},409);
+    if((configuredAction.fromNight!=null&&Number(meta.cycleNight)<Number(configuredAction.fromNight))||(configuredAction.toNight!=null&&Number(meta.cycleNight)>Number(configuredAction.toNight)))return j({ok:false,error:"ARTIFACT_OUTSIDE_NIGHT_WINDOW"},409);
     const targets=Array.isArray(confirmation.targetIds)?confirmation.targetIds.map(normalizeLoginId):[normalizeLoginId(targetLoginId)];
     if(!targets.length||targets.length>30||new Set(targets).size!==targets.length||!targets.includes(normalizeLoginId(targetLoginId)))return j({ok:false,error:"INVALID_ARTIFACT_TARGETS"},400);
     // Enforce explicit per-action limits on the server, not just the GM UI.
     // Older Artifact cards without targetCount retain their existing behavior.
     if(configuredAction.targetCount!==undefined&&configuredAction.targetCount!==null){
       const count=Number(configuredAction.targetCount);
-      if(!Number.isInteger(count)||count<1||count>30||targets.length!==count)
+      const noTarget=configuredAction.noTarget===true&&count===0&&targets.length===1&&targets[0]===normalizeLoginId(step.loginId);
+      if(!noTarget&&(!Number.isInteger(count)||count<1||count>30||targets.length!==count))
         return j({ok:false,error:"INVALID_ARTIFACT_TARGET_COUNT"},400);
     }
-    if(configuredAction.noSelf!==false&&targets.includes(normalizeLoginId(step.loginId)))
+    if(!configuredAction.noTarget&&configuredAction.noSelf!==false&&targets.includes(normalizeLoginId(step.loginId)))
       return j({ok:false,error:"ARTIFACT_SELF_TARGET_FORBIDDEN"},403);
     const players=(await this.ctx.storage.get("players"))||{};
     if(targets.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_ARTIFACT_TARGET"},400);
@@ -2053,6 +2058,7 @@ export class RoomDurableObject extends DurableObject {
       card=owned.artifactCard||{};
       const fns=Array.isArray(card.functions)&&card.functions.length?card.functions:card.actions||[];
       fn=fns.find(x=>String(x?.actionId||x?.id)===actionId);
+      if(fn){const legacy=(card.actions||[]).find(x=>String(x?.actionId||x?.id)===actionId);fn={...legacy,...fn}}
     }else{
       owned=assignments.find(x=>normalizeLoginId(x.loginId)===actorId&&String(x.roleId)===roleId);
       if(!owned)return j({ok:false,error:"DAY_ROLE_NOT_OWNED"},403);
@@ -2063,7 +2069,7 @@ export class RoomDurableObject extends DurableObject {
       card=privateRow?.roleCard||owned.roleCard||{};
       fn=(card.functions||[]).find(x=>String(x?.actionId||x?.id)===actionId);
     }
-    if(!fn||!["day","any"].includes(String(fn.phase||""))||fn.passive===true||
+    if(!fn||!["day","any","both"].includes(String(fn.phase||""))||fn.passive===true||
       (fn.fromNight!=null&&Number(fn.fromNight)>day)||
       (fn.toNight!=null&&Number(fn.toNight)<day))
       return j({ok:false,error:"DAY_ACTION_NOT_CONFIGURED"},403);
@@ -2095,8 +2101,8 @@ export class RoomDurableObject extends DurableObject {
     if(!artifactId){
       if(card.flags?.allowMultipleActions===false&&own.some(x=>x.day===day))
         return j({ok:false,error:"DAY_ROLE_LIMIT_PER_DAY"},409);
-      if((["onceGame","nGame"].includes(mode)&&used.length>=usageCount)||
-        (mode==="eachNight"&&used.filter(x=>x.day===day).length>=usageCount))
+      if((["onceGame","nGame","custom"].includes(mode)&&used.length>=usageCount)||
+        (["eachNight","eachDay","nPerNight"].includes(mode)&&used.filter(x=>x.day===day).length>=usageCount))
         return j({ok:false,error:"DAY_ROLE_QUOTA_REACHED"},409);
       if(actionId==="action_bear_scan"&&own.some(x=>x.actionId===actionId&&x.day===day))
         return j({ok:false,error:"BEAR_SCAN_ALREADY_USED_TODAY"},409);
@@ -2130,7 +2136,7 @@ export class RoomDurableObject extends DurableObject {
       deadVictims=[correctlyStabbed?effectiveTargets[0]:actorId];
       message=correctlyStabbed?"Du Côn đâm đúng Sói/Phe Ba.":"Du Côn đâm nhầm Dân Làng và bị chết.";
       result={message,correctlyStabbed};
-    }else if(!artifactId&&actionId==="action_bear_scan"&&roleId==="role_bear"){
+    }else if(!artifactId&&actionId==="action_bear_scan"&&["role_bear","role_bear_god"].includes(roleId)){
       const hasWolf=effectiveTargets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
       message=hasWolf?"CÓ SÓI":"KHÔNG CÓ SÓI";
       result={message,hasWolf};
@@ -2144,8 +2150,7 @@ export class RoomDurableObject extends DurableObject {
       result={message};
     }else if(artifactId){
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
-      const terms=[actionId,...effects].join(" ").toLowerCase();
-      if(/revive|hoi_sinh/.test(terms)){
+      if(actionId==='action_revive'||effects.includes('effect_revive')){
         for(const id of effectiveTargets){
           const changed=interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
             String(x.type)==="dead"&&x.effectActive!==false);
@@ -2153,21 +2158,20 @@ export class RoomDurableObject extends DurableObject {
           changes.push({kind:"revived",loginId:id});
         }
         message="Artifact hồi sinh đã được ghi nhận.";
-      }else if(/kill|dead|giet|chet|poison/.test(terms)){
+      }else if(['action_witch_kill','action_day_kill'].includes(actionId)||effects.includes('effect_kill')){
         deadVictims=effectiveTargets;message="Artifact đã gây tác động Chết.";
-      }else if(/expel|exile|duoi/.test(terms)){
+      }else if(actionId==='action_exile'||effects.includes('effect_exile')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
-      }else if(/(?:ban|block|disable|forbid|cam)[_-]?(?:vote|voting|bo[_-]?phieu)|(?:vote|voting)[_-]?(?:ban|block)|no[_-]?vote/.test(terms)||
+      }else if(['artifact_action_block_vote','action_block_vote'].includes(actionId)||effects.includes('effect-artifact-block-vote')||
           /cấm\s*(?:bỏ\s*)?phiếu|cấm\s*vote/i.test(String(fn.name||fn.label||''))){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"status",statusId:"vote_ban"});
         message="Artifact đã cấm bỏ phiếu Lên Giàn trong ngày hiện tại.";
-      }else if(/freeze|frozen|dong_bang/.test(terms)){
+      }else if(actionId==='action_snow_wolf_freeze'||effects.includes('effect_snow_wolf_freeze')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"frozen"});
         message="Artifact đã thực hiện Đóng Băng.";
       }else{
-        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"effect_notice"});
-        message="Artifact đã ghi nhận hành động. Hiệu ứng đặc biệt chờ GM xử lý theo luật đã cấu hình.";
+        return j({ok:false,error:"DAY_ARTIFACT_EFFECT_NOT_IMPLEMENTED",message:"Artifact này chưa có xử lý hiệu ứng trên Server; chưa tiêu hao lượt sử dụng."},409);
       }
       result={message};
     }else return j({ok:false,error:"DAY_ROLE_EFFECT_NOT_IMPLEMENTED"},409);
@@ -2258,7 +2262,7 @@ export class RoomDurableObject extends DurableObject {
     // Validate all private divination targets BEFORE any usage ledger or game-state write.
     const inspectIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?
       body.revealTargetIds.map(normalizeLoginId):(body?.revealTargetId?[normalizeLoginId(body.revealTargetId)]:targets);
-    const expectedInspectCount=({action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3})[String(body?.actionId||'')];
+    const expectedInspectCount=({action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3,'action-vampire-check':3})[String(body?.actionId||'')];
     if(!artifactId&&expectedInspectCount&&(inspectIds.length!==expectedInspectCount||
       new Set(inspectIds).size!==expectedInspectCount||inspectIds.some(id=>!players['member:'+id])))
       return j({ok:false,error:'DIVINATION_TARGET_COUNT',message:'Soi xét phải chọn đủ các mục tiêu khác nhau.'},400);
@@ -2314,7 +2318,9 @@ export class RoomDurableObject extends DurableObject {
         roleId==="role_witch"&&actionId==="action_witch_kill"?"dead":
         roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"?"frozen":
         roleId==="role_guard"&&actionId==="action_protect"?"effect_notice":
-        roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":"";
+        roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":
+        ['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?"effect_notice":
+        roleId==='role_destroyer'&&actionId==='action_destroyer_kill'?'dead':"";
       if(expectedType&&type!==expectedType)
         return j({ok:false,error:"NIGHT_ACTION_TYPE_MISMATCH"},409);
       if(roleId==="role_snow_wolf"&&actionId==="action_snow_wolf_freeze"&&targets.includes(actorId))
@@ -2368,11 +2374,12 @@ export class RoomDurableObject extends DurableObject {
           actorId,roleId,actionId:String(hit.actionId),eventId,usedAt:hit.createdAt});
         known.add(eventId);
       }
+      const ruleTargets=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?inspectIds:targets;
       const decision=checkBattleRoleActionUsage(currentUsage,{matchId,
-        night:Number(meta.cycleNight||1),actorId,roleId,actionId,policy});
+        night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:ruleTargets,policy});
       if(!decision.ok)return j({ok:false,error:decision.error,
         message:decision.message||"Hành động không được phép theo luật vai trò."},409);
-      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:targets,
+      roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:ruleTargets,
         eventId:token,usedAt:new Date().toISOString(),currentUsage};
     }
     const undoKey="battleLastAction:"+matchId,
@@ -2393,8 +2400,14 @@ export class RoomDurableObject extends DurableObject {
     // actor's normal action, but never applies gameplay effects to those targets.
     const isFactionCompare=String(body?.actionId||'')==='action_compare_faction';
     // Observation is not a harmful effect: Exile must not suppress faction comparison.
-    const effectiveTargets=isFactionCompare?targets:targets.filter(id=>!isExpelled(id));
-    for(const id of targets){
+    let actionTargets=targets;
+    if(roleUse?.roleId==='role_destroyer'&&body.actionId==='action_destroyer_kill'&&!targets.some(isExpelled)){
+      const assigned=await this.ctx.storage.get('assignments')||[];
+      const succeeds=targets.every(id=>assigned.some(row=>normalizeLoginId(row.loginId)===id&&['role_seer','role_witch','role_hunter','role_guard','role_assassin'].includes(row.roleId)));
+      if(!succeeds)actionTargets=[actorId];
+    }
+    const effectiveTargets=isFactionCompare?actionTargets:actionTargets.filter(id=>!isExpelled(id));
+    for(const id of actionTargets){
       if(isFactionCompare){
         results.push({ok:true,loginId:id,observed:true});continue;
       }

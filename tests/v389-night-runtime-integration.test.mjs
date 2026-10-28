@@ -45,9 +45,69 @@ const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMetho
   isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles,
   partitionNightSpecialRoles,witchSaveTargetAllowed,inheritedRolePlans,buildPrivateDeliverySnapshot,
   drunkDeadCards,drunkDeckView,isPassiveInformationAction,
+  gameLabelKey:vm.runInNewContext(source.match(/function gameLabelKey\(v\)\{[^\n]+/)[0]+";gameLabelKey"),
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
+test('card audit: DO self-target refusal leaves ledgers untouched',async()=>{
+ const h=harness({artifact:false});await h.jump('role');
+ h.data.set('roles:alice',[{roleId:'seer',matchId:'test-match',roleCard:{functions:[{actionId:'inspect',phase:'night',targetCount:1,noSelf:true}]}}]);
+ const rt=await h.runtime(),meta=await h.meta();
+ const r=await result(await h.room.gmBattleAction(null,{turnId:rt.currentId,actorId:'alice',type:'effect_notice',actionId:'inspect',targetIds:['alice'],matchId:meta.matchId,cycleKey:meta.cycleKey,clientEventId:'audit-self'}));
+ assert.equal(r.error,'ACTION_SELF_TARGET_FORBIDDEN');assert.equal(h.data.has('battleRoleUsage:test-match'),false);assert.equal(h.data.has('interactions'),false);
+});
+test('card audit: Seer validates observed targets, not self-notice recipient',async()=>{
+ const h=harness({artifact:false});await h.jump('role');
+ h.data.set('roles:alice',[{roleId:'seer',matchId:'test-match',roleCard:{functions:[{actionId:'action_seer',phase:'night',targetCount:1,noSelf:true}]}}]);
+ const rt=await h.runtime(),m=await h.meta(),b={turnId:rt.currentId,actorId:'alice',type:'effect_notice',actionId:'action_seer',targetIds:['alice'],revealTargetIds:['alice'],matchId:m.matchId,cycleKey:m.cycleKey,clientEventId:'audit-seer-self'};
+ assert.equal((await result(await h.room.gmBattleAction(null,b))).error,'ACTION_SELF_TARGET_FORBIDDEN');
+ assert.equal((await result(await h.room.gmBattleAction(null,{...b,revealTargetIds:['bob'],clientEventId:'audit-valid'}))).ok,true);
+ assert.deepEqual(Array.from(h.data.get('battleRoleUsage:test-match')[0].targetIds),['bob']);
+});
+test('card audit: canonical Bear God resolves and obeys two-use game quota',async()=>{
+ const h=harness({artifact:false});Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
+ h.data.set('assignments',[{loginId:'alice',roleId:'role_bear_god',faction:'village'},{loginId:'bob',roleId:'role_wolf',faction:'wolf'},{loginId:'carol',roleId:'role_villager',faction:'village'}]);
+ h.data.set('roles:alice',[{roleId:'role_bear_god',matchId:'test-match',roleCard:{functions:[{actionId:'action_bear_scan',phase:'day',targetCount:2,noSelf:true,usageMode:'custom',usageCount:2}]}}]);
+ const b={matchId:'test-match',cycleKey:'morning-1',actorId:'alice',roleId:'role_bear_god',actionId:'action_bear_scan',targetIds:['bob','carol'],clientEventId:'audit-bear'};
+ const r=await result(await h.room.gmDayAction(null,b));assert.equal(r.ok,true);assert.equal(r.result.hasWolf,true);
+ h.data.set('dayRoleUsage:test-match',[1,2].map(day=>({actorId:'alice',roleId:'role_bear_god',artifactId:'',actionId:'action_bear_scan',day})));
+ Object.assign(h.data.get('meta'),{cycleNight:3,cycleKey:'morning-3'});
+ assert.equal((await result(await h.room.gmDayAction(null,{...b,cycleKey:'morning-3',clientEventId:'audit-exhausted'}))).error,'DAY_ROLE_QUOTA_REACHED');
+});
+test('card audit: dead_vote Artifact ID cannot be mistaken for kill or charged',async()=>{
+ const h=harness({artifact:false});Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
+ h.data.set('artifact:alice',{artifactId:'unknown',matchId:'test-match',artifactCard:{functions:[{actionId:'artifact_action_dead_vote',phase:'day',targetCount:1,noSelf:false}]}});
+ const r=await result(await h.room.gmDayAction(null,{matchId:'test-match',cycleKey:'morning-1',actorId:'alice',artifactId:'unknown',actionId:'artifact_action_dead_vote',targetIds:['bob'],clientEventId:'audit-vote'}));
+ assert.equal(r.error,'DAY_ARTIFACT_EFFECT_NOT_IMPLEMENTED');assert.equal(h.data.has('artifactUse:alice:unknown'),false);assert.equal(h.data.has('interactions'),false);
+});
+test('card audit: night Artifact checks function phase and self placeholder for no-target',async()=>{
+ const h=harness();await h.jump('early-artifact-window');h.data.get('artifact:alice').artifactCard={actions:[{id:'copy',targetCount:0,noSelf:true}],functions:[{actionId:'copy',phase:'day',noTarget:true,targetCount:0,noSelf:true}]};
+ assert.equal((await result(await h.act({targetIds:['alice'],loginId:'alice'}))).error,'ARTIFACT_ACTION_WRONG_PHASE');assert.equal(h.data.has('artifactUse:alice:mirror'),false);
+ h.data.get('artifact:alice').artifactCard.functions[0].phase='any';assert.equal((await result(await h.act({targetIds:['alice'],loginId:'alice'}))).ok,true);
+});
+test('card audit: partial legacy functions retain explicit action target rules',async()=>{
+ const h=harness();await h.jump('early-artifact-window');h.data.get('artifact:alice').artifactCard=sanitizePlayerArtifactCard({actions:[{id:'copy',targetCount:2,noSelf:false}],functions:[{actionId:'copy'}]});
+ assert.equal((await result(await h.act({targetIds:['alice','bob'],loginId:'alice'}))).ok,true);
+});
+test('card audit: legacy day functions retain action phase and target rules',async()=>{
+ const h=harness({artifact:false});Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
+ h.data.set('artifact:alice',{artifactId:'legacy',matchId:'test-match',artifactCard:sanitizePlayerArtifactCard({actions:[{id:'action_day_kill',phase:'day',targetCount:1,noSelf:false}],functions:[{actionId:'action_day_kill'}]})});
+ const r=await result(await h.room.gmDayAction(null,{matchId:'test-match',cycleKey:'morning-1',actorId:'alice',artifactId:'legacy',actionId:'action_day_kill',targetIds:['bob'],clientEventId:'legacy-day'}));
+ assert.equal(r.ok,true,JSON.stringify(r));assert.equal(h.data.get('interactions').filter(x=>x.type==='dead'&&x.loginId==='bob').length,1);
+});
+test('card audit: forged lethal divination is rejected before writes',async()=>{
+ const h=harness({artifact:false});await h.jump('role');h.data.set('roles:alice',[{roleId:'seer',matchId:'test-match',roleCard:{functions:[{actionId:'action_seer',phase:'night',targetCount:1,noSelf:true}]}}]);
+ const rt=await h.runtime(),m=await h.meta();const r=await result(await h.room.gmBattleAction(null,{turnId:rt.currentId,actorId:'alice',type:'dead',actionId:'action_seer',targetIds:['bob'],matchId:m.matchId,cycleKey:m.cycleKey,clientEventId:'audit-forge'}));
+ assert.equal(r.error,'NIGHT_ACTION_TYPE_MISMATCH');assert.equal(h.data.has('interactions'),false);assert.equal(h.data.has('battleRoleUsage:test-match'),false);
+});
+test('card audit: Destroyer kills listed roles, otherwise itself despite immunity',async()=>{
+ for(const targetRole of ['role_guard','role_villager']){
+ const h=harness({artifact:false});h.data.set('assignments',[{loginId:'alice',roleId:'role_destroyer',faction:'third'},{loginId:'bob',roleId:targetRole,faction:'village'}]);
+ h.data.set('roles:alice',[{roleId:'role_destroyer',matchId:'test-match',roleCard:{flags:{nightImmune:true},functions:[{actionId:'action_destroyer_kill',phase:'night',targetCount:1,noSelf:true}]}}]);h.data.set('gameConfig',{roles:[{roleId:'role_destroyer'}]});
+ const first=await h.runtime();await h.room.gmTurn(null,{action:'jump',targetIndex:first.queue.findIndex(x=>x.roleId==='role_destroyer')});const m=await h.meta(),rt=await h.runtime();
+ const r=await result(await h.room.gmBattleAction(null,{turnId:rt.currentId,actorId:'alice',type:'dead',actionId:'action_destroyer_kill',targetIds:['bob'],matchId:m.matchId,cycleKey:m.cycleKey,clientEventId:'audit-destroyer'}));
+ assert.equal(r.ok,true,JSON.stringify(r));assert.deepEqual(h.data.get('interactions').filter(x=>x.pendingDeath).map(x=>x.loginId),[targetRole==='role_guard'?'bob':'alice']);}
+});
 function harness({artifact=true,auto=false,singleUse=false}={}){
   const data=new Map(),room=new Room(),events=[];
   const storage={get:async key=>clone(data.get(key)),put:async(key,value)=>data.set(key,clone(value)),delete:async key=>data.delete(key),
@@ -227,7 +287,8 @@ test('invalid multi-target selection leaves Artifact unused',async()=>{
 test('GM delivery preserves configured Artifact target limits through the card payload',()=>{
   const gmSource=fs.readFileSync('server-game/current/app.js','utf8');
   const definition=gmSource.slice(gmSource.indexOf('function playArtifactCardPayload('),gmSource.indexOf('async function playBlobDataUrl('));
-  const payload=vm.runInNewContext('const state={actions:{artifacts:[]}};'+definition+'; playArtifactCardPayload');
+  const helper=gmSource.slice(gmSource.indexOf('function playFunctionRulePayload('),gmSource.indexOf('function playRoleCardPayload('));
+  const payload=vm.runInNewContext('const state={actions:{artifacts:[]}};'+helper+definition+'; playArtifactCardPayload');
   const card=payload({id:'stone',name:'Đá Đổi Vai Trò',functions:[{actionId:'swap',targetCount:2,noSelf:false,allowDead:true}]});
   assert.equal(card.actions[0].targetCount,2);
   assert.equal(card.actions[0].noSelf,false);

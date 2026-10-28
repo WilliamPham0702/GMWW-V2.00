@@ -906,6 +906,16 @@ function applyApprovedRoleSettings(s){
       Object.assign(fn,contract);
     }
   };
+  // User ruling 28/10: Aura reads the Role name (V1.11), not function names.
+  update('role_aura_seer',{
+    information:'Trong 4 đêm đầu tiên, bạn có tổng cộng 2 lần sử dụng chức năng để đọc tên Vai Trò của một Người Chơi.',
+    limits:'Tối đa 2 lần trong 4 đêm đầu.',
+    conditions:'Kết quả là tên Vai Trò của người được soi, theo luật V1.11 đã chốt.'
+  },[['action_aura_read',{description:'Đọc tên Vai Trò của người được soi.'}]]);
+  for(const a of Array.isArray(s.artifacts)?s.artifacts:[]){
+    if(a.id==='artifact_23')a.information='Sao chép chức năng của một người, bổ sung thành chức năng số 2. Người nhận được cấp lại đầy đủ lượt sử dụng mới cho chức năng sao chép.';
+    if(a.id==='artifact_40')a.information='Hoán đổi vai trò của bản thân với một người chơi khác. Người nhận Vai Trò được cấp lại đầy đủ lượt sử dụng mới.';
+  }
   update('role_old_witch',{
     information:'Mỗi đêm sau Bầy Sói nhận diện, Phù Thuỷ Già được chọn một trong hai: Đuổi hoặc Hồi Sinh. Đuổi người khiến các tác động lên họ không có hiệu lực. Hồi Sinh chỉ được dùng một lần cả ván, cho người chết ngày hoặc đêm liền trước và không được tự cứu.',
     limits:'Mỗi đêm chỉ thực hiện Đuổi hoặc Hồi Sinh, không cả hai. Hồi Sinh 1 lần trong ván.',
