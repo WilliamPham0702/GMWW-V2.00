@@ -875,6 +875,17 @@ export class RoomDurableObject extends DurableObject {
       nominations:{},votes:{},blocked:[],blockedNomination:[],blockedVotes:[],mode:"auto",eligible:[],outcome:null};
     const players=await this.ctx.storage.get("players")||{};
     const interactions=await this.ctx.storage.get("interactions")||[];
+    const assignments=await this.ctx.storage.get("assignments")||[];
+    const saveOnlyVoters=assignments.filter(x=>x.roleId==='role_peace_lover')
+      .map(x=>normalizeLoginId(x.loginId));
+    const crowActors=new Set(assignments.filter(x=>x.roleId==='role_crow')
+      .map(x=>normalizeLoginId(x.loginId)));
+    const crowMarks=interactions.filter(x=>x.actionId==='action-g7-crow-votes'&&
+      x.type==='effect_notice'&&x.undone!==true&&x.noEffect!==true&&
+      String(x.matchId||'')===String(meta.matchId||'')&&
+      Number(x.night)===Number(meta.cycleNight)&&
+      crowActors.has(normalizeLoginId(x.actorId)))
+      .map(x=>normalizeLoginId(x.loginId));
     const aliveNow=Object.values(players).filter(p=>p?.kind==="member"&&normalizeLoginId(p?.loginId))
       .map(p=>normalizeLoginId(p.loginId)).filter(loginId=>!interactions.some(row=>
         normalizeLoginId(row?.loginId)===loginId&&row?.effectActive!==false&&
@@ -890,7 +901,7 @@ export class RoomDurableObject extends DurableObject {
     // has a valid Save/Kill vote, including in older persisted ballots.
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow;
-    let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+    let current={...ballot,eligible,saveOnlyVoters,crowMarks,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
     const now=Date.now();
@@ -2439,6 +2450,7 @@ export class RoomDurableObject extends DurableObject {
         roleId==="role_guard"&&actionId==="action_protect"?"effect_notice":
         roleId==="role_wolf_hunter"&&actionId==="action_hunter_mark"?"effect_notice":
         roleId==="role_hunter"&&actionId==="action_hunt"?"effect_notice":
+        roleId==="role_crow"&&actionId==="action-g7-crow-votes"?"effect_notice":
         roleId==="role_fairy"&&actionId==="action_transfer_bite"?"effect_notice":
         ['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?"effect_notice":
         roleId==='role_destroyer'&&actionId==='action_destroyer_kill'?'dead':"";

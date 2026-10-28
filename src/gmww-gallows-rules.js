@@ -69,7 +69,10 @@ export function gallowsAutomaticNominee(ballot){
 export function gallowsVoteTotals(ballot){
   const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedVotes(ballot));
   const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&voter!==String(ballot?.candidateId||'')&&!blocked.has(voter)&&['👍','👎'].includes(choice));
-  return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length,cast:votes.length,
+  // Each confirmed Crow mark contributes exactly two adverse votes only
+  // when its target reaches the gallows; these aren't fabricated voters.
+  const crowPenalty=(ballot?.crowMarks||[]).filter(id=>id===String(ballot?.candidateId||'')).length*2;
+  return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length+crowPenalty,cast:votes.length,
     eligible:[...eligible].filter(id=>id!==String(ballot?.candidateId||'')&&!blocked.has(id)).length};
 }
 export function gallowsAutomaticOutcome(ballot){
@@ -146,6 +149,8 @@ export function gallowsCast(ballot,voter,choice,now=Date.now()){
   if(ballot.stage!=='voting'||now>=ballot.deadlineAt)return {ok:false,error:'VOTE_DEADLINE_PASSED'};
   if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(gallowsBlockedVotes(ballot).includes(voter))return {ok:false,error:'VOTER_BANNED'};
+  if(choice==='👎'&&(ballot?.saveOnlyVoters||[]).includes(voter))
+    return {ok:false,error:'PEACE_LOVER_KILL_VOTE_FORBIDDEN'};
   if(!(ballot.eligible||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(ballot.votes?.[voter])return ballot.votes[voter]===choice?{ok:true,idempotent:true,value:ballot}:{ok:false,error:'VOTE_ALREADY_USED'};
   return {ok:true,value:{...ballot,votes:{...(ballot.votes||{}),[voter]:choice},updatedAt:now}};
@@ -193,6 +198,8 @@ export function gallowsManualVote(ballot,voter,choice,now=Date.now()){
     return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(!['👍','👎',null].includes(choice))return {ok:false,error:'INVALID_VOTE'};
+  if(choice==='👎'&&(ballot?.saveOnlyVoters||[]).includes(voter))
+    return {ok:false,error:'PEACE_LOVER_KILL_VOTE_FORBIDDEN'};
   const votes={...(ballot.votes||{})};
   if(choice===null)delete votes[voter];else votes[voter]=choice;
   return {ok:true,value:{...ballot,votes,updatedAt:now}};
