@@ -14,7 +14,7 @@ import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlaye
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
 import { resolveWolfNight, readNightAssignments, isNightImmune, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
-import { wolfPackMembers, shouldWakeWolfPack, privateWolfRecognition } from "./gmww-wolf-recognition.js";
+import { wolfPackMembers, shouldWakeWolfPack, privateWolfRecognition, privateRoleGroupRecognition } from "./gmww-wolf-recognition.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -2992,8 +2992,10 @@ export class RoomDurableObject extends DurableObject {
     // pack role labels. Never copy names or faction into public room or websocket.
     const wolfRuntime=String(meta.cyclePhase)==="night"&&Number(meta.cycleNight)>0?
       await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
+    const privateAssignments=(await this.ctx.storage.get("assignments"))||[];
     const wolfRecognition=privateWolfRecognition(meta,wolfRuntime,loginId,
-      wolfPackMembers(await this.ctx.storage.get("assignments")||[],rows,meta.matchId));
+      wolfPackMembers(privateAssignments,rows,meta.matchId))||
+      privateRoleGroupRecognition(meta,wolfRuntime,loginId,privateAssignments,rows);
     const turn=wolfRuntime?.queue?.[wolfRuntime.cursor];
     // Public role call only. Never reveal the actor, role owner or hidden target.
     const audioCue=String(meta.phase)==="running"?
