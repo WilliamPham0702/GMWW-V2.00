@@ -7,7 +7,7 @@ import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes,gallowsSetDuration,gallowsCloseNomination} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes,gallowsSetDuration,gallowsCloseNomination,resolveFoolGallows} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -900,6 +900,10 @@ export class RoomDurableObject extends DurableObject {
         ["dead","expelled"].includes(String(row.type))));
     // An Artifact's vote ban is server-enforced and cannot be removed via GM toggle.
     // Restrict to this calendar/game day; previous nights never leak into new voting.
+    const foolVoteBans=[...new Set(interactions.filter(row=>
+      row?.effectActive!==false&&row?.actionId==='action-fool-escape'&&
+      String(row?.matchId||'')===String(meta.matchId||''))
+      .map(row=>normalizeLoginId(row.loginId)).filter(Boolean))];
     const artifactVoteBans=[...new Set(interactions.filter(row=>row?.effectActive!==false&&
       row?.artifactId&&String(row?.type)==='status'&&String(row?.statusId)==='vote_ban'&&
       (!row.matchId||String(row.matchId)===String(meta.matchId))&&
@@ -908,7 +912,7 @@ export class RoomDurableObject extends DurableObject {
     // has a valid Save/Kill vote, including in older persisted ballots.
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow;
-    let current={...ballot,eligible,saveOnlyVoters,doubleVoteVoters,crowMarks,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+    let current={...ballot,eligible,saveOnlyVoters,doubleVoteVoters,crowMarks,foolVoteBans,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
     const now=Date.now();
@@ -919,9 +923,26 @@ export class RoomDurableObject extends DurableObject {
         if(closed.ok){current=closed.value;changed=true}
       }
       if(current.stage==="voting"&&now>=Number(current.deadlineAt||Infinity)){
-        const decision=gallowsAutomaticOutcome(current),done=gallowsResolve(current,decision,now);
+        const proposed=gallowsAutomaticOutcome(current),
+          fool=resolveFoolGallows({candidateId:current.candidateId,outcome:proposed,
+            assignments,interactions,matchId:String(meta.matchId)});
+        const decision=fool.outcome,done=gallowsResolve(current,decision,now);
         if(done.ok){
           current=done.value;changed=true;
+          if(fool.escaped){
+            const id="fool-escape:"+String(meta.matchId)+":"+current.candidateId;
+            if(!interactions.some(x=>x.id===id)){
+              const event={id,type:"status",statusId:"fool_vote_ban",
+                loginId:current.candidateId,actionId:"action-fool-escape",
+                matchId:String(meta.matchId),night:Number(meta.cycleNight),
+                cycleKey:String(meta.cycleKey),effectActive:true,source:"gallows",
+                createdAt:new Date(now).toISOString(),
+                message:"Kẻ Ngốc sống sót lần treo đầu nhưng mất quyền bỏ phiếu."};
+              interactions.push(event);
+              await this.ctx.storage.put(this.actionLogKey(event),event);
+              await this.ctx.storage.put("interactions",pruneInteractions(interactions));
+            }
+          }
           if(decision==="dead"){
             const rows=await this.ctx.storage.get("interactions")||[],loginId=current.candidateId;
             if(!rows.some(row=>normalizeLoginId(row.loginId)===loginId&&row.effectActive!==false&&
@@ -993,6 +1014,25 @@ export class RoomDurableObject extends DurableObject {
         gallowsMode(ballot)==='gm'?
           gallowsManualResolve(ballot,target,String(body?.outcome||''),now):
           gallowsResolve(ballot,String(body?.outcome||''),now);
+      if(result.ok&&result.value.outcome==="dead"){
+        const currentRows=await this.ctx.storage.get("interactions")||[],
+          assigned=await this.ctx.storage.get("assignments")||[],
+          fool=resolveFoolGallows({candidateId:result.value.candidateId,outcome:"dead",
+            assignments:assigned,interactions:currentRows,matchId:String(meta.matchId)});
+        if(fool.escaped){
+          const loginId=result.value.candidateId,id="fool-escape:"+String(meta.matchId)+":"+loginId;
+          result.value={...result.value,outcome:"alive"};
+          if(!currentRows.some(x=>x.id===id)){
+            const event={id,type:"status",statusId:"fool_vote_ban",loginId,
+              actionId:"action-fool-escape",matchId:String(meta.matchId),
+              night:Number(meta.cycleNight),cycleKey:String(meta.cycleKey),
+              effectActive:true,createdAt:new Date(now).toISOString(),source:"gallows",
+              message:"Kẻ Ngốc lần đầu lên giàn được tha nhưng mất quyền bỏ phiếu."};
+            currentRows.push(event);await this.ctx.storage.put(this.actionLogKey(event),event);
+            await this.ctx.storage.put("interactions",pruneInteractions(currentRows));
+          }
+        }
+      }
       if(result.ok&&result.value.outcome==="dead"){
         const rows=await this.ctx.storage.get("interactions")||[],loginId=result.value.candidateId;
         if(!rows.some(x=>normalizeLoginId(x.loginId)===loginId&&x.effectActive!==false&&

@@ -11,7 +11,7 @@ export const gallowsMode=ballot=>ballot?.mode==='gm'?'gm':'auto';
 // The legacy `blocked` list meant "ban from voting". Preserve that interpretation.
 export const gallowsBlockedNomination=ballot=>unique(ballot?.blockedNomination);
 export const gallowsGmBlockedVotes=ballot=>unique([...(ballot?.blockedVotes||[]),...(ballot?.blocked||[])]);
-export const gallowsBlockedVotes=ballot=>unique([...gallowsGmBlockedVotes(ballot),...(ballot?.artifactVoteBans||[])]);
+export const gallowsBlockedVotes=ballot=>unique([...gallowsGmBlockedVotes(ballot),...(ballot?.artifactVoteBans||[]),...(ballot?.foolVoteBans||[])]);
 export const gallowsStage=(ballot,now=Date.now())=>{
   if(ballot?.stage==='nominating'&&ballot.nominationDeadlineAt&&now>=ballot.nominationDeadlineAt)return 'selecting';
   if(ballot?.stage==='voting'&&now>=ballot.deadlineAt)return 'closed';
@@ -79,6 +79,19 @@ export function gallowsVoteTotals(ballot){
   return {save:votes.filter(([,choice])=>choice==='👍').reduce((sum,v)=>sum+weight(v),0),
     kill:votes.filter(([,choice])=>choice==='👎').reduce((sum,v)=>sum+weight(v),0)+crowPenalty,cast:votes.length,
     eligible:[...eligible].filter(id=>id!==String(ballot?.candidateId||'')&&!blocked.has(id)).length};
+}
+// Kẻ Ngốc survives only the FIRST execution; from then on cannot vote,
+// but remains eligible to be nominated and can die on a later execution.
+export function resolveFoolGallows({candidateId,outcome,assignments=[],interactions=[],matchId}={}){
+  const target=String(candidateId||''),match=String(matchId||'');
+  if(outcome!=='dead'||!target||!match)return {outcome,escaped:false};
+  const role=(Array.isArray(assignments)?assignments:[]).find(x=>
+    String(x.loginId||'').replace(/^member:/,'')===target);
+  if(role?.roleId!=='role_fool')return {outcome,escaped:false};
+  const previously=(Array.isArray(interactions)?interactions:[]).some(x=>
+    String(x.matchId||'')===match&&x.actionId==='action-fool-escape'&&
+    String(x.loginId||'').replace(/^member:/,'')===target);
+  return previously?{outcome:'dead',escaped:false}:{outcome:'alive',escaped:true};
 }
 export function gallowsAutomaticOutcome(ballot){
   const tally=gallowsVoteTotals(ballot);
