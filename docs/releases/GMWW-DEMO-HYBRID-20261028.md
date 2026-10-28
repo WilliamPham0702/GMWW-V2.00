@@ -23,3 +23,9 @@
 - Thay đổi Worker + Player Web trên cùng phiên bản Server, không đổi IPA/Native shell, không đổi schema DO, không xóa dữ liệu.
 - Chỉ merge/deploy sau khi CI bắt buộc SUCCESS và chủ dự án duyệt phát hành.
 - Rollback: deploy lại commit Production trước PR; các trường `humanControlled` là bổ sung tương thích, các ván lịch sử vẫn giữ nguyên.
+
+## Phiên bản phát hành
+- Runtime/Server/Player Web: **V3.265**; phiên bản cũ V3.264.
+- IPA Shell: **V3.264**, không build/cập nhật IPA, không thay đổi Native.
+- Tối ưu tương thích: cập nhật cơ chế vá lá bài riêng tư để Player Web không trả lỗi HTTP 500 với bảng thao tác DEMO mới.
+- Sau CI SUCCESS: tạo gói OTA versioned V3.265, manifest SHA-256, xác minh endpoint Production và giữ rollback V3.264.
