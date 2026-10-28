@@ -1,25 +1,19 @@
-# Player Web Online trên nền Làng — 28/10/2026 (Ứng viên)
+# GMWW Runtime V3.273 — Player Web Online trên nền Làng
 
-## Đã triển khai trên nhánh riêng
-- Giữ nguyên màn hình làng đang chơi, không tự mở trang lá bài khi phát Vai Trò. Mở lá đầy đủ khi chọn lá mini.
-- Khi phòng Online chạy, hiển thị lá Vai Trò và Artifact của chính người chơi ở phía trên, dưới menu Timeline, kích thước bề ngang tối đa 25% lá chuẩn.
-- Chat 💬 không hộp nền, nằm ở giữa menu dưới. Chạm mở; chạm ngoài hoặc 30 giây không tương tác đóng. Khung Chat thu gọn có vùng xem lịch sử cuộn.
-- Timeline của Player Web sử dụng phase và audioCue lấy qua API riêng /me, không tiết lộ chủ nhân các lượt bí mật. Thông báo audio hiện dùng giọng đọc Player Web, không giả định đã phát đúng file audio gốc từ GM.
-- Nhãn Vai Trò của chính người chơi luôn hiện trên nhân vật trong ván. Đồng đội cùng một nhóm Vai Trò được phép thấy nhau chỉ khi đang cùng lượt có từ hai thành viên hợp lệ, Server cấp riêng qua /me; không chuyển quyền riêng tư qua public WebSocket.
-- Menu trên và icon Chat ẩn khi không có tương tác sau 30 giây, chạm vào làng mở lại.
+## Phạm vi PR #596
+- Giữ Player Web ở làng hiện hành sau khi phát lá, không tạo một màn chơi Online riêng. Lá Vai Trò và Artifact riêng thu nhỏ ở phía dưới Timeline; khi chạm mới mở lá lớn.
+- Chat 💬 đặt trong dock dưới, chạm để mở; vùng tin nhắn có cuộn; chạm ngoài hoặc quá 30 giây không hoạt động sẽ đóng. Menu trên và dock hành động cũng thu gọn sau 30 giây.
+- Player Web nhận vai trò của chính mình và nhãn đồng đội đúng nhóm, đúng lượt từ API riêng theo session; không đưa vai trò bí mật lên dữ liệu công khai.
+- Icon hành động kéo thả/chạm trong làng, Server cấp danh sách được dùng theo người đăng nhập, lượt, phiên, giới hạn và mục tiêu. Backend dùng chung GM battle/day handlers; không cấp quyền GM cho Player Web. Kích thước icon lấy từ cài đặt GM đã đồng bộ.
+- Timeline và audio cue đọc từ Server theo giai đoạn, không lộ actor bí mật. Player Web hiện sử dụng TTS theo cue, chưa phát nguyên tệp audio đã nạp trên thiết bị GM.
+- Giữ nguyên DEMO lai, GM Chat 🦩 và ba hành động GM của Runtime V3.272, IPA Native V3.264, Durable Objects, dữ liệu người chơi và lịch sử.
 
-## Chưa đạt / Không phát hành
-- Icon hành động Online dạng kéo thả giống GM cần cơ chế cấp action offer và thực thi Server xác thực riêng cho từng Vai Trò; phần executor 107 lá còn ở PR #584.
-- Timeline chưa dựng đầy đủ mọi ô/hành động của GM và audio vẫn là announcement cue + TTS, chưa đạt đồng bộ byte audio gốc.
-- Chưa kiểm thử thiết bị iPhone thật, chưa xác nhận CI và chưa phát hành Production/OTA.
-- Không thay đổi IPA hay xoá dữ liệu/phòng lịch sử.
+## Giới hạn cần tiếp tục
+- 107 Vai Trò/Artifact và các tác động đan xen phụ thuộc việc hoàn thiện executor tại PR #584; không nhận là đã đạt 100%.
+- Audio tệp gốc GM không được đưa lên kho riêng cho Player Web, hiện chỉ đồng bộ lời gọi/cue và trạng thái. Không gọi đây là đồng bộ audio tệp gốc.
+- Cần nghiệm thu thực tế iPhone và nhiều Player Web Online sau phát hành.
 
-## Kiểm thử đúng phạm vi
-```bash
-node --test tests/player-web-online-village-20261028.test.mjs tests/online-chat-authority.test.mjs
-node .github/scripts/assemble-player-web.mjs --verify
-node --check src/index.js
-node --check src/gmww-members-live.js
-```
-
-Rollback: revert PR sau khi merge (nếu đủ điều kiện). Production Runtime V3.271, OTA và IPA hiện hành giữ nguyên cho tới khi có bản phát hành đạt kiểm chứng.
+## Kiểm tra trước khi phát hành
+- CI phạm vi Player Web Online V3.273, kiểm thử bảo mật, DEMO không hồi quy, đồng nhất bundle, phiên bản Worker/GM/manifest.
+- Chỉ phát hành khi CI bắt buộc SUCCESS và GitHub merge an toàn với main V3.272; kiểm tra thông số Production cùng checksum SHA-256 của Runtime OTA. Không thay đổi IPA.
+- Rollback: chuyển lại Runtime V3.272 đã phát hành qua cơ chế versioned OTA; giữ dữ liệu/phòng/lịch sử nguyên vẹn.
