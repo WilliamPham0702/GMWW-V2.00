@@ -128,7 +128,8 @@ jobs:
     name: "GĐ14–34: STAGING, WebKit/Chrome, Core 30"
     needs: verify-stage14
     if: >-
-      github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' &&
+      (github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' ||
+      github.ref == 'refs/heads/feature/arena3d-g39-main-first-candidate') &&
       ((github.event_name == 'workflow_dispatch' && inputs.deploy_stage14 == true) ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-arena3d-staging]')))
     runs-on: ubuntu-latest
