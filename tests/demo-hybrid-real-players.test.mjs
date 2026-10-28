@@ -63,8 +63,8 @@ test('new DEMO action endpoint delegates to the same authoritative GM handlers',
 test('DEMO public broadcasts hide secret night action identity',()=>{
   assert.match(runner,/demoEvent:\{id:event\.id,matchId:event\.matchId,/);
   assert.doesNotMatch(runner,/demoEvent:publicEvent/);
-  assert.match(worker,/if\\(meta\\.demo!==true\\)this\\.broadcast\\(\\{type:"player_interaction",interaction\\}\\)/);
-  assert.match(worker,/if\\(meta\\.demo!==true\\)this\\.broadcast\\(\\{type:"player_interaction_response"/);
+  assert.ok(worker.includes('if(meta.demo!==true)this.broadcast({type:"player_interaction",interaction})'));
+  assert.ok(worker.includes('if(meta.demo!==true)this.broadcast({type:"player_interaction_response"'));
   assert.doesNotMatch(worker,/notifyPrivateMember/,'WebSocket participantId is not a private authentication token');
   assert.match(worker,/this\.broadcast\(meta\.demo===true\?\{type:"battle_action_confirmed",matchId,serverTime:Date\.now\(\)\}/);
 });
