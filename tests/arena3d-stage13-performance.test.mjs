@@ -9,7 +9,7 @@ test('GĐ13 low-end mobile: 3 consecutive slow VISIBLE GPU frames enter eco tier
  assert.equal(q.observe(830,true),false);
  assert.equal(q.observe(1240,true),true);
  const tier=renderQualityBudget({characters:30,lowPower:q.lowPower,fps:2});
- assert.equal(tier.tier,'eco');assert.equal(tier.pixelRatioCap,1);
+ assert.equal(tier.tier,'eco');assert.equal(tier.pixelRatioCap,.85);
 });
 test('GĐ13 single sleep/long frame, hidden tab or debugger pause do NOT force eco',()=>{
  const q=createArenaAdaptiveQuality({severeFrames:3});
