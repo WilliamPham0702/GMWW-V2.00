@@ -24,4 +24,12 @@ for(const file of ['app.js','gmww-shared-motion.js','runtime-recovery.js','gmww-
  requireFile(file);
  if(hash(path.join(root,file))!==hash(path.join('server-game/current',file)))throw Error('Runtime hash mismatch '+file);
 }
-console.log('Verified native startup dependencies, current runtime hashes and all 40 Character assets');
+for(const legacy of ['sea-v1','v2'])if(fs.existsSync(path.join(root,'action-icons',legacy)))throw Error('Obsolete native icon folder '+legacy);
+const v3Directory=path.join(root,'action-icons','v3');
+const v3Files=fs.readdirSync(v3Directory);
+if(v3Files.length!==51||v3Files.some(name=>!name.endsWith('.webp')))throw Error('Missing active V3 icons');
+for(const name of v3Files){
+ requireFile('action-icons/v3/'+name);
+ if(hash(path.join(v3Directory,name))!==hash(path.join('server-game/current/action-icons/v3',name)))throw Error('V3 icon bytes mismatch '+name);
+}
+console.log('Verified native startup dependencies, all 40 Character assets and lean 51 V3 icons');

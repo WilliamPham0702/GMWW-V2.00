@@ -2190,7 +2190,51 @@ function isGMFireRadius3262Scope(changes){
    after('package.json').includes('"version": "3.262.0"');
 }
 
+// V3.264 native IPA + OTA optimization: fail closed on all unrelated feature changes.
+function isLeanPackaging3264Scope(changes){
+ const allowed=new Set([
+ '.github/scripts/prepare-update-channel.mjs','.github/scripts/verify-native-web.mjs',
+ '.github/scripts/ci-browser-scope.mjs','.github/workflows/build-server-game-ipa.yml',
+ '.github/workflows/check-player-web.yml','package.json','package-lock.json',
+ 'src/index.js','server-game/current/app.js','server-game/src/00-core-and-library.part',
+ 'server-game/src/10-library-and-settings.part','server-game/current/GMWW.html',
+ 'server-game/GMWW-Server.xcodeproj/project.pbxproj',
+ 'tests/manual-runtime-package.test.mjs','tests/ipa-ota-lean-assets-v3264.test.mjs',
+ 'docs/releases/GMWW-V3.264-ipa-ota-lean-assets-20261028.md']);
+ if(!Array.isArray(changes)||changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status)))return false;
+ const map=new Map(changes.map(c=>[c.path,c]));
+ const required=['.github/scripts/prepare-update-channel.mjs','.github/workflows/build-server-game-ipa.yml',
+  'src/index.js','server-game/current/app.js','server-game/src/00-core-and-library.part',
+  'server-game/src/10-library-and-settings.part','server-game/GMWW-Server.xcodeproj/project.pbxproj',
+  'tests/ipa-ota-lean-assets-v3264.test.mjs'];
+ if(!required.every(x=>map.has(x)))return false;
+ const exact=(p,oldText,newText)=>{
+  const c=map.get(p);return c?.status==='M'&&typeof c.before==='string'&&
+   typeof c.after==='string'&&c.before.includes(oldText)&&
+   c.after===c.before.replaceAll(oldText,()=>newText);
+ };
+ const audioFixed=s=>s.replaceAll("$('[data-audio-id]').forEach",()=> "$$('[data-audio-id]').forEach")
+  .replaceAll("$('[data-system-sound-slot]').forEach",()=> "$$('[data-system-sound-slot]').forEach");
+ const app=map.get('server-game/current/app.js');
+ if(!app?.before||app.after!==audioFixed(app.before.replaceAll("const VERSION='3.263';",()=> "const VERSION='3.264';")))return false;
+ const audio=map.get('server-game/src/10-library-and-settings.part');
+ if(!audio?.before||audio.after!==audioFixed(audio.before))return false;
+ if(!exact('server-game/src/00-core-and-library.part',"const VERSION='3.263';","const VERSION='3.264';"))return false;
+ if(!exact('src/index.js','VERSION="V3.263",NATIVE_SHELL_VERSION="3.257",UPDATE_CHANNEL_REV="runtime-3263"',
+  'VERSION="V3.264",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="native-3264-lean-assets"'))return false;
+ if(!exact('server-game/current/GMWW.html','<title>GMWW V3.263</title>','<title>GMWW V3.264</title>'))return false;
+ const project=map.get('server-game/GMWW-Server.xcodeproj/project.pbxproj');
+ if(!project?.before||project.after!==project.before.replaceAll('MARKETING_VERSION = 3.257;',()=> 'MARKETING_VERSION = 3.264;').replaceAll('CURRENT_PROJECT_VERSION = 3110;',()=> 'CURRENT_PROJECT_VERSION = 3264;'))return false;
+ const pack=map.get('.github/scripts/prepare-update-channel.mjs')?.after||'';
+ const native=map.get('.github/workflows/build-server-game-ipa.yml')?.after||'';
+ return pack.includes("copyDir('server-game/current/action-icons/v3','action-icons/v3')")&&
+ pack.includes('V3.264: Tối ưu IPA/Runtime OTA')&&
+ native.includes('cp -R server-game/current/action-icons/v3 "$APPDIR/Web/action-icons/v3"')&&
+ !native.includes('cp -R server-game/current/action-icons "$APPDIR/Web/action-icons"');
+}
+
 export function classifyBrowserScope(changes){
+  if(isLeanPackaging3264Scope(changes))return 'ipa-ota-lean-3264';
   if(isGMFireRadius3262Scope(changes))return 'gm-fire-radius-3262';
   if(isGMFireWalk3261Scope(changes))return 'gm-fire-walk-3261';
   if(isDrunkCardOverlayScope(changes))return 'drunk-card-overlay-20261028';
@@ -2511,6 +2555,7 @@ function detect(){
         const after=status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null;
         return{status,path,before,after};
       });
+      if(isLeanPackaging3264Scope(changes))return{mode:'ipa-ota-lean-3264',reason:'V3.264 exact IPA/OTA icon packaging and two Audio selector fixes'};
       if(isGMFireRadius3262Scope(changes))return{mode:'gm-fire-radius-3262',reason:'V3.262 exact GM campfire equal-radius motion patch'};
       if(isGMFireWalk3261Scope(changes))return{mode:'gm-fire-walk-3261',reason:'V3.261 exact GM fire walk hotfix with return home and immutable version'};
       if(isGMTurnMotionScope(changes))return{mode:'gm-turn-motion-lowheat',reason:'V3.253 exact GM motion and OTA changes only'};
