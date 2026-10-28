@@ -39,6 +39,7 @@ try {
  ok(await req('/api/rooms/'+code+'/join',{method:'POST',
    body:{token:humanToken}}),'human join');
  ok(await gm('/participants',{members:people,replace:true}),'reserve bots and preserve human');
+ for(const p of people)ok(await gm('/seat',{loginId:p.loginId,seatId:p.seatId}),'settle '+p.loginId);
  ok(await gm('/seat-lock',{locked:true}),'lock seats');
  const matchId='hybrid-match-'+serial;
  ok(await gm('/assignments',{matchId,assignments:people.map((p,i)=>({
