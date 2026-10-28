@@ -34,7 +34,7 @@ jobs:
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TESTED_SHA"
           git merge-base --is-ancestor 3e3773c5cf96fd3fff13b1dbdd0339deeca9c5d7 HEAD
           # Restrict this one-time release to the owner-approved hotfix/rollout merges.
-          git log -1 --format=%B | grep -qE 'Merge PR #599|Merge pull request #599|Merge PR #RELEASE_PR|Merge pull request #RELEASE_PR'
+          git log -1 --format=%B | grep -qE 'Merge PR #599|Merge pull request #599|Merge PR #600|Merge pull request #600'
           test "$(node -p 'require("./package.json").version')" = "3.273.0"
           test -s docs/releases/GMWW-V3.273-PLAYER-WEB-LOGIN-HOTFIX-20261029.md
           git diff --name-only HEAD^1 HEAD > /tmp/changed-files.txt
