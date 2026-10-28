@@ -762,6 +762,10 @@ const battleActions=()=>{
   // Per-player limits: another eligible member of the same waking group can
   // still act, even when one wolf/player is frozen, dead or exhausted.
   return actions.map(action=>{
+    // Sói Con: show exactly two distinct drop targets in the following
+    // Wolf Pack turn; Server rejects any other target count.
+    if(turn?.kind==='wolf-pack-bite'&&action.actionId==='action_wolf_bite')
+      action={...action,targetCount:Number(turn.targetCount||1)};
     let unavailableReason='';
     if(turn?.kind==='wolf-pack-bite'){
       const alpha=(playSceneRuntime.assignments||[]).filter(x=>x.roleId==='role_alpha_wolf');
