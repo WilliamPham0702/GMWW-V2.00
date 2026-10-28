@@ -774,7 +774,7 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node --test tests/gm-gallows-vote-markers-ui.test.mjs
 
-      - name: PR587 — DEMO lai, bảo mật Player Web và Runtime OTA V3.265
+      - name: PR587 — DEMO lai, bảo mật Player Web và Runtime OTA V3.268
         if: steps.scope.outputs.mode == 'demo-hybrid-587'
         run: |
           node --check src/index.js
