@@ -1059,7 +1059,6 @@ export class RoomDurableObject extends DurableObject {
     }else return j({ok:false,error:"DEMO_PHASE_INVALID"},409);
     if(!response.ok)return response;
     const result=await response.json();
-    this.broadcast({type:"demo_human_action",actorId:loginId,actionId:action.actionId,serverTime:Date.now()});
     // Never forward the GM undo ledger, wolf pack internals or private assignments.
     return j({ok:true,actionId:action.actionId,actorId:loginId,
       ...(result.revelation?{revelation:result.revelation}:{}),
@@ -2591,7 +2590,8 @@ export class RoomDurableObject extends DurableObject {
     const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt,
       ...(revelation?{revelation}:{}),...(wolfOutcome?{wolfOutcome}: {})};
     await this.ctx.storage.put(receiptKey,{fingerprint,result});
-    this.broadcast({type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()});
+    this.broadcast(meta.demo===true?{type:"battle_action_confirmed",matchId,serverTime:Date.now()}:
+      {type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()});
     return j(result);
   }
   async gmBattleUndo(request,body){
