@@ -55,6 +55,14 @@ jobs:
         run: |
           node --test tests/manual-runtime-package.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
+      - name: PR577 — chỉ test Say Rượu, dọn ván và luật Xếp hạng không đổi
+        if: steps.scope.outputs.mode == 'drunk-card-overlay-20261028'
+        run: |
+          node --test tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/member-ranking-games-first-v3221.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
       - name: Kiểm tra mã nguồn Worker
         run: npm run check
       - name: Kiểm tra đồng bộ phiên bản GMWW

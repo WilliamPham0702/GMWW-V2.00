@@ -2085,7 +2085,62 @@ function isGMWWAudio3258Scope(changes){
  }catch{return false}
 }
 
+// PR #577: exact match-only Say Rượu card/cleanup scope. Unknown diffs
+// fail closed to the standard full check; no general bypass is introduced.
+function isDrunkCardOverlayScope(changes){
+  const expected=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/scripts/prepare-update-channel.mjs','M'],
+    ['.github/workflows/deploy-production.yml','M'],
+    ['package.json','M'],
+    ['package-lock.json','M'],
+    ['server-game/current/GMWW.html','M'],
+    ['server-game/src/00-core-and-library.part','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['.github/workflows/check-drunk-spiritualist.yml','M'],
+    ['assets/role-card-back.webp','A'],
+    ['docs/releases/GMWW-DRUNK-CARD-OVERLAY-20261028.md','A'],
+    ['server-game/current/app.js','M'],
+    ['server-game/src/40-battle-and-timeline.part','M'],
+    ['src/gmww-members-live.js','M'],
+    ['src/index.js','M'],
+    ['src/player-web-src/30-rooms-and-realtime.part','M'],
+    ['src/player-web-src/50-privacy-and-runtime.part','M'],
+    ['tests/drunk-card-overlay-match-cleanup-20261028.test.mjs','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     changes.some(c=>expected.get(c.path)!==c.status))return false;
+  try{
+    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.260.0')return false;
+    const back=fs.readFileSync('src/player-web-src/10-role-card-artwork.part','utf8')
+      .match(/const src='data:image\/webp;base64,([A-Za-z0-9+/=]+)'/)?.[1];
+    if(!back||!fs.readFileSync('assets/role-card-back.webp').equals(Buffer.from(back,'base64')))return false;
+    const gmFiles=['00-core-and-library.part','10-library-and-settings.part',
+      '20-members-and-roster.part','30-village-and-setup.part',
+      '40-battle-and-timeline.part','50-roles-and-artifacts.part'];
+    const gm=gmFiles.map(x=>fs.readFileSync('server-game/src/'+x,'utf8')).join('');
+    if(gm!==fs.readFileSync('server-game/current/app.js','utf8'))return false;
+    const webFiles=['00-bootstrap-and-session.part','10-role-card-artwork.part',
+      '20-village-and-profile.part','30-rooms-and-realtime.part',
+      '40-cards-and-game.part','50-privacy-and-runtime.part'];
+    const web=webFiles.map(x=>fs.readFileSync('src/player-web-src/'+x,'utf8')).join('');
+    if('export const gmwwMembersLiveScript = '+JSON.stringify(web)+';\n'!==
+       fs.readFileSync('src/gmww-members-live.js','utf8'))return false;
+    const worker=fs.readFileSync('src/index.js','utf8');
+    const ui=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+    const scene=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+    return worker.includes('VERSION="V3.260"')&&worker.includes('NATIVE_SHELL_VERSION="3.257"')&&
+      fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8').includes("copy('assets/role-card-back.webp','role-card-back.webp')")&&
+      fs.readFileSync('server-game/current/GMWW.html','utf8').includes('GMWW V3.260')&&
+      worker.includes('prefix:"drunkDeck:"+endedMatchId+":"')&&
+      ui.includes("document.getElementById('game').appendChild(panel)")&&
+      scene.includes("shell.appendChild(deck)")&&
+      fs.existsSync('tests/drunk-card-overlay-match-cleanup-20261028.test.mjs');
+  }catch{return false}
+}
+
 export function classifyBrowserScope(changes){
+  if(isDrunkCardOverlayScope(changes))return 'drunk-card-overlay-20261028';
   if(isGMVote3259PostverifyScope(changes))return 'gm-vote-postverify-3259';
   if(isGMVote3259Scope(changes))return 'gm-vote-3259';
   if(isGMWWAudio3258Scope(changes))return 'gm-audio-3258';

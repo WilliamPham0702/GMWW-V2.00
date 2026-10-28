@@ -1107,39 +1107,36 @@ function battlePlayWakeupAndAdvance(turn,key){
   // optional terminal Night turn. This avoids missing or double wake-up cues.
   void battleWakeupToDay(key);
 }
+// Say Rượu deck lives inside the game page, not document.body.
 function battleRenderDrunkDraw(turn){
-  let box=document.getElementById('gmwwGmDrunkDeck');
-  const inNight=playSceneState.step==='battle'&&playSceneState.phase==='night'&&
-    Number(playSceneState.night||0)===3;
-  const draws=inNight?(playSceneRuntime.drunkDraws||[]):[];
-  if(!draws.length){if(box)box.hidden=true;return}
-  if(!box){
-    const css=document.createElement('style');css.id='gmwwGmDrunkDeckCss';
-    css.textContent='#gmwwGmDrunkDeck{position:fixed;z-index:900;right:12px;top:24%;width:min(82vw,320px);max-height:45dvh;overflow:auto;padding:10px;border-radius:16px;border:1px solid #e0bd80;background:#073448ed;color:#fff;box-shadow:0 10px 24px #0008;font-size:12px;text-align:center}'+
-      '#gmwwGmDrunkDeck[hidden]{display:none!important}#gmwwGmDrunkDeck strong{color:#ffe9ac;font-size:14px}#gmwwGmDrunkDeck .deck-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:7px 0 12px}'+
-      '#gmwwGmDrunkDeck .deck-card{position:relative;width:52px;height:72px;border-radius:7px;border:1px solid #ecc98f;background:linear-gradient(145deg,#174968,#081327);display:grid;place-content:center;color:#f4dba9}'+
-      '#gmwwGmDrunkDeck .deck-card.is-picked{border-color:#a5ffc8;background:#14594d}#gmwwGmDrunkDeck .deck-result{font-weight:900;color:#bfffd1}';
-    document.head.appendChild(css);
-    box=document.createElement('section');box.id='gmwwGmDrunkDeck';
-    document.body.appendChild(box);
+  let deck=document.getElementById('gmwwGmDrunkDeck');
+  const room=playSceneRuntime.room||{};
+  const active=playSceneState.step==='battle'&&playSceneState.phase==='night'&&
+    Number(playSceneState.night||0)===3&&String(room.phase||'')==='running'&&
+    document.getElementById('start')?.classList.contains('active')&&
+    turn?.roleId==='role_drunk';
+  const draws=active?(playSceneRuntime.drunkDraws||[]).filter(row=>
+    row?.status==='pending'&&String(row.matchId||'')===String(room.matchId||'')&&
+    (turn.loginIds||[]).map(String).includes(String(row.actorId||''))):[];
+  if(!draws.length){if(deck)deck.hidden=true;return}
+  const shell=document.getElementById('playShell');if(!shell)return;
+  if(!deck){
+    const style=document.createElement('style');style.id='gmwwGmDrunkDeckCss';
+    style.textContent='#gmwwGmDrunkDeck{position:absolute;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;pointer-events:none;background:transparent}'+
+      '#gmwwGmDrunkDeck[hidden]{display:none!important}'+
+      '#gmwwGmDrunkDeck .deck-row{max-width:96%;max-height:72dvh;overflow:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px}'+
+      '#gmwwGmDrunkDeck .deck-card{display:block;width:clamp(68px,25vw,145px);aspect-ratio:3/4;border:0;border-radius:9px;object-fit:cover;box-shadow:0 8px 20px #0018;pointer-events:none}';
+    document.head.appendChild(style);
+    deck=document.createElement('div');deck.id='gmwwGmDrunkDeck';shell.appendChild(deck);
   }
-  box.hidden=false;box.replaceChildren();
-  const title=document.createElement('strong');title.textContent='🍻 SAY RƯỢU · LÁ BÀI ĐÃ CHẾT';box.appendChild(title);
-  for(const draw of draws){
-    const name=(playSceneRuntime.players||[]).find(x=>String(x?.loginId||'')===String(draw.actorId||''))?.displayName||'Say Rượu';
-    const owner=document.createElement('p');owner.textContent=name+' · '+(draw.status==='selected'?'ĐÃ BỐC':'ĐANG CHỜ BỐC');box.appendChild(owner);
-    const grid=document.createElement('div');grid.className='deck-row';
-    for(const [i,card] of (draw.cards||[]).entries()){
-      const el=document.createElement('div');el.className='deck-card'+(card.selected?' is-picked':'');
-      el.textContent=card.selected?'✓ '+String(card.roleName||draw.selectedRoleName||'Vai Trò'):'🂠 '+(i+1);
-      grid.appendChild(el);
-    }
-    box.appendChild(grid);
-    if(draw.status==='selected'){
-      const result=document.createElement('div');result.className='deck-result';
-      result.textContent='ĐÃ NHẬN VAI: '+String(draw.selectedRoleName||'');box.appendChild(result);
-    }
+  deck.hidden=false;deck.replaceChildren();
+  const cards=document.createElement('div');cards.className='deck-row';
+  for(const draw of draws)for(const card of draw.cards||[]){
+    const img=document.createElement('img');img.className='deck-card';
+    img.src='role-card-back.webp';img.alt='Lá Vai Trò úp';img.draggable=false;
+    cards.appendChild(img);
   }
+  deck.appendChild(cards);
 }
 // Nhãn MỤC TIÊU vẫn hiển thị; không mở popup Phù Thủy riêng.
 function battleBindResultPopup(){
@@ -1820,6 +1817,7 @@ function renderPlayBattle(){
   }
   if(!visible){document.getElementById('battleFireIconDock')?.setAttribute('hidden','');battleIconClearDrag();const picker=document.getElementById('battleTargetSheet');if(picker)picker.hidden=true;const gallows=document.getElementById('battleGallowsPanel');if(gallows)gallows.hidden=true};if(!visible){const morning=document.getElementById('battleMorningReport');if(morning)morning.hidden=true}
   if(!visible){
+    battleRenderDrunkDraw(null);
     gmwwFireWalkDetach();
     battleClear();battleState.key='';battleState.details=false;battleState.clockOpen=false;battleState.quickType='';
     const menu=document.getElementById('battleWolfMenu');
