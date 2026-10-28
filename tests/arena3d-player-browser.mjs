@@ -33,10 +33,17 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
   assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_PLAYER_READONLY())).count,0);
   assert.equal(await page.locator('#player-core').getAttribute('src'),null);
   await page.locator('#open-card').click();
-  await page.waitForFunction(()=>window.__GMWW_ARENA_PLAYER_READONLY?.().cardOpen===true);
+  await page.waitForFunction(()=>window.__GMWW_ARENA_PLAYER_READONLY?.().cardOpen===true&&
+   window.__GMWW_ARENA_PLAYER_READONLY?.().renderPaused===true);
+  const before=await page.evaluate(()=>window.__GMWW_ARENA_PLAYER_READONLY().paintFrames);
+  await page.waitForTimeout(280);
+  assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_PLAYER_READONLY())).paintFrames,before,
+   'WebGL must not paint under the Core role-card iframe');
   const src=await page.locator('#player-core').getAttribute('src');
   assert.equal(src,'/join/'+roomCode);
   await page.locator('#close-card').click();
+  await page.waitForFunction(n=>window.__GMWW_ARENA_PLAYER_READONLY?.().renderPaused===false&&
+    window.__GMWW_ARENA_PLAYER_READONLY?.().paintFrames>n,before,{timeout:30000});
   assert.equal((await page.evaluate(()=>window.__GMWW_ARENA_PLAYER_READONLY())).cardOpen,false);
   assert.deepEqual(unsafeRequests,[],'Player 3D cannot request GM endpoints');
   assert.deepEqual(pageErrors,[]);
