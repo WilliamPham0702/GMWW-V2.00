@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.260';
+const VERSION='3.261';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3629,7 +3629,7 @@ function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect
   const state=hanging?'walking':travel==='back'?'running':travel==='out'?'walking':runTarget?'running':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle';
   const motion=state==='running'?'run':state==='walking'?'walk':'idle';
   return {...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,
-    facing:travel?(battleTurnFacing==='left'?'left':'right'):moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,
+    facing:(travel||battleTurnTravel==='hold')?(battleTurnFacing==='left'?'left':'right'):moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,
     paused:effect==='dead'||(battleStatic&&!hanging&&!runTarget&&!travel),lowPower:battleStatic};
 }
 function playRigTextureUrl(characterId,facing='right'){return playCharacterFrameUrl(characterId,1,facing)}
@@ -5585,7 +5585,7 @@ const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:
 // UI-only skill icon drag: server remains sole action authority. Uses the same
 // GM battleConfirm() and existing rollback token as manual target selection.
 // GM-only visual preference. Nothing enters the authoritative Room DTO or Player Web.
-const GMWW_TURN_MOTION_KEY='GMWW_GM_TURN_MOTION_V1';
+const GMWW_TURN_MOTION_KEY='GMWW_GM_FIRE_WALK_V2';
 function battleMotionOn(){try{return localStorage.getItem(GMWW_TURN_MOTION_KEY)!=='0'}catch{return true}}
 function battleMotionSetOn(on){
   try{localStorage.setItem(GMWW_TURN_MOTION_KEY,on?'1':'0')}catch{}
@@ -5989,6 +5989,12 @@ function battleTickCountdown(){
       battleState.dayTimeupCueKey=cueKey;
       void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
+  }
+  // Edge-triggered: returning from campfire happens exactly when the night turn reaches 0.
+  // No new timer or rAF; preserves server-clock ownership and works across refetches.
+  const expired=phase==='night'&&Number.isFinite(seconds)&&seconds<=0;
+  if(battleState.gmwwWalkExpired!==expired){
+    battleState.gmwwWalkExpired=expired;battleMarkPlayers();
   }
   const formatted=battleRules()?.formatTime(seconds)||'--:--';
   if(clock.textContent!==formatted)clock.textContent=formatted;
@@ -6466,7 +6472,7 @@ function gmwwFireWalkDestination(x,y,cx,cy,width,height,used=[]){
 function gmwwFireWalkRig(token,member,phase){
   if(!member)return;
   playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{
-    effect:playPlayerEffect(member.loginId),battleTurnTravel:phase==='out'||phase==='back'?phase:'',
+    effect:playPlayerEffect(member.loginId),battleTurnTravel:phase,
     battleTurnFacing:token.dataset.gmwwFireFacing||'right'
   });
 }
@@ -6474,35 +6480,51 @@ function gmwwFireWalkCancel(token,member){
   if(!token)return;
   token.gmwwFireAnimation?.cancel();token.gmwwFireAnimation=null;
   token.dataset.gmwwFireWalk='';delete token.dataset.gmwwFireFacing;
-  delete token.dataset.gmwwFireHome;delete token.dataset.gmwwFireDx;
-  delete token.dataset.gmwwFireDy;delete token.dataset.gmwwFireX;delete token.dataset.gmwwFireY;
-  token.style.removeProperty('transform');token.style.removeProperty('transition');
-  token.style.removeProperty('z-index');token.classList.remove('is-gm-walking-fire');
+  delete token.dataset.gmwwFireRestFacing;
+  delete token.dataset.gmwwFireDx;delete token.dataset.gmwwFireDy;
+  delete token.dataset.gmwwFireX;delete token.dataset.gmwwFireY;
+  // translate is an independent CSS transform layer; preserve all theme/seat
+  // transforms (including immersive -100% anchor and .is-active scale).
+  token.style.removeProperty('translate');
+  token.style.removeProperty('will-change');
+  token.style.removeProperty('z-index');
+  token.classList.remove('is-gm-walking-fire');
   if(member)gmwwFireWalkRig(token,member,'');
 }
 function gmwwFireWalkDetach(){
   document.getElementById('playPlayerRing')?.querySelectorAll('[data-gmww-fire-walk]')?.forEach(el=>gmwwFireWalkCancel(el));
 }
 function gmwwFireWalkTravel(token,member,phase,dx,dy,ms){
-  const originalAnimation=token.gmwwFireAnimation;
-  const from=getComputedStyle(token).transform;
-  originalAnimation?.cancel();
-  if(!token.dataset.gmwwFireHome)token.dataset.gmwwFireHome=from;
-  const target=phase==='back'?token.dataset.gmwwFireHome:
-    'translate(-50%, -50%) translate3d('+dx.toFixed(2)+'px,'+dy.toFixed(2)+'px,0)';
+  // The old transform animation fought #start .play-player-token and therefore
+  // only flipped the avatar on an iPhone. Animate CSS "translate" instead.
+  const current=getComputedStyle(token).translate;
+  const from=current&&current!=='none'?current:'0px 0px';
+  token.gmwwFireAnimation?.cancel();
+  const target=phase==='back'?'0px 0px':
+    dx.toFixed(2)+'px '+dy.toFixed(2)+'px';
   token.dataset.gmwwFireWalk=phase;
   token.dataset.gmwwFireFacing=dx<0?'left':'right';
-  token.style.transition='none';token.style.zIndex='145';token.classList.add('is-gm-walking-fire');
+  token.style.zIndex='145';
+  token.classList.add('is-gm-walking-fire');
   gmwwFireWalkRig(token,member,phase);
   const finish=()=>{
     if(!token.isConnected||token.dataset.gmwwFireWalk!==phase)return;
-    token.style.transform=target;
+    // Set the final actual position before canceling fill:forwards.
+    token.style.translate=target;
     token.gmwwFireAnimation?.cancel();token.gmwwFireAnimation=null;
     if(phase==='back')gmwwFireWalkCancel(token,member);
-    else{token.dataset.gmwwFireWalk='hold';gmwwFireWalkRig(token,member,'hold')}
+    else{
+      token.dataset.gmwwFireWalk='hold';
+      token.dataset.gmwwFireFacing=token.dataset.gmwwFireRestFacing||token.dataset.gmwwFireFacing;
+      gmwwFireWalkRig(token,member,'hold');
+    }
   };
-  if(typeof token.animate!=='function'){token.style.transform=target;finish();return}
-  const a=token.animate([{transform:from},{transform:target}],{
+  // iPhone Safari supports WAAPI on individual CSS translate; if another
+  // renderer lacks it, update DOM position immediately rather than only face.
+  const supported=typeof token.animate==='function'&&
+    (typeof CSS==='undefined'||typeof CSS.supports!=='function'||CSS.supports('translate','1px 1px'));
+  if(!supported){token.style.translate=target;finish();return}
+  const a=token.animate([{translate:from},{translate:target}],{
     duration:ms,easing:phase==='back'?'ease-in':'ease-out',fill:'forwards'
   });
   token.gmwwFireAnimation=a;
@@ -6522,9 +6544,9 @@ function gmwwFireWalkSync(ring,actors,active){
     const id=String(el.dataset.playPlayerId||''),member=battleMember(id),phase=el.dataset.gmwwFireWalk||'';
     const permitted=active&&actors.has(id)&&member&&!['dead','frozen','expelled'].includes(playPlayerEffect(id));
     if(!permitted){
-      if(phase==='back'&&(!active||!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))))gmwwFireWalkCancel(el,member);
+      if(phase==='back'&&(!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))))gmwwFireWalkCancel(el,member);
       if(phase==='out'||phase==='hold'){
-        if(!active||!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))){gmwwFireWalkCancel(el,member);continue}
+        if(!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))){gmwwFireWalkCancel(el,member);continue}
         const dx=Number(el.dataset.gmwwFireDx)||0,dy=Number(el.dataset.gmwwFireDy)||0;
         gmwwFireWalkTravel(el,member,'back',-dx,-dy,Math.max(350,Math.min(1700,Math.hypot(dx,dy)/.22)));
       }
@@ -6538,6 +6560,7 @@ function gmwwFireWalkSync(ring,actors,active){
     const dx=p.x-x,dy=p.y-y,distance=Math.hypot(dx,dy);if(distance<5)continue;
     el.dataset.gmwwFireDx=String(dx);el.dataset.gmwwFireDy=String(dy);
     el.dataset.gmwwFireX=String(p.x);el.dataset.gmwwFireY=String(p.y);
+    el.dataset.gmwwFireRestFacing=p.x>cx?'left':'right';
     gmwwFireWalkTravel(el,member,'out',dx,dy,Math.max(440,Math.min(2200,distance/.14)));
   }
 }
