@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {STAGE10_VERSION,animationFamilies,animationRoleGroups,resolveRoleAnimation,authorizedAnimationCue,animationMotion,animationAudioCue} from '../assets/village/arena-3d/stage10-role-animations.mjs';
+import {normalizeRitualCue} from '../assets/village/arena-3d/stage8-ritual-director.mjs';
+test('GĐ10 families cover role families with distinctive effects and audio IDs',()=>{
+ assert.equal(STAGE10_VERSION,'gmww.arena.role-animation.10');
+ for(const family of ['wolf','oracle','wand','shield','heal','attack','vote','scout','curse'])assert.ok(animationFamilies.includes(family));
+ assert.ok(Object.values(animationRoleGroups).flat().length>=30);
+ assert.equal(resolveRoleAnimation({kind:'attack',roleId:'wolf'}).projectile,'spectral-wolf-head');
+ assert.equal(resolveRoleAnimation({kind:'inspect',roleId:'tien-tri-hao-quang'}).motion,'wand-orbit');
+ assert.equal(resolveRoleAnimation({kind:'shield',roleId:'bao-ve'}).impact,'shield-dome');
+ assert.equal(resolveRoleAnimation({kind:'heal',roleId:'phu-thuy'}).projectile,'sea-lotus');
+ assert.equal(resolveRoleAnimation({kind:'attack',roleId:'phu-thuy',actionId:'poison'}).family,'attack');
+});
+test('GĐ10 authorized Core-only cue; no role information in anonymous projection',()=>{
+ const now=Date.now(),ids=['member:a','member:b'];
+ const cue=normalizeRitualCue({turnId:'n1',actorIds:[ids[0]],cast:{actorId:ids[0],targetIds:[ids[1]],kind:'attack',roleId:'wolf',actionId:'wolf-bite',startedAt:now,expiresAt:now+2500}},ids,now);
+ assert.equal(authorizedAnimationCue(cue,{gmAuthorized:false}),null);
+ const privateCue=authorizedAnimationCue(cue,{gmAuthorized:true});
+ assert.equal(privateCue.profile.projectile,'spectral-wolf-head');
+ assert.equal(privateCue.targetIds[0],ids[1]);
+ assert.equal(animationAudioCue(privateCue.profile,false),null);
+ assert.deepEqual(animationAudioCue(privateCue.profile,true),{soundId:'ritual_wolf_bite'});
+});
+test('GĐ10 reduced motion, no audio URL invention, GPU lifecycle',()=>{
+ const profile=resolveRoleAnimation({kind:'inspect'});
+ assert.equal(animationMotion(profile,100,{reducedMotion:true}).wristTurn,0);
+ const art=readFileSync('assets/village/arena-3d/character-atelier.mjs','utf8');
+ assert.match(art,/const wolfHeads=Array\.from\(\{length:5\}/);
+ assert.match(art,/const shieldDomes=Array\.from\(\{length:5\}/);
+ assert.match(art,/wand\.geometry\.dispose\(\)/);
+ assert.match(art,/const impactRings=Array\.from\(\{length:5\}/);
+ assert.match(art,/ring\.material\.color\.set\(profile\.color/);
+ assert.match(art,/for\(const ring of impactRings\)\{ring\.geometry\.dispose\(\)/);
+ assert.match(art,/get peakVfxDrawBudget\(\)\{return spellBeams\.length/);
+ assert.match(art,/profile\.projectile==='spectral-wolf-head'/);
+ const live=readFileSync('assets/village/arena-3d/live.mjs','utf8');
+ assert.match(live,/gmwwStage10=STAGE10_VERSION/);
+ assert.doesNotMatch(live,/dataset\\.gmwwStage10(?:Motion|Projectile|SoundId)/);
+});

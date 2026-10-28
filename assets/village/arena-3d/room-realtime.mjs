@@ -21,7 +21,7 @@ export function publicGallowsScene(gallows,room){
 // Both browsers read the SAME /api/rooms/:code and /ws/:code supplied by
 // isolated GMWW V2 Core. WebSocket is a hint, HTTP snapshot wins after reconnect.
 // No new mutation or second player-state store.
-export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,fetchImpl=fetch,WebSocketImpl=WebSocket,intervalMs=4000}){
+export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,fetchImpl=fetch,WebSocketImpl=WebSocket,intervalMs=4000,loadPublicGallows=true}){
   const code=String(roomCode||'').toUpperCase().trim();
   if(!/^[A-Z0-9]{4,12}$/.test(code))throw new TypeError('INVALID_ROOM_CODE');
   let stopped=false,ws=null,timer=null,retry=null,latest=null,generation=0,ballot=null,abort=null;
@@ -30,9 +30,25 @@ export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,
     if(!payload?.room||!Array.isArray(payload.players))return;
     const next=publicRoomSnapshot(payload);
     if(latest&&!shouldAcceptRendererFrame(latest,next))return;
+    // Never carry a candidate from a previous day/match into this Core frame.
+    const changed=latest&&(latest.room.matchId!==next.room.matchId||
+      latest.room.cycleKey!==next.room.cycleKey||
+      latest.room.cyclePhase!==next.room.cyclePhase);
+    if((changed||next.room.phase!=='running'||next.room.cyclePhase!=='morning')&&ballot){
+      ballot=null;onGallows?.(null);
+    }
     latest=next;onFrame(next);
   };
   async function reloadPublicBallot(){
+    // 3D Player may run on the live Core Worker, which already provides public
+    // room/WS but not the research-only ballot summary endpoint. Player Web
+    // inside the same origin remains authoritative for votes/nomination.
+    if(loadPublicGallows===false){
+      // Official live Core has no staging-only GET summary endpoint. Preserve
+      // a public WS ballot until the cycle changes or the socket disconnects.
+      if(!ballot)onGallows?.(null);
+      return;
+    }
     if(!latest||latest.room.cyclePhase!=='morning'){ballot=null;onGallows?.(null);return;}
     try {
       const response=await fetchImpl('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/gallows',{cache:'no-store'});
@@ -47,7 +63,11 @@ export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,
   const handle=packet=>{
     if(packet?.type==='room_state')apply(packet);
     // Authorized public projection ONLY. No private receipts / role assignment.
-    if(packet?.type==='gallows_updated'&&packet.room&&latest?.room.matchId===packet.room.matchId){
+    if(packet?.type==='gallows_updated'&&packet.room&&
+      latest?.room.phase==='running'&&latest.room.cyclePhase==='morning'&&
+      packet.room.cyclePhase==='morning'&&
+      String(latest.room.matchId||'')===String(packet.room.matchId||'')&&
+      String(latest.room.cycleKey||'')===String(packet.room.cycleKey||'')){
       const next=publicGallowsScene(packet.gallows,packet.room);
       if(next){ballot=next;onGallows?.(next);}
     }
@@ -69,7 +89,11 @@ export function connectStagingRoom({roomCode,onFrame,onGallows,onStatus,onError,
     onStatus?.('connecting');
     ws.onopen=()=>{if(!stopped){onStatus?.('connected');void refresh();}};
     ws.onmessage=event=>{try{handle(JSON.parse(event.data))}catch(error){onError?.(error)}};
-    ws.onclose=()=>{if(!stopped){onStatus?.('reconnecting');retry=setTimeout(connect,1800);void refresh();}};
+    ws.onclose=()=>{if(!stopped){
+      // Reconnect can skip interim vote events. Fail closed, not stale display.
+      if(ballot){ballot=null;onGallows?.(null)}
+      onStatus?.('reconnecting');retry=setTimeout(connect,1800);void refresh();
+    }};
     ws.onerror=()=>{if(!stopped)onStatus?.('reconnecting')};
   }
   void refresh();connect();
