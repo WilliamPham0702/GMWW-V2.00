@@ -1387,10 +1387,10 @@ jobs:
           node --test tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/member-ranking-games-first-v3221.test.mjs
           VERIFIED=false
           for TRY in $(seq 1 40); do
-            RESULT=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.head_sha == env.TESTED_SHA and .event == "push") | {name, conclusion}]')
+            RESULT=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
             if printf '%s' "$RESULT" | node -e '
                 let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
-                  const r=JSON.parse(s); const ok=n=>r.some(x=>x.name===n&&x.conclusion==="success");
+                  const r=JSON.parse(s).workflow_runs||[]; const ok=n=>r.some(x=>x.name===n&&x.head_sha===process.env.TESTED_SHA&&x.event==="push"&&x.conclusion==="success");
                   process.exit(ok("Check Player Web Worker")&&ok("Check Drunk Card Draw and Expelled Spiritualist")?0:1);
                 })'; then VERIFIED=true; break; fi
             sleep 8
