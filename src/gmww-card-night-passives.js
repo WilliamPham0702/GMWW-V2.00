@@ -1,3 +1,4 @@
+import {isWolfRole} from './gmww-pack-night-rules.js';
 // Server-authoritative passive roles. Each calculation uses only receipts from
 // the current match; the caller persists stable event IDs before publishing.
 const id=x=>String(x??'').trim().toLowerCase().replace(/^member:/,'');
@@ -93,13 +94,11 @@ export function factionRoleTransitionsDue({assignments=[],interactions=[],matchI
 export function activePackAtNight({assignments=[],interactions=[],matchId,night}={}){
   const n=Number(night),rows=matchRows(interactions,matchId),dead=deadIds(rows);
   const living=(Array.isArray(assignments)?assignments:[]).filter(a=>
-    !dead.has(id(a.loginId))&&id(a.loginId)&&
-    (String(a.faction||a.factionId||a.roleCard?.factionId||'').toLowerCase()==='wolf'||
-     (!String(a.faction||a.factionId||'')&&/wolf/.test(a.roleId||''))));
+    !dead.has(id(a.loginId))&&id(a.loginId)&&isWolfRole(a));
   const others= living.filter(x=>x.roleId!=='role_lycan');
   const lastOtherDeath=rows.filter(x=>x.type==='dead'&&
     (Array.isArray(assignments)?assignments:[]).some(a=>a.roleId!=='role_lycan'&&
-      String(a.faction||a.factionId||'')==='wolf'&&id(a.loginId)===id(x.loginId)))
+      isWolfRole(a)&&id(a.loginId)===id(x.loginId)))
     .reduce((m,x)=>Math.max(m,Number(x.night)||0),0);
   return living.filter(x=>
     (x.roleId!=='role_lone_wolf'||n>=3)&&
