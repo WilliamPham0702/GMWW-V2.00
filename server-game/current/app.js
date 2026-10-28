@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.263';
+const VERSION='3.264';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1556,7 +1556,7 @@ async function renderAudio(){
       return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
     }).join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
-  $('[data-audio-id]').forEach(row=>{
+  $$('[data-audio-id]').forEach(row=>{
     const a=list.find(x=>String(x.id)===String(row.dataset.audioId));
     $('[data-audio-play]',row).onclick=()=>playAudioItem(a);
     $('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);
@@ -1567,7 +1567,7 @@ async function renderAudio(){
       button.addEventListener('click',()=>{const now=Date.now();if(now-lastTap<400){lastTap=0;void gmwwOpenAudioNameEditor(a)}else lastTap=now});
     }
   });
-  $('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
+  $$('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
     const id=String(button.dataset.systemSoundSlot||'');
     const item=(state.audio.system||[]).find(x=>String(x.targetId||x.id)===id);
     if(item)replaceAudioItem(item,'system');

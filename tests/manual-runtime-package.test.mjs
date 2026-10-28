@@ -64,5 +64,5 @@ test('the manual update native shell version matches the release and Xcode basel
  const shell=worker.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
  const runtime=worker.match(/VERSION="V([0-9.]+)"/)?.[1];
  assert.equal(shell,runtime,'manual picker changes require a new IPA shell');
- assert.equal((project.match(/MARKETING_VERSION = 3\.257;/g)||[]).length,2);
+ assert.deepEqual([...project.matchAll(/MARKETING_VERSION = ([0-9.]+);/g)].map(m=>m[1]),[shell,shell]);
 });

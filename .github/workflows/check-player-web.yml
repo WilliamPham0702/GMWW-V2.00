@@ -64,6 +64,16 @@ jobs:
         run: |
           node --test tests/manual-runtime-package.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
+      - name: V3.264 — chỉ kiểm thử đóng gói IPA/OTA và SHA-256
+        if: steps.scope.outputs.mode == 'ipa-ota-lean-3264'
+        run: |
+          node --test tests/ipa-ota-lean-assets-v3264.test.mjs tests/action-icon-library.test.mjs tests/manual-runtime-package.test.mjs tests/native-ipa-startup.test.mjs tests/fast-g2-generic-delta.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          test -s docs/releases/GMWW-V3.264-ipa-ota-lean-assets-20261028.md
       - name: PR577 — chỉ test Say Rượu, dọn ván và luật Xếp hạng không đổi
         if: steps.scope.outputs.mode == 'drunk-card-overlay-20261028'
         run: |

@@ -22,7 +22,9 @@ let ota=published;
 if(published.releaseType==='native'){
  // A new iOS shell must NOT advertise Runtime OTA to older installs.
  // Verify its separately packaged complete inventory and real edge bytes instead.
- assert.equal(version,'3.257','Native verification scope is limited to the approved manual updater release');
+ const nativeProject=await readFile('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
+ const nativeShell=nativeProject.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim();
+ assert.equal(nativeShell,version,'Native release version must match the actual Xcode project');
  assert.equal(published.shellVersion,version);
  assert.equal(published.minimumShellVersion,version);
  assert.equal(published.ipa?.version,version);
@@ -85,4 +87,4 @@ assert.equal(sha(playerBytes),sha(localPlayerBytes),'Player Web controller SHA m
 assert.notEqual(sha(gmBytes),sha(localPlayerBytes),'GM-only low-power controller must remain isolated from Player Web');
 assert.equal(ota.runtime.files.find(f=>f.path==='gmww-shared-motion.js')?.sha256,sha(gmBytes),'GM low-power controller OTA SHA');
 assert.equal(ota.runtime.files.find(f=>f.path==='characters/gmww40/runtime.js')?.sha256,sha(localPlayerBytes),'Player controller OTA SHA');
-console.log('Production Character40 PASS: 40 portraits + 40 motion atlases SHA-256, Player/GM controllers and HTML/JS verified against '+(published.releaseType==='native'?'V3.257 manual inventory, Native IPA':'Runtime OTA')+'.');
+console.log('Production Character40 PASS: 40 portraits + 40 motion atlases SHA-256, Player/GM controllers and HTML/JS verified against '+(published.releaseType==='native'?'V'+version+' manual inventory, Native IPA':'Runtime OTA')+'.');
