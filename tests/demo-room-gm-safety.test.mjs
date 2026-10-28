@@ -12,8 +12,9 @@ const html=readFileSync('server-game/current/GMWW.html','utf8');
 test('Demo identity is an authoritative server flag, never inferred from room name',()=>{
   assert.match(worker,/demo:b\?\.demo===true/);
   assert.match(contract,/demo:m\.demo===true/);
-  assert.match(worker,/if\(r\?\.demo===true\)continue/);
-  assert.match(worker,/if\(meta\.demo===true\)return j\(\{ok:false,error:"DEMO_ROOM_GM_ONLY"/);
+  assert.doesNotMatch(worker,/if\(r\?\.demo===true\)continue/,'Hybrid DEMO must be discoverable');
+  assert.match(worker,/DEMO_LOGIN_REQUIRED/,'DEMO is limited to logged-in members');
+  assert.match(worker,/humanControlled:meta\.demo===true/,'Joining human controls their own actor');
 });
 
 test('Demo members cannot change real room presence, ranking or history',()=>{
