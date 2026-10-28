@@ -8483,7 +8483,6 @@ function playAssignmentSwapRole(loginId,wantedId){
   savePlayScene();renderPlayScene();
 }
 
-
 /* GM Chat monitor: available only with GM-authorized room API. No public history path. */
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
 // Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
