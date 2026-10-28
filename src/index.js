@@ -2207,6 +2207,25 @@ export class RoomDurableObject extends DurableObject {
         rows.push(fatal);await this.ctx.storage.put(this.actionLogKey(fatal),fatal);
       }
     }
+    if(p==="morning"&&n>0&&!elderBell.blocked){
+      const pending=await this.ctx.storage.list({prefix:"grudgePending:"+String(meta.matchId)+":"+n+":"});
+      for(const [storageKey,action] of pending.entries()){
+        const loginId=normalizeLoginId(action.targetId);
+        if(!loginId||String(action.matchId||"")!==String(meta.matchId))continue;
+        const id="grudge-victim:"+String(meta.matchId)+":"+n+":"+loginId;
+        const died=rows.some(x=>x.type==="dead"&&x.effectActive!==false&&
+          normalizeLoginId(x.loginId)===loginId&&
+          String(x.matchId||"")===String(meta.matchId));
+        if(!died&&!rows.some(x=>x.id===id)){
+          const fatal={id,type:"dead",loginId,matchId:String(meta.matchId),
+            night:n,cycleKey:key,effectActive:true,source:"grudge-victim",
+            actionId:"action-grudge-designate",actorId:action.actorId,
+            createdAt:now,message:"Oan Nhân đã chọn người này chết vào sáng hôm sau."};
+          rows.push(fatal);await this.ctx.storage.put(this.actionLogKey(fatal),fatal);
+        }
+        await this.ctx.storage.delete(storageKey);
+      }
+    }
     if(p==="morning"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
@@ -2336,10 +2355,12 @@ export class RoomDurableObject extends DurableObject {
     if(fn.noSelf!==false&&targets.includes(actorId))
       return j({ok:false,error:"DAY_SELF_TARGET_FORBIDDEN"},403);
     const roleKnight=!artifactId&&roleId==="role_knight"&&actionId==="action_knight_last_strike";
-    const gallows=roleKnight?(await this.gallowsState(meta)).ballot:null;
-    const lynched=roleKnight&&gallows.stage==="resolved"&&gallows.outcome==="dead"&&
-      gallows.candidateId===actorId;
-    if(roleKnight&&!lynched)return j({ok:false,error:"KNIGHT_REQUIRES_LYNCH"},409);
+    const roleGrudge=!artifactId&&roleId==="role_grudge_victim"&&actionId==="action-grudge-designate";
+    const gallows=(roleKnight||roleGrudge)?(await this.gallowsState(meta)).ballot:null;
+    const lynched=(roleKnight||roleGrudge)&&gallows?.stage==="resolved"&&
+      gallows.outcome==="dead"&&gallows.candidateId===actorId;
+    if((roleKnight||roleGrudge)&&!lynched)
+      return j({ok:false,error:roleGrudge?"GRUDGE_REQUIRES_EXECUTION":"KNIGHT_REQUIRES_LYNCH"},409);
     if((affected(actorId,"dead")&&!fn.actorMayBeDead&&!lynched)||
       affected(actorId,"expelled")||affected(actorId,"frozen")||
       interactions.some(x=>normalizeLoginId(x?.loginId)===actorId&&sameMatch(x)&&
@@ -2412,6 +2433,14 @@ export class RoomDurableObject extends DurableObject {
       const hasWolf=effectiveTargets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
       message=hasWolf?"CÓ SÓI":"KHÔNG CÓ SÓI";
       result={message,hasWolf};
+    }else if(roleGrudge){
+      const pendingKey="grudgePending:"+matchId+":"+(day+1)+":"+effectiveTargets[0];
+      if(await this.ctx.storage.get(pendingKey))
+        return j({ok:false,error:"GRUDGE_TARGET_ALREADY_QUEUED"},409);
+      changes.push({kind:"knight_pending",key:pendingKey,value:{matchId,actorId,
+        targetId:effectiveTargets[0],createdAt:time,resolveDay:day+1,kind:"grudge"}});
+      message="Oan Nhân đã chọn người sẽ chết vào sáng hôm sau, nếu còn sống.";
+      result={message};
     }else if(roleKnight){
       const pendingKey="knightPending:"+matchId+":"+(day+1)+":"+effectiveTargets[0];
       if(await this.ctx.storage.get(pendingKey))
