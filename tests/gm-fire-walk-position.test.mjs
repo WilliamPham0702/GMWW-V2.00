@@ -92,3 +92,32 @@ test('when timer expires, actor RUNS home instead of snapping instantly',async()
  a.animations[1].complete();await flush();
  assert.equal(a.token.style.translate,'','home offset cleared after Run completes');
 });
+
+test('all directions have the SAME distance from the actual campfire center',()=>{
+ const cx=200,cy=342,w=400,h=700;
+ const origins=[[200,60],[200,660],[38,342],[362,342],[40,70],[360,70],[40,640],[360,640]];
+ const points=origins.map(([x,y])=>walker.gmwwFireWalkDestination(x,y,cx,cy,w,h));
+ const radius=Math.hypot(points[0].x-cx,points[0].y-cy);
+ assert.ok(radius>=74&&radius<=88,'walkers stand near but outside flames');
+ for(const p of points){
+   assert.ok(Math.abs(Math.hypot(p.x-cx,p.y-cy)-radius)<1e-7,'different radial distance '+JSON.stringify(p));
+ }
+ assert.ok(points[0].y<cy&&points[1].y>cy,'upper and lower players both approach their side of the fire');
+ assert.ok(Math.abs((cy-points[0].y)-(points[1].y-cy))<1e-7,'upper and lower stop at symmetric distance');
+});
+test('seats on four corners share one radius even with eight simultaneous turns',()=>{
+ const center={x:200,y:342},used=[];
+ for(const [x,y] of [[20,30],[380,30],[20,670],[380,670],[30,30],[370,30],[30,670],[370,670]]){
+   const p=walker.gmwwFireWalkDestination(x,y,center.x,center.y,400,700,used);
+   assert.ok(p,'must assign a destination to each actor');
+   assert.ok(Math.abs(Math.hypot(p.x-center.x,p.y-center.y)-88)<1e-6,'must not clamp destinations into an ellipse');
+   assert.ok(used.every(a=>Math.hypot(a.x-p.x,a.y-p.y)>=34),'characters overlap by fire');
+   used.push(p);
+ }
+});
+test('destination selection stays pure and keeps native Seat coordinates and low-power rendering',()=>{
+ const s=source.slice(source.indexOf('function gmwwFireWalkDestination('),source.indexOf('function gmwwFireWalkRig('));
+ assert.doesNotMatch(s,/requestAnimationFrame\(|setInterval\(|setTimeout\(|style\.left|style\.top/);
+ assert.match(s,/cx\+Math\.cos\(angle\)\*radius/);
+ assert.match(s,/cy\+Math\.sin\(angle\)\*radius/);
+});
