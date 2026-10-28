@@ -492,6 +492,7 @@ function wave3213Asset(path){
 function isIconWave3213Scope(changes){
  const names=new Map(changes.map(x=>[x.path,x]));
  for(const p of ['src/index.js','package.json','server-game/current/app.js','server-game/current/GMWW.html',
+  'server-game/src/00-core-and-library.part',
   'server-game/current/action-icon-library.js','tests/action-icon-library.test.mjs','assets/action-icons/sea-v1/manifest.json',
   'docs/releases/GMWW-V3.213-icons-wave3-20261025.md'])if(!names.has(p))return false;
  if(!changes.every(x=>['A','M'].includes(x.status)&&(wave3213Files.has(x.path)||wave3213Asset(x.path))))return false;
