@@ -18,7 +18,7 @@ function ok(response,label){assert.equal(response.ok,true,label+': '+JSON.string
 const room=ok(await req('/api/rooms',{method:'POST',token:localGmSync,body:{roomName:'DEMO hybrid integration '+serial,
   demo:true,seatCount:8,gameConfig:{name:'DEMO test',roles:[{roleId:'role_seer',roleName:'Tiên Tri',order:1},
     {roleId:'role_villager',roleName:'Dân',order:2}],timing:{defaultActionSec:45}}}}),'create');
-const code=room.roomCode,gm=async(path,body)=>req('/api/gm/rooms/'+code+path,{
+const code=room.roomCode,gm=async(path='',body)=>req('/api/gm/rooms/'+code+path,{
   method:body===undefined?'GET':'POST',token:room.gmToken,body});
 const people=[{loginId:id,seatId:1,displayName:'Real '+serial},
   ...Array.from({length:5},(_,i)=>({loginId:codePrefix+i,seatId:i+2,displayName:'NPC '+i}))];
