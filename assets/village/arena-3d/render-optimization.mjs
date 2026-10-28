@@ -93,3 +93,10 @@ export function createArenaPaintScheduler(){
  }
  return Object.freeze({shouldPaint,reset});
 }
+
+/** GĐ42: Player-only public crowd framebuffer policy. No Core or private data. */
+export function arenaPlayerPixelRatio({characters=0,devicePixelRatio=1}={}){
+ const count=Number.isFinite(characters)?Math.max(0,Math.trunc(characters)):0;
+ const dpr=Number.isFinite(devicePixelRatio)&&devicePixelRatio>0?devicePixelRatio:1;
+ return Math.min(dpr,count>=20?.85:1.1);
+}
