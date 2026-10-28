@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.269';
+const VERSION='3.270';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3403,6 +3403,11 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   // mask a real GM upload under an older alternate audio ID.
   const candidates=typeof battleFindAudioCandidates==='function'
     ?battleFindAudioCandidates(kind,targetId,name):[row].filter(Boolean);
+  // Name-only revelation must prefer the SAME audio row on which GM saved
+  // the complete Tên crop. Stale duplicate IDs often have an older/short cut.
+  if(Number(maxSeconds)>0)candidates.sort((a,b)=>
+    Number(Number(b.roleNameEnd)>Number(b.roleNameStart||0))-
+    Number(Number(a.roleNameEnd)>Number(a.roleNameStart||0)));
   let src=null;
   for(const candidate of candidates){
     const found=battleAudioReady.get(kind+':'+String(candidate.id||''))||
@@ -3417,6 +3422,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
       if(targetId==='audio_group_wolves')return 'Bầy sói ơi dậy đi';
       const canonical=targetId==='source-18'?'role_old_witch':targetId;
       const card=(state.cards||[]).find(c=>String(c.id)===String(canonical));
+      if(Number(maxSeconds)>0)return String(name||card?.name||'').trim();
       return card?card.name+' ơi dậy đi':String(name||'');
     }
     if(kind==='actions'){
@@ -3501,6 +3507,11 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
+  // Fast DEMO must not retain a long, real-time clip after the Server has
+  // already advanced. Keep cropped role names intelligible at normal speed.
+  const demoRate=typeof demoRunner!=='undefined'&&demoRunner.running&&playSceneRuntime.room?.demo===true?
+    Math.max(1,Math.min(2,Number(demoRunner.speed)||1)):1;
+  player.playbackRate=Number(maxSeconds)>0?1:demoRate;
   // WKWebView can reject media that has not yet left the pending state.
   // The user-unlocked WebAudio channel is the fallback, then Vietnamese speech.
   let fallbackStarted=false;
@@ -3545,7 +3556,9 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     player.onloadedmetadata=seek;
     player.addEventListener('playing',()=>{
       if(cutTimer!==null)clearTimeout(cutTimer);
-      cutTimer=setTimeout(stop,Math.max(100,Math.ceil((excerpt.end-excerpt.start)*1000)+120));
+      // A seek/buffer delay must not truncate the final syllable of a name.
+      // Playback timeupdate is authoritative; timer is only a generous failsafe.
+      cutTimer=setTimeout(stop,Math.max(500,Math.ceil((excerpt.end-excerpt.start)*1000)+1800));
     },{once:true});
     player.ontimeupdate=()=>{if(player.currentTime>=excerpt.end-.02)stop()};
     if(player.readyState>=1)seek();
@@ -5430,7 +5443,10 @@ function demoApplyServerControl(control){
   if(control?.engine!=='server')return;
   const event=control.lastEvent,sameRoom=demoRunner.roomCode===String(playSceneState.roomCode),previous=demoRunner.lastEvent;
   const heard=demoRunner.heardEvents||(demoRunner.heardEvents=new Set());
-  const feedback=!heard.has(event?.id)&&sameRoom&&demoRunner.observedMatch===String(playSceneRuntime.room?.matchId||'')&&event&&event.id!==previous?.id&&event.status==='accepted';
+  // A delayed Server event from the preceding turn/cycle must not interrupt
+  // the currently playing voice, particularly at x2/x5.
+  const sameCycle=!event?.cycleKey||String(event.cycleKey)===String(playSceneRuntime.room?.cycleKey||'');
+  const feedback=!heard.has(event?.id)&&sameRoom&&sameCycle&&demoRunner.observedMatch===String(playSceneRuntime.room?.matchId||'')&&event&&event.id!==previous?.id&&event.status==='accepted';
   demoRunner.observedMatch=String(playSceneRuntime.room?.matchId||'');
   demoRunner.roomCode=String(playSceneState.roomCode);demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
   demoRunner.running=control.running===true;demoRunner.paused=control.paused===true;demoRunner.speed=Number(control.speed)||1;
@@ -5494,6 +5510,9 @@ function demoRenderControls(){
   }
 }
 async function demoToggle(){
+  // Start DEMO may call the server before the first role cue. Unlock the iOS
+  // AudioContext synchronously on the actual GM tap, not after awaiting HTTP.
+  battleUnlockAudioFromGesture();
   if(playSceneRuntime.room?.demo!==true)return;
   if(demoRunner.running){await demoStop();return}
   if(playSceneState.step!=='battle'){playFlashError('Hãy setup và vào trận trước khi chạy Demo.');return}
@@ -6097,8 +6116,11 @@ function battleTickCountdown(){
     }
   }
   if(phase==='day'&&Number.isFinite(seconds)){
+    const demoSpeed=playSceneRuntime.room?.demo===true&&demoRunner.running?
+      Math.max(1,Number(demoRunner.speed)||1):1;
+    const warningSeconds=Math.max(1,Math.ceil(30/demoSpeed));
     const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
-    if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=30&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
+    if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=warningSeconds&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
       battleState.dayCountdownCueKey=cueKey;
       void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
     }
@@ -6245,7 +6267,7 @@ let battleDayAudioQueue=null;
 function battleQueueDayAudio(cues){
   if(playSceneState.phase!=='day'||!Array.isArray(cues)||!cues.length)return;
   const key=[playSceneRuntime.room?.matchId||'',playSceneState.night||0,
-    playSceneRuntime.room?.cycleStartedAt||''].join(':');
+    playSceneRuntime.room?.cycleStartedAt||'',playSceneRuntime.gallows?.stage||'ready'].join(':');
   if(!battleDayAudioQueue||battleDayAudioQueue.key!==key)
     battleDayAudioQueue={key,items:[],active:false};
   const queue=battleDayAudioQueue;
@@ -6262,8 +6284,11 @@ function battleQueueDayAudio(cues){
       done=true;if(watchdog!==null)clearTimeout(watchdog);
       queue.active=false;playNext();
     };
-    // A broken/disabled iOS speech engine must not block all later cues.
-    watchdog=setTimeout(complete,45000);
+    // At fast DEMO speeds the ballot may advance in 6–15 real seconds.
+    // The old 45s per cue caused obsolete morning narration to pile up.
+    const speed=playSceneRuntime.room?.demo===true&&demoRunner.running?
+      Math.max(1,Number(demoRunner.speed)||1):1;
+    watchdog=setTimeout(complete,Math.max(2200,Math.round(15000/speed)));
     const started=id==='__tts__'?battleSpeakCue(label,false,complete):
       battlePlayConfiguredAudio('system',id,label,false,complete);
     void Promise.resolve(started).then(ok=>{if(ok===false)complete()},complete);
@@ -6283,9 +6308,9 @@ function battleMorningPlayAudio(){
     queue.push(['audio_system_morning_dead_noun','người chết']);
   }
   for(const row of notices){
-    if(row.kind==='expelled')queue.push(['audio_system_morning_expelled',row.name+' đã bị đuổi khỏi làng']);
+    if(row.kind==='expelled')queue.push(['audio_system_morning_expelled','Đêm qua '+row.name+' đã bị đuổi khỏi làng']);
     else if(row.kind==='assassin_mark'||row.kind==='marked')
-      queue.push(['audio_system_morning_marked',row.name+' bị Sát Thủ chọn']);
+      queue.push(['audio_system_morning_marked','Đêm qua '+row.name+' đã bị Sát Thủ chọn']);
     else if(row.kind==='dead'&&row.role==='Thiếu Nữ')
       queue.push([/nhà Sói/i.test(row.label)?'audio_system_morning_maiden_wolf':'audio_system_morning_maiden_follow',row.name+' '+row.label]);
     else if(row.kind!=='dead')queue.push(['audio_system_morning_'+row.kind,row.name+' '+row.label]);
@@ -6319,7 +6344,7 @@ function battlePresentRevelation(actionId,revelation){
     // wake-up audio. No full “ơi dậy đi” and no competing speech synthesis.
     const target=revelation?.targets?.[0]||{};
     const roleName=String(target.roleName||revelation.message||'').trim();
-    const playName=()=>{if(roleName)void battlePlayConfiguredAudio('cards',target.roleId||'',roleName,false,null,4)};
+    const playName=()=>{if(roleName)void battlePlayConfiguredAudio('cards',target.roleId||'',roleName,false,null,1)};
     if(cue&&battleFindAudio('system',cue,revelation.message))
       void battlePlayConfiguredAudio('system',cue,'Người bạn soi là',false,playName);
     else void battleSpeakCue('Người bạn soi là',false,playName);
@@ -6842,6 +6867,18 @@ function battleGallowsRender(phase){
     stage=g.stage==='nominating'&&now>=Number(g.nominationDeadlineAt||Infinity)?'selecting':
       g.stage==='voting'&&now>=Number(g.deadlineAt||Infinity)?'closed':g.stage||'ready';
   const key=[playSceneRuntime.room?.matchId,playSceneState.night,g.candidateId,stage].join(':');
+  // Server DEMO advances ballots without invoking the GM button handlers.
+  // Emit open/nomination/vote cues on the authoritative stage once, also in DEMO.
+  if(phase==='day'&&['nominating','voting'].includes(stage)){
+    const cueKey=[playSceneRuntime.room?.matchId,playSceneState.night,g.id,stage].join(':');
+    if(battleState.gallowsStageAudioKey!==cueKey){
+      battleState.gallowsStageAudioKey=cueKey;
+      battleQueueDayAudio(stage==='nominating'?
+        [['audio_system_gallows_day_long','Ngày dài rồi'],
+         ['audio_system_gallows_open_nomination','Mở đề cử']]:
+        [['audio_system_gallows_open_vote','Mở bỏ phiếu']]);
+    }
+  }
   if(phase==='day'&&['closed','resolved'].includes(stage)&&battleState.gallowsShowKey!==key){
     battleState.gallowsShowKey=key;battleState.gallowsOpen=true;
   }
@@ -7006,9 +7043,9 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     playSceneRuntime.gallows=data.gallows||null;
     // Only play a cue after the Server confirms the phase transition.
     const cues={
-      open:[['audio_system_gallows_day_long','Ngày dài rồi'],['audio_system_gallows_open_nomination','Mở đề cử']],
-      close_nomination:[['audio_system_gallows_nomination_result','Công bố đề cử']],
-      begin:[['audio_system_gallows_open_vote','Mở bỏ phiếu']]
+      // Opening and voting cues come from server-confirmed stage observation,
+      // shared by GM manual controls and unattended DEMO; never duplicate.
+      close_nomination:[['audio_system_gallows_nomination_result','Công bố đề cử']]
     };
     if(cues[command])battleQueueDayAudio(cues[command]);
     if(['resolve','restore','close_vote'].includes(command))gmHapticFeedback();
@@ -7638,6 +7675,9 @@ function initBattleControls(){
   battleBindAuxiliaryDrag('battleDemoObserver','header');
   battleBindAuxiliaryDrag('battleMorningReport','header');
   battleBindAuxiliaryDrag('battleFactionStats','header');
+  // The first natural touch on the battle view unlocks iOS sound without
+  // waiting for GM to swipe the timeline several times.
+  top.addEventListener('pointerdown',battleUnlockAudioFromGesture,{once:true,capture:true});
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
   document.getElementById('battleGallowsVerdict')?.addEventListener('click',event=>{
     if(event.target.closest('[data-verdict-continue]'))battleGallowsAcceptVerdict(battleState.gallowsVerdictKey);

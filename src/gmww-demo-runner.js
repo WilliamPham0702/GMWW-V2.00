@@ -89,8 +89,12 @@ export async function demoPlayerActions(room,meta,loginId){
 }
 export function demoTaskAt(duration,plan){
  const count=Math.max(1,plan?.tasks?.length||0),cursor=Number(plan?.cursor||0);
- const base=duration/2+duration/2*cursor/count;
  const task=plan?.tasks?.[cursor];
+ // The GM keeps the first half for role decisions; voting has a separate
+ // short clock and should show live nominations early rather than bunching
+ // 30 ballots into the last seconds at x2/x5.
+ const ballot=plan?.tasks?.some(x=>x.kind==='nominate'||x.kind==='vote');
+ const base=ballot?duration*(.1+.72*cursor/count):duration/2+duration/2*cursor/count;
  return task?.humanControlled?Math.max(base,duration-Math.min(1800,duration*.2)):base;
 }
 export function targetsFor(action,actorId,ctx,meta){

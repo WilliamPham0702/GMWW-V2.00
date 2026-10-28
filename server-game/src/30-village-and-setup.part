@@ -281,6 +281,11 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   // mask a real GM upload under an older alternate audio ID.
   const candidates=typeof battleFindAudioCandidates==='function'
     ?battleFindAudioCandidates(kind,targetId,name):[row].filter(Boolean);
+  // Name-only revelation must prefer the SAME audio row on which GM saved
+  // the complete Tên crop. Stale duplicate IDs often have an older/short cut.
+  if(Number(maxSeconds)>0)candidates.sort((a,b)=>
+    Number(Number(b.roleNameEnd)>Number(b.roleNameStart||0))-
+    Number(Number(a.roleNameEnd)>Number(a.roleNameStart||0)));
   let src=null;
   for(const candidate of candidates){
     const found=battleAudioReady.get(kind+':'+String(candidate.id||''))||
@@ -295,6 +300,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
       if(targetId==='audio_group_wolves')return 'Bầy sói ơi dậy đi';
       const canonical=targetId==='source-18'?'role_old_witch':targetId;
       const card=(state.cards||[]).find(c=>String(c.id)===String(canonical));
+      if(Number(maxSeconds)>0)return String(name||card?.name||'').trim();
       return card?card.name+' ơi dậy đi':String(name||'');
     }
     if(kind==='actions'){
@@ -379,6 +385,11 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
+  // Fast DEMO must not retain a long, real-time clip after the Server has
+  // already advanced. Keep cropped role names intelligible at normal speed.
+  const demoRate=typeof demoRunner!=='undefined'&&demoRunner.running&&playSceneRuntime.room?.demo===true?
+    Math.max(1,Math.min(2,Number(demoRunner.speed)||1)):1;
+  player.playbackRate=Number(maxSeconds)>0?1:demoRate;
   // WKWebView can reject media that has not yet left the pending state.
   // The user-unlocked WebAudio channel is the fallback, then Vietnamese speech.
   let fallbackStarted=false;
@@ -423,7 +434,9 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     player.onloadedmetadata=seek;
     player.addEventListener('playing',()=>{
       if(cutTimer!==null)clearTimeout(cutTimer);
-      cutTimer=setTimeout(stop,Math.max(100,Math.ceil((excerpt.end-excerpt.start)*1000)+120));
+      // A seek/buffer delay must not truncate the final syllable of a name.
+      // Playback timeupdate is authoritative; timer is only a generous failsafe.
+      cutTimer=setTimeout(stop,Math.max(500,Math.ceil((excerpt.end-excerpt.start)*1000)+1800));
     },{once:true});
     player.ontimeupdate=()=>{if(player.currentTime>=excerpt.end-.02)stop()};
     if(player.readyState>=1)seek();

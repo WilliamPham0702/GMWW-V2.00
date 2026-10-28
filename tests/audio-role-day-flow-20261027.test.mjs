@@ -15,13 +15,15 @@ test('dawn cue plays before the number of night deaths; Ngày dài only on open 
   assert.match(dawn,/audio_system_morning_number_/);
   assert.doesNotMatch(dawn,/audio_system_gallows_day_long/);
   const gallows=between(battle,'async function battleGallowsCommand(', '/\\* V3.234');
-  assert.match(gallows,/open:\[\['audio_system_gallows_day_long','Ngày dài rồi'/);
+  const stage=between(battle,'function battleGallowsRender(', 'async function battleGallowsCommand(');
+  assert.match(stage,/audio_system_gallows_day_long/);
+  assert.doesNotMatch(gallows,/open:\[\['audio_system_gallows_day_long','Ngày dài rồi'/);
   assert.doesNotMatch(gallows,/battlePlayConfiguredAudio\('system',cues\[command\],''\)/);
 });
 
 test('30s and 0s cues work in manually controlled days; a paused clock cannot announce',()=>{
   const tick=between(battle,'function battleTickCountdown(', 'async function battleNavigateIndex(');
-  assert.match(tick,/dayPausedRemainingMs==null&&seconds<=30&&seconds>0/);
+  assert.match(tick,/dayPausedRemainingMs==null&&seconds<=warningSeconds&&seconds>0/);
   assert.match(tick,/dayPausedRemainingMs==null&&seconds<=0/);
   assert.doesNotMatch(tick,/autoGM!==false\|\|playSceneRuntime\.room\?\.demo===true/);
 });
