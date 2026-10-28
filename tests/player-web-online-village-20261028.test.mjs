@@ -21,7 +21,7 @@ test('Chat is a bare bottom icon with close on outside tap and 30s idle',()=>{
   assert.match(chat,/#gmwwChatLaunch\{[^\n]*border:0;border-radius:0;background:transparent/);
   assert.match(chat,/function gmwwChatClosePanel\(/);
   assert.match(chat,/setTimeout\(gmwwChatClosePanel,30000\)/);
-  assert.match(chat,/panel\.contains\(target\)/);
+  assert.match(chat,/getElementById\('gmwwChatPanel'\)\?\.contains\(target\)/);
   assert.match(chat,/#gmwwChatLines\{flex:1;overflow-y:auto/);
 });
 test('Role-group labels never reveal unrelated group, dead peer, or out-of-turn cards',()=>{
