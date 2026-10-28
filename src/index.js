@@ -2315,6 +2315,18 @@ export class RoomDurableObject extends DurableObject {
       deadVictims=[correctlyStabbed?effectiveTargets[0]:actorId];
       message=correctlyStabbed?"Du Côn đâm đúng Sói/Phe Ba.":"Du Côn đâm nhầm Dân Làng và bị chết.";
       result={message,correctlyStabbed};
+    }else if(!artifactId&&(
+      roleId==="role_cavalier"&&actionId==="action-knight-stab"||
+      roleId==="role_prince"&&actionId==="action-g7-prince-stab")){
+      // Reveal ONLY the acting role; the selected target's actual role remains
+      // private. The kill rule uses the target's CURRENT Server-side faction.
+      const selected=assignments.find(x=>normalizeLoginId(x.loginId)===effectiveTargets[0]);
+      const hit=!!selected&&(isWolf(selected)||(roleId==="role_prince"&&isThird(selected)));
+      if(!selected)return j({ok:false,error:"DAY_STAB_TARGET_NOT_ASSIGNED"},409);
+      deadVictims=[hit?effectiveTargets[0]:actorId];
+      message=(roleId==="role_cavalier"?"Kỵ Sỹ":"Hoàng Tử")+
+        (hit?" đã Đâm đúng Phe và hạ mục tiêu.":" đã Đâm sai Phe và phải chết.");
+      result={message,correctlyStabbed:hit,revealedActorRole:roleId};
     }else if(!artifactId&&actionId==="action_bear_scan"&&["role_bear","role_bear_god"].includes(roleId)){
       const hasWolf=effectiveTargets.some(id=>assignments.some(x=>normalizeLoginId(x.loginId)===id&&isWolf(x)));
       message=hasWolf?"CÓ SÓI":"KHÔNG CÓ SÓI";
@@ -2460,6 +2472,15 @@ export class RoomDurableObject extends DurableObject {
     }
     if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,interactions,time);
     await this.ctx.storage.put("interactions",pruneInteractions(interactions));
+    if(!artifactId&&result?.revealedActorRole){
+      const reveal={id:"role-reveal:"+matchId+":"+actorId,type:"role_revealed",
+        loginId:actorId,actorId,roleId,matchId,night:day,createdAt:time,
+        message:(roleId==="role_cavalier"?"Kỵ Sỹ":"Hoàng Tử")+" đã công khai Vai Trò."};
+      await this.ctx.storage.put(this.actionLogKey(reveal),reveal);
+      this.broadcast({type:"role_revealed",loginId:actorId,roleId,
+        roleName:roleId==="role_cavalier"?"Kỵ Sỹ":"Hoàng Tử",
+        matchId,serverTime:Date.now()});
+    }
     const audit={id:"ev-"+crypto.randomUUID(),source:"gm",type:"day_action",actorId,
       roleId,artifactId,actionId,matchId,night:day,targetIds:targets,message,createdAt:time};
     await this.ctx.storage.put("actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+audit.id,audit);
