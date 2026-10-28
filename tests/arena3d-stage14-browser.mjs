@@ -41,6 +41,8 @@ async function check(engine,kind){
    assert.equal(await page.locator('body').getAttribute('data-gmww-stage10'),'gmww.arena.role-animation.10');
    assert.ok(state.drawCalls>0&&state.drawCalls<=57,'30 actors share the expected draw-call budget');
    assert.ok(state.pixelRatio<=1.75,'Stage7 mobile pixel-ratio budget');
+   if(n===20)assert.ok(state.pixelRatio<=1,'20-player GM GPU crowd budget');
+   if(n>=24)assert.ok(state.pixelRatio<=.85,'24–30-player GM GPU crowd budget');
    assert.equal(state.privateOverlayCount,0,'synthetic demo must not show GM-private effects');
    roster.push({players:n,drawCalls:state.drawCalls,fps:state.fps,
      pixelRatio:state.pixelRatio,crowdTier:state.crowdTier});
