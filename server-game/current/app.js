@@ -7677,7 +7677,8 @@ function initBattleControls(){
   battleBindAuxiliaryDrag('battleFactionStats','header');
   // The first natural touch on the battle view unlocks iOS sound without
   // waiting for GM to swipe the timeline several times.
-  top.addEventListener('pointerdown',battleUnlockAudioFromGesture,{once:true,capture:true});
+  document.addEventListener('pointerdown',battleUnlockAudioFromGesture,{once:true,capture:true});
+  document.addEventListener('click',battleUnlockAudioFromGesture,{once:true,capture:true});
   document.getElementById('battleMorningAudio')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleMorningPlayAudio()});
   document.getElementById('battleGallowsVerdict')?.addEventListener('click',event=>{
     if(event.target.closest('[data-verdict-continue]'))battleGallowsAcceptVerdict(battleState.gallowsVerdictKey);
