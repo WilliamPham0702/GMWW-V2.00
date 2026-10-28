@@ -2930,12 +2930,20 @@ export class RoomDurableObject extends DurableObject {
     const wolfRecognition=privateWolfRecognition(meta,wolfRuntime,loginId,
       wolfPackMembers(await this.ctx.storage.get("assignments")||[],rows,meta.matchId));
     const turn=wolfRuntime?.queue?.[wolfRuntime.cursor];
+    // Public role call only. Never reveal the actor, role owner or hidden target.
+    const audioCue=String(meta.phase)==="running"?
+      String(meta.cyclePhase)==="night"&&turn?
+        {key:String(meta.matchId)+":"+String(meta.cycleKey)+":"+String(turn.id),
+          label:String(turn.label||"Đến lượt Vai Trò").slice(0,120)}:
+      String(meta.cyclePhase)==="morning"?
+        {key:String(meta.matchId)+":"+String(meta.cycleKey)+":wakeup",label:"Làng ơi dậy đi"}:null
+      :null;
     const drawn=Number(meta.cycleNight)===3&&String(meta.cyclePhase)==='night'?
       await this.ctx.storage.get('drunkDeck:'+String(meta.matchId)+':3:'+loginId):null;
     const drunkDraw=drawn&&(drawn.selectedId||
       turn?.roleId==='role_drunk'&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId))?
       drunkDeckView(drawn,false):null;
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,drunkDraw,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,drunkDraw,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
@@ -3162,7 +3170,7 @@ export class RoomDurableObject extends DurableObject {
   // The generic chat_tick only asks each authenticated client to fetch its own channel.
   async chatAccess(loginId){
     const meta=await this.ctx.storage.get("meta"),players=(await this.ctx.storage.get("players"))||{},
-      rows=(await this.ctx.storage.get("interactions"))||[],bans=(await this.ctx.storage.get("onlineChatBans"))||{};
+      rows=(await this.ctx.storage.get("interactions"))||[],bans=(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{};
     const runtime=meta?.cyclePhase==="night"?await this.getNightRuntime(meta,Number(meta.cycleNight||1),false):null;
     const permission=chatPolicy({meta,players,rows,runtime,loginId,bans});
     return{meta,players,permission};
@@ -3201,15 +3209,15 @@ export class RoomDurableObject extends DurableObject {
         messages:Array.isArray(messages)?messages.slice(-80):[]
       }));
     return j({ok:true,matchId:match,phase:meta.cyclePhase||null,
-      bans:(await this.ctx.storage.get("onlineChatBans"))||{},channels});
+      bans:(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{},channels});
   }
   async gmChatModerate(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const id=normalizeLoginId(body?.loginId),players=(await this.ctx.storage.get("players"))||{};
     if(!id||!players["member:"+id]||typeof body?.muted!=="boolean")return j({ok:false,error:"CHAT_INVALID_MODERATION"},400);
-    const bans=(await this.ctx.storage.get("onlineChatBans"))||{};
+    const bans=(await this.ctx.storage.get("onlineChatBans:"+String(auth.meta.matchId||"")))||{};
     if(body.muted)bans[id]=true;else delete bans[id];
-    await this.ctx.storage.put("onlineChatBans",bans);
+    await this.ctx.storage.put("onlineChatBans:"+String(auth.meta.matchId||""),bans);
     this.broadcast({type:"chat_tick",serverTime:Date.now()});
     return j({ok:true,loginId:id,muted:body.muted});
   }
