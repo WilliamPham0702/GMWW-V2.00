@@ -465,8 +465,8 @@ function gmwwApplyRoster(rows,origin='http'){
    "let gmwwPublicPollSequence=0,gmwwLastRoomBroadcastAt=0,gmwwLastGallowsBroadcastAt=0;");
  offlineReplace("if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}",
    "if(d.type==='gallows_updated'){gmwwLastGallowsBroadcastAt=Date.now();if(d.room)state.room=d.room;state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);void refreshPrivateRole(true);return}");
- offlineReplace("else if(d.type==='room_cycle'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);state.gallows=null;",
-   "else if(d.type==='room_cycle'){state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);gmwwLastGallowsBroadcastAt=Date.now();state.gallows=null;");
+ offlineReplace("else if(d.type==='room_cycle'){gmwwChatClear();void gmwwChatRefresh();state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);state.gallows=null;",
+   "else if(d.type==='room_cycle'){gmwwChatClear();void gmwwChatRefresh();state.wolfWakeEpoch=Number(state.wolfWakeEpoch||0)+1;setPrivateWolfRecognition(null);gmwwLastGallowsBroadcastAt=Date.now();state.gallows=null;");
  offlineReplace("  const entry={key,promise:null};\n  entry.promise=api(",
    "  const entry={key,promise:null},requestedAt=Date.now();\n  entry.promise=api(");
  offlineReplace("    .then(d=>(state.roomCode===room&&state.participantId===participant&&state.token===token)?d:null)",
