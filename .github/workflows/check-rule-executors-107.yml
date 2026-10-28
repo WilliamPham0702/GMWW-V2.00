@@ -21,6 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned dependencies for real Worker compilation
+        run: npm ci
       - name: Syntax of the Worker and pure executor modules
         run: |
           node --check src/index.js
@@ -32,3 +34,9 @@ jobs:
         run: |
           node --test tests/card-executors-*.test.mjs
           node --test --test-name-pattern='Hunter' tests/v3193-seat-history-hunter.test.mjs
+      - name: Verify GM executable bundle, isolated Worker and action contract
+        run: |
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          npx wrangler deploy --dry-run
+
