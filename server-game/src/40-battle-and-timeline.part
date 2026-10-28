@@ -1133,7 +1133,7 @@ function battleRenderDrunkDraw(turn){
   const cards=document.createElement('div');cards.className='deck-row';
   for(const draw of draws)for(const card of draw.cards||[]){
     const img=document.createElement('img');img.className='deck-card';
-    img.src='/role-card-back.webp';img.alt='Lá Vai Trò úp';img.draggable=false;
+    img.src='role-card-back.webp';img.alt='Lá Vai Trò úp';img.draggable=false;
     cards.appendChild(img);
   }
   deck.appendChild(cards);
