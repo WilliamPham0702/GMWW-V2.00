@@ -96,7 +96,7 @@
 | Nhật Ký Mất Ngủ | artifact_action_check_awake | Chưa hoàn thiện executor chuyên biệt. Thiếu lịch sử ai thực sự thức và xác định hàng xóm. |
 | Ngọc Ghen Tuông | artifact_action_steal | Chưa hoàn thiện executor chuyên biệt. Thiếu đổi chủ lá chưa lật/cấp lá mới/ledger theo chủ. |
 | Mắt Tiên Tri | action_find_seer | Chưa hoàn thiện executor chuyên biệt. Thiếu gắn vào lượt Tiên Tri/chia sẻ cùng kết quả; action_find_seer hiện không đúng ý nghĩa này. |
-| Bình Giấc Mơ | artifact_action_lock_function | Đã chốt: khóa chức năng trong 2 ngày đêm. **Chưa có executor áp dụng và tự hết hạn.** |
+| Bình Giấc Mơ | artifact_action_lock_function | **Đã có executor Server ngày/đêm:** tạo trạng thái disabled_2n chặn vai trò, tự hết hạn sau 2 chu kỳ ngày/đêm, kiểm tra sở hữu/quota và rollback đêm. Cần nghiệm thu GM/Player Web trên thiết bị trước phát hành. |
 | Trái Tim Vô Tâm | artifact_action_block_vote | Chưa hoàn thiện executor chuyên biệt. Có vote_ban Ban Ngày; cần hoàn thiện flow bình minh và giới hạn sở hữu. |
 | Ấn Thị Trưởng | artifact_action_double_vote | Chưa hoàn thiện executor chuyên biệt. Thiếu trọng số hai phiếu trong gallows. |
 | Mặt Nạ Câm Lặng | artifact_action_silence | Chưa hoàn thiện executor chuyên biệt. Thiếu Câm và khóa quyền nói đúng ngày. |

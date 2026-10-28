@@ -2083,7 +2083,9 @@ export class RoomDurableObject extends DurableObject {
       gallows.candidateId===actorId;
     if(roleKnight&&!lynched)return j({ok:false,error:"KNIGHT_REQUIRES_LYNCH"},409);
     if((affected(actorId,"dead")&&!fn.actorMayBeDead&&!lynched)||
-      affected(actorId,"expelled")||affected(actorId,"frozen"))
+      affected(actorId,"expelled")||affected(actorId,"frozen")||
+      interactions.some(x=>normalizeLoginId(x?.loginId)===actorId&&sameMatch(x)&&
+        x?.effectActive!==false&&x?.type==="status"&&STATUS_DEFS[x.statusId]?.blocks===true))
       return j({ok:false,error:"DAY_ACTOR_BLOCKED"},409);
     // Expelled players remain targetable, but every effect on them is inert.
     if(targets.some(x=>!affected(x,"expelled")&&fn.allowDead!==true&&affected(x,"dead")&&
@@ -2163,6 +2165,16 @@ export class RoomDurableObject extends DurableObject {
       }else if(actionId==='action_exile'||effects.includes('effect_exile')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
+      }else if(actionId==='artifact_action_lock_function'){
+        // Bình Giấc Mơ: an actual server-side block for two whole day/night
+        // cycles, rather than an acknowledgement with no effect.
+        if(effectiveTargets.some(id=>interactions.some(x=>sameMatch(x)&&
+          normalizeLoginId(x.loginId)===id&&x.type==="status"&&
+          x.statusId==="disabled_2n"&&x.effectActive!==false)))
+          return j({ok:false,error:"DAY_DREAM_ALREADY_LOCKED",message:"Mục tiêu đang bị khóa chức năng; không tiêu hao lượt."},409);
+        for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,
+          type:"status",statusId:"disabled_2n"});
+        message="Bình Giấc Mơ đã khóa chức năng mục tiêu trong 2 ngày đêm.";
       }else if(['artifact_action_block_vote','action_block_vote'].includes(actionId)||effects.includes('effect-artifact-block-vote')||
           /cấm\s*(?:bỏ\s*)?phiếu|cấm\s*vote/i.test(String(fn.name||fn.label||''))){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"status",statusId:"vote_ban"});
@@ -2186,7 +2198,9 @@ export class RoomDurableObject extends DurableObject {
         Number(row.night)===day);
       if(effect.type!=="effect_notice"&&(effect.type==="status"?sameStatus:affected(effect.loginId,effect.type)))continue;
       const log={id:"ix-"+crypto.randomUUID(),type:effect.type,
-        ...(effect.statusId?{statusId:effect.statusId}:{}),loginId:effect.loginId,matchId,cycleKey,night:day,actorId,artifactId,roleId,actionId,
+        ...(effect.statusId?{statusId:effect.statusId}:{}),
+        ...(effect.statusId==="disabled_2n"?{activationPhase:"morning"}:{}),
+        loginId:effect.loginId,matchId,cycleKey,night:day,actorId,artifactId,roleId,actionId,
         source:"day-action",effectActive:effect.type!=="effect_notice",
         message:message||"Hành động Ban ngày",createdAt:time};
       interactions.push(log);
@@ -2534,6 +2548,39 @@ export class RoomDurableObject extends DurableObject {
       const statusId=String(body?.statusId||"").trim();if(!STATUS_VISUAL_IDS.has(statusId))return j({ok:false,error:"INVALID_STATUS"},400);
       const display={...(meta.statusDisplay&&typeof meta.statusDisplay==="object"?meta.statusDisplay:{})};display[statusId]=body?.visible===true;meta.statusDisplay=display;meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta);
       this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now()});return j({ok:true,statusDisplay:display})
+    }
+    // Only a validated, currently-owned Artifact turn may create this power
+    // block. The GM's generic notice would otherwise appear successful while
+    // leaving the target able to act.
+    if(String(body?.actionId||"")==="artifact_action_lock_function"){
+      if(!gmArtifactStep||type!=="effect_notice")
+        return j({ok:false,error:"DREAM_ARTIFACT_REQUIRES_VALID_TURN"},409);
+      if(!loginId||!players["member:"+loginId])
+        return j({ok:false,error:"INVALID_DREAM_TARGET"},400);
+      const rows=(await this.ctx.storage.get("interactions"))||[],
+        matchId=String(meta.matchId||""),night=Math.max(1,Number(meta.cycleNight)||1);
+      const sameMatch=x=>!x.matchId||String(x.matchId)===matchId;
+      if(rows.some(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===loginId&&
+        x.effectActive!==false&&(x.type==="dead"||
+          (x.type==="status"&&x.statusId==="disabled_2n"))))
+        return j({ok:false,error:"DREAM_TARGET_INELIGIBLE",message:"Mục tiêu đã chết hoặc đang bị khóa chức năng."},409);
+      const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);
+      if(useError)return useError;
+      const now=new Date().toISOString(),interaction={
+        id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),
+        clientEventId:String(body.clientEventId||""),type:"status",
+        statusId:"disabled_2n",loginId,matchId,night,cycleKey:String(meta.cycleKey||""),
+        activationPhase:"night",effectActive:true,
+        actionId:"artifact_action_lock_function",artifactId:String(body.artifactId||""),
+        actorId:normalizeLoginId(body.actorId),source:"artifact-night-engine",
+        message:"Bình Giấc Mơ khóa chức năng trong 2 ngày đêm.",createdAt:now
+      };
+      rows.push(interaction);
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+interaction.id,interaction);
+      this.broadcast({type:"player_status_changed",loginId,statusId:"disabled_2n",
+        active:true,serverTime:Date.now()});
+      return j({ok:true,interaction});
     }
     if(type==="status"){
       const statusId=String(body?.statusId||"").trim();if(!loginId||!STATUS_DEFS[statusId])return j({ok:false,error:"INVALID_STATUS",message:"Trạng thái không hợp lệ."},400);

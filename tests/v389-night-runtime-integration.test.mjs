@@ -819,3 +819,76 @@ test('Spiritualist compares factions normally when B was expelled in an earlier 
   assert.equal((await h.storage.get('interactions')).filter(x=>x.actionId==='action_compare_faction').length,0,
     'Faction comparison must not send a harmful effect notification to targets');
 });
+
+test('Dream Flask: day Artifact creates a real two-cycle block; disabled actor cannot use day powers',async()=>{
+  const h=harness({artifact:false});
+  Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
+  h.data.set('artifact:alice',{artifactId:'artifact_19',matchId:'test-match',singleUse:true,
+    artifactCard:{functions:[{actionId:'artifact_action_lock_function',phase:'both',targetCount:1,noSelf:false,usageMode:'onceGame',usageCount:1}]}});
+  h.data.set('roles:bob',[{roleId:'seer',matchId:'test-match',
+    roleCard:{functions:[{actionId:'action_bear_scan',phase:'day',targetCount:2,noSelf:false}]}}]);
+  const b={matchId:'test-match',cycleKey:'morning-1',actorId:'alice',
+    artifactId:'artifact_19',actionId:'artifact_action_lock_function',
+    targetIds:['bob'],clientEventId:'dream-day-1'};
+  const first=await result(await h.room.gmDayAction(null,b));
+  assert.equal(first.ok,true);
+  const lock=h.data.get('interactions').find(x=>x.statusId==='disabled_2n');
+  assert.ok(lock);assert.equal(lock.loginId,'bob');assert.equal(lock.activationPhase,'morning');
+  const blocked=await result(await h.room.gmDayAction(null,{
+    matchId:'test-match',cycleKey:'morning-1',actorId:'bob',roleId:'seer',
+    actionId:'action_bear_scan',targetIds:['alice','carol'],clientEventId:'dream-bob-blocked'}));
+  assert.equal(blocked.error,'DAY_ACTOR_BLOCKED');
+  assert.equal(h.data.has('dayRoleUsage:test-match'),false);
+  assert.equal((await result(await h.room.gmDayAction(null,b))).idempotent,true);
+  assert.equal(h.data.get('interactions').filter(x=>x.statusId==='disabled_2n').length,1);
+  for(const [phase,night] of [['night',2],['morning',2],['night',3]]){
+    const m=await h.meta();await h.room.applyCycle(m,phase,night,phase+'-'+night);
+    assert.equal(h.data.get('interactions').find(x=>x.id===lock.id).effectActive,true);
+  }
+  const m=await h.meta();await h.room.applyCycle(m,'morning',3,'morning-3');
+  assert.equal(h.data.get('interactions').find(x=>x.id===lock.id).effectActive,false);
+  assert.equal((await result(await h.room.gmDayAction(null,{
+    matchId:'test-match',cycleKey:'morning-3',actorId:'bob',roleId:'seer',
+    actionId:'action_bear_scan',targetIds:['alice','carol'],clientEventId:'dream-bob-after'}))).ok,true);
+});
+
+test('Dream Flask: target already locked rejects before Artifact use is debited',async()=>{
+  const h=harness({artifact:false});Object.assign(h.data.get('meta'),{cyclePhase:'morning',cycleKey:'morning-1'});
+  h.data.set('artifact:alice',{artifactId:'artifact_19',matchId:'test-match',singleUse:true,
+    artifactCard:{functions:[{actionId:'artifact_action_lock_function',phase:'both',targetCount:1}]}});
+  h.data.set('interactions',[{id:'prior-lock',loginId:'bob',matchId:'test-match',
+    type:'status',statusId:'disabled_2n',effectActive:true,night:1}]);
+  const resultDay=await result(await h.room.gmDayAction(null,{
+    matchId:'test-match',cycleKey:'morning-1',actorId:'alice',
+    artifactId:'artifact_19',actionId:'artifact_action_lock_function',
+    targetIds:['bob'],clientEventId:'dream-refused'}));
+  assert.equal(resultDay.error,'DAY_DREAM_ALREADY_LOCKED');
+  assert.equal(h.data.has('artifactUse:alice:artifact_19'),false);
+  assert.equal(h.data.has('artifactCycle:morning-1'),false);
+});
+
+test('Dream Flask: night Artifact turn applies status and GM undo restores actor ability and use',async()=>{
+  const h=harness();
+  const assigned=h.data.get('assignments')[0];
+  assigned.artifactId='artifact_19';assigned.artifactName='Bình Giấc Mơ';
+  h.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_19',
+    artifactName:'Bình Giấc Mơ',priorityFirst:true,singleUse:true,
+    artifactCard:{actions:[{id:'artifact_action_lock_function',name:'Bình Giấc Mơ',phase:'both',targetCount:1}],
+      functions:[{actionId:'artifact_action_lock_function',phase:'both',targetCount:1}]}});
+  await h.jump('early-artifact-window');
+  const rt=await h.runtime(),m=await h.meta();
+  const body={matchId:m.matchId,cycleKey:m.cycleKey,turnId:rt.currentId,
+    actorId:'alice',artifactId:'artifact_19',actionId:'artifact_action_lock_function',
+    type:'effect_notice',targetIds:['bob'],clientEventId:'dream-night-1'};
+  const forged=await result(await h.room.gmBattleAction(null,{...body,clientEventId:'dream-forged',type:'dead'}));
+  assert.equal(forged.error,'BATTLE_ACTION_ABORTED');
+  assert.equal(h.data.has('artifactUse:alice:artifact_19'),false);
+  const applied=await result(await h.room.gmBattleAction(null,body));
+  assert.equal(applied.ok,true,JSON.stringify(applied));
+  assert.equal(h.data.get('interactions').find(x=>x.statusId==='disabled_2n').loginId,'bob');
+  assert.equal(isBattleActorBlocked(h.data.get('interactions'),{actorId:'bob',matchId:'test-match',statusDefs:STATUS_DEFS}),true);
+  const undo=await result(await h.room.gmBattleUndo(null,{undoToken:applied.undoToken}));
+  assert.equal(undo.ok,true,JSON.stringify(undo));
+  assert.equal(h.data.get('interactions')?.some(x=>x.statusId==='disabled_2n')||false,false);
+  assert.equal(h.data.has('artifactUse:alice:artifact_19'),false);
+});
