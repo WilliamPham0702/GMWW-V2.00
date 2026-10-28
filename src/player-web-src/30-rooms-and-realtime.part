@@ -129,7 +129,7 @@ function renderDrunkDraw(draw){
     panel=document.createElement('section');panel.id='gmwwDrunkDraw';
     panel.setAttribute('aria-label','Say Rượu chọn một lá Vai Trò');
     panel.innerHTML='<div class="dd-deck" role="group" aria-label="Chọn một lá Vai Trò úp"></div>';
-    document.body.appendChild(panel);
+    document.getElementById('game').appendChild(panel);
   }
   panel.hidden=false;
   const grid=panel.querySelector('.dd-deck');grid.replaceChildren();
