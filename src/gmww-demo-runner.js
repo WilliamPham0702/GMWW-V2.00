@@ -67,11 +67,11 @@ function dayActions(ctx,meta,usage,ballot){
 }
 // Only the authenticated actor's current, unused powers reach Player Web.
 // The private response does not expose other actors or the full night queue.
-export async function demoPlayerActions(room,meta,loginId){
- if(meta?.demo!==true||meta?.phase!=='running'||!loginId)return [];
+export async function playerOfferedActions(room,meta,loginId){
+ if(meta?.phase!=='running'||!loginId||(!meta.demo&&String(meta.roomMode||'').toLowerCase()!=='online'))return [];
  const ctx=await context(room,meta);
- if(ctx.players['member:'+loginId]?.humanControlled!==true||
-    !ctx.assignments.some(a=>a.loginId===loginId))return [];
+ if(!ctx.players['member:'+loginId]||(meta.demo&&ctx.players['member:'+loginId]?.humanControlled!==true)||
+    !ctx.assignments.some(a=>a.loginId===loginId&&(!a.matchId||String(a.matchId)===String(meta.matchId))))return [];
  let actions=[];
  if(meta.cyclePhase==='night'){
   const runtime=await room.getNightRuntime(meta,meta.cycleNight,false);
@@ -87,6 +87,12 @@ export async function demoPlayerActions(room,meta,loginId){
   noSelf:a.noSelf,allowDead:a.allowDead,noTarget:a.noTarget,phase:meta.cyclePhase
  }));
 }
+/* The legacy DEMO action API remains DEMO-only; Online uses separate admission. */
+export async function demoPlayerActions(room,meta,loginId){
+ if(meta?.demo!==true)return [];
+ return playerOfferedActions(room,meta,loginId);
+}
+
 export function demoTaskAt(duration,plan){
  const count=Math.max(1,plan?.tasks?.length||0),cursor=Number(plan?.cursor||0);
  const task=plan?.tasks?.[cursor];
