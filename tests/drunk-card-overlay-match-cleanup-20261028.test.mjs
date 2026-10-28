@@ -15,7 +15,8 @@ test('same original Role card-back image in GM and Player Web',()=>{
   assert.equal(card.subarray(8,12).toString(),'WEBP');
   const original=artwork.match(/const src='data:image\/webp;base64,([A-Za-z0-9+/=]+)'/);
   assert.ok(original);assert.deepEqual(card,Buffer.from(original[1],'base64'));
-  assert.match(gm,/img\.src='\/role-card-back\.webp'/);
+  assert.match(gm,/img\.src='role-card-back\.webp'/);
+  assert.match(fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8'),/copy\('assets\/role-card-back\.webp','role-card-back\.webp'\)/);
   assert.match(web,/gmww-card-back-img/);
 });
 test('Player Web has no new dialog, title, count or Finish button; selects exactly one card',()=>{
