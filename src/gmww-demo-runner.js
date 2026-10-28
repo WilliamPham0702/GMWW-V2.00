@@ -72,7 +72,8 @@ export async function playerOfferedActions(room,meta,loginId){
  if(meta?.phase!=='running'||!loginId||(!meta.demo&&String(meta.roomMode||'').toLowerCase()!=='online'))return [];
  const ctx=await context(room,meta);
  if(!ctx.players['member:'+loginId]||(meta.demo&&ctx.players['member:'+loginId]?.humanControlled!==true)||
-    !ctx.assignments.some(a=>a.loginId===loginId&&(!a.matchId||String(a.matchId)===String(meta.matchId))))return [];
+    !ctx.assignments.some(a=>a.loginId===loginId))return [];
+ if(!ctx.assignments.some(a=>a.loginId===loginId&&(!a.matchId||String(a.matchId)===String(meta.matchId))))return [];
  let actions=[];
  if(meta.cyclePhase==='night'){
   const runtime=await room.getNightRuntime(meta,meta.cycleNight,false);
