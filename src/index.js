@@ -1,7 +1,7 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {resolveElderBell} from "./gmww-elder-bell-rules.js";
-import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversionsDue} from "./gmww-card-night-passives.js";
+import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversionsDue,apprenticeSeersDue} from "./gmww-card-night-passives.js";
 import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -1815,30 +1815,43 @@ export class RoomDurableObject extends DurableObject {
     return {assignments:updated,drunkNotices,applied};
   }
   async applyCursedRoleConversions(meta,night,assignments){
+    // Resolve both automatic successor Roles at a stable night boundary.
+    // Never overwrite a living Seer, and never expose the donor's private card.
     const matchId=String(meta.matchId||""),events=await this.ctx.storage.get("interactions")||[],
-      targets=cursedConversionsDue({assignments,interactions:events,matchId,night});
+      initialSeerCount=await this.ctx.storage.get("ruleInitialSeerCount:"+matchId),
+      targets=[
+        ...cursedConversionsDue({assignments,interactions:events,matchId,night})
+          .map(loginId=>({loginId,fromRoleId:"role_cursed",toRoleId:"role_wolf",
+            faction:"wolf",fallbackName:"Sói Thường"})),
+        ...apprenticeSeersDue({assignments,interactions:events,matchId,night,
+          initialSeerCount})
+          .map(loginId=>({loginId,fromRoleId:"role_apprentice_seer",toRoleId:"role_seer",
+            faction:"village",fallbackName:"Tiên Tri"}))
+      ];
     if(!targets.length)return {assignments,converted:[]};
-    const canonical=await this.ctx.storage.get("roleCatalog:role_wolf");
-    // Do not invent a Wolf power from an empty card: the real catalog must
-    // supply the role's authoritative functions, artwork and faction.
-    if(!canonical?.roleCard?.functions?.length)return {assignments,converted:[],error:"WOLF_ROLE_PACKAGE_MISSING"};
     let result=assignments.map(x=>({...x})),converted=[],publishedAt=new Date().toISOString();
-    for(const loginId of targets){
-      const index=result.findIndex(x=>normalizeLoginId(x.loginId)===loginId&&x.roleId==="role_cursed");
+    for(const plan of targets){
+      const canonical=await this.ctx.storage.get("roleCatalog:"+plan.toRoleId);
+      if(!canonical?.roleCard?.functions?.length)continue; // never invent abilities
+      const loginId=plan.loginId,index=result.findIndex(x=>
+        normalizeLoginId(x.loginId)===loginId&&x.roleId===plan.fromRoleId);
       if(index<0)continue;
       const prior=await this.ctx.storage.get("roles:"+loginId)||[];
       if(!Array.isArray(prior)||!prior.length)continue;
-      const own=prior.find(x=>x.roleId==="role_cursed"&&
+      const own=prior.find(x=>x.roleId===plan.fromRoleId&&
         Number(x.assignmentIndex)===Number(result[index].assignmentIndex));
       if(!own)continue;
-      const updated={...own,roleId:"role_wolf",roleName:String(canonical.roleName||"Sói Thường"),
-        faction:"wolf",roleCard:canonical.roleCard,roleImage:canonical.roleImage||own.roleImage,
+      const updated={...own,roleId:plan.toRoleId,
+        roleName:String(canonical.roleName||plan.fallbackName),
+        faction:plan.faction,roleCard:canonical.roleCard,
+        roleImage:canonical.roleImage||own.roleImage,
         artworkAssetId:canonical.artworkAssetId||own.artworkAssetId,
         artworkId:canonical.artworkAssetId||own.artworkId,
-        deliveredAt:publishedAt,viewedAt:null,inheritedFromRoleId:"role_cursed"};
+        deliveredAt:publishedAt,viewedAt:null,inheritedFromRoleId:plan.fromRoleId};
       const roles=prior.map(x=>x===own?updated:x);
-      result[index]={...result[index],roleId:"role_wolf",roleName:updated.roleName,
-        faction:"wolf",deliveredAt:publishedAt,viewedAt:null,inheritedFromRoleId:"role_cursed"};
+      result[index]={...result[index],roleId:plan.toRoleId,roleName:updated.roleName,
+        faction:plan.faction,deliveredAt:publishedAt,viewedAt:null,
+        inheritedFromRoleId:plan.fromRoleId};
       await this.ctx.storage.put("roles:"+loginId,roles);
       await this.ctx.storage.put("role:"+loginId,roles[0]);
       converted.push({loginId,roles});
@@ -1849,8 +1862,8 @@ export class RoomDurableObject extends DurableObject {
       meta.roleDeliveredAt=publishedAt;meta.updatedAt=publishedAt;
       for(const {loginId,roles} of converted)
         await this.ctx.storage.put("deliverySnapshot:"+loginId,buildPrivateDeliverySnapshot({
-          matchId,matchRevision:Number(meta.matchRevision||0),deliveryVersion:meta.deliveryVersion,
-          publishedAt,roles}));
+          matchId,matchRevision:Number(meta.matchRevision||0),
+          deliveryVersion:meta.deliveryVersion,publishedAt,roles}));
       await this.ctx.storage.put("meta",meta);
       this.broadcast({type:"room_state",room:publicRoom(meta),serverTime:Date.now()});
     }
@@ -2065,6 +2078,8 @@ export class RoomDurableObject extends DurableObject {
       if(await this.ctx.storage.get(baselineKey)===undefined){
         const initial=(await this.ctx.storage.get("assignments"))||[];
         await this.ctx.storage.put(baselineKey,initial.filter(isWolfRole).length);
+        await this.ctx.storage.put("ruleInitialSeerCount:"+String(meta.matchId),
+          initial.filter(a=>a.roleId==="role_seer").length);
       }
     }
     meta.cycleKey=key;if(p)meta.cyclePhase=p;if(n)meta.cycleNight=n;meta.autoPausedRemainingMs=null;meta.dayDeadlineAt=null;

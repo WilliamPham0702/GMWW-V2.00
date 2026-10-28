@@ -46,3 +46,17 @@ export function cursedConversionsDue({assignments=[],interactions=[],matchId,nig
       rows.some(x=>x.actionId==='action_cursed_bite'&&id(x.loginId)===id(a.loginId)&&Number(x.night)<n))
     .map(a=>id(a.loginId));
 }
+
+export function apprenticeSeersDue({assignments=[],interactions=[],matchId,night,initialSeerCount}={}){
+  const n=Number(night),original=Number(initialSeerCount);
+  if(!Number.isInteger(n)||n<1||!Number.isInteger(original)||original<0)return [];
+  const rows=matchRows(interactions,matchId),dead=deadIds(rows);
+  const seers=(Array.isArray(assignments)?assignments:[]).filter(x=>x.roleId==='role_seer');
+  if(seers.some(a=>!dead.has(id(a.loginId))))return [];
+  // Seers who died tonight cannot be replaced until the next night.
+  if(original>0&&(n===1||rows.filter(x=>x.type==='dead'&&
+    seers.some(a=>id(a.loginId)===id(x.loginId))).some(x=>Number(x.night)>=n)))return [];
+  return (Array.isArray(assignments)?assignments:[])
+    .filter(a=>a.roleId==='role_apprentice_seer'&&!dead.has(id(a.loginId)))
+    .map(a=>id(a.loginId));
+}
