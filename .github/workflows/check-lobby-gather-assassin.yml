@@ -11,6 +11,8 @@ on:
       - 'server-game/current/GMWW.html'
       - 'server-game/current/style.css'
       - 'tests/lobby-gather-mode-assassin-20261027.test.mjs'
+      - 'tests/gm-gather-pinch-spacing-v3265.test.mjs'
+      - 'assets/village/village-layout.js'
       - '.github/workflows/check-lobby-gather-assassin.yml'
   pull_request:
     paths:
@@ -22,6 +24,8 @@ on:
       - 'server-game/current/GMWW.html'
       - 'server-game/current/style.css'
       - 'tests/lobby-gather-mode-assassin-20261027.test.mjs'
+      - 'tests/gm-gather-pinch-spacing-v3265.test.mjs'
+      - 'assets/village/village-layout.js'
       - '.github/workflows/check-lobby-gather-assassin.yml'
   workflow_dispatch:
 jobs:
@@ -38,4 +42,4 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node --check src/index.js
       - name: Lobby Gather and Assassin targeted tests
-        run: node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
+        run: node --test tests/lobby-gather-mode-assassin-20261027.test.mjs tests/gm-gather-pinch-spacing-v3265.test.mjs tests/gather-spacing-gm-menu.test.mjs tests/seat-free-map-drag-v3198.test.mjs
