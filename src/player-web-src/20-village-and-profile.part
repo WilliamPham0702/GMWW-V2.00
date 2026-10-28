@@ -21,7 +21,7 @@ function playerTopMenuStatus(){
 function updatePlayerTopMenu(){
   const menu=$('#gmwwPlayerTopMenu');if(!menu)return;
   const info=menu.querySelector('.gmww-player-menu-info b');if(info)info.textContent=playerTopMenuStatus();const hint=menu.querySelector('.gmww-player-menu-info small');if(hint)hint.textContent=state.participantId?(Number(currentRoomPlayer()?.seatId||0)>0?'Vị trí '+currentRoomPlayer().seatId+' · Đã sẵn sàng':'Chờ Quản Trò xếp vị trí'):'Chờ Quản Trò gọi vào phòng';
-  const turn=menu.querySelector('.gmww-player-menu-turn');if(turn)turn.textContent=playerScenePolicy(room).mode==='battle'?String(state.audioCue?.label||'Đang theo dõi lượt GM').slice(0,120):'';
+  const turn=menu.querySelector('.gmww-player-menu-turn');if(turn)turn.textContent=playerScenePolicy(state.room).mode==='battle'?String(state.audioCue?.label||'Đang theo dõi lượt GM').slice(0,120):'';
   const avatar=menu.querySelector('.gmww-player-menu-account img'),characterId=String(state.member?.gameCharacterId||currentRoomPlayer()?.gameCharacterId||'');
   if(avatar&&characterId){
     const key=characterId+':top-menu';
