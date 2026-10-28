@@ -44,6 +44,19 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: V3.273 — Player Web Online trên nền Làng và hành động xác thực
+        if: steps.scope.outputs.mode == 'player-online-village-3273'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check src/gmww-online-action-icons.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/wolf-recognition.test.mjs tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs
+          test -s docs/releases/GMWW-player-web-online-village-20261028.md
       - name: V3.272 PR595 — GM Chat 🦩, Giết/Cứu/Cấm chat, Runtime OTA
         if: steps.scope.outputs.mode == 'gm-admin-top-chat-3272'
         run: |
