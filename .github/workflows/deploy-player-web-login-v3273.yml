@@ -121,9 +121,7 @@ jobs:
           if [ -n "$SMOKE_LOGIN_ID" ]; then
             node -e 'process.stdout.write(JSON.stringify({loginId:process.env.SMOKE_LOGIN_ID}))' > /tmp/smoke-input.json
             curl -fsS --max-time 20 -H 'content-type: application/json' --data-binary @/tmp/smoke-input.json "$URL/api/members/login" > /tmp/smoke-session.json
-            node - <<'NODE'
-            const x=require('/tmp/smoke-session.json');if(!x.ok||!x.token||!x.member)throw Error('Login failed');
-            NODE
+            node -e "const x=require('/tmp/smoke-session.json');if(!x.ok||!x.token||!x.member)process.exit(1)"
             TOKEN=$(node -e "process.stdout.write(require('/tmp/smoke-session.json').token)")
             for n in 1 2; do
               curl -fsS --max-time 20 -H "Authorization: Bearer $TOKEN" "$URL/api/members/me" > "/tmp/smoke-me-$n.json"
