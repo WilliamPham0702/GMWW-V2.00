@@ -1998,6 +1998,14 @@ export class RoomDurableObject extends DurableObject {
     meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     const rows=(await this.ctx.storage.get("interactions"))||[];
     const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
+    if(p==="night")for(const old of rows){
+      if(old.type!=="expelled"||!['black-woman','artifact-elder-stick'].includes(old.source)||
+        String(old.matchId||"")!==String(meta.matchId)||old.effectActive===false||
+        Number(old.night)>=n)continue;
+      old.effectActive=false;old.expiredAt=now;old.expiredReason="RETURNED_TO_VILLAGE";
+      if(old.id)await this.ctx.storage.put(this.actionLogKey(old),old);
+    }
+
     // Rung Chuông Già Làng suppresses EVERY death effect of the same night,
     // regardless of source. The bell's own second-life cost is not suppressed.
     const elderBell=p==="morning"&&n>0?resolveElderBell({
@@ -2034,6 +2042,39 @@ export class RoomDurableObject extends DurableObject {
       row.pendingDeath=false;row.type="dead";row.effectActive=true;row.resolvedAt=now;
       row.message="Bạn đã chết vì "+(row.effectName||"tác động ban đêm")+".";
       await this.ctx.storage.put("actionLog:"+String(Date.parse(row.createdAt)).padStart(13,"0")+":"+row.id,row);
+    }
+    // Người Loan Tin: publish the ROLE NAME captured at action time, not
+    // whatever the target may have transformed into by the following dawn.
+    if(p==="morning"&&n>0)for(const noticed of rows){
+      if(noticed.type!=="effect_notice"||noticed.actionId!=="action-news-role"||
+        String(noticed.matchId||"")!==String(meta.matchId)||Number(noticed.night)!==n||
+        noticed.undone===true||!noticed.snapshotRoleName)continue;
+      const id="news-role:"+String(meta.matchId)+":"+n+":"+noticed.id;
+      if(rows.some(x=>x.id===id))continue;
+      const event={id,type:"effect_notice",effectActive:true,
+        actionId:"action-news-role-announce",loginId:noticed.loginId,
+        matchId:String(meta.matchId),night:n,cycleKey:key,
+        snapshotRoleName:noticed.snapshotRoleName,snapshotRoleId:noticed.snapshotRoleId,
+        source:"news-bearer",createdAt:now,
+        message:"Người Loan Tin công bố Vai Trò: "+noticed.snapshotRoleName+"."};
+      rows.push(event);await this.ctx.storage.put(this.actionLogKey(event),event);
+      this.broadcast({type:"role_revealed",loginId:noticed.loginId,
+        roleId:noticed.snapshotRoleId,roleName:noticed.snapshotRoleName,
+        matchId:String(meta.matchId),serverTime:Date.now()});
+    }
+    // Bà Da Đen: the person leaves only during the following DAY, never
+    // retrospectively during the Night that selected them.
+    if(p==="morning"&&n>0)for(const noticed of rows){
+      if(noticed.type!=="effect_notice"||noticed.actionId!=="action-black-woman-leave"||
+        String(noticed.matchId||"")!==String(meta.matchId)||Number(noticed.night)!==n||
+        noticed.undone===true||noticed.noEffect===true)continue;
+      const id="black-woman-exile:"+String(meta.matchId)+":"+n+":"+noticed.loginId;
+      if(rows.some(x=>x.id===id))continue;
+      const event={id,type:"expelled",effectActive:true,loginId:noticed.loginId,
+        actionId:"action-black-woman-leave",matchId:String(meta.matchId),
+        night:n,cycleKey:key,source:"black-woman",createdAt:now,
+        message:"Người chơi rời làng trong ngày theo Bà Da Đen."};
+      rows.push(event);await this.ctx.storage.put(this.actionLogKey(event),event);
     }
     // At dawn resolve confirmed wolf-bite/Guard/Fairy notices in the SAME match
     // and night. Guards block final, potentially transferred bite destinations.
@@ -2632,6 +2673,16 @@ export class RoomDurableObject extends DurableObject {
       const deliveredRole=privateRoles.find(r=>String(r?.roleId||"")===roleId&&
         (!r?.matchId||String(r.matchId)===matchId));
       const roleCard=deliveredRole?.roleCard||row.roleCard||{},actionId=String(body?.actionId||"");
+      if(roleId==='role_mad_doctor'&&actionId==='action-mad-doctor-cure'&&
+        !targets.some(id=>interactions.some(x=>String(x.matchId||'')===matchId&&
+          x.type==='status'&&x.statusId==='infected'&&x.effectActive!==false&&
+          normalizeLoginId(x.loginId)===id)))
+        return j({ok:false,error:'DOCTOR_TARGET_NOT_INFECTED',
+          message:'Không có người đang Bị Bệnh để giải độc; chưa trừ Bình Cứu.'},409);
+      if(['action-disease-self','action-mad-doctor-cure','action-news-role',
+          'action-black-woman-leave'].includes(actionId)&&type!=='effect_notice')
+        return j({ok:false,error:'ROLE_SPECIAL_EFFECT_TYPE_INVALID'},409);
+
       // Server-side special restrictions precede all usage and effect writes.
       if(roleId==='role_elder'&&actionId==='18'){
         if(type!=='effect_notice'||Number(meta.cycleNight||0)>4)
@@ -2794,6 +2845,44 @@ export class RoomDurableObject extends DurableObject {
           message:data.message||"Không thể áp dụng đầy đủ hành động; tất cả mục tiêu đã được khôi phục."},response.status>=400?response.status:409);
       }
       results.push(data);
+    }
+    if(roleUse&&['action-disease-self','action-mad-doctor-cure','action-news-role',
+        'action-black-woman-leave'].includes(roleUse.actionId)){
+      const updated=await this.ctx.storage.get("interactions")||[];
+      const id=effectiveTargets[0],timestamp=new Date().toISOString();
+      if(roleUse.actionId==='action-mad-doctor-cure'){
+        for(const x of updated)if(String(x.matchId||'')===matchId&&
+          x.type==='status'&&x.statusId==='infected'&&
+          x.effectActive!==false&&normalizeLoginId(x.loginId)===id){
+            x.effectActive=false;x.expiredAt=timestamp;
+            x.expiredReason="MAD_DOCTOR_CURED";await this.ctx.storage.put(this.actionLogKey(x),x);
+          }
+        this.broadcast({type:"player_status_changed",loginId:id,
+          statusId:"infected",active:false,serverTime:Date.now()});
+      }
+      if(roleUse.actionId==='action-disease-self'){
+        const stamp="infected:"+matchId+":"+actorId;
+        if(!updated.some(x=>x.id===stamp)){
+          const disease={id:stamp,type:"status",statusId:"infected",loginId:id,
+            matchId,night:Number(meta.cycleNight),cycleKey,roleId:"role_diseased",
+            actionId:roleUse.actionId,actorId,effectActive:true,
+            createdAt:timestamp,source:"diseased-role",
+            message:"Người chơi đã bị nhiễm bệnh."};
+          updated.push(disease);await this.ctx.storage.put(this.actionLogKey(disease),disease);
+        }
+      }
+      if(roleUse.actionId==='action-news-role'){
+        const targetRole=(await this.ctx.storage.get("assignments")||[])
+          .find(x=>normalizeLoginId(x.loginId)===id);
+        const confirmed=updated.find(x=>x.actionNonce===token&&
+          x.actionId===roleUse.actionId&&normalizeLoginId(x.loginId)===id);
+        if(confirmed&&targetRole){
+          confirmed.snapshotRoleId=String(targetRole.roleId||"");
+          confirmed.snapshotRoleName=String(targetRole.roleName||targetRole.roleId||"");
+          await this.ctx.storage.put(this.actionLogKey(confirmed),confirmed);
+        }
+      }
+      await this.ctx.storage.put("interactions",pruneInteractions(updated));
     }
     if(roleUse)await this.ctx.storage.put(usageKey,appendBattleRoleActionUsage(roleUse.currentUsage,roleUse));
     const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
