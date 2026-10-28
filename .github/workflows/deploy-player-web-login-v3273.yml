@@ -159,3 +159,5 @@ jobs:
 # PR599 Worker-only re-trigger after production gate isolation
 
 # Retry after PR599 gate stabilization: 2026-10-29T06:53+07:00
+
+# PR merge trigger for final Worker-only deployment
