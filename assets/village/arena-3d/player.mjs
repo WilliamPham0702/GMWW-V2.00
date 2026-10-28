@@ -26,6 +26,7 @@ const scheduler=createArenaPaintScheduler();
 let orbit=.5,elevation=.75,radius=20,lastSize='',lastSignature='',room=null;
 let selected=null,activePointer=null,pinchSize=0,contextLost=false,lastPaintHz=0;
 let frameCount=0,fps=0,fpsSince=performance.now(),connection=null,publicBallot=null;
+let paintFrames=0,renderPaused=false;
 const pointers=new Map();
 
 function showState(frame){
@@ -59,11 +60,20 @@ function resize(){
   camera.aspect=Math.max(1,box.width)/Math.max(1,box.height);camera.updateProjectionMatrix();
 }
 function frame(now){
-  const hz=arenaTargetFrameHz({visible:!document.hidden,
+  // The real Player Web handles private choices inside an opaque full-screen
+  // iframe. Never continue WebGL painting behind it: GPU use heats iPhones.
+  // HTTP and WebSocket Core sync deliberately remain independent and active.
+  const covered=$('card').classList.contains('open');
+  const paused=Boolean(document.hidden||covered||contextLost);
+  if(renderPaused!==paused){
+    renderPaused=paused;scheduler.reset();frameCount=0;fpsSince=now;
+    document.body.dataset.arenaPlayerRenderPaused=String(paused);
+  }
+  const hz=arenaTargetFrameHz({visible:!paused,
     active:field.hasActiveMotion(now),interacting:pointers.size>0,
     lowPower:field.actorCount>=20,reducedMotion});
   if(hz!==lastPaintHz){lastPaintHz=hz;document.body.dataset.arenaPlayerHz=String(hz)}
-  if(scheduler.shouldPaint(now,hz,{paused:contextLost})){
+  if(scheduler.shouldPaint(now,hz,{paused})){
     resize();
     camera.position.set(Math.sin(orbit)*Math.cos(elevation)*radius,
       Math.sin(elevation)*radius,Math.cos(orbit)*Math.cos(elevation)*radius+1.5);
@@ -71,7 +81,7 @@ function frame(now){
     if(!reducedMotion)village.animate(now);
     field.draw(now);
     renderer.render(scene,camera);
-    frameCount++;
+    frameCount++;paintFrames++;
   }
   if(now-fpsSince>=1000){
     fps=Math.round(frameCount*1000/(now-fpsSince));
@@ -133,7 +143,7 @@ window.__GMWW_ARENA_PLAYER_READONLY=()=>({
   room:room?.code||null,count:field.actorCount,phase:room?.phase||null,
   cyclePhase:room?.cyclePhase||null,gallowsActorId:field.gallowsActorId,
   cardOpen:$('card').classList.contains('open'),
-  fps,connection,drawCalls:renderer.info.render.calls
+  fps,connection,renderPaused,paintFrames,drawCalls:renderer.info.render.calls
 });
 requestAnimationFrame(frame);
 if(!validCode){$('state').textContent='Thiếu mã phòng';message('Mở trang từ liên kết phòng của GM, hoặc thêm ?room=MÃPHÒNG.');}
