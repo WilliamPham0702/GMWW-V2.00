@@ -41,6 +41,6 @@ test('Kẻ Bị Nguyền changes only at the following night',()=>{
 test('Server validates two-target Bite, native role conversion and private delivery',()=>{
  const s=fs.readFileSync('src/index.js','utf8');
  for(const key of ['WOLF_PACK_BITE_TARGET_COUNT_INVALID','applyCursedRoleConversions',
-  'ruleInitialWolfCount:','roleCatalog:role_wolf','action_stone_wolf_life'])
+  'ruleInitialWolfCount:','"roleCatalog:"+plan.toRoleId','action_stone_wolf_life'])
   assert.ok(s.includes(key));
 });
