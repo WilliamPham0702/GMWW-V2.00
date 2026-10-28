@@ -2277,7 +2277,41 @@ function isMorningAudio3267Scope(changes){
   }catch{return false}
 }
 
-function classifyBrowserScope(changes){
+// PR #587: Hybrid DEMO is a self-contained, server-authoritative Player Web
+// feature. No unrelated 3D, IPA, card-art or gallows browser suite is required.
+// Fail closed if ANY extra source path is modified.
+const HYBRID_DEMO_587_FILES=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-demo-hybrid.yml',
+  'docs/releases/GMWW-DEMO-HYBRID-20261028.md',
+  'src/gmww-demo-runner.js',
+  'src/gmww-members-live.js',
+  'src/gmww-player-private-card-patch.js',
+  'src/index.js',
+  'src/player-web-src/30-rooms-and-realtime.part',
+  'tests/demo-hybrid-live-e2e.mjs',
+  'tests/demo-hybrid-real-players.test.mjs',
+  'tests/demo-pr367-369-reconciliation.test.mjs',
+  'tests/demo-room-cross-origin-webkit.mjs',
+  'tests/demo-room-gm-safety.test.mjs',
+  'tests/demo-room-lease-phases.test.mjs',
+  'tests/demo-server-autonomous-e2e.mjs',
+  'package.json','package-lock.json',
+  'server-game/current/app.js','server-game/current/GMWW.html',
+  'server-game/src/00-core-and-library.part'
+]);
+function isHybridDemo587Scope(changes){
+  if(!Array.isArray(changes)||changes.length<8)return false;
+  const names=new Set(changes.map(c=>c.path));
+  const required=['src/index.js','src/gmww-demo-runner.js','src/gmww-members-live.js',
+    'src/gmww-player-private-card-patch.js','src/player-web-src/30-rooms-and-realtime.part',
+    'tests/demo-hybrid-real-players.test.mjs','tests/demo-hybrid-live-e2e.mjs',
+    'docs/releases/GMWW-DEMO-HYBRID-20261028.md'];
+  return required.every(p=>names.has(p))&&changes.every(c=>
+    HYBRID_DEMO_587_FILES.has(c.path)&&['A','M'].includes(c.status));
+}function classifyBrowserScope(changes){
+  if(isHybridDemo587Scope(changes))return 'demo-hybrid-587';
   if(isMorningAudio3267Scope(changes))return 'gm-audio-morning-3267';
   if(isOnlineChatScope(changes))return 'online-chat-audio';
   if(isLeanPackaging3264Scope(changes))return 'ipa-ota-lean-3264';
@@ -2525,6 +2559,20 @@ function detect(){
       if(isDrunkV3260PostMergeScope(changed))
         return{mode:'drunk-card-overlay-20261028',
           reason:'V3.260 postmerge CI scope only; exact prior merge and same-SHA focused checks'};
+    }catch{}
+  }
+
+  // Recognize the exact merged Hybrid DEMO 587 change set on main as well as
+  // on its PR. An expanded diff falls back to full release validation.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+          .split('\n').filter(Boolean).map(row=>{const [status,path]=row.split('\t');return {status,path}});
+        if(isHybridDemo587Scope(changes))return {mode:'demo-hybrid-587',
+          reason:'PR587 hybrid DEMO live member auth, action priority, Player private UI and rollout safety'};
+      }
     }catch{}
   }
 
@@ -2844,6 +2892,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1
   if(result.mode==='audio-fix-3217')console.log('Chỉ kiểm thử ba lỗi âm thanh V3.217, không kiểm Seat/Card/3D.');
   if(result.mode==='audio-gallows-3209')console.log('Chỉ xác minh cú pháp, assembled bundles và phiên bản/OTA; không chạy bộ test gameplay mở rộng.');
   if(result.mode==='audio-v3208')console.log('Chỉ xác minh cú pháp, SHA và luồng Audio/Tiên Tri/Thông cáo liên quan V3.208; bỏ kiểm thử khác.');
+  if(result.mode==='demo-hybrid-587')console.log('PR587: chỉ DEMO lai, Player Web private patch, version guard, Worker and OTA integrity.');
   if(result.mode==='demo-475')console.log('PR #475: chi kiem DEMO Sat Thu/soi xet/audio/Len Gian, bao toan Worker/Player Web; khong kiem Card, Seat, OTA, IPA.');
   if(result.mode==='gallows')console.log('Chỉ dùng CI Lên Giàn và các chốt Worker/OTA/IPA có liên quan; không khởi chạy kiểm tra lá bài Chrome/Edge, ghế, Khám Phá, ảnh nền hay OTA trình duyệt.');
   if(result.mode==='ci-policy')console.log('Chỉ kiểm tra bộ chọn phạm vi CI; không chạy kiểm thử gameplay.');

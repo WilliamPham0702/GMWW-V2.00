@@ -774,6 +774,19 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node --test tests/gm-gallows-vote-markers-ui.test.mjs
 
+      - name: PR587 — DEMO lai, bảo mật Player Web và Runtime OTA V3.265
+        if: steps.scope.outputs.mode == 'demo-hybrid-587'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check src/gmww-player-private-card-patch.js
+          node --check src/gmww-members-live.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-pr367-369-reconciliation.test.mjs tests/demo-server-runner.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs
+          test -s docs/releases/GMWW-DEMO-HYBRID-20261028.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
