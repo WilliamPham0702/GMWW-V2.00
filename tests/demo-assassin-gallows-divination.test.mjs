@@ -58,7 +58,7 @@ test('GM audio honors an excerpt instead of playing a full role wake-up file',as
  const start=audio.indexOf('async function battlePlayConfiguredAudio('),end=audio.indexOf('function battleTurnAudioCue(',start);
  assert.ok(start>=0&&end>start);
  let calls=0,last;
- const ctx={battleState:{key:''},playSceneRuntime:{room:{demo:false}},state:{cards:[]},
+ const ctx={battleState:{key:''},battleUnlockedAudioContext:null,playSceneRuntime:{room:{demo:false}},state:{cards:[]},
   setTimeout:()=>1,clearTimeout:()=>{},playAudioMuted:()=>false,battleFindAudio:()=>({id:'clip',roleNameEnd:4}),
   battleAudioLast:{key:'',at:0},battleAudioReady:new Map([['cards:clip','role.m4a']]),
   battleAudioRequestId:0,battleActiveAudio:null,battleWarmAudio:async()=>null,
