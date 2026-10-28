@@ -9,6 +9,8 @@ on:
       - 'tests/player-web-receipt-patch-hotfix.test.mjs'
       - 'docs/releases/GMWW-V3.273-PLAYER-WEB-LOGIN-HOTFIX-20261029.md'
       - '.github/workflows/check-player-web-login-v3273.yml'
+      - '.github/workflows/deploy-player-web-login-v3273.yml'
+      - '.github/workflows/deploy-production.yml'
   pull_request:
     branches: [main]
     paths:
@@ -17,6 +19,8 @@ on:
       - 'src/player-web-src/**'
       - 'tests/player-web-receipt-patch-hotfix.test.mjs'
       - '.github/workflows/check-player-web-login-v3273.yml'
+      - '.github/workflows/deploy-player-web-login-v3273.yml'
+      - '.github/workflows/deploy-production.yml'
   workflow_dispatch:
 jobs:
   player-login:
