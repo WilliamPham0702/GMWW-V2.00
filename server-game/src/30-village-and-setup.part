@@ -583,7 +583,7 @@ function playCharacterAnimationCommand(member,{moving=false,sitting=false,effect
   const state=hanging?'walking':travel==='back'?'running':travel==='out'?'walking':runTarget?'running':!battleStatic&&moving?(base.state==='running'?'running':'walking'):'idle';
   const motion=state==='running'?'run':state==='walking'?'walk':'idle';
   return {...base,characterId:playActiveCharacterId(member?.gameCharacterId),state,motion,
-    facing:travel?(battleTurnFacing==='left'?'left':'right'):moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,
+    facing:(travel||battleTurnTravel==='hold')?(battleTurnFacing==='left'?'left':'right'):moving?playWalkDirection(member):(base.facing==='left'?'left':'right'),activity:motion,
     paused:effect==='dead'||(battleStatic&&!hanging&&!runTarget&&!travel),lowPower:battleStatic};
 }
 function playRigTextureUrl(characterId,facing='right'){return playCharacterFrameUrl(characterId,1,facing)}
