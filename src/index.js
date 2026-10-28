@@ -1,7 +1,7 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {resolveElderBell} from "./gmww-elder-bell-rules.js";
-import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversionsDue,apprenticeSeersDue} from "./gmww-card-night-passives.js";
+import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversionsDue,apprenticeSeersDue,bigfootWolfDue,factionRoleTransitionsDue,activePackAtNight} from "./gmww-card-night-passives.js";
 import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -1826,7 +1826,10 @@ export class RoomDurableObject extends DurableObject {
         ...apprenticeSeersDue({assignments,interactions:events,matchId,night,
           initialSeerCount})
           .map(loginId=>({loginId,fromRoleId:"role_apprentice_seer",toRoleId:"role_seer",
-            faction:"village",fallbackName:"Tiên Tri"}))
+            faction:"village",fallbackName:"Tiên Tri"})),
+        ...bigfootWolfDue({assignments,interactions:events,matchId,night})
+          .map(loginId=>({loginId,fromRoleId:"role_bigfoot",toRoleId:"role_wolf",
+            faction:"wolf",fallbackName:"Sói Thường"}))
       ];
     if(!targets.length)return {assignments,converted:[]};
     let result=assignments.map(x=>({...x})),converted=[],publishedAt=new Date().toISOString();
@@ -1869,11 +1872,47 @@ export class RoomDurableObject extends DurableObject {
     }
     return {assignments:result,converted:converted.map(x=>x.loginId)};
   }
+  async applyNightFactionTransitions(meta,night,assignments){
+    const matchId=String(meta.matchId||""),events=await this.ctx.storage.get("interactions")||[],
+      plans=factionRoleTransitionsDue({assignments,interactions:events,matchId,night});
+    if(!plans.length)return assignments;
+    const updated=assignments.map(x=>({...x})),publishedAt=new Date().toISOString();
+    let applied=0;
+    for(const plan of plans){
+      const index=updated.findIndex(x=>normalizeLoginId(x.loginId)===plan.loginId);
+      if(index<0)continue;
+      const prior=await this.ctx.storage.get("roles:"+plan.loginId)||[];
+      if(!Array.isArray(prior)||!prior.length)continue;
+      const matchRole=prior.find(x=>String(x.roleId)===String(updated[index].roleId));
+      if(!matchRole)continue;
+      const converted={...matchRole,faction:plan.toFaction,
+        roleCard:{...matchRole.roleCard,factionId:plan.toFaction},
+        deliveredAt:publishedAt,viewedAt:null};
+      const roles=prior.map(x=>x===matchRole?converted:x);
+      updated[index]={...updated[index],faction:plan.toFaction,
+        deliveredAt:publishedAt,viewedAt:null};
+      await this.ctx.storage.put("roles:"+plan.loginId,roles);
+      await this.ctx.storage.put("role:"+plan.loginId,roles[0]);
+      plan.roles=roles;applied++;
+    }
+    if(applied){
+      await this.ctx.storage.put("assignments",updated);
+      meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
+      meta.roleDeliveredAt=publishedAt;meta.updatedAt=publishedAt;
+      for(const plan of plans)if(plan.roles)
+        await this.ctx.storage.put("deliverySnapshot:"+plan.loginId,
+          buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),
+            deliveryVersion:meta.deliveryVersion,publishedAt,roles:plan.roles}));
+      await this.ctx.storage.put("meta",meta);
+      this.broadcast({type:"room_state",room:publicRoom(meta),serverTime:Date.now()});
+    }
+    return updated;
+  }
   async buildNightRuntime(meta,night){
     let assignments=(await this.ctx.storage.get("assignments"))||[];
     const cfg=(await this.ctx.storage.get("gameConfig"))||{},now=new Date().toISOString(),n=Math.max(1,Number(night)||1),queue=[],timing=cfg?.timing||{},defaultActionSec=Math.max(0,Number(timing.defaultActionSec??45)||0),wolfDiscussionSec=Math.max(0,Number(timing.wolfDiscussionSec??30)||0),earlyArtifactSec=30,artifactActionSec=Math.max(0,Number(timing.artifactActionSec??30)||0),roleDuration=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??defaultActionSec)||0)]));
     const converted=await this.applyCursedRoleConversions(meta,n,assignments);
-    assignments=converted.assignments;
+    assignments=await this.applyNightFactionTransitions(meta,n,converted.assignments);
     const inheritance=await this.applyNightRoleInheritance(meta,n,assignments);
     assignments=inheritance.assignments;
     // ART-01: explicit match disable wins; legacy matches with assigned Artifacts remain compatible.
@@ -1895,7 +1934,8 @@ export class RoomDurableObject extends DurableObject {
       queue.push({id:"early-artifact-window",kind:"early-artifact-window",label:"Artifact đầu ván",durationSec:earlyArtifactSec,status:"pending",actions:priorityOwners.map(row=>({artifactId:String(row.artifactId),artifactName:String(row.artifactName||"Artifact"),loginId:normalizeLoginId(row.loginId),playerId:"member:"+normalizeLoginId(row.loginId)}))});
     // WOLF-01: one waking turn only when at least two living wolves can meet.
     // A newly converted member wakes the pack again on the next night only.
-    const wolfMembers=wolfPackMembers(assignments,await this.ctx.storage.get("interactions")||[],meta.matchId);
+    const wolfMembers=activePackAtNight({assignments,
+      interactions:await this.ctx.storage.get("interactions")||[],matchId:meta.matchId,night:n});
     const previousNight=n>1?await this.getNightRuntime(meta,n-1,false):null;
     const previousIds=Array.isArray(previousNight?.wolfPackIds)?previousNight.wolfPackIds:wolfMembers.map(a=>a.loginId);
     if(shouldWakeWolfPack(n,wolfMembers,previousIds))queue.push({
@@ -1955,8 +1995,8 @@ export class RoomDurableObject extends DurableObject {
     const arranged=arrangeNightRoles(specials.remaining,artifactTurns);
     queue.push(...arranged.fixed);
     const packInteractions=await this.ctx.storage.get("interactions")||[];
-    const eligiblePack=packMembers(assignments,packInteractions,meta.matchId);
-    if(assignments.some(isWolfRole)){
+    const eligiblePack=activePackAtNight({assignments,interactions:packInteractions,matchId:meta.matchId,night:n});
+    if(eligiblePack.length){
       const snowCanBite=canSnowWolfBite({assignments,interactions:packInteractions,matchId:meta.matchId});
       const packOwners=eligiblePack.filter(x=>x.roleId!=="role_snow_wolf"||snowCanBite);
       const biteQuota=wolfCubBiteQuota({assignments,interactions:packInteractions,matchId:meta.matchId,night:n});
