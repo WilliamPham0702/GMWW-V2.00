@@ -2452,7 +2452,44 @@ function isPlayerWebBackgroundPerformanceScope(changes){
     by.get('src/player-web-src/50-privacy-and-runtime.part')?.after?.includes('if(!document.hidden)checkWebUpdate()');
 }
 
+// PR603: isolated top-account icon repair. Do not treat the compiled Player bundle
+// as a change to voting, roles, or realtime; unknown paths fail closed to full.
+const playerAvatar603Paths=new Set([
+  '.github/workflows/check-player-web-online-village.yml',
+  'src/gmww-members-live.js',
+  'src/player-web-src/20-village-and-profile.part',
+  'tests/player-web-top-account-avatar-20261029.test.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  'tests/ci-browser-scope.test.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/check-drunk-spiritualist.yml',
+  '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/check-p0-chrome-edge-realtime.yml'
+]);
+function isPlayerAvatar603Scope(changes){
+  if(!Array.isArray(changes)||changes.length<4||changes.some(c=>
+    !playerAvatar603Paths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  const required=[
+    'src/gmww-members-live.js',
+    'src/player-web-src/20-village-and-profile.part',
+    'tests/player-web-top-account-avatar-20261029.test.mjs',
+    '.github/workflows/check-player-web-online-village.yml'
+  ];
+  if(!required.every(x=>by.has(x)))return false;
+  const part=String(by.get('src/player-web-src/20-village-and-profile.part')?.after||'');
+  const test=String(by.get('tests/player-web-top-account-avatar-20261029.test.mjs')?.after||'');
+  return part.includes('gmww-player-account-fallback') &&
+    part.includes("account.classList.add('has-avatar')") &&
+    part.includes("account.classList.remove('has-avatar')") &&
+    part.includes('avatar.onload=') && part.includes('avatar.onerror=') &&
+    test.includes('Menu avatar is static') &&
+    test.includes('Account avatar appears only after loading');
+}
+
 function classifyBrowserScope(changes){
+  if(isPlayerAvatar603Scope(changes))return 'player-top-avatar-603';
   if(isPlayerWebBackgroundPerformanceScope(changes))return 'player-web-background-performance';
   if(gmAdmin3272Scope(changes))return 'gm-admin-top-chat-3272';
   if(isOnlineVillage3273Scope(changes))return 'player-online-village-3273';
