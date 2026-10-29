@@ -1,0 +1,53 @@
+name: Check Native GitHub-first OTA Stage 2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server-game/GMWW-Server/GameView.swift"
+      - "server-game/src/10-library-and-settings.part"
+      - "server-game/current/app.js"
+      - ".github/scripts/ci-browser-scope.mjs"
+      - ".github/workflows/check-player-web.yml"
+      - ".github/workflows/build-server-game-ipa.yml"
+      - ".github/workflows/check-native-github-ota.yml"
+      - "tests/native-github-first-ota-stage2.test.mjs"
+      - "docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md"
+  push:
+    branches: [main]
+    paths:
+      - "server-game/GMWW-Server/GameView.swift"
+      - "server-game/src/10-library-and-settings.part"
+      - "server-game/current/app.js"
+      - ".github/workflows/check-native-github-ota.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Native OTA integrity, rollback and GitHub/Cloudflare fallback
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact reviewed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked test tooling
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test Native Github-first OTA policy without Cloudflare deploy
+        run: |
+          node --test tests/native-github-first-ota-stage2.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          test -s docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md

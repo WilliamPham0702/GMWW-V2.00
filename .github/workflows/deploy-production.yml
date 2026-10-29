@@ -148,6 +148,27 @@ jobs:
             SHOULD_DEPLOY=true
             echo 'V3.274 PR613: canonical Character40 original-image SHA proof repaired; Runtime source/IPA/data unchanged.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          # PR629 Native OTA Stage 2: exact 10-file Native-only release.
+          # Never deploy Worker/Cloudflare Production for this IPA feature.
+          if grep -Fxq 'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            EXPECTED=$(printf '%s\n' \
+              'server-game/GMWW-Server/GameView.swift' \
+              'server-game/src/10-library-and-settings.part' \
+              'server-game/current/app.js' \
+              '.github/workflows/build-server-game-ipa.yml' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/check-native-github-ota.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/native-github-first-ota-stage2.test.mjs' \
+              'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md' | sort)
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::PR629 Native OTA scope expanded; refuse silent deploy-skip"; exit 1; }
+            test "$(node -p 'require("./package.json").version')" = '3.275.0'
+            grep -Fq 'GMWW_NATIVE_GITHUB_OTA=true' server-game/GMWW-Server/GameView.swift
+            SHOULD_DEPLOY=false
+            echo 'PR629 Native OTA only: Cloudflare Worker, IPA Production and game data are isolated.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
