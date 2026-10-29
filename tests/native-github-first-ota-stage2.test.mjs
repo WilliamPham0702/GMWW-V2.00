@@ -22,7 +22,7 @@ test('GitHub metadata is strictly official, immutable version-tagged and not lat
   assert.match(swift,/release\.tag_name\.hasPrefix\("gmww-runtime-v"\)/);
   assert.match(swift,/url\.host == "github\.com"/);
   assert.match(swift,/url\.path == "\/WilliamPham0702\/GMWW-V2\.00\/releases\/download\/gmww-runtime-v/);
-  assert.match(swift,/version\.compare\(current,options:\.numeric\) == \.orderedDescending/);
+  assert.match(swift,/latest\.0\.compare\(current,options:\.numeric\) == \.orderedDescending/);
   assert.doesNotMatch(swift,/releases\/latest/);
 });
 test('Automatic downloader verifies full download checksum and each embedded file',()=>{
