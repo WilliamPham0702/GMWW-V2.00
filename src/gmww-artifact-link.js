@@ -6,7 +6,8 @@ const SAFE_COPIES=Object.freeze({
  artifact_09:'artifact_action_check_villager',
  artifact_24:'artifact_action_check_third_faction',
  artifact_29:'action_seer',
- artifact_39:'action_destroyer_scry'
+ artifact_39:'action_destroyer_scry',
+ artifact_35:'action_protect'
 });
 export function planArtifactLink({actorId,targetId,actorArtifact,donorArtifact,assignments=[],matchId}={}){
  const actor=identity(actorId),donor=identity(targetId);
