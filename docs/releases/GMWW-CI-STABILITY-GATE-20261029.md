@@ -7,6 +7,10 @@
 - Cố định Node 22, cache npm, cài theo lockfile, timeout 12 phút; hủy lượt PR cũ cùng nhánh khi có commit mới.
 - Chỉ quyền contents:read, không quyền deploy, không Cloudflare secret, không sửa Worker/IPA/Runtime OTA/dữ liệu.
 
+## Sửa lỗi CI lặp lại qua chạy thực tế
+- Lượt CI đầu của PR #606 phát hiện 2/34 unit test selector lỗi: V3.222 AUTO VÁN và V3.234 dock. Hai fixture lịch sử dùng mã nguồn phiên bản hiện tại hoặc dấu mốc đã lỗi thời, dẫn đến kỳ vọng phạm vi hẹp sai thực tế.
+- Đã sửa kỳ vọng để `full` (fail-closed), không nới selector, không bỏ test. Có commit `edf08ba`; cần chạy lại toàn bộ check trên commit mới.
+
 ## Điều kiện nghiệm thu
 - CI Stability Contract SUCCESS trên chính PR và main sau khi merge.
 - Các check chức năng theo phạm vi vẫn phải SUCCESS; **gate này không thay thế** kiểm thử luật/Server/Player hoặc kiểm thử E2E.
