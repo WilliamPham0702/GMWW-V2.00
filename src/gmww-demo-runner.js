@@ -23,14 +23,15 @@ export const serverDemoActive=(meta,lease)=>meta?.demo===true&&meta.phase==='run
 
 async function context(room,meta){
  const store=room.ctx.storage,assignments=await store.get('assignments')||[],players=await store.get('players')||{},rows=await store.get('interactions')||[],cfg=await store.get('gameConfig')||{};
- const cards=[],artifacts=[],artifactOwners=new Map();
+ const cards=[],artifacts=[],artifactOwners=new Map(),roleOwners=new Map();
  for(const a of assignments){
   const privateRows=await store.get('roles:'+a.loginId)||[await store.get('role:'+a.loginId)].filter(Boolean),owned=privateRows.find(r=>r.roleId===a.roleId&&matchRow(r,meta)),catalog=await store.get('roleCatalog:'+a.roleId);
   if(!cards.some(c=>c.id===a.roleId))cards.push({...catalog?.roleCard,...a.roleCard,...owned?.roleCard,id:a.roleId,name:a.roleName});
+  roleOwners.set(a.loginId,{...catalog?.roleCard,...a.roleCard,...owned?.roleCard,id:a.roleId,name:a.roleName});
   if(a.artifactId){const art=await store.get('artifact:'+a.loginId);artifactOwners.set(a.loginId,{...art,spent:!!(await store.get('artifactUse:'+a.loginId+':'+a.artifactId))});if(!artifacts.some(c=>c.id===a.artifactId))artifacts.push({...art?.artifactCard,id:a.artifactId,name:a.artifactName})}
  }
  const cycle=(await store.get('artifactCycle:'+(meta.cyclePhase==='morning'?meta.matchId+':day:'+meta.cycleNight:artifactCycleKey(meta.matchId,meta.cycleNight))))||{accepted:[]};
- return {store,assignments,players,rows,cfg,cards,artifacts,artifactOwners,cycle};
+ return {store,assignments,players,rows,cfg,cards,artifacts,artifactOwners,roleOwners,cycle};
 }
 function nightActions(ctx,meta,turn,usage){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
@@ -48,7 +49,7 @@ function nightActions(ctx,meta,turn,usage){
 function dayActions(ctx,meta,usage,ballot){
  const list=[];
  for(const a of ctx.assignments){
-  const owners=[{card:ctx.cards.find(c=>c.id===a.roleId),roleId:a.roleId},...(a.artifactId?[{card:ctx.artifacts.find(c=>c.id===a.artifactId),artifactId:a.artifactId}]:[])];
+  const owners=[{card:ctx.roleOwners.get(a.loginId)||ctx.cards.find(c=>c.id===a.roleId),roleId:a.roleId},...(a.artifactId?[{card:ctx.artifacts.find(c=>c.id===a.artifactId),artifactId:a.artifactId}]:[])];
   for(const owner of owners){const card=owner.card;if(!card)continue;
    for(const fn of card.functions?.length?card.functions:card.actions||[]){
     const actionId=fn.actionId||fn.id,actorId=a.loginId,knight=owner.roleId==='role_knight'&&actionId==='action_knight_last_strike'&&ballot?.stage==='resolved'&&ballot.outcome==='dead'&&ballot.candidateId===actorId;
