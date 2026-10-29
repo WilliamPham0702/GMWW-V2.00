@@ -606,3 +606,23 @@ test('CI-only merge main push does not treat the CI policy selector itself as a 
   assert.equal(classifyBrowserScope(changes),'ci-policy');
   assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay')]),'full');
 });
+
+test('CI-only merge excludes unrelated Drunk-role tests without waiving gameplay checks',()=>{
+  const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+  const deploy=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  const workflow=readFileSync(new URL('../.github/workflows/check-drunk-spiritualist.yml',import.meta.url),'utf8');
+  assert.match(workflow,/steps\.scope\.outputs\.mode != 'player-top-avatar-603' && steps\.scope\.outputs\.mode != 'ci-policy'/);
+  assert.match(workflow,/steps\.scope\.outputs\.mode == 'ci-policy'/);
+  assert.match(deploy,/check-drunk-spiritualist\.yml/);
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old',selector),
+    modified('.github/workflows/check-drunk-spiritualist.yml','old',workflow),
+    modified('.github/workflows/deploy-production.yml','old',deploy),
+    modified('tests/ci-browser-scope.test.mjs','old','Drunk CI test'),
+    modified('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md','old','# CI-only notes')
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','actual game change')]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/gmww-drunk-draw-rules.js',status:'M',before:'a',after:'b'}]),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md')),'full');
+});
