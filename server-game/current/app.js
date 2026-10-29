@@ -1303,7 +1303,7 @@ function artifactArtworkSideMargins(data,width,height){
     }
   }
   if(!samples)return null;
-  const threshold=Math.max(2,Math.ceil(samples*.12));
+  const threshold=Math.max(3,Math.ceil(samples*.22)); // Ignore isolated bright specks in dark artwork gutters.
   const present=x=>columns[x]>=threshold;
   // A minimum two-column run rejects isolated sparkles/noise in black padding.
   let left=0;
@@ -1356,7 +1356,22 @@ function fitPlayerCardTitle(){
   const title=$('#playerName');if(!title)return;
   title.style.fontSize='';
   if(typeof requestAnimationFrame!=='function')return;
-  requestAnimationFrame(()=>{let size=25;while(size>18&&title.scrollWidth>title.clientWidth+1){size=Math.max(18,size-.5);title.style.fontSize=size+'px'}});
+  // Fit BOTH lines and height, not just nowrap width. Long Vietnamese Artifact
+  // titles must remain readable on iPhone instead of overflowing the card edge.
+  const expected=title.textContent;
+  requestAnimationFrame(()=>{
+    if(title.textContent!==expected)return;
+    const head=title.parentElement;
+    if(!head)return;
+    const styles=typeof getComputedStyle==='function'?getComputedStyle(head):null;
+    const verticalPadding=(parseFloat(styles?.paddingTop)||0)+(parseFloat(styles?.paddingBottom)||0);
+    const available=Math.max(0,head.clientHeight-verticalPadding-2);
+    let size=Math.min(23,parseFloat(typeof getComputedStyle==='function'?getComputedStyle(title).fontSize:23)||23);
+    title.style.fontSize=size+'px';
+    while(size>12.5&&(title.scrollWidth>title.clientWidth+1||title.scrollHeight>available+1)){
+      size=Math.max(12.5,size-.5);title.style.fontSize=size+'px';
+    }
+  });
 }
 function fitPlayerCardInformation(){
   const box=$('#playerInformation');if(!box)return;
@@ -9375,6 +9390,59 @@ async function openPlayEndSheet(){
   sheet.classList.remove('hidden');
 }
 function closePlayEndSheet(){document.getElementById('playEndSheet')?.classList.add('hidden')}
+
+/* Shared Server GM outside-tap policy: dismiss the topmost visible floating
+   sheet, never submit a form, confirm a game action or discard saved data.
+   The active navigation pages remain navigable rather than auto-exiting play. */
+function gmwwDismissOutsidePointer(event){
+  if(event.pointerType==='mouse'&&event.button!==0)return;
+  const target=event.target;
+  if(!target?.closest)return;
+  const sheets=[...document.querySelectorAll('.sheet')].filter(el=>!el.hidden&&!el.classList.contains('hidden')&&getComputedStyle(el).display!=='none');
+  if(sheets.length){
+    // Respect z-index; for equal layers the last DOM node is topmost.
+    const sheet=sheets.map((el,index)=>({el,index,z:Number.parseInt(getComputedStyle(el).zIndex,10)||0}))
+      .sort((a,b)=>a.z-b.z||a.index-b.index).at(-1).el;
+    if(sheet.querySelector('.sheet-card')?.contains(target))return;
+    const close={
+      editSheet:()=>closeSheet(),
+      playGameSheet:()=>closePlayGameSheet(),
+      playMatchCompletionSheet:()=>closePlayCompletionSheet(),
+      playEndSheet:()=>closePlayEndSheet(),
+      playRosterSheet:()=>closePlayRosterSheet(),
+      playSeatSheet:()=>closePlaySeatSheet(),
+      playDisbandSheet:()=>closePlayDisbandSheet(),
+      memberSheet:()=>closeMemberSheet(),
+      playGMSheet:()=>closePlayGMSheet(),
+      playCreateRoomSheet:()=>document.getElementById('playCreateRoomClose')?.click()
+    }[sheet.id];
+    if(!close)return;
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    close();
+    return;
+  }
+  const preset=document.getElementById('playSeatPresetPanel');
+  if(preset&&!preset.hidden&&!preset.contains(target)&&!target.closest('#playGatherSeatPreset')){
+    closePlaySeatPresetPanel();return;
+  }
+  // Front-of-card is a viewer, not an unsaved edit form. A tap in the blank
+  // library background closes it; Settings/back-face editing is left intact.
+  const editor=document.getElementById('entityEditor');
+  if(editor&&!editor.classList.contains('hidden')&&
+     document.getElementById('library')?.classList.contains('active')&&
+     document.getElementById('entityFront')?.classList.contains('active')&&
+     !target.closest('#playerCard,.editor-bar,#bottomNav')&&
+     (editor.contains(target)||document.getElementById('library')?.contains(target))){
+    closeEntityEditor();
+  }
+}
+function gmwwBindOutsideDismiss(){
+  const app=document.getElementById('app');
+  if(!app||app.dataset.outsideDismissReady==='1')return;
+  app.dataset.outsideDismissReady='1';
+  document.addEventListener('pointerdown',gmwwDismissOutsidePointer,true);
+}
+
 async function confirmPlayEndGame(){
   if(playSceneRuntime.busy)return;
   if(!isLivePlayRoom()){playFlashError('Chưa chọn Phòng để kết thúc ván.');return}
@@ -9886,6 +9954,7 @@ async function handlePlayTimelineStep(step){
   playFlashError('Hãy hoàn tất bước hiện tại trước khi chuyển đến bước này.');
 }
 function initPlayScene(){
+  gmwwBindOutsideDismiss();
   initPlayCompletion();
   const shell=document.getElementById('playShell');if(!shell)return;
   initBattleControls();
