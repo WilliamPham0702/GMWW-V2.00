@@ -9298,14 +9298,17 @@
           }
         ]
       },
-      "httpEvidence": [],
+      "httpEvidence": [
+        "tests/worker-artifact-echo-shield-e2e.mjs"
+      ],
       "acceptance": {
         "executor": {
           "status": "PARTIAL",
           "evidence": [
             "tests/card-executors-artifact-link-20261029.test.mjs",
             "tests/worker-artifact-link-e2e.mjs",
-            "tests/worker-artifact-night-transformations-e2e.mjs"
+            "tests/worker-artifact-night-transformations-e2e.mjs",
+            "tests/worker-artifact-echo-shield-e2e.mjs"
           ]
         },
         "timing": {
@@ -9313,7 +9316,8 @@
           "evidence": [
             "tests/card-executors-artifact-link-20261029.test.mjs",
             "tests/worker-artifact-link-e2e.mjs",
-            "tests/worker-artifact-night-transformations-e2e.mjs"
+            "tests/worker-artifact-night-transformations-e2e.mjs",
+            "tests/worker-artifact-echo-shield-e2e.mjs"
           ]
         },
         "ownership": {
@@ -9321,7 +9325,8 @@
           "evidence": [
             "tests/card-executors-artifact-link-20261029.test.mjs",
             "tests/worker-artifact-link-e2e.mjs",
-            "tests/worker-artifact-night-transformations-e2e.mjs"
+            "tests/worker-artifact-night-transformations-e2e.mjs",
+            "tests/worker-artifact-echo-shield-e2e.mjs"
           ]
         },
         "quota": {
@@ -9329,7 +9334,8 @@
           "evidence": [
             "tests/card-executors-artifact-link-20261029.test.mjs",
             "tests/worker-artifact-link-e2e.mjs",
-            "tests/worker-artifact-night-transformations-e2e.mjs"
+            "tests/worker-artifact-night-transformations-e2e.mjs",
+            "tests/worker-artifact-echo-shield-e2e.mjs"
           ]
         },
         "idempotency": {
@@ -9353,7 +9359,8 @@
           "evidence": [
             "tests/card-executors-artifact-link-20261029.test.mjs",
             "tests/worker-artifact-link-e2e.mjs",
-            "tests/worker-artifact-night-transformations-e2e.mjs"
+            "tests/worker-artifact-night-transformations-e2e.mjs",
+            "tests/worker-artifact-echo-shield-e2e.mjs"
           ]
         },
         "deathAndRevival": {
@@ -9365,7 +9372,8 @@
           "evidence": [
             "tests/card-executors-artifact-link-20261029.test.mjs",
             "tests/worker-artifact-link-e2e.mjs",
-            "tests/worker-artifact-night-transformations-e2e.mjs"
+            "tests/worker-artifact-night-transformations-e2e.mjs",
+            "tests/worker-artifact-echo-shield-e2e.mjs"
           ]
         },
         "gmUi": {
@@ -9389,7 +9397,8 @@
           "evidence": [
             "tests/card-executors-artifact-link-20261029.test.mjs",
             "tests/worker-artifact-link-e2e.mjs",
-            "tests/worker-artifact-night-transformations-e2e.mjs"
+            "tests/worker-artifact-night-transformations-e2e.mjs",
+            "tests/worker-artifact-echo-shield-e2e.mjs"
           ]
         }
       }
