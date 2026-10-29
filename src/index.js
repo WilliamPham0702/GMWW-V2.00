@@ -3243,7 +3243,10 @@ export class RoomDurableObject extends DurableObject {
     const payload={ok:true,kind,actionId,actorId,roleId,artifactId,targetIds:targets,
       day,result,serverTime:Date.now()};
     await this.ctx.storage.put(receiptKey,{fingerprint,result:payload});
-    this.broadcast({type:"day_action_confirmed",actionId,actorId,targetIds:targets,
+    // Private disclosure: wake clients with a generic tick; recipient data
+    // is fetched only by the authenticated /me endpoint, never broadcast.
+    if(artifactId==="artifact_27")this.broadcast({type:"private_notice_tick",serverTime:Date.now()});
+    else this.broadcast({type:"day_action_confirmed",actionId,actorId,targetIds:targets,
       day,serverTime:Date.now()});
     return j(payload);
   }
