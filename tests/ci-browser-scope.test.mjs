@@ -689,3 +689,22 @@ test('PR613 Artifact preview V3.274 release proof accepts only exact four CI fil
   assert.match(gate,/CI Stability Gate/);
   assert.match(gate,/V3\.274 PR613/);
 });
+
+test('PR613 V3.274 full git history release recovery only accepts four audited files',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs',
+    'docs/releases/GMWW-PR613-git-history-ci-20261029.md'
+  ];
+  const rows=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
+  assert.equal(classifyBrowserScope(rows),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope([...rows,{path:'server-game/current/app.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(rows.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
+  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
+  const workflow=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(workflow,/fetch-depth: 0/);
+  assert.match(workflow,/git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD/);
+  assert.match(workflow,/GMWW-PR613-git-history-ci-20261029.md/);
+  assert.match(workflow,/V3\\.274 PR613/);
+});
