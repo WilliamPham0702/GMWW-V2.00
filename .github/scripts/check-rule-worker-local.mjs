@@ -70,6 +70,7 @@ try{
  await runIsolated('tests/worker-artifact-night-transformations-e2e.mjs','8800','9240');
  await runIsolated('tests/worker-artifact-ghost-letter-e2e.mjs','8801','9241');
  await runIsolated('tests/worker-artifact-private-disclosure-e2e.mjs','8801','9241');
+ await runIsolated('tests/worker-artifact-echo-shield-e2e.mjs','8802','9242');
 }finally{
  worker.kill('SIGTERM');
  await new Promise(resolve=>{if(worker.exitCode!==null)return resolve();worker.once('exit',resolve);setTimeout(()=>{worker.kill('SIGKILL');resolve()},3000).unref()});
