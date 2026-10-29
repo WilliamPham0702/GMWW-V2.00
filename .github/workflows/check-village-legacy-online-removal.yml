@@ -1,0 +1,77 @@
+name: Check Village Legacy Online Removal (focused)
+on:
+  pull_request:
+    paths:
+      - 'assets/village/index.html'
+      - 'assets/village/village.mjs'
+      - 'assets/village/village.css'
+      - 'tests/village-remove-old-online-setup.test.mjs'
+      - 'tests/village-legacy-online-webkit-smoke.mjs'
+      - '.github/workflows/check-village-legacy-online-removal.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/village/index.html'
+      - 'assets/village/village.mjs'
+      - 'assets/village/village.css'
+      - 'tests/village-remove-old-online-setup.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  village-legacy-removal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: No old Online controls or fake players; preserve live Player Web bridge
+        run: |
+          node --test tests/village-remove-old-online-setup.test.mjs tests/player-web-online-village-20261028.test.mjs
+          node --check assets/village/village.mjs
+          node --check assets/village/scene-manager.mjs
+      - name: Worker build only - no Production or OTA release
+        run: npm run check
+
+  mobile-webkit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: gmww-webkit-${{ runner.os }}-playwright-1.58.2
+      - name: Install Safari WebKit emulator
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps webkit
+      - name: iPhone Safari first-paint test - no legacy Online UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-pr612-webkit-worker.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 35); do
+            if curl -fsS http://127.0.0.1:8787/api/health -o /tmp/gmww-pr612-health.json; then break; fi
+            sleep 1
+          done
+          test -s /tmp/gmww-pr612-health.json
+          GMWW_SMOKE_BASE_URL=http://127.0.0.1:8787 node tests/village-legacy-online-webkit-smoke.mjs
+      - name: Preserve iPhone Safari emulator screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-pr612-iphone-safari-village
+          path: /tmp/gmww-pr612-iphone-webkit-village.png
+          if-no-files-found: ignore

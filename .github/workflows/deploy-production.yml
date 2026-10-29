@@ -48,6 +48,12 @@ jobs:
                 ;;
             esac
           done < /tmp/gmww-production-change-scope.txt
+          # PR612: dedicated Worker-only release. Never use this generic Runtime OTA pipeline.
+          if grep -Fxq 'docs/releases/GMWW-VILLAGE-REMOVE-OLD-ONLINE-20261029.md' /tmp/gmww-production-change-scope.txt &&
+             grep -Fxq 'assets/village/index.html' /tmp/gmww-production-change-scope.txt; then
+            SHOULD_DEPLOY=false
+            echo 'PR612: dedicated Worker-only Player Web deployment; Runtime OTA unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           # V3.238 recovery: deploy only the already verified Runtime, when
           # exactly this workflow and scope classifier are repaired.
           if [ "$(node -p 'require("./package.json").version')" = "3.238.0" ]; then

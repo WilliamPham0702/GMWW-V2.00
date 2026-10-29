@@ -1,0 +1,177 @@
+name: Deploy PR612 Village Player Web (Worker-only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/village/index.html'
+      - 'assets/village/village.mjs'
+      - 'assets/village/village.css'
+      - '.github/workflows/deploy-village-legacy-online-pr612.yml'
+concurrency:
+  group: gmww-production
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          persist-credentials: true
+      - name: Require the exact merged PR612, unchanged IPA/OTA and successful PR checks
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          gh api "repos/$GITHUB_REPOSITORY/pulls/612" > /tmp/gmww-pr612.json
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const pr=JSON.parse(fs.readFileSync('/tmp/gmww-pr612.json','utf8'));
+          if(!pr.merged||pr.merge_commit_sha!==process.env.GITHUB_SHA)throw Error('Not the exact merged PR #612');
+          fs.writeFileSync('/tmp/gmww-pr612-head-sha',pr.head.sha);
+          NODE
+          git diff --name-only HEAD^1 HEAD > /tmp/gmww-pr612-scope.txt
+          if grep -Ev '^(assets/village/(index[.]html|village[.]mjs|village[.]css)|tests/(village-remove-old-online-setup[.]test[.]mjs|village-legacy-online-webkit-smoke[.]mjs)|docs/releases/GMWW-VILLAGE-REMOVE-OLD-ONLINE-20261029[.]md|[.]github/workflows/(check-village-legacy-online-removal[.]yml|deploy-village-legacy-online-pr612[.]yml|deploy-production[.]yml))$' /tmp/gmww-pr612-scope.txt; then
+            echo "::error::Unexpected change could affect Runtime/IPA/DO. No deploy."
+            exit 1
+          fi
+          for f in assets/village/index.html assets/village/village.mjs assets/village/village.css docs/releases/GMWW-VILLAGE-REMOVE-OLD-ONLINE-20261029.md; do
+            grep -Fxq "$f" /tmp/gmww-pr612-scope.txt
+          done
+          git diff --quiet HEAD^1 HEAD -- assets/updates/ update-system/ server-game/ src/ wrangler.jsonc package.json package-lock.json
+          HEAD_SHA=$(cat /tmp/gmww-pr612-head-sha)
+          gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/check-runs?per_page=100" > /tmp/gmww-pr612-checks.json
+          node - <<'NODE'
+          const c=require('/tmp/gmww-pr612-checks.json').check_runs||[];
+          for(const name of ['CI Policy Gate','village-legacy-removal','mobile-webkit']){
+            const checks=c.filter(x=>x.name===name).sort((a,b)=>new Date(b.completed_at||0)-new Date(a.completed_at||0));
+            if(checks[0]?.conclusion!=='success')throw Error('PR612 required/relevant check not successful: '+name);
+          }
+          console.log('PASS: CI Policy Gate, scoped village regression and iPhone WebKit on PR #612');
+          NODE
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reverify only Village and Player Web Online contract
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node --test tests/village-remove-old-online-setup.test.mjs tests/player-web-online-village-20261028.test.mjs
+          node --check assets/village/village.mjs
+          node --check assets/village/scene-manager.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          npm run check
+      - name: Capture immutable OTA manifest and previous Worker version
+        id: previous
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          URL=https://gmww-v2-00.williampham0702.workers.dev
+          curl --fail --silent --show-error --retry 3 "$URL/updates/latest.json?pr612-before=$(date +%s)" > /tmp/gmww-pr612-ota-before.json
+          # Fail closed if wrangler would unexpectedly publish a different OTA manifest.
+          cmp -s assets/updates/latest.json /tmp/gmww-pr612-ota-before.json || {
+            echo "::error::Production OTA manifest does not match repository. Refuse Worker deploy."
+            exit 1
+          }
+          curl --fail --silent --show-error --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/gmww-pr612-before.json
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const d=require('/tmp/gmww-pr612-before.json');
+          const v=d.result?.deployments?.[0]?.versions?.[0];
+          if(!d.success||!v?.version_id||v.percentage!==100)throw Error('Cannot capture current Worker rollback version');
+          console.log('version='+v.version_id);
+          NODE
+      - name: Publish only Worker and existing Village static assets
+        id: publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --no-install wrangler deploy
+      - name: Verify Production Village, Player Web, health, OTA byte-for-byte and new Worker version
+        if: steps.publish.outcome == 'success'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_WORKER: ${{ steps.previous.outputs.version }}
+        run: |
+          set -euo pipefail
+          URL=https://gmww-v2-00.williampham0702.workers.dev
+          PASS=false
+          for i in $(seq 1 12); do
+            if curl -fsS --max-time 25 "$URL/village/?pr612-check=$i-$(date +%s)" -o /tmp/gmww-pr612-village.html &&
+               curl -fsS --max-time 25 "$URL/village/village.mjs?pr612-check=$i-$(date +%s)" -o /tmp/gmww-pr612-village.mjs &&
+               curl -fsS --max-time 20 "$URL/?pr612-check=$i-$(date +%s)" -o /tmp/gmww-pr612-player.html &&
+               curl -fsS --max-time 20 "$URL/api/health?pr612-check=$i" -o /tmp/gmww-pr612-health.json; then
+               if node - <<'NODE'
+          const fs=require('node:fs');
+          const html=fs.readFileSync('/tmp/gmww-pr612-village.html','utf8');
+          const js=fs.readFileSync('/tmp/gmww-pr612-village.mjs','utf8');
+          const player=fs.readFileSync('/tmp/gmww-pr612-player.html','utf8');
+          const health=JSON.parse(fs.readFileSync('/tmp/gmww-pr612-health.json','utf8'));
+          const absent=['id="gamePanel"','id="size"','id="mode"','id="chatForm"','id="voice"','Minh:','Lan:','Nhập tin nhắn (bản mô phỏng)'];
+          if(absent.some(s=>html.includes(s)))process.exit(2);
+          if(!html.includes('legacyui=removed-20261029')||js.includes('const sample=names.map'))process.exit(3);
+          if(!/GMWW PLAYER/i.test(player)||health.ok!==true)process.exit(4);
+          NODE
+               then PASS=true;break;fi
+            fi
+            sleep 5
+          done
+          test "$PASS" = true || { echo "::error::Production Village / Player Web smoke FAILED"; exit 1; }
+          curl -fsS --max-time 25 "$URL/updates/latest.json?pr612-after=$(date +%s)" > /tmp/gmww-pr612-ota-after.json
+          cmp -s /tmp/gmww-pr612-ota-before.json /tmp/gmww-pr612-ota-after.json || { echo "::error::OTA manifest changed unexpectedly"; exit 1; }
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/gmww-pr612-current.json
+          node - <<'NODE'
+          const x=require('/tmp/gmww-pr612-current.json').result?.deployments?.[0]?.versions?.[0];
+          if(!x?.version_id||x.percentage!==100||x.version_id===process.env.PREVIOUS_WORKER)throw Error('Worker version did not advance');
+          console.log('Worker Production version: '+x.version_id);
+          NODE
+          echo "PASS: PR #612 Player Web Village Production, no legacy Online mock, OTA unchanged, Worker rollout verified." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/cache@v4
+        if: steps.publish.outcome == 'success'
+        with:
+          path: ~/.cache/ms-playwright
+          key: gmww-webkit-${{ runner.os }}-playwright-1.58.2
+      - name: Simulate iPhone Safari WebKit against LIVE Production
+        if: steps.publish.outcome == 'success'
+        env:
+          GMWW_SMOKE_BASE_URL: https://gmww-v2-00.williampham0702.workers.dev
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps webkit
+          node tests/village-legacy-online-webkit-smoke.mjs
+      - name: Upload iPhone Safari WebKit verification screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-pr612-production-iphone-safari
+          path: /tmp/gmww-pr612-iphone-webkit-village.png
+          if-no-files-found: ignore
+      - name: Automatically restore previous Worker if Production verification fails
+        if: failure() && steps.publish.outcome == 'success' && steps.previous.outputs.version != ''
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_WORKER: ${{ steps.previous.outputs.version }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > /tmp/gmww-pr612-rollback.json
+          console.log(JSON.stringify({strategy:'percentage',versions:[{version_id:process.env.PREVIOUS_WORKER,percentage:100}],annotations:{'workers/message':'Automatic rollback PR612 village UI verification failure'}}));
+          NODE
+          curl -fsS --retry 3 -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/gmww-pr612-rollback.json "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments" > /tmp/gmww-pr612-rollback-response.json
+          node -e "if(!require('/tmp/gmww-pr612-rollback-response.json').success)process.exit(1)"
+          echo "ROLLBACK: previous Worker version restored to 100%. IPA/OTA and data untouched." >> "$GITHUB_STEP_SUMMARY"
