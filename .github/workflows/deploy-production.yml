@@ -116,6 +116,20 @@ jobs:
             SHOULD_DEPLOY=true
             echo 'PR613: previously merged V3.274 Runtime, strictly audited CI recovery; no IPA or DO modification.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          # PR613 second CI-only proof correction: source remains V3.274.
+          if grep -Fxq 'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            test "$(node -p 'require("./package.json").version')" = '3.274.0'
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' \
+              'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' | sort)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::V3.274 release-proof scope mismatch"; exit 1; }
+            SHOULD_DEPLOY=true
+            echo 'PR613: release-only CI proof correction, original role checks retained; no source or IPA changes.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
@@ -1552,6 +1566,7 @@ jobs:
           grep -Fq 'V3.274 PR613:' .github/scripts/prepare-update-channel.mjs
           grep -Fq 'NATIVE_SHELL_VERSION="3.264"' src/index.js
           node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs
+          node --test --test-name-pattern="PR613 Artifact preview V3.274" tests/ci-browser-scope.test.mjs
           node --check server-game/current/app.js
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
@@ -1564,13 +1579,13 @@ jobs:
           if [[ "$SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]]; then
             IS_RECOVERY=true
             git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
-            BASE_RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=2171214cec2c9af92994c27caaa8f75e976dbb1c&per_page=100")
+            BASE_RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=28f62f91dea9538b79b06177cd1d7cdbd7703e57&per_page=100")
             printf '%s' "$BASE_RUNS" | node -e '
               let raw="";process.stdin.on("data",c=>raw+=c).on("end",()=>{
-                const a=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.event==="push"&&r.head_sha==="2171214cec2c9af92994c27caaa8f75e976dbb1c");
+                const a=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.event==="pull_request"&&r.head_sha==="28f62f91dea9538b79b06177cd1d7cdbd7703e57");
                 const names=["Check Approved Role Card Settings","Check GM card artwork centering (20261029)"];
                 process.exit(names.every(n=>a.some(r=>r.name===n&&r.conclusion==="success"))?0:1);
-              })' || { echo "::error::Original PR613 main role/Artifact proof missing"; exit 1; }
+              })' || { echo "::error::Original PR613 verified PR role/Artifact proof missing"; exit 1; }
           fi
           export IS_RECOVERY
           VERIFIED=false
@@ -1579,7 +1594,7 @@ jobs:
             if printf '%s' "$RUNS" | node -e '
               let raw="";process.stdin.on("data",x=>raw+=x).on("end",()=>{
                 const runs=(JSON.parse(raw).workflow_runs||[]).filter(x=>x.head_sha===process.env.TESTED_SHA&&x.event==="push");
-                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Policy Gate"]; if(process.env.IS_RECOVERY!=="true")required.push("Check Approved Role Card Settings");
+                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Stability Gate"]; if(process.env.IS_RECOVERY!=="true")required.push("Check Approved Role Card Settings");
                 process.exit(required.every(name=>runs.some(r=>r.name===name&&r.conclusion==="success"))?0:1);
               })
             '; then VERIFIED=true; break; fi
@@ -1650,7 +1665,7 @@ jobs:
           # Exact postmerge Artifact V3.274 repair must publish the pending
           # Runtime payload, not misclassify five CI-only files as server_only.
           if [ "$VERSION" = "3.274.0" ] && \
-             grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-changed-files.txt; then
+             { grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-changed-files.txt || grep -Fxq 'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' /tmp/gmww-changed-files.txt; }; then
             RELEASE_SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
             [[ "$RELEASE_SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]] || { echo "::error::V3.274 recovery source scope mismatch"; exit 1; }
             TYPE=runtime
