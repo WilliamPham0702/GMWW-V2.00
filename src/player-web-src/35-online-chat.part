@@ -45,7 +45,7 @@ function gmwwChatMount(){
 #gmwwOnlineFooter #gmwwChatLines .msg{max-width:100%;font-size:11px;padding:3px 6px;line-height:1.35}
 #gmwwOnlineFooter #gmwwChatHelp{display:none}#gmwwOnlineFooter #gmwwChatPanel form{padding:4px;gap:4px}
 #gmwwOnlineFooter #gmwwChatText,#gmwwOnlineFooter #gmwwChatSubmit{min-height:31px;height:31px;padding:4px;font-size:12px}
-#gmwwOnlineFooter #gmwwChatClose{display:none}#gmwwChatLaunch{display:none!important}
+#gmwwOnlineFooter #gmwwChatClose{display:none}body:has(#gmwwOnlineFooter) #gmwwChatLaunch{display:none!important}
 #gmwwOnlineFooter[hidden]{display:none!important}`;
     document.head.appendChild(style);
   }
@@ -164,7 +164,7 @@ function gmwwOnlinePickAction(action){
  const count=Math.max(0,Number(action.targetCount)||0);
  if(count)for(const p of gmwwOnlinePeople().filter(p=>(!action.noSelf||p.id!==state.member?.loginId)&&!gmwwOnlinePick.targets.includes(p.id))){
    const b=document.createElement('button');b.textContent=p.name;b.onclick=()=>gmwwOnlineTarget(p.id);list.appendChild(b);
- }else{line.textContent='Không cần mục tiêu';const b=document.createElement('button');b.textContent='✓ Xác nhận';b.onclick=()=>void gmwwOnlineSubmit();list.appendChild(b)}
+ }else{line.textContent='Không cần mục tiêu';queueMicrotask(()=>{if(gmwwOnlinePick?.action.key===action.key)void gmwwOnlineSubmit()})}
  const cancel=document.createElement('button');cancel.textContent='✕ Hủy';cancel.onclick=gmwwOnlineStop;box.appendChild(cancel);
  document.body.appendChild(box);
 }
