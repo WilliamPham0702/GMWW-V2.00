@@ -42,4 +42,5 @@ test('standalone scene fills the viewport and Player Web embed stays isolated',(
   assert.doesNotMatch(css,/\.hud\{position:absolute/);
   assert.match(css,/html\.embedded \.panel\{display:none!important\}/);
   assert.match(css,/html\.embedded \.stage\{position:absolute!important/);
+  assert.match(css,/html:not\(\.embedded\) \.stage\{height:100dvh!important;min-height:100dvh!important\}/);
 });
