@@ -4,13 +4,13 @@
 Mặt Player Web của một số Artifact, điển hình Kim Cương Phủ Nhận, có lề đen bên trái lớn hơn bên phải khiến viền artwork lệch khung. CSS hiện đã đặt ảnh giữa nhưng không thể xử lý lề trống có sẵn bên trong file ảnh.
 
 ## Sửa
-- Chỉ trong Thư viện → Mặt Player Web, khi đang xem Artifact: phân tích mẫu canvas nhỏ để phát hiện **lề tối bất cân xứng**, đặt transform ngang cho ảnh có độ tin cậy đủ cao.
+- Chỉ trong Thư viện → Mặt Player Web, khi đang xem Artifact: phân tích mẫu canvas nhỏ để phát hiện **lề tối bất cân xứng**, chỉ dịch chuyển ngang cho ảnh có độ tin cậy đủ cao, không dùng scaleX/scaleY làm méo ảnh.
 - Đảm bảo **Vai Trò không áp dụng biến đổi**; đổi lá, đổi Artifact/Vai Trò hoặc ảnh lỗi sẽ dọn transform cũ.
 - Giữ nguyên tên, luật, audio, dữ liệu gốc của hình, IndexedDB, IPA, Player Web và trạng thái ván.
 - Giới hạn cắt lề để tránh mất chi tiết hình; không can thiệp vào ảnh có lề cân đối hoặc không nhận dạng đủ rõ.
 
 ## Kiểm thử đúng phạm vi
-- `node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs` (7 ca)
+- `node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs` (8 ca)
 - `node --check server-game/current/app.js`
 - `node .github/scripts/assemble-gm-app.mjs --verify`
 - `node .github/scripts/verify-gmww-versions.mjs`
