@@ -507,3 +507,9 @@ body.player-battle .player:not(.gmww-gallows-hanging) .portrait.game-character .
 
 /* Village Online mock HUD, tabs and chat removed: scene fills the standalone viewport.
    Embedded Player Web continues to own its separate real Online UI. */
+
+/* PR612: the retired 480px standalone demo panel no longer exists. Keep the
+   real Village scene full-height on iPhone; the embedded Player Web's own
+   100svh geometry is intentionally untouched. */
+html:not(.embedded) .game{display:block!important;min-height:100dvh!important}
+html:not(.embedded) .stage{height:100dvh!important;min-height:100dvh!important}
