@@ -126,7 +126,15 @@ jobs:
               '.github/workflows/deploy-production.yml' \
               'tests/ci-browser-scope.test.mjs' \
               'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' | sort)
-            test "$ACTUAL" = "$EXPECTED" || { echo "::error::V3.274 release-proof scope mismatch"; exit 1; }
+            EXPECTED_CHARACTER_IMAGE=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              '.github/scripts/verify-character40-production.mjs' \
+              'tests/ci-browser-scope.test.mjs' \
+              'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' | sort)
+            { test "$ACTUAL" = "$EXPECTED" || test "$ACTUAL" = "$EXPECTED_CHARACTER_IMAGE"; } || {
+              echo "::error::V3.274 release-proof scope mismatch"; exit 1;
+            }
             SHOULD_DEPLOY=true
             echo 'PR613: release-only CI proof correction, original role checks retained; no source or IPA changes.' >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -1836,7 +1844,9 @@ jobs:
           test "$OK" = "1"
           # Runtime V3.160 can stay unchanged on a server-only deploy. Health version
           # alone cannot prove the just-uploaded static assets have reached the edge.
-          # Wait for the new portrait bytes, then verify all 40 IDs. Fail closed if
+          # The /api/game-characters/{id}/image route serves immutable originals,
+          # not generated portraits. Compare those exact original bytes for all 40 IDs.
+          # Wait for the original image bytes, then verify all 40 IDs. Fail closed if
           # propagation never finishes; retain the previous deployment for rollback.
           AVATAR_READY=0
           for TRY in $(seq 1 40); do
@@ -1844,21 +1854,21 @@ jobs:
               -H 'Cache-Control: no-cache' \
               "$URL/api/game-characters/character-01/image?rev=c40-4&edge-propagation=$TRY-$(date +%s)" \
               > /tmp/gmww-live-avatar.webp; then
-              if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/portraits/character-01.webp; then
+              if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/originals/character-01.webp; then
                 AVATAR_READY=1
                 break
               fi
-              echo "::warning::Waiting for Character40 portrait edge propagation ($TRY/40); expected bytes $(wc -c < assets/characters/gmww40/portraits/character-01.webp), received $(wc -c < /tmp/gmww-live-avatar.webp)"
+              echo "::warning::Waiting for Character40 portrait edge propagation ($TRY/40); expected bytes $(wc -c < assets/characters/gmww40/originals/character-01.webp), received $(wc -c < /tmp/gmww-live-avatar.webp)"
             fi
             sleep 2
           done
           test "$AVATAR_READY" = "1" || {
             echo "::error::New Worker assets did not propagate; production verification blocked."
-            echo "Expected SHA: $(shasum -a 256 assets/characters/gmww40/portraits/character-01.webp)"
+            echo "Expected SHA: $(shasum -a 256 assets/characters/gmww40/originals/character-01.webp)"
             echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
             exit 1
           }
-          echo "Verify Production: fresh Character40 portrait revision is live."
+          echo "Verify Production: fresh Character40 original-image revision is live."
 
           for N in $(seq 1 40); do
             ID=$(printf 'character-%02d' "$N")
@@ -1868,7 +1878,7 @@ jobs:
                 -H 'Cache-Control: no-cache' \
                 "$URL/api/game-characters/$ID/image?rev=c40-4&verify-avatar=$N-$TRY-$(date +%s)" \
                 > /tmp/gmww-live-avatar.webp && \
-                cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/portraits/$ID.webp"; then
+                cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/originals/$ID.webp"; then
                 MATCHED=1
                 break
               fi
@@ -1876,12 +1886,12 @@ jobs:
             done
             test "$MATCHED" = "1" || {
               echo "::error::Production avatar/atlas bytes differ for $ID"
-              echo "Expected SHA: $(shasum -a 256 "assets/characters/gmww40/portraits/$ID.webp")"
+              echo "Expected SHA: $(shasum -a 256 "assets/characters/gmww40/originals/$ID.webp")"
               echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
               exit 1
             }
           done
-          echo "Verify Production: all 40 portrait/animation identities and bytes PASS."
+          echo "Verify Production: all 40 original-image/animation identities and bytes PASS."
 
           # Safari Player iframe must resolve full village HTML, not the Worker 404 page.
           curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 30 "$URL/village/?embed=1&v=303" > /tmp/gmww-production-village.html
