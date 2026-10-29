@@ -56,7 +56,8 @@ test('Artifact: browser preview aligns the image but keeps source bytes untouche
   const align=vm.runInNewContext(helper+'\nalignArtifactPreviewArtwork',{document});
   const img={naturalWidth:3072,naturalHeight:2560,style:{transform:''}};
   align(img);
-  assert.match(img.style.transform,/translate3d\(-\d+(?:\.\d+)?%,0,0\) scaleX\(1\.\d+\)/);
+  assert.match(img.style.transform,/^translate3d\\(-\\d+(?:\\.\\d+)?%,0,0\\)$/);
+  assert.doesNotMatch(img.style.transform,/scale|matrix/i,'Artwork proportions must remain unchanged');
   assert.match(source,/if\(kind==='artifacts'&&currentKind===kind/);
   assert.match(source,/img\.style\.removeProperty\('transform'\)/);
   assert.match(source,/if\(currentKind!==kind\|\|editDraft\?\.id!==e\.id\)return/);
@@ -75,4 +76,19 @@ test('Artifact: no drift for balanced artwork and no persistent artwork mutation
   const balanced=sample(9,9);
   assert.equal(detect(balanced.pixels,balanced.width,balanced.height),null);
   assert.doesNotMatch(source,/putImageData\(|toDataURL\(|convertToBlob\(/);
+});
+
+test('Artifact: right-side gutter shifts image right, without distortion',()=>{
+  const {pixels}=sample(0,18);
+  const document={createElement:()=>({
+    width:0,height:0,
+    getContext:()=>({drawImage(){},getImageData:()=>({data:pixels})})
+  })};
+  const align=vm.runInNewContext(helper+'\nalignArtifactPreviewArtwork',{document});
+  const img={naturalWidth:3072,naturalHeight:2560,style:{transform:''}};
+  align(img);
+  assert.match(img.style.transform,/^translate3d\\(\\d+(?:\\.\\d+)?%,0,0\\)$/);
+  assert.doesNotMatch(img.style.transform,/scale|matrix/i);
+  assert.equal(img.naturalWidth,3072);
+  assert.equal(img.naturalHeight,2560);
 });
