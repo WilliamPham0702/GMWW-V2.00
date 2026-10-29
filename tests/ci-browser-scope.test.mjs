@@ -650,3 +650,25 @@ test('PR613 Artifact preview V3.274 scope accepts only reviewed image, runtime a
   assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='server-game/src/10-library-and-settings.part')),'full');
   assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,status:'D'}:c)),'full');
 });
+
+test('PR613 Artifact preview V3.274 postmerge CI-only recovery preserves exact release proof',()=>{
+  const allowed=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs',
+    'docs/releases/GMWW-PR613-postmerge-ci-20261029.md'
+  ];
+  const changes=allowed.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
+  assert.equal(classifyBrowserScope(changes),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
+  const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(worker,/artifact-preview-3274-postmerge/);
+  assert.match(deploy,/IS_RECOVERY/);
+  assert.match(deploy,/TYPE=runtime/);
+  assert.match(deploy,/2171214cec2c9af92994c27caaa8f75e976dbb1c/);
+  assert.match(deploy,/V3\.274 PR613/);
+});
