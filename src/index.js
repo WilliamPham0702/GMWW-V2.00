@@ -2316,7 +2316,9 @@ export class RoomDurableObject extends DurableObject {
       }else{
         return j({ok:false,error:"DAY_ARTIFACT_EFFECT_NOT_IMPLEMENTED",message:"Artifact này chưa có xử lý hiệu ứng trên Server; chưa tiêu hao lượt sử dụng."},409);
       }
-      result={message};
+      // Preserve structured, private inspection results. Other day Artifact
+      // executors that only produce a message keep the legacy response shape.
+      if(result===null)result={message};
     }else return j({ok:false,error:"DAY_ROLE_EFFECT_NOT_IMPLEMENTED"},409);
     for(const id of deadVictims)changes.push({kind:"status",loginId:id,type:"dead"});
     for(const effect of changes){
