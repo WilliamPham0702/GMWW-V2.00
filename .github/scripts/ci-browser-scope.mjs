@@ -2765,7 +2765,7 @@ const onlinePrivacy630Paths=new Set([
   'docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md',
   // Same PR's immutable V3.276 Runtime release identity; no IPA changes.
   'package.json','package-lock.json','server-game/current/GMWW.html',
-  'server-game/current/app.js','server-game/src/00-core-and-library.part',
+  'server-game/current/app.js','server-game/src/00-core-and-library.part','server-game/src/45-online-chat.part',
   '.github/scripts/prepare-update-channel.mjs'
 ]);
 function isPlayerOnlinePrivacy630Scope(changes){
