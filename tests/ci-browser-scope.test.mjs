@@ -689,3 +689,21 @@ test('PR613 Artifact preview V3.274 release proof accepts only exact four CI fil
   assert.match(gate,/CI Stability Gate/);
   assert.match(gate,/V3\.274 PR613/);
 });
+
+test('PR613 Runtime V3.274 deploy-scope checks full git ancestry and exact four-file patch',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs',
+    'docs/releases/GMWW-PR613-deploy-checkout-ci-20261029.md'
+  ];
+  const changes=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
+  assert.equal(classifyBrowserScope(changes),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-PR613-deploy-checkout-ci-20261029.md')),'full');
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(deploy,/ref: \\$\\{\\{ github\\.event\\.workflow_run\\.head_sha \\$\\}\\}\\n          fetch-depth: 0/);
+  assert.match(deploy,/GMWW-PR613-deploy-checkout-ci-20261029\\.md/);
+  assert.match(deploy,/git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD/);
+  assert.match(deploy,/TYPE=runtime/);
+});
