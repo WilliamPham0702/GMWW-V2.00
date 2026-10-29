@@ -2613,6 +2613,9 @@ function isArtifactPreview3274RecoveryScope(changes){
     if(begin<0||end<=begin)return false;
     const helper=art.slice(begin,end);
     return JSON.parse(file('package.json')).version==='3.274.0'&&
+      // Release evidence must name both immutable PR CI and main CI proofs.
+      file('docs/releases/GMWW-PR613-postmerge-ci-20261029.md').includes('Check Approved Role Card Settings')&&
+      file('docs/releases/GMWW-PR613-postmerge-ci-20261029.md').includes('CI Stability Gate')&&
       file('src/index.js').includes('VERSION="V3.274",NATIVE_SHELL_VERSION="3.264"')&&
       art.includes('const offsetPercent=50*(margins.right-margins.left)')&&
       !helper.includes('scaleX(')&&!helper.includes('scaleY(')&&app.includes(helper)&&
