@@ -283,6 +283,33 @@ const policyPaths=new Set([
   'docs/releases/ci-browser-focused-gallows-20261024.md',
   'docs/releases/GMWW-V3.203-focused-release-gate-20261024.md'
 ]);
+// Stable CI-only contract. Never classify gameplay/Player changes as policy-only.
+// Unknown paths and deletions must fall back to the full test suite.
+const stableCIPolicyPaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/ci-policy-gate.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/deploy-production.yml',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/releases/GMWW-CI-POLICY-GATE-20261029.md',
+  'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'
+]);
+function isStableCIPolicyScope(changes){
+  if(!Array.isArray(changes)||changes.length===0||
+      !changes.some(c=>c?.path?.startsWith('.github/')))return false;
+  if(changes.some(c=>!c||!stableCIPolicyPaths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const names=new Set(changes.map(c=>c.path));
+  if(!names.has('.github/scripts/ci-browser-scope.mjs')||
+     !names.has('tests/ci-browser-scope.test.mjs')||
+     !names.has('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'))return false;
+  const deploy=changes.find(c=>c.path==='.github/workflows/deploy-production.yml');
+  if(deploy&&(typeof deploy.after!=='string'||
+      !deploy.after.includes('CHỈ CI: BỎ QUA DEPLOY PRODUCTION')||
+      !deploy.after.includes("needs.deploy-scope.outputs.should_deploy == 'true'")))return false;
+  return true;
+}
+
 function isPolicyScope(changes){
   const names=new Set(changes.map(x=>x.path));
   return names.has('.github/scripts/ci-browser-scope.mjs')&&
@@ -2596,7 +2623,7 @@ function classifyBrowserScope(changes){
   if(isIconRuntime3210Scope(changes))return 'icon-runtime-3210';
   if(isAudioGallows209Scope(changes))return 'audio-gallows-3209';
   if(isAudio208Scope(changes))return 'audio-v3208';
-  if(isPolicyScope(changes))return 'ci-policy';
+  if(isStableCIPolicyScope(changes)||isPolicyScope(changes))return 'ci-policy';
   if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)||isDemo475FinalGateScope(changes))return 'demo-475';
   if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
