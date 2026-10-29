@@ -5,18 +5,47 @@ let gmwwChatOpen=false,gmwwChatSeq=0,gmwwPlayerCueKey='',gmwwChatIdleTimer=null,
 function gmwwChatClosePanel(){if(document.getElementById('gmwwOnlineFooter'))return;gmwwChatOpen=false;clearTimeout(gmwwChatIdleTimer);document.getElementById('gmwwChatPanel')?.classList.remove('open')}
 function gmwwChatTouch(){clearTimeout(gmwwChatIdleTimer);if(gmwwChatOpen&&!document.getElementById('gmwwOnlineFooter'))gmwwChatIdleTimer=setTimeout(gmwwChatClosePanel,30000)}
 const gmwwChatAudioOff=()=>{try{return localStorage.getItem('gmww_player_announcement_audio_off')==='1'}catch{return false}};
+let gmwwAnnouncementAudio=null,gmwwAnnouncementUrl='',gmwwAnnouncementRequest=null,gmwwAnnouncementPending=null,gmwwAnnouncementGeneration=0;
+function gmwwStopAnnouncement(){
+  gmwwAnnouncementGeneration++;gmwwAnnouncementRequest?.abort();gmwwAnnouncementRequest=null;
+  if(gmwwAnnouncementAudio){gmwwAnnouncementAudio.pause();gmwwAnnouncementAudio.removeAttribute('src');gmwwAnnouncementAudio.load();gmwwAnnouncementAudio=null}
+  if(gmwwAnnouncementUrl)URL.revokeObjectURL(gmwwAnnouncementUrl);gmwwAnnouncementUrl='';
+}
 function gmwwChatAnnounce(cue){
   state.audioCue=cue?.key&&cue?.label?{key:String(cue.key),label:String(cue.label).slice(0,120)}:null;
   updatePlayerTopMenu();
-  if(!cue?.key||!state.roomCode||!state.participantId)return;
-  const key=state.roomCode+':'+cue.key;
-  if(key===gmwwPlayerCueKey)return;gmwwPlayerCueKey=key;
-  if(gmwwChatAudioOff())return;
-  // Never synthesize role labels as speech: only approved recorded same-origin audio may play.
-  const media=String(cue.audioUrl||'');
-  if(!/^\/audio\/[-\w./]+\.(mp3|m4a|ogg|wav)(\?[-\w=&.]+)?$/i.test(media))return;
-  try{const audio=new Audio(media);audio.volume=.85;void audio.play().catch(()=>{})}catch{}
+  const key=cue?.key&&state.roomCode&&state.participantId?state.roomCode+':'+cue.key:'';
+  if(gmwwAnnouncementPending?.key!==key){gmwwStopAnnouncement();gmwwAnnouncementPending=key?{key,cue,room:state.roomCode}:null}
+  else if(gmwwAnnouncementPending)gmwwAnnouncementPending.cue=cue;
+  if(!key||key===gmwwPlayerCueKey||gmwwChatAudioOff())return;
+  // A missing recording is retryable: the GM upload may arrive on the next poll.
+  if(gmwwAnnouncementRequest||!cue.audioUrl)return;
+  void gmwwPlayAnnouncement();
 }
+async function gmwwPlayAnnouncement(){
+  const pending=gmwwAnnouncementPending;if(!pending||gmwwChatAudioOff()||pending.key===gmwwPlayerCueKey)return;
+  const expected='/api/rooms/'+encodeURIComponent(pending.room)+'/announcement-audio?key='+encodeURIComponent(pending.cue.key);
+  if(pending.cue.audioUrl!==expected)return;
+  const generation=gmwwAnnouncementGeneration,controller=new AbortController();gmwwAnnouncementRequest=controller;
+  try{
+    const response=await fetch(expected,{headers:auth(),cache:'no-store',signal:controller.signal});
+    if(!response.ok)return;
+    const blob=await response.blob();
+    if(generation!==gmwwAnnouncementGeneration||gmwwChatAudioOff()||state.roomCode!==pending.room)return;
+    if(!/^audio\//i.test(blob.type)||blob.size>2*1024*1024)return;
+    if(gmwwAnnouncementUrl)URL.revokeObjectURL(gmwwAnnouncementUrl);
+    gmwwAnnouncementUrl=URL.createObjectURL(blob);
+    const audio=gmwwAnnouncementAudio||(gmwwAnnouncementAudio=new Audio());audio.src=gmwwAnnouncementUrl;audio.volume=.85;
+    await audio.play();
+    if(generation===gmwwAnnouncementGeneration)gmwwPlayerCueKey=pending.key;
+  }catch{}finally{if(gmwwAnnouncementRequest===controller)gmwwAnnouncementRequest=null}
+}
+// Retry a blocked autoplay using a real user gesture; keep one Player-owned audio element.
+document.addEventListener('pointerdown',()=>{
+  if(gmwwChatAudioOff()||!gmwwAnnouncementPending||gmwwAnnouncementPending.key===gmwwPlayerCueKey)return;
+  if(gmwwAnnouncementAudio?.src){const generation=gmwwAnnouncementGeneration,key=gmwwAnnouncementPending.key;void gmwwAnnouncementAudio.play().then(()=>{if(generation===gmwwAnnouncementGeneration)gmwwPlayerCueKey=key}).catch(()=>{})}
+  else if(!gmwwAnnouncementRequest)void gmwwPlayAnnouncement();
+},{passive:true});
 function gmwwChatAudioButton(){const b=document.getElementById('gmwwChatAudio');if(b){b.textContent=gmwwChatAudioOff()?'🔇':'🔊';b.title=gmwwChatAudioOff()?'Bật audio thông báo':'Tắt audio thông báo'}}
 function gmwwChatMount(){
   if(!state.roomCode||!state.participantId)return;
@@ -70,7 +99,7 @@ function gmwwChatMount(){
   }
   const audio=document.getElementById('gmwwChatAudio');audio.onclick=()=>{
     try{localStorage.setItem('gmww_player_announcement_audio_off',gmwwChatAudioOff()?'0':'1')}catch{}
-    gmwwChatAudioButton();if(gmwwChatAudioOff())try{speechSynthesis.cancel()}catch{}
+    gmwwChatAudioButton();if(gmwwChatAudioOff())gmwwStopAnnouncement();else if(gmwwAnnouncementPending){gmwwPlayerCueKey='';void gmwwPlayAnnouncement()}
   };
   gmwwChatAudioButton();
   document.getElementById('gmwwChatForm').onsubmit=e=>{e.preventDefault();void gmwwChatSend()};
@@ -103,6 +132,7 @@ function gmwwChatClear(){
   const note=document.getElementById('gmwwChatHelp');if(note)note.textContent='Đang kiểm tra quyền Chat cho lượt mới…';
 }
 function gmwwChatUnmount(){
+  gmwwStopAnnouncement();gmwwAnnouncementPending=null;
   gmwwChatClear();document.getElementById('gmwwOnlineFooter')?.remove();if(gmwwOnlineFooterTimer)clearInterval(gmwwOnlineFooterTimer);gmwwOnlineFooterTimer=null;gmwwChatOpen=false;gmwwChatTarget='room';gmwwPlayerCueKey='';state.audioCue=null;document.getElementById('gmwwPlayerMiniCards')?.remove();
   document.getElementById('gmwwChatLaunch')?.remove();document.getElementById('gmwwChatPanel')?.remove();
   try{speechSynthesis.cancel()}catch{}

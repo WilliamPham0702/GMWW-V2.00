@@ -9,10 +9,12 @@
 - Tắt phát giọng TTS tự đọc nhãn vai trò. Chỉ chấp nhận URL audio ghi âm an toàn từ cùng origin khi server cung cấp.
 
 ## Giới hạn an toàn / chưa nghiệm thu
-- Kho audio GM nội bộ/IndexedDB chưa tự động chia sẻ audio ghi âm cho Player; khi không có bản ghi được cấp quyền, Player không đọc AI và không tự chế audio. Cần luồng phân phối asset được kiểm soát mới có thể phát chính xác.
+- Đã bổ sung bản ghi lời gọi lượt hiện tại từ kho GM/IndexedDB: GM xác thực khi tải lên; Player phải đăng nhập và thuộc phòng để tải xuống. Chỉ nhận MP3/M4A/OGG/WAV có chữ ký byte phù hợp, tối đa 2 MiB; từ chối bản ghi sai lượt. Dữ liệu âm thanh chia khối dưới giới hạn một giá trị Durable Object, chỉ giữ bản ghi hiện tại.
+- Player đợi bản ghi đến muộn, hủy tải/phát khi đổi lượt hoặc rời phòng; tắt tiếng Player độc lập GM. Không dùng TTS cho Player. Autoplay bị chặn sẽ thử lại khi người chơi chạm màn hình.
+- Còn phải nghiệm thu iPhone Safari, bản ghi thực tế của từng lượt và lượt nhóm nhiều vai. Chưa có xác nhận Production.
 - Đồng hồ đêm chỉ hiển thị khi có deadline do Server xuất bản. Không suy đoán thời gian.
 - Khôi phục chỉ bỏ thao tác đang soạn, KHÔNG rollback hành động đã chốt trên Server.
-- Không sửa IPA, dữ liệu Durable Object, luật hoặc hồ sơ trận.
+- Không sửa IPA, luật, phòng hoặc hồ sơ trận hiện có. Chỉ thêm dữ liệu bản ghi hiện tại có thể thay thế trong Durable Object.
 - PR chưa được phép coi là Production cho tới khi tất cả kiểm thử theo phạm vi/CI required SUCCESS, nghiệm thu iPhone Safari, sau đó merge/deploy và xác minh SHA-256 Runtime OTA.
 
 ## Test theo phạm vi
@@ -27,3 +29,4 @@
 
 ## Rollback
 Hoàn nguyên merge commit theo GitHub PR và deploy lại bản Worker/Player Web đã xác minh trước đó; giữ nguyên lịch sử Durable Object. IPA bất biến.
+

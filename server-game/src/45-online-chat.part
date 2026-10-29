@@ -1,3 +1,42 @@
+// Publish only the public turn call. GM mute never changes Player audio permissions.
+let gmwwPublishedAnnouncement='',gmwwPublishingAnnouncement='',gmwwAnnouncementAttempt={key:'',at:0};
+async function gmwwPublishAnnouncement(turn){
+  const room=playSceneRuntime.room,code=String(playSceneState.roomCode||'');
+  if(!code||room?.phase!=='running')return;
+  const morning=room.cyclePhase==='morning';
+  const key=String(room.matchId)+':'+String(room.cycleKey)+':'+(morning?'wakeup':String(turn?.id||''));
+  if(!morning&&!turn?.id||gmwwPublishedAnnouncement===code+key||gmwwPublishingAnnouncement===code+key)return;
+  if(gmwwAnnouncementAttempt.key===code+key&&Date.now()-gmwwAnnouncementAttempt.at<5000)return;
+  gmwwAnnouncementAttempt={key:code+key,at:Date.now()};gmwwPublishingAnnouncement=code+key;
+  try{
+    const cue=morning?{kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'}:battleTurnAudioCue(turn);
+    if(!cue)return;
+    const candidates=battleFindAudioCandidates(cue.kind,cue.targetId,cue.name);
+    let blob=null;
+    for(const row of candidates){
+      const src=await battleWarmAudio(cue.kind,row);if(!src)continue;
+      const response=await fetch(src);if(!response.ok)continue;
+      const candidate=await response.blob();
+      if(candidate.size&&candidate.size<=2*1024*1024){blob=candidate;break}
+    }
+    if(!blob)return;
+    const bytes=new Uint8Array(await blob.arrayBuffer());let raw='';
+    const signature=(a,b)=>String.fromCharCode(...bytes.slice(a,b));
+    const mime=signature(0,3)==='ID3'||bytes[0]===255&&(bytes[1]&224)===224?'audio/mpeg':signature(4,8)==='ftyp'?'audio/mp4':signature(0,4)==='OggS'?'audio/ogg':signature(0,4)==='RIFF'&&signature(8,12)==='WAVE'?'audio/wav':'';
+    if(!mime)return;
+    for(let i=0;i<bytes.length;i+=16384)raw+=String.fromCharCode(...bytes.subarray(i,i+16384));
+    // Route and key are verified again by the room before storing any bytes.
+    await gmApi('/api/gm/rooms/'+encodeURIComponent(code)+'/announcement-audio',{method:'PUT',body:JSON.stringify({key,mime,base64:btoa(raw)}),timeoutMs:30000});
+    gmwwPublishedAnnouncement=code+key;
+  }catch(error){console.warn('Player recorded announcement pending',String(error?.message||error))}
+  finally{if(gmwwPublishingAnnouncement===code+key)gmwwPublishingAnnouncement=''}
+}
+
+
+// Share the approved public call independently of GM local playback/mute.
+const gmwwLocalTurnAudio=battleAudioForTurn,gmwwLocalMorningAudio=battleMorningPlayAudio;
+battleAudioForTurn=function(turn,auto=false){void gmwwPublishAnnouncement(turn);return gmwwLocalTurnAudio(turn,auto)};
+battleMorningPlayAudio=function(){void gmwwPublishAnnouncement(null);return gmwwLocalMorningAudio()};
 
 /* GM Chat monitor: available only with GM-authorized room API. No public history path. */
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';

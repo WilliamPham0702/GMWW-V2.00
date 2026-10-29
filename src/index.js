@@ -73,6 +73,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async fetch(request){
     const path=new URL(request.url).pathname;
+    if(path==="/gm/announcement"&&request.method==="PUT")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     // GR01 recovery marker: internal DO stub requests only, read-only.
     // No Production restore route exists here; unconfigured credentials fail closed.
     if(path==="/__gr01/pitr/bookmark"){
@@ -112,6 +113,8 @@ export class RoomDurableObject extends DurableObject {
   }
   async handleFetch(request){
     const url=new URL(request.url);
+    if(url.pathname==="/gm/announcement"&&request.method==="PUT")return this.gmAnnouncement(request,await safeJson(request));
+    if(url.pathname==="/player/announcement"&&request.method==="POST")return this.playerAnnouncement(await safeJson(request));
     if(url.pathname==="/security/rate-limit"&&request.method==="POST")return this.securityRateLimit(await safeJson(request));
     if(url.pathname==="/storage-optimizer/stats"&&request.method==="GET")return j(this.gmwwWriteOptimizerStatus());
     if(url.pathname==="/health/storage"&&request.method==="GET"){
@@ -1139,6 +1142,19 @@ export class RoomDurableObject extends DurableObject {
       // Never derive the village bulletin from only the short-lived rules buffer.
       villageHistory:await this.villageHistoryForMatch(meta,interactions),
       interactionResponses,activeEffects,drunkDraws,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+  }
+  async currentAnnouncement(meta){
+    const runtime=meta?.cyclePhase==='night'?await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
+    return announcementCue(meta,runtime);
+  }
+  async gmAnnouncement(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    return saveAnnouncement(this.ctx.storage,body,(await this.currentAnnouncement(auth.meta))?.key);
+  }
+  async playerAnnouncement(body){
+    const meta=await this.ctx.storage.get('meta'),players=await this.ctx.storage.get('players')||{};
+    if(!meta||meta.enabled===false||!players['member:'+normalizeLoginId(body?.loginId)])return j({ok:false,error:'PLAYER_NOT_IN_ROOM'},403);
+    return readAnnouncement(this.ctx.storage,String(body?.key||''),(await this.currentAnnouncement(meta))?.key);
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -3023,13 +3039,9 @@ export class RoomDurableObject extends DurableObject {
           steps:[{label:"Làng ơi dậy đi",status:"active"},{label:"Thông cáo Làng",status:"upcoming"},{label:"Lên Giàn",status:"upcoming"}]}
       :null;
     // Public role call only. Never reveal the actor, role owner or hidden target.
-    const audioCue=String(meta.phase)==="running"?
-      String(meta.cyclePhase)==="night"&&turn?
-        {key:String(meta.matchId)+":"+String(meta.cycleKey)+":"+String(turn.id),
-          label:String(turn.label||"Đến lượt Vai Trò").slice(0,120)}:
-      String(meta.cyclePhase)==="morning"?
-        {key:String(meta.matchId)+":"+String(meta.cycleKey)+":wakeup",label:"Làng ơi dậy đi"}:null
-      :null;
+    const audioCue=announcementCue(meta,wolfRuntime);
+    const recorded=audioCue?await this.ctx.storage.get('announcement:meta'):null;
+    if(audioCue&&recorded?.key===audioCue.key)audioCue.audioUrl='/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?key='+encodeURIComponent(audioCue.key);
     const drawn=Number(meta.cycleNight)===3&&String(meta.cyclePhase)==='night'?
       await this.ctx.storage.get('drunkDeck:'+String(meta.matchId)+':3:'+loginId):null;
     const drunkDraw=drawn&&(drawn.selectedId||
@@ -3637,6 +3649,16 @@ export default {async fetch(request,env){
   const leaveApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/leave$/);if(leaveApi&&request.method==="POST")return leaveRoomApi(env,leaveApi[1],request);
   const drunkDraw=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/drunk\/draw$/);
   if(drunkDraw&&request.method==='POST')return playerDrunkDrawApi(env,drunkDraw[1],request);
+  const gmAnnouncement=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
+  if(gmAnnouncement&&request.method==='PUT')return roomProxy(env,gmAnnouncement[1],'/gm/announcement',request);
+  const playerAnnouncement=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
+  if(playerAnnouncement&&request.method==='GET'){
+    const code=normalizeRoomCode(playerAnnouncement[1]);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
+    const session=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));
+    if(!session.ok)return session;
+    const data=await session.json();
+    return roomStub(env,code).fetch('https://room.internal/player/announcement',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({loginId:data.member.loginId,key:url.searchParams.get('key')})});
+  }
   const playerChat=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat$/);
   if(playerChat&&(request.method==="GET"||request.method==="POST"))return playerRoomChatApi(env,playerChat[1],request);
   const gmChat=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat$/);
@@ -4033,3 +4055,54 @@ function normalizeDisplayName(v){return titleCaseDisplayName(String(v||"").trim(
 function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a.charCodeAt(i)^b.charCodeAt(i);return x===0}function randomToken(n){return bytesToBase64(crypto.getRandomValues(new Uint8Array(n))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}function bytesToBase64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s)}function base64ToBytes(v){const s=atob(v);return Uint8Array.from(s,c=>c.charCodeAt(0))}function bearer(r){const h=r.headers.get("Authorization")||"";return h.startsWith("Bearer ")?h.slice(7).trim():""}async function safeJson(r){try{return await r.json()}catch{return null}}function j(data,status=200){return Response.json(data,{status,headers:{...corsHeaders(),"cache-control":"no-store"}})}function corsHeaders(){return{"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,PUT,DELETE,OPTIONS","access-control-allow-headers":"content-type,authorization,x-gmww-demo-owner","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}}
 
 async function playerSeatSwapApi(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);const me=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,code).fetch('https://room.internal/player/seat-swap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...body,loginId:data.member.loginId})})}
+
+// BEGIN RECORDED PUBLIC ANNOUNCEMENTS
+// Only the current public wake-up cue is eligible. Never publish action/result audio.
+function announcementCue(meta,runtime){
+  if(meta?.phase!=='running')return null;
+  const turn=runtime?.queue?.[runtime.cursor];
+  if(meta.cyclePhase==='night'&&turn)return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':'+String(turn.id),label:String(turn.label||'Đến lượt Vai Trò').slice(0,120)};
+  if(meta.cyclePhase==='morning')return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':wakeup',label:'Làng ơi dậy đi'};
+  return null;
+}
+const chunkSize=60000,maxBytes=2*1024*1024;
+function decodeRecording(body){
+  if(typeof body?.base64!=='string'||body.base64.length>Math.ceil(maxBytes/3)*4||!body.base64.length||!/^[-A-Za-z0-9+/]*={0,2}$/.test(body.base64))return null;
+  try{
+    const raw=atob(body.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+    if(!bytes.length||bytes.length>maxBytes)return null;
+    const text=(a,b)=>String.fromCharCode(...bytes.slice(a,b)),mime=String(body.mime||'').split(';')[0].toLowerCase();
+    const valid=mime==='audio/mpeg'&&(text(0,3)==='ID3'||bytes[0]===255&&(bytes[1]&224)===224)||
+      ['audio/mp4','audio/x-m4a'].includes(mime)&&text(4,8)==='ftyp'||
+      mime==='audio/ogg'&&text(0,4)==='OggS'||
+      ['audio/wav','audio/x-wav'].includes(mime)&&text(0,4)==='RIFF'&&text(8,12)==='WAVE';
+    return valid?{bytes,mime}:null;
+  }catch{return null}
+}
+async function saveAnnouncement(storage,body,currentKey){
+  if(!currentKey||body?.key!==currentKey)return Response.json({ok:false,error:'STALE_AUDIO_CUE'},{status:409});
+  const recording=decodeRecording(body);
+  if(!recording)return Response.json({ok:false,error:'INVALID_RECORDED_AUDIO'},{status:400});
+  await storage.transaction(async tx=>{
+    const previous=await tx.get('announcement:meta'),count=Math.ceil(recording.bytes.length/chunkSize);
+    for(let i=0;i<count;i++)await tx.put('announcement:chunk:'+i,recording.bytes.slice(i*chunkSize,(i+1)*chunkSize));
+    for(let i=count;i<Number(previous?.count||0);i++)await tx.delete('announcement:chunk:'+i);
+    await tx.put('announcement:meta',{key:currentKey,mime:recording.mime,count,size:recording.bytes.length});
+  });
+  return Response.json({ok:true,key:currentKey});
+}
+async function readAnnouncement(storage,key,currentKey){
+  if(!key||key!==currentKey)return new Response(null,{status:404});
+  return storage.transaction(async tx=>{
+    const meta=await tx.get('announcement:meta');
+    if(meta?.key!==key)return new Response(null,{status:404});
+    const bytes=new Uint8Array(meta.size);let offset=0;
+    for(let i=0;i<meta.count;i++){
+      const chunk=await tx.get('announcement:chunk:'+i);
+      if(!chunk)return new Response(null,{status:404});
+      bytes.set(chunk,offset);offset+=chunk.length;
+    }
+    return new Response(bytes,{headers:{'content-type':meta.mime,'cache-control':'no-store','x-content-type-options':'nosniff'}});
+  });
+}
+// END RECORDED PUBLIC ANNOUNCEMENTS

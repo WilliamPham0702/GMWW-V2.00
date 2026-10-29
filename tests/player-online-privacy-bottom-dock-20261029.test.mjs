@@ -61,3 +61,69 @@ test('GM can reply to an authenticated private Player channel without public cha
   assert.ok(worker.includes('this.broadcast({type:"chat_tick",serverTime:now})'));
   assert.ok(!worker.includes('this.broadcast({type:"chat_message"'));
 });
+
+import vm from 'node:vm';
+const recordingCode=worker.split('// BEGIN RECORDED PUBLIC ANNOUNCEMENTS')[1]?.split('// END RECORDED PUBLIC ANNOUNCEMENTS')[0]||'';
+const mod=vm.runInNewContext(recordingCode+';({saveAnnouncement:typeof saveAnnouncement===\"function\"?saveAnnouncement:null,readAnnouncement:typeof readAnnouncement===\"function\"?readAnnouncement:null})',{Response,Uint8Array,atob});
+test('public announcement recordings validate bytes and reject stale turn uploads',async()=>{
+  assert.equal(typeof mod.saveAnnouncement,'function','recorded announcement transport is missing');
+  const data=new Map(),storage={get:async k=>data.get(k),put:async(k,v)=>data.set(k,v),delete:async k=>data.delete(k),transaction:async fn=>fn(storage)};
+  const bytes=new Uint8Array(150000);bytes.set(new TextEncoder().encode('ID3'));
+  const body={key:'match:night:turn',mime:'audio/mpeg',base64:Buffer.from(bytes).toString('base64')};
+  assert.equal((await mod.saveAnnouncement(storage,body,'other')).status,409);
+  assert.equal(data.size,0);
+  assert.equal((await mod.saveAnnouncement(storage,{...body,mime:'text/html'},body.key)).status,400);
+  assert.equal((await mod.saveAnnouncement(storage,{...body,base64:Buffer.from('<html>').toString('base64')},body.key)).status,400);
+  assert.equal((await mod.saveAnnouncement(storage,body,body.key)).status,200);
+  const response=await mod.readAnnouncement(storage,body.key,body.key);
+  assert.equal(response.headers.get('content-type'),'audio/mpeg');
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()),bytes);
+  assert.equal((await mod.readAnnouncement(storage,body.key,'next-turn')).status,404);
+  const small={...body,key:'next-turn',base64:Buffer.from('ID3recording').toString('base64')};
+  await mod.saveAnnouncement(storage,small,small.key);
+  assert.equal(data.has('announcement:chunk:1'),false,'previous recording chunks are removed');
+});
+
+test('recorded audio room handlers enforce GM auth and current room membership',async()=>{
+  const start=worker.indexOf('  async currentAnnouncement(meta)'),end=worker.indexOf('  async gmRoleAssets(',start);
+  const Room=vm.runInNewContext('(class Room {'+worker.slice(start,end)+'})',{
+    ...mod,announcementCue:vm.runInNewContext(recordingCode+';announcementCue'),normalizeLoginId:x=>String(x||'').toLowerCase(),j:(data,status)=>Response.json(data,{status})
+  });
+  const meta={phase:'running',cyclePhase:'morning',matchId:'m',cycleKey:'day:1'};
+  const room=new Room();room.ctx={storage:{get:async k=>k==='meta'?meta:k==='players'?{'member:alice':{}}:null}};
+  room.gmAuthorized=async()=>({ok:false,response:new Response(null,{status:401})});
+  assert.equal((await room.gmAnnouncement({},{})).status,401);
+  assert.equal((await room.playerAnnouncement({loginId:'intruder',key:'m:day:1:wakeup'})).status,403);
+  meta.enabled=false;
+  assert.equal((await room.playerAnnouncement({loginId:'alice',key:'m:day:1:wakeup'})).status,403);
+});
+
+test('Player retries late recordings, stops old audio on turn change and rejects foreign URLs',async()=>{
+  const data=new Map(),players=[],requests=[];
+  class RecordedAudio{
+    constructor(){this.src='';this.paused=false;players.push(this)}
+    play(){return Promise.resolve()}
+    pause(){this.paused=true}
+    load(){}
+    removeAttribute(){this.src=''}
+  }
+  const context={state:{roomCode:'ABCDEF',participantId:'member:alice'},document:{addEventListener(){}},localStorage:{getItem:k=>data.get(k)},
+    updatePlayerTopMenu(){},auth:()=>({Authorization:'Bearer player'}),Audio:RecordedAudio,AbortController,URL,
+    fetch:async(url,opts)=>{requests.push({url,opts});return new Response('ID3recording',{headers:{'content-type':'audio/mpeg'}})}};
+  const code=chat.slice(0,chat.indexOf('function gmwwChatAudioButton()'));
+  vm.runInNewContext(code+';globalThis.actions={announce:gmwwChatAnnounce,stop:gmwwStopAnnouncement};',context);
+  const cue={key:'m:night:1',label:'Bầy Sói'};
+  context.actions.announce(cue);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(requests.length,0);
+  context.actions.announce({...cue,audioUrl:'/api/rooms/ABCDEF/announcement-audio?key=m%3Anight%3A1'});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(players.length,1,'late GM recording plays after next private poll');
+  assert.equal(requests[0].opts.headers.Authorization,'Bearer player');
+  context.actions.announce({key:'next',label:'Bảo Vệ',audioUrl:'https://other.example/private.mp3'});
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(players[0].paused,true,'old cue is stopped');
+  assert.equal(requests.length,1,'foreign recording URL is rejected');
+  context.actions.stop();
+});
