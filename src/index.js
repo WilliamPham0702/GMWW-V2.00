@@ -197,6 +197,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/player/chat"&&request.method==="POST")return this.playerChatRead(await safeJson(request));
     if(url.pathname==="/player/chat/send"&&request.method==="POST")return this.playerChatSend(await safeJson(request));
     if(url.pathname==="/player/ghost-clue"&&request.method==="POST")return this.playerGhostClue(await safeJson(request));
+    if(url.pathname==="/player/ghost-letter"&&request.method==="POST")return this.playerGhostLetter(await safeJson(request));
     if(url.pathname==="/gm/chat"&&request.method==="GET")return this.gmChatRead(request);
     if(url.pathname==="/gm/chat/moderate"&&request.method==="POST")return this.gmChatModerate(request,await safeJson(request));
     if(url.pathname==="/gm/ghost-clue"&&request.method==="POST")return this.gmGhostClue(request,await safeJson(request));
@@ -4171,7 +4172,17 @@ export class RoomDurableObject extends DurableObject {
     const ownGhostClue=meta.matchId?
       await this.ctx.storage.get("ghostClue:"+String(meta.matchId)+":"+
         Math.max(1,Number(meta.cycleNight)||1)+":"+loginId):null;
-    return j({ok:true,privateRoleDisclosures,ghostClue:ownGhostClue?
+    const ownGhostLetter=meta.matchId?
+      await this.ctx.storage.get("ghostLetterRequest:"+String(meta.matchId)+":"+loginId):null;
+    const incomingGhostLetters=meta.matchId?[...(await this.ctx.storage.list({
+      prefix:"ghostLetterRequest:"+String(meta.matchId)+":"
+    })).values()].filter(x=>x?.targetId===loginId&&x?.status==="pending")
+      .map(x=>({requestId:x.id,day:x.day})):[];
+    return j({ok:true,privateRoleDisclosures,ghostLetterInbox:ownGhostLetter?
+      {requestId:ownGhostLetter.id,status:ownGhostLetter.status,
+        letter:ownGhostLetter.status==="responded"?ownGhostLetter.letter:null}:null,
+      ghostLetterPrompts:incomingGhostLetters,
+      ghostClue:ownGhostClue?
       {id:ownGhostClue.id,status:ownGhostClue.status,text:ownGhostClue.text}:null,
       swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,linkedArtifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
@@ -4429,6 +4440,25 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put(rateKey,now);
     this.broadcast({type:"chat_tick",serverTime:now});
     return j({ok:true,id:message.id,channel:permission.channel});
+  }
+  async playerGhostLetter(body){
+    const actorId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta"),
+      matchId=String(meta?.matchId||""),requestId=String(body?.requestId||""),
+      letter=String(body?.letter||"");
+    if(String(meta?.phase)!=="running"||!actorId)return j({ok:false,error:"GHOST_LETTER_NOT_RUNNING"},409);
+    const players=await this.ctx.storage.get("players")||{};
+    if(!players["member:"+actorId])return j({ok:false,error:"GHOST_LETTER_PLAYER_NOT_IN_ROOM"},403);
+    const rows=await this.ctx.storage.list({prefix:"ghostLetterRequest:"+matchId+":"}),
+      match=[...rows.values()].find(x=>x?.id===requestId&&x?.targetId===actorId);
+    if(!match)return j({ok:false,error:"GHOST_LETTER_REQUEST_NOT_FOUND"},404);
+    if(match.status==="responded"&&match.letter===letter.trim().normalize("NFC"))
+      return j({ok:true,idempotent:true,requestId});
+    const response=ghostLetterResponse({request:match,loginId:actorId,matchId,letter});
+    if(!response.ok)return j({ok:false,error:response.error},409);
+    const saved={...response.request,respondedAt:new Date().toISOString()};
+    await this.ctx.storage.put("ghostLetterRequest:"+matchId+":"+match.ownerId,saved);
+    this.broadcast({type:"ghost_letter_received",serverTime:Date.now()});
+    return j({ok:true,requestId,status:"responded"});
   }
   async playerGhostClue(body){
     const actorId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta"),
