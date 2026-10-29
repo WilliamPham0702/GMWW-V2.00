@@ -65,6 +65,7 @@ try{
  await runIsolated('tests/worker-artifact-role-swap-e2e.mjs','8795','9235');
  await runIsolated('tests/worker-artifact-steal-e2e.mjs','8796','9236');
  await runIsolated('tests/worker-artifact-function-copy-e2e.mjs','8797','9237');
+ await runIsolated('tests/worker-artifact-link-e2e.mjs','8798','9238');
 }finally{
  worker.kill('SIGTERM');
  await new Promise(resolve=>{if(worker.exitCode!==null)return resolve();worker.once('exit',resolve);setTimeout(()=>{worker.kill('SIGKILL');resolve()},3000).unref()});
