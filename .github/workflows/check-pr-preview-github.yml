@@ -76,6 +76,12 @@ jobs:
           # Cloudflare Preview uses a separate DO namespace; this is NOT wrangler deploy.
           npx --no-install wrangler preview --config wrangler.jsonc \
             --worker-name gmww-v2-00 --name "pr-${PR_NUMBER}"
+          # Read-only GET smoke test of the actual Preview endpoint.
+          BASE="https://pr-${PR_NUMBER}-gmww-v2-00.williampham0702.workers.dev"
+          curl --fail --location --silent --show-error --retry 6 \
+            --retry-all-errors --retry-delay 2 --max-time 25 \
+            "$BASE/" --output "$RUNNER_TEMP/gmww-pr-preview-home.html"
+          test -s "$RUNNER_TEMP/gmww-pr-preview-home.html"
           {
             echo "### GMWW isolated PR Preview"
             echo "PR #${PR_NUMBER}: published with Wrangler Preview via GitHub Actions."
