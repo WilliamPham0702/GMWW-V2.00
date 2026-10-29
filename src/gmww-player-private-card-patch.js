@@ -456,8 +456,8 @@ function gmwwApplyRoster(rows,origin='http'){
    "    if(d?.room&&gmwwLastRoomBroadcastAt<=startedAt)state.room=d.room;\n    if(Array.isArray(d?.players)){const validSnapshot=d.players.some(p=>p?.participantId===participantId);state.players=gmwwApplyRoster(d.players,'http');renderRooms();syncVillageFrame();return validSnapshot}");
  offlineReplace("state.players=pub.players;if(!state.players.some(p=>p.participantId===state.participantId))",
    "state.players=gmwwApplyRoster(pub.players,'http');if(!state.players.some(p=>p.participantId===state.participantId))");
- offlineReplace("state.players=(d.players||state.players||[]).map(p=>({ ...p,",
-   "state.players=gmwwApplyRoster(d.players,movementEvent?'movement':'socket').map(p=>({ ...p,");
+ offlineReplace("state.players=(d.players||state.players||[]).map(p=>({...p,",
+   "state.players=gmwwApplyRoster(d.players,movementEvent?'movement':'socket').map(p=>({...p,");
 
  // Always render the exact ballot phase the Server committed when opening
  // nomination/voting, instead of waiting for a later unrelated room_state.
