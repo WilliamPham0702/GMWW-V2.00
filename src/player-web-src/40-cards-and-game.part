@@ -58,7 +58,7 @@ function maybeOpenGame(){
   ensureVillageHud();if(!['game','profile','rooms'].includes(state.activeScreenId))go('game');const title=$('#game .page-title');if(title)title.textContent='Làng Asahi';
   ensureVillageGameView();
   if(state.role&&playerScenePolicy(state.room).rolesReleased)renderRole();
-  syncPlayerPresentation();syncPlayerMiniCards();
+  syncPlayerPresentation();syncPlayerMiniCards();gmwwChatDockSync();
   ensureVillageReadyDock();syncVillageFrame();setTimeout(syncPlayerSetupState,0);return true
 }
 
