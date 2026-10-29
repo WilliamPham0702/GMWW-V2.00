@@ -568,7 +568,8 @@ function renderDemoActions(){
         method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,
           cycleKey:state.room?.cycleKey,actionKey:a.key,targetIds,direction,assassinChoice})});
       toast('Đã ghi nhận: '+(a.name||'Hành động'));
-      state.demoUiKey='';if(d.revelation)toast('Kết quả: '+JSON.stringify(d.revelation).slice(0,260));
+      state.demoUiKey='';const answer=d.revelation?.message||d.result?.message;
+      if(answer)toast('Kết quả: '+String(answer));
       await refreshPrivateRole(true);
     }catch(e){toast(e?.message||'Hành động chưa được ghi nhận.');await refreshPrivateRole(true)}
     finally{state.demoSubmitPending=false;submit.disabled=false}

@@ -45,3 +45,7 @@ Mốc hiện tại: triển khai **một phần**, PR giữ Draft. Không khẳn
 Nhiều Artifact vẫn rơi vào `DAY_ARTIFACT_EFFECT_NOT_IMPLEMENTED`; các luồng sao chép/hoán đổi/cấp Artifact, giao tiếp riêng, DEMO/audio/UI, undo và tương tác chéo chưa đủ bằng chứng. Đây là phần triển khai/kiểm thử còn phải làm, không phải yêu cầu chủ dự án chọn kỹ thuật.
 
 **Không merge PR vào main, không phát hành Production/OTA.** Chưa tạo Runtime Update thủ công cho PR này. Không đổi IPA, không ghi/xóa dữ liệu Production. Rollback Production không cần kích hoạt vì chưa có triển khai; checkpoint nhánh có thể revert sau khi đối chiếu head mới nhất, không force push.
+
+### Sửa kết quả riêng trên Player Web
+
+Phát hiện và sửa Online/DEMO bỏ sót `result.message` của Artifact ban ngày, đồng thời thay JSON soi đêm bằng `revelation.message` dễ đọc. Hai bài test chạy trực tiếp hàm UI thật đã FAIL trước sửa và PASS sau sửa. Chưa chứng nhận UI 107 lá; chưa phát hành.

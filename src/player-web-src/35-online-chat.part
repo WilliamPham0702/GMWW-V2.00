@@ -156,7 +156,8 @@ async function gmwwOnlineSubmit(){
  try{
    const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
    gmwwOnlineStop();toast('Đã thực hiện: '+String(action.name||'Hành động'));
-   if(d.revelation)toast('Kết quả: '+JSON.stringify(d.revelation).slice(0,180));
+   const answer=d.revelation?.message||d.result?.message;
+   if(answer)toast('Kết quả: '+String(answer));
  }catch(e){toast('Hành động chưa được chấp nhận: '+String(e.message||e))}
  finally{state.onlineBusy=false;await refreshPrivateRole(true)}
 }
