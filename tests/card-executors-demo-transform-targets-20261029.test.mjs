@@ -29,3 +29,12 @@ test('DEMO #23 only selects a source with an implemented copyable power',()=>{
  targetCount:1,noSelf:true,actorIds:['alice']},'alice',x,meta);
  assert.deepEqual(chosen,['bob']);
 });
+
+test('DEMO #34 picks only an eliminated player from the prior Day',()=>{
+ const x={...ctx,rows:[{loginId:'bob',type:'dead',effectActive:true,
+  night:1,matchId:'demo-test'}]};
+ const chosen=targetsFor({artifactId:'artifact_34',actionId:'action-ghost-message',
+  targetCount:1,noSelf:true,allowDead:true,actorIds:['alice']},
+  'alice',x,{...meta,cycleNight:2});
+ assert.deepEqual(chosen,['bob']);
+});
