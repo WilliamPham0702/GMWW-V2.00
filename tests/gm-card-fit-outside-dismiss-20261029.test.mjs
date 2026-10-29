@@ -50,4 +50,7 @@ test('Outside handler preserves editable back-face, non-primary mouse, and game 
   assert.match(handler,/entityFront'\)\?\.classList\.contains\('active'\)/);
   assert.match(handler,/!target\.closest\('#playerCard,\.editor-bar,#bottomNav'\)/);
   assert.match(ui,/function initPlayScene\(\)\{\s*gmwwBindOutsideDismiss\(\)/);
+  assert.match(handler,/gmwwGMChatPanel/);
+  assert.match(handler,/gmwwCloudflarePanel/);
+  assert.match(handler,/assignmentPanelDismissed=true/);
 });
