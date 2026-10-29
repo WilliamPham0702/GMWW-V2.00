@@ -1283,13 +1283,72 @@ function renderEntityGrid(kind){
 
 function togglePref(kind,id,type){const p=prefFor(kind,id);if(type==='star'){if(p.starred){p.starred=false;p.starOrder=null}else{p.hidden=false;p.starred=true;const orders=Object.values(prefs[kind]||{}).filter(x=>x.starred).map(x=>Number(x.starOrder)||0);p.starOrder=Math.max(0,...orders)+1}}else{p.hidden=!p.hidden;if(p.hidden){p.starred=false;p.starOrder=null}}savePrefs();renderEntityGrid(kind)}
 
+/* Artwork imported from older Artifact packs can include a dark empty gutter on
+   only one side. Detect asymmetric *empty* gutters in a tiny canvas sample;
+   never crop persisted artwork, rename files or touch role cards. */
+function artifactArtworkSideMargins(data,width,height){
+  if(!data||!Number.isFinite(width)||!Number.isFinite(height)||width<60||height<60)return null;
+  const firstY=Math.floor(height*.12),lastY=Math.ceil(height*.88);
+  const columns=new Uint16Array(width);
+  let samples=0;
+  for(let y=firstY;y<lastY;y+=2){
+    samples++;
+    for(let x=0;x<width;x++){
+      const p=(y*width+x)*4;
+      if(data[p+3]<128)continue;
+      const red=data[p],green=data[p+1],blue=data[p+2];
+      const hi=Math.max(red,green,blue),lo=Math.min(red,green,blue);
+      const luminance=.2126*red+.7152*green+.0722*blue;
+      if(luminance>86||(hi>75&&hi-lo>27))columns[x]++;
+    }
+  }
+  if(!samples)return null;
+  const threshold=Math.max(2,Math.ceil(samples*.12));
+  const present=x=>columns[x]>=threshold;
+  // A minimum two-column run rejects isolated sparkles/noise in black padding.
+  let left=0;
+  while(left<width-2&&!(present(left)&&present(left+1)))left++;
+  let right=width-1;
+  while(right>1&&!(present(right)&&present(right-1)))right--;
+  if(right<=left)return null;
+  const l=left/width,r=(width-1-right)/width;
+  // Be conservative: real dark artwork must not be auto-cropped.
+  if(l+r>.14||Math.max(l,r)>.12||Math.abs(l-r)<.025)return null;
+  return{left:l,right:r};
+}
+function alignArtifactPreviewArtwork(img){
+  if(!img?.naturalWidth||!img?.naturalHeight)return;
+  try{
+    const sample=document.createElement('canvas');
+    sample.width=240;sample.height=200;
+    const context=sample.getContext('2d',{willReadFrequently:true});
+    if(!context)return;
+    context.drawImage(img,0,0,sample.width,sample.height);
+    const margins=artifactArtworkSideMargins(context.getImageData(0,0,sample.width,sample.height).data,sample.width,sample.height);
+    if(!margins)return;
+    const scale=1/(1-margins.left-margins.right);
+    const offsetPercent=100*((scale-1)/2-scale*margins.left);
+    // Only expand horizontally: top/bottom frame art and titles stay untouched.
+    img.style.transform='translate3d('+offsetPercent.toFixed(2)+'%,0,0) scaleX('+scale.toFixed(4)+')';
+  }catch(_){
+    // A non-readable external image retains the safe, centered CSS fallback.
+  }
+}
+
 async function renderEntityFront(){
-  const e=editDraft;if(!e)return;const card=$('#playerCard'),badge=$('#playerFactionBadge');
-  card.className='player-card '+(currentKind==='artifacts'?'artifact':(e.factionId||'village'));
+  const e=editDraft;if(!e)return;const kind=currentKind,card=$('#playerCard'),badge=$('#playerFactionBadge');
+  card.className='player-card '+(kind==='artifacts'?'artifact':(e.factionId||'village'));
   $('#playerName').textContent=(e.name||'').toUpperCase();
-  if(currentKind==='cards'){const f=factionMeta(e.factionId);badge.textContent=f.icon;badge.setAttribute('aria-label',f.label)}else{badge.textContent='✦';badge.setAttribute('aria-label','Artifacts')}
+  if(kind==='cards'){const f=factionMeta(e.factionId);badge.textContent=f.icon;badge.setAttribute('aria-label',f.label)}else{badge.textContent='✦';badge.setAttribute('aria-label','Artifacts')}
   $('#playerInformation').textContent=formatInformation(e.information||'');
-  $('#playerDisplay').src=await resolveArtwork(currentKind,e.id,'display');
+  const img=$('#playerDisplay'),src=await resolveArtwork(kind,e.id,'display');
+  // Opening another card during an async asset read must not show the old card.
+  if(currentKind!==kind||editDraft?.id!==e.id)return;
+  img.style.removeProperty('transform');
+  img.onload=()=>{if(kind==='artifacts'&&currentKind===kind&&editDraft?.id===e.id)alignArtifactPreviewArtwork(img)};
+  img.onerror=()=>img.style.removeProperty('transform');
+  img.src=src;
+  if(img.complete&&img.naturalWidth)img.onload();
   fitPlayerCardTitle();fitPlayerCardInformation();
 }
 function fitPlayerCardTitle(){
