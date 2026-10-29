@@ -4,7 +4,7 @@ import {validateGhostClue,ghostClueAllowed,moderateGhostClue} from '../src/gmww-
 test('one Vietnamese Unicode clue word is valid, multiple words and player names are not',()=>{
  assert.equal(validateGhostClue({text:'Sói'}).ok,true);
  assert.equal(validateGhostClue({text:'Phe Sói'}).error,'GHOST_ONE_WORD_ONLY');
- assert.equal(validateGhostClue({text:'Lan',playerNames:['Lân','Bình']}).ban,true);
+ assert.equal(validateGhostClue({text:'Lan',playerNames:['Nguyễn Lân','Bình']}).ban,true);
  assert.equal(validateGhostClue({text:'🐺'}).ok,false);
  assert.equal(validateGhostClue({text:' '}).ok,false);
 });
