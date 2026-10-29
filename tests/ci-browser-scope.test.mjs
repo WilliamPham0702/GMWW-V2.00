@@ -628,3 +628,25 @@ test('CI-only merge excludes unrelated Drunk-role tests without waiving gameplay
   assert.equal(classifyBrowserScope([...changes,{path:'src/gmww-drunk-draw-rules.js',status:'M',before:'a',after:'b'}]),'full');
   assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md')),'full');
 });
+
+test('PR613 Artifact preview V3.274 scope accepts only reviewed image, runtime and CI files',()=>{
+  const allowed=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/deploy-production.yml',
+    '.github/workflows/check-gm-card-preview-centering-20261029.yml',
+    '.github/scripts/prepare-update-channel.mjs',
+    'docs/releases/GMWW-artifact-preview-centering-main-20261029.md',
+    'package.json','package-lock.json','src/index.js',
+    'server-game/src/00-core-and-library.part',
+    'server-game/src/10-library-and-settings.part',
+    'server-game/current/app.js','server-game/current/GMWW.html',
+    'tests/artifact-preview-horizontal-centering-20261029.test.mjs',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const changes=allowed.map(path=>({path,status:path.startsWith('tests/artifact-')?'A':'M'}));
+  assert.equal(classifyBrowserScope(changes),'artifact-preview-3274');
+  assert.equal(classifyBrowserScope([...changes,modified('src/gmww-members-live.js','old','unexpected Player logic')]),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='server-game/src/10-library-and-settings.part')),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,status:'D'}:c)),'full');
+});

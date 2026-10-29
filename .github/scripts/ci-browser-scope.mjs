@@ -2544,7 +2544,54 @@ function isGithubPreviewCIOnly(changes){
     changes.some(c=>c.path==='tests/github-actions-pr-preview-ci.test.mjs');
 }
 
+// PR613 V3.274 — fail-closed, image-only Runtime scope; any extra path is full CI.
+const artifact3274Allowed=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/check-gm-card-preview-centering-20261029.yml',
+  '.github/scripts/prepare-update-channel.mjs',
+  'docs/releases/GMWW-artifact-preview-centering-main-20261029.md',
+  'package.json','package-lock.json','src/index.js',
+  'server-game/src/00-core-and-library.part',
+  'server-game/src/10-library-and-settings.part',
+  'server-game/current/app.js','server-game/current/GMWW.html',
+  'tests/artifact-preview-horizontal-centering-20261029.test.mjs',
+  'tests/ci-browser-scope.test.mjs'
+]);
+function isArtifactPreview3274Scope(changes){
+  if(!Array.isArray(changes)||changes.length<12||
+     changes.some(x=>!artifact3274Allowed.has(x.path)||!['A','M'].includes(x.status)))return false;
+  const has=new Set(changes.map(x=>x.path));
+  for(const p of [
+    'server-game/src/10-library-and-settings.part',
+    'server-game/current/app.js','src/index.js','package.json','package-lock.json',
+    '.github/workflows/deploy-production.yml',
+    'tests/artifact-preview-horizontal-centering-20261029.test.mjs',
+    'docs/releases/GMWW-artifact-preview-centering-main-20261029.md'
+  ])if(!has.has(p))return false;
+  try{
+    const load=p=>fs.readFileSync(p,'utf8');
+    const source=load('server-game/src/10-library-and-settings.part');
+    const bundled=load('server-game/current/app.js');
+    const helper=source.slice(source.indexOf('function artifactArtworkSideMargins('),source.indexOf('async function renderEntityFront()'));
+    const pkg=JSON.parse(load('package.json'));
+    return pkg.version==='3.274.0'&&
+      JSON.parse(load('package-lock.json')).version===pkg.version&&
+      load('src/index.js').includes('VERSION="V3.274",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3274-artifact-preview-centering"')&&
+      load('server-game/src/00-core-and-library.part').includes("const VERSION='3.274'")&&
+      bundled.includes("const VERSION='3.274'")&&
+      load('server-game/current/GMWW.html').includes('<title>GMWW V3.274</title>')&&
+      source.includes('const offsetPercent=50*(margins.right-margins.left)')&&
+      helper.includes('img.style.transform=')&&!helper.includes('scaleX(')&&!helper.includes('scaleY(')&&
+      bundled.includes(helper)&&
+      source.includes("if(kind==='artifacts'&&currentKind===kind&&editDraft?.id===e.id)")&&
+      load('.github/scripts/prepare-update-channel.mjs').includes('V3.274 PR613:');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isArtifactPreview3274Scope(changes))return 'artifact-preview-3274';
   if(isGithubPreviewCIOnly(changes))return 'github-pr-preview-ci';
   if(isPlayerAvatar603Scope(changes))return 'player-top-avatar-603';
   if(isPlayerWebBackgroundPerformanceScope(changes))return 'player-web-background-performance';
@@ -3210,6 +3257,8 @@ function detect(){
    try{
     const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
     const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path}});
+    if(isArtifactPreview3274Scope(changes))
+      return{mode:'artifact-preview-3274',reason:'PR613 V3.274 exact scoped artwork update on main'};
     if(isIcon247PostMergeScope(changes))
      return{mode:'icon-scale-3247-postmerge',reason:'Exact four-file same-version V3.247 recovery'};
    }catch{}

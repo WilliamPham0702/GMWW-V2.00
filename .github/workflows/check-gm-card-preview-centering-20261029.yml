@@ -1,0 +1,58 @@
+name: Check GM card artwork centering (20261029)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server-game/src/10-library-and-settings.part"
+      - "server-game/current/app.js"
+      - "package.json"
+      - "package-lock.json"
+      - "src/index.js"
+      - "server-game/src/00-core-and-library.part"
+      - "server-game/current/GMWW.html"
+      - ".github/workflows/deploy-production.yml"
+      - ".github/scripts/prepare-update-channel.mjs"
+      - "docs/releases/GMWW-artifact-preview-centering-main-20261029.md"
+      - "tests/artifact-preview-horizontal-centering-20261029.test.mjs"
+      - ".github/workflows/check-gm-card-preview-centering-20261029.yml"
+  push:
+    branches: [main]
+    paths:
+      - "server-game/src/10-library-and-settings.part"
+      - "server-game/current/app.js"
+      - "package.json"
+      - "package-lock.json"
+      - "src/index.js"
+      - "server-game/src/00-core-and-library.part"
+      - "server-game/current/GMWW.html"
+      - ".github/workflows/deploy-production.yml"
+      - ".github/scripts/prepare-update-channel.mjs"
+      - "docs/releases/GMWW-artifact-preview-centering-main-20261029.md"
+      - "tests/artifact-preview-horizontal-centering-20261029.test.mjs"
+      - ".github/workflows/check-gm-card-preview-centering-20261029.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  card-centering:
+    name: Card centering and role isolation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test Artifact preview + Vai Trò isolation
+        run: node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs
+      - name: Vietnamese Runtime OTA V3.274 notes
+        run: |
+          test -s docs/releases/GMWW-artifact-preview-centering-main-20261029.md
+          grep -Fq 'V3.274 PR613:' .github/scripts/prepare-update-channel.mjs
+      - name: Verify GM source and bundle
+        run: |
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
