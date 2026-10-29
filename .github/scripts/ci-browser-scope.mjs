@@ -2605,13 +2605,20 @@ const artifact3274ProofPaths=new Set([
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/GMWW-PR613-release-proof-ci-20261029.md'
 ]);
+const artifact3274HistoryPaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/deploy-production.yml',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/releases/GMWW-PR613-git-history-ci-20261029.md'
+]);
 function isArtifactPreview3274RecoveryScope(changes){
   if(!Array.isArray(changes)||changes.some(c=>!['A','M'].includes(c.status)))return false;
   const paths=new Set(changes.map(x=>x.path));
   const exact=expected=>paths.size===expected.size&&
     [...paths].every(path=>expected.has(path));
   if(!((changes.length===5&&exact(artifact3274RecoveryPaths))||
-       (changes.length===4&&exact(artifact3274ProofPaths))))return false;
+       (changes.length===4&&exact(artifact3274ProofPaths))||
+       (changes.length===4&&exact(artifact3274HistoryPaths))))return false;
   try{
     // The classifier also runs in shallow-checkout unit tests. The exact
     // ancestor is enforced by the Production deploy-scope and release gate.
