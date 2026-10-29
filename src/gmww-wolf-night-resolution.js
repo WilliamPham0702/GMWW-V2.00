@@ -121,7 +121,7 @@ export const DIVINATION_ACTION_IDS=Object.freeze([
   'action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction',
   'action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'
 ]);
-export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
+export function resolveNightReveal({actionId,targetIds=[],assignments=[],expelledIds=[]}={}){
   const action=String(actionId||'');
   if(!DIVINATION_ACTION_IDS.includes(action))return null;
   const targets=[...new Set((Array.isArray(targetIds)?targetIds:[]).map(login).filter(Boolean))];
@@ -158,8 +158,12 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
     return {kind:'faction-compare',actionId:action,targets:reads.map(x=>({loginId:x.loginId,roleId:x.roleId,roleName:x.roleName})),
       same,message:same?'CÙNG PHE':'KHÁC PHE'};
   }
-  // The Alpha Wolf deceives the regular Seer only, not a group check.
-  const wolves=reads.some(x=>action==='action_seer'?x.roleId==='role_human_wolf'||(x.wolf&&!['role_alpha_wolf','role_lycan'].includes(x.roleId)):x.wolf);
+  // Expelled targets do not receive an effect. The regular Seer nevertheless
+  // receives the neutral, non-wolf verdict without revealing their real role.
+  // Preserve the Alpha Wolf's existing false-negative rule.
+  const expelled=new Set((Array.isArray(expelledIds)?expelledIds:[]).map(login));
+  const wolves=reads.some(x=>action==='action_seer'?
+    (!expelled.has(x.loginId)&&(x.roleId==='role_human_wolf'||(x.wolf&&!['role_alpha_wolf','role_lycan'].includes(x.roleId)))):x.wolf);
   return {kind:'wolf-check',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
     wolf:wolves,message:action==='action_seer'?(wolves?'Người bạn soi là Sói':'Người bạn soi không phải là Sói'):(wolves?'CÓ SÓI':'KHÔNG CÓ SÓI')};
 }

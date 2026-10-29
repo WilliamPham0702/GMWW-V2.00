@@ -1,0 +1,39 @@
+name: Check V3.273 Player Web Login Hotfix (focused)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/gmww-player-private-card-patch.js'
+      - 'src/gmww-members-live.js'
+      - 'src/player-web-src/**'
+      - 'tests/player-web-receipt-patch-hotfix.test.mjs'
+      - 'docs/releases/GMWW-V3.273-PLAYER-WEB-LOGIN-HOTFIX-20261029.md'
+      - '.github/workflows/check-player-web-login-v3273.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/gmww-player-private-card-patch.js'
+      - 'src/gmww-members-live.js'
+      - 'src/player-web-src/**'
+      - 'tests/player-web-receipt-patch-hotfix.test.mjs'
+      - '.github/workflows/check-player-web-login-v3273.yml'
+  workflow_dispatch:
+jobs:
+  player-login:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact Worker dependencies
+        run: npm ci
+      - name: Reproduce V3.273 patch and validate login, receipt, Online handlers
+        run: node --test tests/player-web-receipt-patch-hotfix.test.mjs
+      - name: Verify exact seven-part Player Web bundle
+        run: node .github/scripts/assemble-player-web.mjs --verify
+      - name: Check Worker syntax
+        run: node --check src/index.js
+      - name: Build Worker without deploying Production
+        run: npx wrangler deploy --dry-run --outdir /tmp/gmww-player-login-v3273

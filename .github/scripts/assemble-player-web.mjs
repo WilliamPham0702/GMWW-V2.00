@@ -11,6 +11,7 @@ const parts=[
   '10-role-card-artwork.part',
   '20-village-and-profile.part',
   '30-rooms-and-realtime.part',
+  '35-online-chat.part',
   '40-cards-and-game.part',
   '50-privacy-and-runtime.part'
 ];

@@ -426,10 +426,16 @@ function applyActionIconScale(value){
  const dock=document.getElementById('battleFireIconDock');if(dock)delete dock.dataset.sig;
  return n;
 }
-function saveActionIconScale(value){
+async function saveActionIconScale(value){
  const n=applyActionIconScale(value);
  try{localStorage.setItem(ACTION_ICON_SCALE_STORAGE_KEY,String(n))}
  catch(err){console.warn('GMWW_ICON_SCALE_SAVE',err)}
+ try{
+  const response=await fetch(GMWW_SERVER_BASE+'/api/gm/ui-settings',{
+   method:'PUT',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},
+   body:JSON.stringify({actionIconScale:n}),cache:'no-store'});
+  if(!response.ok)throw new Error('HTTP '+response.status);
+ }catch(err){console.warn('GMWW_ICON_SCALE_SYNC',err)}
 }
 function initActionIconScaleSetting(){
  const choices=document.getElementById('actionIconScaleChoices');if(!choices)return;

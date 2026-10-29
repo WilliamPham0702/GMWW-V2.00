@@ -121,7 +121,7 @@ function renderStatusLibrary(){
     const visible=Object.prototype.hasOwnProperty.call(draft,id)?draft[id]===true:
       Object.prototype.hasOwnProperty.call(display,id)?display[id]===true:defaultVisible;
     const instant=item.type==='instant';
-    return '<article class="status-card" data-status-preview="'+visuals.safe(id)+'"><div class="status-card-header"><span class="status-card-icon" aria-hidden="true">'+item.icon+'</span><div class="status-card-copy"><h3>'+visuals.safe(item.name)+'</h3></div><span class="status-card-index">'+String(index+1).padStart(2,'0')+'/15</span></div>'+
+    return '<article class="status-card" data-status-preview="'+visuals.safe(id)+'"><div class="status-card-header"><span class="status-card-icon" aria-hidden="true">'+item.icon+'</span><div class="status-card-copy"><h3>'+visuals.safe(item.name)+'</h3></div><span class="status-card-index">'+String(index+1).padStart(2,'0')+'/'+visuals.entries.length+'</span></div>'+
       '<div class="gmww-sv-preview"><span class="gmww-sv-target gmww-sv-stage"><img class="gmww-sv-avatar" alt="" src="'+visuals.safe(avatarSrc)+'">'+visuals.overlay([id])+'</span></div>'+
       '<small>'+visuals.safe(item.description)+'</small><span class="gmww-sv-preview-note">'+(instant?'Hiệu ứng tức thời · Preview chạy lặp':'Trạng thái duy trì · Chỉ gỡ khi dữ liệu thay đổi')+'</span>'+
       '<label class="status-card-toggle"><span>Hiển thị Player Web</span><input type="checkbox" data-status-display="'+visuals.safe(id)+'"'+(visible?' checked':'')+' aria-label="Hiển thị '+visuals.safe(item.name)+' trên Player Web"></label></article>';
@@ -281,6 +281,11 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   // mask a real GM upload under an older alternate audio ID.
   const candidates=typeof battleFindAudioCandidates==='function'
     ?battleFindAudioCandidates(kind,targetId,name):[row].filter(Boolean);
+  // Name-only revelation must prefer the SAME audio row on which GM saved
+  // the complete Tên crop. Stale duplicate IDs often have an older/short cut.
+  if(Number(maxSeconds)>0)candidates.sort((a,b)=>
+    Number(Number(b.roleNameEnd)>Number(b.roleNameStart||0))-
+    Number(Number(a.roleNameEnd)>Number(a.roleNameStart||0)));
   let src=null;
   for(const candidate of candidates){
     const found=battleAudioReady.get(kind+':'+String(candidate.id||''))||
@@ -295,6 +300,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
       if(targetId==='audio_group_wolves')return 'Bầy sói ơi dậy đi';
       const canonical=targetId==='source-18'?'role_old_witch':targetId;
       const card=(state.cards||[]).find(c=>String(c.id)===String(canonical));
+      if(Number(maxSeconds)>0)return String(name||card?.name||'').trim();
       return card?card.name+' ơi dậy đi':String(name||'');
     }
     if(kind==='actions'){
@@ -379,6 +385,11 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
   const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
+  // Fast DEMO must not retain a long, real-time clip after the Server has
+  // already advanced. Keep cropped role names intelligible at normal speed.
+  const demoRate=typeof demoRunner!=='undefined'&&demoRunner.running&&playSceneRuntime.room?.demo===true?
+    Math.max(1,Math.min(2,Number(demoRunner.speed)||1)):1;
+  player.playbackRate=Number(maxSeconds)>0?1:demoRate;
   // WKWebView can reject media that has not yet left the pending state.
   // The user-unlocked WebAudio channel is the fallback, then Vietnamese speech.
   let fallbackStarted=false;
@@ -423,7 +434,9 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     player.onloadedmetadata=seek;
     player.addEventListener('playing',()=>{
       if(cutTimer!==null)clearTimeout(cutTimer);
-      cutTimer=setTimeout(stop,Math.max(100,Math.ceil((excerpt.end-excerpt.start)*1000)+120));
+      // A seek/buffer delay must not truncate the final syllable of a name.
+      // Playback timeupdate is authoritative; timer is only a generous failsafe.
+      cutTimer=setTimeout(stop,Math.max(500,Math.ceil((excerpt.end-excerpt.start)*1000)+1800));
     },{once:true});
     player.ontimeupdate=()=>{if(player.currentTime>=excerpt.end-.02)stop()};
     if(player.readyState>=1)seek();
@@ -1888,27 +1901,20 @@ function renderPlayContext(){
 }
 let playStagePublishQueue=Promise.resolve(),playStagePublishPending=0;
 function initPlayGatherSpacing(){
-  const input=document.getElementById('playGatherSpacing');if(!input)return;
-  const layout=globalThis.GMWW_VILLAGE_LAYOUT,output=document.getElementById('playGatherSpacingValue');
-  if(!input.dataset.bound){
-    input.dataset.bound='1';
-    input.addEventListener('input',()=>{
-      const value=layout.normalizeSeatSpacing(input.value);
-      playSeatSpacingPreview=value;if(output)output.textContent=value+'%';
-      renderPlayPlayers();
-    });
-    input.addEventListener('change',async()=>{
-      const value=layout.normalizeSeatSpacing(input.value);
-      try{await playUpdateRoomSettings({seatSpacing:value})}finally{
-        playSeatSpacingPreview=null;
-        const real=layout.normalizeSeatSpacing(playSceneRuntime.room?.seatSpacing);
-        input.value=String(real);if(output)output.textContent=real+'%';
-        renderPlayPlayers();
-      }
-    });
+  const output=document.getElementById('playGatherSpacingValue');
+  if(output)output.textContent=globalThis.GMWW_VILLAGE_LAYOUT.normalizeSeatSpacing(
+    playSeatSpacingPreview??playSceneRuntime.room?.seatSpacing)+'%';
+}
+// Update seat-anchor CSS only during a pinch; do not remount 6–30 Character rigs.
+function playPreviewPinchSeats(){
+  const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  const positions=playSeatPositions(playSeatStats().seatCount);
+  for(const seat of ring.querySelectorAll('[data-seat-id]')){
+    const p=positions[Number(seat.dataset.seatId)-1];if(!p)continue;
+    const pt=playMapDisplay(p[0],p[1]);
+    seat.style.left=pt[0]+'%';seat.style.top=pt[1]+'%';seat.style.zIndex=String(10+Math.round(pt[1]));
   }
-  if(playSeatSpacingPreview==null)input.value=String(layout.normalizeSeatSpacing(playSceneRuntime.room?.seatSpacing));
-  if(output)output.textContent=String(layout.normalizeSeatSpacing(playSeatSpacingPreview??playSceneRuntime.room?.seatSpacing))+'%';
+  initPlayGatherSpacing();
 }
 function initPlaySeatOffsetControls(){
   const layout=globalThis.GMWW_VILLAGE_LAYOUT;
@@ -1940,14 +1946,45 @@ function initPlaySeatOffsetControls(){
   world.classList.toggle('is-seat-drag-enabled',adjustable());
   if(world.dataset.seatDragBound)return;
   world.dataset.seatDragBound='1';
-  let gesture=null,suppressClick=false,committing=false;
+  let gesture=null,pinch=null,suppressClick=false,committing=false,previewFrame=0;
+  const pointers=new Map();
+  const distance=()=>{const [a,b]=[...pointers.values()];return Math.hypot(a.x-b.x,a.y-b.y)};
+  const indicator=document.getElementById('playGatherSpacingValue');
+  const preview=()=>{
+    if(previewFrame)return;
+    previewFrame=requestAnimationFrame(()=>{previewFrame=0;if(pinch)playPreviewPinchSeats()});
+  };
   world.addEventListener('pointerdown',event=>{
     if(!adjustable()||committing||(event.button!=null&&event.button!==0)||
       event.target?.closest?.('button:not(.play-player-token), input, select, textarea, a, summary'))return;
-    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,offset:offset(),dragged:false};
+    if(pointers.size>=2)return;
+    pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
     try{world.setPointerCapture(event.pointerId)}catch{}
+    if(pointers.size===2){
+      pinch={startDistance:Math.max(1,distance()),startSpacing:layout.normalizeSeatSpacing(
+        playSceneRuntime.room?.seatSpacing),startOffset:offset()};
+      gesture=null;playSeatOffsetPreview=null;
+      if(indicator)indicator.hidden=false;
+      world.classList.add('is-seat-pinching');
+      playSceneRuntime.ignoreSeatClickUntil=Date.now()+650;
+      event.preventDefault();return;
+    }
+    if(pointers.size===1)gesture={id:event.pointerId,x:event.clientX,y:event.clientY,offset:offset(),dragged:false};
   });
   world.addEventListener('pointermove',event=>{
+    if(!pointers.has(event.pointerId))return;
+    pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});
+    if(pinch){
+      if(!adjustable()||pointers.size!==2)return;
+      const next=layout.normalizeSeatSpacing(pinch.startSpacing*distance()/pinch.startDistance);
+      if(next!==playSeatSpacingPreview){
+        playSeatSpacingPreview=next;
+        playSeatOffsetPreview=layout.resolveSeatOffset(playSeatStats().seatCount,
+          playSceneRuntime.room?.seatLayout,pinch.startOffset,next);
+        preview();
+      }
+      event.preventDefault();return;
+    }
     if(!gesture||gesture.id!==event.pointerId||!adjustable())return;
     const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;
     if(!gesture.dragged&&Math.hypot(dx,dy)<6)return;
@@ -1960,10 +1997,28 @@ function initPlaySeatOffsetControls(){
     renderPlayPlayers();event.preventDefault();
   },{passive:false});
   const finish=async(event,cancelled)=>{
+    if(!pointers.has(event.pointerId))return;
+    pointers.delete(event.pointerId);
+    try{world.releasePointerCapture(event.pointerId)}catch{}
+    if(pinch){
+      const initial=pinch,finalValue=layout.normalizeSeatSpacing(
+        playSeatSpacingPreview??initial.startSpacing),finalOffset=playSeatOffsetPreview;
+      pinch=null;gesture=null;pointers.clear();
+      if(previewFrame){cancelAnimationFrame(previewFrame);previewFrame=0;}
+      if(indicator)indicator.hidden=true;
+      world.classList.remove('is-seat-pinching');
+      suppressClick=true;playSceneRuntime.ignoreSeatClickUntil=Date.now()+650;
+      if(cancelled||!adjustable()||finalValue===initial.startSpacing){
+        playSeatSpacingPreview=null;playSeatOffsetPreview=null;renderPlayPlayers();return;
+      }
+      committing=true;
+      try{await playUpdateRoomSettings({seatSpacing:finalValue,seatOffset:finalOffset||initial.startOffset})}
+      finally{committing=false;playSeatSpacingPreview=null;playSeatOffsetPreview=null;renderPlayScene()}
+      return;
+    }
     if(!gesture||event.pointerId!==gesture.id)return;
-    const initial=gesture.offset,moved=gesture.dragged;
-    const next=playSeatOffsetPreview;
-    gesture=null;try{world.releasePointerCapture(event.pointerId)}catch{}
+    const initial=gesture.offset,moved=gesture.dragged,next=playSeatOffsetPreview;
+    gesture=null;
     if(!moved)return;
     suppressClick=true;
     playSceneRuntime.ignoreSeatClickUntil=Date.now()+650;
@@ -1991,7 +2046,6 @@ function renderPlayGatherToolbar(){
   initPlayGatherSpacing();initPlaySeatOffsetControls();
   const members=playLiveMembers(),st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
   if(locked)closePlaySeatPresetPanel();
-  const spacing=document.getElementById('playGatherSpacing');if(spacing)spacing.disabled=locked;
   const count=document.getElementById('playGatherCount');
   if(count)count.textContent=members.length+' người • '+st.occupied+'/'+st.seatCount+' vị trí';
   for(const id of ['playGatherCall','playGatherSeatPreset','playGatherRandom','playGatherManual']){

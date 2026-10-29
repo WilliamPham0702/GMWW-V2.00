@@ -163,9 +163,23 @@ jobs:
         with:
           node-version: 22
       - name: Chỉ kiểm thử logic phân phạm vi CI
-        run: node --test tests/ci-browser-scope.test.mjs
+        run: node --test --test-name-pattern='Unknown Worker|Any other public-room|UI changes outside|Browser, seat, workflow|A deletion, unexpected status|CI-only merge|PR603 account avatar' tests/ci-browser-scope.test.mjs
   # Lên Giàn đã có workflow Check Lên Giàn theo đúng phạm vi.
   # Không chạy browser-test khi mode=gallows: tuyệt đối không chặn task bằng Card/Seat/Home/OTA.
+  avatar-regression:
+    needs: scope
+    if: needs.scope.outputs.mode == 'player-top-avatar-603'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Kiểm icon avatar + Player Web bundle trên PR603
+        run: |
+          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
   browser-test:
     needs: scope
     if: needs.scope.outputs.mode == 'full'

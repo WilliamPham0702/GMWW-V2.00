@@ -1,5 +1,5 @@
 function renderRole(){
-  const r=state.role;if(!r)return;rememberActiveRole(r);applyRoleCardBack();ensureMultiRoleNav();ensureArtifactStack();const pc=r.roleCard||{},img=$('#game .role-art img'),name=$('#game .role-name'),faction=$('#game .faction'),info=$('#game .info p'),art=$('#game .role-art');if(name)name.textContent=pc.name||r.roleName||r.name||'Vai Trò';const fv=pc.faction??r.faction??r.factionName??'—';if(faction)faction.textContent='PHE • '+fv;if(info){const bits=[];const information=pc.information??r.description??r.roleDescription??'';if(information)bits.push(String(information));if(pc.objective)bits.push('Mục tiêu: '+pc.objective);if(Array.isArray(pc.actions)&&pc.actions.length)bits.push('Hành động: '+pc.actions.map(a=>a.name+(a.description?' — '+a.description:'')).join(' • '));info.textContent=bits.join('\\n\\n')||'Chưa có thông tin.';info.style.whiteSpace='pre-line'}if(img){const aid=String(r.artworkAssetId||r.artworkId||pc.artworkAssetId||pc.artworkId||''),rid=String(r.roleId||pc.roleId||''),base=state.roomCode?('/api/rooms/'+encodeURIComponent(state.roomCode)+'/role-assets/'):'',candidates=[r.roleImage,aid&&base+encodeURIComponent(aid)+'/image',rid&&base+encodeURIComponent(rid)+'/image'].filter(Boolean),uniq=[...new Set(candidates)];let ix=0;const loadNext=()=>{if(ix>=uniq.length){img.style.display='none';if(art){art.dataset.imageState='error';art.setAttribute('data-error','Artwork chưa tải được • Vai Trò vẫn hoạt động bình thường')}return}const src=uniq[ix++],sep=src.includes('?')?'&':'?';if(art)art.dataset.imageState='loading';img.style.display='block';img.src=src+sep+'v='+encodeURIComponent(String(r.matchId||state.room?.matchId||Date.now()))};img.onerror=()=>loadNext();img.onload=()=>{img.style.display='block';if(art){art.dataset.imageState='ready';art.removeAttribute('data-error')}};loadNext()}const card=$('#roleCard');if(card)card.classList.toggle('revealed',state.roleOpen);renderRoleEffects();
+  const r=state.role;if(!r)return;rememberActiveRole(r);applyRoleCardBack();ensureMultiRoleNav();ensureArtifactStack();const pc=r.roleCard||{},img=$('#game .role-art img'),name=$('#game .role-name'),faction=$('#game .faction'),info=$('#game .info p'),art=$('#game .role-art');if(name)name.textContent=pc.name||r.roleName||r.name||'Vai Trò';const fv=pc.faction??r.faction??r.factionName??'—';if(faction)faction.textContent='PHE • '+fv;if(info){const bits=[];const information=pc.information??r.description??r.roleDescription??'';if(information)bits.push(String(information));if(pc.objective)bits.push('Mục tiêu: '+pc.objective);if(Array.isArray(pc.actions)&&pc.actions.length)bits.push('Hành động: '+pc.actions.map(a=>a.name+(a.description?' — '+a.description:'')).join(' • '));info.textContent=bits.join('\\n\\n')||'Chưa có thông tin.';info.style.whiteSpace='pre-line'}if(img){const aid=String(r.artworkAssetId||r.artworkId||pc.artworkAssetId||pc.artworkId||''),rid=String(r.roleId||pc.roleId||''),base=state.roomCode?('/api/rooms/'+encodeURIComponent(state.roomCode)+'/role-assets/'):'',candidates=[r.roleImage,aid&&base+encodeURIComponent(aid)+'/image',rid&&base+encodeURIComponent(rid)+'/image'].filter(Boolean),uniq=[...new Set(candidates)];let ix=0;const loadNext=()=>{if(ix>=uniq.length){img.style.display='none';if(art){art.dataset.imageState='error';art.setAttribute('data-error','Artwork chưa tải được • Vai Trò vẫn hoạt động bình thường')}return}const src=uniq[ix++],sep=src.includes('?')?'&':'?';if(art)art.dataset.imageState='loading';img.style.display='block';img.src=src+sep+'v='+encodeURIComponent(String(r.matchId||state.room?.matchId||Date.now()))};img.onerror=()=>loadNext();img.onload=()=>{img.style.display='block';if(art){art.dataset.imageState='ready';art.removeAttribute('data-error')}};loadNext()}const card=$('#roleCard');if(card)card.classList.toggle('revealed',state.roleOpen);renderRoleEffects();syncPlayerMiniCards();
 }
 let gmwwLastPlayerSceneMode='',gmwwPlayerPresentationSignature='',gmwwLastRoleDeliveryNotice='';
 function ensurePlayerPresentationUi(){
@@ -49,16 +49,8 @@ function syncPlayerPresentation(){
   }else if(!hasRole&&$('#game .role-stage')?.hidden===false)setGameViewPane('village',{persist:false});
   const modalOpen=$('#gmwwPlayerRoleBackdrop')?.hidden===false;
   if(modalOpen&&policy.mode==='battle')setGameViewPane('village',{persist:false});
-  if(policy.phase==='role_delivery'&&hasRole){
-    const role=state.role||{},deliveryKey=[state.roomCode,String(state.room?.matchId||role.matchId||''),String(state.room?.deliveryVersion||''),String(role.assignmentIndex??role.roleId??'')].join(':');
-    if(gmwwLastRoleDeliveryNotice!==deliveryKey){
-      gmwwLastRoleDeliveryNotice=deliveryKey;
-      try{
-        const storageKey='gmww_role_modal_seen_'+state.roomCode;
-        if(sessionStorage.getItem(storageKey)!==deliveryKey){sessionStorage.setItem(storageKey,deliveryKey);setGameViewPane('role',{persist:false})}
-      }catch{setGameViewPane('role',{persist:false})}
-    }
-  }
+  // Do not auto-open an Online card screen when GM delivers roles.
+  // The current village stays visible; private cards open on demand.
 }
 function maybeOpenGame(){
   if(!state.roomCode||!state.participantId)return false;
@@ -66,7 +58,7 @@ function maybeOpenGame(){
   ensureVillageHud();if(!['game','profile','rooms'].includes(state.activeScreenId))go('game');const title=$('#game .page-title');if(title)title.textContent='Làng Asahi';
   ensureVillageGameView();
   if(state.role&&playerScenePolicy(state.room).rolesReleased)renderRole();
-  syncPlayerPresentation();
+  syncPlayerPresentation();syncPlayerMiniCards();
   ensureVillageReadyDock();syncVillageFrame();setTimeout(syncPlayerSetupState,0);return true
 }
 

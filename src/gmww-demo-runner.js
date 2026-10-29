@@ -6,6 +6,7 @@ import {appendDemoHistory} from './gmww-demo-history.js';
 import {artifactCycleKey} from './gmww-game-scene-rules.js';
 import {STATUS_DEFS} from './gmww-public-room-contract.js';
 import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
+import {onlineGmActionIcon} from './gmww-online-action-icons.js';
 import {canSnowWolfBite,resolveWolfNight} from './gmww-wolf-night-resolution.js';
 const rules=globalThis.GMWW_BATTLE_CONTROLS;
 const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
@@ -65,6 +66,46 @@ function dayActions(ctx,meta,usage,ballot){
  }
  return list;
 }
+// Only the authenticated actor's current, unused powers reach Player Web.
+// The private response does not expose other actors or the full night queue.
+export async function playerOfferedActions(room,meta,loginId){
+ if(meta?.phase!=='running'||!loginId||(!meta.demo&&String(meta.roomMode||'').toLowerCase()!=='online'))return [];
+ const ctx=await context(room,meta);
+ if(!ctx.players['member:'+loginId]||(meta.demo&&ctx.players['member:'+loginId]?.humanControlled!==true)||
+    !ctx.assignments.some(a=>a.loginId===loginId))return [];
+ if(!ctx.assignments.some(a=>a.loginId===loginId&&(!a.matchId||String(a.matchId)===String(meta.matchId))))return [];
+ let actions=[];
+ if(meta.cyclePhase==='night'){
+  const runtime=await room.getNightRuntime(meta,meta.cycleNight,false);
+  const turn=runtime?.queue?.[runtime.cursor];
+  if(turn&&!runtime.completed)actions=nightActions(ctx,meta,turn,await ctx.store.get('battleRoleUsage:'+meta.matchId)||[]);
+ }else if(meta.cyclePhase==='morning'){
+  const ballot=(await room.gallowsState(meta)).ballot;
+  actions=dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot);
+ }
+ return actions.filter(a=>a.actorIds.includes(loginId)).map(a=>({
+  key:a.id,actionId:a.actionId,name:a.name,type:a.type,roleId:a.roleId||'',
+  artifactId:a.artifactId||'',targetCount:a.noTarget||a.actionId==='action_transfer_bite'?0:a.targetCount,
+  noSelf:a.noSelf,allowDead:a.allowDead,noTarget:a.noTarget,phase:meta.cyclePhase,
+  iconUrl:onlineGmActionIcon(a.actionId)
+ }));
+}
+/* The legacy DEMO action API remains DEMO-only; Online uses separate admission. */
+export async function demoPlayerActions(room,meta,loginId){
+ if(meta?.demo!==true)return [];
+ return playerOfferedActions(room,meta,loginId);
+}
+
+export function demoTaskAt(duration,plan){
+ const count=Math.max(1,plan?.tasks?.length||0),cursor=Number(plan?.cursor||0);
+ const task=plan?.tasks?.[cursor];
+ // The GM keeps the first half for role decisions; voting has a separate
+ // short clock and should show live nominations early rather than bunching
+ // 30 ballots into the last seconds at x2/x5.
+ const ballot=plan?.tasks?.some(x=>x.kind==='nominate'||x.kind==='vote');
+ const base=ballot?duration*(.1+.72*cursor/count):duration/2+duration/2*cursor/count;
+ return task?.humanControlled?Math.max(base,duration-Math.min(1800,duration*.2)):base;
+}
 export function targetsFor(action,actorId,ctx,meta){
  const wolfNight=action.actionId==='action_witch_save'&&!action.artifactId
   ?resolveWolfNight({interactions:ctx.rows,players:ctx.players,matchId:meta.matchId,night:meta.cycleNight}):null;
@@ -83,7 +124,11 @@ async function observe(room,meta,lease,action,actorId='',targets=[],status='acce
  // Keep the accepted/skipped DEMO event ledger on the Server across GM reloads.
  // The existing MAX_STEPS limit bounds storage while retaining the full DEMO run.
  lease.history=appendDemoHistory(lease.history,event);
- await room.ctx.storage.put('demoLease',lease);const {revelation,...publicEvent}=event;room.broadcast({type:'demo_event',demoEvent:publicEvent,serverTime:Date.now()});
+ await room.ctx.storage.put('demoLease',lease);
+ // The same WebSocket is visible to Players. Never publish secret actors,
+ // targets, or night role labels. GM reads the full event from authorized /gm/state.
+ room.broadcast({type:'demo_event',demoEvent:{id:event.id,matchId:event.matchId,
+  status:event.status,at:event.at},serverTime:Date.now()});
 }
 async function checked(response){const data=await response.json();if(!response.ok||!data.ok){const e=new Error(data.message||data.error||'DEMO_ACTION_FAILED');e.code=data.detail||data.error;throw e}return data}
 async function ballotAction(room,body){
@@ -91,7 +136,7 @@ async function ballotAction(room,body){
  catch(error){if(['NOMINATION_CLOSED','VOTE_DEADLINE_PASSED'].includes(error.code))return null;throw error}
 }
 async function execute(room,meta,lease,ctx,action,day=false){
- const actorId=pick(action.actorIds),targets=targetsFor(action,actorId,ctx,meta);
+ const botActors=action.actorIds.filter(id=>ctx.players['member:'+id]?.humanControlled!==true),actorId=pick(botActors.length?botActors:action.actorIds),targets=targetsFor(action,actorId,ctx,meta);
  if(!targets){await observe(room,meta,lease,action.name+' · Không đủ mục tiêu hợp lệ',actorId,[],'skipped');return}
  const request=room.demoInternalRequest(),token='demo-'+crypto.randomUUID();
  let result,observedTargets=targets,observedAction=action.name;
@@ -116,16 +161,16 @@ export function pendingDemoAssassinResponses(ctx,meta){
 async function tasksFor(room,meta,ctx){
  if(meta.cyclePhase==='night'){
   const rt=await room.getNightRuntime(meta,meta.cycleNight,true),turn=rt?.queue?.[rt.cursor],usage=await ctx.store.get('battleRoleUsage:'+meta.matchId)||[];
-  return nightActions(ctx,meta,turn,usage).map(a=>({id:a.id,declined:a.actionId==='action_witch_save'&&!a.artifactId&&Math.random()>=.5}));
+  return nightActions(ctx,meta,turn,usage).map(a=>({id:a.id,humanControlled:a.actorIds.some(id=>ctx.players['member:'+id]?.humanControlled===true),declined:a.actionId==='action_witch_save'&&!a.artifactId&&Math.random()>=.5}));
  }
  const {ballot,eligible}=await room.gallowsState(meta);
  if(ballot.mode==='gm'&&['nominating','voting'].includes(ballot.stage))return [];
  if(['ready','resolved'].includes(ballot.stage))return [
-  ...pendingDemoAssassinResponses(ctx,meta),
-  ...dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot).map(a=>({id:a.id}))
+  ...pendingDemoAssassinResponses(ctx,meta).map(task=>({...task,humanControlled:ctx.players['member:'+task.actorId]?.humanControlled===true})),
+  ...dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot).map(a=>({id:a.id,humanControlled:ctx.players['member:'+a.actorIds[0]]?.humanControlled===true}))
  ];
- if(ballot.stage==='nominating')return eligible.filter(id=>!Object.hasOwn(ballot.nominations||{},id)&&!(ballot.blockedNomination||[]).includes(id)).map(id=>({id:'nominate:'+id,actorId:id,kind:'nominate'}));
- if(ballot.stage==='voting')return eligible.filter(id=>id!==ballot.candidateId&&!Object.hasOwn(ballot.votes||{},id)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(id)).map(id=>({id:'vote:'+id,actorId:id,kind:'vote'}));
+ if(ballot.stage==='nominating')return eligible.filter(id=>!Object.hasOwn(ballot.nominations||{},id)&&!(ballot.blockedNomination||[]).includes(id)).map(id=>({id:'nominate:'+id,actorId:id,kind:'nominate',humanControlled:ctx.players['member:'+id]?.humanControlled===true}));
+ if(ballot.stage==='voting')return eligible.filter(id=>id!==ballot.candidateId&&!Object.hasOwn(ballot.votes||{},id)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(id)).map(id=>({id:'vote:'+id,actorId:id,kind:'vote',humanControlled:ctx.players['member:'+id]?.humanControlled===true}));
  return [];
 }
 async function planFor(room,meta,clock){
@@ -140,7 +185,7 @@ export async function nextServerDemoDue(room,meta){
  const clock=await room.syncDemoClock(meta,lease),plan=await room.ctx.storage.get('demoPlan');
  if(plan?.key!==clock.key)return Date.now();
  const remaining=Number(clock.remainingMs)||0,duration=Number(clock.durationMs)||0;
- if(plan.cursor<plan.tasks.length){const at=duration/2+duration/2*plan.cursor/Math.max(1,plan.tasks.length);return Date.now()+Math.max(0,at-(duration-remaining))/clock.speed}
+ if(plan.cursor<plan.tasks.length){const at=demoTaskAt(duration,plan);return Date.now()+Math.max(0,at-(duration-remaining))/clock.speed}
  return Date.now()+remaining/clock.speed;
 }
 export async function stopServerDemo(room,meta,lease,reason,error=''){
@@ -156,7 +201,7 @@ export async function runServerDemo(room,meta,budget=32){
  lease.failures=0;lease.error='';
  const clock=await room.syncDemoClock(meta,lease),plan=await planFor(room,meta,clock),duration=Number(clock.durationMs)||0,remaining=Number(clock.remainingMs)||0;
  if(remaining<=0&&['nominating','voting'].includes(clock.kind)){plan.cursor=plan.tasks.length;await store.put('demoPlan',plan)}
- const slot=duration/2+duration/2*plan.cursor/Math.max(1,plan.tasks.length);
+ const slot=demoTaskAt(duration,plan);
  if(plan.cursor<plan.tasks.length&&duration-remaining+1>=slot){
   const task=plan.tasks[plan.cursor],ctx=await context(room,meta);
   if(task.kind){

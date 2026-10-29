@@ -15,6 +15,7 @@ test('Complete catalog inventory is additive, 63 roles plus 44 artifacts; no ove
   const ids=[...fallback.role,...fallback.artifact].map(x=>x.id);
   assert.equal(new Set(ids).size,ids.length);
   for(const x of fallback.role)assert.ok(catalog.some(c=>c.id===x.id));
-  assert.match(source,/if\(!original\)\s*\{/);\n  assert.match(source,/if\(actionId&&!ids\.has\(actionId\)\)/);
+  assert.match(source,/if\(!original\)\s*\{/);
+  assert.match(source,/if\(actionId&&!ids\.has\(actionId\)\)/);
  }
 });

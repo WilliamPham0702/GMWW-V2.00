@@ -1,0 +1,161 @@
+name: Deploy V3.273 Player Web Login Hotfix (Worker-only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-player-web-login-v3273.yml'
+  workflow_run:
+    workflows: ["Check V3.273 Player Web Login Hotfix (focused)"]
+    types: [completed]
+    branches: [main]
+concurrency:
+  group: gmww-v3273-player-login-worker
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact CI-success main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || github.event.workflow_run.head_sha }}
+          fetch-depth: 20
+      - name: Guard owner-approved PR 599 and reject stale main
+        id: gate
+        shell: bash
+        env:
+          TESTED_SHA: ${{ github.event_name == 'push' && github.sha || github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TESTED_SHA"
+          HOTFIX_SHA="3e3773c5cf96fd3fff13b1dbdd0339deeca9c5d7"
+          test -n "$HOTFIX_SHA"
+          git merge-base --is-ancestor "$HOTFIX_SHA" HEAD
+          test "$(node -p 'require("./package.json").version')" = "3.273.0"
+          test -s docs/releases/GMWW-V3.273-PLAYER-WEB-LOGIN-HOTFIX-20261029.md
+          git diff --name-only "$HOTFIX_SHA^1" "$HOTFIX_SHA" > /tmp/changed-files.txt
+          if grep -Ev '^(src/gmww-player-private-card-patch[.]js|src/gmww-members-live[.]js|src/player-web-src/20-village-and-profile[.]part|tests/player-web-receipt-patch-hotfix[.]test[.]mjs|docs/releases/GMWW-V3[.]273-PLAYER-WEB-LOGIN-HOTFIX-20261029[.]md|[.]github/workflows/check-player-web-login-v3273[.]yml|[.]github/workflows/deploy-player-web-login-v3273[.]yml|[.]github/workflows/deploy-production[.]yml)$' /tmp/changed-files.txt; then
+            echo "::error::Unexpected runtime change; Worker-only release blocked"
+            exit 1
+          fi
+          for f in src/gmww-player-private-card-patch.js src/gmww-members-live.js src/player-web-src/20-village-and-profile.part; do
+            grep -Fxq "$f" /tmp/changed-files.txt || { echo "::error::Missing expected hotfix: $f"; exit 1; }
+          done
+          echo "PASS: PR #599 exact approved Worker-only scope and same-SHA CI."
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reverify login and reconnect package
+        run: |
+          npm ci
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/player-web-receipt-patch-hotfix.test.mjs
+          node --check src/index.js
+          npx wrangler deploy --dry-run --outdir /tmp/gmww-v3273-login-only
+      - name: Capture previous Worker deployment
+        id: previous
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/previous-worker.json
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const x=require('/tmp/previous-worker.json');
+          const d=x.result?.deployments?.[0],v=d?.versions?.[0];
+          if(!x.success||!v?.version_id||v.percentage!==100)throw Error('Previous Worker unavailable; refuse deploy');
+          console.log('version='+v.version_id);
+          console.log('deployment='+d.id);
+          NODE
+      - name: Deploy Worker and Player Web only (no OTA or IPA)
+        id: publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      # Recovery rollout: this workflow is the only approved publishing path for PR #599.
+      # The standard Production pipeline is excluded to preserve the existing OTA/IPA.
+      - name: Smoke Production JavaScript, health and session API
+        if: steps.publish.outcome == 'success'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_WORKER: ${{ steps.previous.outputs.version }}
+          SMOKE_LOGIN_ID: ${{ secrets.GMWW_PLAYER_LOGIN_SMOKE_ID }}
+        run: |
+          set -euo pipefail
+          URL="https://gmww-v2-00.williampham0702.workers.dev"
+          PASS=0
+          for n in $(seq 1 12); do
+            if curl -fsS --max-time 25 "$URL/gmww-members-live.js?hotfix=599-$n-$(date +%s)" -o /tmp/v3273-player.js &&
+               node --check /tmp/v3273-player.js &&
+               grep -Fq 'window.login=login;' /tmp/v3273-player.js &&
+               grep -Fq 'function gmwwReadPrivateReceipt()' /tmp/v3273-player.js &&
+               curl -fsS --max-time 20 "$URL/api/health?hotfix=599-$n" -o /tmp/v3273-health.json &&
+               node -e "const d=require('/tmp/v3273-health.json');if(d.ok!==true||d.project!=='GMWW-V2.00'||d.status!=='online')process.exit(1)"; then PASS=1;break; fi
+            sleep 5
+          done
+          test "$PASS" = 1 || { echo "::error::Player JS syntax, HTTP 200 or health failed"; exit 1; }
+          # A deliberate unknown login must return the documented MEMBER_NOT_FOUND response.
+          # This does not create or alter any member.
+          curl -sS --max-time 15 -o /tmp/unknown-member.json -w '%{http_code}' -H 'content-type: application/json' -d '{"loginId":"gmww_ci_no_such_user_599"}' "$URL/api/members/login" > /tmp/unknown-member-status.txt
+          test "$(cat /tmp/unknown-member-status.txt)" = 404
+          test -s /tmp/unknown-member.json
+          node - <<'NODE'
+          const fs=require('fs'),body=JSON.parse(fs.readFileSync('/tmp/unknown-member.json','utf8'));
+          if(body.error!=='MEMBER_NOT_FOUND')throw Error('Login API did not return expected negative authorization result');
+          NODE
+          if [ -n "$SMOKE_LOGIN_ID" ]; then
+            node -e 'process.stdout.write(JSON.stringify({loginId:process.env.SMOKE_LOGIN_ID}))' > /tmp/smoke-input.json
+            curl -fsS --max-time 20 -H 'content-type: application/json' --data-binary @/tmp/smoke-input.json "$URL/api/members/login" > /tmp/smoke-session.json
+            node -e "const x=require('/tmp/smoke-session.json');if(!x.ok||!x.token||!x.member)process.exit(1)"
+            TOKEN=$(node -e "process.stdout.write(require('/tmp/smoke-session.json').token)")
+            for n in 1 2; do
+              curl -fsS --max-time 20 -H "Authorization: Bearer $TOKEN" "$URL/api/members/me" > "/tmp/smoke-me-$n.json"
+              node -e "const x=require('/tmp/smoke-me-$n.json');if(!x.member?.loginId)process.exit(1)"
+            done
+            echo "PASS: Production login and repeated authenticated session recovery" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "NOT TESTED: Production successful login/reconnect requires optional smoke login secret; negative login route and CI browser simulation passed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/current-worker.json
+          PREVIOUS_WORKER="$PREVIOUS_WORKER" node - <<'NODE'
+          const v=require('/tmp/current-worker.json').result?.deployments?.[0]?.versions?.[0];
+          if(!v?.version_id||v.percentage!==100||v.version_id===process.env.PREVIOUS_WORKER)throw Error('No new Worker version verified');
+          console.log('Verified Production Worker: '+v.version_id);
+          NODE
+          echo "PASS: Production Player JS HTTP 200, syntax, login handler, private receipt and health. No IPA/OTA." >> "$GITHUB_STEP_SUMMARY"
+      - name: Automatic Worker rollback on failed Production verification
+        if: failure() && steps.publish.outcome == 'success' && steps.previous.outputs.version != ''
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_WORKER: ${{ steps.previous.outputs.version }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > /tmp/rollback-v3273.json
+          console.log(JSON.stringify({strategy:'percentage',versions:[{version_id:process.env.PREVIOUS_WORKER,percentage:100}],annotations:{'workers/message':'Rollback PR 599 Player Web login hotfix verification failure'}}));
+          NODE
+          curl -fsS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' --data-binary @/tmp/rollback-v3273.json "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments" > /tmp/rollback-result-v3273.json
+          node -e "if(!require('/tmp/rollback-result-v3273.json').success)process.exit(1)"
+          echo "ROLLBACK: previous Worker restored to 100%; no IPA, OTA, Durable Objects, rooms or history changed." >> "$GITHUB_STEP_SUMMARY"
+
+# PR599 Worker-only re-trigger after production gate isolation
+
+# Retry after PR599 gate stabilization: 2026-10-29T06:53+07:00
+
+# PR merge trigger for final Worker-only deployment

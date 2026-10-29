@@ -44,6 +44,119 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR605 — chỉ kiểm tra GitHub Actions Preview CI, không chạy gameplay/IPA
+        if: steps.scope.outputs.mode == 'github-pr-preview-ci'
+        run: |
+          node --test tests/github-actions-pr-preview-ci.test.mjs
+          node .github/scripts/guard-pr-preview-ci.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/guard-pr-preview-ci.mjs
+      - name: PR603 — icon tài khoản Player Web, bảo toàn menu và bundle
+        if: steps.scope.outputs.mode == 'player-top-avatar-603'
+        run: |
+          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs
+          node --test --test-name-pattern='PR603 account avatar' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/gmww-members-live.js
+          node --check .github/scripts/ci-browser-scope.mjs
+      - name: Tối ưu Player Web khi chạy nền trên iPhone
+        if: steps.scope.outputs.mode == 'player-web-background-performance'
+        run: |
+          node --test tests/player-web-background-performance.test.mjs tests/player-web-render-budget.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          node --test --test-name-pattern='Player Web background performance patch' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node -e "import('./src/gmww-members-live.js').then(m=>require('fs').writeFileSync('/tmp/gmww-background-performance-player.js',m.gmwwMembersLiveScript))"
+          node --check /tmp/gmww-background-performance-player.js
+          test -s docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md
+      - name: V3.273 — Player Web Online trên nền Làng và hành động xác thực
+        if: steps.scope.outputs.mode == 'player-online-village-3273'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check src/gmww-online-action-icons.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/wolf-recognition.test.mjs tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs
+          test -s docs/releases/GMWW-player-web-online-village-20261028.md
+      - name: V3.272 PR595 — GM Chat 🦩, Giết/Cứu/Cấm chat, Runtime OTA
+        if: steps.scope.outputs.mode == 'gm-admin-top-chat-3272'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/gm-admin-top-chat-20261028.test.mjs tests/online-chat-authority.test.mjs
+          test -s docs/releases/gm-admin-top-chat-20261028.md
+      - name: V3.271 — khắc phục Player Web theo DEMO đang chạy
+        if: steps.scope.outputs.mode == 'demo-player-live-3271'
+        run: |
+          node --check src/index.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs
+          test -s docs/releases/GMWW-DEMO-PLAYER-V3.271-20261028.md
+      - name: V3.270 — kiểm Audio DEMO x2/x5, Tiên Tri và Lên Giàn đúng phạm vi
+        if: steps.scope.outputs.mode == 'demo-audio-sync-3270'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check src/gmww-wolf-night-resolution.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs tests/demo-audio-clock-sync-20261028.test.mjs tests/demo-assassin-gallows-divination.test.mjs tests/demo-server-runner.test.mjs tests/demo-room-lease-phases.test.mjs
+          test -s docs/releases/GMWW-V3.270-audio-demo-gallows-20261028.md
+      - name: V3.268 — Ván Mẫu hít menu dưới, bảo toàn Online Chat và Runtime
+        if: steps.scope.outputs.mode == 'template-dock-3268'
+        run: |
+          node --test tests/gmww-v3268-game-sheet-bottom-dock.test.mjs tests/lobby-gather-mode-assassin-20261027.test.mjs tests/v3177-room-mode-glass-dock.test.mjs tests/v368-template-save-select-reliability.test.mjs tests/v367-choose-game-artifact-feedback.test.mjs tests/online-chat-authority.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          test -s docs/releases/GMWW-V3.268-game-template-magnetic-dock-20261028.md
+      - name: V3.267 — Audio sáng không người chết và chốt Worker/Runtime liên quan
+        if: steps.scope.outputs.mode == 'gm-audio-morning-3267'
+        run: |
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          test -s docs/releases/GMWW-V3.267-morning-zero-deaths-20261028.md
+      - name: V3.265 — Tập hợp chụm/banh 50–300%, đồng bộ Worker/GM/Player và OTA
+        if: steps.scope.outputs.mode == 'gather-pinch-3265'
+        run: |
+          node --test tests/gm-gather-pinch-spacing-v3265.test.mjs tests/gather-spacing-gm-menu.test.mjs tests/seat-free-map-drag-v3198.test.mjs tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node --test tests/v3183-seat-perimeter-contract.test.mjs tests/seat-presets-fire-v399.test.mjs tests/seat-presets-v397.test.mjs tests/gmww-v3128-seat-geofence-rewrite.test.mjs tests/gmww-v3129-seat-anchor-sync.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          test -s docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md
+      - name: Online Chat — kiểm tra riêng tư theo lượt, mute, audio và hai bundle
+        if: steps.scope.outputs.mode == 'online-chat-audio'
+        run: |
+          node --test tests/online-chat-authority.test.mjs tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          node --check src/index.js
+          node --check src/gmww-online-chat-policy.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node -e "import('./src/gmww-members-live.js').then(m=>require('fs').writeFileSync('/tmp/gmww-online-chat-player.js',m.gmwwMembersLiveScript))"
+          node --check /tmp/gmww-online-chat-player.js
+          test -s docs/releases/GMWW-ONLINE-CHAT-20261028.md
       - name: V3.263 — kiểm RULE Bình Giấc Mơ, Hơi Thở Lão Già, Kim Cương Phủ Nhận
         if: steps.scope.outputs.mode == 'card-rule-3263'
         run: |
@@ -83,6 +196,7 @@ jobs:
           node --check src/index.js
           node --check server-game/current/app.js
       - name: Kiểm tra mã nguồn Worker
+        if: steps.scope.outputs.mode != 'player-top-avatar-603'
         run: npm run check
       - name: Kiểm tra đồng bộ phiên bản GMWW
         run: node .github/scripts/verify-gmww-versions.mjs
@@ -741,6 +855,24 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node --test tests/gm-gallows-vote-markers-ui.test.mjs
 
+      - name: PR587 — DEMO lai, bảo mật Player Web và Runtime OTA V3.269
+        if: steps.scope.outputs.mode == 'demo-hybrid-587'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check src/gmww-player-private-card-patch.js
+          node --check src/gmww-members-live.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-pr367-369-reconciliation.test.mjs tests/demo-server-runner.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs
+          test -s docs/releases/GMWW-DEMO-HYBRID-20261028.md
+      - name: CI-only policy — kiểm thử bất biến an toàn, không quét gameplay
+        if: steps.scope.outputs.mode == 'ci-policy'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test --test-name-pattern='Unknown Worker|Any other public-room|UI changes outside|Browser, seat, workflow|A deletion, unexpected status|CI-only merge|PR603 account avatar' tests/ci-browser-scope.test.mjs
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test

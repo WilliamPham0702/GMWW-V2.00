@@ -1,0 +1,38 @@
+name: Check GM Chat Flamingo and 3 Persistent Actions
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server-game/current/app.js'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/45-online-chat.part'
+      - 'src/index.js'
+      - 'package.json'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/45-online-chat.part'
+      - 'server-game/current/app.js'
+      - 'server-game/current/style.css'
+      - 'tests/gm-admin-top-chat-20261028.test.mjs'
+      - '.github/workflows/check-gm-admin-top-chat.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gm-admin-focused:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check GM Runtime JavaScript syntax
+        run: node --check server-game/current/app.js
+      - name: Check source modules exactly match the Runtime bundle
+        run: node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Test kill, revive, chat mute toggle, GM-only authorization, and icon persistence
+        run: node --test tests/gm-admin-top-chat-20261028.test.mjs

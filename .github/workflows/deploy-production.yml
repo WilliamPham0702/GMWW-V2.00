@@ -41,7 +41,7 @@ jobs:
           if [ ! -s /tmp/gmww-production-change-scope.txt ]; then SHOULD_DEPLOY=true; fi
           while IFS= read -r FILE; do
             case "$FILE" in
-              .github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs)
+              .github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml)
                 ;;
               *)
                 SHOULD_DEPLOY=true
@@ -69,6 +69,16 @@ jobs:
           # Separate artwork CI-policy PR never publishes a duplicate Runtime.
           SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
           if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* || "$SCOPE" == "GMWW browser CI scope: fairy-ci-policy |"* ]]; then SHOULD_DEPLOY=false; fi
+          # V3.273 Player Web login PR #599: deploy by dedicated Worker-only workflow.
+          # Never publish Runtime OTA/IPA from the corresponding CI-only release repair.
+          if [ "$(node -p 'require("./package.json").version')" = "3.273.0" ]; then
+            if git log -1 --format=%B | grep -qE 'Merge PR #599|Merge pull request #599'; then
+              SHOULD_DEPLOY=false
+            elif [ "$(wc -l < /tmp/gmww-production-change-scope.txt | tr -d ' ')" = "1" ] &&
+                 grep -Fxq '.github/workflows/deploy-player-web-login-v3273.yml' /tmp/gmww-production-change-scope.txt; then
+              SHOULD_DEPLOY=false
+            fi
+          fi
           # Worker-only Player receipt recovery uses its dedicated same-SHA gated workflow.
           if [[ "$SCOPE" == "GMWW browser CI scope: player-receipt-hotfix |"* ]]; then SHOULD_DEPLOY=false; fi
           # PR550 test-only rule regression: exact verified five-file scope, no Worker/GM/IPA change.
@@ -1464,9 +1474,49 @@ jobs:
           echo "approved=true" >> "$GITHUB_OUTPUT"
           echo "V3.261: GM movement CSS translate, walk/idle facing/run-home, OTA SHA-256 mandatory, IPA V3.257 unchanged." >> "$GITHUB_STEP_SUMMARY"
 
+      # PR595 has its own approved, fail-closed GM/chat release scope.
+      # Never reuse this exception for another version or arbitrary code changes.
+      - name: V3.272 PR595 — chốt CI GM/chat đúng SHA, không xây IPA
+        id: gmadmin3272_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.272.0" ]; then exit 0; fi
+          test -s docs/releases/gm-admin-top-chat-20261028.md
+          grep -Fq 'NATIVE_SHELL_VERSION="3.264"' src/index.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/gm-admin-top-chat-20261028.test.mjs tests/online-chat-authority.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-admin-top-chat-3272 |"* ]] || {
+            echo "::error::PR595 unexpected file changes; release denied."; exit 1;
+          }
+          VERIFIED=false
+          for TRY in $(seq 1 24); do
+            RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            if printf '%s' "$RUNS" | node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.head_sha===process.env.TESTED_SHA&&x.event==="push");
+                const good=n=>runs.some(x=>x.name===n&&x.conclusion==="success");
+                process.exit(good("Check Player Web Worker")&&
+                  good("Check GM Chat Flamingo and 3 Persistent Actions")?0:1);
+              })'; then VERIFIED=true; break; fi
+            sleep 10
+          done
+          test "$VERIFIED" = true || {
+            echo "::error::Missing exact-main-SHA GM chat and Worker CI SUCCESS."; exit 1;
+          }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "GMWW V3.272 PR595: GM Chat 🦩 + Giết/Cứu/Cấm Chat, Runtime OTA SHA-256 và gói thủ công; IPA V3.264 không đổi; rollback V3.271." >> "$GITHUB_STEP_SUMMARY"
+
       # Historical V3.236/V3.237 gates are intentionally omitted from the V3.238 release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.cardrule3263_release.outputs.approved != 'true' && steps.drunk3260_release.outputs.approved != 'true' && steps.gmvote3259_release.outputs.approved != 'true' && steps.audio3258_release.outputs.approved != 'true' && steps.fireradius3262_release.outputs.approved != 'true' && steps.firewalk3261_release.outputs.approved != 'true' && steps.firewalk3256_release.outputs.approved != 'true' && steps.drunk255_release.outputs.approved != 'true' && steps.thermal3254_release.outputs.approved != 'true' && steps.motion3253_release.outputs.approved != 'true' && steps.ui3252_release.outputs.approved != 'true' && steps.ui3251_release.outputs.approved != 'true' && steps.role250_release.outputs.approved != 'true' && steps.rule249_release.outputs.approved != 'true' && steps.runtime248_release.outputs.approved != 'true' && steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
+        if: steps.gmadmin3272_release.outputs.approved != 'true' && steps.cardrule3263_release.outputs.approved != 'true' && steps.drunk3260_release.outputs.approved != 'true' && steps.gmvote3259_release.outputs.approved != 'true' && steps.audio3258_release.outputs.approved != 'true' && steps.fireradius3262_release.outputs.approved != 'true' && steps.firewalk3261_release.outputs.approved != 'true' && steps.firewalk3256_release.outputs.approved != 'true' && steps.drunk255_release.outputs.approved != 'true' && steps.thermal3254_release.outputs.approved != 'true' && steps.motion3253_release.outputs.approved != 'true' && steps.ui3252_release.outputs.approved != 'true' && steps.ui3251_release.outputs.approved != 'true' && steps.role250_release.outputs.approved != 'true' && steps.rule249_release.outputs.approved != 'true' && steps.runtime248_release.outputs.approved != 'true' && steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
