@@ -17,3 +17,10 @@ Dừng nếu CI/SHA/Production không đạt. Nếu đã phát hành lỗi, roll
 - Checkout tại `deploy-scope` chuyển sang `fetch-depth: 0` để `git merge-base --is-ancestor` xác minh được commit gốc PR #613 thay vì lỗi `Not a valid commit name`.
 - Bảo toàn các chốt kiểm thử gốc từ PR #613, Worker/Artifact/CI Stability cùng SHA và phạm vi chính xác bốn file CI/release.
 - Runtime V3.274 bao gồm GM/Chat đã merge từ PR #598; không thay đổi gameplay, Worker source, IPA V3.264, Durable Objects hay lịch sử. Chỉ hoàn thành sau khi SHA-256 OTA, file Runtime thủ công và Production health được xác nhận.
+
+## Sửa sai lệch bộ kiểm chứng Character40, không đổi ảnh (29/10/2026)
+- Endpoint `/api/game-characters/{id}/image` từ trước đến nay đọc `/characters/gmww40/originals/{id}.webp`, nhưng workflow Production và script nghiệm thu lại so sánh với `portraits/{id}.webp` được tạo nhỏ hơn. Đây là **hai tệp khác nhau**, không phải lỗi đồng bộ Cloudflare.
+- Ở Character-01, SHA của tệp gốc trong catalog là `e02be1adc8cb5eb074e79b10c6523aeaab59ffcb0d4171bb26da357f2402a2d9`, **khớp SHA mà Production trả về**; SHA của ảnh thu nhỏ `1cce1a1067567b4dfce326797a88338fe8275dfd9735c37f2a6aebbb3c6a5f34` không được dùng để đối chiếu API ảnh gốc.
+- Sửa cả hai bài kiểm tra Production để đối chiếu **ảnh gốc với ảnh gốc**; vẫn giữ SHA của 40 ảnh, atlas và file Runtime, không tắt cơ chế kiểm thử.
+- Thay đổi chỉ đúng 5 file CI/test/release notes, giữ nguyên source của game, 40 ảnh Character, IPA V3.264, Durable Objects, dữ liệu người chơi và rollback.
+- Chỉ phát hành GitHub Release thủ công khi workflow Production SUCCESS sau xác minh manifest và SHA-256.
