@@ -8502,43 +8502,68 @@
           }
         ]
       },
-      "httpEvidence": [],
+      "httpEvidence": [
+        "tests/worker-artifact-secret-destruction-e2e.mjs"
+      ],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-artifact-secret-destruction-e2e.mjs",
+            "tests/card-executors-secret-artifact-destroy-20261029.test.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-secret-destruction-e2e.mjs",
+            "tests/card-executors-secret-artifact-destroy-20261029.test.mjs"
+          ],
+          "note": "Day-phase HTTP acceptance covered; other phase transitions and turn ordering not certified."
         },
         "ownership": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-artifact-secret-destruction-e2e.mjs",
+            "tests/card-executors-secret-artifact-destroy-20261029.test.mjs"
+          ]
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-artifact-secret-destruction-e2e.mjs",
+            "tests/card-executors-secret-artifact-destroy-20261029.test.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-artifact-secret-destruction-e2e.mjs",
+            "tests/card-executors-secret-artifact-destroy-20261029.test.mjs"
+          ]
         },
         "undo": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-artifact-secret-destruction-e2e.mjs",
+            "tests/card-executors-secret-artifact-destroy-20261029.test.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "privateInformation": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-secret-destruction-e2e.mjs",
+            "tests/card-executors-secret-artifact-destroy-20261029.test.mjs"
+          ],
+          "note": "Private GM result and public room leak checks passed; full Player Web broadcasts/UI not independently certified."
         },
         "gmUi": {
           "status": "NOT_VERIFIED",
@@ -8557,8 +8582,12 @@
           "evidence": []
         },
         "crossInteractions": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-secret-destruction-e2e.mjs",
+            "tests/card-executors-secret-artifact-destroy-20261029.test.mjs"
+          ],
+          "note": "Flipped, used, missing, stale and self Artifact targets blocked; full 107-card interactions pending."
         }
       }
     },
