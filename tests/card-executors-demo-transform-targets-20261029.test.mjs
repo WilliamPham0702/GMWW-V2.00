@@ -19,13 +19,13 @@ const ctx={players:{'member:alice':alice,'member:bob':bob,'member:carol':carol},
 const meta={matchId:'demo-test',cycleNight:1,cyclePhase:'morning'};
 test('DEMO #32 selects real compatible Artifact donor, never an arbitrary living player',()=>{
  const chosen=targetsFor({artifactId:'artifact_32',actionId:'artifact_action_link',
-  targetCount:1,noSelf:true},'alice',ctx,meta);
+  targetCount:1,noSelf:true,actorIds:['alice']},'alice',ctx,meta);
  assert.deepEqual(chosen,['bob']);
 });
 test('DEMO #23 only selects a source with an implemented copyable power',()=>{
  const x={...ctx,assignments:assign.map(a=>a.loginId==='alice'?{...a,artifactId:'artifact_23'}:a),
  artifactOwners:new Map([...ctx.artifactOwners,['alice',{artifactId:'artifact_23'}]])};
  const chosen=targetsFor({artifactId:'artifact_23',actionId:'artifact_action_copy_function',
- targetCount:1,noSelf:true},'alice',x,meta);
+ targetCount:1,noSelf:true,actorIds:['alice']},'alice',x,meta);
  assert.deepEqual(chosen,['bob']);
 });
