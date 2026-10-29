@@ -796,7 +796,7 @@ export class RoomDurableObject extends DurableObject {
     // by publicPlayer().online instead of deleting the roster entry.
     return{players:players||{},removed:[]};
   }
-  async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],frozenLogins=activeFrozenLoginIds(interactions,meta,Date.now());return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(p=>({...publicPlayer(p),frozen:meta?.statusDisplay?.frozen===false?false:frozenLogins.has(normalizeLoginId(p?.loginId)),statusTags:statusTagsFor(interactions,meta,p?.loginId,players)})),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
+  async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],frozenLogins=activeFrozenLoginIds(interactions,meta,Date.now());return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(p=>({...publicPlayer(p),frozen:meta?.statusDisplay?.frozen===true&&frozenLogins.has(normalizeLoginId(p?.loginId)),statusTags:statusTagsFor(interactions,meta,p?.loginId,players)})),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
   async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};
     if(meta.demo&&request.method==="POST"&&/^\/gm\/(?:battle-action|day-action|day-clock|gallows|turn|cycle|end)$/.test(new URL(request.url).pathname)){
       const lease=await this.ctx.storage.get("demoLease");
@@ -3261,15 +3261,24 @@ export class RoomDurableObject extends DurableObject {
   async leave(body){const players=(await this.ctx.storage.get("players"))||{},id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!id||!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn không còn ở trong phòng."},404);delete players[id];await this.ctx.storage.put("players",players);if(meta){meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta)}for(const ws of this.ctx.getWebSockets()){try{if(ws.deserializeAttachment()?.participantId===id)ws.close(1000,"PLAYER_LEFT_ROOM")}catch{}}this.broadcast({type:"room_state",room:meta?publicRoom(meta):null,players:Object.values(players).map(publicPlayer)});return j({ok:true,left:true})}
   // Chat content NEVER enters the public room DTO or broadcast WebSocket.
   // The generic chat_tick only asks each authenticated client to fetch its own channel.
-  async chatAccess(loginId){
+  async chatAccess(loginId,requestedChannel="room"){
     const meta=await this.ctx.storage.get("meta"),players=(await this.ctx.storage.get("players"))||{},
       rows=(await this.ctx.storage.get("interactions"))||[],bans=(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{};
+    const id=normalizeLoginId(loginId);
+    // Server-only authenticated DM channel. Never deliver through public room chat or room state.
+    if(requestedChannel==="gm"){
+      const allowed=!!meta?.matchId&&["running","role_delivery","lobby"].includes(String(meta?.phase||""))&&!!players["member:"+id];
+      const blocked=bans[id]===true;
+      const permission=allowed?{canRead:true,canSend:!blocked,channel:"gm:"+id,scope:"gm",reason:blocked?"CHAT_MUTED_GM":null}
+        :{canRead:false,canSend:false,channel:null,scope:null,reason:"CHAT_NOT_IN_ROOM"};
+      return{meta,players,permission};
+    }
     const runtime=meta?.cyclePhase==="night"?await this.getNightRuntime(meta,Number(meta.cycleNight||1),false):null;
     const permission=chatPolicy({meta,players,rows,runtime,loginId,bans});
     return{meta,players,permission};
   }
   async playerChatRead(body){
-    const loginId=normalizeLoginId(body?.loginId),{meta,permission}=await this.chatAccess(loginId);
+    const loginId=normalizeLoginId(body?.loginId),{meta,permission}=await this.chatAccess(loginId,body?.channel);
     if(!permission.canRead)return j({ok:true,channel:null,messages:[],canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
     const key="onlineChat:"+String(meta.matchId)+":"+permission.channel;
     return j({ok:true,channel:permission.channel,scope:permission.scope,
@@ -3279,7 +3288,7 @@ export class RoomDurableObject extends DurableObject {
   async playerChatSend(body){
     const loginId=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text);
     if(!content||String(body?.text||'').length>400)return j({ok:false,error:"CHAT_INVALID_TEXT"},400);
-    const {meta,players,permission}=await this.chatAccess(loginId);
+    const {meta,players,permission}=await this.chatAccess(loginId,body?.channel);
     if(!permission.canSend)return j({ok:false,error:permission.reason||"CHAT_FORBIDDEN"},403);
     const rateKey="onlineChatRate:"+String(meta.matchId)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
     if(Date.now()-prev<850)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
@@ -3726,11 +3735,11 @@ async function playerRoomChatApi(env,raw,request){
   // The external client controls neither loginId nor channel membership.
   const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
   if(!session.ok)return session;
-  const data=await session.json(),body=request.method==="POST"?await safeJson(request)||{}:{};
+  const data=await session.json(),body=request.method==="POST"?await safeJson(request)||{}:{channel:new URL(request.url).searchParams.get("channel")};
   const route=request.method==="POST"?"/player/chat/send":"/player/chat";
   return roomStub(env,code).fetch(new Request("https://room.internal"+route,{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({loginId:data.member.loginId,text:body.text})
+    body:JSON.stringify({loginId:data.member.loginId,text:body.text,channel:body.channel==="gm"?"gm":"room"})
   }));
 }
 async function playerPrivateState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),res=await roomStub(env,c).fetch("https://room.internal/player/state",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,member:data.member})});if(res.ok)await syncRoomDirectory(env,c);return res}
