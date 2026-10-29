@@ -796,10 +796,14 @@ const autoVanCIPolicyPaths=new Set([
  'tests/ci-browser-scope.test.mjs'
 ]);
 function isAutoVanCIPolicyScope(changes){
+ if(!Array.isArray(changes))return false;
  const names=new Set(changes.map(c=>c.path));
  return names.size===autoVanCIPolicyPaths.size&&
    [...autoVanCIPolicyPaths].every(x=>names.has(x))&&
-   changes.every(c=>autoVanCIPolicyPaths.has(c.path)&&c.status==='M');
+   changes.every(c=>autoVanCIPolicyPaths.has(c.path)&&c.status==='M'&&
+     // Reject partial PR550 edits even when they share all four legacy CI paths.
+     // Otherwise the historic AUTO VÁN shortcut can hide a RULE change.
+     !/PR550|night02-rule-regression-550|isRules550Scope/.test(String(c.after||'')));
 }
 const autoVanReleasePaths=new Set([
  'package.json','package-lock.json','src/index.js',
