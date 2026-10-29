@@ -1,6 +1,6 @@
 # GMWW Runtime OTA V3.275 — Artifact preview & đóng cửa sổ khi chạm ngoài (29/10/2026)
 
-- Căn lại vùng tiêu đề Mặt Player Web của mọi lá Artifact/Vai Trò: cho phép xuống dòng, tự co chữ theo chiều rộng **và chiều cao**; không bị cắt tên ở mép iPhone.
+- Căn lại vùng tiêu đề và nội dung Mặt Player Web của mọi lá Artifact/Vai Trò: cho phép xuống dòng, tự co chữ theo chiều rộng **và chiều cao**, cố định chiều rộng cột nội dung; không bị cắt tên/mô tả ở mép iPhone.
 - Tăng khả năng nhận biết dải đen bất cân xứng khi artwork có đốm sáng trang trí; giữ trần bảo vệ không cắt ảnh gốc, không thay tỷ lệ và không ghi đè ảnh đã lưu.
 - Đồng bộ chính sách chạm ngoài cho 10 sheet GM Server (Chọn Ván, Tạo Phòng, GM, Thành Viên, Seat, Roster, Kết thúc, v.v.), Chat 🦩, panel Cloudflare, Phân Vai, menu chọn Seat và trình xem mặt trước lá; nhấn trong khung giữ nguyên.
 - Không tự xác nhận hành động, lưu/xóa dữ liệu hoặc đóng mặt sau khi đang biên tập. Các popup chiến đấu vẫn áp dụng logic chạm ngoài hiện hữu.
