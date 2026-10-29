@@ -44,6 +44,20 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR626 — bốn Artifact soi ngày, riêng tư, DEMO, GM audio, Undo và Worker E2E
+        if: steps.scope.outputs.mode == 'artifact-inspection-626'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/card-executors-day-inspection-planners-20261029.test.mjs tests/pr626-private-inspection-ui-demo-20261029.test.mjs
+          node --test --test-name-pattern='PR626' tests/ci-browser-scope.test.mjs
+          node .github/scripts/check-pr626-day-inspections-worker.mjs
+          test -s docs/releases/GMWW-PR626-four-private-inspection-artifacts-draft-20261029.md
       - name: PR605 — chỉ kiểm tra GitHub Actions Preview CI, không chạy gameplay/IPA
         if: steps.scope.outputs.mode == 'github-pr-preview-ci'
         run: |
