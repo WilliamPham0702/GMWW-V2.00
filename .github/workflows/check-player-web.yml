@@ -903,6 +903,16 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           test -s docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md
+      - name: PR630 P0 Online Player - riêng tư, chat GM, bài thu nhỏ và hành động
+        if: steps.scope.outputs.mode == 'player-online-privacy-630'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-player-private-card-patch.js
+          node --check src/gmww-public-room-contract.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/player-online-privacy-bottom-dock-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/online-chat-authority.test.mjs tests/player-visual-notice-status-sync-20261028.test.mjs tests/status-visuals-v1.test.mjs tests/player-web-resume-receipt-runtime.test.mjs
+          test -s docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
