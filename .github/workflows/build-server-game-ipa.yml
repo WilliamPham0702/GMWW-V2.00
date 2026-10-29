@@ -525,7 +525,7 @@ jobs:
           TAG="gmww-v$VERSION"
           IPA="GMWW-V$VERSION.ipa"
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "GMWW IPA V$VERSION: bổ sung chọn file cập nhật Runtime thủ công, kiểm tra SHA-256 và khôi phục Runtime trước; bốn nút cập nhật cùng một hàng."
+            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes-file docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
           else
             echo "::error::IPA tag $TAG already exists. Never overwrite a published IPA; increment version.";
             exit 1
