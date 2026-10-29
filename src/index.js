@@ -185,6 +185,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/player/chat"&&request.method==="POST")return this.playerChatRead(await safeJson(request));
     if(url.pathname==="/player/chat/send"&&request.method==="POST")return this.playerChatSend(await safeJson(request));
     if(url.pathname==="/gm/chat"&&request.method==="GET")return this.gmChatRead(request);
+    if(url.pathname==="/gm/chat"&&request.method==="POST")return this.gmChatSend(request,await safeJson(request));
     if(url.pathname==="/gm/chat/moderate"&&request.method==="POST")return this.gmChatModerate(request,await safeJson(request));
     if(url.pathname==="/gm/state"&&request.method==="GET")return this.gmState(request);
     if(url.pathname==="/gm/action-log"&&request.method==="GET")return this.gmActionLog(request);
@@ -3313,6 +3314,20 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,matchId:match,phase:meta.cyclePhase||null,
       bans:(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{},channels});
   }
+  async gmChatSend(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
+      players=(await this.ctx.storage.get("players"))||{};
+    if(!meta?.matchId||!id||!players["member:"+id]||!content||String(body?.text||"").length>400)
+      return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
+    const key="onlineChat:"+String(meta.matchId)+":gm:"+id,now=Date.now(),
+      rateKey="gmChatRate:"+String(meta.matchId)+":"+id;
+    if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
+    const messages=(await this.ctx.storage.get(key))||[],
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",text:content,at:now,scope:"gm"};
+    await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
+    this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel:"gm:"+id});
+  }
   async gmChatModerate(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const id=normalizeLoginId(body?.loginId),players=(await this.ctx.storage.get("players"))||{};
@@ -3625,7 +3640,7 @@ export default {async fetch(request,env){
   const playerChat=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat$/);
   if(playerChat&&(request.method==="GET"||request.method==="POST"))return playerRoomChatApi(env,playerChat[1],request);
   const gmChat=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat$/);
-  if(gmChat&&request.method==="GET")return roomProxy(env,gmChat[1],"/gm/chat",request);
+  if(gmChat&&(request.method==="GET"||request.method==="POST"))return roomProxy(env,gmChat[1],"/gm/chat",request);
   const gmChatMute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/moderate$/);
   if(gmChatMute&&request.method==="POST")return roomProxy(env,gmChatMute[1],"/gm/chat/moderate",request);
   const playerState=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/me$/);if(playerState&&request.method==="GET")return playerPrivateState(env,playerState[1],request);
