@@ -7,6 +7,7 @@ import {resolveElderBell} from "./gmww-elder-bell-rules.js";
 import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversionsDue,apprenticeSeersDue,bigfootWolfDue,factionRoleTransitionsDue,activePackAtNight} from "./gmww-card-night-passives.js";
 import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
 import {validateUnrevealedArtifactDestroy} from "./gmww-artifact-destruction.js";
+import {planArtifactRoleSwap} from "./gmww-artifact-role-swap.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -2759,6 +2760,15 @@ export class RoomDurableObject extends DurableObject {
       if(!inspection)return j({ok:false,error:'DAY_ARTIFACT_INSPECTION_INVALID',
         message:'Artifact không có mục tiêu soi hợp lệ hoặc sai chức năng; chưa trừ lượt.'},409);
       message=inspection.message;result=inspection;
+    }else if(artifactId==="artifact_40"&&actionId==="artifact_action_swap_role"){
+      // Change actual role/faction/private cards atomically, not merely a UI label.
+      // The client's proposed target must never dictate role or faction data.
+      const targetId=effectiveTargets[0];
+      if(!targetId||targetId===actorId)
+        return j({ok:false,error:"ROLE_SWAP_INVALID_TARGET"},409);
+      changes.push({kind:"swap_role",targetId});
+      message="Đá Hoán Đổi đã hoán đổi hai Vai Trò.";
+      result={message,private:true,roleSwap:true};
     }else if(artifactId){
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
       if(actionId==='action_revive'||effects.includes('effect_revive')){
@@ -2851,6 +2861,45 @@ export class RoomDurableObject extends DurableObject {
       if(effect.kind==="double_gallows"){
         await this.ctx.storage.put(effect.key,effect.value);
         this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(effect.value,meta),serverTime:Date.now()});
+        continue;
+      }
+      if(effect.kind==="swap_role"){
+        const swapped=await this.ctx.storage.transaction(async txn=>{
+          const current=await txn.get("meta"),rows=await txn.get("assignments")||[];
+          if(!current||String(current.matchId||"")!==matchId||
+            String(current.cycleKey||"")!==cycleKey||
+            String(current.cyclePhase||"")!=="morning")
+            return {ok:false,error:"ROLE_SWAP_PHASE_CHANGED"};
+          const original=await txn.get("roles:"+actorId)||[],
+            recipient=await txn.get("roles:"+effect.targetId)||[];
+          const plan=planArtifactRoleSwap({assignments:rows,actorId,
+            targetId:effect.targetId,actorRoles:original,targetRoles:recipient,now:time});
+          if(!plan.ok)return plan;
+          const nextVersion=Math.max(1,Number(current.deliveryVersion)||1)+1,
+            nextMeta={...current,deliveryVersion:nextVersion,
+              roleDeliveredAt:time,updatedAt:time};
+          await txn.put("assignments",plan.assignments);
+          for(const [id,roles] of [[actorId,plan.actorRoles],[effect.targetId,plan.targetRoles]]){
+            await txn.put("roles:"+id,roles);
+            await txn.put("role:"+id,roles[0]);
+            await txn.put("deliverySnapshot:"+id,buildPrivateDeliverySnapshot({
+              matchId,matchRevision:Number(nextMeta.matchRevision||0),
+              deliveryVersion:nextVersion,publishedAt:time,roles}));
+          }
+          // The new recipients have fresh Role abilities. Keep immutable
+          // actionLog history; reset only current-match action-use ledgers.
+          for(const key of ["battleRoleUsage:"+matchId,"dayRoleUsage:"+matchId]){
+            const usage=await txn.get(key)||[];
+            await txn.put(key,(Array.isArray(usage)?usage:[]).filter(row=>
+              ![actorId,effect.targetId].includes(normalizeLoginId(row.actorId))));
+          }
+          await txn.put("meta",nextMeta);
+          return {ok:true,room:publicRoom(nextMeta)};
+        });
+        if(!swapped.ok)return j({ok:false,error:swapped.error||"ROLE_SWAP_CONFLICT",
+          message:"Không thể hoán đổi Vai Trò; lượt Artifact chưa bị trừ."},409);
+        this.broadcast({type:"room_state",room:swapped.room,
+          serverTime:Date.now()});
         continue;
       }
       if(effect.kind==="remove_artifact"){
