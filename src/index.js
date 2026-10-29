@@ -2781,7 +2781,8 @@ export class RoomDurableObject extends DurableObject {
       }
       result={message,correct};
     }else if(artifactId&&(['artifact_09','artifact_24','artifact_29','artifact_39'].includes(artifactId)||
-      artifactId==="artifact_32"&&actionId!=="artifact_action_link")){
+      artifactId==="artifact_32"&&["artifact_action_check_villager","artifact_action_check_third_faction",
+        "action_seer","action_destroyer_scry"].includes(actionId))){
       const linked=artifactId==="artifact_32"?
         await this.ctx.storage.get("artifactLink:"+matchId+":"+actorId):null;
       const inspection=resolveDayArtifactInspection({artifactId:linked?.sourceArtifactId||artifactId,actionId,
