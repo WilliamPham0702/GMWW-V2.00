@@ -489,17 +489,22 @@ struct GameWebView: UIViewRepresentable {
                         throw githubError("Checksum GitHub không hợp lệ.",integrity:true)
                     }
                     req=URLRequest(url:packageURL);req.timeoutInterval=180
-                    let (temp,response)=try await URLSession.shared.download(for:req)
-                    retained=temp
+                    let (downloaded,response)=try await URLSession.shared.download(for:req)
                     guard let http=response as? HTTPURLResponse,http.statusCode == 200 else {
                         throw githubError("Không tải được gói Runtime từ GitHub.")
                     }
-                    let verified=try verifyManualContainer(temp,expectedSHA:checksum,expectedVersion:version)
-                    // installRuntime owns the temporary file once verification succeeds.
+                    // URLSession's download location is short lived. Retain our
+                    // own file until the atomic Runtime installer finishes.
+                    let local=FileManager.default.temporaryDirectory
+                        .appendingPathComponent("GMWW-GitHub-"+UUID().uuidString+".gmwwupdate")
+                    try FileManager.default.moveItem(at:downloaded,to:local)
+                    retained=local
+                    let verified=try verifyManualContainer(local,expectedSHA:checksum,expectedVersion:version)
+                    // installRuntime takes ownership of the verified temporary file.
                     retained=nil
                     runtimeInstallBusy=false
                     installRuntime(manifestObject:verified.manifest,webView:webView,
-                                   localFiles:verified.files,packageURL:temp)
+                                   localFiles:verified.files,packageURL:local)
                 }catch {
                     let domain = (error as NSError).domain
                     // Only transport/service failures may fall back to Cloudflare.
