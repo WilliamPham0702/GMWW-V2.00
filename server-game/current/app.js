@@ -8798,6 +8798,7 @@ function gmwwGMChatMount(){
 .gmwwGmChannel{border:1px solid #365c6c;border-radius:10px;padding:9px;display:grid;gap:5px}
 .gmwwGmChannel.secret{border-color:#795ca9;background:#251c3c}.gmwwGmChannel h4{font-size:12px;font-weight:800;color:#f0dbff;margin:0}
 .gmwwGmChannel p{font-size:12px;margin:0;overflow-wrap:anywhere}
+.gmwwGmReply{display:flex;gap:6px;margin-top:6px}.gmwwGmReply input{flex:1;min-width:0;border:1px solid #527a87;border-radius:8px;background:#082f41;color:white;padding:8px}.gmwwGmReply button{background:#116f8c;border:1px solid #6aafb9;border-radius:8px;color:white;padding:6px 10px;font-weight:800}
 `;document.head.appendChild(st)
   }
   let trigger=document.getElementById('gmwwGMChatLaunch');
@@ -8825,7 +8826,22 @@ async function gmwwGMChatRefresh(){
       const h=document.createElement('h4');h.textContent=String(ch.channel).startsWith('night:')?'🌙 Chat bí mật • '+String(ch.channel).slice(0,75):'☀️ Chat Làng';box.appendChild(h);
       for(const msg of (ch.messages||[]).slice(-20)){
         const line=document.createElement('p');line.textContent=String(msg.senderName||msg.senderId||'')+': '+String(msg.text||'');box.appendChild(line)
-      }content.appendChild(box)
+      }
+      if(String(ch.channel).startsWith('gm:')){
+        const loginId=String(ch.channel).slice(3);
+        h.textContent='🔒 Chat riêng GM • '+loginId;
+        const form=document.createElement('form');form.className='gmwwGmReply';
+        const input=document.createElement('input');input.type='text';input.placeholder='Trả lời riêng cho '+loginId;input.maxLength=280;input.required=true;
+        const submit=document.createElement('button');submit.type='submit';submit.textContent='GỬI GM';form.append(input,submit);
+        form.addEventListener('submit',async event=>{
+          event.preventDefault();const msg=input.value.trim();if(!msg)return;submit.disabled=true;
+          try{await playRoomApi('/chat',{method:'POST',body:JSON.stringify({loginId,text:msg})});await gmwwGMChatRefresh()}
+          catch(e){input.setCustomValidity('Không thể gửi. '+String(e.message||''));input.reportValidity();input.setCustomValidity('')}
+          finally{submit.disabled=false}
+        });
+        box.appendChild(form);
+      }
+      content.appendChild(box)
     }
   }catch(error){const el=document.getElementById('gmwwGMChatContent');if(el)el.textContent='Lỗi đồng bộ Chat: '+String(error.message||error)}
 }
