@@ -282,7 +282,8 @@ test('AUTO VÁN V3.222 release allows only exact metadata bump, notes and unchan
   modified('.github/scripts/prepare-update-channel.mjs',read('.github/scripts/prepare-update-channel.mjs'),read('.github/scripts/prepare-update-channel.mjs').replace('releaseNotes:[','releaseNotes:["V3.222: AUTO VÁN đúng số người, lưu khi xác nhận; rollback V3.221.",')),
   {path:'docs/releases/GMWW-V3.222-auto-van-20261025.md',status:'A',before:null,after:'AUTO VÁN\nrollback'}
  ];
- assert.equal(classifyBrowserScope(files),'auto-van-3222');
+ // Fixture reads current release files, not historical V3.221 inputs: no-op replacements must fail closed.
+ assert.equal(classifyBrowserScope(files),'full');
  assert.equal(classifyBrowserScope([...files,modified('src/gmww-gallows-rules.js','x','y')]),'full');
  const broken=files.map(c=>c.path==='server-game/current/app.js'?{...c,after:c.after+'\n// gameplay changed'}:c);
  assert.equal(classifyBrowserScope(broken),'full');
@@ -351,7 +352,8 @@ test('V3.234 post-merge push CI is scoped to four verified CI/release-note files
   modified('.github/workflows/check-player-web.yml','old','node --test tests/ci-browser-scope.test.mjs'),
   modified('docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md','old','CI hậu merge V3.234')
  ];
- assert.equal(classifyBrowserScope(c),'phase-dock-gallows-3234');
+ // Historical V3.234 post-merge shortcut must not be re-enabled on a new release.
+ assert.equal(classifyBrowserScope(c),'full');
  assert.equal(classifyBrowserScope(c.slice(0,3)),'full','Release notes mandatory');
  assert.equal(classifyBrowserScope([...c,modified('src/gmww-gallows-rules.js','old','new')]),'full','Core modification cannot inherit UI scope');
  assert.equal(classifyBrowserScope(c.map(x=>x.path==='docs/releases/GMWW-V3.234-night-day-dock-gallows-20261026.md'?{...x,after:'unknown version'}:x)),'full','Release version evidence mandatory');
