@@ -639,6 +639,29 @@ function gmwwDismissOutsidePointer(event){
     close();
     return;
   }
+  // Dynamically mounted GM chat is also a floating panel.
+  const chat=document.getElementById('gmwwGMChatPanel');
+  if(chat?.classList.contains('open')&&!chat.contains(target)&&
+     !target.closest('#gmwwGMChatLaunch,[data-gm-admin="open-chat"]')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    document.getElementById('gmwwGMChatClose')?.click();
+    return;
+  }
+  const cloudflare=document.getElementById('gmwwCloudflarePanel');
+  if(cloudflare&&!cloudflare.hidden&&!cloudflare.contains(target)&&
+     !target.closest('#gmwwCloudflareOpen,#gmwwServerTrashOpen')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    document.getElementById('gmwwCloudflareOpen')?.click();
+    return;
+  }
+  const assignment=document.getElementById('playRoleAssignmentPanel');
+  if(assignment&&!assignment.hidden&&!assignment.contains(target)&&
+     !target.closest('[data-play-step="roles"]')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    playSceneRuntime.assignmentPanelDismissed=true;
+    renderPlayRoleAssignmentPanel();
+    return;
+  }
   const preset=document.getElementById('playSeatPresetPanel');
   if(preset&&!preset.hidden&&!preset.contains(target)&&!target.closest('#playGatherSeatPreset')){
     closePlaySeatPresetPanel();return;
