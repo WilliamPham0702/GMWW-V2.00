@@ -51,4 +51,6 @@ jobs:
           node --check server-game/current/app.js
           node .github/scripts/assemble-gm-app.mjs --verify
           npx wrangler deploy --dry-run
+      - name: Block release until 107/107 cards have complete acceptance evidence
+        run: node .github/scripts/check-rule-acceptance-107.mjs
 
