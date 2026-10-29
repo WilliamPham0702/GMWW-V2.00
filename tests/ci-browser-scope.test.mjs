@@ -667,6 +667,10 @@ test('PR613 Artifact preview V3.274 postmerge CI-only recovery preserves exact r
   const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
   const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
   assert.match(worker,/artifact-preview-3274-postmerge/);
+  const scopeStart=deploy.indexOf('name: Lấy đúng commit đã hoàn tất CI');
+  const scopeEnd=deploy.indexOf('name: Chặn auto-deploy',scopeStart);
+  assert.ok(scopeStart>=0 && scopeEnd>scopeStart);
+  assert.match(deploy.slice(scopeStart,scopeEnd),/fetch-depth: 0/);
   assert.match(deploy,/IS_RECOVERY/);
   assert.match(deploy,/TYPE=runtime/);
   assert.match(deploy,/2171214cec2c9af92994c27caaa8f75e976dbb1c/);
