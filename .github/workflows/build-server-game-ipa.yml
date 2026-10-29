@@ -3,6 +3,12 @@ name: Build Native GMWW IPA
 # Full Xcode build also supports owner-requested consolidated IPA releases.
 on:
   workflow_dispatch:
+    inputs:
+      publish_ipa:
+        description: "Explicitly publish a NEW verified IPA after CI and iPhone acceptance"
+        type: boolean
+        required: false
+        default: false
   pull_request:
     branches: [main]
     paths:
@@ -487,9 +493,25 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # Never create/update an official GitHub Release from an unapproved PR.
+      # Build candidate IPA for PR/main; publishing is an explicit opt-in only.
+      # A routine push must never replace the Production IPA or overwrite an existing tag.
+      - name: Verify release permission and required CI on exact main SHA
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_ipa == true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100")
+          for NAME in "Check Player Web Worker" "Check Native GitHub-first OTA Stage 2"; do
+            PASS=$(printf '%s' "$RUNS" | jq -r --arg sha "$GITHUB_SHA" --arg name "$NAME" \
+              '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .name == $name)] | sort_by(.run_number) | last | .conclusion // "missing"')
+            test "$PASS" = "success" || { echo "::error::$NAME has no SUCCESS on main SHA: $PASS"; exit 1; }
+          done
+          test -s docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
       - name: Publish IPA for in-app download
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_ipa == true
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -500,5 +522,6 @@ jobs:
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "GMWW IPA V$VERSION: bổ sung chọn file cập nhật Runtime thủ công, kiểm tra SHA-256 và khôi phục Runtime trước; bốn nút cập nhật cùng một hàng."
           else
-            gh release upload "$TAG" "$IPA" "$IPA.sha256" --repo "$GITHUB_REPOSITORY" --clobber
+            echo "::error::IPA tag $TAG already exists. Never overwrite a published IPA; increment version.";
+            exit 1
           fi
