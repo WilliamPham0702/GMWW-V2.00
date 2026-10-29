@@ -39,6 +39,8 @@ try{
  const action={matchId,cycleKey:'morning-1',actorId:ids[0],
   artifactId:'artifact_25',actionId:'artifact_action_destroy',
   targetIds:[ids[2]],clientEventId:'viewed-target'};
+ const notOwner=await gm('/day-action',{...action,actorId:ids[3],clientEventId:'not-owner'});
+ assert.equal(notOwner.error,'DAY_ARTIFACT_NOT_OWNED','GM cannot act as non-owner');
  const before=await gm('/day-action',action);
  assert.equal(before.error,'DESTROY_TARGET_NOT_UNREVEALED','a revealed card is not destroyable');
  assert.equal((await gm('/day-action',{...action,targetIds:[ids[0]],clientEventId:'self'})).error,
