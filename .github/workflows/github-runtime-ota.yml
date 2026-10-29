@@ -197,5 +197,5 @@ jobs:
           gh release create "$TAG" "$NAME" "$NAME.sha256" "manual-manifest.json" \
             --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
             --title "GMWW RUNTIME V$VERSION — GITHUB" \
-            --notes-file release-notes.txt --verify-tag=false
+            --notes-file release-notes.txt
           echo "Published GitHub Runtime V$VERSION at $SOURCE_SHA; no Cloudflare deployment." >> "$GITHUB_STEP_SUMMARY"
