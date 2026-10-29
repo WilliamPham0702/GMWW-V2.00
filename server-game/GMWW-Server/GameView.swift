@@ -501,10 +501,19 @@ struct GameWebView: UIViewRepresentable {
                     installRuntime(manifestObject:verified.manifest,webView:webView,
                                    localFiles:verified.files,packageURL:temp)
                 }catch {
-                    let integrity = (error as NSError).domain == "GMWWUpdaterIntegrity"
-                    sendResult(["ok":false,"action":"checkGithubRuntime",
-                                "integrityFailure":integrity,"error":error.localizedDescription],
-                               to:webView)
+                    let domain = (error as NSError).domain
+                    // Only transport/service failures may fall back to Cloudflare.
+                    // A downloaded file with invalid SHA, manifest, size or paths
+                    // must NEVER be installed from an alternate source silently.
+                    if domain == NSURLErrorDomain || domain == "GMWWUpdaterNetwork" {
+                        sendResult(["ok":true,"action":"checkGithubRuntime",
+                                    "status":"fallback","error":error.localizedDescription],
+                                   to:webView)
+                    }else {
+                        sendResult(["ok":false,"action":"checkGithubRuntime",
+                                    "integrityFailure":true,"error":error.localizedDescription],
+                                   to:webView)
+                    }
                 }
             }
         }
