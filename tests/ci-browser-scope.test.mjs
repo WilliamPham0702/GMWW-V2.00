@@ -672,3 +672,20 @@ test('PR613 Artifact preview V3.274 postmerge CI-only recovery preserves exact r
   assert.match(deploy,/2171214cec2c9af92994c27caaa8f75e976dbb1c/);
   assert.match(deploy,/V3\.274 PR613/);
 });
+
+test('PR613 Artifact preview V3.274 release proof accepts only exact four CI files',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs',
+    'docs/releases/GMWW-PR613-release-proof-ci-20261029.md'
+  ];
+  const rows=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
+  assert.equal(classifyBrowserScope(rows),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope([...rows,{path:'server-game/current/app.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(rows.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
+  const gate=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(gate,/head_sha=28f62f91dea9538b79b06177cd1d7cdbd7703e57/);
+  assert.match(gate,/CI Stability Gate/);
+  assert.match(gate,/V3\.274 PR613/);
+});
