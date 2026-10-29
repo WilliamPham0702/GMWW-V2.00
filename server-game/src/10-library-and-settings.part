@@ -36,7 +36,7 @@ function artifactArtworkSideMargins(data,width,height){
     }
   }
   if(!samples)return null;
-  const threshold=Math.max(2,Math.ceil(samples*.12));
+  const threshold=Math.max(3,Math.ceil(samples*.22)); // Ignore isolated bright specks in dark artwork gutters.
   const present=x=>columns[x]>=threshold;
   // A minimum two-column run rejects isolated sparkles/noise in black padding.
   let left=0;
@@ -89,7 +89,22 @@ function fitPlayerCardTitle(){
   const title=$('#playerName');if(!title)return;
   title.style.fontSize='';
   if(typeof requestAnimationFrame!=='function')return;
-  requestAnimationFrame(()=>{let size=25;while(size>18&&title.scrollWidth>title.clientWidth+1){size=Math.max(18,size-.5);title.style.fontSize=size+'px'}});
+  // Fit BOTH lines and height, not just nowrap width. Long Vietnamese Artifact
+  // titles must remain readable on iPhone instead of overflowing the card edge.
+  const expected=title.textContent;
+  requestAnimationFrame(()=>{
+    if(title.textContent!==expected)return;
+    const head=title.parentElement;
+    if(!head)return;
+    const styles=typeof getComputedStyle==='function'?getComputedStyle(head):null;
+    const verticalPadding=(parseFloat(styles?.paddingTop)||0)+(parseFloat(styles?.paddingBottom)||0);
+    const available=Math.max(0,head.clientHeight-verticalPadding-2);
+    let size=Math.min(23,parseFloat(typeof getComputedStyle==='function'?getComputedStyle(title).fontSize:23)||23);
+    title.style.fontSize=size+'px';
+    while(size>12.5&&(title.scrollWidth>title.clientWidth+1||title.scrollHeight>available+1)){
+      size=Math.max(12.5,size-.5);title.style.fontSize=size+'px';
+    }
+  });
 }
 function fitPlayerCardInformation(){
   const box=$('#playerInformation');if(!box)return;
