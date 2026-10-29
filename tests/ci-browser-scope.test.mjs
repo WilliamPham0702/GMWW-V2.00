@@ -583,4 +583,12 @@ test('CI-only merge remains scoped with actual selector/deploy source containing
   ];
   assert.equal(classifyBrowserScope(changes),'ci-policy');
   assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','new')]),'full');
+  const complete=[...changes,
+    modified('.github/workflows/check-player-web.yml','previous',readFileSync(new URL('../.github/workflows/check-player-web.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/check-player-card-browsers.yml','previous',readFileSync(new URL('../.github/workflows/check-player-card-browsers.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/check-dual-renderer.yml','previous',readFileSync(new URL('../.github/workflows/check-dual-renderer.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/build-server-game-ipa.yml','previous',readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8'))
+  ];
+  assert.equal(classifyBrowserScope(complete),'ci-policy','all eight actual PR files must remain focused');
+  assert.equal(classifyBrowserScope([...complete,modified('server-game/current/app.js','old','game changed')]),'full');
 });
