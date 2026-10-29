@@ -2490,7 +2490,28 @@ function isPlayerAvatar603Scope(changes){
     test.includes('Account avatar appears only after loading');
 }
 
+// GitHub Actions replaces only the Cloudflare *build* for PR Previews.
+// Exact infrastructure-only scope; any gameplay or unknown path runs full CI.
+const githubPreviewCIPaths=new Set([
+  '.github/workflows/check-pr-preview-github.yml',
+  '.github/scripts/guard-pr-preview-ci.mjs',
+  'tests/github-actions-pr-preview-ci.test.mjs',
+  'docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/deploy-production.yml'
+]);
+function isGithubPreviewCIOnly(changes){
+  return Array.isArray(changes)&&changes.length>=7&&
+    changes.every(c=>githubPreviewCIPaths.has(c.path)&&['A','M'].includes(c.status))&&
+    changes.some(c=>c.path==='.github/workflows/check-pr-preview-github.yml')&&
+    changes.some(c=>c.path==='tests/github-actions-pr-preview-ci.test.mjs');
+}
+
 function classifyBrowserScope(changes){
+  if(isGithubPreviewCIOnly(changes))return 'github-pr-preview-ci';
   if(isPlayerAvatar603Scope(changes))return 'player-top-avatar-603';
   if(isPlayerWebBackgroundPerformanceScope(changes))return 'player-web-background-performance';
   if(gmAdmin3272Scope(changes))return 'gm-admin-top-chat-3272';
