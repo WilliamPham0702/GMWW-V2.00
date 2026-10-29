@@ -35,3 +35,20 @@ test('#32 copied action requires linked donor to have revealed the unchanged sou
    matchId:'m',donorArtifact:{...actual,removedFromMatch:true},
    donorAssignment:assignments[1]}).ok,false);
 });
+
+test('#32 can copy real #35 next-night shield without taking donor Artifact',()=>{
+ const shield={artifactId:'artifact_35',matchId:'m',viewedAt:'2026-10-29T12:00:00Z',
+   artifactCard:{functions:[{id:'fn_artifact_35',actionId:'action_protect',
+     phase:'both',usageMode:'unlimited',targetCount:1,effectIds:['effect_protected']}]}};
+ const rows=[{loginId:'alice',artifactId:'artifact_32'},
+   {loginId:'bob',artifactId:'artifact_35'}];
+ const plan=planArtifactLink({...base,assignments:rows,donorArtifact:shield});
+ assert.equal(plan.ok,true);
+ assert.equal(plan.link.actionId,'action_protect');
+ assert.equal(plan.copiedFunction.usageMode,'onceGame');
+ assert.equal(shield.artifactCard.functions[0].usageMode,'unlimited','donor is unchanged');
+ assert.equal(linkedArtifactAction({link:plan.link,actorId:'alice',actionId:'action_protect',
+   matchId:'m',donorArtifact:shield,donorAssignment:rows[1]}).ok,true);
+ assert.equal(linkedArtifactAction({link:plan.link,actorId:'alice',actionId:'action_witch_kill',
+   matchId:'m',donorArtifact:shield,donorAssignment:rows[1]}).ok,false);
+});
