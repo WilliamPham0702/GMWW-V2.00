@@ -297,16 +297,16 @@ const stableCIPolicyPaths=new Set([
 ]);
 function isStableCIPolicyScope(changes){
   if(!Array.isArray(changes)||changes.length===0||
-      !changes.some(c=>c.path.startsWith('.github/')))return false;
-  if(changes.some(c=>!stableCIPolicyPaths.has(c.path)||!['A','M'].includes(c.status)))return false;
+      !changes.some(c=>c?.path?.startsWith('.github/')))return false;
+  if(changes.some(c=>!c||!stableCIPolicyPaths.has(c.path)||!['A','M'].includes(c.status)))return false;
   const names=new Set(changes.map(c=>c.path));
   if(!names.has('.github/scripts/ci-browser-scope.mjs')||
      !names.has('tests/ci-browser-scope.test.mjs')||
      !names.has('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'))return false;
   const deploy=changes.find(c=>c.path==='.github/workflows/deploy-production.yml');
-  if(deploy&&typeof deploy.after==='string'&&
-      (!deploy.after.includes('CHỈ CI: BỎ QUA DEPLOY PRODUCTION')||
-       !deploy.after.includes("needs.deploy-scope.outputs.should_deploy == 'true'")))return false;
+  if(deploy&&(typeof deploy.after!=='string'||
+      !deploy.after.includes('CHỈ CI: BỎ QUA DEPLOY PRODUCTION')||
+      !deploy.after.includes("needs.deploy-scope.outputs.should_deploy == 'true'")))return false;
   return true;
 }
 
