@@ -28,3 +28,19 @@ test('GMWW Preview Durable Objects and data stay isolated',()=>{
   assert.equal(result.status,0,result.stderr);
   assert.match(result.stdout,/isolated ROOMS DO/);
 });
+
+test('CI-only Preview changes cannot invoke Production auto-deploy or IPA packaging',()=>{
+  const scope=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+  const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  const ipa=readFileSync('.github/workflows/build-server-game-ipa.yml','utf8');
+  const production=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(scope,/isGithubPreviewCIOnly\(changes\)/);
+  assert.match(worker,/steps\.scope\.outputs\.mode == 'github-pr-preview-ci'/);
+  assert.match(ipa,/needs\.scope\.outputs\.mode != 'github-pr-preview-ci'/);
+  for (const file of ['.github/workflows/check-pr-preview-github.yml',
+    '.github/scripts/guard-pr-preview-ci.mjs',
+    'tests/github-actions-pr-preview-ci.test.mjs',
+    '.github/workflows/build-server-game-ipa.yml']) {
+    assert.ok(production.includes(file),'Production scope must ignore '+file);
+  }
+});
