@@ -2,6 +2,23 @@
 /* Online-first Chat: all reads are authenticated; the WebSocket carries only a generic tick.
  * DO NOT use public room_state to transport chat messages or secret group membership. */
 let gmwwChatOpen=false,gmwwChatSeq=0,gmwwPlayerCueKey='',gmwwChatIdleTimer=null;
+let gmwwPrivateDisclosureMatch='',gmwwPrivateDisclosureSeen=new Set();
+function gmwwHandlePrivateRoleDisclosures(items,matchId){
+  const match=String(matchId||'');
+  if(!match||gmwwPrivateDisclosureMatch!==match){gmwwPrivateDisclosureMatch=match;gmwwPrivateDisclosureSeen.clear()}
+  const notices=Array.isArray(items)?items.filter(x=>x&&x.matchId===match).slice(-20):[];
+  const inbox=document.getElementById('gmwwPrivateRoleInbox');
+  if(inbox){inbox.replaceChildren();inbox.hidden=!notices.length;
+    for(const item of notices){const row=document.createElement('div');
+      row.textContent=String(item.message||'Thông điệp riêng').slice(0,200);inbox.appendChild(row)}
+  }
+  for(const item of notices){const key=String(item.id||'');
+    if(!key||gmwwPrivateDisclosureSeen.has(key))continue;
+    gmwwPrivateDisclosureSeen.add(key);
+    // Never announce another player's role aloud or via a public WebSocket.
+    toast('🔒 '+String(item.message||'Bạn có thông điệp riêng.').slice(0,180));
+  }
+}
 function gmwwChatClosePanel(){gmwwChatOpen=false;clearTimeout(gmwwChatIdleTimer);document.getElementById('gmwwChatPanel')?.classList.remove('open')}
 function gmwwChatTouch(){clearTimeout(gmwwChatIdleTimer);if(gmwwChatOpen)gmwwChatIdleTimer=setTimeout(gmwwChatClosePanel,30000)}
 const gmwwChatAudioOff=()=>{try{return localStorage.getItem('gmww_player_announcement_audio_off')==='1'}catch{return false}};
@@ -25,7 +42,8 @@ function gmwwChatMount(){
 #gmwwChatPanel{display:none;position:fixed;z-index:100003;inset:auto 8px max(8px,env(safe-area-inset-bottom)) 8px;height:min(46dvh,380px);max-width:470px;margin:auto;background:#071b2a;border:1px solid #527e8b;border-radius:18px;box-shadow:0 12px 55px #000d;color:#e9f5ff;flex-direction:column;overflow:hidden}
 #gmwwChatPanel.open{display:flex}#gmwwChatPanel header{display:flex;gap:9px;align-items:center;padding:9px 11px;background:#12364a}#gmwwChatPanel header b{flex:1;font-size:14px}
 #gmwwChatPanel header button{border:1px solid #56798c;border-radius:9px;min-width:34px;min-height:34px;background:#1a4052;color:#fff}
-#gmwwChatLines{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:11px}
+#gmwwPrivateRoleInbox:not([hidden]){padding:9px 11px;background:#20415a;color:#fff;font-size:12px;max-height:100px;overflow-y:auto}#gmwwPrivateRoleInbox div+div{margin-top:6px}
+ #gmwwChatLines{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px;padding:11px}
 #gmwwChatLines .msg{max-width:89%;align-self:flex-start;background:#13516a;padding:8px 10px;border-radius:12px;line-height:1.4;font-size:13px;overflow-wrap:anywhere;white-space:pre-wrap}
 #gmwwChatLines .msg.own{align-self:flex-end;background:#287e99}#gmwwChatLines .msg b{display:block;color:#bdeaff;font-size:10px}
 #gmwwChatPanel.secret #gmwwChatLines .msg{background:#583477}#gmwwChatPanel.secret #gmwwChatLines .msg.own{background:#774e9b}
@@ -40,7 +58,7 @@ function gmwwChatMount(){
   launch.onclick=()=>{gmwwChatOpen=!gmwwChatOpen;document.getElementById('gmwwChatPanel')?.classList.toggle('open',gmwwChatOpen);gmwwChatTouch();if(gmwwChatOpen)void gmwwChatRefresh()};
   document.body.appendChild(launch);
   const panel=document.createElement('section');panel.id='gmwwChatPanel';panel.setAttribute('aria-label','Chat GMWW');
-  panel.innerHTML='<header><b id="gmwwChatHeading">Chat Làng</b><button type="button" id="gmwwChatAudio" aria-label="Audio thông báo"></button><button type="button" id="gmwwChatClose" aria-label="Đóng">✕</button></header><div id="gmwwChatLines"></div><div id="gmwwChatHelp">Đang tải quyền Chat…</div><form id="gmwwChatForm"><input id="gmwwChatText" maxlength="280" autocomplete="off" aria-label="Tin nhắn" placeholder="Nhập tin nhắn…"><button type="submit" id="gmwwChatSubmit">Gửi</button></form>';
+  panel.innerHTML='<header><b id="gmwwChatHeading">Chat Làng</b><button type="button" id="gmwwChatAudio" aria-label="Audio thông báo"></button><button type="button" id="gmwwChatClose" aria-label="Đóng">✕</button></header><div id="gmwwPrivateRoleInbox" hidden></div><div id="gmwwChatLines"></div><div id="gmwwChatHelp">Đang tải quyền Chat…</div><form id="gmwwChatForm"><input id="gmwwChatText" maxlength="280" autocomplete="off" aria-label="Tin nhắn" placeholder="Nhập tin nhắn…"><button type="submit" id="gmwwChatSubmit">Gửi</button></form>';
   document.body.appendChild(panel);
   document.getElementById('gmwwChatClose').onclick=gmwwChatClosePanel;
   if(!document.documentElement.dataset.gmwwChatDismiss){
