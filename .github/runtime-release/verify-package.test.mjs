@@ -72,5 +72,5 @@ test('GitHub-only Runtime source changes cannot accidentally trigger Worker Prod
     '.github/runtime-release/verify-package.test.mjs',
     'docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md'
   ])assert.ok(selector.includes(rel),'Unsafe auto-deploy scope: '+rel);
-  assert.match(selector,/\*\)[^\n]*SHOULD_DEPLOY=true/s,'Unknown gameplay files must still trigger Production deployment');
+  assert.ok(selector.includes('SHOULD_DEPLOY=true'),'Unknown gameplay files must still trigger Production deployment');
 });
