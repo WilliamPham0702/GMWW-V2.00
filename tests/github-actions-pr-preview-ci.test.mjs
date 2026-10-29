@@ -40,7 +40,8 @@ test('CI-only Preview changes cannot invoke Production auto-deploy or IPA packag
   for (const file of ['.github/workflows/check-pr-preview-github.yml',
     '.github/scripts/guard-pr-preview-ci.mjs',
     'tests/github-actions-pr-preview-ci.test.mjs',
-    '.github/workflows/build-server-game-ipa.yml']) {
+    '.github/workflows/build-server-game-ipa.yml',
+    '.github/workflows/check-dual-renderer.yml']) {
     assert.ok(production.includes(file),'Production scope must ignore '+file);
   }
 });
