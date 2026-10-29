@@ -12,6 +12,7 @@ import {validateArtifactSteal,eligibleArtifactReplacements,applyArtifactStealSum
 import {planDayFunctionCopy} from "./gmww-artifact-function-copy.js";
 import {planArtifactLink,linkedArtifactAction} from "./gmww-artifact-link.js";
 import {validateGhostClue,ghostClueAllowed,moderateGhostClue} from "./gmww-ghost-clue.js";
+import {ghostLetterTarget,ghostLetterResponse} from "./gmww-ghost-letter.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -2799,6 +2800,14 @@ export class RoomDurableObject extends DurableObject {
         roleName:String(actorRole.roleName||actorRole.roleCard?.name||actorRole.roleId).slice(0,100)});
       message="Mặt Dây Chuyền Kiêu Hãnh đã gửi thông điệp riêng cho người được chọn.";
       result={message,private:true,delivered:true};
+    }else if(artifactId==="artifact_34"&&actionId==="action-ghost-message"){
+      const valid=ghostLetterTarget({actorId,targetId:effectiveTargets[0],
+        matchId,day,interactions});
+      if(!valid.ok)return j({ok:false,error:valid.error,
+        message:"Chỉ được hỏi người bị loại ở lượt trước, chưa trừ Artifact."},409);
+      changes.push({kind:"ghost_letter_request",targetId:valid.targetId});
+      message="Khăn Hồn Ma đã gửi yêu cầu manh mối một chữ cái riêng.";
+      result={message,private:true,letterRequested:true};
     }else if(artifactId==="artifact_32"&&actionId==="artifact_action_link"){
       changes.push({kind:"link_artifact",targetId:effectiveTargets[0]});
       message="Lam Ngọc Định Mệnh đã liên kết riêng với Artifact mục tiêu.";
@@ -2926,6 +2935,29 @@ export class RoomDurableObject extends DurableObject {
       if(effect.kind==="double_gallows"){
         await this.ctx.storage.put(effect.key,effect.value);
         this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(effect.value,meta),serverTime:Date.now()});
+        continue;
+      }
+      if(effect.kind==="ghost_letter_request"){
+        const created=await this.ctx.storage.transaction(async txn=>{
+          const key="ghostLetterRequest:"+matchId+":"+actorId,
+            rows=await txn.get("interactions")||[],
+            current=await txn.get("meta");
+          if(!current||String(current.matchId||"")!==matchId||
+            String(current.cyclePhase||"")!=="morning"||
+            String(current.cycleKey||"")!==cycleKey)
+            return {ok:false,error:"GHOST_LETTER_PHASE_CHANGED"};
+          if(await txn.get(key))return {ok:false,error:"GHOST_LETTER_ALREADY_REQUESTED"};
+          const valid=ghostLetterTarget({actorId,targetId:effect.targetId,
+            matchId,day,interactions:rows});
+          if(!valid.ok)return valid;
+          const request={id:crypto.randomUUID(),matchId,ownerId:actorId,
+            targetId:effect.targetId,day,status:"pending",createdAt:time};
+          await txn.put(key,request);
+          return {ok:true};
+        });
+        if(!created.ok)return j({ok:false,error:created.error,
+          message:"Không thể gửi yêu cầu manh mối; chưa trừ lượt Artifact."},409);
+        this.broadcast({type:"ghost_letter_pending",serverTime:Date.now()});
         continue;
       }
       if(effect.kind==="link_artifact"){
