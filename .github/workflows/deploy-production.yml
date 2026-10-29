@@ -1564,13 +1564,26 @@ jobs:
           if [[ "$SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]]; then
             IS_RECOVERY=true
             git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
-            BASE_RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=2171214cec2c9af92994c27caaa8f75e976dbb1c&per_page=100")
-            printf '%s' "$BASE_RUNS" | node -e '
+            # Card/role and CI Policy checks ran on PR613's immutable head,
+            # not on main: these workflows are pull_request-only or path-scoped.
+            # Verify both original PR and original merge SHA, without waiving checks.
+            PR613_HEAD=28f62f91dea9538b79b06177cd1d7cdbd7703e57
+            PR_RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$PR613_HEAD&per_page=100")
+            printf '%s' "$PR_RUNS" | node -e '
               let raw="";process.stdin.on("data",c=>raw+=c).on("end",()=>{
-                const a=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.event==="push"&&r.head_sha==="2171214cec2c9af92994c27caaa8f75e976dbb1c");
-                const names=["Check Approved Role Card Settings","Check GM card artwork centering (20261029)"];
-                process.exit(names.every(n=>a.some(r=>r.name===n&&r.conclusion==="success"))?0:1);
-              })' || { echo "::error::Original PR613 main role/Artifact proof missing"; exit 1; }
+                const head="28f62f91dea9538b79b06177cd1d7cdbd7703e57";
+                const runs=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.event==="pull_request"&&r.head_sha===head);
+                const required=["Check Approved Role Card Settings","Check GM card artwork centering (20261029)","CI Policy Gate","Check Player Web Worker"];
+                process.exit(required.every(name=>runs.some(r=>r.name===name&&r.conclusion==="success"))?0:1);
+              })' || { echo "::error::Original PR613 head role/Artifact/policy proof missing"; exit 1; }
+            ORIGINAL_MAIN_RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=2171214cec2c9af92994c27caaa8f75e976dbb1c&per_page=100")
+            printf '%s' "$ORIGINAL_MAIN_RUNS" | node -e '
+              let raw="";process.stdin.on("data",c=>raw+=c).on("end",()=>{
+                const sha="2171214cec2c9af92994c27caaa8f75e976dbb1c";
+                const runs=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.event==="push"&&r.head_sha===sha);
+                const required=["Check GM card artwork centering (20261029)","Check GM Chat Flamingo and 3 Persistent Actions"];
+                process.exit(required.every(name=>runs.some(r=>r.name===name&&r.conclusion==="success"))?0:1);
+              })' || { echo "::error::Original PR613 main GM/Artifact proof missing"; exit 1; }
           fi
           export IS_RECOVERY
           VERIFIED=false
@@ -1579,7 +1592,7 @@ jobs:
             if printf '%s' "$RUNS" | node -e '
               let raw="";process.stdin.on("data",x=>raw+=x).on("end",()=>{
                 const runs=(JSON.parse(raw).workflow_runs||[]).filter(x=>x.head_sha===process.env.TESTED_SHA&&x.event==="push");
-                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Policy Gate"]; if(process.env.IS_RECOVERY!=="true")required.push("Check Approved Role Card Settings");
+                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Stability Gate"]; if(process.env.IS_RECOVERY!=="true")required.push("Check Approved Role Card Settings","CI Policy Gate");
                 process.exit(required.every(name=>runs.some(r=>r.name===name&&r.conclusion==="success"))?0:1);
               })
             '; then VERIFIED=true; break; fi
