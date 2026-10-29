@@ -15,6 +15,7 @@ on:
       - 'tests/worker-night-rules-e2e.mjs'
       - 'tests/worker-double-gallows-e2e.mjs'
       - 'tests/worker-disable-artifact-e2e.mjs'
+      - 'tests/worker-passive-gallows-artifacts-e2e.mjs'
       - '.github/scripts/check-rule-worker-local.mjs'
       - '.github/workflows/check-rule-executors-107.yml'
 permissions:

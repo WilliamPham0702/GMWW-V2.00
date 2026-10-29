@@ -296,7 +296,7 @@ function gallowsTick(){
     const stage=gallowsCurrentStage(),me=String(state.member?.loginId||'');
     dock.querySelectorAll('[data-gallows-vote]').forEach(b=>{
       b.disabled=stage!=='voting'||me===String(g.candidateId||'')||
-        !(g.eligible||[]).includes(me)||!!g.votes?.[me]||
+        !(g.voteEligible||g.eligible||[]).includes(me)||!!g.votes?.[me]||
         (g.blockedVotes||g.blocked||[]).includes(me);
     });
   }
@@ -321,7 +321,7 @@ function renderGallowsWidget(){
     eligible=Array.isArray(g.eligible)?g.eligible:[],
     canNominate=eligible.includes(me)&&stage==='nominating'&&
       !(g.blockedNomination||[]).includes(me)&&!g.nominations?.[me],
-    canVote=eligible.includes(me)&&me!==String(g.candidateId||'')&&stage==='voting'&&
+    canVote=(g.voteEligible||eligible).includes(me)&&me!==String(g.candidateId||'')&&stage==='voting'&&
       !(g.blockedVotes||g.blocked||[]).includes(me)&&!g.votes?.[me];
   // While nominations are open the map displays ONLY the red pirate flag.
   // The bottom dock is reserved for Save/Kill voting and finalized outcomes.
@@ -367,7 +367,7 @@ function renderGallowsWidget(){
 async function sendGallowsChoice(command,targetId='',choice=''){
   if(!state.token||!state.roomCode||!state.gallows)return;
   const g=state.gallows,me=String(state.member?.loginId||'');
-  if(state.gallowsSubmitPending||g.mode==='gm'||!(g.eligible||[]).includes(me)||
+  if(state.gallowsSubmitPending||g.mode==='gm'||!(command==='vote'?(g.voteEligible||g.eligible||[]):(g.eligible||[])).includes(me)||
     (command==='nominate'?(g.blockedNomination||[]):(g.blockedVotes||g.blocked||[])).includes(me))return;
   state.gallowsSubmitPending=true;
   try{

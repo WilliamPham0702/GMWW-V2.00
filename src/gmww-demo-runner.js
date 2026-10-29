@@ -1,3 +1,4 @@
+import {gallowsVoteEligible,gallowsBlockedVotes} from './gmww-gallows-rules.js';
 // The DEMO runner executes inside the room's serialized, transactional alarm.
 // It reuses the real game handlers and the same pure targeting rules as GM Web.
 import '../server-game/current/battle-controls.js';
@@ -173,7 +174,7 @@ async function tasksFor(room,meta,ctx){
   ...dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot).map(a=>({id:a.id,humanControlled:ctx.players['member:'+a.actorIds[0]]?.humanControlled===true}))
  ];
  if(ballot.stage==='nominating')return eligible.filter(id=>!Object.hasOwn(ballot.nominations||{},id)&&!(ballot.blockedNomination||[]).includes(id)).map(id=>({id:'nominate:'+id,actorId:id,kind:'nominate',humanControlled:ctx.players['member:'+id]?.humanControlled===true}));
- if(ballot.stage==='voting')return eligible.filter(id=>id!==ballot.candidateId&&!Object.hasOwn(ballot.votes||{},id)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(id)).map(id=>({id:'vote:'+id,actorId:id,kind:'vote',humanControlled:ctx.players['member:'+id]?.humanControlled===true}));
+ if(ballot.stage==='voting')return gallowsVoteEligible(ballot).filter(id=>id!==ballot.candidateId&&!Object.hasOwn(ballot.votes||{},id)&&!gallowsBlockedVotes(ballot).includes(id)).map(id=>({id:'vote:'+id,actorId:id,kind:'vote',humanControlled:ctx.players['member:'+id]?.humanControlled===true}));
  return [];
 }
 async function planFor(room,meta,clock){
@@ -222,8 +223,8 @@ export async function runServerDemo(room,meta,budget=32){
    else if(task.kind==='nominate'&&eligible.includes(task.actorId)&&!(ballot.blockedNomination||[]).includes(task.actorId)&&!Object.hasOwn(ballot.nominations||{},task.actorId)){
     const targets=eligible.slice();
     if(targets.length){const target=pick(targets);if(await ballotAction(room,{command:'nominate',loginId:task.actorId,targetId:target}))await observe(room,meta,lease,'Đề cử',task.actorId,[target])}
-   }else if(task.kind==='vote'&&eligible.includes(task.actorId)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(task.actorId)&&!Object.hasOwn(ballot.votes||{},task.actorId)){
-    const choice=pick(['👍','👎']);if(await ballotAction(room,{command:'vote',loginId:task.actorId,choice}))await observe(room,meta,lease,'Bỏ phiếu '+choice,task.actorId,[ballot.candidateId]);
+   }else if(task.kind==='vote'&&gallowsVoteEligible(ballot).includes(task.actorId)&&!gallowsBlockedVotes(ballot).includes(task.actorId)&&!Object.hasOwn(ballot.votes||{},task.actorId)){
+    const choice=(ballot.saveOnlyVoters||[]).includes(task.actorId)?'👍':(ballot.forcedKillVoters||[]).includes(task.actorId)?'👎':pick(['👍','👎']);if(await ballotAction(room,{command:'vote',loginId:task.actorId,choice}))await observe(room,meta,lease,'Bỏ phiếu '+choice,task.actorId,[ballot.candidateId]);
    }
    }
   }else{

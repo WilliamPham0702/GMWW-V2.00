@@ -23,3 +23,11 @@ Phát hiện và sửa Online/DEMO bỏ sót `result.message` của Artifact ban
 - Bộ chọn hành động Online/DEMO nhận phase `both`, chặn actor bị khóa và Artifact một lần đã dùng ở chu kỳ trước, kể cả snapshot lượt Đêm cũ.
 
 Chưa nghiệm thu toàn bộ 107/107. Ma trận cập nhật bằng chứng riêng theo từng tiêu chí; các phần chưa kiểm giữ NOT_VERIFIED/PARTIAL. Chưa phát hành Production/OTA/IPA; rollback vẫn là revert checkpoint trên nhánh sau khi kiểm tra head, không force push hoặc thay dữ liệu Production.
+
+### Artifact nội tại Lên Giàn
+
+- Lá Phiếu Âm Giới: quyền bỏ phiếu của chủ đã chết tách khỏi quyền đề cử/lên giàn; người chết thường vẫn bị chặn. Server, GM roster, Player Web và DEMO cùng dùng danh sách quyền vote. Không hồi sinh người sở hữu; giữ hiệu lực cấm vote, quota một phiếu, retry và reconnect. Tỷ lệ đề cử chỉ tính người đủ quyền đề cử.
+- Áo Choàng Hoàng Tử: sửa nhánh GM chốt trực tiếp/đóng vote sớm không áp dụng kết quả bảo hộ; kiểm thử thật cả hai đường. Đã tạm gỡ riêng sửa này để kiểm chứng test thật FAIL đúng lỗi Cloak, sau đó phục hồi.
+- DEMO chọn phiếu theo ràng buộc CỨU/GIẾT và bỏ qua actor không có phiếu hợp lệ khi hai ràng buộc xung đột; không tự tạo phiếu hoặc đổi luật đếm.
+
+Chưa phát hành; các ô chưa nghiệm thu đủ vẫn giữ NOT_VERIFIED/PARTIAL.

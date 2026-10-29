@@ -73,5 +73,5 @@ test('the real battle handler rejects incomplete multi-target scans before state
  const validate=src.indexOf('const expectedInspectCount='),write=src.indexOf('const usageKey="battleRoleUsage:"+matchId;');
  assert.ok(validate>0&&write>validate);
  const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
- assert.match(player,/canVote=eligible\.includes\(me\)&&me!==String\(g\.candidateId/);
+ assert.match(player,/canVote=\(g\.voteEligible\|\|eligible\)\.includes\(me\)&&me!==String\(g\.candidateId/);
 });

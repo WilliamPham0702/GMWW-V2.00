@@ -7272,11 +7272,17 @@
           }
         ]
       },
-      "httpEvidence": [],
+      "httpEvidence": [
+        "tests/worker-passive-gallows-artifacts-e2e.mjs",
+        "tests/card-executors-automatic-revival-20261028.test.mjs"
+      ],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-passive-gallows-artifacts-e2e.mjs",
+            "tests/card-executors-automatic-revival-20261028.test.mjs"
+          ]
         },
         "timing": {
           "status": "NOT_VERIFIED",
@@ -10213,35 +10219,53 @@
           }
         ]
       },
-      "httpEvidence": [],
+      "httpEvidence": [
+        "tests/worker-passive-gallows-artifacts-e2e.mjs",
+        "tests/card-executors-dead-vote-20261029.test.mjs"
+      ],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-passive-gallows-artifacts-e2e.mjs",
+            "tests/card-executors-dead-vote-20261029.test.mjs"
+          ]
         },
         "timing": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "ownership": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-passive-gallows-artifacts-e2e.mjs",
+            "tests/card-executors-dead-vote-20261029.test.mjs"
+          ]
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-passive-gallows-artifacts-e2e.mjs",
+            "tests/card-executors-dead-vote-20261029.test.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-passive-gallows-artifacts-e2e.mjs",
+            "tests/card-executors-dead-vote-20261029.test.mjs"
+          ]
         },
         "undo": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-passive-gallows-artifacts-e2e.mjs",
+            "tests/card-executors-dead-vote-20261029.test.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
@@ -10268,8 +10292,12 @@
           "evidence": []
         },
         "crossInteractions": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-passive-gallows-artifacts-e2e.mjs",
+            "tests/card-executors-dead-vote-20261029.test.mjs"
+          ],
+          "note": "GM bans, peaceful/forced vote conflicts, no nomination or revival, and nomination statistics verified; not every card combination."
         }
       }
     },

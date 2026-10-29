@@ -1653,7 +1653,7 @@ function battleGallowsRender(phase){
   battleRenderFactionStats();
   panel.hidden=phase!=='day'||!battleState.gallowsOpen;
   if(panel.hidden)return;
-  const eligibleIds=new Set(Array.isArray(g.eligible)?g.eligible.map(String):[]);
+  const eligibleIds=new Set((g.voteEligible||g.eligible||[]).map(String)),nominationIds=new Set((g.eligible||[]).map(String));
   const members=playLiveMembers().filter(p=>p?.loginId&&(eligibleIds.size?eligibleIds.has(String(p.loginId)):
     playPlayerEffect(p.loginId)!=='dead'&&playPlayerEffect(p.loginId)!=='expelled'));
   const memberName=id=>battleMember(id)?.displayName||String(id||'');
@@ -1681,11 +1681,11 @@ function battleGallowsRender(phase){
       return '<div class="battle-gallows-member'+(picked?' is-selected':'')+'" role="listitem">'+
         '<span class="gallows-rank">'+(index+1)+'</span>'+
         '<button type="button" class="gallows-name" data-gallows-pick="'+id+'" '+
-        (mode!=='gm'||stage==='resolved'||battleState.gallowsBusy?'disabled ':'')+
+        (mode!=='gm'||stage==='resolved'||battleState.gallowsBusy||!nominationIds.has(m.loginId)?'disabled ':'')+
         'aria-pressed="'+picked+'" title="GM chọn người lên giàn">'+name+(picked?' ⚖️':'')+'</button>'+
         '<span class="gallows-count">'+count+'/'+nomEligible+'</span>'+
         '<button type="button" data-gallows-kind="nomination" data-gallows-id="'+id+'" aria-label="'+(nom?'Bỏ cấm chọn ':'Cấm chọn ')+name+'" aria-pressed="'+nom+'" '+
-        (stage==='resolved'||battleState.gallowsBusy?'disabled ':'')+'>'+(nom?'✓ CẤM':'CẤM')+'</button>'+
+        (stage==='resolved'||battleState.gallowsBusy||!nominationIds.has(m.loginId)?'disabled ':'')+'>'+(nom?'✓ CẤM':'CẤM')+'</button>'+
         '<button type="button" data-gallows-kind="vote" data-gallows-id="'+id+'" aria-label="'+(vote?'Bỏ cấm vote ':'Cấm vote ')+name+'" aria-pressed="'+vote+'" '+
         (stage==='resolved'||battleState.gallowsBusy||artifactBans.has(m.loginId)?'disabled ':'')+
         ' title="'+(artifactBans.has(m.loginId)?'Artifact cấm Vote':'GM cấm Vote')+'">'+

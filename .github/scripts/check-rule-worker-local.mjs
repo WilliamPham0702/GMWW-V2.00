@@ -24,6 +24,7 @@ try{
  await run('tests/worker-card-artifact-e2e.mjs');
  await run('tests/worker-double-gallows-e2e.mjs');
  await run('tests/worker-disable-artifact-e2e.mjs');
+ await run('tests/worker-passive-gallows-artifacts-e2e.mjs');
 }finally{
  worker.kill('SIGTERM');
  await new Promise(resolve=>{if(worker.exitCode!==null)return resolve();worker.once('exit',resolve);setTimeout(()=>{worker.kill('SIGKILL');resolve()},3000).unref()});

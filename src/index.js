@@ -1008,7 +1008,11 @@ export class RoomDurableObject extends DurableObject {
     // has a valid Save/Kill vote, including in older persisted ballots.
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow;
-    let current={...ballot,eligible,saveOnlyVoters,doubleVoteVoters,forcedKillVoters,crowMarks,foolVoteBans,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+    const voteNow=Object.values(players).filter(p=>p?.kind==="member"&&normalizeLoginId(p.loginId)).map(p=>normalizeLoginId(p.loginId)).filter(id=>
+      aliveNow.includes(id)||assignments.some(a=>normalizeLoginId(a.loginId)===id&&a.artifactId==='artifact_43')&&
+      !interactions.some(x=>normalizeLoginId(x.loginId)===id&&x.type==='expelled'&&x.effectActive!==false&&(!x.matchId||String(x.matchId)===String(meta.matchId))));
+    const voteEligible=ballot.stage==='resolved'&&Array.isArray(ballot.voteEligible)?ballot.voteEligible:[...new Set(voteNow)];
+    let current={...ballot,eligible,voteEligible,saveOnlyVoters,doubleVoteVoters,forcedKillVoters,crowMarks,foolVoteBans,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
     const now=Date.now();
@@ -1137,6 +1141,7 @@ export class RoomDurableObject extends DurableObject {
           assigned=await this.ctx.storage.get("assignments")||[],
           fool=resolveFoolGallows({candidateId:result.value.candidateId,outcome:"dead",
             assignments:assigned,interactions:currentRows,matchId:String(meta.matchId)});
+        result.value={...result.value,outcome:fool.outcome};
         if(fool.escaped){
           const loginId=result.value.candidateId,id="fool-escape:"+String(meta.matchId)+":"+loginId;
           result.value={...result.value,outcome:"alive"};
@@ -1250,10 +1255,11 @@ export class RoomDurableObject extends DurableObject {
     }
     if(!meta||String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")
       return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
-    const {key,ballot,eligible}=await this.gallowsState(meta);
-    if(!loginId||!eligible.includes(loginId))return j({ok:false,error:"VOTER_NOT_ELIGIBLE"},403);
+    const {key,ballot,eligible}=await this.gallowsState(meta),command=String(body?.command||"");
+    const permitted=command==='vote'?(ballot.voteEligible||eligible):eligible;
+    if(!loginId||!permitted.includes(loginId))return j({ok:false,error:"VOTER_NOT_ELIGIBLE"},403);
     if(gallowsMode(ballot)==="gm")return j({ok:false,error:"GM_MANUAL_MODE"},403);
-    const command=String(body?.command||""),now=Date.now();
+    const now=Date.now();
     let result;
     if(command==="nominate"){
       const target=normalizeLoginId(body?.targetId);

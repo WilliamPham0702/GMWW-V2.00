@@ -64,3 +64,11 @@ Chưa nghiệm thu toàn bộ 107/107. Ma trận cập nhật bằng chứng ri�
 ### Bằng chứng checkpoint 58dc429 (29/10)
 
 208/208 test focused cục bộ PASS; bốn chương trình HTTP Worker/SQLite thật PASS. CI RULE focused (bao gồm HTTP thật), CI Policy Gate, DEMO Hybrid và các check luật Say Rượu/Phù Thủy/Dân Làng SUCCESS trên head này. Check Lên Giàn phát hiện fixture cũ; đã sửa fixture đề cử hợp lệ, policy DEMO người thật, kiểm hành vi paused và manifest bảy module. Nhóm 61 bài Lên Giàn PASS cục bộ. Không bỏ test hoặc sửa engine để đáp ứng assertion cũ. Các CI icon/OTA candidate/Preview có lỗi riêng, không dùng chúng làm bằng chứng PASS và không phát hành từ checkpoint.
+
+### Artifact nội tại Lên Giàn
+
+- Lá Phiếu Âm Giới: quyền bỏ phiếu của chủ đã chết tách khỏi quyền đề cử/lên giàn; người chết thường vẫn bị chặn. Server, GM roster, Player Web và DEMO cùng dùng danh sách quyền vote. Không hồi sinh người sở hữu; giữ hiệu lực cấm vote, quota một phiếu, retry và reconnect. Tỷ lệ đề cử chỉ tính người đủ quyền đề cử.
+- Áo Choàng Hoàng Tử: sửa nhánh GM chốt trực tiếp/đóng vote sớm không áp dụng kết quả bảo hộ; kiểm thử thật cả hai đường. Đã tạm gỡ riêng sửa này để kiểm chứng test thật FAIL đúng lỗi Cloak, sau đó phục hồi.
+- DEMO chọn phiếu theo ràng buộc CỨU/GIẾT và bỏ qua actor không có phiếu hợp lệ khi hai ràng buộc xung đột; không tự tạo phiếu hoặc đổi luật đếm.
+
+Chưa phát hành; các ô chưa nghiệm thu đủ vẫn giữ NOT_VERIFIED/PARTIAL.

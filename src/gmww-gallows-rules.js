@@ -8,10 +8,12 @@ export const gallowsDurationSec=(value,fallback=60)=>{
 const validId=id=>typeof id==='string'&&/^[a-z0-9._-]{1,80}$/i.test(id);
 const unique=a=>[...new Set((Array.isArray(a)?a:[]).filter(validId))];
 export const gallowsMode=ballot=>ballot?.mode==='gm'?'gm':'auto';
+// Candidate/nomination eligibility remains alive-only; this list is voting-only.
+export const gallowsVoteEligible=ballot=>unique(Array.isArray(ballot?.voteEligible)?ballot.voteEligible:ballot?.eligible);
 // The legacy `blocked` list meant "ban from voting". Preserve that interpretation.
 export const gallowsBlockedNomination=ballot=>unique(ballot?.blockedNomination);
 export const gallowsGmBlockedVotes=ballot=>unique([...(ballot?.blockedVotes||[]),...(ballot?.blocked||[])]);
-export const gallowsBlockedVotes=ballot=>unique([...gallowsGmBlockedVotes(ballot),...(ballot?.artifactVoteBans||[]),...(ballot?.foolVoteBans||[])]);
+export const gallowsBlockedVotes=ballot=>unique([...gallowsGmBlockedVotes(ballot),...(ballot?.artifactVoteBans||[]),...(ballot?.foolVoteBans||[]),...(ballot?.saveOnlyVoters||[]).filter(id=>(ballot?.forcedKillVoters||[]).includes(id))]);
 export const gallowsStage=(ballot,now=Date.now())=>{
   if(ballot?.stage==='nominating'&&ballot.nominationDeadlineAt&&now>=ballot.nominationDeadlineAt)return 'selecting';
   if(ballot?.stage==='voting'&&now>=ballot.deadlineAt)return 'closed';
@@ -67,7 +69,7 @@ export function gallowsAutomaticNominee(ballot){
   return totals[0]&&(!totals[1]||totals[0].votes>totals[1].votes)?totals[0].loginId:null;
 }
 export function gallowsVoteTotals(ballot){
-  const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedVotes(ballot));
+  const eligible=new Set(gallowsVoteEligible(ballot)),blocked=new Set(gallowsBlockedVotes(ballot));
   const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&voter!==String(ballot?.candidateId||'')&&!blocked.has(voter)&&['👍','👎'].includes(choice));
   // Each confirmed Crow mark contributes exactly two adverse votes only
   // when its target reaches the gallows; these aren't fabricated voters.
@@ -104,14 +106,15 @@ export function gallowsAutomaticOutcome(ballot){
 
 export function gallowsRosterStats(ballot){
   // Server-authoritative receipts: do not reconstruct vote percentages from UI state.
-  const eligible=[...new Set(ballot?.eligible||[])];
+  const eligible=gallowsVoteEligible(ballot);
   const candidate=String(ballot?.candidateId||'');
-  const nominations=Object.entries(ballot?.nominations||{}).map(([voterId,targetId])=>({voterId,targetId}));
+  const living=new Set(ballot?.eligible||[]);
+  const nominations=Object.entries(ballot?.nominations||{}).filter(([voterId,targetId])=>living.has(voterId)&&living.has(targetId)).map(([voterId,targetId])=>({voterId,targetId}));
   const votes=Object.entries(ballot?.votes||{}).filter(([voterId])=>voterId!==candidate).map(([voterId,choice])=>({
     voterId,targetId:candidate,choice:choice==='👍'?'save':choice==='👎'?'kill':null
   }));
   return gallowsTally(eligible.map(id=>({id})),nominations,votes,{
-    nominationBans:gallowsBlockedNomination(ballot),
+    nominationBans:unique([...gallowsBlockedNomination(ballot),...eligible.filter(id=>!living.has(id))]),
     voteBans:gallowsBlockedVotes(ballot)
   }).map(({player,...row})=>row);
 }
@@ -144,7 +147,7 @@ export function gallowsSnapshot(ballot,meta,now=Date.now()){
     resolvedAt:ballot.resolvedAt||null,updatedAt:ballot.updatedAt||null,
     blockedNomination,blockedVotes,gmBlockedVotes:gallowsGmBlockedVotes(ballot),
     artifactVoteBans:unique(ballot.artifactVoteBans),blocked:blockedVotes,outcome:ballot.outcome||null,
-    eligible:[...(ballot.eligible||[])],eligibleCount:(ballot.eligible||[]).length,nominationTotals:gallowsNominationTotals(ballot),
+    voteEligible:gallowsVoteEligible(ballot),eligible:[...(ballot.eligible||[])],eligibleCount:(ballot.eligible||[]).length,nominationTotals:gallowsNominationTotals(ballot),
     rosterStats:gallowsRosterStats(ballot),voteTotals:gallowsVoteTotals(ballot)};
 }
 export function gallowsNominate(ballot,voter,target,now=Date.now()){
@@ -175,14 +178,14 @@ export function gallowsCast(ballot,voter,choice,now=Date.now()){
     return {ok:false,error:'FOOL_HAT_REQUIRES_KILL_VOTE'};
   if(choice==='👎'&&(ballot?.saveOnlyVoters||[]).includes(voter))
     return {ok:false,error:'PEACE_LOVER_KILL_VOTE_FORBIDDEN'};
-  if(!(ballot.eligible||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
+  if(!gallowsVoteEligible(ballot).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(ballot.votes?.[voter])return ballot.votes[voter]===choice?{ok:true,idempotent:true,value:ballot}:{ok:false,error:'VOTE_ALREADY_USED'};
   return {ok:true,value:{...ballot,votes:{...(ballot.votes||{}),[voter]:choice},updatedAt:now}};
 }
 export function gallowsSetRestriction(ballot,voter,kind,banned=true,now=Date.now()){
   if(!validId(voter)||!['nomination','vote'].includes(kind)||gallowsStage(ballot,now)==='resolved')
     return {ok:false,error:'INVALID_RESTRICTION'};
-  if(!(ballot.eligible||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
+  if(!(kind==='vote'?gallowsVoteEligible(ballot):ballot.eligible||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   const field=kind==='nomination'?'blockedNomination':'blockedVotes';
   const current=kind==='nomination'?gallowsBlockedNomination(ballot):gallowsGmBlockedVotes(ballot);
   const next=banned?unique([...current,voter]):current.filter(id=>id!==voter);
@@ -218,7 +221,7 @@ export function gallowsSetMode(ballot,mode,now=Date.now()){
 export function gallowsManualVote(ballot,voter,choice,now=Date.now()){
   if(gallowsMode(ballot)!=='gm'||!['voting','closed'].includes(gallowsStage(ballot,now)))
     return {ok:false,error:'GM_MANUAL_MODE_REQUIRED'};
-  if(!validId(voter)||!(ballot.eligible||[]).includes(voter)||gallowsBlockedVotes(ballot).includes(voter))
+  if(!validId(voter)||!gallowsVoteEligible(ballot).includes(voter)||gallowsBlockedVotes(ballot).includes(voter))
     return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(!['👍','👎',null].includes(choice))return {ok:false,error:'INVALID_VOTE'};
