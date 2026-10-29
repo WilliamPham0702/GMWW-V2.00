@@ -84,7 +84,7 @@ test('DEMO does not execute an already spent Artifact on following day',()=>{
 });
 
 test('Server persists inspection privately and allows no public result broadcast',()=>{
- assert.match(server,/dayArtifactInspections:\+String\(meta\.matchId\)\+":"\+loginId/);
+ assert.ok(server.includes('"dayArtifactInspections:"+String(meta.matchId)+":"+loginId'));
  assert.match(server,/this\.broadcast\(\{type:"private_notice_tick"/);
  assert.match(server,/dayLastInspection:/);
  assert.match(server,/UNDO_STATE_CHANGED/);
