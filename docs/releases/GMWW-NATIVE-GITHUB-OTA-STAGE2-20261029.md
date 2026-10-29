@@ -1,5 +1,5 @@
 # GMWW GIAI ĐOẠN 2 — NATIVE OTA GITHUB-FIRST, CLOUDFLARE FALLBACK
-Ngày: 29/10/2026 — trạng thái: **PR STAGING / IPA ứng viên, chưa phát hành Production**
+Ngày: 29/10/2026 — trạng thái: **Đã phê duyệt phát hành, CI và build phải SUCCESS trước khi tạo GitHub Release**
 
 ## Phạm vi triển khai
 
@@ -22,3 +22,9 @@ Ngày: 29/10/2026 — trạng thái: **PR STAGING / IPA ứng viên, chưa phát
 - Kiểm tra SHA-256 có thể phát hiện file bị lỗi hoặc bị thay đổi **so với checksum của GitHub Release**, nhưng bản này **chưa có chữ ký mật mã với khoá riêng tách biệt GitHub**. Cần thêm khóa ký và quy trình quản trị khóa trước khi tuyên bố manifest được *ký số*.
 - GitHub độc lập Cloudflare trong tải và cài **Runtime**; Server Online và Player Web vẫn cần backend Cloudflare cho tới khi có hạ tầng backend dự phòng riêng.
 - Đây là code + CI ứng viên, chưa có bằng chứng chạy thực tế trên iPhone và chưa phát hành IPA Production.
+
+## Giới hạn phát hành IPA GitHub
+
+- IPA được đóng gói bằng `CODE_SIGNING_ALLOWED=NO`, vì vậy đây là **file IPA chưa ký**. Cần công cụ cài đặt/ký IPA phù hợp trên iPhone; chỉ tải file từ GitHub không bảo đảm có thể cài trực tiếp.
+- Phát hành chỉ được phép sau CI thành công cùng commit, phiên bản mới và SHA-256 toàn file; không ghi đè tag đã tồn tại. GitHub Releases không thay thế backend Cloudflare cho phòng Online.
+- Không được ghi là đã nghiệm thu thực tế trên iPhone nếu chưa có kiểm thử trên thiết bị.
