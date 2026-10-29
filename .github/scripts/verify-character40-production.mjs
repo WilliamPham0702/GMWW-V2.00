@@ -57,12 +57,12 @@ let index=0;
 await Promise.all(Array.from({length:4},async()=>{
  while(index<40){
   const n=index++,c=accepted[n],live=catalog.characters[n];assert.equal(live.id,c.id);assert.deepEqual(live.actions,actions);
-  // Player profile portraits intentionally use the SAME accepted atlas Idle
-  // frame as the village. Their lossless thumbnails are generated at deploy
-  // time, after OTA packaging; they are server-only and not part of IPA OTA.
-  const portraitPath='assets/characters/gmww40/portraits/'+c.id+'.webp';
-  const generatedPortraitSha=sha(await readFile(portraitPath));
-  assert.equal(sha(await bytes(live.imageUrl)),generatedPortraitSha,c.id+' live portrait must match actual atlas frame');
+  // The public c40-4 profile image route intentionally serves the approved
+  // canonical original artwork, not the deploy-time generated portrait.
+  // Verify exact source bytes; keep all 40 atlas and Runtime SHA checks below.
+  const originalPath='assets/characters/gmww40/'+c.original;
+  const originalSha=sha(await readFile(originalPath));
+  assert.equal(sha(await bytes(live.imageUrl)),originalSha,c.id+' live profile image must match canonical original');
   assert.equal(sha(await bytes(live.motionAtlas)),c.atlasSHA256,c.id+' live motion atlas');
   // Preserve rigorous SHA guards for both unchanged original artwork and
   // all animation atlases in the separately signed native Runtime inventory.
