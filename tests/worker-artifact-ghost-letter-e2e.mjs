@@ -35,7 +35,7 @@ try{
  ok(await gm('/assignments',{matchId,assignments:assigned}));
  ok(await gm('/start',{matchId}));ok(await gm('/auto',{enabled:false}));
  ok(await gm('/cycle',{phase:'morning',night:1,cycleKey:'morning-1'}));
- ok(await gm('/interaction',{type:'dead',loginId:ids[1],clientEventId:'dead-previous-day'}));
+ ok(await gm('/interaction',{type:'dead',loginId:ids[1],night:1,clientEventId:'dead-previous-day'}));
  const action={matchId,cycleKey:'morning-1',actorId:ids[0],
   artifactId:'artifact_34',actionId:'action-ghost-message',
   targetIds:[ids[1]],clientEventId:'too-early'};
