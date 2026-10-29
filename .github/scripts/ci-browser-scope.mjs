@@ -2762,7 +2762,11 @@ const onlinePrivacy630Paths=new Set([
   'tests/player-web-resume-receipt-runtime.test.mjs',
   'tests/player-web-top-account-avatar-20261029.test.mjs',
   'tests/status-visuals-v1.test.mjs',
-  'docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md'
+  'docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md',
+  // Same PR's immutable V3.276 Runtime release identity; no IPA changes.
+  'package.json','package-lock.json','server-game/current/GMWW.html',
+  'server-game/current/app.js','server-game/src/00-core-and-library.part',
+  '.github/scripts/prepare-update-channel.mjs'
 ]);
 function isPlayerOnlinePrivacy630Scope(changes){
   if(!Array.isArray(changes)||!changes.length||changes.length>onlinePrivacy630Paths.size)return false;
@@ -2784,6 +2788,16 @@ function isPlayerOnlinePrivacy630Scope(changes){
       if(!c.after?.includes('channel:"gm:"+id,scope:"gm"')||
          !c.after.includes('frozen:meta?.statusDisplay?.frozen===true&&frozenLogins')||
          !c.after.includes('body:JSON.stringify({loginId:data.member.loginId,text:body.text,channel:'))return false;
+    }
+    if(c.path==='package.json'||c.path==='package-lock.json'||c.path==='server-game/current/GMWW.html'||
+       c.path==='server-game/current/app.js'||c.path==='server-game/src/00-core-and-library.part'||
+       c.path==='.github/scripts/prepare-update-channel.mjs'){
+      if(!c.after||!c.before)return false;
+      const released=c.after.replaceAll('3.276.0','3.275.0').replaceAll('V3.276','V3.275')
+        .replaceAll("const VERSION='3.276'","const VERSION='3.275'");
+      if(c.path!=='server-game/current/app.js'&&c.path!=='.github/scripts/prepare-update-channel.mjs'&&released!==c.before)return false;
+      if(c.path==='server-game/current/app.js'&&!c.after.includes("const VERSION='3.276'"))return false;
+      if(c.path==='.github/scripts/prepare-update-channel.mjs'&&!c.after.includes('V3.276 PR630:'))return false;
     }
     if(c.path==='src/player-web-src/35-online-chat.part'){
       if(!c.after?.includes('function gmwwChatDockSync(')||
