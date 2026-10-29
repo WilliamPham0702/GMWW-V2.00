@@ -2719,7 +2719,58 @@ function isGMCardOutside3275Scope(changes){
   }catch{return false}
 }
 
+// P0 #630: allow only reviewed Online Player, public status projection and
+// private chat fixes. Unknown files/branches still use the comprehensive suite.
+const onlinePrivacy630Paths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  'src/gmww-members-live.js','src/gmww-player-private-card-patch.js',
+  'src/gmww-public-room-contract.js','src/index.js',
+  'src/player-web-src/00-bootstrap-and-session.part',
+  'src/player-web-src/20-village-and-profile.part',
+  'src/player-web-src/30-rooms-and-realtime.part',
+  'src/player-web-src/35-online-chat.part',
+  'src/player-web-src/40-cards-and-game.part',
+  'tests/online-chat-authority.test.mjs',
+  'tests/player-online-privacy-bottom-dock-20261029.test.mjs',
+  'tests/player-web-online-actions-20261028.test.mjs',
+  'tests/player-web-online-village-20261028.test.mjs',
+  'tests/player-web-top-account-avatar-20261029.test.mjs',
+  'tests/status-visuals-v1.test.mjs',
+  'docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md'
+]);
+function isPlayerOnlinePrivacy630Scope(changes){
+  if(!Array.isArray(changes)||!changes.length||changes.length>onlinePrivacy630Paths.size)return false;
+  const byPath=new Map(changes.map(c=>[c.path,c]));
+  const required=['src/index.js','src/gmww-public-room-contract.js','src/gmww-members-live.js',
+    'src/player-web-src/35-online-chat.part','src/player-web-src/30-rooms-and-realtime.part',
+    'tests/player-online-privacy-bottom-dock-20261029.test.mjs',
+    'docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md'];
+  if(!required.every(p=>byPath.has(p)))return false;
+  for(const c of changes){
+    if(!onlinePrivacy630Paths.has(c.path)||!['M','A'].includes(c.status))return false;
+    if(c.path.startsWith('src/')&&c.status!=='M')return false;
+    if(c.path==='src/gmww-public-room-contract.js'){
+      const after=c.after?.replace('const canSee=display[statusId]===true;',
+        'const canSee=Object.prototype.hasOwnProperty.call(display,statusId)?display[statusId]===true:statusId!=="marked";');
+      if(after!==c.before)return false; // Only make legacy statuses more private
+    }
+    if(c.path==='src/index.js'){
+      if(!c.after?.includes('channel:"gm:"+id,scope:"gm"')||
+         !c.after.includes('frozen:meta?.statusDisplay?.frozen===true&&frozenLogins')||
+         !c.after.includes('body:JSON.stringify({loginId:data.member.loginId,text:body.text,channel:'))return false;
+    }
+    if(c.path==='src/player-web-src/35-online-chat.part'){
+      if(!c.after?.includes('function gmwwChatDockSync(')||
+         c.after.includes('new SpeechSynthesisUtterance')||
+         c.after.includes("confirm('Thực hiện "))return false;
+    }
+  }
+  return true;
+}
+
 function classifyBrowserScope(changes){
+  if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
   if(isGithubRuntimeCIRepair(changes))return "github-runtime-ota-ci";
   if(isGMCardOutside3275Scope(changes))return "gm-card-outside-3275";
   if(isArtifactPreview3274RecoveryScope(changes))return 'artifact-preview-3274-postmerge';
