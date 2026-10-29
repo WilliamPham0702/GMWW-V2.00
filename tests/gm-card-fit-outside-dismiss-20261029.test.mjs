@@ -17,6 +17,14 @@ test('Long Artifact and role names wrap inside the card, with enough badge clear
   assert.ok(bundle.includes(library.slice(library.indexOf('function fitPlayerCardTitle()'),library.indexOf('function fitPlayerCardInformation()'))));
 });
 
+test('Description wraps inside card grid instead of clipping at the right edge',()=>{
+  assert.match(css,/\.player-card\{[^}]*grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(css,/\.card-zone\{[^}]*min-width:0/);
+  assert.match(css,/\.card-zone-info\{[^}]*white-space:pre-wrap/);
+  assert.match(css,/\.card-zone-info\{[^}]*overflow-wrap:anywhere/);
+  assert.match(css,/\.card-zone-info\{[^}]*overflow-x:hidden/);
+});
+
 test('Artifact gutter detector ignores bright specks rather than shifting valid artwork',()=>{
   const head=library.slice(library.indexOf('function artifactArtworkSideMargins('),library.indexOf('function alignArtifactPreviewArtwork('));
   const detect=vm.runInNewContext(head+'\nartifactArtworkSideMargins');
