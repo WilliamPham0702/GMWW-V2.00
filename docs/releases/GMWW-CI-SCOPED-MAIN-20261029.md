@@ -23,3 +23,9 @@ Rollback: revert pull request CI policy này; Production không tự được ph
 - Giới hạn nhánh kiểm tra PR550 lịch sử trên `main`: không quét nội dung chuỗi của chính các tệp CI-only đã được kiểm toán.
 - Giữ điều kiện fail-closed cho mọi sửa luật/gameplay và các tệp lạ.
 - Chốt giữ nguyên Production/Runtime OTA/IPA; không tự phát hành từ thay đổi CI-only.
+
+## Bổ sung CI Say Rượu (29/10/2026)
+- Tách thay đổi CI-only khỏi workflow **Check Drunk Card Draw and Expelled Spiritualist**: chỉ kiểm tra bộ chọn phạm vi và các bất biến an toàn; không chạy test luật Say Rượu/Nhà Tin Thần Học khi không có thay đổi luật.
+- Bổ sung kiểm thử chống bỏ sót: thay đổi Worker, gameplay, luật Say Rượu hoặc thiếu release notes bắt buộc phân loại `full`.
+- Thêm workflow Say Rượu vào danh sách thay đổi CI-only được phép và chặn tự phát hành Production. Không thay đổi tính năng game, IPA, Runtime OTA, dữ liệu và lịch sử.
+- Rollback: revert PR CI Say Rượu tương ứng.

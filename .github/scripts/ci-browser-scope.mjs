@@ -292,6 +292,7 @@ const stableCIPolicyPaths=new Set([
   '.github/workflows/check-player-card-browsers.yml',
   '.github/workflows/check-dual-renderer.yml',
   '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-drunk-spiritualist.yml',
   '.github/workflows/deploy-production.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/GMWW-CI-POLICY-GATE-20261029.md',
