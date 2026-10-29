@@ -80,7 +80,7 @@ function dayActions(ctx,meta,usage,ballot){
     if(hits.some(x=>x.day===meta.cycleNight))continue;
     if(owner.artifactId&&(ctx.cycle.accepted.length>=Number(ctx.cfg.artifactLimitPerCycle??3)||ctx.cycle.accepted.some(x=>x.artifactId===owner.artifactId&&x.playerId==='member:'+actorId)))continue;
     const id='day:'+(owner.artifactId?'artifact:'+owner.artifactId:'role:'+owner.roleId)+':'+actorId+':'+actionId,name=card.actions?.find(x=>(x.id||x.actionId)===actionId)?.name||fn.name||fn.description||actionId;
-    list.push({id,actionId,name,...owner,card:undefined,actorIds:[actorId],targetCount:fn.noTarget?0:Number(fn.targetCount??1),noSelf:fn.noSelf!==false,allowDead:fn.allowDead,noTarget:fn.noTarget,type:rules.resolvedType({...fn,name}),effectIds:fn.effectIds||[]});
+    list.push({id,actionId,name,...owner,card:undefined,actorIds:[actorId],targetCount:fn.noTarget?0:Number(fn.targetCount??1),noSelf:fn.noSelf!==false||owner.artifactId==='artifact_27',allowDead:fn.allowDead,noTarget:fn.noTarget,type:rules.resolvedType({...fn,name}),effectIds:fn.effectIds||[]});
    }
   }
  }
