@@ -2849,7 +2849,7 @@ export class RoomDurableObject extends DurableObject {
       }else if(actionId==='action_exile'||effects.includes('effect_exile')){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,type:"expelled"});
         message="Artifact đã thực hiện Đuổi.";
-      }else if(artifactId==="artifact_35"&&actionId==="action_protect"){
+      }else if((artifactId==="artifact_35"||artifactId==="artifact_32")&&actionId==="action_protect"){
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,
           type:"status",statusId:"artifact_next_night_protect",protectNight:day+1});
         message="Khiên Bảo Hộ sẽ bảo vệ mục tiêu trong đêm kế tiếp.";
