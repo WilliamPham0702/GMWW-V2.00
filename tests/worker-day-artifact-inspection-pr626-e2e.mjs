@@ -65,13 +65,17 @@ try{
  assert.equal(ok(await gm('/battle-undo',{undoToken})).idempotent,true);
  assert.equal(ok(await gm('')).battleUndo,null,'undo should not remain actionable');
  // The removed receipt/use allows a new, independently identified action.
- const restoredCard=catalog.find(c=>c.id==='artifact_39');
- const replay=ok(await gm('/day-action',{matchId,cycleKey:'morning-1',actorId:ids[3],
-   artifactId:'artifact_39',actionId:restoredCard.functions[0].actionId,
-   targetIds:[ids[7]],clientEventId:'inspect-3-after-undo'}));
- assert.equal(replay.result.roleId,'role_seer');
+ const offer=ok(await req('/api/rooms/'+room.roomCode+'/me',undefined,sessions[3]));
+ const privateAction=(offer.onlineActions||[]).find(a=>a.artifactId==='artifact_39');
+ assert.ok(privateAction?.key,'live Player Web must offer the restored Artifact');
+ const replay=ok(await req('/api/rooms/'+room.roomCode+'/action',{matchId,
+   cycleKey:'morning-1',actionKey:privateAction.key,targetIds:[ids[7]]},sessions[3]));
+ assert.equal(replay.result.roleId,'role_seer','Player online uses same true Server inspection');
  const ownerAfterReplay=ok(await req('/api/rooms/'+room.roomCode+'/me',undefined,sessions[3]));
- assert.equal(ownerAfterReplay.dayArtifactInspections.at(-1)?.id,'inspect-3-after-undo');
+ assert.equal(ownerAfterReplay.dayArtifactInspections.at(-1)?.result?.roleId,'role_seer');
+ const notOwner=ok(await req('/api/rooms/'+room.roomCode+'/me',undefined,sessions[1]));
+ assert.equal((notOwner.dayArtifactInspections||[]).some(row=>row.targetId===ids[7]&&row.artifactId==='artifact_39'),false);
+
  const publicState=ok(await req('/api/rooms/'+room.roomCode));
  for(const artifactId of cases.map(x=>x[0]))assert.equal(JSON.stringify(publicState).includes(artifactId),false,'private Artifact leaked');
  console.log('PASS: four inspections, GM authentication, owner-only /me and reconnect, private audit, undo, idempotent replay, quota');
