@@ -8,7 +8,7 @@ export function validateGhostClue({text,playerNames=[]}={}){
    return {ok:false,error:'GHOST_ONE_WORD_ONLY'};
  const key=fold(value);
  if((Array.isArray(playerNames)?playerNames:[]).some(name=>
-   String(name||'').trim()&&fold(String(name).trim())===key))
+   String(name||'').trim().split(/\\s+/u).some(part=>fold(part)===key)))
    return {ok:false,error:'GHOST_PLAYER_NAME_FORBIDDEN',ban:true};
  return {ok:true,text:value};
 }
