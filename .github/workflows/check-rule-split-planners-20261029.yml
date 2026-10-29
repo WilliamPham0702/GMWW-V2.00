@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/gmww-artifact-*.js'
       - 'src/gmww-day-artifact-inspection.js'
+      - 'src/index.js'
+      - 'tests/worker-day-artifact-inspection-pr626-e2e.mjs'
+      - '.github/scripts/check-pr626-day-inspections-worker.mjs'
       - 'src/gmww-ghost-clue.js'
       - 'src/gmww-ghost-letter.js'
       - 'tests/card-executors-artifact-*.test.mjs'
@@ -17,7 +20,7 @@ permissions:
 jobs:
   planner-units:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -42,5 +45,11 @@ jobs:
           done
           if (( ${#files[@]} == 0 )); then echo 'No split-unit tests on this PR' >&2; exit 1; fi
           node --test "${files[@]}"
+      - name: Verify PR626 day Artifact Server action and real Worker HTTP/SQLite
+        if: ${{ hashFiles('tests/worker-day-artifact-inspection-pr626-e2e.mjs') != '' }}
+        run: |
+          npm ci
+          node --check src/index.js
+          node .github/scripts/check-pr626-day-inspections-worker.mjs
       - name: Show stage limitation
         run: echo 'Planner unit PASS is NOT Server/Player/DEMO/audio/undo/E2E acceptance; keep draft.'
