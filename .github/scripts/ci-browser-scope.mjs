@@ -2569,7 +2569,7 @@ function classifyBrowserScope(changes){
   // A partial/expanded PR550 change must never masquerade as a historic CI-only scope.
   if(Array.isArray(changes)&&changes.some(c=>
     c?.path==='tests/gmww-rule-snow-guard-pack-fairy.test.mjs'||
-    String(c?.after||'').includes('PR550 test-only rule regression')))return 'full';
+    (!stableCIPolicyPaths.has(c?.path)&&String(c?.after||'').includes('PR550 test-only rule regression'))))return 'full';
   if(isFairy246PostMergeScope(changes))return 'fairy-246-postmerge';
   if(isFairy246Scope(changes))return 'fairy-triptych-3246';
   if(isNight02Scope(changes))return 'night02-pack-roles';
