@@ -693,3 +693,25 @@ test('PR613 Artifact preview V3.274 release proof accepts only exact four CI fil
   assert.match(gate,/CI Stability Gate/);
   assert.match(gate,/V3\.274 PR613/);
 });
+
+test('PR613 V3.274 Character40 image API verification uses originals, never generated portraits',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/deploy-production.yml',
+    '.github/scripts/verify-character40-production.mjs',
+    'tests/ci-browser-scope.test.mjs',
+    'docs/releases/GMWW-PR613-release-proof-ci-20261029.md'
+  ];
+  assert.equal(classifyBrowserScope(paths.map(path=>({path,status:'M'}))),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope(paths.filter(x=>x!=='.github/scripts/verify-character40-production.mjs').map(path=>({path,status:'M'}))),'full');
+  assert.equal(classifyBrowserScope([...paths,'server-game/current/app.js'].map(path=>({path,status:'M'}))),'full');
+  const api=readFileSync('src/gmww-character40-catalog.js','utf8');
+  const production=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  const verification=readFileSync('.github/scripts/verify-character40-production.mjs','utf8');
+  assert.match(api,/u\.pathname='\/characters\/gmww40\/originals\//);
+  assert.match(production,/assets\/characters\/gmww40\/originals\/character-01\.webp/);
+  assert.match(production,/EXPECTED_CHARACTER_IMAGE/);
+  assert.match(verification,/const originalPath='assets\/characters\/gmww40\/'\+c\.original/);
+  assert.match(verification,/assert\.equal\(sha\(await bytes\(live\.imageUrl\)\),originalSha/);
+  assert.doesNotMatch(verification,/live portrait must match actual atlas frame/);
+});
