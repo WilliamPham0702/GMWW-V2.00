@@ -592,3 +592,17 @@ test('CI-only merge remains scoped with actual selector/deploy source containing
   assert.equal(classifyBrowserScope(complete),'ci-policy','all eight actual PR files must remain focused');
   assert.equal(classifyBrowserScope([...complete,modified('server-game/current/app.js','old','game changed')]),'full');
 });
+
+test('CI-only merge main push does not treat the CI policy selector itself as a PR550 gameplay patch',()=>{
+  const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+  const mainGuard=selector.slice(selector.indexOf("if(isRules550Scope(changes))return{mode:'night02-rule-regression-550'"));
+  assert.match(mainGuard,/!stableCIPolicyPaths\.has\(c\?\.path\)/);
+  assert.match(mainGuard,/if\(isStableCIPolicyScope\(changes\)\|\|isPolicyScope\(changes\)\)return\{mode:'ci-policy'/);
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old',selector),
+    modified('tests/ci-browser-scope.test.mjs','old','policy regression'),
+    modified('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md','old','# Vietnamese notes')
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay')]),'full');
+});
