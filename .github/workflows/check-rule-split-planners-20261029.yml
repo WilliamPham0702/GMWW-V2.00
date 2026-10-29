@@ -7,6 +7,11 @@ on:
       - 'src/gmww-day-artifact-inspection.js'
       - 'src/index.js'
       - 'tests/worker-day-artifact-inspection-pr626-e2e.mjs'
+      - 'tests/pr626-private-inspection-ui-demo-20261029.test.mjs'
+      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'server-game/current/app.js'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'src/gmww-demo-runner.js'
       - '.github/scripts/check-pr626-day-inspections-worker.mjs'
       - 'src/gmww-ghost-clue.js'
       - 'src/gmww-ghost-letter.js'
@@ -45,6 +50,12 @@ jobs:
           done
           if (( ${#files[@]} == 0 )); then echo 'No split-unit tests on this PR' >&2; exit 1; fi
           node --test "${files[@]}"
+      - name: Check GM and Player UI, DEMO, role audio and safe private-undo wiring
+        if: ${{ hashFiles('tests/pr626-private-inspection-ui-demo-20261029.test.mjs') != '' }}
+        run: |
+          node --test tests/pr626-private-inspection-ui-demo-20261029.test.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
       - name: Verify PR626 day Artifact Server action and real Worker HTTP/SQLite
         if: ${{ hashFiles('tests/worker-day-artifact-inspection-pr626-e2e.mjs') != '' }}
         run: |
