@@ -868,6 +868,15 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node --test tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-pr367-369-reconciliation.test.mjs tests/demo-server-runner.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs
           test -s docs/releases/GMWW-DEMO-HYBRID-20261028.md
+      - name: GitHub Runtime OTA CI-only — verify package and Production isolation
+        if: steps.scope.outputs.mode == 'github-runtime-ota-ci'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/runtime-release/verify-package.mjs
+          node --test .github/runtime-release/verify-package.test.mjs
+          node --test --test-name-pattern='GitHub-only Runtime CI repair' tests/ci-browser-scope.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md
       - name: CI-only policy — kiểm thử bất biến an toàn, không quét gameplay
         if: steps.scope.outputs.mode == 'ci-policy'
         run: |
