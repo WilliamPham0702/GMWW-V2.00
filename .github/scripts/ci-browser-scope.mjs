@@ -2728,6 +2728,7 @@ function isGithubNativeStage2Scope(changes){
     '.github/scripts/ci-browser-scope.mjs',
     '.github/workflows/check-player-web.yml',
     '.github/workflows/check-native-github-ota.yml',
+    '.github/workflows/deploy-production.yml',
     'tests/native-github-first-ota-stage2.test.mjs',
     'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md'
   ]);
@@ -3296,6 +3297,7 @@ function detect(){
         'server-game/src/10-library-and-settings.part','server-game/current/app.js',
         '.github/workflows/build-server-game-ipa.yml','.github/scripts/ci-browser-scope.mjs',
         '.github/workflows/check-player-web.yml','.github/workflows/check-native-github-ota.yml',
+        '.github/workflows/deploy-production.yml',
         'tests/native-github-first-ota-stage2.test.mjs',
         'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md'
       ]);
