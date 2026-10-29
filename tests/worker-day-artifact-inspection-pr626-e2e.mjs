@@ -43,8 +43,36 @@ try{
   assert.equal((await gm('/day-action',{...payload,clientEventId:'exhausted-'+i})).error,'DAY_ARTIFACT_SINGLE_USE_EXHAUSTED');
   const reconnect=ok(await req('/api/rooms/'+room.roomCode+'/me',undefined,sessions[i]));
   assert.equal(reconnect.artifact.artifactId,artifactId);
+  const privateRow=(reconnect.dayArtifactInspections||[]).find(row=>row.id==='inspect-'+i);
+  assert.equal(privateRow?.result?.private,true,'owner sees private receipt after reconnect');
+  assert.equal(privateRow?.targetId,ids[i+4]);
+  if(i===3)assert.equal(privateRow.result.roleName,'Tiên Tri');
+  const another=ok(await req('/api/rooms/'+room.roomCode+'/me',undefined,sessions[(i+1)%4]));
+  assert.equal((another.dayArtifactInspections||[]).some(row=>row.id==='inspect-'+i),false,
+    'different member must not receive another owner\'s inspection');
  }
+ // Last accepted day inspection can be undone by GM in this SAME day.
+ const beforeUndo=ok(await gm('/state'));
+ assert.equal(beforeUndo.battleUndo?.turnId,'day-inspection');
+ const undoToken=beforeUndo.battleUndo.token;
+ assert.equal((await req('/api/gm/rooms/'+room.roomCode+'/battle-undo',
+   {undoToken},sessions[3])).status,401,'owner is not GM');
+ const undone=ok(await gm('/battle-undo',{undoToken}));
+ assert.equal(undone.undone,true);
+ const afterUndo=ok(await req('/api/rooms/'+room.roomCode+'/me',undefined,sessions[3]));
+ assert.equal((afterUndo.dayArtifactInspections||[]).some(row=>row.id==='inspect-3'),false,
+   'undo must withdraw the private delivery');
+ assert.equal(ok(await gm('/battle-undo',{undoToken})).idempotent,true);
+ assert.equal(ok(await gm('/state')).battleUndo,null,'undo should not remain actionable');
+ // The removed receipt/use allows a new, independently identified action.
+ const restoredCard=catalog.find(c=>c.id==='artifact_39');
+ const replay=ok(await gm('/day-action',{matchId,cycleKey:'morning-1',actorId:ids[3],
+   artifactId:'artifact_39',actionId:restoredCard.functions[0].actionId,
+   targetIds:[ids[7]],clientEventId:'inspect-3-after-undo'}));
+ assert.equal(replay.result.roleId,'role_seer');
+ const ownerAfterReplay=ok(await req('/api/rooms/'+room.roomCode+'/me',undefined,sessions[3]));
+ assert.equal(ownerAfterReplay.dayArtifactInspections.at(-1)?.id,'inspect-3-after-undo');
  const publicState=ok(await req('/api/rooms/'+room.roomCode));
  for(const artifactId of cases.map(x=>x[0]))assert.equal(JSON.stringify(publicState).includes(artifactId),false,'private Artifact leaked');
- console.log('PASS: four real day Artifact inspections, ownership, GM authentication, private results, retries, quota and reconnect');
+ console.log('PASS: four inspections, GM authentication, owner-only /me and reconnect, private audit, undo, idempotent replay, quota');
 }finally{await gm('/end',{force:true}).catch(()=>{})}
