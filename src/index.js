@@ -3,6 +3,7 @@ import {chatPolicy,chatNormalizeText} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
+import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
 import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes,gallowsSetDuration,gallowsCloseNomination} from "./gmww-gallows-rules.js";
@@ -2241,7 +2242,17 @@ export class RoomDurableObject extends DurableObject {
       result={message};
     }else if(artifactId){
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
-      if(actionId==='action_revive'||effects.includes('effect_revive')){
+      // Isolated PR #626: information Artifact results must come from current
+      // Server assignments. Never trust client-supplied role/faction or broadcast
+      // the private answer to room listeners.
+      if(['artifact_09','artifact_24','artifact_29','artifact_39'].includes(artifactId)){
+        const inspection=resolveDayArtifactInspection({artifactId,actionId,
+          targetId:effectiveTargets[0],assignments});
+        if(!inspection)return j({ok:false,error:'DAY_ARTIFACT_INSPECTION_INVALID',
+          message:'Artifact soi không có mục tiêu hoặc chức năng hợp lệ; chưa trừ lượt.'},409);
+        message=inspection.message;
+        result=inspection;
+      }else if(actionId==='action_revive'||effects.includes('effect_revive')){
         for(const id of effectiveTargets){
           const changed=interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
             String(x.type)==="dead"&&x.effectActive!==false);
