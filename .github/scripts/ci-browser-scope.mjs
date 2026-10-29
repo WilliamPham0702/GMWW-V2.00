@@ -2590,7 +2590,38 @@ function isArtifactPreview3274Scope(changes){
   }catch{return false}
 }
 
+// PR613 post-merge recovery: only CI policy and release gating may change.
+// An ancestor check and live V3.274 artifact/role contract are mandatory.
+const artifact3274RecoveryPaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/releases/GMWW-PR613-postmerge-ci-20261029.md'
+]);
+function isArtifactPreview3274RecoveryScope(changes){
+  if(!Array.isArray(changes)||changes.length!==5||
+    changes.some(c=>!artifact3274RecoveryPaths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  try{
+    git('merge-base','--is-ancestor','2171214cec2c9af92994c27caaa8f75e976dbb1c','HEAD');
+    const file=p=>fs.readFileSync(p,'utf8');
+    const art=file('server-game/src/10-library-and-settings.part');
+    const app=file('server-game/current/app.js');
+    const begin=art.indexOf('function artifactArtworkSideMargins(');
+    const end=art.indexOf('async function renderEntityFront()',begin);
+    if(begin<0||end<=begin)return false;
+    const helper=art.slice(begin,end);
+    return JSON.parse(file('package.json')).version==='3.274.0'&&
+      file('src/index.js').includes('VERSION="V3.274",NATIVE_SHELL_VERSION="3.264"')&&
+      art.includes('const offsetPercent=50*(margins.right-margins.left)')&&
+      !helper.includes('scaleX(')&&!helper.includes('scaleY(')&&app.includes(helper)&&
+      art.includes("if(kind==='artifacts'&&currentKind===kind&&editDraft?.id===e.id)")&&
+      file('.github/scripts/prepare-update-channel.mjs').includes('V3.274 PR613:');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isArtifactPreview3274RecoveryScope(changes))return 'artifact-preview-3274-postmerge';
   if(isArtifactPreview3274Scope(changes))return 'artifact-preview-3274';
   if(isGithubPreviewCIOnly(changes))return 'github-pr-preview-ci';
   if(isPlayerAvatar603Scope(changes))return 'player-top-avatar-603';
@@ -2837,6 +2868,18 @@ function isTemplateDock3268Scope(changes){
 }
 
 function detect(){
+  // Same strict classification must run BEFORE the legacy early full-suite fallback.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(line=>{const [status,path]=line.split('\t');return{status,path}});
+        if(isArtifactPreview3274RecoveryScope(changes))
+          return{mode:'artifact-preview-3274-postmerge',reason:'V3.274 exact five-file postmerge CI and OTA release recovery'};
+      }
+    }catch{} // Never weaken unknown CI scopes.
+  }
   // Owner-approved PR595 Runtime V3.272: verify every changed path and
   // the version/GM/chat contract. Unknown changes always run the full suite.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
