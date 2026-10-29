@@ -873,6 +873,17 @@ jobs:
         run: |
           node --check .github/scripts/ci-browser-scope.mjs
           node --test --test-name-pattern='Unknown Worker|Any other public-room|UI changes outside|Browser, seat, workflow|A deletion, unexpected status|CI-only merge|PR603 account avatar' tests/ci-browser-scope.test.mjs
+      - name: PR613 V3.274 — chỉ kiểm thử Artifact căn giữa, Vai Trò và an toàn Runtime
+        if: steps.scope.outputs.mode == 'artifact-preview-3274'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs
+          node --test --test-name-pattern='PR613 Artifact preview V3.274' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-artifact-preview-centering-main-20261029.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
