@@ -9,6 +9,7 @@ import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
 import {validateUnrevealedArtifactDestroy} from "./gmww-artifact-destruction.js";
 import {planArtifactRoleSwap} from "./gmww-artifact-role-swap.js";
 import {validateArtifactSteal,eligibleArtifactReplacements,applyArtifactStealSummary,artifactForNewOwner} from "./gmww-artifact-steal.js";
+import {planDayFunctionCopy} from "./gmww-artifact-function-copy.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -2685,7 +2686,8 @@ export class RoomDurableObject extends DurableObject {
     }else if(targets.length&&effectiveTargets.length===0){
       message="Mục tiêu đã bị đuổi khỏi làng; hành động không có tác dụng.";
       result={message,noEffect:true};
-    }else if(!artifactId&&actionId==="action_stab"&&roleId==="role_thug"){
+    }else if(!artifactId&&actionId==="action_stab"&&
+      (roleId==="role_thug"||fn?.copiedFromRoleId==="role_thug")){
       const chosen=assignments.filter(x=>normalizeLoginId(x.loginId)===effectiveTargets[0]);
       const correctlyStabbed=chosen.some(x=>isWolf(x)||isThird(x));
       deadVictims=[correctlyStabbed?effectiveTargets[0]:actorId];
@@ -2761,6 +2763,10 @@ export class RoomDurableObject extends DurableObject {
       if(!inspection)return j({ok:false,error:'DAY_ARTIFACT_INSPECTION_INVALID',
         message:'Artifact không có mục tiêu soi hợp lệ hoặc sai chức năng; chưa trừ lượt.'},409);
       message=inspection.message;result=inspection;
+    }else if(artifactId==="artifact_23"&&actionId==="artifact_action_copy_function"){
+      changes.push({kind:"copy_day_function",targetId:effectiveTargets[0]});
+      message="Tráng Gương đã sao chép chức năng mới.";
+      result={message,private:true,roleFunctionCopied:true};
     }else if(artifactId==="artifact_17"&&actionId==="artifact_action_steal"){
       // Move the unrevealed Artifact to this owner, issue a *real* replacement
       // from a configured deck, and publish new private deliveries atomically.
@@ -2868,6 +2874,42 @@ export class RoomDurableObject extends DurableObject {
       if(effect.kind==="double_gallows"){
         await this.ctx.storage.put(effect.key,effect.value);
         this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(effect.value,meta),serverTime:Date.now()});
+        continue;
+      }
+      if(effect.kind==="copy_day_function"){
+        const copied=await this.ctx.storage.transaction(async txn=>{
+          const current=await txn.get("meta"),rows=await txn.get("assignments")||[],
+            actorRoles=await txn.get("roles:"+actorId)||[],
+            targetRoles=await txn.get("roles:"+effect.targetId)||[];
+          if(!current||String(current.matchId||"")!==matchId||
+            String(current.cycleKey||"")!==cycleKey||
+            String(current.cyclePhase||"")!=="morning")
+            return {ok:false,error:"COPY_FUNCTION_PHASE_CHANGED"};
+          const plan=planDayFunctionCopy({assignments:rows,actorId,
+            targetId:effect.targetId,actorRoles,targetRoles,now:time});
+          if(!plan.ok)return plan;
+          const version=Math.max(1,Number(current.deliveryVersion)||1)+1,
+            nextMeta={...current,deliveryVersion:version,
+              roleDeliveredAt:time,updatedAt:time};
+          await txn.put("roles:"+actorId,plan.roles);
+          await txn.put("role:"+actorId,plan.roles[0]);
+          // Match-wide delivery revision must retain every other Player's
+          // snapshot, including their Artifact and previous viewed state.
+          for(const row of rows){
+            const id=normalizeLoginId(row.loginId);
+            if(!id)continue;
+            const roles=id===actorId?plan.roles:await txn.get("roles:"+id)||[];
+            if(!Array.isArray(roles)||!roles.length)continue;
+            await txn.put("deliverySnapshot:"+id,buildPrivateDeliverySnapshot({
+              matchId,matchRevision:Number(nextMeta.matchRevision||0),
+              deliveryVersion:version,publishedAt:time,roles}));
+          }
+          await txn.put("meta",nextMeta);
+          return {ok:true,room:publicRoom(nextMeta)};
+        });
+        if(!copied.ok)return j({ok:false,error:copied.error||"COPY_FUNCTION_CONFLICT",
+          message:"Chưa có chức năng sao chép tương thích để thực thi; chưa trừ lượt."},409);
+        this.broadcast({type:"room_state",room:copied.room,serverTime:Date.now()});
         continue;
       }
       if(effect.kind==="steal_artifact"){
