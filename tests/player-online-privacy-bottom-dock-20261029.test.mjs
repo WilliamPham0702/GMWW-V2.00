@@ -50,3 +50,14 @@ test('Server-patched Player script never mounts the legacy bottom deck in Online
   has(runtime,'if(String(state.room?.roomMode||"online").toLowerCase()==="online"){$("#gmwwPlayerPrivateDock")?.remove();return}');
   has(runtime,'function syncPlayerMiniCards(){');
 });
+
+test('GM can reply to an authenticated private Player channel without public chat fanout',()=>{
+  const gm=read('server-game/src/45-online-chat.part');
+  assert.ok(gm.includes("String(ch.channel).startsWith('gm:')"));
+  assert.ok(gm.includes("playRoomApi('/chat',{method:'POST'"));
+  assert.ok(gm.includes("loginId,text:msg"));
+  assert.ok(worker.includes('async gmChatSend(request,body)'));
+  assert.ok(worker.includes('this.gmAuthorized(request)'));
+  assert.ok(worker.includes('this.broadcast({type:"chat_tick",serverTime:now})'));
+  assert.ok(!worker.includes('this.broadcast({type:"chat_message"'));
+});
