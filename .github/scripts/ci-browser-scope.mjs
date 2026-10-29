@@ -2640,7 +2640,56 @@ function isArtifactPreview3274RecoveryScope(changes){
   }catch{return false}
 }
 
+
+// PR628 — exact GM UI only: card face fit, Artifact gutter and outside-dismiss.
+// Fail closed on unexpected paths/versions; every included UI pathway is tested.
+const gmCardOutside3275Paths=new Set([
+  'server-game/src/00-core-and-library.part',
+  'server-game/src/10-library-and-settings.part',
+  'server-game/src/50-roles-and-artifacts.part',
+  'server-game/current/app.js',
+  'server-game/current/style.css',
+  'server-game/current/GMWW.html',
+  'src/index.js',
+  'package.json','package-lock.json',
+  '.github/scripts/prepare-update-channel.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-gm-card-preview-centering-20261029.yml',
+  'tests/gm-card-fit-outside-dismiss-20261029.test.mjs',
+  'tests/gm-card-outside-ci-scope-20261029.test.mjs',
+  'docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md'
+]);
+function isGMCardOutside3275Scope(changes){
+  if(!Array.isArray(changes)||changes.length!==gmCardOutside3275Paths.size||
+     changes.some(c=>!['A','M'].includes(c?.status)||!gmCardOutside3275Paths.has(c.path))||
+     new Set(changes.map(c=>c.path)).size!==gmCardOutside3275Paths.size)return false;
+  try{
+    const load=p=>fs.readFileSync(p,'utf8'),pkg=JSON.parse(load('package.json'));
+    const library=load('server-game/src/10-library-and-settings.part');
+    const ui=load('server-game/src/50-roles-and-artifacts.part');
+    const bundle=load('server-game/current/app.js');
+    const assembly=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','45-online-chat','50-roles-and-artifacts']
+      .map(part=>load('server-game/src/'+part+'.part')).join('');
+    return pkg.version==='3.275.0'&&
+      JSON.parse(load('package-lock.json')).version===pkg.version&&
+      JSON.parse(load('package-lock.json')).packages[''].version===pkg.version&&
+      load('src/index.js').includes('VERSION="V3.275",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss"')&&
+      load('server-game/current/GMWW.html').includes('<title>GMWW V3.275</title>')&&
+      bundle===assembly&&
+      library.includes('function fitPlayerCardTitle()')&&
+      library.includes('title.scrollHeight>available+1')&&
+      ui.includes('function gmwwDismissOutsidePointer(event)')&&
+      ui.includes('gmwwBindOutsideDismiss();')&&
+      load('server-game/current/style.css').includes('white-space:normal;overflow-wrap:anywhere')&&
+      load('.github/scripts/prepare-update-channel.mjs').includes('V3.275 PR628:')&&
+      load('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'gm-card-outside-3275'")&&
+      load('docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md').includes('V3.275');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isGMCardOutside3275Scope(changes))return "gm-card-outside-3275";
   if(isArtifactPreview3274RecoveryScope(changes))return 'artifact-preview-3274-postmerge';
   if(isArtifactPreview3274Scope(changes))return 'artifact-preview-3274';
   if(isGithubPreviewCIOnly(changes))return 'github-pr-preview-ci';
@@ -3325,6 +3374,15 @@ function detect(){
     if(isIcon247PostMergeScope(changes))
      return{mode:'icon-scale-3247-postmerge',reason:'Exact four-file same-version V3.247 recovery'};
    }catch{}
+  }
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean).map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isGMCardOutside3275Scope(changes))return{mode:'gm-card-outside-3275',reason:'PR628 V3.275 exact GM card fit, outside-dismiss and OTA release only'};
+      }
+    }catch{} // Unknown source or CI edits must run full checks.
   }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
