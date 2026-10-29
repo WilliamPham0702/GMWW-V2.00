@@ -194,6 +194,6 @@ test('V3.124: GM avoids continuous heavy DOM rewrites; animation and Player CSS 
   assert.equal(webCss.slice(0,gmCss.length),gmCss);
   assert.equal(read('server-game/current/app.js'),
     ['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
-    '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part']
+    '30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part']
      .map(x=>read('server-game/src/'+x)).join(''));
 });
