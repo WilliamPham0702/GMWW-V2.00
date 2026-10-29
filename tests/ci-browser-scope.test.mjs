@@ -716,3 +716,18 @@ test('PR613 V3.274 canonical Character40 verification repair keeps exact CI-only
   assert.ok(route.includes("u.pathname='/characters/gmww40/originals/'+visual+'.webp'"));
   assert.match(workflow,/git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD/);
 });
+
+test('GitHub-only Runtime CI repair scopes only audited policy and package checks',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/deploy-production.yml',
+    '.github/runtime-release/verify-package.test.mjs',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const changes=paths.map(path=>({path,status:'M'}));
+  assert.equal(classifyBrowserScope(changes),'github-runtime-ota-ci');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
+});

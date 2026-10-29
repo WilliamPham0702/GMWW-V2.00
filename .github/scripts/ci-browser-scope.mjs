@@ -2640,7 +2640,37 @@ function isArtifactPreview3274RecoveryScope(changes){
   }catch{return false}
 }
 
+// Exact CI-only GitHub Runtime OTA repair; unknown paths fail closed.
+const githubRuntimeCIRepairPaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/runtime-release/verify-package.test.mjs',
+  'tests/ci-browser-scope.test.mjs'
+]);
+function isGithubRuntimeCIRepair(changes){
+  if(!Array.isArray(changes)||changes.length!==githubRuntimeCIRepairPaths.size||
+    changes.some(c=>c?.status!=='M'||!githubRuntimeCIRepairPaths.has(c.path)))return false;
+  try{
+    const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
+    const check=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+    const start=deploy.indexOf('while IFS= read -r FILE');
+    const end=deploy.indexOf('done < /tmp/gmww-production-change-scope.txt',start);
+    if(start<0||end<start)return false;
+    const scope=deploy.slice(start,end);
+    return [
+      '.github/workflows/github-runtime-ota.yml',
+      '.github/runtime-release/verify-package.mjs',
+      '.github/runtime-release/verify-package.test.mjs',
+      'docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md'
+    ].every(p=>scope.includes(p))&&
+      check.includes("steps.scope.outputs.mode == 'github-runtime-ota-ci'")&&
+      fs.existsSync('docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isGithubRuntimeCIRepair(changes))return 'github-runtime-ota-ci';
   if(isArtifactPreview3274RecoveryScope(changes))return 'artifact-preview-3274-postmerge';
   if(isArtifactPreview3274Scope(changes))return 'artifact-preview-3274';
   if(isGithubPreviewCIOnly(changes))return 'github-pr-preview-ci';
@@ -2895,6 +2925,7 @@ function detect(){
       if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
         const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
         const changes=rows.map(line=>{const [status,path]=line.split('\t');return{status,path}});
+        if(isGithubRuntimeCIRepair(changes))return{mode:'github-runtime-ota-ci',reason:'Exact GitHub-only OTA CI isolation'};
         if(isArtifactPreview3274RecoveryScope(changes))
           return{mode:'artifact-preview-3274-postmerge',reason:'V3.274 exact five-file postmerge CI and OTA release recovery'};
       }
