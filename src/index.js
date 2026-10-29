@@ -3423,6 +3423,34 @@ export class RoomDurableObject extends DurableObject {
       roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:ruleTargets,
         eventId:token,usedAt:new Date().toISOString(),currentUsage};
     }
+    // Night versions of the 3 transformation Artifacts use the same real
+    // planners as Day, rather than consuming a turn as a fake effect_notice.
+    const transform=artifactId==="artifact_40"&&body.actionId==="artifact_action_swap_role"?"swap":
+      artifactId==="artifact_23"&&body.actionId==="artifact_action_copy_function"?"copy":
+      artifactId==="artifact_32"&&body.actionId==="artifact_action_link"?"link":"";
+    let transformPlan=null;
+    if(transform){
+      if(type!=="effect_notice"||targets.length!==1||targets[0]===actorId||
+        isExpelled(targets[0])||interactions.some(x=>
+          normalizeLoginId(x.loginId)===targets[0]&&x.type==="dead"&&
+          x.effectActive!==false&&(!x.matchId||String(x.matchId)===matchId)))
+        return j({ok:false,error:"NIGHT_ARTIFACT_TRANSFORM_TARGET_INVALID"},409);
+      const assignments=await this.ctx.storage.get("assignments")||[],
+        actorRoles=await this.ctx.storage.get("roles:"+actorId)||[],
+        targetRoles=await this.ctx.storage.get("roles:"+targets[0])||[],
+        now=new Date().toISOString();
+      transformPlan=transform==="swap"?planArtifactRoleSwap({assignments,
+        actorId,targetId:targets[0],actorRoles,targetRoles,now}):
+        transform==="copy"?planDayFunctionCopy({assignments,
+          actorId,targetId:targets[0],actorRoles,targetRoles,now}):
+        planArtifactLink({actorId,targetId:targets[0],
+          actorArtifact:await this.ctx.storage.get("artifact:"+actorId),
+          donorArtifact:await this.ctx.storage.get("artifact:"+targets[0]),
+          assignments,matchId});
+      if(!transformPlan.ok)return j({ok:false,error:transformPlan.error},409);
+      if(transform==="link"&&await this.ctx.storage.get("artifactLink:"+matchId+":"+actorId))
+        return j({ok:false,error:"ARTIFACT_LINK_ALREADY_USED"},409);
+    }
     const undoKey="battleLastAction:"+matchId,
       artifactKey=artifactId?"artifact:"+actorId:null,
       useKey=artifactId?"artifactUse:"+actorId+":"+artifactId:null,
@@ -3431,10 +3459,15 @@ export class RoomDurableObject extends DurableObject {
     // deliveries plus room revision in the same authorized Undo snapshot.
     const cupidTargets=roleUse?.roleId==="role_cupid"&&roleUse.actionId==="action-cupid-pair"?
       targets:[],avengerTargets=roleUse?.roleId==="role_avenger"&&roleUse.actionId==="action-avenger-target"?
-      [actorId]:[],privateKeys=[...cupidTargets,...avengerTargets].flatMap(id=>[
+      [actorId]:[],transformedPlayers=transform&&transform!=="link"?[actorId,...(transform==="swap"?targets:[])]:[],
+      privateKeys=[...new Set([...cupidTargets,...avengerTargets,...transformedPlayers])].flatMap(id=>[
         "role:"+id,"roles:"+id,"deliverySnapshot:"+id]);
     const keys=["interactions","assignments",...privateKeys,
-      ...([(cupidTargets.length||avengerTargets.length)?"meta":null,roleUse?usageKey:null,artifactKey,useKey,cycleUseKey].filter(Boolean))];
+      ...([(cupidTargets.length||avengerTargets.length)?"meta":null,
+        roleUse||transform==="swap"?usageKey:null,
+        transform==="swap"?"dayRoleUsage:"+matchId:null,
+        transform==="link"?"artifactLink:"+matchId+":"+actorId:null,
+        artifactKey,useKey,cycleUseKey].filter(Boolean))];
     const snapshot=async()=>{const entries=[];for(const key of keys){
       const value=await this.ctx.storage.get(key);
       entries.push({key,exists:value!==undefined&&value!==null,value:value===undefined?null:value});
@@ -3591,6 +3624,36 @@ export class RoomDurableObject extends DurableObject {
       await this.ctx.storage.put("interactions",pruneInteractions(rows));
     }
     if(roleUse)await this.ctx.storage.put(usageKey,appendBattleRoleActionUsage(roleUse.currentUsage,roleUse));
+    if(transform&&effectiveTargets.length===1){
+      const now=new Date().toISOString();
+      if(transform==="link"){
+        await this.ctx.storage.put("artifactLink:"+matchId+":"+actorId,
+          {...transformPlan.link,createdAt:now});
+      }else if(transform==="copy"){
+        await this.ctx.storage.put("roles:"+actorId,transformPlan.roles);
+        await this.ctx.storage.put("role:"+actorId,transformPlan.roles[0]);
+        await this.ctx.storage.put("deliverySnapshot:"+actorId,
+          buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),
+            deliveryVersion:Number(meta.deliveryVersion||0),
+            publishedAt:String(meta.roleDeliveredAt||""),roles:transformPlan.roles}));
+      }else if(transform==="swap"){
+        await this.ctx.storage.put("assignments",transformPlan.assignments);
+        for(const [id,roles] of [[actorId,transformPlan.actorRoles],
+          [targets[0],transformPlan.targetRoles]]){
+          await this.ctx.storage.put("roles:"+id,roles);
+          await this.ctx.storage.put("role:"+id,roles[0]);
+          await this.ctx.storage.put("deliverySnapshot:"+id,
+            buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),
+              deliveryVersion:Number(meta.deliveryVersion||0),
+              publishedAt:String(meta.roleDeliveredAt||""),roles}));
+        }
+        for(const key of [usageKey,"dayRoleUsage:"+matchId]){
+          const ledger=await this.ctx.storage.get(key)||[];
+          await this.ctx.storage.put(key,(Array.isArray(ledger)?ledger:[])
+            .filter(row=>![actorId,targets[0]].includes(normalizeLoginId(row.actorId))));
+        }
+      }
+    }
     const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
       record={token:undoToken,matchId,cycleKey,night:Number(meta.cycleNight||1),turnId,
         label:String(body?.effectName||body?.actionId||"Hành động").slice(0,120),targetIds:targets,
