@@ -1326,10 +1326,11 @@ function alignArtifactPreviewArtwork(img){
     context.drawImage(img,0,0,sample.width,sample.height);
     const margins=artifactArtworkSideMargins(context.getImageData(0,0,sample.width,sample.height).data,sample.width,sample.height);
     if(!margins)return;
-    const scale=1/(1-margins.left-margins.right);
-    const offsetPercent=100*((scale-1)/2-scale*margins.left);
-    // Only expand horizontally: top/bottom frame art and titles stay untouched.
-    img.style.transform='translate3d('+offsetPercent.toFixed(2)+'%,0,0) scaleX('+scale.toFixed(4)+')';
+    // Center the visible artwork without stretching or changing its aspect ratio.
+    // In CSS percentage transforms, the offset is relative to the image width.
+    const offsetPercent=50*(margins.right-margins.left);
+    if(Math.abs(offsetPercent)<.25)return;
+    img.style.transform='translate3d('+offsetPercent.toFixed(2)+'%,0,0)';
   }catch(_){
     // A non-readable external image retains the safe, centered CSS fallback.
   }
