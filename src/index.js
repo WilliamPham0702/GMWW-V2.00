@@ -10,6 +10,7 @@ import {validateUnrevealedArtifactDestroy} from "./gmww-artifact-destruction.js"
 import {planArtifactRoleSwap} from "./gmww-artifact-role-swap.js";
 import {validateArtifactSteal,eligibleArtifactReplacements,applyArtifactStealSummary,artifactForNewOwner} from "./gmww-artifact-steal.js";
 import {planDayFunctionCopy} from "./gmww-artifact-function-copy.js";
+import {planArtifactLink,linkedArtifactAction} from "./gmww-artifact-link.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -2605,6 +2606,17 @@ export class RoomDurableObject extends DurableObject {
       const fns=Array.isArray(card.functions)&&card.functions.length?card.functions:card.actions||[];
       fn=fns.find(x=>String(x?.actionId||x?.id)===actionId);
       if(fn){const legacy=(card.actions||[]).find(x=>String(x?.actionId||x?.id)===actionId);fn={...legacy,...fn}}
+      if(artifactId==="artifact_32"&&actionId!=="artifact_action_link"){
+        const link=await this.ctx.storage.get("artifactLink:"+matchId+":"+actorId),
+          donor=link?await this.ctx.storage.get("artifact:"+link.donorId):null,
+          donorRow=assignments.find(row=>normalizeLoginId(row.loginId)===link?.donorId),
+          valid=linkedArtifactAction({link,actorId,actionId,matchId,
+            donorArtifact:donor,donorAssignment:donorRow});
+        if(!valid.ok)return j({ok:false,error:valid.error,
+          message:"Artifact liên kết không hợp lệ hoặc chưa được lật."},409);
+        fn=donor?.artifactCard?.functions?.find(x=>x.actionId===actionId)||null;
+        if(!fn)return j({ok:false,error:"ARTIFACT_LINK_SOURCE_FUNCTION_INVALID"},409);
+      }
     }else{
       owned=assignments.find(x=>normalizeLoginId(x.loginId)===actorId&&String(x.roleId)===roleId);
       if(!owned)return j({ok:false,error:"DAY_ROLE_NOT_OWNED"},403);
@@ -2661,7 +2673,10 @@ export class RoomDurableObject extends DurableObject {
       useKey="artifactUse:"+actorId+":"+artifactId;
     let artifactReservation=null;
     if(artifactId){
-      if(owned.singleUse===true&&await this.ctx.storage.get(useKey))
+      const copiedLink=artifactId==="artifact_32"&&actionId!=="artifact_action_link";
+      if(copiedLink&&await this.ctx.storage.get("artifactEchoUse:"+matchId+":"+actorId+":"+actionId))
+        return j({ok:false,error:"ARTIFACT_LINK_COPIED_ACTION_EXHAUSTED"},409);
+      if(!copiedLink&&owned.singleUse===true&&await this.ctx.storage.get(useKey))
         return j({ok:false,error:"DAY_ARTIFACT_SINGLE_USE_EXHAUSTED"},409);
       const ckey="artifactCycle:"+artifactCycleKey,
         cstate=await this.ctx.storage.get(ckey)||{cycleKey:artifactCycleKey,accepted:[]},
@@ -2757,12 +2772,19 @@ export class RoomDurableObject extends DurableObject {
         message="Quả Cầu Phán Đoán soi sai: người sở hữu phải chết.";
       }
       result={message,correct};
-    }else if(artifactId&&['artifact_09','artifact_24','artifact_29','artifact_39'].includes(artifactId)){
-      const inspection=resolveDayArtifactInspection({artifactId,actionId,
+    }else if(artifactId&&(['artifact_09','artifact_24','artifact_29','artifact_39'].includes(artifactId)||
+      artifactId==="artifact_32"&&actionId!=="artifact_action_link")){
+      const linked=artifactId==="artifact_32"?
+        await this.ctx.storage.get("artifactLink:"+matchId+":"+actorId):null;
+      const inspection=resolveDayArtifactInspection({artifactId:linked?.sourceArtifactId||artifactId,actionId,
         targetId:effectiveTargets[0],assignments});
       if(!inspection)return j({ok:false,error:'DAY_ARTIFACT_INSPECTION_INVALID',
         message:'Artifact không có mục tiêu soi hợp lệ hoặc sai chức năng; chưa trừ lượt.'},409);
       message=inspection.message;result=inspection;
+    }else if(artifactId==="artifact_32"&&actionId==="artifact_action_link"){
+      changes.push({kind:"link_artifact",targetId:effectiveTargets[0]});
+      message="Lam Ngọc Định Mệnh đã liên kết riêng với Artifact mục tiêu.";
+      result={message,private:true,artifactLinked:true};
     }else if(artifactId==="artifact_23"&&actionId==="artifact_action_copy_function"){
       changes.push({kind:"copy_day_function",targetId:effectiveTargets[0]});
       message="Tráng Gương đã sao chép chức năng mới.";
@@ -2874,6 +2896,27 @@ export class RoomDurableObject extends DurableObject {
       if(effect.kind==="double_gallows"){
         await this.ctx.storage.put(effect.key,effect.value);
         this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(effect.value,meta),serverTime:Date.now()});
+        continue;
+      }
+      if(effect.kind==="link_artifact"){
+        const linked=await this.ctx.storage.transaction(async txn=>{
+          const current=await txn.get("meta"),rows=await txn.get("assignments")||[],
+            actorArtifact=await txn.get("artifact:"+actorId),
+            donorArtifact=await txn.get("artifact:"+effect.targetId),
+            key="artifactLink:"+matchId+":"+actorId;
+          if(!current||String(current.matchId||"")!==matchId||
+            String(current.cycleKey||"")!==cycleKey||
+            String(current.cyclePhase||"")!=="morning")
+            return {ok:false,error:"ARTIFACT_LINK_PHASE_CHANGED"};
+          if(await txn.get(key))return {ok:false,error:"ARTIFACT_LINK_ALREADY_USED"};
+          const planned=planArtifactLink({actorId,targetId:effect.targetId,
+            actorArtifact,donorArtifact,assignments:rows,matchId});
+          if(!planned.ok)return planned;
+          await txn.put(key,{...planned.link,createdAt:time});
+          return {ok:true};
+        });
+        if(!linked.ok)return j({ok:false,error:linked.error,
+          message:"Chưa thể liên kết Artifact này, chưa tiêu hao lượt."},409);
         continue;
       }
       if(effect.kind==="copy_day_function"){
@@ -3117,9 +3160,17 @@ export class RoomDurableObject extends DurableObject {
     if(artifactId){
       const ckey="artifactCycle:"+artifactCycleKey;
       await this.ctx.storage.put(ckey,artifactReservation.state);
-      await this.ctx.storage.put(useKey,{requestId:token,cycleKey:artifactCycleKey,usedAt:time,artifactId,actorId});
-      // Steal replaced the owner card inside the transaction; never restore #17.
-      if(artifactId!=="artifact_17"){
+      const copiedLink=artifactId==="artifact_32"&&actionId!=="artifact_action_link";
+      if(copiedLink)
+        await this.ctx.storage.put("artifactEchoUse:"+matchId+":"+actorId+":"+actionId,
+          {requestId:token,cycleKey:artifactCycleKey,usedAt:time,artifactId,actorId});
+      else await this.ctx.storage.put(useKey,
+        {requestId:token,cycleKey:artifactCycleKey,usedAt:time,artifactId,actorId});
+      // Preserve #17's moved card and #32's link: only original owner cards
+      // may have their use marker updated; copied functions have separate quota.
+      if(!["artifact_17","artifact_32"].includes(artifactId)){
+        owned.usedAt=time;await this.ctx.storage.put("artifact:"+actorId,owned);
+      }else if(artifactId==="artifact_32"&&actionId==="artifact_action_link"){
         owned.usedAt=time;await this.ctx.storage.put("artifact:"+actorId,owned);
       }
     }else{
