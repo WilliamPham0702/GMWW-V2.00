@@ -2639,7 +2639,7 @@ export class RoomDurableObject extends DurableObject {
       return j({ok:false,error:"DAY_ACTION_NOT_CONFIGURED"},403);
     const count=fn.noTarget===true?0:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0)));
     if(targets.length!==count)return j({ok:false,error:"DAY_TARGET_COUNT_INVALID",expected:count},400);
-    if(fn.noSelf!==false&&targets.includes(actorId))
+    if((fn.noSelf!==false||artifactId==="artifact_27")&&targets.includes(actorId))
       return j({ok:false,error:"DAY_SELF_TARGET_FORBIDDEN"},403);
     const roleKnight=!artifactId&&roleId==="role_knight"&&actionId==="action_knight_last_strike";
     const roleGrudge=!artifactId&&roleId==="role_grudge_victim"&&actionId==="action-grudge-designate";
@@ -2787,6 +2787,18 @@ export class RoomDurableObject extends DurableObject {
       if(!inspection)return j({ok:false,error:'DAY_ARTIFACT_INSPECTION_INVALID',
         message:'Artifact không có mục tiêu soi hợp lệ hoặc sai chức năng; chưa trừ lượt.'},409);
       message=inspection.message;result=inspection;
+    }else if(artifactId==="artifact_27"&&actionId==="action-ghost-message"){
+      // Artifact #27: the real role is read from trusted assignments, never
+      // supplied by the requesting client or broadcast to the public room.
+      const actorRole=assignments.find(x=>normalizeLoginId(x.loginId)===actorId&&
+        (!x.matchId||String(x.matchId)===matchId));
+      if(!actorRole?.roleId||effectiveTargets.length!==1||effectiveTargets[0]===actorId)
+        return j({ok:false,error:"PRIDE_PENDANT_INVALID_RECIPIENT"},409);
+      changes.push({kind:"private_role_disclosure",loginId:effectiveTargets[0],
+        roleId:String(actorRole.roleId),
+        roleName:String(actorRole.roleName||actorRole.roleCard?.name||actorRole.roleId).slice(0,100)});
+      message="Mặt Dây Chuyền Kiêu Hãnh đã gửi thông điệp riêng cho người được chọn.";
+      result={message,private:true,delivered:true};
     }else if(artifactId==="artifact_32"&&actionId==="artifact_action_link"){
       changes.push({kind:"link_artifact",targetId:effectiveTargets[0]});
       message="Lam Ngọc Định Mệnh đã liên kết riêng với Artifact mục tiêu.";
@@ -2899,6 +2911,18 @@ export class RoomDurableObject extends DurableObject {
     }else return j({ok:false,error:"DAY_ROLE_EFFECT_NOT_IMPLEMENTED"},409);
     for(const id of deadVictims)changes.push({kind:"status",loginId:id,type:"dead"});
     for(const effect of changes){
+      if(effect.kind==="private_role_disclosure"){
+        const inboxKey="privateRoleDisclosures:"+matchId+":"+effect.loginId,
+          previousNotices=await this.ctx.storage.get(inboxKey)||[],
+          noticeId="artifact-27:"+matchId+":"+token;
+        if(!previousNotices.some(x=>x.id===noticeId))
+          await this.ctx.storage.put(inboxKey,[...previousNotices.slice(-19),{
+            id:noticeId,matchId,sourceArtifactId:"artifact_27",
+            actorId,roleId:effect.roleId,roleName:effect.roleName,
+            message:"Người gửi Mặt Dây Chuyền Kiêu Hãnh có Vai Trò: "+effect.roleName,
+            createdAt:time}]);
+        continue;
+      }
       if(effect.kind==="double_gallows"){
         await this.ctx.storage.put(effect.key,effect.value);
         this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(effect.value,meta),serverTime:Date.now()});
@@ -4109,10 +4133,13 @@ export class RoomDurableObject extends DurableObject {
       drunkDeckView(drawn,false):null;
     const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
     const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
+    const privateRoleDisclosures=meta.matchId?
+      (await this.ctx.storage.get("privateRoleDisclosures:"+String(meta.matchId)+":"+loginId)||[])
+        .filter(x=>x.matchId===String(meta.matchId)).slice(-20):[];
     const ownGhostClue=meta.matchId?
       await this.ctx.storage.get("ghostClue:"+String(meta.matchId)+":"+
         Math.max(1,Number(meta.cycleNight)||1)+":"+loginId):null;
-    return j({ok:true,ghostClue:ownGhostClue?
+    return j({ok:true,privateRoleDisclosures,ghostClue:ownGhostClue?
       {id:ownGhostClue.id,status:ownGhostClue.status,text:ownGhostClue.text}:null,
       swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,linkedArtifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
