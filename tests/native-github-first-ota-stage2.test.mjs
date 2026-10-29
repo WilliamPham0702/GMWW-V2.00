@@ -29,7 +29,7 @@ test('Automatic downloader verifies full download checksum and each embedded fil
   assert.match(swift,/checksum\.range\(of:"\^\[a-f0-9\]\{64\}\$"/);
   assert.match(swift,/try digestFile\(packageURL\) == expectedSHA/);
   assert.match(swift,/sha256\(bytes\) == entry\.sha256\.lowercased\(\)/);
-  assert.match(swift,/verifyManualContainer\(temp,expectedSHA:checksum,expectedVersion:version\)/);
+  assert.match(swift,/verifyManualContainer\(local,expectedSHA:checksum,expectedVersion:version\)/);
   assert.match(swift,/guard offset == UInt64\(fileSize\)/);
   assert.match(swift,/Set\(paths\)\.count == paths\.count/);
   assert.match(swift,/guard safeRelativePath\(entry\.path\)/);
