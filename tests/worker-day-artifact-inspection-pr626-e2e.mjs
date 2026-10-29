@@ -36,7 +36,7 @@ try{
   const wrongOwner=await gm('/day-action',{...payload,actorId:ids[(i+1)%4],clientEventId:'wrong-'+i});
   assert.equal(wrongOwner.error,'DAY_ARTIFACT_NOT_OWNED');
   const answer=ok(await gm('/day-action',payload));
-  assert.equal(answer.result.private,true);
+  assert.equal(answer.result?.private,true,JSON.stringify({artifactId,actionId,answer}));
   if(i<3)assert.equal(answer.result.confirmed,true);else assert.equal(answer.result.roleId,'role_seer');
   assert.equal(ok(await gm('/day-action',payload)).idempotent,true);
   assert.equal((await gm('/day-action',{...payload,targetIds:[ids[7-i]]})).error,'REQUEST_ID_CONFLICT');
