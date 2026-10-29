@@ -66,7 +66,7 @@ test('The browser and API use the same new portrait revision for avatar selectio
   assert.match(source,/const main=\$\('#profileAvatar'\)/);
   const catalog=readFileSync(new URL('../src/gmww-character40-catalog.js',import.meta.url),'utf8');
   assert.match(catalog,/CHARACTER40_PORTRAIT_REV='c40-4'/);
-  assert.match(catalog,/u\.pathname='\/characters\/gmww40\/portraits\/'\+visual/);
+  assert.match(catalog,/u\.pathname='\/characters\/gmww40\/originals\/'\+visual/);
   const generator=readFileSync(new URL('../tools/generate-character40-portraits.py',import.meta.url),'utf8');
   assert.match(generator,/FRAME_INDEX = 8/);
   assert.match(generator,/lossless=True/);

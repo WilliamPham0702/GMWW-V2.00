@@ -66,7 +66,6 @@ const dualPaths=new Set([
   'src/gmww-dual-renderer-projection.js',
   'tests/dual-renderer-contract.test.mjs',
   'docs/plans/GMWW-DUAL-RENDERER-2026-10-24.md',
-  '.github/workflows/check-dual-renderer.yml',
   'wrangler.arena3d-preview.jsonc',
   'assets/village/arena-3d/preview-worker.mjs',
   'assets/village/arena-3d/build-preview.mjs',
@@ -108,7 +107,6 @@ const dualPaths=new Set([
   'docs/releases/GMWW-ARENA3D-PHASE3-2026-10-24.md',
   '.github/workflows/check-player-web.yml',
   '.github/workflows/check-p0-chrome-edge-realtime.yml',
-  '.github/workflows/build-server-game-ipa.yml',
   '.github/scripts/ci-browser-scope.mjs'
 ]);
 function isDualRendererScope(changes){
@@ -278,11 +276,43 @@ function isGallowsScope(changes){
 const policyPaths=new Set([
   '.github/scripts/ci-browser-scope.mjs',
   '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/build-server-game-ipa.yml',
   '.github/workflows/deploy-production.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/ci-browser-focused-gallows-20261024.md',
   'docs/releases/GMWW-V3.203-focused-release-gate-20261024.md'
 ]);
+// Stable CI-only contract. Never classify gameplay/Player changes as policy-only.
+// Unknown paths and deletions must fall back to the full test suite.
+const stableCIPolicyPaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/ci-policy-gate.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-drunk-spiritualist.yml',
+  '.github/workflows/deploy-production.yml',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/releases/GMWW-CI-POLICY-GATE-20261029.md',
+  'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'
+]);
+function isStableCIPolicyScope(changes){
+  if(!Array.isArray(changes)||changes.length===0||
+      !changes.some(c=>c?.path?.startsWith('.github/')))return false;
+  if(changes.some(c=>!c||!stableCIPolicyPaths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const names=new Set(changes.map(c=>c.path));
+  if(!names.has('.github/scripts/ci-browser-scope.mjs')||
+     !names.has('tests/ci-browser-scope.test.mjs')||
+     !names.has('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'))return false;
+  const deploy=changes.find(c=>c.path==='.github/workflows/deploy-production.yml');
+  if(deploy&&(typeof deploy.after!=='string'||
+      !deploy.after.includes('CHỈ CI: BỎ QUA DEPLOY PRODUCTION')||
+      !deploy.after.includes("needs.deploy-scope.outputs.should_deploy == 'true'")))return false;
+  return true;
+}
+
 function isPolicyScope(changes){
   const names=new Set(changes.map(x=>x.path));
   return names.has('.github/scripts/ci-browser-scope.mjs')&&
@@ -766,10 +796,14 @@ const autoVanCIPolicyPaths=new Set([
  'tests/ci-browser-scope.test.mjs'
 ]);
 function isAutoVanCIPolicyScope(changes){
+ if(!Array.isArray(changes))return false;
  const names=new Set(changes.map(c=>c.path));
  return names.size===autoVanCIPolicyPaths.size&&
    [...autoVanCIPolicyPaths].every(x=>names.has(x))&&
-   changes.every(c=>autoVanCIPolicyPaths.has(c.path)&&c.status==='M');
+   changes.every(c=>autoVanCIPolicyPaths.has(c.path)&&c.status==='M'&&
+     // Reject partial PR550 edits even when they share all four legacy CI paths.
+     // Otherwise the historic AUTO VÁN shortcut can hide a RULE change.
+     !/PR550|night02-rule-regression-550|isRules550Scope/.test(String(c.after||'')));
 }
 const autoVanReleasePaths=new Set([
  'package.json','package-lock.json','src/index.js',
@@ -2375,7 +2409,147 @@ function isDemoPlayerLive3271Scope(changes){
       fs.readFileSync('src/index.js','utf8').includes('UPDATE_CHANNEL_REV="runtime-3271-demo-player-live-join"');
   }catch{return false}
 }
+
+function gmAdmin3272Scope(changes){
+  const allowed=new Set([
+    'server-game/src/00-core-and-library.part',
+    'server-game/src/40-battle-and-timeline.part',
+    'server-game/src/45-online-chat.part',
+    'server-game/current/app.js','server-game/current/style.css',
+    'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json',
+    '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml','.github/workflows/deploy-production.yml',
+    '.github/workflows/check-gm-admin-top-chat.yml','.github/workflows/build-server-game-ipa.yml',
+    'tests/gm-admin-top-chat-20261028.test.mjs',
+    'docs/releases/gm-admin-top-chat-20261028.md'
+  ]);
+  const names=new Set(changes.map(c=>c.path));
+  const required=['server-game/current/app.js','server-game/src/40-battle-and-timeline.part',
+    'server-game/src/45-online-chat.part','server-game/current/style.css','src/index.js',
+    'package.json','package-lock.json','.github/scripts/prepare-update-channel.mjs',
+    'tests/gm-admin-top-chat-20261028.test.mjs'];
+  if(changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status))||
+     required.some(p=>!names.has(p)))return false;
+  const get=p=>fs.readFileSync(p,'utf8');
+  return JSON.parse(get('package.json')).version==='3.272.0'&&
+    get('src/index.js').includes('VERSION="V3.272",NATIVE_SHELL_VERSION="3.264"')&&
+    get('server-game/src/00-core-and-library.part').includes("const VERSION='3.272'")&&
+    get('server-game/current/app.js').includes("const VERSION='3.272'")&&
+    get('server-game/current/app.js').includes('function gmwwGMAdminMount()')&&
+    get('server-game/current/app.js').includes("trigger.textContent='🦩'")&&
+    get('server-game/current/GMWW.html').includes('<title>GMWW V3.272</title>')&&
+    get('.github/scripts/prepare-update-channel.mjs').includes('V3.272 PR595:')&&
+    get('docs/releases/gm-admin-top-chat-20261028.md').includes('Giết');
+}
+/* PR #596 — fail-closed V3.273 Player Web Online village and 7 required features. */
+const onlineVillage3273Paths=new Set([".github/scripts/ci-browser-scope.mjs",".github/scripts/prepare-update-channel.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-player-web-online-village.yml","docs/releases/GMWW-player-web-online-village-20261028.md","package.json","package-lock.json","server-game/current/GMWW.html","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/src/10-library-and-settings.part","src/gmww-demo-runner.js","src/gmww-members-live.js","src/gmww-online-action-icons.js","src/gmww-wolf-recognition.js","src/index.js","src/player-web-src/20-village-and-profile.part","src/player-web-src/30-rooms-and-realtime.part","src/player-web-src/35-online-chat.part","src/player-web-src/40-cards-and-game.part","src/player-web-src/50-privacy-and-runtime.part","tests/player-web-online-actions-20261028.test.mjs","tests/player-web-online-village-20261028.test.mjs"]);
+function isOnlineVillage3273Scope(changes){
+ if(!Array.isArray(changes)||changes.length<20||
+    changes.some(c=>!onlineVillage3273Paths.has(c.path)||!['A','M'].includes(c.status)))return false;
+ const paths=new Set(changes.map(c=>c.path));
+ const mandatory=['src/index.js','src/gmww-members-live.js','src/gmww-demo-runner.js',
+   'src/gmww-online-action-icons.js','src/player-web-src/35-online-chat.part',
+   'tests/player-web-online-actions-20261028.test.mjs',
+   'docs/releases/GMWW-player-web-online-village-20261028.md'];
+ if(!mandatory.every(x=>paths.has(x)))return false;
+ try{
+  return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.273.0'&&
+   fs.readFileSync('src/index.js','utf8').includes('UPDATE_CHANNEL_REV="runtime-3273-player-online-village"');
+ }catch{return false}
+}
+
+const playerWebBackgroundPerformancePaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  'assets/village/scene-manager.mjs','assets/village/village-performance.mjs',
+  'src/gmww-members-live.js','src/player-web-src/30-rooms-and-realtime.part',
+  'src/player-web-src/50-privacy-and-runtime.part','tests/ci-browser-scope.test.mjs',
+  'tests/player-web-background-performance.test.mjs',
+  'docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md',
+  'docs/superpowers/specs/2026-10-29-player-web-background-performance-design.md',
+  'docs/superpowers/plans/2026-10-29-player-web-background-performance.md'
+]);
+function isPlayerWebBackgroundPerformanceScope(changes){
+  if(!Array.isArray(changes)||changes.length<9||changes.some(c=>
+    !playerWebBackgroundPerformancePaths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  const required=[
+    'assets/village/scene-manager.mjs','assets/village/village-performance.mjs',
+    'src/gmww-members-live.js','src/player-web-src/30-rooms-and-realtime.part',
+    'src/player-web-src/50-privacy-and-runtime.part',
+    'tests/player-web-background-performance.test.mjs',
+    'docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md'
+  ];
+  return required.every(path=>by.has(path))&&
+    by.get('assets/village/village-performance.mjs')?.after?.includes("document.addEventListener('visibilitychange',visibility)")&&
+    by.get('assets/village/scene-manager.mjs')?.after?.includes('if(!document.hidden)void sync()')&&
+    by.get('src/player-web-src/30-rooms-and-realtime.part')?.after?.includes('if(document.hidden)return;sendPresence()')&&
+    by.get('src/player-web-src/50-privacy-and-runtime.part')?.after?.includes('if(!document.hidden)checkWebUpdate()');
+}
+
+// PR603: isolated top-account icon repair. Do not treat the compiled Player bundle
+// as a change to voting, roles, or realtime; unknown paths fail closed to full.
+const playerAvatar603Paths=new Set([
+  '.github/workflows/check-player-web-online-village.yml',
+  'src/gmww-members-live.js',
+  'src/player-web-src/20-village-and-profile.part',
+  'tests/player-web-top-account-avatar-20261029.test.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  'tests/ci-browser-scope.test.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/check-drunk-spiritualist.yml',
+  '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/check-p0-chrome-edge-realtime.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/build-server-game-ipa.yml'
+]);
+function isPlayerAvatar603Scope(changes){
+  if(!Array.isArray(changes)||changes.length<4||changes.some(c=>
+    !playerAvatar603Paths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  const required=[
+    'src/gmww-members-live.js',
+    'src/player-web-src/20-village-and-profile.part',
+    'tests/player-web-top-account-avatar-20261029.test.mjs',
+    '.github/workflows/check-player-web-online-village.yml'
+  ];
+  if(!required.every(x=>by.has(x)))return false;
+  const part=String(by.get('src/player-web-src/20-village-and-profile.part')?.after||'');
+  const test=String(by.get('tests/player-web-top-account-avatar-20261029.test.mjs')?.after||'');
+  return part.includes('gmww-player-account-fallback') &&
+    part.includes("account.classList.add('has-avatar')") &&
+    part.includes("account.classList.remove('has-avatar')") &&
+    part.includes('avatar.onload=') && part.includes('avatar.onerror=') &&
+    test.includes('Menu avatar is static') &&
+    test.includes('Account avatar appears only after loading');
+}
+
+// GitHub Actions replaces only the Cloudflare *build* for PR Previews.
+// Exact infrastructure-only scope; any gameplay or unknown path runs full CI.
+const githubPreviewCIPaths=new Set([
+  '.github/workflows/check-pr-preview-github.yml',
+  '.github/scripts/guard-pr-preview-ci.mjs',
+  'tests/github-actions-pr-preview-ci.test.mjs',
+  'docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/deploy-production.yml'
+]);
+function isGithubPreviewCIOnly(changes){
+  return Array.isArray(changes)&&changes.length>=7&&
+    changes.every(c=>githubPreviewCIPaths.has(c.path)&&['A','M'].includes(c.status))&&
+    changes.some(c=>c.path==='.github/workflows/check-pr-preview-github.yml')&&
+    changes.some(c=>c.path==='tests/github-actions-pr-preview-ci.test.mjs');
+}
+
 function classifyBrowserScope(changes){
+  if(isGithubPreviewCIOnly(changes))return 'github-pr-preview-ci';
+  if(isPlayerAvatar603Scope(changes))return 'player-top-avatar-603';
+  if(isPlayerWebBackgroundPerformanceScope(changes))return 'player-web-background-performance';
+  if(gmAdmin3272Scope(changes))return 'gm-admin-top-chat-3272';
+  if(isOnlineVillage3273Scope(changes))return 'player-online-village-3273';
   if(isDemoPlayerLive3271Scope(changes))return 'demo-player-live-3271';
   if(isDemoAudioSync3270Scope(changes))return 'demo-audio-sync-3270';
   if(isHybridDemo587Scope(changes))return 'demo-hybrid-587';
@@ -2402,7 +2576,7 @@ function classifyBrowserScope(changes){
   // A partial/expanded PR550 change must never masquerade as a historic CI-only scope.
   if(Array.isArray(changes)&&changes.some(c=>
     c?.path==='tests/gmww-rule-snow-guard-pack-fairy.test.mjs'||
-    String(c?.after||'').includes('PR550 test-only rule regression')))return 'full';
+    (!stableCIPolicyPaths.has(c?.path)&&String(c?.after||'').includes('PR550 test-only rule regression'))))return 'full';
   if(isFairy246PostMergeScope(changes))return 'fairy-246-postmerge';
   if(isFairy246Scope(changes))return 'fairy-triptych-3246';
   if(isNight02Scope(changes))return 'night02-pack-roles';
@@ -2456,7 +2630,7 @@ function classifyBrowserScope(changes){
   if(isIconRuntime3210Scope(changes))return 'icon-runtime-3210';
   if(isAudioGallows209Scope(changes))return 'audio-gallows-3209';
   if(isAudio208Scope(changes))return 'audio-v3208';
-  if(isPolicyScope(changes))return 'ci-policy';
+  if(isStableCIPolicyScope(changes)||isPolicyScope(changes))return 'ci-policy';
   if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)||isDemo475FinalGateScope(changes))return 'demo-475';
   if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
@@ -2616,6 +2790,34 @@ function isTemplateDock3268Scope(changes){
 }
 
 function detect(){
+  // Owner-approved PR595 Runtime V3.272: verify every changed path and
+  // the version/GM/chat contract. Unknown changes always run the full suite.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+          .split('\n').filter(Boolean).map(line=>{
+            const [status,path]=line.split('\t');return{status,path};
+          });
+        if(gmAdmin3272Scope(changes))
+          return{mode:'gm-admin-top-chat-3272',reason:'PR595 verified 3 GM actions, chat authority, no IPA, exact V3.272 Runtime OTA'};
+      }
+    }catch{} // Fail closed.
+  }
+
+
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean)
+          .map(row=>{const [status,path]=row.split('\t');return{status,path}});
+        if(isOnlineVillage3273Scope(changes))
+          return{mode:'player-online-village-3273',reason:'PR596 V3.273 Online action and Player Web Server authenticated scope'};
+      }
+    }catch{}
+  }
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
@@ -2894,7 +3096,7 @@ function detect(){
       if(isPostMatchCIOnlyScope(changes))return{mode:'postmatch-ci-532',reason:'PR532 CI routing fix only, no game/IPA change'};
       if(isRules550Scope(changes))return{mode:'night02-rule-regression-550',reason:'PR550 exact five-file test-only merge; no Worker, gameplay, OTA or IPA'};
       if(changes.some(c=>c?.path==='tests/gmww-rule-snow-guard-pack-fairy.test.mjs'||
-        String(c?.after||'').includes('PR550 test-only rule regression')))
+        (!stableCIPolicyPaths.has(c?.path)&&String(c?.after||'').includes('PR550 test-only rule regression'))))
         return{mode:'full',reason:'PR550 changes are not the exact approved test-only release scope'};
       if(isNight02Scope(changes))return{mode:'night02-pack-roles',reason:'V3.245 NIGHT-02 scoped wolf pack, snow, guard, fairy Core + GM'};
       if(isWITCH01Scope(changes))return{mode:'witch01-old-witch',reason:'V3.240 WITCH-01 authoritative and GM-only tests'};
@@ -2937,7 +3139,7 @@ function detect(){
       if(isIconRuntime3210Scope(changes))return{mode:'icon-runtime-3210',reason:'Verified V3.210 ICON Runtime/OTA release only'};
       if(isAudioGallows209Scope(changes))return{mode:'audio-gallows-3209',reason:'Verified V3.209 audio and public vote UI only'};
       if(isAudio208Scope(changes))return{mode:'audio-v3208',reason:'Verified V3.208 audio/bulletin release only'};
-      if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
+      if(isStableCIPolicyScope(changes)||isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
       if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)){
         git('merge-base','--is-ancestor','8772337ab95e7561aeba6d63b2ec2337d7bbee94','HEAD');
         return{mode:'demo-475',reason:'Verified merged PR #475 / focused V3.207 release: '+changes.map(c=>c.path).join(', ')};
@@ -3029,6 +3231,7 @@ function detect(){
     return{mode:'full',reason:'Could not verify changes safely: '+String(error.message||error)};
   }
 }
+export {classifyBrowserScope};
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);

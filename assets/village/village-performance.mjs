@@ -1,7 +1,10 @@
 export function startVillagePerformanceReporter({target=window.parent,targetOrigin=window.location.origin,sampleMs=5000}={}){
-  let stopped=false,frames=0,lastFrame=performance.now(),fps=60,longTasks=0,worstLongTask=0;
-  const frame=now=>{if(stopped)return;frames++;const span=now-lastFrame;if(span>=1000){fps=Math.round(frames*1000/span);frames=0;lastFrame=now}requestAnimationFrame(frame)};
-  requestAnimationFrame(frame);
+  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=60,longTasks=0,worstLongTask=0;
+  const frame=now=>{frameId=0;if(stopped||document.hidden)return;frames++;const span=now-lastFrame;if(span>=1000){fps=Math.round(frames*1000/span);frames=0;lastFrame=now}frameId=requestAnimationFrame(frame)};
+  const resumeFrames=()=>{if(stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};
+  const visibility=()=>{if(document.hidden){if(frameId)cancelAnimationFrame(frameId);frameId=0;return}resumeFrames()};
+  document.addEventListener('visibilitychange',visibility);
+  resumeFrames();
   let observer=null;
   try{
     if("PerformanceObserver" in window){
@@ -24,5 +27,5 @@ export function startVillagePerformanceReporter({target=window.parent,targetOrig
     try{if(target&&target!==window)target.postMessage(payload,targetOrigin)}catch{}
   };
   const timer=setInterval(report,Math.max(3000,sampleMs));setTimeout(report,1200);
-  return()=>{stopped=true;clearInterval(timer);observer?.disconnect?.()};
+  return()=>{stopped=true;if(frameId)cancelAnimationFrame(frameId);frameId=0;clearInterval(timer);document.removeEventListener('visibilitychange',visibility);observer?.disconnect?.()};
 }

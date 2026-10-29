@@ -1,0 +1,131 @@
+name: Deploy Player Web Background Performance (Worker-only)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: gmww-player-web-background-performance-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout approved main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 2
+      - name: Verify exact approved main and focused release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | cut -f1)"
+          test -s docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md
+          test -s docs/releases/GMWW-PLAYER-WEB-AVATAR-QUESTION-MARK-HOTFIX-20261029.md
+          test -s tests/player-web-background-performance.test.mjs
+          grep -Fq "u.pathname='/characters/gmww40/originals/'+visual+'.webp'" src/gmww-character40-catalog.js
+          grep -Fq "document.addEventListener('visibilitychange',visibility)" assets/village/village-performance.mjs
+          grep -Fq 'if(!document.hidden)void sync()' assets/village/scene-manager.mjs
+          grep -Fq 'if(document.hidden)return;sendPresence()' src/player-web-src/30-rooms-and-realtime.part
+          grep -Fq 'if(!document.hidden)checkWebUpdate()' src/player-web-src/50-privacy-and-runtime.part
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Verify focused Player Web package
+        run: |
+          set -euo pipefail
+          npm ci
+          node --test tests/player-web-background-performance.test.mjs tests/player-web-render-budget.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          node --test --test-name-pattern='Player Web background performance patch' tests/ci-browser-scope.test.mjs
+          node --test --test-name-pattern='all forty shipped portraits|active catalog|all portrait routes|every Player Web character image route' tests/character40-live.test.mjs
+          node --test tests/player-web-profile-avatar-40-catalog.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node -e "import('./src/gmww-members-live.js').then(m=>require('fs').writeFileSync('/tmp/gmww-background-performance-player.js',m.gmwwMembersLiveScript))"
+          node --check /tmp/gmww-background-performance-player.js
+          npx wrangler deploy --dry-run --outdir /tmp/gmww-background-performance-worker
+      - name: Capture previous Production Worker
+        id: previous
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/background-performance-before.json
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const d=require('/tmp/background-performance-before.json');
+          const deployment=d.result?.deployments?.[0],version=deployment?.versions?.[0];
+          if(!d.success||!deployment?.id||deployment.versions?.length!==1||!version?.version_id||version.percentage!==100)throw Error('Previous Production Worker unavailable');
+          console.log('version='+version.version_id);
+          console.log('deployment='+deployment.id);
+          NODE
+      - name: Deploy Worker and Player Web only
+        id: publish
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      - name: Verify Production health, JavaScript and hidden-page guards
+        if: steps.publish.outcome == 'success'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
+        run: |
+          set -euo pipefail
+          URL='https://gmww-v2-00.williampham0702.workers.dev'
+          PASS=0
+          for N in $(seq 1 16); do
+            CACHE="background-performance-$N-$(date +%s)"
+            if curl -fsS --max-time 20 "$URL/api/health?$CACHE" -o /tmp/background-health.json &&
+               node -e "const d=require('/tmp/background-health.json');if(d.ok!==true||d.project!=='GMWW-V2.00'||d.status!=='online')process.exit(1)" &&
+               curl -fsS --max-time 25 "$URL/gmww-members-live.js?$CACHE" -o /tmp/background-player.js &&
+               node --check /tmp/background-player.js &&
+               grep -Fq 'if(document.hidden)return;sendPresence()' /tmp/background-player.js &&
+               grep -Fq 'if(!document.hidden)checkWebUpdate()' /tmp/background-player.js &&
+               curl -fsS --max-time 20 "$URL/village/village-performance.mjs?$CACHE" -o /tmp/background-village-performance.mjs &&
+               grep -Fq "document.addEventListener('visibilitychange',visibility)" /tmp/background-village-performance.mjs &&
+               curl -fsS --max-time 20 "$URL/village/scene-manager.mjs?$CACHE" -o /tmp/background-scene-manager.mjs &&
+               grep -Fq 'if(!document.hidden)void sync()' /tmp/background-scene-manager.mjs &&
+               curl -fsS --max-time 20 "$URL/api/game-characters/character-01/image?$CACHE" -o /tmp/player-avatar.webp &&
+               test -s /tmp/player-avatar.webp; then PASS=1; break; fi
+            sleep 5
+          done
+          test "$PASS" = 1
+          for N in $(seq -w 1 40); do
+            curl -fsS --max-time 20 "$URL/api/game-characters/character-$N/image?avatar-hotfix=$(date +%s)" -o "/tmp/player-avatar-$N.webp"
+            test -s "/tmp/player-avatar-$N.webp"
+          done
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/background-performance-after.json
+          node - <<'NODE'
+          const d=require('/tmp/background-performance-after.json'),v=d.result?.deployments?.[0]?.versions?.[0];
+          if(!d.success||!v?.version_id||v.percentage!==100||v.version_id===process.env.PREVIOUS_VERSION)throw Error('New Production Worker version not confirmed');
+          console.log('Verified Production Worker: '+v.version_id);
+          NODE
+          echo 'PASS: Production Player Web background guards and health verified. No IPA/OTA.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Roll back Worker after failed Production verification
+        if: failure() && steps.publish.outcome == 'success' && steps.previous.outputs.version != ''
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_VERSION: ${{ steps.previous.outputs.version }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > /tmp/background-performance-rollback.json
+          console.log(JSON.stringify({strategy:'percentage',versions:[{version_id:process.env.PREVIOUS_VERSION,percentage:100}],annotations:{'workers/message':'Rollback Player Web background performance after failed Production smoke'}}));
+          NODE
+          curl -fsS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+            --data-binary @/tmp/background-performance-rollback.json \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments" > /tmp/background-performance-rollback-result.json
+          node -e "if(!require('/tmp/background-performance-rollback-result.json').success)process.exit(1)"
+          echo 'ROLLBACK: previous Worker restored at 100%; rooms, history, Durable Objects, IPA and OTA untouched.' >> "$GITHUB_STEP_SUMMARY"

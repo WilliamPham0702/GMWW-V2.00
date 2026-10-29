@@ -6,6 +6,7 @@ import {appendDemoHistory} from './gmww-demo-history.js';
 import {artifactCycleKey} from './gmww-game-scene-rules.js';
 import {STATUS_DEFS} from './gmww-public-room-contract.js';
 import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
+import {onlineGmActionIcon} from './gmww-online-action-icons.js';
 import {canSnowWolfBite,resolveWolfNight} from './gmww-wolf-night-resolution.js';
 const rules=globalThis.GMWW_BATTLE_CONTROLS;
 const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
@@ -67,11 +68,12 @@ function dayActions(ctx,meta,usage,ballot){
 }
 // Only the authenticated actor's current, unused powers reach Player Web.
 // The private response does not expose other actors or the full night queue.
-export async function demoPlayerActions(room,meta,loginId){
- if(meta?.demo!==true||meta?.phase!=='running'||!loginId)return [];
+export async function playerOfferedActions(room,meta,loginId){
+ if(meta?.phase!=='running'||!loginId||(!meta.demo&&String(meta.roomMode||'').toLowerCase()!=='online'))return [];
  const ctx=await context(room,meta);
- if(ctx.players['member:'+loginId]?.humanControlled!==true||
+ if(!ctx.players['member:'+loginId]||(meta.demo&&ctx.players['member:'+loginId]?.humanControlled!==true)||
     !ctx.assignments.some(a=>a.loginId===loginId))return [];
+ if(!ctx.assignments.some(a=>a.loginId===loginId&&(!a.matchId||String(a.matchId)===String(meta.matchId))))return [];
  let actions=[];
  if(meta.cyclePhase==='night'){
   const runtime=await room.getNightRuntime(meta,meta.cycleNight,false);
@@ -84,9 +86,16 @@ export async function demoPlayerActions(room,meta,loginId){
  return actions.filter(a=>a.actorIds.includes(loginId)).map(a=>({
   key:a.id,actionId:a.actionId,name:a.name,type:a.type,roleId:a.roleId||'',
   artifactId:a.artifactId||'',targetCount:a.noTarget||a.actionId==='action_transfer_bite'?0:a.targetCount,
-  noSelf:a.noSelf,allowDead:a.allowDead,noTarget:a.noTarget,phase:meta.cyclePhase
+  noSelf:a.noSelf,allowDead:a.allowDead,noTarget:a.noTarget,phase:meta.cyclePhase,
+  iconUrl:onlineGmActionIcon(a.actionId)
  }));
 }
+/* The legacy DEMO action API remains DEMO-only; Online uses separate admission. */
+export async function demoPlayerActions(room,meta,loginId){
+ if(meta?.demo!==true)return [];
+ return playerOfferedActions(room,meta,loginId);
+}
+
 export function demoTaskAt(duration,plan){
  const count=Math.max(1,plan?.tasks?.length||0),cursor=Number(plan?.cursor||0);
  const task=plan?.tasks?.[cursor];
