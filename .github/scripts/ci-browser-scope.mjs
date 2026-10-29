@@ -66,7 +66,6 @@ const dualPaths=new Set([
   'src/gmww-dual-renderer-projection.js',
   'tests/dual-renderer-contract.test.mjs',
   'docs/plans/GMWW-DUAL-RENDERER-2026-10-24.md',
-  '.github/workflows/check-dual-renderer.yml',
   'wrangler.arena3d-preview.jsonc',
   'assets/village/arena-3d/preview-worker.mjs',
   'assets/village/arena-3d/build-preview.mjs',
@@ -108,7 +107,6 @@ const dualPaths=new Set([
   'docs/releases/GMWW-ARENA3D-PHASE3-2026-10-24.md',
   '.github/workflows/check-player-web.yml',
   '.github/workflows/check-p0-chrome-edge-realtime.yml',
-  '.github/workflows/build-server-game-ipa.yml',
   '.github/scripts/ci-browser-scope.mjs'
 ]);
 function isDualRendererScope(changes){
@@ -278,11 +276,42 @@ function isGallowsScope(changes){
 const policyPaths=new Set([
   '.github/scripts/ci-browser-scope.mjs',
   '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/build-server-game-ipa.yml',
   '.github/workflows/deploy-production.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/ci-browser-focused-gallows-20261024.md',
   'docs/releases/GMWW-V3.203-focused-release-gate-20261024.md'
 ]);
+// Stable CI-only contract. Never classify gameplay/Player changes as policy-only.
+// Unknown paths and deletions must fall back to the full test suite.
+const stableCIPolicyPaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/ci-policy-gate.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/deploy-production.yml',
+  'tests/ci-browser-scope.test.mjs',
+  'docs/releases/GMWW-CI-POLICY-GATE-20261029.md',
+  'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'
+]);
+function isStableCIPolicyScope(changes){
+  if(!Array.isArray(changes)||changes.length===0||
+      !changes.some(c=>c?.path?.startsWith('.github/')))return false;
+  if(changes.some(c=>!c||!stableCIPolicyPaths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const names=new Set(changes.map(c=>c.path));
+  if(!names.has('.github/scripts/ci-browser-scope.mjs')||
+     !names.has('tests/ci-browser-scope.test.mjs')||
+     !names.has('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'))return false;
+  const deploy=changes.find(c=>c.path==='.github/workflows/deploy-production.yml');
+  if(deploy&&(typeof deploy.after!=='string'||
+      !deploy.after.includes('CHỈ CI: BỎ QUA DEPLOY PRODUCTION')||
+      !deploy.after.includes("needs.deploy-scope.outputs.should_deploy == 'true'")))return false;
+  return true;
+}
+
 function isPolicyScope(changes){
   const names=new Set(changes.map(x=>x.path));
   return names.has('.github/scripts/ci-browser-scope.mjs')&&
@@ -2542,7 +2571,7 @@ function classifyBrowserScope(changes){
   // A partial/expanded PR550 change must never masquerade as a historic CI-only scope.
   if(Array.isArray(changes)&&changes.some(c=>
     c?.path==='tests/gmww-rule-snow-guard-pack-fairy.test.mjs'||
-    String(c?.after||'').includes('PR550 test-only rule regression')))return 'full';
+    (!stableCIPolicyPaths.has(c?.path)&&String(c?.after||'').includes('PR550 test-only rule regression'))))return 'full';
   if(isFairy246PostMergeScope(changes))return 'fairy-246-postmerge';
   if(isFairy246Scope(changes))return 'fairy-triptych-3246';
   if(isNight02Scope(changes))return 'night02-pack-roles';
@@ -2596,7 +2625,7 @@ function classifyBrowserScope(changes){
   if(isIconRuntime3210Scope(changes))return 'icon-runtime-3210';
   if(isAudioGallows209Scope(changes))return 'audio-gallows-3209';
   if(isAudio208Scope(changes))return 'audio-v3208';
-  if(isPolicyScope(changes))return 'ci-policy';
+  if(isStableCIPolicyScope(changes)||isPolicyScope(changes))return 'ci-policy';
   if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)||isDemo475FinalGateScope(changes))return 'demo-475';
   if(isGallowsScope(changes)||isGallowsVisual205Scope(changes))return 'gallows';
   if(isP0Scope(changes))return 'p0-roster';
@@ -3105,7 +3134,7 @@ function detect(){
       if(isIconRuntime3210Scope(changes))return{mode:'icon-runtime-3210',reason:'Verified V3.210 ICON Runtime/OTA release only'};
       if(isAudioGallows209Scope(changes))return{mode:'audio-gallows-3209',reason:'Verified V3.209 audio and public vote UI only'};
       if(isAudio208Scope(changes))return{mode:'audio-v3208',reason:'Verified V3.208 audio/bulletin release only'};
-      if(isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
+      if(isStableCIPolicyScope(changes)||isPolicyScope(changes))return{mode:'ci-policy',reason:'Verified main CI-only merge: '+changes.map(c=>c.path).join(', ')};
       if(isDemo475Scope(changes)||isDemo475ReleaseScope(changes)||isDemo475FinalGateScope(changes)||isDemo475CompletionScope(changes)){
         git('merge-base','--is-ancestor','8772337ab95e7561aeba6d63b2ec2337d7bbee94','HEAD');
         return{mode:'demo-475',reason:'Verified merged PR #475 / focused V3.207 release: '+changes.map(c=>c.path).join(', ')};

@@ -554,3 +554,41 @@ const cls='gmww-player-account-fallback';
   assert.equal(classifyBrowserScope([...rows,{path:'src/player-web-src/30-rooms-and-realtime.part',status:'M',before:'a',after:'b'}]),'full');
   assert.equal(classifyBrowserScope(rows.map(x=>x.path==='src/player-web-src/20-village-and-profile.part'?{...x,after:'unrelated UI rewrite'}:x)),'full');
 });
+
+test('CI-only merge selects focused CI checks but fails closed for gameplay and missing evidence',()=>{
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old selector','stable policy selector'),
+    modified('.github/workflows/check-player-web.yml','old workflow','focused policy workflow'),
+    modified('.github/workflows/check-player-card-browsers.yml','old browser workflow','focused policy workflow'),
+    modified('.github/workflows/deploy-production.yml','old deploy',"CHỈ CI: BỎ QUA DEPLOY PRODUCTION needs.deploy-scope.outputs.should_deploy == 'true'"),
+    modified('tests/ci-browser-scope.test.mjs','old tests','focused CI tests'),
+    {path:'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md',status:'A',before:null,after:'# CI-only scope'}
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope(changes.filter(x=>!x.path.startsWith('docs/'))),'full');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old game','changed game')]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'assets/village/village.css',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='tests/ci-browser-scope.test.mjs'?{...c,status:'D'}:c)),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='.github/workflows/deploy-production.yml'?{...c,after:'deploy without safety check'}:c)),'full');
+});
+
+test('CI-only merge remains scoped with actual selector/deploy source containing historical PR550 text',()=>{
+  const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+  const deploy=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old',selector),
+    modified('.github/workflows/deploy-production.yml','old',deploy),
+    modified('tests/ci-browser-scope.test.mjs','old','current safety assertions'),
+    {path:'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md',status:'A',after:'# release notes'}
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','new')]),'full');
+  const complete=[...changes,
+    modified('.github/workflows/check-player-web.yml','previous',readFileSync(new URL('../.github/workflows/check-player-web.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/check-player-card-browsers.yml','previous',readFileSync(new URL('../.github/workflows/check-player-card-browsers.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/check-dual-renderer.yml','previous',readFileSync(new URL('../.github/workflows/check-dual-renderer.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/build-server-game-ipa.yml','previous',readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8'))
+  ];
+  assert.equal(classifyBrowserScope(complete),'ci-policy','all eight actual PR files must remain focused');
+  assert.equal(classifyBrowserScope([...complete,modified('server-game/current/app.js','old','game changed')]),'full');
+});
