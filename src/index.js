@@ -1118,7 +1118,12 @@ export class RoomDurableObject extends DurableObject {
     const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark","status"]),activeEffects=[...interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))),...confirmedNightStatusVisuals(interactions,meta,players)].slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKeyValue=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKeyValue))||{cycleKey:artifactCycleKeyValue,accepted:[]};
     const battleActionUsage=(await this.ctx.storage.get("battleRoleUsage:"+String(meta.matchId||"")))||[];
     const lastBattleAction=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
-    const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
+    const dayInspectionUndo=String(meta.cyclePhase||"").toLowerCase()==="morning"?
+      await this.ctx.storage.get("dayLastInspection:"+String(meta.matchId||"")):null;
+    const battleUndo=dayInspectionUndo&&!dayInspectionUndo.undone&&dayInspectionUndo.cycleKey===String(meta.cycleKey||"")?
+      {token:dayInspectionUndo.token,label:dayInspectionUndo.label,targets:dayInspectionUndo.targets,turnId:"day-inspection"}:
+      lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?
+      {token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
     const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
     const drunkDraws=[];
@@ -2374,9 +2379,21 @@ export class RoomDurableObject extends DurableObject {
     }
     if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,interactions,time);
     await this.ctx.storage.put("interactions",pruneInteractions(interactions));
+    const inspectionAction=['artifact_09','artifact_24','artifact_29','artifact_39'].includes(artifactId)&&
+      result?.private===true;
+    const privateKey="dayArtifactInspections:"+matchId+":"+actorId,
+      artifactKey="artifact:"+actorId,
+      artifactCycleStorageKey="artifactCycle:"+artifactCycleKey,
+      undoKeys=inspectionAction?[artifactCycleStorageKey,useKey,artifactKey,receiptKey,privateKey]:[];
+    const before=inspectionAction?await Promise.all(undoKeys.map(async key=>{
+      const value=await this.ctx.storage.get(key);return {key,exists:value!==undefined&&value!==null,value:value??null};
+    })):[];
     const audit={id:"ev-"+crypto.randomUUID(),source:"gm",type:"day_action",actorId,
-      roleId,artifactId,actionId,matchId,night:day,targetIds:targets,message,createdAt:time};
-    await this.ctx.storage.put("actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+audit.id,audit);
+      roleId,artifactId,actionId,matchId,night:day,targetIds:targets,
+      // The public action log records the action, never its secret inspection answer.
+      message:inspectionAction?"Artifact soi đã được xác nhận.":message,createdAt:time};
+    const auditKey="actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+audit.id;
+    await this.ctx.storage.put(auditKey,audit);
     if(artifactId){
       const ckey="artifactCycle:"+artifactCycleKey;
       await this.ctx.storage.put(ckey,artifactReservation.state);
@@ -2388,9 +2405,32 @@ export class RoomDurableObject extends DurableObject {
     }
     const payload={ok:true,kind,actionId,actorId,roleId,artifactId,targetIds:targets,
       day,result,serverTime:Date.now()};
+    if(inspectionAction){
+      const rows=await this.ctx.storage.get(privateKey)||[];
+      const privateReceipt={id:token,matchId,day,artifactId,actionId,
+        targetId:targets[0],result,createdAt:time};
+      await this.ctx.storage.put(privateKey,[...rows,privateReceipt].slice(-20));
+    }
     await this.ctx.storage.put(receiptKey,{fingerprint,result:payload});
-    this.broadcast({type:"day_action_confirmed",actionId,actorId,targetIds:targets,
-      day,serverTime:Date.now()});
+    if(inspectionAction){
+      const keys=[...undoKeys,auditKey];
+      before.push({key:auditKey,exists:false,value:null});
+      const after=await Promise.all(keys.map(async key=>{
+        const value=await this.ctx.storage.get(key);return {key,exists:value!==undefined&&value!==null,value:value??null};
+      }));
+      await this.ctx.storage.put("dayLastInspection:"+matchId,{
+        token:crypto.randomUUID(),matchId,cycleKey,day,actorId,artifactId,actionId,
+        targets,turnId:"day-inspection",label:owned.artifactName||artifactId,
+        before,after,undone:false});
+      // All clients get only a tick. The inspected answer is available exclusively
+      // through the authenticated owner's /me response.
+      this.broadcast({type:"private_notice_tick",serverTime:Date.now()});
+    }else{
+      // A later unrelated action makes the older day inspection ineligible to undo.
+      await this.ctx.storage.delete("dayLastInspection:"+matchId);
+      this.broadcast({type:"day_action_confirmed",actionId,actorId,targetIds:targets,
+        day,serverTime:Date.now()});
+    }
     return j(payload);
   }
   /* V3.99: a single GM confirmation is one reversible server operation, including
@@ -2632,8 +2672,33 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmBattleUndo(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const meta=auth.meta,matchId=String(meta.matchId||""),key="battleLastAction:"+matchId,
-      record=await this.ctx.storage.get(key);
+    const meta=auth.meta,matchId=String(meta.matchId||""),key="battleLastAction:"+matchId;
+    if(String(meta.cyclePhase)==="morning"){
+      const dayKey="dayLastInspection:"+matchId,
+        record=await this.ctx.storage.get(dayKey);
+      if(!record||String(body?.undoToken||"")!==record.token)
+        return j({ok:false,error:"UNDO_NOT_FOUND"},404);
+      if(record.undone)return j({ok:true,idempotent:true,undone:true,turnId:"day-inspection"});
+      if(meta.phase!=="running"||String(meta.cycleKey||"")!==record.cycleKey||
+        Number(meta.cycleNight||0)!==record.day)
+        return j({ok:false,error:"UNDO_STALE_TURN"},409);
+      for(const row of record.after){
+        const current=await this.ctx.storage.get(row.key),
+          exists=current!==undefined&&current!==null;
+        if(exists!==row.exists||JSON.stringify(current??null)!==JSON.stringify(row.value??null))
+          return j({ok:false,error:"UNDO_STATE_CHANGED"},409);
+      }
+      for(const row of record.before){
+        if(row.exists)await this.ctx.storage.put(row.key,row.value);
+        else await this.ctx.storage.delete(row.key);
+      }
+      record.undone=true;record.undoneAt=new Date().toISOString();
+      await this.ctx.storage.put(dayKey,record);
+      if(meta.demo)await this.ctx.storage.delete("demoPlan");
+      this.broadcast({type:"private_notice_tick",serverTime:Date.now()});
+      return j({ok:true,undone:true,turnId:"day-inspection",targets:record.targets});
+    }
+    const record=await this.ctx.storage.get(key);
     if(!record||String(body?.undoToken||"")!==record.token)return j({ok:false,error:"UNDO_NOT_FOUND"},404);
     if(record.undone)return j({ok:true,idempotent:true,undone:true,turnId:record.turnId});
     if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
@@ -3003,6 +3068,9 @@ export class RoomDurableObject extends DurableObject {
       .slice(-10).map(({gmChoice,...safe})=>safe),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&
       (x.type!=="assassin_mark"||String(meta?.cyclePhase||"")==="morning")&&
       (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest).map(({gmChoice,...safe})=>safe);
+    const dayArtifactInspections=meta.matchId&&String(meta.phase)==="running"?
+      (await this.ctx.storage.get("dayArtifactInspections:"+String(meta.matchId)+":"+loginId)||[])
+        .filter(row=>String(row.matchId)===String(meta.matchId)).slice(-10):[];
     const storedArtifact=await this.ctx.storage.get("artifact:"+loginId),
       // A role assignment also contains the committed artifact. Use it if the
       // legacy standalone Artifact key is absent; do not hide an assigned card.
@@ -3049,7 +3117,7 @@ export class RoomDurableObject extends DurableObject {
       drunkDeckView(drawn,false):null;
     const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
     const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,dayArtifactInspections,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
