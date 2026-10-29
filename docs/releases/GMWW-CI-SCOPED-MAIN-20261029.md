@@ -18,3 +18,8 @@ Sau khi PR #607 merge, Check Player Web Worker trên main đã chạy nhầm b�
 ## Bảo toàn & Rollback
 Không thay đổi gameplay, Worker runtime, Player Web, IPA, Runtime OTA, dữ liệu và lịch sử.
 Rollback: revert pull request CI policy này; Production không tự được phát hành từ thay đổi CI-only.
+
+## Bổ sung hậu merge
+- Giới hạn nhánh kiểm tra PR550 lịch sử trên `main`: không quét nội dung chuỗi của chính các tệp CI-only đã được kiểm toán.
+- Giữ điều kiện fail-closed cho mọi sửa luật/gameplay và các tệp lạ.
+- Chốt giữ nguyên Production/Runtime OTA/IPA; không tự phát hành từ thay đổi CI-only.
