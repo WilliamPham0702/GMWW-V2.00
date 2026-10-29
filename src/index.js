@@ -8,6 +8,7 @@ import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversio
 import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
 import {validateUnrevealedArtifactDestroy} from "./gmww-artifact-destruction.js";
 import {planArtifactRoleSwap} from "./gmww-artifact-role-swap.js";
+import {validateArtifactSteal,eligibleArtifactReplacements,applyArtifactStealSummary,artifactForNewOwner} from "./gmww-artifact-steal.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -2760,6 +2761,12 @@ export class RoomDurableObject extends DurableObject {
       if(!inspection)return j({ok:false,error:'DAY_ARTIFACT_INSPECTION_INVALID',
         message:'Artifact không có mục tiêu soi hợp lệ hoặc sai chức năng; chưa trừ lượt.'},409);
       message=inspection.message;result=inspection;
+    }else if(artifactId==="artifact_17"&&actionId==="artifact_action_steal"){
+      // Move the unrevealed Artifact to this owner, issue a *real* replacement
+      // from a configured deck, and publish new private deliveries atomically.
+      changes.push({kind:"steal_artifact",targetId:effectiveTargets[0]});
+      message="Ngọc Ghen Tuông đã chuyển Artifact và cấp lá thay thế.";
+      result={message,private:true,artifactTransferred:true};
     }else if(artifactId==="artifact_40"&&actionId==="artifact_action_swap_role"){
       // Change actual role/faction/private cards atomically, not merely a UI label.
       // The client's proposed target must never dictate role or faction data.
@@ -2861,6 +2868,87 @@ export class RoomDurableObject extends DurableObject {
       if(effect.kind==="double_gallows"){
         await this.ctx.storage.put(effect.key,effect.value);
         this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(effect.value,meta),serverTime:Date.now()});
+        continue;
+      }
+      if(effect.kind==="steal_artifact"){
+        const moved=await this.ctx.storage.transaction(async txn=>{
+          const current=await txn.get("meta"),rows=await txn.get("assignments")||[],
+            actorCard=await txn.get("artifact:"+actorId),
+            targetCard=await txn.get("artifact:"+effect.targetId);
+          if(!current||String(current.matchId||"")!==matchId||
+            String(current.cycleKey||"")!==cycleKey||
+            String(current.cyclePhase||"")!=="morning")
+            return {ok:false,error:"ARTIFACT_STEAL_PHASE_CHANGED"};
+          const valid=validateArtifactSteal({actorId,targetId:effect.targetId,
+            actorArtifact:actorCard,targetArtifact:targetCard,assignments:rows,matchId});
+          if(!valid.ok)return valid;
+          if(await txn.get("artifactUse:"+effect.targetId+":"+targetCard.artifactId))
+            return {ok:false,error:"ARTIFACT_STEAL_TARGET_ALREADY_USED"};
+          const cfg=await txn.get("gameConfig")||{},configured=Array.isArray(cfg.artifacts)?cfg.artifacts:[],
+            catalog=[];
+          for(const item of configured){
+            const id=String(item?.artifactId||"");
+            if(!id)continue;
+            const pkg=await txn.get("roleCatalog:artifact:"+id);
+            if(pkg?.roleCard?.functions?.length)catalog.push({artifactId:id,package:pkg});
+          }
+          const eligible=eligibleArtifactReplacements({configured,assignments:rows,catalog}),
+            replacementId=eligible[0],pkg=catalog.find(item=>item.artifactId===replacementId)?.package;
+          if(!replacementId||!pkg)
+            return {ok:false,error:"ARTIFACT_STEAL_NO_REPLACEMENT",
+              message:"Không còn Artifact chưa phân phối trong bộ bài đã thiết lập."};
+          const assetId=String(pkg.artworkAssetId||pkg.artworkId||
+            "artifact:"+replacementId),
+            art=await txn.get("artworkRef:"+assetId)||await txn.get("artworkAsset:"+assetId),
+            artifactCard=pkg.roleCard;
+          const newCard=artifactForNewOwner({
+            loginId:effect.targetId,matchId,matchRevision:Number(current.matchRevision||0),
+            artifactId:replacementId,artifactName:String(pkg.roleName||artifactCard.name||"Artifact"),
+            description:String(artifactCard.information||pkg.description||""),
+            artifactImage:"/api/rooms/"+encodeURIComponent(current.code)+
+              "/role-assets/"+encodeURIComponent(assetId)+"/image",
+            artworkAssetId:assetId,artworkId:assetId,
+            artworkAvailable:!!art,artifactCard,singleUse:artifactCard.singleUse===true,
+            priorityFirst:artifactCard.priorityFirst===true
+          },effect.targetId,time);
+          const stolen=artifactForNewOwner(targetCard,actorId,time);
+          const actorRoles=await txn.get("roles:"+actorId)||[],
+            targetRoles=await txn.get("roles:"+effect.targetId)||[];
+          if(actorRoles.length!==1||targetRoles.length!==1||
+            String(actorRoles[0]?.roleId)!==String(rows.find(x=>normalizeLoginId(x.loginId)===actorId)?.roleId)||
+            String(targetRoles[0]?.roleId)!==String(rows.find(x=>normalizeLoginId(x.loginId)===effect.targetId)?.roleId))
+            return {ok:false,error:"ARTIFACT_STEAL_PRIVATE_ROLES_MISSING"};
+          const changed=new Map([[actorId,actorRoles.map(row=>({...row,artifact:stolen}))],
+            [effect.targetId,targetRoles.map(row=>({...row,artifact:newCard}))]]);
+          const updated=applyArtifactStealSummary({assignments:rows,actorId,
+            targetId:effect.targetId,stolen,replacement:newCard,now:time}),
+            version=Math.max(1,Number(current.deliveryVersion)||1)+1,
+            nextMeta={...current,deliveryVersion:version,roleDeliveredAt:time,updatedAt:time};
+          await txn.put("artifact:"+actorId,stolen);
+          await txn.put("artifact:"+effect.targetId,newCard);
+          await txn.put("assignments",updated);
+          for(const [id,roles] of changed){
+            await txn.put("roles:"+id,roles);
+            await txn.put("role:"+id,roles[0]);
+          }
+          // Update every active delivery when global revision changes, so
+          // unaffected Players never fall back to stale legacy snapshots.
+          for(const row of updated){
+            const id=normalizeLoginId(row.loginId);
+            if(!id)continue;
+            const roles=changed.get(id)||await txn.get("roles:"+id)||[];
+            if(!Array.isArray(roles)||!roles.length)continue;
+            await txn.put("deliverySnapshot:"+id,buildPrivateDeliverySnapshot({
+              matchId,matchRevision:Number(nextMeta.matchRevision||0),
+              deliveryVersion:version,publishedAt:time,roles}));
+          }
+          await txn.put("meta",nextMeta);
+          return {ok:true,room:publicRoom(nextMeta)};
+        });
+        if(!moved.ok)return j({ok:false,error:moved.error||"ARTIFACT_STEAL_CONFLICT",
+          message:moved.message||"Không thể cấp lá mới; Artifact chưa tiêu hao lượt."},409);
+        // Never send the stolen Artifact identity over a shared socket.
+        this.broadcast({type:"room_state",room:moved.room,serverTime:Date.now()});
         continue;
       }
       if(effect.kind==="swap_role"){
@@ -2988,7 +3076,10 @@ export class RoomDurableObject extends DurableObject {
       const ckey="artifactCycle:"+artifactCycleKey;
       await this.ctx.storage.put(ckey,artifactReservation.state);
       await this.ctx.storage.put(useKey,{requestId:token,cycleKey:artifactCycleKey,usedAt:time,artifactId,actorId});
-      owned.usedAt=time;await this.ctx.storage.put("artifact:"+actorId,owned);
+      // Steal replaced the owner card inside the transaction; never restore #17.
+      if(artifactId!=="artifact_17"){
+        owned.usedAt=time;await this.ctx.storage.put("artifact:"+actorId,owned);
+      }
     }else{
       await this.ctx.storage.put(usageKey,[...priorUsage,{matchId,day,actorId,roleId,
         artifactId:"",actionId,requestId:token,createdAt:time}].slice(-1000));
