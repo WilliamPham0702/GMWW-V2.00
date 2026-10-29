@@ -8,6 +8,7 @@ import {artifactCycleKey} from './gmww-game-scene-rules.js';
 import {STATUS_DEFS} from './gmww-public-room-contract.js';
 import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
 import {onlineGmActionIcon} from './gmww-online-action-icons.js';
+import {linkedArtifactAction} from './gmww-artifact-link.js';
 import {canSnowWolfBite,resolveWolfNight} from './gmww-wolf-night-resolution.js';
 const rules=globalThis.GMWW_BATTLE_CONTROLS;
 const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
@@ -23,15 +24,27 @@ export const serverDemoActive=(meta,lease)=>meta?.demo===true&&meta.phase==='run
 
 async function context(room,meta){
  const store=room.ctx.storage,assignments=await store.get('assignments')||[],players=await store.get('players')||{},rows=await store.get('interactions')||[],cfg=await store.get('gameConfig')||{};
- const cards=[],artifacts=[],artifactOwners=new Map(),roleOwners=new Map();
+ const cards=[],artifacts=[],artifactOwners=new Map(),roleOwners=new Map(),artifactLinks=new Map();
  for(const a of assignments){
   const privateRows=await store.get('roles:'+a.loginId)||[await store.get('role:'+a.loginId)].filter(Boolean),owned=privateRows.find(r=>r.roleId===a.roleId&&matchRow(r,meta)),catalog=await store.get('roleCatalog:'+a.roleId);
   if(!cards.some(c=>c.id===a.roleId))cards.push({...catalog?.roleCard,...a.roleCard,...owned?.roleCard,id:a.roleId,name:a.roleName});
   roleOwners.set(a.loginId,{...catalog?.roleCard,...a.roleCard,...owned?.roleCard,id:a.roleId,name:a.roleName});
   if(a.artifactId){const art=await store.get('artifact:'+a.loginId);artifactOwners.set(a.loginId,{...art,spent:!!(await store.get('artifactUse:'+a.loginId+':'+a.artifactId))});if(!artifacts.some(c=>c.id===a.artifactId))artifacts.push({...art?.artifactCard,id:a.artifactId,name:a.artifactName})}
  }
+ for(const a of assignments){
+  if(a.artifactId!=='artifact_32')continue;
+  const link=await store.get('artifactLink:'+meta.matchId+':'+a.loginId);
+  if(!link)continue;
+  const donorArtifact=await store.get('artifact:'+link.donorId),
+    donorAssignment=assignments.find(x=>x.loginId===link.donorId),
+    checked=linkedArtifactAction({link,actorId:a.loginId,actionId:link.actionId,
+      matchId:meta.matchId,donorArtifact,donorAssignment});
+  if(!checked.ok||await store.get('artifactEchoUse:'+meta.matchId+':'+a.loginId+':'+link.actionId))continue;
+  const fn=donorArtifact?.artifactCard?.functions?.find(x=>x.actionId===link.actionId);
+  if(fn)artifactLinks.set(a.loginId,{link,fn});
+ }
  const cycle=(await store.get('artifactCycle:'+(meta.cyclePhase==='morning'?meta.matchId+':day:'+meta.cycleNight:artifactCycleKey(meta.matchId,meta.cycleNight))))||{accepted:[]};
- return {store,assignments,players,rows,cfg,cards,artifacts,artifactOwners,roleOwners,cycle};
+ return {store,assignments,players,rows,cfg,cards,artifacts,artifactOwners,roleOwners,artifactLinks,cycle};
 }
 function nightActions(ctx,meta,turn,usage){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
@@ -68,6 +81,23 @@ function dayActions(ctx,meta,usage,ballot){
     list.push({id,actionId,name,...owner,card:undefined,actorIds:[actorId],targetCount:fn.noTarget?0:Number(fn.targetCount??1),noSelf:fn.noSelf!==false,allowDead:fn.allowDead,noTarget:fn.noTarget,type:rules.resolvedType({...fn,name}),effectIds:fn.effectIds||[]});
    }
   }
+ }
+ // The Echo remains a separate, once-game power of the Lam Ngọc owner.
+ // Its donor must already have revealed the original Artifact.
+ for(const a of ctx.assignments){
+  const echo=ctx.artifactLinks.get(a.loginId),actorId=a.loginId;
+  if(!echo||status(ctx.rows,meta,actorId,'expelled')||
+    status(ctx.rows,meta,actorId,'dead')||
+    isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS})||
+    ctx.cycle.accepted.length>=Number(ctx.cfg.artifactLimitPerCycle??3)||
+    ctx.cycle.accepted.some(x=>x.artifactId==='artifact_32'&&x.playerId==='member:'+actorId))
+    continue;
+  const fn=echo.fn,actionId=fn.actionId,name='Lam Ngọc · '+String(fn.description||fn.name||actionId);
+  list.push({id:'day:linked:artifact_32:'+actorId+':'+actionId,
+    actionId,name,artifactId:'artifact_32',roleId:'',actorIds:[actorId],
+    targetCount:fn.noTarget?0:Number(fn.targetCount??1),
+    noSelf:fn.noSelf!==false,allowDead:fn.allowDead,noTarget:fn.noTarget,
+    type:rules.resolvedType({...fn,name}),effectIds:fn.effectIds||[]});
  }
  return list;
 }
