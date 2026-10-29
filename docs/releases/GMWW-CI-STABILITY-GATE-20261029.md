@@ -24,3 +24,10 @@
 
 ## Rollback
 Revert commit thêm workflow này, sau khi gỡ required check tương ứng khỏi ruleset; không chạm dữ liệu hoặc phiên bản ứng dụng.
+
+## Kiểm tra CI thực tế tiếp theo (PR #606)
+- CI Stability Contract SUCCESS; 30-Player Realtime Room SUCCESS.
+- Player Web Worker FAILURE: log có assertion lịch sử `tests/player-web-template-assets-v365.test.mjs:45`; runner sau đó bị shutdown/cancel trong quá trình quét rộng. Chưa được kết luận tất cả lỗi Worker chỉ do runner.
+- Player Card Browsers FAILURE: assertion `🏴‍☠️ displayed to eligible Player` khi kiểm tra hiển thị đề cử/Lên Giàn; phải kiểm chứng UI hành vi theo luật đang áp dụng, không xóa assertion để ép PASS.
+- P0 Chrome/Edge FAILURE: `TimeoutError` trong E2E realtime; log có 404 ảnh từ role ID giả `role-p0-*`, cần phân biệt dữ liệu fixture với lỗi ảnh Production.
+- **Chặn merge** cho đến khi các kiểm tra lỗi được sửa hoặc chứng minh không liên quan và cấu hình required checks hợp lệ. Không bypass, không deploy.
