@@ -11,6 +11,7 @@ import {onlineGmActionIcon} from './gmww-online-action-icons.js';
 import {linkedArtifactAction} from './gmww-artifact-link.js';
 import {planArtifactLink} from './gmww-artifact-link.js';
 import {planDayFunctionCopy} from './gmww-artifact-function-copy.js';
+import {ghostLetterTarget} from './gmww-ghost-letter.js';
 import {canSnowWolfBite,resolveWolfNight} from './gmww-wolf-night-resolution.js';
 const rules=globalThis.GMWW_BATTLE_CONTROLS;
 const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
@@ -166,6 +167,9 @@ export function targetsFor(action,actorId,ctx,meta){
        roleCard:ctx.roleOwners.get(targetId)}],
      now:new Date().toISOString()}).ok;
   }
+  if(action.artifactId==='artifact_34'&&actionId==='action-ghost-message')
+   return ghostLetterTarget({actorId,targetId,matchId:meta.matchId,
+     day:meta.cycleNight,interactions:ctx.rows}).ok;
   if(action.artifactId==='artifact_40'&&actionId==='artifact_action_swap_role'){
    return ctx.assignments.filter(x=>x.loginId===actorId).length===1&&
      ctx.assignments.filter(x=>x.loginId===targetId).length===1;
@@ -201,7 +205,25 @@ async function execute(room,meta,lease,ctx,action,day=false){
  if(!targets){await observe(room,meta,lease,action.name+' · Không đủ mục tiêu hợp lệ',actorId,[],'skipped');return}
  const request=room.demoInternalRequest(),token='demo-'+crypto.randomUUID();
  let result,observedTargets=targets,observedAction=action.name;
- if(day)result=await checked(await room.gmDayAction(request,{matchId:meta.matchId,cycleKey:meta.cycleKey,actorId,roleId:action.roleId||'',artifactId:action.artifactId||'',actionId:action.actionId,targetIds:targets,clientEventId:token}));
+ if(day){
+  result=await checked(await room.gmDayAction(request,{matchId:meta.matchId,
+   cycleKey:meta.cycleKey,actorId,roleId:action.roleId||'',
+   artifactId:action.artifactId||'',actionId:action.actionId,
+   targetIds:targets,clientEventId:token}));
+  // DEMO's deceased bot may answer a request using one real letter of its
+  // Role. A live human never receives an automatic answer on their behalf.
+  if(action.artifactId==='artifact_34'&&action.actionId==='action-ghost-message'&&
+    result.result?.letterRequested&&
+    ctx.players['member:'+targets[0]]?.humanControlled!==true){
+   const requestRow=await room.ctx.storage.get('ghostLetterRequest:'+meta.matchId+':'+actorId);
+   const person=ctx.assignments.find(x=>x.loginId===targets[0]),
+     roleName=String(person?.roleName||person?.roleId||''),
+     letter=[...roleName.normalize('NFC')].find(c=>/\p{L}/u.test(c))||'V';
+   if(requestRow?.id)
+    await checked(await room.playerGhostLetter({loginId:targets[0],
+      requestId:requestRow.id,letter}));
+  }
+ }
  else{
   const rt=await room.getNightRuntime(meta,meta.cycleNight,false),turn=rt.queue[rt.cursor],seer=!action.artifactId&&['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer'].includes(action.actionId),transfer=!action.artifactId&&action.actionId==='action_transfer_bite',direction=transfer?pick(['left','right']):'';
   result=await checked(await room.gmBattleAction(request,{matchId:meta.matchId,cycleKey:meta.cycleKey,turnId:turn.id,night:meta.cycleNight,actorId,type:transfer?'effect_notice':action.type,actionId:action.actionId,effectId:action.effectIds?.[0]||'',effectName:action.name,targetIds:seer||transfer||!action.targetCount?[actorId]:targets,clientEventId:token,source:'demo-server',...(action.artifactId?{artifactId:action.artifactId}:{}),...(seer?{revealTargetIds:targets,message:'GM Demo thực hiện soi xét.'}:{}),...(transfer?{direction,message:'Demo dịch vết cắn '+direction}:{}),...(action.actionId==='action_assassin_mark'?{assassinChoice:pick(['👍','👎'])}:{})}));
