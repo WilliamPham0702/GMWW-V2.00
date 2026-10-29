@@ -26,6 +26,7 @@ test('Mismatched action or invented Player target is rejected',()=>{
 });
 test('GM day handler uses private Server-authoritative inspection, no public result broadcast',()=>{
  const server=fs.readFileSync('src/index.js','utf8');
- assert.ok(server.includes('resolveDayArtifactInspection({artifactId,actionId,'));
+ assert.match(server,/resolveDayArtifactInspection\(\{artifactId:linked\?\.sourceArtifactId\|\|artifactId,actionId,/);
+ assert.ok(server.includes('linkedArtifactAction({link,actorId,actionId,matchId,'));
  assert.ok(server.includes('DAY_ARTIFACT_INSPECTION_INVALID'));
 });
