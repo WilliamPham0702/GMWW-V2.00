@@ -166,6 +166,20 @@ jobs:
         run: node --test tests/ci-browser-scope.test.mjs
   # Lên Giàn đã có workflow Check Lên Giàn theo đúng phạm vi.
   # Không chạy browser-test khi mode=gallows: tuyệt đối không chặn task bằng Card/Seat/Home/OTA.
+  avatar-regression:
+    needs: scope
+    if: needs.scope.outputs.mode == 'player-top-avatar-603'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Kiểm icon avatar + Player Web bundle trên PR603
+        run: |
+          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-lobby-scene.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
   browser-test:
     needs: scope
     if: needs.scope.outputs.mode == 'full'
