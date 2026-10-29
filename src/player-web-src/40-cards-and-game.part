@@ -21,7 +21,7 @@ function ensurePlayerPresentationUi(){
   let bar=$('#gmwwPlayerWaitingBar');
   if(!bar){bar=document.createElement('div');bar.id='gmwwPlayerWaitingBar';bar.innerHTML='<div class="waiting-copy"><b></b><small></small></div><button type="button" hidden>XEM VAI TRÒ</button>';game.appendChild(bar);bar.querySelector('button').addEventListener('click',()=>setGameViewPane('role'))}
   if(!$('#gmwwPlayerRoleBackdrop')){const el=document.createElement('div');el.id='gmwwPlayerRoleBackdrop';el.hidden=true;game.appendChild(el);el.addEventListener('click',()=>setGameViewPane('village',{persist:false}))}
-  if(!$('#gmwwPlayerRoleReturn')){const btn=document.createElement('button');btn.id='gmwwPlayerRoleReturn';btn.type='button';btn.textContent='← VỀ SẢNH CHỜ';btn.hidden=true;btn.addEventListener('click',()=>setGameViewPane('village',{persist:false}));game.appendChild(btn)}
+  if(!$('#gmwwPlayerRoleReturn')){const btn=document.createElement('button');btn.id='gmwwPlayerRoleReturn';btn.type='button';btn.textContent='← VỀ LÀNG';btn.hidden=true;btn.addEventListener('click',()=>setGameViewPane('village',{persist:false}));game.appendChild(btn)}
   return bar;
 }
 function syncPlayerPresentation(){
@@ -47,8 +47,7 @@ function syncPlayerPresentation(){
     // The same iframe and character rig stay mounted when GM starts the game.
     setGameViewPane('village',{persist:false});
   }else if(!hasRole&&$('#game .role-stage')?.hidden===false)setGameViewPane('village',{persist:false});
-  const modalOpen=$('#gmwwPlayerRoleBackdrop')?.hidden===false;
-  if(modalOpen&&policy.mode==='battle')setGameViewPane('village',{persist:false});
+  // Keep the full-size card modal open during realtime updates until dismissed by the player.
   // Do not auto-open an Online card screen when GM delivers roles.
   // The current village stays visible; private cards open on demand.
 }
