@@ -117,3 +117,12 @@ PR vẫn Draft. Chỉ merge sau khi 107/107 được chứng nhận và required
 - Gửi yêu cầu **riêng** cho người bị loại. Người được yêu cầu gửi chính xác một chữ cái Unicode qua API có xác thực; chỉ chủ Khăn Hồn Ma đọc được kết quả trên `/me`. Người khác không xem được manh mối hay danh tính người dùng Artifact từ WebSocket. Trạng thái pending/đã phản hồi lưu theo ván và hỗ trợ reconnect; hết Ngày yêu cầu thì không thể phản hồi muộn.
 - Bộ test: `tests/card-executors-ghost-letter-20261029.test.mjs`, `tests/worker-artifact-ghost-letter-e2e.mjs` (Worker HTTP/SQLite riêng). **Chưa đánh dấu PASS khi CI của checkpoint chưa hoàn tất.**
 - Chưa nghiệm thu phần giao diện nhập chữ trên Player Web/GM, audio, DEMO/undo và các tình huống chéo 107 lá. Vẫn giữ PR Draft và khóa phát hành.
+
+### Checkpoint 29/10 — Mặt Dây Chuyền Kiêu Hãnh (#27), thông điệp riêng
+
+- Executor Ban ngày: chỉ người giữ #27 được gửi Vai Trò thật của mình cho một người khác; Vai Trò lấy từ assignment Server, không tin dữ liệu client.
+- Thông điệp lưu theo matchId và loginId người nhận; `/me` trả riêng đúng người nhận qua xác thực. Chống gửi trùng clientEventId, hỗ trợ reconnect.
+- WebSocket chỉ phát generic tick, không lộ nội dung hoặc người gửi/nhận. Player Web có inbox riêng trong Chat, hiển thị an toàn bằng textContent và toast không lặp.
+- Không tự đọc audio vai trò bí mật ra loa. DEMO chặn tự chọn bản thân là mục tiêu.
+- Test: tests/card-executors-private-role-disclosure-20261029.test.mjs (UI unit), tests/worker-artifact-private-disclosure-e2e.mjs (Worker/SQLite/HTTP, quyền/quota/retry/privacy/reconnect).
+- Ma trận Artifact #27 chỉ PARTIAL có bằng chứng; undo, GM UI thực, DEMO, audio, tương tác chéo chưa chứng nhận. Tổng CERTIFIED vẫn 0/107. PR giữ Draft; không merge/deploy/OTA/IPA, dữ liệu Production giữ nguyên.
