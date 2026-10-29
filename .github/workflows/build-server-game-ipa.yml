@@ -52,6 +52,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -498,25 +500,58 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # Build candidate IPA for PR/main; publishing is an explicit opt-in only.
-      # A routine push must never replace the Production IPA or overwrite an existing tag.
+      # Owner explicitly approved PR629 publication. Only its exact merge
+      # commit may publish once; later pushes remain build-only.
+      - name: Authorize owner-approved Stage 2 IPA release only on PR629 merge
+        id: approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPROVED=false
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            SUBJECT=$(git log -1 --format=%s)
+            if [ "$SUBJECT" = "Merge PR #629: release Native GitHub-first OTA Stage 2" ]; then
+              APPROVED=true
+            fi
+          fi
+          echo "approved=$APPROVED" >> "$GITHUB_OUTPUT"
+          echo "PR629 one-time IPA authorization: $APPROVED" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify release permission and required CI on exact main SHA
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_ipa == true
+        if: >-
+          (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_ipa == true) ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.approval.outputs.approved == 'true')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100")
-          for NAME in "Check Player Web Worker" "Check Native GitHub-first OTA Stage 2"; do
-            PASS=$(printf '%s' "$RUNS" | jq -r --arg sha "$GITHUB_SHA" --arg name "$NAME" \
-              '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .name == $name)] | sort_by(.run_number) | last | .conclusion // "missing"')
-            test "$PASS" = "success" || { echo "::error::$NAME has no SUCCESS on main SHA: $PASS"; exit 1; }
+          git fetch --no-tags origin main
+          test "$(git rev-parse refs/remotes/origin/main)" = "$GITHUB_SHA" || {
+            echo "::error::Main moved during build; never publish stale IPA."; exit 1;
+          }
+          for TRIAL in $(seq 1 24); do
+            RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100")
+            OK=true
+            for NAME in "Check Player Web Worker" "Check Native GitHub-first OTA Stage 2"; do
+              PASS=$(printf '%s' "$RUNS" | jq -r --arg sha "$GITHUB_SHA" --arg name "$NAME" \
+                '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .name == $name)] | sort_by(.run_number) | last | .conclusion // "missing"')
+              if [ "$PASS" != success ]; then
+                OK=false
+                case "$PASS" in failure|cancelled|timed_out|action_required) echo "::error::$NAME failed: $PASS"; exit 1;; esac
+              fi
+            done
+            if [ "$OK" = true ]; then break; fi
+            if [ "$TRIAL" -eq 24 ]; then echo "::error::Required same-SHA CI not SUCCESS"; exit 1; fi
+            sleep 10
           done
           test -s docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
+
       - name: Publish IPA for in-app download
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_ipa == true
+        if: >-
+          (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_ipa == true) ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.approval.outputs.approved == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -524,9 +559,12 @@ jobs:
           set -euo pipefail
           TAG="gmww-v$VERSION"
           IPA="GMWW-V$VERSION.ipa"
+          test -s "$IPA"
+          test -s "$IPA.sha256"
+          shasum -a 256 -c "$IPA.sha256"
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes-file docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
+            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION — NATIVE GITHUB-FIRST OTA" --notes-file docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
           else
-            echo "::error::IPA tag $TAG already exists. Never overwrite a published IPA; increment version.";
+            echo "::error::IPA tag $TAG already exists. Do not overwrite a published IPA.";
             exit 1
           fi
