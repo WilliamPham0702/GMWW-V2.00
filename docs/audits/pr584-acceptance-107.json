@@ -4821,40 +4821,61 @@
       "httpEvidence": [],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-ghost-clue-20261029.test.mjs",
+            "tests/worker-ghost-clue-e2e.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-ghost-clue-20261029.test.mjs",
+            "tests/worker-ghost-clue-e2e.mjs"
+          ]
         },
         "ownership": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-ghost-clue-20261029.test.mjs",
+            "tests/worker-ghost-clue-e2e.mjs"
+          ]
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-ghost-clue-20261029.test.mjs",
+            "tests/worker-ghost-clue-e2e.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-ghost-clue-20261029.test.mjs",
+            "tests/worker-ghost-clue-e2e.mjs"
+          ]
         },
         "undo": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-ghost-clue-20261029.test.mjs",
+            "tests/worker-ghost-clue-e2e.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "privateInformation": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-ghost-clue-20261029.test.mjs",
+            "tests/worker-ghost-clue-e2e.mjs"
+          ]
         },
         "gmUi": {
           "status": "NOT_VERIFIED",
@@ -8340,7 +8361,8 @@
           "evidence": [
             "tests/card-executors-artifact-function-copy-20261029.test.mjs",
             "tests/worker-artifact-function-copy-e2e.mjs",
-            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "timing": {
@@ -8348,7 +8370,8 @@
           "evidence": [
             "tests/card-executors-artifact-function-copy-20261029.test.mjs",
             "tests/worker-artifact-function-copy-e2e.mjs",
-            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "ownership": {
@@ -8356,7 +8379,8 @@
           "evidence": [
             "tests/card-executors-artifact-function-copy-20261029.test.mjs",
             "tests/worker-artifact-function-copy-e2e.mjs",
-            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "quota": {
@@ -8364,7 +8388,8 @@
           "evidence": [
             "tests/card-executors-artifact-function-copy-20261029.test.mjs",
             "tests/worker-artifact-function-copy-e2e.mjs",
-            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "idempotency": {
@@ -8372,19 +8397,25 @@
           "evidence": [
             "tests/card-executors-artifact-function-copy-20261029.test.mjs",
             "tests/worker-artifact-function-copy-e2e.mjs",
-            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "undo": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "reconnect": {
           "status": "PARTIAL",
           "evidence": [
             "tests/card-executors-artifact-function-copy-20261029.test.mjs",
             "tests/worker-artifact-function-copy-e2e.mjs",
-            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "deathAndRevival": {
@@ -8396,7 +8427,8 @@
           "evidence": [
             "tests/card-executors-artifact-function-copy-20261029.test.mjs",
             "tests/worker-artifact-function-copy-e2e.mjs",
-            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "gmUi": {
@@ -8421,7 +8453,9 @@
         "crossInteractions": {
           "status": "PARTIAL",
           "evidence": [
-            "tests/worker-artifact-function-copy-e2e.mjs"
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         }
       }
@@ -9248,40 +9282,72 @@
       "httpEvidence": [],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "ownership": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "undo": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "privateInformation": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "gmUi": {
           "status": "NOT_VERIFIED",
@@ -9300,8 +9366,12 @@
           "evidence": []
         },
         "crossInteractions": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-link-20261029.test.mjs",
+            "tests/worker-artifact-link-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         }
       }
     },
@@ -10005,46 +10075,56 @@
           "status": "PARTIAL",
           "evidence": [
             "tests/worker-artifact-role-swap-e2e.mjs",
-            "tests/card-executors-artifact-role-swap-20261029.test.mjs"
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "timing": {
           "status": "PARTIAL",
           "evidence": [
             "tests/worker-artifact-role-swap-e2e.mjs",
-            "tests/card-executors-artifact-role-swap-20261029.test.mjs"
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "ownership": {
           "status": "PARTIAL",
           "evidence": [
             "tests/worker-artifact-role-swap-e2e.mjs",
-            "tests/card-executors-artifact-role-swap-20261029.test.mjs"
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "quota": {
           "status": "PARTIAL",
           "evidence": [
             "tests/worker-artifact-role-swap-e2e.mjs",
-            "tests/card-executors-artifact-role-swap-20261029.test.mjs"
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "idempotency": {
           "status": "PARTIAL",
           "evidence": [
             "tests/worker-artifact-role-swap-e2e.mjs",
-            "tests/card-executors-artifact-role-swap-20261029.test.mjs"
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "undo": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-role-swap-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         },
         "reconnect": {
           "status": "PARTIAL",
           "evidence": [
             "tests/worker-artifact-role-swap-e2e.mjs",
-            "tests/card-executors-artifact-role-swap-20261029.test.mjs"
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "deathAndRevival": {
@@ -10055,7 +10135,8 @@
           "status": "PARTIAL",
           "evidence": [
             "tests/worker-artifact-role-swap-e2e.mjs",
-            "tests/card-executors-artifact-role-swap-20261029.test.mjs"
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
           ]
         },
         "gmUi": {
@@ -10075,8 +10156,12 @@
           "evidence": []
         },
         "crossInteractions": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-role-swap-20261029.test.mjs",
+            "tests/worker-artifact-role-swap-e2e.mjs",
+            "tests/worker-artifact-night-transformations-e2e.mjs"
+          ]
         }
       }
     },
