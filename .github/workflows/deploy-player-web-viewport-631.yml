@@ -1,0 +1,81 @@
+name: Deploy Player Web fixed viewport PR631 (Production)
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/player-web-src/00-bootstrap-and-session.part"
+      - "src/gmww-members-live.js"
+      - "assets/village/village.css"
+      - "assets/village/index.html"
+      - "tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs"
+      - "docs/releases/GMWW-PLAYER-WEB-VIEWPORT-PR631-20261029.md"
+      - ".github/workflows/deploy-player-web-viewport-631.yml"
+permissions:
+  contents: read
+concurrency:
+  group: gmww-production
+  cancel-in-progress: false
+jobs:
+  player-web-viewport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact merged main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Prove PR631 merge and exact Worker-only scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          git log -1 --format=%B | grep -qE 'Merge pull request #631([[:space:]]|$)'
+          test "$(node -p 'require("./package.json").version')" = 3.275.0
+          git diff --name-only HEAD^1 HEAD > /tmp/pr631-scope.txt
+          for p in src/player-web-src/00-bootstrap-and-session.part src/gmww-members-live.js assets/village/village.css assets/village/index.html tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs docs/releases/GMWW-PLAYER-WEB-VIEWPORT-PR631-20261029.md .github/workflows/deploy-player-web-viewport-631.yml; do
+            grep -Fxq "$p" /tmp/pr631-scope.txt || { echo "::error::Missing $p"; exit 1; }
+          done
+          while IFS= read -r p; do
+            case "$p" in
+              src/player-web-src/00-bootstrap-and-session.part|src/gmww-members-live.js|assets/village/village.css|assets/village/index.html|tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs|docs/releases/GMWW-PLAYER-WEB-VIEWPORT-PR631-20261029.md|.github/workflows/deploy-player-web-viewport-631.yml) ;;
+              *) echo "::error::Unexpected Production file: $p"; exit 1 ;;
+            esac
+          done < /tmp/pr631-scope.txt
+          test -s docs/releases/GMWW-PLAYER-WEB-VIEWPORT-PR631-20261029.md
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Focused Player Web tests, syntax and Worker dry run
+        run: |
+          set -euo pipefail
+          node --test tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-first-paint-cleanup.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/gmww-members-live.js
+          node --check src/index.js
+          npm run check
+      - name: Deploy existing Production Worker and static assets only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --no-install wrangler deploy --config wrangler.jsonc
+      - name: Verify deployed Production health, Player JS and village CSS
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL=https://gmww-v2-00.williampham0702.workers.dev
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 "$URL/api/health" -o /tmp/pr631-health.json
+          grep -q '"project":"GMWW-V2.00"' /tmp/pr631-health.json
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 "$URL/gmww-members-live.js?pr631=$GITHUB_SHA" -o /tmp/pr631-player.js
+          grep -Fq 'gmwwPlayerViewportLock' /tmp/pr631-player.js
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 "$URL/village/?pr631=$GITHUB_SHA" -o /tmp/pr631-village.html
+          grep -Fq '3202-viewport631' /tmp/pr631-village.html
+          curl -fsS --retry 5 --retry-all-errors --retry-delay 3 "$URL/village/village.css?pr631=$GITHUB_SHA" -o /tmp/pr631-village.css
+          grep -Fq 'html.embedded .stage{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important' /tmp/pr631-village.css
+          echo 'PR631 Production smoke PASS. IPA/Runtime OTA/DO data unchanged.' >> "$GITHUB_STEP_SUMMARY"
