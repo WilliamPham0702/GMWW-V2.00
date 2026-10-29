@@ -109,3 +109,11 @@ PR vẫn Draft. Chỉ merge sau khi 107/107 được chứng nhận và required
 - **DEMO**: lọc mục tiêu hợp lệ cho Tráng Gương (#23), Lam Ngọc (#32), Đá Hoán Đổi (#40) trước khi chạy, tránh chọn sai và dừng DEMO. Regression `tests/card-executors-demo-transform-targets-20261029.test.mjs`, còn phải nghiệm thu một ván DEMO trọn vẹn.
 - CI run **40871853717**: unit regression + HTTP/SQLite Worker E2E + GM bundle/Worker dry-run PASS; cổng 107/107 FAIL đúng thiết kế. Các commit tiếp theo về DEMO vẫn phải chạy CI lại trên head cuối.
 - **Không đủ điều kiện hoàn tất:** #32 mới hỗ trợ một tập con đã có executor, #23 còn các chức năng nguồn khác, #34 và các executor chưa triển khai, audio, UI GM/Player Web trực quan, DEMO đầy đủ và mọi tương tác chéo 107 lá còn thiếu. Ma trận `pr584-acceptance-107.json` giữ **0/107 CERTIFIED**. PR #584 vẫn DRAFT; không merge, Production, Runtime OTA hoặc IPA; không thay đổi dữ liệu.
+
+
+### Bổ sung Khăn Hồn Ma (#34) — checkpoint 29/10
+
+- Executor Ban ngày chỉ cho phép chọn người đã bị loại ở chu kỳ trước; dùng cùng ledger quota Artifact Server và không tiêu hao khi mục tiêu không hợp lệ.
+- Gửi yêu cầu **riêng** cho người bị loại. Người được yêu cầu gửi chính xác một chữ cái Unicode qua API có xác thực; chỉ chủ Khăn Hồn Ma đọc được kết quả trên `/me`. Người khác không xem được manh mối hay danh tính người dùng Artifact từ WebSocket. Trạng thái pending/đã phản hồi lưu theo ván và hỗ trợ reconnect; hết Ngày yêu cầu thì không thể phản hồi muộn.
+- Bộ test: `tests/card-executors-ghost-letter-20261029.test.mjs`, `tests/worker-artifact-ghost-letter-e2e.mjs` (Worker HTTP/SQLite riêng). **Chưa đánh dấu PASS khi CI của checkpoint chưa hoàn tất.**
+- Chưa nghiệm thu phần giao diện nhập chữ trên Player Web/GM, audio, DEMO/undo và các tình huống chéo 107 lá. Vẫn giữ PR Draft và khóa phát hành.
