@@ -170,6 +170,37 @@ async function submitDrunkDraw(cardId){
     await pollRoomState();
   }
 }
+// Server-authoritative day Artifact results are visible ONLY in this owner's
+// authenticated /me response. No result is read from public room/WS events.
+let gmwwInspectionMatch='',gmwwInspectionSeen=new Set(),gmwwInspectionHide=null;
+function gmwwShowDayInspection(rows,room){
+  const match=String(room?.matchId||'');
+  if(match!==gmwwInspectionMatch){
+    gmwwInspectionMatch=match;gmwwInspectionSeen.clear();
+    document.getElementById('gmwwPrivateArtifactResult')?.remove();
+  }
+  if(!match||String(room?.phase||'')!=='running')return;
+  for(const row of Array.isArray(rows)?rows:[]){
+    if(String(row?.matchId||'')!==match||!row?.id||gmwwInspectionSeen.has(String(row.id)))continue;
+    gmwwInspectionSeen.add(String(row.id));
+    const result=row.result||{};
+    if(result.private!==true)continue;
+    const label=result.kind==='role'?'Vai trò thật: '+String(result.roleName||''):
+      result.confirmed===true?'ĐÚNG':'KHÔNG ĐÚNG';
+    let panel=document.getElementById('gmwwPrivateArtifactResult');
+    if(!panel){
+      panel=document.createElement('aside');panel.id='gmwwPrivateArtifactResult';
+      panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');
+      panel.style.cssText='position:fixed;z-index:1200;top:max(96px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(88vw,390px);padding:14px 18px;border-radius:15px;border:1px solid #dab56b;box-shadow:0 10px 28px #0009;background:#092e44;color:#fff9e8;font-size:16px;font-weight:800;text-align:center';
+      document.body.appendChild(panel);
+    }
+    panel.textContent='KẾT QUẢ ARTIFACT RIÊNG TƯ — '+label;
+    toast('Kết quả Artifact của bạn: '+label);
+    if(gmwwInspectionHide)clearTimeout(gmwwInspectionHide);
+    gmwwInspectionHide=setTimeout(()=>{panel.remove();gmwwInspectionHide=null},12000);
+  }
+}
+
 async function pollRoomState(){
   if(!state.roomCode||!state.participantId)return;
   const wolfWakeEpoch=Number(state.wolfWakeEpoch||0);
@@ -183,6 +214,7 @@ async function pollRoomState(){
     const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/me',{headers:auth()});
     if(d?.room){state.room=d.room;if(String(d.room.phase||'').toLowerCase()!=='ended')maybeOpenGame()}if(d?.cardBackImage){state.cardBackImage=d.cardBackImage;applyRoleCardBack()}
     if(d?.player){const me=d.player;state.ready=!!me.ready}
+    gmwwShowDayInspection(d?.dayArtifactInspections,d?.room||state.room);
     handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);renderDrunkDraw(d?.drunkDraw);gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();state.gallows=d?.gallows||null;renderGallowsWidget();state.demoActions=d?.demoActions||[];renderDemoActions();
     if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d.room||state.room);syncVillageFrame();
     if(d?.role){state.role=d.role;renderRole();maybeOpenGame()}
@@ -397,6 +429,7 @@ async function refreshPrivateRole(force=false){
   if(!state.roomCode||!state.token||!state.participantId)return false;
   const wolfWakeEpoch=Number(state.wolfWakeEpoch||0);
   try{const d=await api('/api/rooms/'+state.roomCode+'/me',{headers:auth()});
+    gmwwShowDayInspection(d?.dayArtifactInspections,d?.room||state.room);
     if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d?.room||state.room);handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);renderDrunkDraw(d?.drunkDraw);gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();if(d?.cardBackImage)state.cardBackImage=d.cardBackImage;const oldArtifactId=String(state.artifact?.artifactId||'');state.artifact=d?.artifact||null;state.artifactCycle=d?.artifactCycle||{cycleKey:'',count:0,max:3};if(oldArtifactId&&state.artifact&&oldArtifactId!==String(state.artifact.artifactId||'')){state.artifactOpen=false;state.artifactFocus='';clearArtifactDraft()}const incoming=Array.isArray(d?.roles)&&d.roles.length?d.roles:(d?.role?[d.role]:[]),previous=state.role,prevKey=previous?String(previous.assignmentIndex??previous.roleId??''):'';state.roles=incoming;if(incoming.length){let ix=incoming.findIndex(x=>String(x?.assignmentIndex??x?.roleId??'')===prevKey);if(ix<0)ix=Math.min(Math.max(0,Number(state.roleIndex||0)),incoming.length-1);state.roleIndex=ix;state.role=incoming[ix]||incoming[0]}else{state.roleIndex=0;state.role=null}state.room=d.room||state.room;state.demoActions=d?.demoActions||[];renderDemoActions();if(String(d.room?.phase||'').toLowerCase()==='ended'){showResult(d.room?.winnerFaction||d.room?.winnerLabel||'',d.room?.matchId||'');return false}if(state.role){rememberActiveRole(state.role);if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}renderRole();maybeOpenGame();return true}else if(['role_delivery','running'].includes(d.room?.phase)&&!state.rolePoll){restoreCachedRole();state.rolePoll=setInterval(()=>refreshPrivateRole(true),1800)}return !!state.role}catch(e){if(e?.status===403){await handleRoomMembershipLost();return false}if(e?.status===404){restoreCachedRole();return !!state.role}if(force)console.warn('[GMWW role]',e);restoreCachedRole();return !!state.role}
 }
 async function ensureRoleGameView(timeoutMs=5200){const phase=String(state.room?.phase||'').toLowerCase();if(!['role_delivery','running'].includes(phase))return false;if(state.role||restoreCachedRole()){maybeOpenGame();return true}const end=Date.now()+Math.max(1200,Number(timeoutMs)||5200);while(Date.now()<end&&state.roomCode&&state.participantId){const ok=await refreshPrivateRole(true);if(ok&&state.role){maybeOpenGame();return true}await new Promise(r=>setTimeout(r,450))}restoreCachedRole();if(state.role){maybeOpenGame();return true}return false}
