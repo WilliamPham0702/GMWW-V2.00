@@ -126,3 +126,10 @@ PR vẫn Draft. Chỉ merge sau khi 107/107 được chứng nhận và required
 - Không tự đọc audio vai trò bí mật ra loa. DEMO chặn tự chọn bản thân là mục tiêu.
 - Test: tests/card-executors-private-role-disclosure-20261029.test.mjs (UI unit), tests/worker-artifact-private-disclosure-e2e.mjs (Worker/SQLite/HTTP, quyền/quota/retry/privacy/reconnect).
 - Ma trận Artifact #27 chỉ PARTIAL có bằng chứng; undo, GM UI thực, DEMO, audio, tương tác chéo chưa chứng nhận. Tổng CERTIFIED vẫn 0/107. PR giữ Draft; không merge/deploy/OTA/IPA, dữ liệu Production giữ nguyên.
+
+### Checkpoint 29/10 — Lam Ngọc Định Mệnh (#32) sao chép Khiên Bảo Hộ (#35)
+
+- Mở rộng executor liên kết #32: thêm quyền sao chép `action_protect` của #35 khi Artifact nguồn đã được lật, đang thuộc đúng chủ và cùng ván. Nguồn vẫn giữ quyền dùng vô hạn; bản sao chỉ được dùng một lần.
+- Bản sao đi qua Server executor ngày để ghi `artifact_next_night_protect` với `protectNight = ngày + 1`; resolver cắn đêm sử dụng trạng thái thực, không giả lập hiệu ứng.
+- Có kiểm thử kế hoạch sao chép/owner/quota, Worker/SQLite/HTTP cho liên kết, lật nguồn, kích hoạt, ghi hiệu ứng, reconnect, public privacy và bảo toàn Artifact nguồn: `tests/card-executors-artifact-link-20261029.test.mjs`, `tests/worker-artifact-echo-shield-e2e.mjs`.
+- Đây mới là **một loại Artifact bổ sung**, không phải hỗ trợ sao chép mọi Artifact. Ban đêm, GM UI, DEMO, audio, undo và tương tác chéo 107/107 còn chưa được chứng nhận. PR giữ Draft và cổng 107/107 tiếp tục chặn phát hành.
