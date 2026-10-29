@@ -668,6 +668,10 @@ test('PR613 Artifact preview V3.274 postmerge CI-only recovery preserves exact r
   const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
   assert.match(worker,/artifact-preview-3274-postmerge/);
   assert.match(deploy,/IS_RECOVERY/);
+  assert.match(deploy,/head_sha=\\$PR613_HEAD/);
+  assert.match(deploy,/Check Approved Role Card Settings/);
+  assert.match(deploy,/Check GM Chat Flamingo and 3 Persistent Actions/);
+  assert.match(deploy,/CI Stability Gate/);
   assert.match(deploy,/TYPE=runtime/);
   assert.match(deploy,/2171214cec2c9af92994c27caaa8f75e976dbb1c/);
   assert.match(deploy,/V3\.274 PR613/);
