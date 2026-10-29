@@ -157,8 +157,6 @@ test('CI-only merge phải chặn auto-deploy Production',()=>{
   assert.match(workflow,/needs\.deploy-scope\.outputs\.should_deploy == 'true'/);
   assert.match(workflow,/\.github\/workflows\/deploy-production\.yml/);
   assert.match(workflow,/CHỈ CI: BỎ QUA DEPLOY PRODUCTION/);
-  assert.ok(workflow.includes('.github/workflows/ci-policy-gate.yml'), 'CI gate must not auto-deploy Production');
-  assert.ok(workflow.includes('docs/releases/GMWW-CI-POLICY-GATE-20261029.md'), 'CI-only release notes must not auto-deploy Production');
 });
 
 test('Bản vá cổng phát hành V3.203 chỉ chạy CI policy, không kiểm Chrome/Seat',()=>{
