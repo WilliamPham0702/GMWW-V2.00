@@ -72,3 +72,12 @@ Chưa nghiệm thu toàn bộ 107/107. Ma trận cập nhật bằng chứng ri�
 - DEMO chọn phiếu theo ràng buộc CỨU/GIẾT và bỏ qua actor không có phiếu hợp lệ khi hai ràng buộc xung đột; không tự tạo phiếu hoặc đổi luật đếm.
 
 Chưa phát hành; các ô chưa nghiệm thu đủ vẫn giữ NOT_VERIFIED/PARTIAL.
+
+### Hắc Ngọc Hủy Diệt (#25) — checkpoint tiếp theo 29/10
+
+- Thêm executor hủy bí mật Artifact của **người khác** chỉ khi chưa lật/chưa dùng. Đối chiếu sở hữu từ assignment + card Durable Object, trạng thái cùng ván, từ chối lá đã lật/đã sử dụng, lá không tồn tại hoặc đã bị loại.
+- Kiểm tra lại điều kiện hợp lệ **trong transaction** trước khi loại bỏ; giữ nguyên thông tin riêng tư, không phát danh tính lá bị hủy ở kết quả/broadcast. Tận dụng đường thu hồi đã có và bộ lọc private delivery trên reconnect.
+- Unit test và Worker HTTP/SQLite E2E: kiểm quyền GM, chủ sở hữu, chặn tự hủy, chặn lá đã lật, giữ nguyên lá không hợp lệ, retry/idempotency, quota, cập nhật lá sau reconnect, bảo mật public.
+- Ma trận `pr584-acceptance-107.json` ghi PASS/PARTIAL theo phạm vi có bằng chứng; **Artifact #25 chưa được chứng nhận đầy đủ**, các hạng mục UI/DEMO/audio/undo và tương tác toàn bộ bài chưa hoàn thành.
+
+PR vẫn Draft. Chỉ merge sau khi 107/107 được chứng nhận và required checks SUCCESS; chưa phát hành Worker/Runtime/IPA, không sửa dữ liệu Production.
