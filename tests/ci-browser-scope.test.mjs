@@ -693,3 +693,26 @@ test('PR613 Artifact preview V3.274 release proof accepts only exact four CI fil
   assert.match(gate,/CI Stability Gate/);
   assert.match(gate,/V3\.274 PR613/);
 });
+
+test('PR613 V3.274 canonical Character40 verification repair keeps exact CI-only scope',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/scripts/verify-character40-production.mjs',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs',
+    'docs/releases/GMWW-PR613-character40-proof-ci-20261029.md'
+  ];
+  const rows=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
+  assert.equal(classifyBrowserScope(rows),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope([...rows,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(rows.filter(x=>x.path!=='.github/scripts/verify-character40-production.mjs')),'full');
+  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
+  const workflow=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  const verify=readFileSync('.github/scripts/verify-character40-production.mjs','utf8');
+  const route=readFileSync('src/gmww-character40-catalog.js','utf8');
+  assert.match(workflow,/GMWW-PR613-character40-proof-ci-20261029.md/);
+  assert.ok(workflow.includes('assets/characters/gmww40/originals/character-01.webp'));
+  assert.ok(verify.includes("const originalPath='assets/characters/gmww40/'+c.original"));
+  assert.ok(route.includes("u.pathname='/characters/gmww40/originals/'+visual+'.webp'"));
+  assert.match(workflow,/git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD/);
+});
