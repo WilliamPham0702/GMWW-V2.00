@@ -23,3 +23,16 @@ test('Mismatched action or invented Player target is rejected',()=>{
  assert.equal(run('artifact_09','action_seer','villager'),null);
  assert.equal(run('artifact_29','action_seer','unknown'),null);
 });
+
+test('Cross interactions: inspect the CURRENT assigned Role/Faction after conversion or swap',()=>{
+ const before=[{loginId:'target',roleId:'role_villager',roleName:'Dân Làng',factionId:'village'}],
+   swapped=[{loginId:'target',roleId:'role_alpha_wolf',roleName:'Sói Trùm',factionId:'wolf'}],
+   converted=[{loginId:'target',roleId:'role_vampire',roleName:'Ma Cà Rồng',factionId:'third'}];
+ const inspectAt=(rows,artifactId,actionId)=>inspect({artifactId,actionId,targetId:'target',assignments:rows});
+ assert.equal(inspectAt(before,'artifact_09','artifact_action_check_villager').confirmed,true);
+ assert.equal(inspectAt(swapped,'artifact_09','artifact_action_check_villager').confirmed,false);
+ assert.equal(inspectAt(swapped,'artifact_29','action_seer').confirmed,true);
+ assert.equal(inspectAt(converted,'artifact_24','artifact_action_check_third_faction').confirmed,true);
+ assert.equal(inspectAt(converted,'artifact_29','action_seer').confirmed,false);
+ assert.equal(inspectAt(converted,'artifact_39','action_destroyer_scry').roleId,'role_vampire');
+});
