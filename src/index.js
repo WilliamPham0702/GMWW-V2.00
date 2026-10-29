@@ -11,6 +11,7 @@ import {planArtifactRoleSwap} from "./gmww-artifact-role-swap.js";
 import {validateArtifactSteal,eligibleArtifactReplacements,applyArtifactStealSummary,artifactForNewOwner} from "./gmww-artifact-steal.js";
 import {planDayFunctionCopy} from "./gmww-artifact-function-copy.js";
 import {planArtifactLink,linkedArtifactAction} from "./gmww-artifact-link.js";
+import {validateGhostClue,ghostClueAllowed,moderateGhostClue} from "./gmww-ghost-clue.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -194,8 +195,10 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
     if(url.pathname==="/player/chat"&&request.method==="POST")return this.playerChatRead(await safeJson(request));
     if(url.pathname==="/player/chat/send"&&request.method==="POST")return this.playerChatSend(await safeJson(request));
+    if(url.pathname==="/player/ghost-clue"&&request.method==="POST")return this.playerGhostClue(await safeJson(request));
     if(url.pathname==="/gm/chat"&&request.method==="GET")return this.gmChatRead(request);
     if(url.pathname==="/gm/chat/moderate"&&request.method==="POST")return this.gmChatModerate(request,await safeJson(request));
+    if(url.pathname==="/gm/ghost-clue"&&request.method==="POST")return this.gmGhostClue(request,await safeJson(request));
     if(url.pathname==="/gm/state"&&request.method==="GET")return this.gmState(request);
     if(url.pathname==="/gm/action-log"&&request.method==="GET")return this.gmActionLog(request);
     if(url.pathname==="/gm/assign"&&request.method==="POST")return this.gmAssign(request,await safeJson(request));
@@ -1304,7 +1307,10 @@ export class RoomDurableObject extends DurableObject {
       nightRuntime.deadlineAt=demoClock.deadlineAt?new Date(demoClock.deadlineAt).toISOString():null;
       nightRuntime.autoPausedRemainingMs=demoClock.running?0:demoClock.remainingMs/demoClock.speed;
     }
-    return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,history:(Array.isArray(demoLease?.history)?demoLease.history:[]).filter(event=>String(event?.matchId||'')===String(meta.matchId||'')),running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
+    const ghostClues=meta.matchId?[...(await this.ctx.storage.list({
+      prefix:"ghostClue:"+String(meta.matchId)+":"
+    })).values()].filter(x=>x?.status==="pending").slice(-30):[];
+    return j({ok:true,ghostClues,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,history:(Array.isArray(demoLease?.history)?demoLease.history:[]).filter(event=>String(event?.matchId||'')===String(meta.matchId||'')),running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
       // Unlike the 100-row rules buffer, the immutable actionLog archive
       // includes older nights and nonpersistent effects (effect_notice, healed...).
       // Never derive the village bulletin from only the short-lived rules buffer.
@@ -4040,7 +4046,12 @@ export class RoomDurableObject extends DurableObject {
       drunkDeckView(drawn,false):null;
     const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
     const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,linkedArtifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    const ownGhostClue=meta.matchId?
+      await this.ctx.storage.get("ghostClue:"+String(meta.matchId)+":"+
+        Math.max(1,Number(meta.cycleNight)||1)+":"+loginId):null;
+    return j({ok:true,ghostClue:ownGhostClue?
+      {id:ownGhostClue.id,status:ownGhostClue.status,text:ownGhostClue.text}:null,
+      swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,linkedArtifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
@@ -4296,6 +4307,61 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put(rateKey,now);
     this.broadcast({type:"chat_tick",serverTime:now});
     return j({ok:true,id:message.id,channel:permission.channel});
+  }
+  async playerGhostClue(body){
+    const actorId=normalizeLoginId(body?.loginId),meta=await this.ctx.storage.get("meta"),
+      matchId=String(meta?.matchId||""),day=Math.max(1,Number(meta?.cycleNight)||1);
+    const members=await this.ctx.storage.get("players")||{},
+      assignments=await this.ctx.storage.get("assignments")||[],
+      interactions=await this.ctx.storage.get("interactions")||[];
+    if(!actorId||!members["member:"+actorId])return j({ok:false,error:"GHOST_PLAYER_NOT_IN_ROOM"},403);
+    const role=assignments.find(x=>normalizeLoginId(x.loginId)===actorId),
+      active=(type)=>interactions.some(x=>normalizeLoginId(x.loginId)===actorId&&
+        x.type===type&&x.effectActive!==false&&(!x.matchId||x.matchId===matchId)),
+      key="ghostClue:"+matchId+":"+day+":"+actorId,
+      previous=await this.ctx.storage.get(key),
+      ban=await this.ctx.storage.get("ghostClueBan:"+matchId+":"+actorId),
+      allowed=ghostClueAllowed({phase:meta?.phase,cyclePhase:meta?.cyclePhase,
+        roleId:role?.roleId,dead:active("dead"),expelled:active("expelled"),
+        previous,ban});
+    if(previous&&String(previous.text)===String(body?.text||"").trim())
+      return j({ok:true,idempotent:true,clue:{id:previous.id,status:previous.status}});
+    if(!allowed.ok)return j({ok:false,error:allowed.error},409);
+    const names=Object.values(members).map(p=>p.displayName).filter(Boolean),
+      checked=validateGhostClue({text:body?.text,playerNames:names});
+    if(!checked.ok){
+      if(checked.ban)await this.ctx.storage.put("ghostClueBan:"+matchId+":"+actorId,
+        {reason:checked.error,at:new Date().toISOString()});
+      return j({ok:false,error:checked.error},409);
+    }
+    const time=new Date().toISOString(),
+      clue={id:crypto.randomUUID(),actorId,matchId,day,text:checked.text,
+        status:"pending",createdAt:time};
+    await this.ctx.storage.put(key,clue);
+    this.broadcast({type:"ghost_clue_pending",serverTime:Date.now()});
+    return j({ok:true,clue:{id:clue.id,status:clue.status}});
+  }
+  async gmGhostClue(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,actorId=normalizeLoginId(body?.actorId),
+      matchId=String(meta?.matchId||""),day=Math.max(1,Number(body?.day)||Number(meta?.cycleNight)||1);
+    if(!actorId||String(meta.phase)!=="running")return j({ok:false,error:"GHOST_MODERATION_INVALID"},409);
+    const key="ghostClue:"+matchId+":"+day+":"+actorId,
+      clue=await this.ctx.storage.get(key),
+      decision=moderateGhostClue({clue,decision:String(body?.decision||""),
+        violation:body?.ruleViolation===true});
+    if(!decision.ok)return j({ok:false,error:decision.error},409);
+    const approvedAt=new Date().toISOString(),saved={...decision.clue,moderatedAt:approvedAt};
+    await this.ctx.storage.put(key,saved);
+    if(decision.ban)await this.ctx.storage.put("ghostClueBan:"+matchId+":"+actorId,
+      {reason:"GM_REJECTED_RULE_VIOLATION",at:approvedAt});
+    if(saved.status==="approved"){
+      const entry={id:"ghost-published:"+saved.id,type:"ghost_clue",matchId,day,
+        night:day,message:"Hồn Ma: "+saved.text,createdAt:approvedAt,source:"ghost-clue"};
+      await this.ctx.storage.put(this.actionLogKey(entry),entry);
+      this.broadcast({type:"ghost_clue_approved",text:saved.text,day,serverTime:Date.now()});
+    }else this.broadcast({type:"ghost_clue_rejected",serverTime:Date.now()});
+    return j({ok:true,clue:{id:saved.id,status:saved.status}});
   }
   async gmChatRead(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
