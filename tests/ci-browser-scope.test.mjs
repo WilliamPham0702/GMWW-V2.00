@@ -711,8 +711,8 @@ test('PR613 V3.274 canonical Character40 verification repair keeps exact CI-only
   const verify=readFileSync('.github/scripts/verify-character40-production.mjs','utf8');
   const route=readFileSync('src/gmww-character40-catalog.js','utf8');
   assert.match(workflow,/GMWW-PR613-character40-proof-ci-20261029.md/);
-  assert.match(workflow,/assets\\/characters\\/gmww40\\/originals\\/character-01.webp/);
-  assert.match(verify,/const originalPath='assets\\/characters\\/gmww40\\/'\\+c.original/);
-  assert.match(route,/u.pathname='\\/characters\\/gmww40\\/originals\\/'\\+visual\\+'.webp'/);
+  assert.ok(workflow.includes('assets/characters/gmww40/originals/character-01.webp'));
+  assert.ok(verify.includes("const originalPath='assets/characters/gmww40/'+c.original"));
+  assert.ok(route.includes("u.pathname='/characters/gmww40/originals/'+visual+'.webp'"));
   assert.match(workflow,/git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD/);
 });
