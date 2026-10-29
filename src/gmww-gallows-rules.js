@@ -135,7 +135,7 @@ export function gallowsSelectCandidate(ballot,candidate,now=Date.now()){
 export function gallowsSnapshot(ballot,meta,now=Date.now()){
   if(!ballot||ballot.matchId!==String(meta?.matchId||'')||ballot.cycleKey!==String(meta?.cycleKey||''))return null;
   const stage=gallowsStage(ballot,now),blockedNomination=gallowsBlockedNomination(ballot),blockedVotes=gallowsBlockedVotes(ballot);
-  return {id:ballot.id,day:ballot.day,candidateId:ballot.candidateId||null,stage,mode:gallowsMode(ballot),hanging:gallowsHangingState(ballot,now),
+  return {id:ballot.id,day:ballot.day,round:Number(ballot.round||1),extraRoundPending:ballot.extraRoundPending===true,candidateId:ballot.candidateId||null,stage,mode:gallowsMode(ballot),hanging:gallowsHangingState(ballot,now),
     deadlineAt:ballot.deadlineAt||null,startedAt:ballot.startedAt||null,
     nominationDeadlineAt:ballot.nominationDeadlineAt||null,nominationStartedAt:ballot.nominationStartedAt||null,
     nominationDurationSec:gallowsDurationSec(ballot.nominationDurationSec),voteDurationSec:gallowsDurationSec(ballot.voteDurationSec),

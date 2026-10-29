@@ -8,9 +8,13 @@ on:
       - 'src/gmww-*-rules.js'
       - 'src/gmww-wolf-night-resolution.js'
       - 'src/index.js'
+      - 'src/gmww-double-gallows.js'
+      - 'src/gmww-demo-runner.js'
       - 'tests/card-executors-*.test.mjs'
       - 'tests/worker-card-artifact-e2e.mjs'
       - 'tests/worker-night-rules-e2e.mjs'
+      - 'tests/worker-double-gallows-e2e.mjs'
+      - 'tests/worker-disable-artifact-e2e.mjs'
       - '.github/scripts/check-rule-worker-local.mjs'
       - '.github/workflows/check-rule-executors-107.yml'
 permissions:

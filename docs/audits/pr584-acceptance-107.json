@@ -3951,35 +3951,53 @@
           }
         ]
       },
-      "httpEvidence": [],
+      "httpEvidence": [
+        "tests/worker-double-gallows-e2e.mjs",
+        "tests/card-executors-double-gallows-20261029.test.mjs"
+      ],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "ownership": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "undo": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
@@ -3998,8 +4016,11 @@
           "evidence": []
         },
         "demo": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs"
+          ],
+          "note": "Judge executes in real hybrid DEMO; full UI/audio/undo acceptance remains open."
         },
         "audio": {
           "status": "NOT_VERIFIED",
@@ -6666,35 +6687,52 @@
           }
         ]
       },
-      "httpEvidence": [],
+      "httpEvidence": [
+        "tests/worker-disable-artifact-e2e.mjs"
+      ],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-disable-artifact-e2e.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-disable-artifact-e2e.mjs"
+          ]
         },
         "ownership": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-disable-artifact-e2e.mjs"
+          ]
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-disable-artifact-e2e.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-disable-artifact-e2e.mjs"
+          ]
         },
         "undo": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-disable-artifact-e2e.mjs"
+          ],
+          "note": "Night undo restores ability/status and Artifact stock; day undo is not implemented."
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-disable-artifact-e2e.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
@@ -9966,35 +10004,53 @@
           }
         ]
       },
-      "httpEvidence": [],
+      "httpEvidence": [
+        "tests/worker-double-gallows-e2e.mjs",
+        "tests/card-executors-double-gallows-20261029.test.mjs"
+      ],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "ownership": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "undo": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PASS",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs",
+            "tests/card-executors-double-gallows-20261029.test.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
@@ -10013,8 +10069,11 @@
           "evidence": []
         },
         "demo": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-double-gallows-e2e.mjs"
+          ],
+          "note": "Judge executes in real hybrid DEMO; full UI/audio/undo acceptance remains open."
         },
         "audio": {
           "status": "NOT_VERIFIED",

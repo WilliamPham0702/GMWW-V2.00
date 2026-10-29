@@ -22,20 +22,20 @@ export const serverDemoActive=(meta,lease)=>meta?.demo===true&&meta.phase==='run
 
 async function context(room,meta){
  const store=room.ctx.storage,assignments=await store.get('assignments')||[],players=await store.get('players')||{},rows=await store.get('interactions')||[],cfg=await store.get('gameConfig')||{};
- const cards=[],artifacts=[];
+ const cards=[],artifacts=[],artifactOwners=new Map();
  for(const a of assignments){
   const privateRows=await store.get('roles:'+a.loginId)||[await store.get('role:'+a.loginId)].filter(Boolean),owned=privateRows.find(r=>r.roleId===a.roleId&&matchRow(r,meta)),catalog=await store.get('roleCatalog:'+a.roleId);
   if(!cards.some(c=>c.id===a.roleId))cards.push({...catalog?.roleCard,...a.roleCard,...owned?.roleCard,id:a.roleId,name:a.roleName});
-  if(a.artifactId&&!artifacts.some(c=>c.id===a.artifactId)){const art=await store.get('artifact:'+a.loginId);artifacts.push({...art?.artifactCard,id:a.artifactId,name:a.artifactName})}
+  if(a.artifactId){const art=await store.get('artifact:'+a.loginId);artifactOwners.set(a.loginId,{...art,spent:!!(await store.get('artifactUse:'+a.loginId+':'+a.artifactId))});if(!artifacts.some(c=>c.id===a.artifactId))artifacts.push({...art?.artifactCard,id:a.artifactId,name:a.artifactName})}
  }
  const cycle=(await store.get('artifactCycle:'+(meta.cyclePhase==='morning'?meta.matchId+':day:'+meta.cycleNight:artifactCycleKey(meta.matchId,meta.cycleNight))))||{accepted:[]};
- return {store,assignments,players,rows,cfg,cards,artifacts,cycle};
+ return {store,assignments,players,rows,cfg,cards,artifacts,artifactOwners,cycle};
 }
 function nightActions(ctx,meta,turn,usage){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
  return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId)).map(action=>({...action,targetCount:action.noTarget?0:demoDivinationTargetCount(action),actorIds:action.actorIds.filter(actorId=>{
   if(status(ctx.rows,meta,actorId,'expelled')||isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS}))return false;
-  if(action.artifactId)return !ctx.cycle.accepted.some(x=>x.artifactId===action.artifactId&&x.playerId==='member:'+actorId)&&ctx.cycle.accepted.length<Number(ctx.cfg.artifactLimitPerCycle??3);
+  if(action.artifactId){const owned=ctx.artifactOwners.get(actorId);return !owned?.removedFromMatch&&!(owned?.singleUse===true&&owned?.spent)&&!ctx.cycle.accepted.some(x=>x.artifactId===action.artifactId&&x.playerId==='member:'+actorId)&&ctx.cycle.accepted.length<Number(ctx.cfg.artifactLimitPerCycle??3)}
   const role=turn.kind==='role-group'?turn.roles.find(r=>r.loginIds.includes(actorId)&&(!action.roleIds?.length||action.roleIds.includes(r.roleId))):turn;
   const roleId=role?.roleId,card=ctx.cards.find(c=>c.id===roleId);
   if(roleId==='role_snow_wolf'&&action.actionId==='action_wolf_bite'&&!canSnowWolfBite({assignments:ctx.assignments,interactions:ctx.rows,matchId:meta.matchId,statusDefs:STATUS_DEFS}))return false;
@@ -51,9 +51,12 @@ function dayActions(ctx,meta,usage,ballot){
   for(const owner of owners){const card=owner.card;if(!card)continue;
    for(const fn of card.functions?.length?card.functions:card.actions||[]){
     const actionId=fn.actionId||fn.id,actorId=a.loginId,knight=owner.roleId==='role_knight'&&actionId==='action_knight_last_strike'&&ballot?.stage==='resolved'&&ballot.outcome==='dead'&&ballot.candidateId===actorId;
-    if(fn.passive||!['day','any'].includes(fn.phase)||(fn.fromNight!=null&&Number(fn.fromNight)>meta.cycleNight)||(fn.toNight!=null&&Number(fn.toNight)<meta.cycleNight))continue;
+    if(fn.passive||!['day','any','both'].includes(fn.phase)||(fn.fromNight!=null&&Number(fn.fromNight)>meta.cycleNight)||(fn.toNight!=null&&Number(fn.toNight)<meta.cycleNight))continue;
     if(status(ctx.rows,meta,actorId,'expelled')||status(ctx.rows,meta,actorId,'frozen')||(status(ctx.rows,meta,actorId,'dead')&&!fn.actorMayBeDead&&!knight))continue;
+    if(isBattleActorBlocked(ctx.rows.filter(row=>row.type!=='dead'),{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS}))continue;
+    if(owner.artifactId){const owned=ctx.artifactOwners.get(actorId);if(owned?.removedFromMatch||owned?.singleUse===true&&owned?.spent)continue;}
     if(owner.roleId==='role_knight'&&actionId==='action_knight_last_strike'&&!knight)continue;
+    if(actionId==='action-judge-double'&&(ballot?.stage!=='ready'||Number(ballot?.round||1)!==1||ballot?.extraRoundPending))continue;
     const own=usage.filter(x=>x.actorId===actorId&&x.roleId===(owner.roleId||'')&&x.artifactId===(owner.artifactId||'')),hits=own.filter(x=>x.actionId===actionId),quota=Math.max(1,Number(fn.usageCount)||1);
     if(card.flags?.allowMultipleActions===false&&own.some(x=>x.day===meta.cycleNight))continue;
     if((['onceGame','nGame'].includes(fn.usageMode)&&hits.length>=quota)||(fn.usageMode==='eachNight'&&hits.filter(x=>x.day===meta.cycleNight).length>=quota))continue;
@@ -243,12 +246,16 @@ export async function runServerDemo(room,meta,budget=32){
    const {ballot,eligible}=await room.gallowsState(meta),request=room.demoInternalRequest();
    if(ballot.stage==='ready')await checked(await room.gmGallows(request,{command:'open',source:'demo'}));
    else if(['nominating','selecting'].includes(ballot.stage)){
-    const allowed=eligible.slice();if(!allowed.length)throw Error('Không có mục tiêu Lên Giàn hợp lệ.');
-    const counts={};for(const id of Object.values(ballot.nominations||{}))counts[id]=(counts[id]||0)+1;
-    const rank=allowed.sort((a,b)=>(counts[b]||0)-(counts[a]||0));await checked(await room.gmGallows(request,{command:'begin',source:'demo',targetId:rank[0]||pick(allowed)}));
+    // The same Server tally handles ties, no nominations, bans and the leader.
+    // A tie finishes without a hanging; DEMO must not invent a candidate.
+    const closed=await checked(await room.gmGallows(request,{command:'close_nomination',source:'demo'}));
+    if(closed.gallows?.stage==='selecting'&&closed.gallows.candidateId)
+      await checked(await room.gmGallows(request,{command:'begin',source:'demo',targetId:closed.gallows.candidateId}));
    }else if(['voting','closed'].includes(ballot.stage)){
-    const votes=Object.values(ballot.votes||{}),kill=votes.filter(v=>v==='👎').length>votes.filter(v=>v==='👍').length;await checked(await room.gmGallows(request,{command:'resolve',source:'demo',outcome:kill?'dead':'alive'}));
-   }else if(ballot.stage==='resolved')await room.applyCycle(meta,'night',meta.cycleNight+1,'night-'+(meta.cycleNight+1),'demo-server');
+    // Crow penalties and weighted/passive Artifact votes apply in DEMO too.
+    await checked(await room.gmGallows(request,{command:'close_vote',source:'demo'}));
+   }else if(ballot.stage==='resolved'&&ballot.extraRoundPending)await checked(await room.gmGallows(request,{command:'acknowledge',ballotId:ballot.id,source:'demo'}));
+   else if(ballot.stage==='resolved')await room.applyCycle(meta,'night',meta.cycleNight+1,'night-'+(meta.cycleNight+1),'demo-server');
   }
   lease.steps=Number(lease.steps||0)+1;await store.put('demoLease',lease);
  }

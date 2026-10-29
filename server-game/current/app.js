@@ -6887,12 +6887,13 @@ async function battleGallowsAcceptVerdict(expected){
   if(playSceneState.step!=='battle'||playSceneState.phase!=='day')return;
   battleState.gallowsVerdictAckPending=true;
   try{
-    const done=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command:'acknowledge'})});
+    const done=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command:'acknowledge',ballotId:playSceneRuntime.gallows?.id})});
     if(done?.ok!==true)throw Error(done?.message||done?.error||'Server chưa xác nhận phán quyết.');
     battleState.gallowsVerdictAcknowledged=true;
     const notice=document.getElementById('battleGallowsVerdict');if(notice)notice.hidden=true;
     if(battleVerdictTimer){clearTimeout(battleVerdictTimer);battleVerdictTimer=null}
     if(playSceneRuntime.winProposal)void openPlayCompletionSheet();
+    else if(done.extraRound){playSceneRuntime.gallows=done.gallows;battleState.gallowsVerdictKey='';battleState.gallowsVerdictAcknowledged=false;battleGallowsRender('day')}
     else void advancePlayPhase();
   }catch(e){playFlashError('Phán quyết Lên Giàn: '+String(e.message||e))}
   finally{battleState.gallowsVerdictAckPending=false}

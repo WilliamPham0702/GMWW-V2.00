@@ -1,3 +1,4 @@
+import {armDoubleGallows,nextDoubleGallows} from "./gmww-double-gallows.js";
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
 import {chatPolicy,chatNormalizeText} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
@@ -1072,6 +1073,23 @@ export class RoomDurableObject extends DurableObject {
     const target=normalizeLoginId(body?.targetId||body?.loginId);
     const now=Date.now();
     if(command==="acknowledge"){
+      if(body?.ballotId&&String(body.ballotId)!==ballot.id){
+        if(String(body.ballotId)===String(ballot.previousBallotId||""))
+          return j({ok:true,idempotent:true,gallows:gallowsSnapshot(ballot,meta,now)});
+        return j({ok:false,error:"GALLOWS_VERDICT_CHANGED"},409);
+      }
+      if(ballot.stage==="resolved"&&ballot.extraRoundPending){
+        const next=nextDoubleGallows(ballot,"gallows-"+crypto.randomUUID(),now);
+        if(next){
+          await this.ctx.storage.put(key+":archive:"+ballot.id,{...ballot,acknowledgedAt:now});
+          await this.ctx.storage.put(key,next);
+          if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
+          const current=(await this.gallowsState(meta)).ballot;
+          this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(current,meta,now),serverTime:now});
+          await this.scheduleRoomAlarm(meta);
+          return j({ok:true,extraRound:true,gallows:gallowsSnapshot(current,meta,now)});
+        }
+      }
       if(ballot.stage!=="resolved")return j({ok:false,error:"GALLOWS_VERDICT_NOT_READY"},409);
       const updated={...ballot,acknowledgedAt:now,updatedAt:now};
       await this.ctx.storage.put(key,updated);
@@ -2186,8 +2204,15 @@ export class RoomDurableObject extends DurableObject {
     if(p==="night"&&String(meta.cyclePhase||"")==="morning"&&n===Number(meta.cycleNight||0)+1&&!meta.demo){
       const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
       const at=Number(ballot?.resolvedAt||0);
+      if(ballot?.extraRoundPending||Number(ballot?.round)===2&&ballot.stage!=="resolved")
+        return {ok:false,error:"DOUBLE_GALLOWS_PENDING",message:"Phải hoàn tất phiên Lên Giàn thứ hai trước khi sang Đêm."};
       if(ballot?.stage==="resolved"&&at>0&&!ballot.acknowledgedAt&&Date.now()<at+30000)
         return {ok:false,error:"GALLOWS_VERDICT_PENDING",message:"Đang công bố kết quả Lên Giàn; GM xác nhận hoặc chờ đủ 30 giây."};
+    }
+    if(p==="night"&&meta.demo&&String(meta.cyclePhase)==="morning"){
+      const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId)+":"+String(meta.cycleKey));
+      if(ballot?.extraRoundPending||Number(ballot?.round)===2&&ballot.stage!=="resolved")
+        return {ok:false,error:"DOUBLE_GALLOWS_PENDING"};
     }
     // Replayed completion must not restart day timers or expire effects twice.
     if(meta.cycleKey===key&&meta.cyclePhase===p&&Number(meta.cycleNight)===n)
@@ -2464,6 +2489,12 @@ export class RoomDurableObject extends DurableObject {
       if(meta.demo)return due;
       const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
       const at=Number(ballot?.resolvedAt||0);
+      if(ballot?.extraRoundPending||Number(ballot?.round)===2){
+        if(ballot.stage==="ready")return Number(ballot.round)===2?Date.now():due;
+        if(ballot.stage==="nominating")return Number(ballot.nominationDeadlineAt)||due;
+        if(ballot.stage==="selecting")return Date.now();
+        if(ballot.stage==="voting")return Number(ballot.deadlineAt)||due;
+      }
       return ballot?.stage==="resolved"&&!ballot.acknowledgedAt&&at>0?Math.max(due,at+30000):due;
     }
     return 0
@@ -2479,7 +2510,19 @@ export class RoomDurableObject extends DurableObject {
     const due=await this.autoAdvanceDue(meta);if(!due||due>Date.now()+25)return false;
     const phase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
     if(phase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(runtime&&!runtime.completed)await this.advanceNightRuntime(meta,"next","auto");const fresh=await this.ctx.storage.get("meta"),after=await this.getNightRuntime(fresh,night,true);if(after?.completed)await this.applyCycle(fresh,"morning",night,"morning-"+night,"auto");else await this.scheduleRoomAlarm(fresh);return true}
-    if(phase==="morning"||phase==="day"){await this.applyCycle(meta,"night",night+1,"night-"+(night+1),"auto");return true}
+    if(phase==="morning"||phase==="day"){
+      const stored=await this.ctx.storage.get("gallows:"+String(meta.matchId)+":"+String(meta.cycleKey));
+      if(stored?.extraRoundPending||Number(stored?.round)===2){
+        const {ballot}=await this.gallowsState(meta),request=this.demoInternalRequest();
+        if(ballot.stage==="resolved"&&ballot.extraRoundPending){
+          await this.gmGallows(request,{command:"acknowledge",ballotId:ballot.id});
+        }else if(ballot.stage==="ready")await this.gmGallows(request,{command:"open"});
+        else if(ballot.stage==="selecting"&&ballot.candidateId)await this.gmGallows(request,{command:"begin",targetId:ballot.candidateId});
+        else if(ballot.stage==="resolved")await this.applyCycle(meta,"night",night+1,"night-"+(night+1),"auto");
+        await this.scheduleRoomAlarm();return true;
+      }
+      await this.applyCycle(meta,"night",night+1,"night-"+(night+1),"auto");return true;
+    }
     return false
   }
   async gmTurn(request,body){
@@ -2624,7 +2667,13 @@ export class RoomDurableObject extends DurableObject {
       return f.includes("soi")||f==="wolf"||f==="wolves"};
     const isThird=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
       return f.includes("phe ba")||f.includes("phe thu")||f==="third"};
-    if(targets.length&&effectiveTargets.length===0){
+    if(actionId==="action-judge-double"&&((!artifactId&&roleId==="role_judge")||artifactId==="artifact_41")){
+      const state=await this.gallowsState(meta),armed=armDoubleGallows(state.ballot,{actorId,roleId,artifactId});
+      if(!armed.ok)return j({ok:false,error:armed.error},409);
+      changes.push({kind:"double_gallows",key:state.key,value:armed.value});
+      message="Đã kích hoạt Phán Quyết Kép: hôm nay có hai phiên Lên Giàn.";
+      result={message,extraRoundPending:true};
+    }else if(targets.length&&effectiveTargets.length===0){
       message="Mục tiêu đã bị đuổi khỏi làng; hành động không có tác dụng.";
       result={message,noEffect:true};
     }else if(!artifactId&&actionId==="action_stab"&&roleId==="role_thug"){
@@ -2753,6 +2802,9 @@ export class RoomDurableObject extends DurableObject {
         for(const id of effectiveTargets)changes.push({kind:"grudge_schedule",
           loginId:id,type:"effect_notice"});
         message="Hơi Thở Lão Già đã đánh dấu. Tác động chết sẽ xét ở sáng sau đêm kế tiếp.";
+      }else if(artifactId==='artifact_06'&&actionId==='artifact_action_disable_function'){
+        for(const id of effectiveTargets)changes.push({kind:'status',loginId:id,type:'status',statusId:'disabled_permanent'});
+        message='Ấn Dân Làng đã làm mục tiêu mất năng lực đặc biệt đến hết ván.';
       }else if(actionId==='artifact_action_lock_function'){
         // Bình Giấc Mơ: an actual server-side block for two whole day/night
         // cycles, rather than an acknowledgement with no effect.
@@ -2777,6 +2829,11 @@ export class RoomDurableObject extends DurableObject {
     }else return j({ok:false,error:"DAY_ROLE_EFFECT_NOT_IMPLEMENTED"},409);
     for(const id of deadVictims)changes.push({kind:"status",loginId:id,type:"dead"});
     for(const effect of changes){
+      if(effect.kind==="double_gallows"){
+        await this.ctx.storage.put(effect.key,effect.value);
+        this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(effect.value,meta),serverTime:Date.now()});
+        continue;
+      }
       if(effect.kind==="remove_artifact"){
         const removed=await this.ctx.storage.transaction(async txn=>{
           const target=await txn.get("artifact:"+effect.loginId),
@@ -3242,6 +3299,19 @@ export class RoomDurableObject extends DurableObject {
               deliveryVersion:meta.deliveryVersion,publishedAt,roles:changed}));
         }
       }
+    }
+    if(artifactId==='artifact_06'&&String(body.actionId)==='artifact_action_disable_function'){
+      const rows=await this.ctx.storage.get('interactions')||[],time=new Date().toISOString();
+      for(const loginId of effectiveTargets){
+        const event={id:'artifact-disable:'+matchId+':'+token+':'+loginId,
+          type:'status',statusId:'disabled_permanent',loginId,actorId,
+          matchId,cycleKey,night:Number(meta.cycleNight),artifactId,
+          actionId:'artifact_action_disable_function',effectActive:true,
+          source:'artifact-disable-function',createdAt:time,
+          message:'Ấn Dân Làng đã làm mục tiêu mất năng lực đặc biệt đến hết ván.'};
+        rows.push(event);await this.ctx.storage.put(this.actionLogKey(event),event);
+      }
+      await this.ctx.storage.put('interactions',pruneInteractions(rows));
     }
     if(roleUse&&['25','action-cult-add'].includes(roleUse.actionId)){
       const rows=await this.ctx.storage.get("interactions")||[],time=new Date().toISOString();
@@ -4640,7 +4710,7 @@ function extractRoleImage(obj,depth=0){
 }
 function currentArtifactCycleKey(meta){const n=Math.max(1,Number(meta?.cycleNight||1)),phase=String(meta?.cyclePhase||"").toLowerCase();return phase==="day"||phase==="morning"?String(meta?.matchId||"match")+":day:"+n:artifactCycleKey(meta?.matchId||"match",n)}
 function gameLabelKey(v){return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
-function normalizeWinnerFaction(v){const raw=String(v||"").trim();if(!raw)return"";const n=raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase();if(n.includes("phe dan"))return"Phe Dân";if(n.includes("phe soi"))return"Phe Sói";if(n.includes("phe ba")||n.includes("phe thu 3")||n.includes("phe thu ba"))return"Phe Ba";if(n.includes("phe khac"))return"Phe Khác";return raw.replace(/^[^A-Za-zÀ-ỹ0-9]+/u,"").trim().slice(0,120)}
+function normalizeWinnerFaction(v){const raw=String(v||"").trim();if(!raw)return"";const n=raw.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase();if(["village","villager","villagers","dan","dan lang"].includes(n))return"Phe Dân";if(["wolf","wolves","soi"].includes(n))return"Phe Sói";if(["third","third faction"].includes(n))return"Phe Ba";if(n.includes("phe dan"))return"Phe Dân";if(n.includes("phe soi"))return"Phe Sói";if(n.includes("phe ba")||n.includes("phe thu 3")||n.includes("phe thu ba"))return"Phe Ba";if(n.includes("phe khac"))return"Phe Khác";return raw.replace(/^[^A-Za-zÀ-ỹ0-9]+/u,"").trim().slice(0,120)}
 function disableMemberPassword(m){if(!m||typeof m!=="object")return m;delete m.passwordSalt;delete m.passwordHash;delete m.passwordAlgorithm;delete m.passwordIterations;delete m.resetRequestedAt;delete m.passwordResetAt;m.passwordConfigured=false;m.passwordRequired=false;return m}
 function gameCharacterCatalog(){return character40Catalog()}
 // Character V4: serve the two user-approved artworks on Player Web without changing IPA files.
