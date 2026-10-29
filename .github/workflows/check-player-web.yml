@@ -44,6 +44,13 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR605 — chỉ kiểm tra GitHub Actions Preview CI, không chạy gameplay/IPA
+        if: steps.scope.outputs.mode == 'github-pr-preview-ci'
+        run: |
+          node --test tests/github-actions-pr-preview-ci.test.mjs
+          node .github/scripts/guard-pr-preview-ci.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/guard-pr-preview-ci.mjs
       - name: PR603 — icon tài khoản Player Web, bảo toàn menu và bundle
         if: steps.scope.outputs.mode == 'player-top-avatar-603'
         run: |
