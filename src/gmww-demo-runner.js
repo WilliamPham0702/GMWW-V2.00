@@ -9,6 +9,8 @@ import {STATUS_DEFS} from './gmww-public-room-contract.js';
 import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
 import {onlineGmActionIcon} from './gmww-online-action-icons.js';
 import {linkedArtifactAction} from './gmww-artifact-link.js';
+import {planArtifactLink} from './gmww-artifact-link.js';
+import {planDayFunctionCopy} from './gmww-artifact-function-copy.js';
 import {canSnowWolfBite,resolveWolfNight} from './gmww-wolf-night-resolution.js';
 const rules=globalThis.GMWW_BATTLE_CONTROLS;
 const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
@@ -145,7 +147,31 @@ export function targetsFor(action,actorId,ctx,meta){
  const wolfNight=action.actionId==='action_witch_save'&&!action.artifactId
   ?resolveWolfNight({interactions:ctx.rows,players:ctx.players,matchId:meta.matchId,night:meta.cycleNight}):null;
  const attacked=wolfNight?(Array.isArray(wolfNight.attacked)?wolfNight.attacked:[]).map(x=>x.to).filter(Boolean):null;
- const available=Object.values(ctx.players).filter(m=>(!attacked||attacked.includes(m.loginId))&&(!action.noSelf||m.loginId!==actorId)&&rules.targetAllowed(action,m,effect(ctx.rows,meta,m.loginId),ctx.rows,meta.cycleNight)).map(m=>m.loginId),chosen=[];
+ const candidates=Object.values(ctx.players).filter(m=>(!attacked||attacked.includes(m.loginId))&&(!action.noSelf||m.loginId!==actorId)&&rules.targetAllowed(action,m,effect(ctx.rows,meta,m.loginId),ctx.rows,meta.cycleNight)).map(m=>m.loginId);
+ const actionId=String(action.actionId||'');
+ const available=candidates.filter(targetId=>{
+  if(action.artifactId==='artifact_32'&&actionId==='artifact_action_link'){
+   return planArtifactLink({actorId,targetId,
+     actorArtifact:ctx.artifactOwners.get(actorId),
+     donorArtifact:ctx.artifactOwners.get(targetId),
+     assignments:ctx.assignments,matchId:meta.matchId}).ok;
+  }
+  if(action.artifactId==='artifact_23'&&actionId==='artifact_action_copy_function'){
+   return planDayFunctionCopy({actorId,targetId,assignments:ctx.assignments,
+     actorRoles:[{...ctx.roleOwners.get(actorId),
+       roleId:ctx.assignments.find(x=>x.loginId===actorId)?.roleId,
+       roleCard:ctx.roleOwners.get(actorId)}],
+     targetRoles:[{...ctx.roleOwners.get(targetId),
+       roleId:ctx.assignments.find(x=>x.loginId===targetId)?.roleId,
+       roleCard:ctx.roleOwners.get(targetId)}],
+     now:new Date().toISOString()}).ok;
+  }
+  if(action.artifactId==='artifact_40'&&actionId==='artifact_action_swap_role'){
+   return ctx.assignments.filter(x=>x.loginId===actorId).length===1&&
+     ctx.assignments.filter(x=>x.loginId===targetId).length===1;
+  }
+  return true;
+ }),chosen=[];
  if(action.actionId==='action_protect'&&!action.artifactId&&available.includes(actorId)&&action.targetCount===1)return [actorId];
  const count=demoDivinationTargetCount(action);
  while(chosen.length<count&&available.length){const id=pick(available);chosen.push(id);available.splice(available.indexOf(id),1)}
