@@ -4180,7 +4180,8 @@ export class RoomDurableObject extends DurableObject {
       await this.ctx.storage.get("ghostLetterRequest:"+String(meta.matchId)+":"+loginId):null;
     const incomingGhostLetters=meta.matchId?[...(await this.ctx.storage.list({
       prefix:"ghostLetterRequest:"+String(meta.matchId)+":"
-    })).values()].filter(x=>x?.targetId===loginId&&x?.status==="pending")
+    })).values()].filter(x=>x?.targetId===loginId&&x?.status==="pending"&&
+      String(meta.cyclePhase)==="morning"&&Number(x.day)===Number(meta.cycleNight))
       .map(x=>({requestId:x.id,day:x.day})):[];
     return j({ok:true,privateRoleDisclosures,ghostLetterInbox:ownGhostLetter?
       {requestId:ownGhostLetter.id,status:ownGhostLetter.status,
@@ -4455,6 +4456,9 @@ export class RoomDurableObject extends DurableObject {
     const rows=await this.ctx.storage.list({prefix:"ghostLetterRequest:"+matchId+":"}),
       match=[...rows.values()].find(x=>x?.id===requestId&&x?.targetId===actorId);
     if(!match)return j({ok:false,error:"GHOST_LETTER_REQUEST_NOT_FOUND"},404);
+    if(String(meta.cyclePhase)!=="morning"||
+      Number(meta.cycleNight)!==Number(match.day))
+      return j({ok:false,error:"GHOST_LETTER_WINDOW_CLOSED"},409);
     if(match.status==="responded"&&match.letter===letter.trim().normalize("NFC"))
       return j({ok:true,idempotent:true,requestId});
     const response=ghostLetterResponse({request:match,loginId:actorId,matchId,letter});
