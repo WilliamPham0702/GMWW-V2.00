@@ -2669,7 +2669,31 @@ function isGithubRuntimeCIRepair(changes){
   }catch{return false}
 }
 
+function isGithubNativeStage2Scope(changes){
+  const required=new Set([
+    'server-game/GMWW-Server/GameView.swift',
+    'server-game/src/10-library-and-settings.part',
+    'server-game/current/app.js',
+    '.github/workflows/build-server-game-ipa.yml',
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-native-github-ota.yml',
+    'tests/native-github-first-ota-stage2.test.mjs',
+    'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md'
+  ]);
+  if(!Array.isArray(changes)||changes.length!==required.size||
+     changes.some(v=>!v||!required.has(v.path)||!['M','A'].includes(v.status)))return false;
+  const get=path=>changes.find(v=>v.path===path)?.after||'';
+  return [...required].every(p=>changes.some(c=>c.path===p))&&
+    get('server-game/GMWW-Server/GameView.swift').includes('GMWW_NATIVE_GITHUB_OTA=true')&&
+    get('server-game/GMWW-Server/GameView.swift').includes('verifyManualContainer')&&
+    get('server-game/current/app.js').includes('gmwwNativePost("checkGithubRuntime")')&&
+    get('.github/workflows/build-server-game-ipa.yml').includes('inputs.publish_ipa == true')&&
+    get('tests/native-github-first-ota-stage2.test.mjs').includes('GitHub network-only fallback');
+}
+
 function classifyBrowserScope(changes){
+  if(isGithubNativeStage2Scope(changes))return 'native-github-ota-stage2';
   if(isGithubRuntimeCIRepair(changes))return 'github-runtime-ota-ci';
   if(isArtifactPreview3274RecoveryScope(changes))return 'artifact-preview-3274-postmerge';
   if(isArtifactPreview3274Scope(changes))return 'artifact-preview-3274';
