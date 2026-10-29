@@ -38,7 +38,8 @@ test('Automatic downloader verifies full download checksum and each embedded fil
 test('GitHub network-only fallback cannot bypass checksum rejection',()=>{
   assert.match(swift,/status":"fallback"/);
   assert.match(swift,/GMWWUpdaterIntegrity/);
-  assert.match(swift,/integrityFailure":integrity/);
+  assert.match(swift,/integrityFailure":true/);
+  assert.match(swift,/domain == NSURLErrorDomain \|\| domain == "GMWWUpdaterNetwork"/);
   assert.match(app,/checkAppUpdate\(\{notify,skipGithub:true\}\)/);
   assert.match(app,/result\.integrityFailure\?"Đã chặn cập nhật/);
   assert.match(app,/gmwwNativePost\("checkGithubRuntime"\)/);
