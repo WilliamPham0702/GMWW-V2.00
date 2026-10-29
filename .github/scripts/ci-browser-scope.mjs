@@ -2759,6 +2759,7 @@ const onlinePrivacy630Paths=new Set([
   'tests/player-online-privacy-bottom-dock-20261029.test.mjs',
   'tests/player-web-online-actions-20261028.test.mjs',
   'tests/player-web-online-village-20261028.test.mjs',
+  'tests/player-web-resume-receipt-runtime.test.mjs',
   'tests/player-web-top-account-avatar-20261029.test.mjs',
   'tests/status-visuals-v1.test.mjs',
   'docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md'
