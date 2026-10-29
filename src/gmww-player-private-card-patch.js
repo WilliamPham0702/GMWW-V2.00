@@ -97,8 +97,8 @@ export function patchPrivatePlayerCards(source){
 
  // Online uses the modern draggable per-card shortcuts; the legacy fixed
  // private dock remains ONLY for offline mode and must never create a second card.
- const oldPrivateDock='function renderPlayerPrivateDock(){\\n  const dock=ensurePlayerPrivateDock();if(!dock)return;';
- const newPrivateDock='function renderPlayerPrivateDock(){\\n  if(String(state.room?.roomMode||"online").toLowerCase()==="online"){$("#gmwwPlayerPrivateDock")?.remove();return}\\n  const dock=ensurePlayerPrivateDock();if(!dock)return;';
+ const oldPrivateDock='function renderPlayerPrivateDock(){'+String.fromCharCode(10)+'  const dock=ensurePlayerPrivateDock();if(!dock)return;';
+ const newPrivateDock=oldPrivateDock.replace('function renderPlayerPrivateDock(){','function renderPlayerPrivateDock(){'+String.fromCharCode(10)+'  if(String(state.room?.roomMode||"online").toLowerCase()==="online"){$("#gmwwPlayerPrivateDock")?.remove();return}');
  if(!result.includes(oldPrivateDock))throw new Error('Private dock injection contract drift');
  result=result.replace(oldPrivateDock,newPrivateDock);
  result=result.replace('<span class="mini-label"><b>VAI TRÒ</b><small>CHẠM ĐỂ XEM</small></span>','<span class="mini-label"><b>VAI TRÒ</b></span>')
