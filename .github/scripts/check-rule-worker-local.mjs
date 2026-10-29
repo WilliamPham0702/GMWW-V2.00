@@ -26,6 +26,7 @@ try{
  await run('tests/worker-disable-artifact-e2e.mjs');
  await run('tests/worker-passive-gallows-artifacts-e2e.mjs');
  await run('tests/worker-artifact-secret-destruction-e2e.mjs');
+ await run('tests/worker-artifact-role-swap-e2e.mjs');
 }finally{
  worker.kill('SIGTERM');
  await new Promise(resolve=>{if(worker.exitCode!==null)return resolve();worker.once('exit',resolve);setTimeout(()=>{worker.kill('SIGKILL');resolve()},3000).unref()});
