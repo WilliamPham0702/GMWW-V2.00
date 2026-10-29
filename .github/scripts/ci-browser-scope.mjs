@@ -2500,6 +2500,7 @@ const githubPreviewCIPaths=new Set([
   '.github/scripts/ci-browser-scope.mjs',
   '.github/workflows/check-player-web.yml',
   '.github/workflows/build-server-game-ipa.yml',
+  '.github/workflows/check-dual-renderer.yml',
   '.github/workflows/deploy-production.yml'
 ]);
 function isGithubPreviewCIOnly(changes){
