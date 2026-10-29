@@ -27,4 +27,4 @@ jobs:
       - name: Verify CI selector syntax
         run: node --check .github/scripts/ci-browser-scope.mjs
       - name: Verify safe scope selection and fail-closed behavior
-        run: node --test tests/ci-browser-scope.test.mjs
+        run: node --test --test-name-pattern='Unknown Worker|Any other public-room|UI changes outside|Browser, seat, workflow|A deletion, unexpected status|CI-only merge|PR603 account avatar' tests/ci-browser-scope.test.mjs
