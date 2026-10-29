@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Chặn auto-deploy khi commit chỉ sửa CI
         id: scope
         shell: bash
@@ -129,6 +129,21 @@ jobs:
             test "$ACTUAL" = "$EXPECTED" || { echo "::error::V3.274 release-proof scope mismatch"; exit 1; }
             SHOULD_DEPLOY=true
             echo 'PR613: release-only CI proof correction, original role checks retained; no source or IPA changes.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # PR613: exact four-file CI fix. Preserve the entire git ancestry
+          # to verify that Runtime V3.274 was merged without source changes.
+          if grep -Fxq 'docs/releases/GMWW-PR613-deploy-checkout-ci-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            test "$(node -p 'require("./package.json").version')" = '3.274.0'
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' \
+              'docs/releases/GMWW-PR613-deploy-checkout-ci-20261029.md' | sort)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::V3.274 checkout repair scope mismatch"; exit 1; }
+            SHOULD_DEPLOY=true
+            echo "PR613 Runtime V3.274: original merge verified with full checkout history." >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
@@ -1665,7 +1680,7 @@ jobs:
           # Exact postmerge Artifact V3.274 repair must publish the pending
           # Runtime payload, not misclassify five CI-only files as server_only.
           if [ "$VERSION" = "3.274.0" ] && \
-             { grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-changed-files.txt || grep -Fxq 'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' /tmp/gmww-changed-files.txt; }; then
+             { grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-changed-files.txt || grep -Fxq 'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' /tmp/gmww-changed-files.txt || grep -Fxq 'docs/releases/GMWW-PR613-deploy-checkout-ci-20261029.md' /tmp/gmww-changed-files.txt; }; then
             RELEASE_SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
             [[ "$RELEASE_SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]] || { echo "::error::V3.274 recovery source scope mismatch"; exit 1; }
             TYPE=runtime
