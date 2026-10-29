@@ -60,3 +60,7 @@ Phát hiện và sửa Online/DEMO bỏ sót `result.message` của Artifact ban
 - Bộ chọn hành động Online/DEMO nhận phase `both`, chặn actor bị khóa và Artifact một lần đã dùng ở chu kỳ trước, kể cả snapshot lượt Đêm cũ.
 
 Chưa nghiệm thu toàn bộ 107/107. Ma trận cập nhật bằng chứng riêng theo từng tiêu chí; các phần chưa kiểm giữ NOT_VERIFIED/PARTIAL. Chưa phát hành Production/OTA/IPA; rollback vẫn là revert checkpoint trên nhánh sau khi kiểm tra head, không force push hoặc thay dữ liệu Production.
+
+### Bằng chứng checkpoint 58dc429 (29/10)
+
+208/208 test focused cục bộ PASS; bốn chương trình HTTP Worker/SQLite thật PASS. CI RULE focused (bao gồm HTTP thật), CI Policy Gate, DEMO Hybrid và các check luật Say Rượu/Phù Thủy/Dân Làng SUCCESS trên head này. Check Lên Giàn phát hiện fixture cũ; đã sửa fixture đề cử hợp lệ, policy DEMO người thật, kiểm hành vi paused và manifest bảy module. Nhóm 61 bài Lên Giàn PASS cục bộ. Không bỏ test hoặc sửa engine để đáp ứng assertion cũ. Các CI icon/OTA candidate/Preview có lỗi riêng, không dùng chúng làm bằng chứng PASS và không phát hành từ checkpoint.

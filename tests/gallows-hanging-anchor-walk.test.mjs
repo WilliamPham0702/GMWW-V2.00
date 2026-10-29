@@ -45,7 +45,12 @@ test('Chỉ Character treo dùng Walk sẵn có, không dựng dây/cây/nhãn t
   const css=read('server-game/current/gallows-hanging.css');
   const villageCss=read('assets/village/village.css');
   assert.match(gmBattle,/state=hanging\?'walking'/);
-  assert.match(gmBattle,/paused:effect==='dead'\|\|\(battleStatic&&!hanging\)/);
+  const expression=gmBattle.match(/paused:([^,\n]+),lowPower/)[1];
+  const paused=new Function('effect','battleStatic','hanging','runTarget','travel','return '+expression);
+  assert.equal(paused('alive',true,true,false,''),false,'hanging Character keeps walking');
+  assert.equal(paused('dead',true,true,false,''),true,'dead Character stays paused');
+  assert.equal(paused('alive',true,false,false,''),true,'idle battle Character does not animate');
+  assert.equal(paused('alive',true,false,true,'out'),false,'campfire motion remains active');
   assert.match(gmBattle,/hanging:active/);
   assert.match(village,/state=hanging\?"walking"/);
   assert.match(village,/motion=dead\?"dead":state==="sitting"\?"sit":hanging\?"walk"/);

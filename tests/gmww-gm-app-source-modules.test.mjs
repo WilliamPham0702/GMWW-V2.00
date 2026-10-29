@@ -10,18 +10,19 @@ const paths=[
   'server-game/src/20-members-and-roster.part',
   'server-game/src/30-village-and-setup.part',
   'server-game/src/40-battle-and-timeline.part',
+  'server-game/src/45-online-chat.part',
   'server-game/src/50-roles-and-artifacts.part'
 ];
 const digest=b=>createHash('sha256').update(b).digest('hex');
 
-test('G3.8: six cohesive GM source parts regenerate EXACT shipped app.js bytes',()=>{
+test('G3.8: seven cohesive GM source parts regenerate EXACT shipped app.js bytes',()=>{
   const segments=paths.map(path=>readFileSync(path));
+  const production=readFileSync('server-game/current/app.js');
   for(const [index,chunk] of segments.entries()){
     assert.ok(chunk.length>1000,'source module '+index+' must not be empty');
-    assert.ok(chunk.length<220000,'source module '+index+' must be much smaller than monolith');
+    assert.ok(chunk.length<production.length/2,'source module '+index+' must remain less than half of the complete bundle');
   }
   const assembled=Buffer.concat(segments);
-  const production=readFileSync('server-game/current/app.js');
   assert.equal(digest(assembled),digest(production),'A modularization must not change any byte shipped to GM/IPA');
   assert.ok(assembled.equals(production),'Script ordering, Unicode and whitespace must match original');
 });

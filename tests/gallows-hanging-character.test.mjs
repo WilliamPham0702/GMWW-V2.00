@@ -5,7 +5,7 @@ import {gallowsBegin,gallowsHangingState,gallowsSelectCandidate,gallowsResolve,
   gallowsSnapshot,gallowsSetMode,gallowsManualResolve} from '../src/gmww-gallows-rules.js';
 const metadata={matchId:'m-1',cycleKey:'day-1'};
 const ballot=(mode='auto')=>({id:'g-1',matchId:'m-1',cycleKey:'day-1',stage:'selecting',mode,
- eligible:['alice','bob','charlie'],candidateId:null,votes:{},nominations:{},voteDurationSec:10});
+ eligible:['alice','bob','charlie'],candidateId:null,votes:{},nominations:mode==='auto'?{alice:'bob'}:{},voteDurationSec:10});
 
 test('Automatic execution vote suspends ONLY the selected, living candidate; result releases',()=>{
  const start=gallowsBegin(ballot(),'bob',1000);
