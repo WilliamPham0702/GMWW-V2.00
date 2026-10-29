@@ -571,3 +571,16 @@ test('CI-only merge selects focused CI checks but fails closed for gameplay and 
   assert.equal(classifyBrowserScope(changes.map(c=>c.path==='tests/ci-browser-scope.test.mjs'?{...c,status:'D'}:c)),'full');
   assert.equal(classifyBrowserScope(changes.map(c=>c.path==='.github/workflows/deploy-production.yml'?{...c,after:'deploy without safety check'}:c)),'full');
 });
+
+test('CI-only merge remains scoped with actual selector/deploy source containing historical PR550 text',()=>{
+  const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+  const deploy=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old',selector),
+    modified('.github/workflows/deploy-production.yml','old',deploy),
+    modified('tests/ci-browser-scope.test.mjs','old','current safety assertions'),
+    {path:'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md',status:'A',after:'# release notes'}
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','new')]),'full');
+});
