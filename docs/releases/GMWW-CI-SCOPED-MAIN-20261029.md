@@ -7,7 +7,7 @@ Sau khi PR #607 merge, Check Player Web Worker trên main đã chạy nhầm b�
 - Thêm phân loại `ci-policy` cho bộ thay đổi thuần GitHub CI, bộ phân loại, test policy và tài liệu phát hành đã cho phép.
 - Bắt buộc cả bộ chọn phạm vi, kiểm thử chính sách và release notes của gói; thiếu bất kỳ bằng chứng nào phải quay về `full`.
 - Mọi sửa gameplay/Worker/Player Web, xóa file, hoặc tệp không thuộc danh sách được phép đều quay về `full` (fail-closed).
-- Chỉ chạy kiểm thử bất biến an toàn CI trong Check Player Web Worker và Check Player Card Browsers khi thực sự là thay đổi CI-only; không chạy Browser/Seat/IPA/OTA không liên quan.
+- Chỉ chạy kiểm thử bất biến an toàn CI trong Check Player Web Worker và Check Player Card Browsers khi thực sự là thay đổi CI-only; bỏ qua Dual Renderer 3D, Browser/Seat và macOS Native IPA không liên quan.
 - Giữ chốt chặn Production: thay đổi thuần CI không tự phát hành Worker, Runtime OTA hoặc IPA.
 
 ## Kiểm thử
