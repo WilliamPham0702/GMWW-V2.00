@@ -260,6 +260,8 @@ function go(id,opts={}){
   $$('.screen').forEach(x=>x.classList.remove('active'));if(state.member&&['profile','rooms'].includes(id))$('#game')?.classList.add('active');
   const el=$('#'+id);if(!el)return false;
   el.classList.add('active');state.activeScreenId=id;
+  // Reveal the selected real screen only after navigation has chosen its destination.
+  document.documentElement.dataset.gmwwBoot='ready';
   window.scrollTo({top:0,behavior:'instant'});
   try{
     if(!state.historyReady){history.replaceState({gmwwScreen:id},'',location.href);state.historyReady=true}
