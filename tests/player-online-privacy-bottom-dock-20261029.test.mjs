@@ -127,3 +127,17 @@ test('Player retries late recordings, stops old audio on turn change and rejects
   assert.equal(requests.length,1,'foreign recording URL is rejected');
   context.actions.stop();
 });
+
+test('ISO server deadline produces a countdown',()=>{
+ const s=read('src/player-web-src/35-online-chat.part');
+ const code=s.slice(s.indexOf('function gmwwChatDockSync(){'),s.indexOf('function gmwwChatClear(){'));
+ const clock={},panel={classList:{add(){}}},footer={},game={classList:{contains:()=>true}};
+ const c={Date:class extends Date {static now(){return Date.parse('2026-10-29T12:00:00.000Z')}},state:{roomCode:'ABCDEF',participantId:'a',room:{phase:'running',roomMode:'online',dayDeadlineAt:'2026-10-29T12:01:30.000Z'}},document:{getElementById:id=>({gmwwOnlineFooter:footer,gmwwChatPanel:panel,gmwwPlayerClock:clock,game}[id])},clearTimeout(){},setInterval(){return 1}};
+ vm.runInNewContext('let gmwwChatOpen=false,gmwwChatIdleTimer=null,gmwwOnlineFooterTimer=null;'+code+'gmwwChatDockSync()',c);
+ assert.equal(clock.textContent,'01:30');
+});
+test('Online shortcuts enter the shared private viewer',()=>{
+ const s=read('src/player-web-src/20-village-and-profile.part');
+ const handler=s.slice(s.indexOf('button.onclick=()=>{if(button.dataset.gmwwMiniMoved)'),s.indexOf('host.hidden=',s.indexOf('button.onclick=()=>{if(button.dataset.gmwwMiniMoved)')));
+ assert.ok(handler.includes('openPrivateCardViewer(type)'));
+});

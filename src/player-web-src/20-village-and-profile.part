@@ -90,8 +90,7 @@ function syncPlayerMiniCards(){
       const button=host.querySelector('[data-mini="'+type+'"]');gmwwMiniPosition(button,type);gmwwMiniDrag(button,type);
       button.onclick=()=>{if(button.dataset.gmwwMiniMoved)return;
         if(type==='artifact'&&!state.artifact)return;
-        state.artifactFocus=type;if(type==='artifact'){state.artifactOpen=true;renderArtifactStack()}
-        setGameViewPane('role',{persist:false});if(type==='role'&&!state.roleOpen)toggleRole();
+        ensurePlayerPrivateDock();openPrivateCardViewer(type);
       }
     }
   }

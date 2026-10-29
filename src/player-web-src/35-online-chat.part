@@ -121,7 +121,7 @@ function gmwwChatDockSync(){
   footer.hidden=!document.getElementById('game')?.classList.contains('active');
   gmwwChatOpen=true;panel.classList.add('open');clearTimeout(gmwwChatIdleTimer);
   const tick=()=>{const el=document.getElementById('gmwwPlayerClock');if(!el)return;
-    const deadline=Number(state.room?.dayDeadlineAt||0);let ms=0;
+    const deadline=(typeof state.room?.dayDeadlineAt==='number'?state.room.dayDeadlineAt:Date.parse(state.room?.dayDeadlineAt||''));let ms=0;
     if(Number.isFinite(deadline)&&deadline>0)ms=Math.max(0,deadline-(Date.now()+Number(state.serverClockOffsetMs||0)));
     const sec=Math.ceil(ms/1000);el.textContent=deadline>0?String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'):'--:--';
   };

@@ -30,3 +30,9 @@
 ## Rollback
 Hoàn nguyên merge commit theo GitHub PR và deploy lại bản Worker/Player Web đã xác minh trước đó; giữ nguyên lịch sử Durable Object. IPA bất biến.
 
+
+## Tiếp tục PR #630
+- Sửa đọc deadline ISO để đồng hồ ngày hiển thị đúng.
+- Shortcut lá bài dùng trình xem riêng chung, cài đặt dock trước khi mở để tránh lặp giao diện.
+- Đồng bộ main và tái tạo Player Web từ nguồn; giữ sửa bootstrap đã phát hành.
+- Kiểm thử hồi quy đồng hồ và mở lá được ghép vào bộ test PR630 hiện có để CI luôn chạy.
