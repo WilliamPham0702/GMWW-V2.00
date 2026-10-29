@@ -8807,51 +8807,70 @@
           }
         ]
       },
-      "httpEvidence": [],
+      "httpEvidence": [
+        "tests/worker-artifact-private-disclosure-e2e.mjs"
+      ],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-private-disclosure-e2e.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-private-disclosure-e2e.mjs"
+          ]
         },
         "ownership": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-private-disclosure-e2e.mjs"
+          ]
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-private-disclosure-e2e.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-private-disclosure-e2e.mjs"
+          ]
         },
         "undo": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-private-disclosure-e2e.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "privateInformation": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-private-disclosure-e2e.mjs"
+          ]
         },
         "gmUi": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "playerWebUi": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-private-role-disclosure-20261029.test.mjs",
+            "tests/worker-artifact-private-disclosure-e2e.mjs"
+          ]
         },
         "demo": {
           "status": "NOT_VERIFIED",
