@@ -4847,6 +4847,9 @@ export default {async fetch(request,env){
   const artifactViewed=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/artifact\/viewed$/);if(artifactViewed&&request.method==="POST")return playerArtifactViewedApi(env,artifactViewed[1],request);
   const artifactActivate=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/artifact\/activate$/);if(artifactActivate&&request.method==="POST")return playerArtifactActivateApi(env,artifactActivate[1],request);
   const playerInteraction=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/interaction\/respond$/);if(playerInteraction&&request.method==="POST")return playerInteractionRespondApi(env,playerInteraction[1],request);
+  const playerGhostLetterRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/ghost-letter$/);
+  if(playerGhostLetterRoute&&request.method==="POST")
+    return playerGhostLetterApi(env,playerGhostLetterRoute[1],request);
   const playerGhostClueRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/ghost-clue$/);
   if(playerGhostClueRoute&&request.method==="POST")
     return playerGhostClueApi(env,playerGhostClueRoute[1],request);
@@ -4939,6 +4942,18 @@ async function joinRoom(env,raw,request){const code=normalizeRoomCode(raw);if(!i
 async function readyRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/ready",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function heartbeatRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/heartbeat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function leaveRoomApi(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/leave",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:null,ready:false})});if(res.ok)await syncRoomDirectory(env,code);return res}
+async function playerGhostLetterApi(env,raw,request){
+  const code=normalizeRoomCode(raw);
+  if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request(
+    "https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const me=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch("https://room.internal/player/ghost-letter",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({loginId:me.member.loginId,
+      requestId:body.requestId,letter:body.letter})});
+}
 async function playerGhostClueApi(env,raw,request){
   const code=normalizeRoomCode(raw);
   if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
