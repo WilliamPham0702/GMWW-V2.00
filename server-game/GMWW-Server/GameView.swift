@@ -32,7 +32,7 @@ struct GameWebView: UIViewRepresentable {
            String(active.split(separator: "-").first ?? "").compare(shellVersion, options: .numeric) == .orderedAscending {
             UserDefaults.standard.removeObject(forKey: "GMWWActiveRuntimeVersion")
         }
-        let bridgeScript = "window.GMWW_NATIVE_SHELL_VERSION='\(escapedVersion)';window.GMWW_NATIVE_UPDATER=true;window.GMWW_NATIVE_MANUAL_RUNTIME=true;"
+        let bridgeScript = "window.GMWW_NATIVE_SHELL_VERSION='\(escapedVersion)';window.GMWW_NATIVE_UPDATER=true;window.GMWW_NATIVE_MANUAL_RUNTIME=true;window.GMWW_NATIVE_GITHUB_OTA=true;"
         config.userContentController.addUserScript(WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
 
         let web = WKWebView(frame: .zero, configuration: config)
@@ -287,6 +287,228 @@ struct GameWebView: UIViewRepresentable {
             }
         }
 
+
+        // GitHub distribution is independently verified: official release tag,
+        // exact asset names/paths, whole-container digest, and each embedded file.
+        // No Cloudflare connection is needed to download or install this package.
+        private struct GitHubAsset: Decodable {
+            let name: String
+            let browser_download_url: String
+        }
+        private struct GitHubRelease: Decodable {
+            let tag_name: String
+            let draft: Bool
+            let prerelease: Bool
+            let assets: [GitHubAsset]
+        }
+        private func installedRuntimeVersion() -> String {
+            let shell = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0"
+            let active = (UserDefaults.standard.string(forKey: activeRuntimeKey) ?? "").components(separatedBy: "-").first ?? ""
+            return active.compare(shell, options: .numeric) == .orderedDescending ? active : shell
+        }
+        private func officialAsset(_ raw: String, version: String, name: String) -> URL? {
+            guard let url = URL(string: raw),
+                  url.scheme == "https", url.host == "github.com",
+                  url.user == nil, url.password == nil, url.query == nil, url.fragment == nil,
+                  url.path == "/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v\(version)/\(name)"
+            else { return nil }
+            return url
+        }
+        private func githubError(_ description: String, integrity: Bool = false) -> NSError {
+            NSError(domain: integrity ? "GMWWUpdaterIntegrity" : "GMWWUpdaterNetwork", code: 11,
+                    userInfo: [NSLocalizedDescriptionKey: description])
+        }
+        private func digestFile(_ url: URL) throws -> String {
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+            var hasher = SHA256()
+            while let block = try handle.read(upToCount: 1024 * 1024), !block.isEmpty {
+                hasher.update(data: block)
+            }
+            return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+        }
+        private func verifyManualContainer(_ packageURL: URL, expectedSHA: String? = nil,
+                                           expectedVersion: String? = nil)
+            throws -> (manifest: [String: Any], files: [String: (offset: UInt64, size: Int)],
+                       version: String, notes: String) {
+            let fileSize = try packageURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+            guard fileSize > 0, fileSize <= 515 * 1024 * 1024 else {
+                throw manualError("File cập nhật quá lớn hoặc rỗng.")
+            }
+            if let expectedSHA {
+                guard expectedSHA.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
+                      try digestFile(packageURL) == expectedSHA else {
+                    throw githubError("SHA-256 toàn bộ gói GitHub không khớp.", integrity: true)
+                }
+            }
+            let handle = try FileHandle(forReadingFrom: packageURL)
+            defer { try? handle.close() }
+            let magic = Data("GMWWRUNTIME2\n".utf8)
+            guard try handle.read(upToCount: magic.count) == magic,
+                  let sizeBytes = try handle.read(upToCount: 4), sizeBytes.count == 4 else {
+                throw manualError("Không phải gói GMWW hợp lệ.")
+            }
+            let headerSize = sizeBytes.reduce(0) { ($0 << 8) | Int($1) }
+            guard headerSize > 0, headerSize <= 2 * 1024 * 1024,
+                  let data = try handle.read(upToCount: headerSize), data.count == headerSize,
+                  let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  object["format"] as? String == "gmww-runtime-2",
+                  let manifestObject = object["manifest"] as? [String: Any],
+                  let lengths = object["lengths"] as? [String: Int],
+                  let manifestData = try? JSONSerialization.data(withJSONObject: manifestObject),
+                  let manifest = try? JSONDecoder().decode(UpdateManifest.self, from: manifestData),
+                  let version = manifest.runtimeVersion,
+                  version.range(of: "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$", options: .regularExpression) != nil,
+                  let entries = manifest.runtime?.files, !entries.isEmpty else {
+                throw manualError("Header hoặc danh sách file Runtime không hợp lệ.")
+            }
+            if let expectedVersion, expectedVersion != version {
+                throw githubError("Phiên bản GitHub không khớp dữ liệu gói.", integrity: true)
+            }
+            let shell = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0"
+            guard shell.compare(manifest.minimumShellVersion ?? "0", options: .numeric) != .orderedAscending,
+                  version.compare(shell, options: .numeric) != .orderedAscending else {
+                throw manualError("Gói Runtime không tương thích với IPA hiện tại.")
+            }
+            let paths = entries.map { $0.path }
+            guard Set(paths).count == paths.count, Set(paths) == Set(lengths.keys),
+                  ["GMWW.html","app.js","style.css"].allSatisfy({paths.contains($0)}),
+                  (manifest.delete ?? []).isEmpty else {
+                throw githubError("Gói có file trùng, thiếu hoặc yêu cầu xóa dữ liệu.", integrity: true)
+            }
+            var total = 0
+            var offset = UInt64(magic.count + 4 + headerSize)
+            var files: [String: (offset: UInt64, size: Int)] = [:]
+            for entry in entries {
+                guard safeRelativePath(entry.path),
+                      let url = URL(string: entry.url), allowedRuntimeURL(url),
+                      let length = lengths[entry.path], length >= 0, length <= 16 * 1024 * 1024,
+                      let bytes = try handle.read(upToCount: length), bytes.count == length,
+                      sha256(bytes) == entry.sha256.lowercased() else {
+                    throw githubError("SHA-256 hoặc đường dẫn không hợp lệ: \(entry.path)", integrity: true)
+                }
+                files[entry.path] = (offset, length)
+                offset += UInt64(length)
+                total += length
+                guard total <= 512 * 1024 * 1024 else {
+                    throw githubError("Dung lượng gói vượt giới hạn.", integrity: true)
+                }
+            }
+            guard offset == UInt64(fileSize) else {
+                throw githubError("Gói cập nhật có dữ liệu thừa hoặc bị thiếu.", integrity: true)
+            }
+            return (manifestObject,files,version,
+                    (manifestObject["releaseNotes"] as? [String] ?? []).prefix(3).joined(separator: "\n"))
+        }
+
+        private func checkGithubRuntime(from webView: WKWebView) {
+            guard !runtimeInstallBusy else {
+                sendResult(["ok": false,"action":"checkGithubRuntime","error":"Đang cập nhật Runtime."], to:webView)
+                return
+            }
+            Task {
+                do {
+                    let api = URL(string:"https://api.github.com/repos/WilliamPham0702/GMWW-V2.00/releases?per_page=50")!
+                    var request = URLRequest(url:api)
+                    request.timeoutInterval = 15
+                    request.setValue("application/vnd.github+json", forHTTPHeaderField:"Accept")
+                    let (data,response) = try await URLSession.shared.data(for:request)
+                    guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+                          data.count < 2 * 1024 * 1024 else {
+                        throw githubError("GitHub chưa phản hồi danh sách bản phát hành.")
+                    }
+                    let releases = try JSONDecoder().decode([GitHubRelease].self,from:data)
+                    let current = installedRuntimeVersion()
+                    let options = releases.compactMap { release -> (String,URL,URL)? in
+                        guard !release.draft && !release.prerelease,
+                              release.tag_name.hasPrefix("gmww-runtime-v") else { return nil }
+                        let version = String(release.tag_name.dropFirst("gmww-runtime-v".count))
+                        guard version.range(of:"^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$",options:.regularExpression) != nil else { return nil }
+                        let name = "GMWW-Runtime-V\(version).gmwwupdate"
+                        guard let package = release.assets.first(where:{$0.name == name}),
+                              let checksum = release.assets.first(where:{$0.name == name+".sha256"}),
+                              let packageURL=officialAsset(package.browser_download_url,version:version,name:name),
+                              let checksumURL=officialAsset(checksum.browser_download_url,version:version,name:name+".sha256") else { return nil }
+                        return (version,packageURL,checksumURL)
+                    }.sorted { $0.0.compare($1.0,options:.numeric) == .orderedDescending }
+                    guard let latest = options.first else {
+                        sendResult(["ok":true,"action":"checkGithubRuntime","status":"fallback",
+                                    "reason":"no_official_release"],to:webView)
+                        return
+                    }
+                    guard latest.0.compare(current,options:.numeric) == .orderedDescending else {
+                        sendResult(["ok":true,"action":"checkGithubRuntime","status":"current",
+                                    "version":latest.0],to:webView)
+                        return
+                    }
+                    let version=latest.0
+                    sendResult(["ok":true,"action":"checkGithubRuntime","status":"available",
+                                "version":version],to:webView)
+                    let alert=UIAlertController(title:"GitHub Runtime V"+version,
+                        message:"Đã tìm thấy bản Runtime mới trên GitHub chính thức. Tải và kiểm tra SHA-256 trước khi cài? Runtime cũ sẽ được giữ lại để khôi phục.",
+                        preferredStyle:.alert)
+                    alert.addAction(UIAlertAction(title:"Để sau",style:.cancel){ _ in
+                        self.sendResult(["cancelled":true,"action":"checkGithubRuntime",
+                                         "version":version],to:webView)
+                    })
+                    alert.addAction(UIAlertAction(title:"Tải và cập nhật",style:.default){ _ in
+                        self.installGithubRelease(version:version,packageURL:latest.1,
+                                                  checksumURL:latest.2,webView:webView)
+                    })
+                    present(alert,from:webView)
+                }catch {
+                    sendResult(["ok":true,"action":"checkGithubRuntime","status":"fallback",
+                                "error":error.localizedDescription],to:webView)
+                }
+            }
+        }
+        private func installGithubRelease(version:String,packageURL:URL,
+                                          checksumURL:URL,webView:WKWebView) {
+            guard !runtimeInstallBusy else { return }
+            runtimeInstallBusy=true
+            sendResult(["ok":true,"action":"checkGithubRuntime","status":"installing",
+                        "version":version],to:webView)
+            Task {
+                var retained: URL?
+                defer {
+                    runtimeInstallBusy=false
+                    if let retained { try? FileManager.default.removeItem(at:retained) }
+                }
+                do {
+                    guard version.compare(installedRuntimeVersion(),options:.numeric) == .orderedDescending else {
+                        throw githubError("Đã có Runtime bằng hoặc mới hơn.", integrity:true)
+                    }
+                    var req=URLRequest(url:checksumURL);req.timeoutInterval=20
+                    let (hashBytes,hashResponse)=try await URLSession.shared.data(for:req)
+                    guard let hr=hashResponse as? HTTPURLResponse,hr.statusCode == 200,
+                          hashBytes.count <= 256,
+                          let value=String(data:hashBytes,encoding:.utf8),
+                          let checksum=value.split(whereSeparator:\.isWhitespace).first.map(String.init),
+                          checksum.range(of:"^[a-f0-9]{64}$",options:.regularExpression) != nil,
+                          value.contains("GMWW-Runtime-V\(version).gmwwupdate") else {
+                        throw githubError("Checksum GitHub không hợp lệ.",integrity:true)
+                    }
+                    req=URLRequest(url:packageURL);req.timeoutInterval=180
+                    let (temp,response)=try await URLSession.shared.download(for:req)
+                    retained=temp
+                    guard let http=response as? HTTPURLResponse,http.statusCode == 200 else {
+                        throw githubError("Không tải được gói Runtime từ GitHub.")
+                    }
+                    let verified=try verifyManualContainer(temp,expectedSHA:checksum,expectedVersion:version)
+                    // installRuntime owns the temporary file once verification succeeds.
+                    retained=nil
+                    runtimeInstallBusy=false
+                    installRuntime(manifestObject:verified.manifest,webView:webView,
+                                   localFiles:verified.files,packageURL:temp)
+                }catch {
+                    let integrity = (error as NSError).domain == "GMWWUpdaterIntegrity"
+                    sendResult(["ok":false,"action":"checkGithubRuntime",
+                                "integrityFailure":integrity,"error":error.localizedDescription],
+                               to:webView)
+                }
+            }
+        }
+
         private func pickRuntimePackage(from webView: WKWebView) {
             guard !runtimeInstallBusy, var controller = webView.window?.rootViewController else { return }
             while let presented = controller.presentedViewController { controller = presented }
@@ -308,51 +530,14 @@ struct GameWebView: UIViewRepresentable {
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                 var retainedPackage: URL?
                 do {
-                    let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                    guard size > 0, size <= 515 * 1024 * 1024 else { throw self.manualError("File cập nhật quá lớn hoặc rỗng.") }
                     let copy = FileManager.default.temporaryDirectory.appendingPathComponent("GMWW-manual-" + UUID().uuidString)
                     try FileManager.default.copyItem(at: url, to: copy)
                     retainedPackage = copy
-                    let handle = try FileHandle(forReadingFrom: copy)
-                    defer { try? handle.close() }
-                    let magic = Data("GMWWRUNTIME2\n".utf8)
-                    guard try handle.read(upToCount: magic.count) == magic,
-                          let lengthBytes = try handle.read(upToCount: 4), lengthBytes.count == 4 else { throw self.manualError("Không phải gói GMWW hợp lệ.") }
-                    let headerSize = lengthBytes.reduce(0) { ($0 << 8) | Int($1) }
-                    guard headerSize > 0, headerSize <= 2 * 1024 * 1024,
-                          let data = try handle.read(upToCount: headerSize), data.count == headerSize,
-                          let package = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                          package["format"] as? String == "gmww-runtime-2",
-                          let manifestObject = package["manifest"] as? [String: Any],
-                          let lengths = package["lengths"] as? [String: Int] else { throw self.manualError("Header gói cập nhật không hợp lệ.") }
-                    let manifestData = try JSONSerialization.data(withJSONObject: manifestObject)
-                    let manifest = try JSONDecoder().decode(UpdateManifest.self, from: manifestData)
-                    let version = manifest.runtimeVersion ?? ""
-                    guard version.range(of: "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$", options: .regularExpression) != nil,
-                          let entries = manifest.runtime?.files, !entries.isEmpty else { throw self.manualError("Thiếu phiên bản hoặc danh sách file.") }
-                    let shell = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
-                    guard shell.compare(manifest.minimumShellVersion ?? "0", options: .numeric) != .orderedAscending else { throw self.manualError("Gói này cần IPA mới hơn.") }
-                    guard version.compare(shell, options: .numeric) != .orderedAscending else { throw self.manualError("Gói Runtime cũ hơn bản đã có trong IPA.") }
-                    let paths = entries.map { $0.path }
-                    guard Set(paths).count == paths.count, Set(paths) == Set(lengths.keys),
-                          ["GMWW.html", "app.js", "style.css"].allSatisfy({ paths.contains($0) }),
-                          (manifest.delete ?? []).allSatisfy({ self.safeRelativePath($0) }) else { throw self.manualError("Danh sách file thiếu, trùng hoặc không an toàn.") }
-                    var total = 0
-                    var offset = UInt64(magic.count + 4 + headerSize)
-                    var files: [String: (offset: UInt64, size: Int)] = [:]
-                    for item in entries {
-                        guard self.safeRelativePath(item.path), let remote = URL(string: item.url), self.allowedRuntimeURL(remote),
-                              let length = lengths[item.path], length >= 0, length <= 16 * 1024 * 1024,
-                              let bytes = try handle.read(upToCount: length), bytes.count == length,
-                              self.sha256(bytes) == item.sha256.lowercased() else { throw self.manualError("SHA-256 hoặc đường dẫn không hợp lệ: \(item.path)") }
-                        files[item.path] = (offset, length)
-                        offset += UInt64(length)
-                        total += length
-                        guard total <= 512 * 1024 * 1024 else { throw self.manualError("Gói cập nhật vượt giới hạn dung lượng.") }
-                    }
-                    guard offset == UInt64(size) else { throw self.manualError("Gói cập nhật có dữ liệu thừa hoặc bị thiếu.") }
-                    let verifiedFiles = files
-                    let notes = (manifestObject["releaseNotes"] as? [String] ?? []).prefix(3).joined(separator: "\n")
+                    let verified = try self.verifyManualContainer(copy)
+                    let version = verified.version
+                    let manifestObject = verified.manifest
+                    let verifiedFiles = verified.files
+                    let notes = verified.notes
                     DispatchQueue.main.async {
                         let alert = UIAlertController(title: "Cài Runtime V" + version + "?", message: notes + "\n\nChỉ cài file nhận từ bản phát hành GMWW tin cậy. SHA-256 đã khớp; dữ liệu ván được giữ nguyên.", preferredStyle: .alert)
                         alert.addAction(UIAlertAction(title: "Hủy", style: .cancel) { _ in try? FileManager.default.removeItem(at: copy); self.sendResult(["cancelled": true, "action": "installRuntime"], to: webView) })
@@ -430,6 +615,8 @@ struct GameWebView: UIViewRepresentable {
                   let webView else { return }
 
             switch action {
+            case "checkGithubRuntime":
+                checkGithubRuntime(from:webView)
             case "pickRuntimePackage":
                 pickRuntimePackage(from: webView)
             case "installRuntime":
