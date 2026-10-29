@@ -59,3 +59,18 @@ test('Offline pipeline never requires Wrangler deploy or Cloudflare credentials'
   assert.match(file,/gh release create/);
   assert.match(file,/verify-package\.mjs/);
 });
+
+test('GitHub-only Runtime source changes cannot accidentally trigger Worker Production deployment',()=>{
+  const source=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
+  const start=source.indexOf('while IFS= read -r FILE');
+  const end=source.indexOf('done < /tmp/gmww-production-change-scope.txt',start);
+  assert.ok(start>=0&&end>start,'Missing production classifier');
+  const selector=source.slice(start,end);
+  for(const rel of [
+    '.github/workflows/github-runtime-ota.yml',
+    '.github/runtime-release/verify-package.mjs',
+    '.github/runtime-release/verify-package.test.mjs',
+    'docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md'
+  ])assert.ok(selector.includes(rel),'Unsafe auto-deploy scope: '+rel);
+  assert.match(selector,/\*\)[^\n]*SHOULD_DEPLOY=true/s,'Unknown gameplay files must still trigger Production deployment');
+});
