@@ -44,6 +44,21 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR605 — chỉ kiểm tra GitHub Actions Preview CI, không chạy gameplay/IPA
+        if: steps.scope.outputs.mode == 'github-pr-preview-ci'
+        run: |
+          node --test tests/github-actions-pr-preview-ci.test.mjs
+          node .github/scripts/guard-pr-preview-ci.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/guard-pr-preview-ci.mjs
+      - name: PR603 — icon tài khoản Player Web, bảo toàn menu và bundle
+        if: steps.scope.outputs.mode == 'player-top-avatar-603'
+        run: |
+          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs
+          node --test --test-name-pattern='PR603 account avatar' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/gmww-members-live.js
+          node --check .github/scripts/ci-browser-scope.mjs
       - name: Tối ưu Player Web khi chạy nền trên iPhone
         if: steps.scope.outputs.mode == 'player-web-background-performance'
         run: |
@@ -181,6 +196,7 @@ jobs:
           node --check src/index.js
           node --check server-game/current/app.js
       - name: Kiểm tra mã nguồn Worker
+        if: steps.scope.outputs.mode != 'player-top-avatar-603'
         run: npm run check
       - name: Kiểm tra đồng bộ phiên bản GMWW
         run: node .github/scripts/verify-gmww-versions.mjs
@@ -852,6 +868,11 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node --test tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-pr367-369-reconciliation.test.mjs tests/demo-server-runner.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs
           test -s docs/releases/GMWW-DEMO-HYBRID-20261028.md
+      - name: CI-only policy — kiểm thử bất biến an toàn, không quét gameplay
+        if: steps.scope.outputs.mode == 'ci-policy'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test --test-name-pattern='Unknown Worker|Any other public-room|UI changes outside|Browser, seat, workflow|A deletion, unexpected status|CI-only merge|PR603 account avatar' tests/ci-browser-scope.test.mjs
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test

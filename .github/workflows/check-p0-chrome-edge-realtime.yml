@@ -35,6 +35,20 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+  avatar-smoke:
+    needs: scope
+    if: needs.scope.outputs.mode == 'player-top-avatar-603'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Kiểm Player Web avatar, không thay đổi realtime/vote
+        run: |
+          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
   chrome-edge:
     needs: scope
     if: needs.scope.outputs.mode == 'full' || needs.scope.outputs.mode == 'p0-roster'

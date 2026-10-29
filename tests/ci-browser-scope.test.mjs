@@ -538,3 +538,91 @@ test('PR550 focused rules regression only (no unrelated gameplay, IPA, OTA)',()=
  assert.equal(classifyBrowserScope([...rows,{path:'src/index.js',status:'M',before:'a',after:'b'}]),'full');
  assert.equal(classifyBrowserScope(rows.map(row=>row.path.startsWith('tests/gmww-rule-snow')?{...row,after:'unrelated'}:row)),'full');
 });
+
+test('PR603 account avatar uses scoped verification and rejects unrelated Worker or role changes',()=>{
+  const rows=[
+    modified('src/gmww-members-live.js','old generated bundle','new generated bundle'),
+    modified('src/player-web-src/20-village-and-profile.part','old avatar',`
+function updatePlayerTopMenu(){const account={};avatar.onload=()=>{account.classList.add('has-avatar')};avatar.onerror=()=>{account.classList.remove('has-avatar')};}
+const cls='gmww-player-account-fallback';
+`),
+    {path:'tests/player-web-top-account-avatar-20261029.test.mjs',status:'A',before:null,after:'Account avatar appears only after loading; Menu avatar is static'},
+    modified('.github/workflows/check-player-web-online-village.yml','old','new')
+  ];
+  assert.equal(classifyBrowserScope(rows),'player-top-avatar-603');
+  assert.equal(classifyBrowserScope([...rows,modified('src/index.js','old','new')]),'full');
+  assert.equal(classifyBrowserScope([...rows,{path:'src/player-web-src/30-rooms-and-realtime.part',status:'M',before:'a',after:'b'}]),'full');
+  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='src/player-web-src/20-village-and-profile.part'?{...x,after:'unrelated UI rewrite'}:x)),'full');
+});
+
+test('CI-only merge selects focused CI checks but fails closed for gameplay and missing evidence',()=>{
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old selector','stable policy selector'),
+    modified('.github/workflows/check-player-web.yml','old workflow','focused policy workflow'),
+    modified('.github/workflows/check-player-card-browsers.yml','old browser workflow','focused policy workflow'),
+    modified('.github/workflows/deploy-production.yml','old deploy',"CHỈ CI: BỎ QUA DEPLOY PRODUCTION needs.deploy-scope.outputs.should_deploy == 'true'"),
+    modified('tests/ci-browser-scope.test.mjs','old tests','focused CI tests'),
+    {path:'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md',status:'A',before:null,after:'# CI-only scope'}
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope(changes.filter(x=>!x.path.startsWith('docs/'))),'full');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old game','changed game')]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'assets/village/village.css',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='tests/ci-browser-scope.test.mjs'?{...c,status:'D'}:c)),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='.github/workflows/deploy-production.yml'?{...c,after:'deploy without safety check'}:c)),'full');
+});
+
+test('CI-only merge remains scoped with actual selector/deploy source containing historical PR550 text',()=>{
+  const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+  const deploy=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old',selector),
+    modified('.github/workflows/deploy-production.yml','old',deploy),
+    modified('tests/ci-browser-scope.test.mjs','old','current safety assertions'),
+    {path:'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md',status:'A',after:'# release notes'}
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','new')]),'full');
+  const complete=[...changes,
+    modified('.github/workflows/check-player-web.yml','previous',readFileSync(new URL('../.github/workflows/check-player-web.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/check-player-card-browsers.yml','previous',readFileSync(new URL('../.github/workflows/check-player-card-browsers.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/check-dual-renderer.yml','previous',readFileSync(new URL('../.github/workflows/check-dual-renderer.yml',import.meta.url),'utf8')),
+    modified('.github/workflows/build-server-game-ipa.yml','previous',readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8'))
+  ];
+  assert.equal(classifyBrowserScope(complete),'ci-policy','all eight actual PR files must remain focused');
+  assert.equal(classifyBrowserScope([...complete,modified('server-game/current/app.js','old','game changed')]),'full');
+});
+
+test('CI-only merge main push does not treat the CI policy selector itself as a PR550 gameplay patch',()=>{
+  const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+  const mainGuard=selector.slice(selector.indexOf("if(isRules550Scope(changes))return{mode:'night02-rule-regression-550'"));
+  assert.match(mainGuard,/!stableCIPolicyPaths\.has\(c\?\.path\)/);
+  assert.match(mainGuard,/if\(isStableCIPolicyScope\(changes\)\|\|isPolicyScope\(changes\)\)return\{mode:'ci-policy'/);
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old',selector),
+    modified('tests/ci-browser-scope.test.mjs','old','policy regression'),
+    modified('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md','old','# Vietnamese notes')
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay')]),'full');
+});
+
+test('CI-only merge excludes unrelated Drunk-role tests without waiving gameplay checks',()=>{
+  const selector=readFileSync(new URL('../.github/scripts/ci-browser-scope.mjs',import.meta.url),'utf8');
+  const deploy=readFileSync(new URL('../.github/workflows/deploy-production.yml',import.meta.url),'utf8');
+  const workflow=readFileSync(new URL('../.github/workflows/check-drunk-spiritualist.yml',import.meta.url),'utf8');
+  assert.match(workflow,/steps\.scope\.outputs\.mode != 'player-top-avatar-603' && steps\.scope\.outputs\.mode != 'ci-policy'/);
+  assert.match(workflow,/steps\.scope\.outputs\.mode == 'ci-policy'/);
+  assert.match(deploy,/check-drunk-spiritualist\.yml/);
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old',selector),
+    modified('.github/workflows/check-drunk-spiritualist.yml','old',workflow),
+    modified('.github/workflows/deploy-production.yml','old',deploy),
+    modified('tests/ci-browser-scope.test.mjs','old','Drunk CI test'),
+    modified('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md','old','# CI-only notes')
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','actual game change')]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/gmww-drunk-draw-rules.js',status:'M',before:'a',after:'b'}]),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md')),'full');
+});
