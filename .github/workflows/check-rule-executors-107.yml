@@ -16,6 +16,8 @@ on:
       - 'tests/worker-double-gallows-e2e.mjs'
       - 'tests/worker-disable-artifact-e2e.mjs'
       - 'tests/worker-passive-gallows-artifacts-e2e.mjs'
+      - 'tests/worker-artifact-secret-destruction-e2e.mjs'
+      - 'src/gmww-artifact-destruction.js'
       - '.github/scripts/check-rule-worker-local.mjs'
       - '.github/workflows/check-rule-executors-107.yml'
 permissions:
