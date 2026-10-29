@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const $=(s,r=document)=>r.querySelector(s), $=(s,r=document)=>[...r.querySelectorAll(s)];
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 
 /* Player Web game viewport: Chrome/Edge/Safari iOS must share the *visible*
  * viewport, not a layout viewport enlarged by mobile browser controls. */

@@ -9,6 +9,7 @@ const chat=readFileSync('src/player-web-src/35-online-chat.part','utf8');
 
 test('Player Web uses visible viewport on Safari, Chrome and Edge iOS, not a scrolling document',()=>{
   assert.match(boot,/installGmwwPlayerViewport/);
+  assert.match(boot,/const \$=\(s,r=document\).*\$\$=\(s,r=document\)/,'keep both DOM selector helpers intact');
   assert.match(boot,/window\.visualViewport/);
   assert.match(boot,/visualViewport\.addEventListener\('resize'/);
   assert.match(boot,/visualViewport\.addEventListener\('scroll'/);
