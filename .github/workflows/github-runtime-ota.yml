@@ -54,7 +54,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          VERSION=$(node -p 'require("./package.json").version.replace(/\\.0$/, "")')
+          VERSION=$(node -p 'require("./package.json").version.replace(/[.]0$/, "")')
           test -n "$VERSION"
           echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -132,12 +132,12 @@ jobs:
           node -e '
             const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1]));
             if(m.releaseType!=="runtime")throw Error("Not a Runtime release");
+            const newline=String.fromCharCode(10);
             fs.writeFileSync(process.argv[2],
-              "GMWW Runtime OTA V"+m.runtimeVersion+" — GitHub-only manual update\\n\\n"+
-              (m.releaseNotes||[]).slice(0,1).join("\\n\\n")+"\\n\\n"+
-              "Bản .gmwwupdate dành cho nút THỦ CÔNG trong IPA hiện tại. "+
-              "Không deploy Cloudflare, không đổi IPA hay dữ liệu. "+
-              "Mọi file và toàn gói đều có SHA-256.\\n");
+              ["GMWW Runtime OTA V"+m.runtimeVersion+" — GitHub-only manual update",
+                ...(m.releaseNotes||[]).slice(0,1),
+                "Bản .gmwwupdate dành cho nút THỦ CÔNG trong IPA hiện tại. Không deploy Cloudflare, không đổi IPA hay dữ liệu. Mọi file và toàn gói đều có SHA-256."
+              ].join(newline+newline)+newline);
           ' "$ROOT/manual-manifest.json" "$RUNNER_TEMP/gmww-manual-runtime/release-notes.txt"
           echo "Offline native package verified: Runtime V$VERSION" >> "$GITHUB_STEP_SUMMARY"
 
@@ -186,9 +186,7 @@ jobs:
             cmp "$NAME.sha256" "$RUNNER_TEMP/existing-release/$NAME.sha256" || {
               echo "::error::Version tag exists with DIFFERENT bytes. Version bump required."; exit 1;
             }
-            HAS_FILE=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" \
-              --json assets --jq "[.assets[] | select(.name == \\"$NAME\\")] | length")
-            test "$HAS_FILE" = "1" || {
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq "$NAME" || {
               echo "::error::Existing GitHub Release is missing verified .gmwwupdate"; exit 1;
             }
             echo "Existing GitHub Runtime V$VERSION has identical SHA-256. No overwrite." >> "$GITHUB_STEP_SUMMARY"
