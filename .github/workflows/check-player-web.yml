@@ -868,6 +868,11 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node --test tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-pr367-369-reconciliation.test.mjs tests/demo-server-runner.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs
           test -s docs/releases/GMWW-DEMO-HYBRID-20261028.md
+      - name: CI-only policy — kiểm thử bất biến an toàn, không quét gameplay
+        if: steps.scope.outputs.mode == 'ci-policy'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test --test-name-pattern='Unknown Worker|Any other public-room|UI changes outside|Browser, seat, workflow|A deletion, unexpected status|CI-only merge|PR603 account avatar' tests/ci-browser-scope.test.mjs
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
