@@ -1,0 +1,31 @@
+name: Check Player Web Online Village (focused)
+on:
+  pull_request:
+    paths:
+      - 'src/player-web-src/**'
+      - 'src/gmww-members-live.js'
+      - 'src/gmww-wolf-recognition.js'
+      - 'src/index.js'
+      - 'tests/player-web-online-village-20261028.test.mjs'
+      - 'tests/player-web-top-account-avatar-20261029.test.mjs'
+      - 'tests/player-web-online-actions-20261028.test.mjs'
+      - 'src/gmww-online-action-icons.js'
+      - 'src/gmww-demo-runner.js'
+      - '.github/workflows/check-player-web-online-village.yml'
+  workflow_dispatch:
+jobs:
+  online-village:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate scoped role-group privacy and Player Web UI
+        run: node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs
+      - name: Verify exact packaged Player Web
+        run: node .github/scripts/assemble-player-web.mjs --verify
+      - name: Check source syntax
+        run: |
+          node --check src/index.js
+          node --check src/gmww-members-live.js

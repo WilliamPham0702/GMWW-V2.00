@@ -3,6 +3,7 @@
  * The result is intentionally deterministic so Durable Object retries cannot
  * select a different victim; saved matches and arbitrary death causes are untouched.
  */
+import {isWolfRole} from './gmww-pack-night-rules.js';
 const login=value=>String(value??'').trim().toLowerCase().replace(/^member:/,'');
 const isFrom=(row,matchId,night)=>String(row?.matchId||'')===matchId&&Number(row?.night)===night;
 const distinct=values=>[...new Set(values)];
@@ -94,24 +95,25 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
 export const DIVINATION_ACTION_IDS=Object.freeze([
   'action_seer','action_aura_read','action_fox_scan','action_bear_scan',
   'action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction',
-  'action_wolf_seer','action_rotten_seer'
+  'action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'
 ]);
-export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
+export function resolveNightReveal({actionId,targetIds=[],assignments=[],expelledIds=[]}={}){
   const action=String(actionId||'');
   if(!DIVINATION_ACTION_IDS.includes(action))return null;
   const targets=[...new Set((Array.isArray(targetIds)?targetIds:[]).map(login).filter(Boolean))];
-  const required=['action_fox_scan','action_scan_three'].includes(action)?3:
+  const required=['action_fox_scan','action_scan_three','action-vampire-check'].includes(action)?3:
     ['action_bear_scan','action_compare_faction'].includes(action)?2:1;
   if(targets.length!==required)return null;
   const byId=new Map((Array.isArray(assignments)?assignments:[]).map(a=>[login(a.loginId),a]));
   if(targets.some(x=>!byId.has(x)))return null;
   const reads=targets.map(id=>{
     const a=byId.get(id),roleId=String(a.roleId||''),
-      faction=String(a.roleCard?.factionId||a.factionId||a.faction||'').toLowerCase(),
+      rawFaction=String(a.factionId||a.faction||a.roleCard?.factionId||'').toLowerCase(),
+      faction=/^(village|villager|dân|dan)$|dân làng|dan lang/.test(rawFaction)?'village':/^(wolf|wolves)$|sói|soi/.test(rawFaction)?'wolf':/^(third)$|phe ba|phe thứ|phe thu/.test(rawFaction)?'third':rawFaction,
       wolf=roleId==='role_snow_wolf'||roleId==='role_wolf'||roleId==='role_alpha_wolf'||
         faction==='wolf'||faction.includes('sói')||faction.includes('soi');
     return {loginId:id,roleId,roleName:String(a.roleName||a.roleCard?.name||roleId),
-      faction,wolf,functions:(a.roleCard?.functions||[]).map(f=>String(f.actionId||'')).filter(Boolean)};
+      faction,wolf,functions:(a.roleCard?.functions||[]).map(f=>String(f.actionId||'')).filter(Boolean),hasFunction:(a.roleCard?.functions||[]).some(f=>!f.passive&&!['trigger','setup'].includes(f.phase))};
   });
   if(action==='action_aura_read'){
     const result=reads[0];return {kind:'aura',actionId:action,targets:reads.map(({loginId,roleId,roleName,functions})=>({loginId,roleId,roleName,functions})),
@@ -119,8 +121,10 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
   }
   if(action==='action_destroyer_scry')
     return {kind:'role',actionId:action,targets:reads.map(x=>({loginId:x.loginId,roleName:x.roleName})),message:reads[0].roleName};
-  if(action==='action_find_seer'){
-    const found=reads[0].roleId==='role_seer';
+  if(action==='action-digan-scry')return {kind:'faction',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),faction:reads[0].faction,message:reads[0].faction==='wolf'?'PHE SÓI':reads[0].faction==='village'?'PHE DÂN LÀNG':reads[0].faction==='third'?'PHE BA':reads[0].faction};
+  if(['action-rotten-seer-check','action_rotten_seer'].includes(action))return {kind:'function-check',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),hasFunction:reads[0].hasFunction,message:reads[0].hasFunction?'CÓ CHỨC NĂNG':'KHÔNG CÓ CHỨC NĂNG'};
+  if(action==='action_find_seer'||action==='action-vampire-check'){
+    const found=reads.some(x=>x.roleId==='role_seer');
     return {kind:'seer-check',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
       found,message:found?'TIÊN TRI':'KHÔNG PHẢI TIÊN TRI'};
   }
@@ -130,8 +134,12 @@ export function resolveNightReveal({actionId,targetIds=[],assignments=[]}={}){
     return {kind:'faction-compare',actionId:action,targets:reads.map(x=>({loginId:x.loginId,roleId:x.roleId,roleName:x.roleName})),
       same,message:same?'CÙNG PHE':'KHÁC PHE'};
   }
-  // The Alpha Wolf deceives the regular Seer only, not a group check.
-  const wolves=reads.some(x=>x.wolf&&(action!=='action_seer'||x.roleId!=='role_alpha_wolf'));
+  // Expelled targets do not receive an effect. The regular Seer nevertheless
+  // receives the neutral, non-wolf verdict without revealing their real role.
+  // Preserve the Alpha Wolf's existing false-negative rule.
+  const expelled=new Set((Array.isArray(expelledIds)?expelledIds:[]).map(login));
+  const wolves=reads.some(x=>action==='action_seer'?
+    (!expelled.has(x.loginId)&&(x.roleId==='role_human_wolf'||(x.wolf&&!['role_alpha_wolf','role_lycan'].includes(x.roleId)))):x.wolf);
   return {kind:'wolf-check',actionId:action,targets:reads.map(x=>({loginId:x.loginId})),
     wolf:wolves,message:action==='action_seer'?(wolves?'Người bạn soi là Sói':'Người bạn soi không phải là Sói'):(wolves?'CÓ SÓI':'KHÔNG CÓ SÓI')};
 }
@@ -144,9 +152,7 @@ export function canSnowWolfBite({assignments=[],interactions=[],matchId}={}){
     .map(row=>login(row.loginId)));
   // Even two living Snow Wolves do NOT satisfy "one Snow Wolf alone".
   const aliveWolves=(Array.isArray(assignments)?assignments:[]).filter(row=>{
-    const role=String(row?.roleId||''),faction=String(row?.faction||row?.factionId||row?.roleCard?.factionId||'').toLowerCase();
-    const wolf=role.includes('wolf')||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
-    return wolf&&!dead.has(login(row?.loginId));
+    return isWolfRole(row)&&!dead.has(login(row?.loginId));
   });
   return aliveWolves.length===1&&aliveWolves[0]?.roleId==='role_snow_wolf';
 }
@@ -163,8 +169,7 @@ export function resolveMaidenNight({assignments=[],interactions=[],matchId,night
       String(visit?.matchId||'')!==match||Number(visit?.night)!==cycle)continue;
     const maiden=login(visit.actorId),target=login(visit.loginId),visitor=roles.get(maiden),visited=roles.get(target);
     if(visitor?.roleId!=='role_maiden'||!visited||!target||!maiden||maiden===target||dead.has(maiden))continue;
-    const faction=String(visited.roleCard?.factionId||visited.factionId||visited.faction||'').toLowerCase();
-    const wolf=String(visited.roleId||'').includes('wolf')||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
+    const wolf=isWolfRole(visited);
     if(wolf||dead.has(target))victimIds.push(maiden);
   }
   return [...new Set(victimIds)];

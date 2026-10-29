@@ -1,0 +1,34 @@
+name: CI Policy Gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-policy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: CI Policy Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify CI selector syntax
+        run: node --check .github/scripts/ci-browser-scope.mjs
+      - name: Verify safe scope selection and fail-closed behavior
+        run: node --test --test-name-pattern='Unknown Worker|Any other public-room|UI changes outside|Browser, seat, workflow|A deletion, unexpected status|CI-only merge|PR603 account avatar' tests/ci-browser-scope.test.mjs
+      - name: Verify CI-only changes cannot auto-deploy Production
+        run: |
+          grep -Fq '.github/workflows/ci-policy-gate.yml' .github/workflows/deploy-production.yml
+          grep -Fq 'docs/releases/GMWW-CI-POLICY-GATE-20261029.md' .github/workflows/deploy-production.yml

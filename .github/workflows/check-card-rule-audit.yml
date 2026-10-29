@@ -1,0 +1,32 @@
+name: Card rule audit (focused, no deployment)
+on:
+  push:
+    branches: [fix/card-rule-contract-audit-20261028]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Rule contract, day/night, private divination, migrations and wolf recognition
+        run: |
+          node --test tests/card-rule-contract-audit-20261028.test.mjs tests/card-divination-audit-20261028.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch01-old-witch-rules.test.mjs tests/v3148-day-action-schema-policy.test.mjs tests/gmww-rule-snow-guard-pack-fairy.test.mjs tests/artifact-priority-first.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/wolf01-private-pack-recognition.test.mjs tests/approved-role-card-settings-20261027.test.mjs
+          node --test --test-name-pattern='divination|Seer recognizes|real battle handler' tests/v3141-fairy-role-scan-day-audio.test.mjs tests/v3142-night-rule-and-gesture-regression.test.mjs tests/night-rules-audio-regression.test.mjs
+          node --test --test-name-pattern='Role card function limits|Confirmed Phù|Runtime recovery|actual Durable Object|GM displays day powers' tests/v3103-battle-audio-limits.test.mjs tests/v3149-day-gallows-integration.test.mjs
+      - name: Syntax, assembly and dry-run only
+        run: |
+          node --check src/index.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/gm-fire-walk-position.test.mjs tests/gm-turn-motion-lowheat.test.mjs
+          node --check server-game/current/app.js
+          node --check server-game/current/battle-controls.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          npx wrangler deploy --dry-run

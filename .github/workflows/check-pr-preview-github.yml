@@ -1,0 +1,90 @@
+name: Check GMWW PR Preview (GitHub Actions)
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+# Intentionally no push, workflow_run, or Production deploy trigger.
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-preview:
+    name: Validate isolated Preview without Cloudflare Builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Assert Preview config cannot bind Production data
+        run: node .github/scripts/guard-pr-preview-ci.mjs
+      - name: Verify GitHub Actions Preview security contract
+        run: node --test tests/github-actions-pr-preview-ci.test.mjs
+      - name: Build Worker locally, without publishing or Cloudflare build minutes
+        run: npm run check
+
+  publish-preview:
+    name: Publish isolated Worker Preview (never Production)
+    needs: validate-preview
+    # Token use is limited to owner-authored PRs from this same repo.
+    # Forks and other authors still receive token-free validation.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Recheck immutable Preview resource boundary
+        run: node .github/scripts/guard-pr-preview-ci.mjs
+      - name: Create/update ONLY the PR Preview
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::Missing existing GitHub Cloudflare credentials. Never bypass Preview required check."
+            exit 1
+          fi
+          # Cloudflare Preview uses a separate DO namespace; this is NOT wrangler deploy.
+          npx --no-install wrangler preview --config wrangler.jsonc \
+            --worker-name gmww-v2-00 --name "pr-${PR_NUMBER}"
+          # Read-only GET smoke test of the actual Preview endpoint.
+          BASE="https://pr-${PR_NUMBER}-gmww-v2-00.williampham0702.workers.dev"
+          curl --fail --location --silent --show-error --retry 6 \
+            --retry-all-errors --retry-delay 2 --max-time 25 \
+            "$BASE/" --output "$RUNNER_TEMP/gmww-pr-preview-home.html"
+          test -s "$RUNNER_TEMP/gmww-pr-preview-home.html"
+          {
+            echo "### GMWW isolated PR Preview"
+            echo "PR #${PR_NUMBER}: published with Wrangler Preview via GitHub Actions."
+            echo "No Workers Builds minutes, production deploy, IPA, Runtime OTA, or production data."
+            echo "View the Preview URL under Cloudflare Workers > gmww-v2-00 > Previews."
+          } >> "$GITHUB_STEP_SUMMARY"

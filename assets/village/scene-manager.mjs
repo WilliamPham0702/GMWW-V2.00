@@ -148,4 +148,4 @@ if(editor){
 }
 new MutationObserver(apply).observe(game,{attributes:true,attributeFilter:['class']});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync()});
-void sync();setInterval(sync,5000);
+void sync();setInterval(()=>{if(!document.hidden)void sync()},5000);

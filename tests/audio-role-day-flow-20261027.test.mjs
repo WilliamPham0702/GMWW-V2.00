@@ -15,13 +15,15 @@ test('dawn cue plays before the number of night deaths; Ngày dài only on open 
   assert.match(dawn,/audio_system_morning_number_/);
   assert.doesNotMatch(dawn,/audio_system_gallows_day_long/);
   const gallows=between(battle,'async function battleGallowsCommand(', '/\\* V3.234');
-  assert.match(gallows,/open:\[\['audio_system_gallows_day_long','Ngày dài rồi'/);
+  const stage=between(battle,'function battleGallowsRender(', 'async function battleGallowsCommand(');
+  assert.match(stage,/audio_system_gallows_day_long/);
+  assert.doesNotMatch(gallows,/open:\[\['audio_system_gallows_day_long','Ngày dài rồi'/);
   assert.doesNotMatch(gallows,/battlePlayConfiguredAudio\('system',cues\[command\],''\)/);
 });
 
 test('30s and 0s cues work in manually controlled days; a paused clock cannot announce',()=>{
   const tick=between(battle,'function battleTickCountdown(', 'async function battleNavigateIndex(');
-  assert.match(tick,/dayPausedRemainingMs==null&&seconds<=30&&seconds>0/);
+  assert.match(tick,/dayPausedRemainingMs==null&&seconds<=warningSeconds&&seconds>0/);
   assert.match(tick,/dayPausedRemainingMs==null&&seconds<=0/);
   assert.doesNotMatch(tick,/autoGM!==false\|\|playSceneRuntime\.room\?\.demo===true/);
 });
@@ -65,8 +67,8 @@ test('audio replay still resolves Old Witch audio by canonical role and V1 sourc
   assert.equal(ctx.find('cards','source-18','Phù Thuỷ Già').targetId,'role_old_witch');
 });
 
-test('GM generated app remains the exact six-part bundle',()=>{
-  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
+test('GM generated app remains the exact seven-part bundle',()=>{
+  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
   assert.equal(fs.readFileSync('server-game/current/app.js','utf8'),parts.map(p=>fs.readFileSync('server-game/src/'+p,'utf8')).join(''));
 });
 
@@ -95,6 +97,7 @@ test('countdown triggers in manual mode and does not duplicate on refresh',()=>{
   const clock={textContent:'',classList:{toggle(){}},title:''};
   const ctx={
     battleGallowsTick(){},
+    battleMarkPlayers(){},
     document:{getElementById:id=>id==='battleCountdown'?clock:id==='playBattleDock'?{hidden:false}:null},
     playSceneState:{phase:'day',night:1},
     playSceneRuntime:{room:{matchId:'m1',cycleStartedAt:new Date(start).toISOString(),autoGM:false,dayDeadlineAt:new Date(start+26000).toISOString()},nightRuntime:null,serverClockOffsetMs:0,gameConfig:{timing:{villageDiscussionSec:90}}},
@@ -113,4 +116,37 @@ test('countdown triggers in manual mode and does not duplicate on refresh',()=>{
   ctx.playSceneRuntime.room.dayPausedRemainingMs=null;
   ctx.tick();
   assert.deepEqual(heard,['audio_system_countdown','audio_system_time_up']);
+});
+
+
+test('morning death narration skips fragments at zero deaths and keeps other notices',()=>{
+  const body=between(battle,'function battleMorningPlayAudio(', 'function battleDivinationSystemAudioCue(');
+  function cues(rows){
+    const calls=[];
+    const ctx={battleMorningRows:()=>rows,battleQueueDayAudio:items=>calls.push(...items)};
+    vm.createContext(ctx);
+    vm.runInContext(body+';globalThis.play=battleMorningPlayAudio',ctx);
+    ctx.play();
+    return calls.map(([id])=>id);
+  }
+  const intro='audio_system_morning_deaths_intro';
+  const noun='audio_system_morning_dead_noun';
+  const numbers=ids=>ids.filter(id=>id.startsWith('audio_system_morning_number_'));
+  const none=cues([]);
+  assert.deepEqual(none,['audio_system_day_wakeup']);
+  assert.equal(none.includes(intro),false);
+  assert.equal(none.includes(noun),false);
+  assert.deepEqual(numbers(none),[]);
+  const status=cues([{kind:'expelled',name:'An',label:'Bị đuổi'},
+                     {kind:'protected',name:'Bình',label:'được bảo vệ'}]);
+  assert.deepEqual(status,['audio_system_day_wakeup','audio_system_morning_expelled','audio_system_morning_protected']);
+  assert.deepEqual(numbers(status),[]);
+  const saved=cues([{kind:'saved',name:'An',label:'được cứu'}]);
+  assert.deepEqual(saved,['audio_system_day_wakeup','audio_system_morning_saved']);
+  const one=cues([{kind:'dead',name:'An',role:'Dân Làng',label:'đã chết'}]);
+  assert.deepEqual(one,['audio_system_day_wakeup',intro,'audio_system_morning_number_1',noun]);
+  const two=cues([{kind:'dead',name:'An',role:'Dân Làng',label:'đã chết'},
+                  {kind:'dead',name:'Bình',role:'Thiếu Nữ',label:'chết vì thăm nhà Sói'}]);
+  assert.deepEqual(two,['audio_system_day_wakeup',intro,'audio_system_morning_number_2',noun,'audio_system_morning_maiden_wolf']);
+  assert.deepEqual(numbers(two),['audio_system_morning_number_2']);
 });

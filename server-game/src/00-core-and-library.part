@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.263';
+const VERSION='3.273';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -906,6 +906,82 @@ function applyApprovedRoleSettings(s){
       Object.assign(fn,contract);
     }
   };
+  // User ruling 28/10: Aura reads the Role name (V1.11), not function names.
+  update('role_aura_seer',{
+    information:'Trong 4 đêm đầu tiên, bạn có tổng cộng 2 lần sử dụng chức năng để đọc tên Vai Trò của một Người Chơi.',
+    limits:'Tối đa 2 lần trong 4 đêm đầu.',
+    conditions:'Kết quả là tên Vai Trò của người được soi, theo luật V1.11 đã chốt.'
+  },[['action_aura_read',{description:'Đọc tên Vai Trò của người được soi.'}]]);
+  // User rulings 28/10: these are authoritative descriptions, NOT an executor.
+  // Keep the original Artwork, function Action ID and usage ledger unchanged.
+  update('role_elder',{
+    information:'Già Làng có 2 mạng. Trong 4 đêm đầu, mỗi lần Rung Chuông vô hiệu mọi tác động gây chết của đêm đó và Già Làng mất 1 mạng. Nếu số mạng về 0, Già Làng chết.',
+    limits:'Rung Chuông tối đa 1 lần mỗi đêm trong 4 đêm đầu; mỗi lần mất 1 mạng (ban đầu có 2 mạng).',
+    conditions:'Rung Chuông ngăn toàn bộ tác động chết trong đêm kích hoạt. Khi Già Làng hết mạng, Già Làng chết.'
+  },[['18',{description:'Rung Chuông: chặn mọi tác động gây chết đêm này; trừ 1 mạng Già Làng và chết nếu còn 0 mạng.',phase:'night',usageMode:'eachNight',usageCount:1,fromNight:1,toNight:4,targetCount:0,noTarget:true}]]);
+  const artifactRulings={
+    artifact_07:{
+      information:'Hơi Thở Lão Già đánh dấu một người; người bị đánh dấu sẽ chết vào đêm hôm sau.',
+      limits:'1 lần trong cả ván.',
+      conditions:'Cái chết được lên lịch cho đêm kế tiếp, không xảy ra ngay trong đêm đánh dấu.',
+      action:'action-grudge-designate',
+      description:'Đánh dấu một người để chết vào đêm hôm sau.'
+    },
+    artifact_13:{
+      information:'Đồng Xu Tuổi Trẻ yêu cầu người giữ công bố Vai Trò thật mỗi ngày; nếu không công bố thì chết.',
+      conditions:'Hậu quả của việc không công bố Vai Trò thật là chết; thời điểm xử lý cần được gắn với vòng ngày/đêm.',
+      action:'artifact_action_reveal_role',
+      description:'Công bố Vai Trò thật mỗi ngày; nếu không công bố thì chết.'
+    },
+    artifact_15:{
+      information:'Kim Cương Phủ Nhận loại bỏ khỏi ván một Artifact loại dùng mãi mãi đã được sử dụng.',
+      limits:'1 lần trong cả ván.',
+      conditions:'Chỉ nhắm Artifact dùng mãi mãi đã sử dụng, không loại Artifact chưa dùng hoặc loại chỉ dùng một lần.',
+      action:'artifact_action_negate',
+      description:'Loại khỏi ván một Artifact dùng mãi mãi đã được sử dụng.'
+    },
+    artifact_19:{
+      information:'Bình Giấc Mơ khóa chức năng đặc biệt của một người trong 2 ngày đêm.',
+      limits:'1 lần trong cả ván; hiệu lực khóa kéo dài 2 ngày đêm.',
+      conditions:'Hết 2 ngày đêm, chức năng được mở lại; cần quản lý mốc bắt đầu/kết thúc khóa.',
+      action:'artifact_action_lock_function',
+      description:'Khóa chức năng đặc biệt của mục tiêu trong 2 ngày đêm.'
+    },
+    artifact_23:{
+      information:'Sao chép chức năng của một người, bổ sung thành chức năng số 2. Người nhận được cấp lại đầy đủ lượt sử dụng mới cho chức năng sao chép.'
+    },
+    artifact_30:{
+      information:'Trượng Luân Hồi được dùng khi chủ sở hữu chết để hồi sinh, tiếp tục sống với chính Vai Trò trước khi chết.',
+      limits:'1 lần trong cả ván.',
+      conditions:'Chỉ dùng khi chủ sở hữu chết; không bốc hay đổi sang Vai Trò mới.',
+      action:'action-maid-inherit',
+      description:'Khi bị chết, hồi sinh với đúng Vai Trò trước khi chết.'
+    },
+    artifact_32:{
+      information:'Lam Ngọc Định Mệnh sao chép Artifact của một người chơi khác; người sử dụng Lam Ngọc có thể cùng sử dụng Artifact được sao chép.',
+      limits:'1 lần trong cả ván.',
+      conditions:'Sao chép để cùng sử dụng, không cướp hoặc chuyển quyền sở hữu Artifact gốc.',
+      action:'artifact_action_link',
+      description:'Sao chép Artifact của một người khác để cùng sử dụng.'
+    },
+    artifact_40:{
+      information:'Hoán đổi vai trò của bản thân với một người chơi khác. Người nhận Vai Trò được cấp lại đầy đủ lượt sử dụng mới.'
+    },
+    artifact_42:{
+      information:'Hư Không Vô Tận là Artifact sáng tạo do GM trực tiếp giao luật và giải quyết thủ công khi chơi Offline.',
+      limits:'1 lần trong cả ván; GM tự điều phối Offline.',
+      conditions:'Không tự động suy diễn tác động. Chỉ GM trực tiếp giao và xử lý theo luật tùy chỉnh Offline.',
+      action:'artifact_action_custom',
+      description:'GM giao luật và xử lý thủ công khi chơi Offline.'
+    }
+  };
+  for(const a of Array.isArray(s.artifacts)?s.artifacts:[]){
+    const rule=artifactRulings[a?.id];if(!rule)continue;
+    for(const field of ['information','limits','conditions'])
+      if(Object.prototype.hasOwnProperty.call(rule,field))a[field]=rule[field];
+    if(rule.action && Array.isArray(a.functions))
+      for(const fn of a.functions)if(fn?.actionId===rule.action)fn.description=rule.description;
+  }
   update('role_old_witch',{
     information:'Mỗi đêm sau Bầy Sói nhận diện, Phù Thuỷ Già được chọn một trong hai: Đuổi hoặc Hồi Sinh. Đuổi người khiến các tác động lên họ không có hiệu lực. Hồi Sinh chỉ được dùng một lần cả ván, cho người chết ngày hoặc đêm liền trước và không được tự cứu.',
     limits:'Mỗi đêm chỉ thực hiện Đuổi hoặc Hồi Sinh, không cả hai. Hồi Sinh 1 lần trong ván.',

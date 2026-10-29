@@ -2,34 +2,42 @@
 // Functions lifted unchanged from the production Worker: no persisted schema changes.
 import { defaultPriorityFirst } from "./gmww-game-scene-rules.js";
 
+function functionRuleFields(fn){
+  const out={};
+  for(const key of ['noTarget','passive','allowConsecutive','targetPreviousCycleOnly','pushToPlayerWeb','systemRequired','usesPackBite','requiresNoOtherLivingWolf','actorMayBeDead','allowFriendlyFaction','replacesWolfBite'])
+    if(typeof fn?.[key]==='boolean')out[key]=fn[key];
+  for(const key of ['cooldownNights','perUserLimit'])
+    if(fn?.[key]!=null)out[key]=Math.max(0,Math.min(100,Math.trunc(Number(fn[key])||0)));
+  if(fn?.activation!=null)out.activation=String(fn.activation).slice(0,160);
+  return out;
+}
 export function sanitizePlayerArtifactCard(v){
   const x=(v&&typeof v==="object")?v:{},actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null,...(a?.targetCount!==undefined&&a?.targetCount!==null&&Number.isInteger(Number(a.targetCount))&&Number(a.targetCount)>=0&&Number(a.targetCount)<=30?{targetCount:Number(a.targetCount)}:{}),...(typeof a?.noSelf==="boolean"?{noSelf:a.noSelf}:{}),...(typeof a?.allowDead==="boolean"?{allowDead:a.allowDead}:{}),...(a?.phase!=null?{phase:['day','night','any'].includes(String(a.phase))?String(a.phase):'night'}:{}),...(a?.actorMayBeDead!=null?{actorMayBeDead:a.actorMayBeDead===true}:{})})):[];
   const functions=Array.isArray(x.functions)?x.functions.slice(0,40).map(fn=>({
-    id:String(fn?.id||fn?.actionId||"").slice(0,120),
+    ...functionRuleFields(fn),id:String(fn?.id||fn?.actionId||"").slice(0,120),
     actionId:String(fn?.actionId||fn?.id||"").slice(0,120),
-    ...(fn?.phase!=null?{phase:["day","night","any"].includes(String(fn.phase))?String(fn.phase):"night"}:{}),
-    usageMode:["eachNight","onceGame","nGame","unlimited"].includes(String(fn?.usageMode||""))?String(fn.usageMode):"unlimited",
+    ...(fn?.phase!=null?{phase:fn.phase==='both'?'any':["day","night","any","setup","trigger"].includes(String(fn.phase))?String(fn.phase):"night"}:{}),
+    usageMode:["eachNight","eachDay","nPerNight","onceGame","nGame","custom","unlimited"].includes(String(fn?.usageMode||""))?String(fn.usageMode):"unlimited",
     usageCount:Math.max(1,Math.min(100,Math.trunc(Number(fn?.usageCount)||1))),
-    targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn?.targetCount??1)||0))),
-    noSelf:fn?.noSelf!==false,allowDead:fn?.allowDead===true,
-    actorMayBeDead:fn?.actorMayBeDead===true,noTarget:fn?.noTarget===true,
-    passive:fn?.passive===true,
+    ...(fn?.targetCount!=null?{targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount)||0)))}:{}),
+    ...(typeof fn?.noSelf==='boolean'?{noSelf:fn.noSelf}:{}),
+    ...(typeof fn?.allowDead==='boolean'?{allowDead:fn.allowDead}:{}),
     effectIds:Array.isArray(fn?.effectIds)?fn.effectIds.map(String).slice(0,8):[],
     ...(fn?.fromNight!=null?{fromNight:Math.max(1,Math.trunc(Number(fn.fromNight)||1))}:{}),
     ...(fn?.toNight!==undefined?{toNight:fn.toNight==null?null:Math.max(1,Math.trunc(Number(fn.toNight)||1))}:{})
   })):null;
   const artworkAssetId=x.artworkAssetId==null?(x.artworkId==null?null:String(x.artworkId).slice(0,180)):String(x.artworkAssetId).slice(0,180);
-  return{version:Number(x.version||x.playerCardVersion||1),name:String(x.name||x.artifactName||"Artifact").slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),actions,limits:x.limits??null,singleUse:x.singleUse===true,priorityFirst:typeof (x.priorityFirst??x.artifact?.priorityFirst)==="boolean"?(x.priorityFirst??x.artifact.priorityFirst):defaultPriorityFirst(x.name||x.artifactName),artworkAssetId,artworkId:artworkAssetId}
+  return{version:Number(x.version||x.playerCardVersion||1),name:String(x.name||x.artifactName||"Artifact").slice(0,120),information:x.information==null?(x.description==null?null:String(x.description).slice(0,6000)):String(x.information).slice(0,6000),actions,functions,limits:x.limits??null,singleUse:typeof x.singleUse==='boolean'?x.singleUse:!!(functions?.length===1&&functions[0].usageMode==='onceGame'&&functions[0].usageCount===1),priorityFirst:typeof (x.priorityFirst??x.artifact?.priorityFirst)==="boolean"?(x.priorityFirst??x.artifact.priorityFirst):defaultPriorityFirst(x.name||x.artifactName),artworkAssetId,artworkId:artworkAssetId}
 }
 export function privateArtifact(a){return{matchId:a.matchId||null,matchRevision:Number(a.matchRevision||0),artifactId:a.artifactId,artifactName:a.artifactName,description:a.description,artifactImage:a.artifactImage||null,artworkAssetId:a.artworkAssetId||a.artworkId||null,artworkId:a.artworkAssetId||a.artworkId||null,artworkAvailable:a.artworkAvailable!==false,artifactCard:a.artifactCard||null,singleUse:a.singleUse===true,deliveredAt:a.deliveredAt||null,viewedAt:a.viewedAt||null,usedAt:a.usedAt||null,lastActivation:a.lastActivation||null}}
 export function sanitizePlayerRoleCard(v){
   const x=(v&&typeof v==="object")?v:{};
   const actions=Array.isArray(x.actions)?x.actions.slice(0,40).map(a=>({id:String(a?.id||"").slice(0,120),name:String(a?.name||"Hành Động").slice(0,160),description:String(a?.description||"").slice(0,3000),limits:a?.limits??null})):[];
   const functions=Array.isArray(x.functions)?x.functions.slice(0,40).map(fn=>({
-    id:String(fn?.id||fn?.actionId||"").slice(0,120),
+    ...functionRuleFields(fn),id:String(fn?.id||fn?.actionId||"").slice(0,120),
     actionId:String(fn?.actionId||fn?.id||"").slice(0,120),
-    usageMode:["eachNight","onceGame","nGame","unlimited"].includes(String(fn?.usageMode||""))?String(fn.usageMode):"unlimited",
-    ...(fn?.phase!=null?{phase:["day","night","any"].includes(String(fn.phase))?String(fn.phase):"night"}:{}),
+    usageMode:["eachNight","eachDay","nPerNight","onceGame","nGame","custom","unlimited"].includes(String(fn?.usageMode||""))?String(fn.usageMode):"unlimited",
+    ...(fn?.phase!=null?{phase:fn.phase==='both'?'any':["day","night","any","setup","trigger"].includes(String(fn.phase))?String(fn.phase):"night"}:{}),
     ...(fn?.targetCount!=null?{targetCount:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount)||0)))}:{}),
     ...(fn?.actorMayBeDead!=null?{actorMayBeDead:fn.actorMayBeDead===true}:{}),
     ...(fn?.allowDead!=null?{allowDead:fn.allowDead===true}:{}),

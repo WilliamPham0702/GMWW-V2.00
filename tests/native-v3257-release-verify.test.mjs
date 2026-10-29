@@ -35,4 +35,6 @@ test('Production V3.257 native inventory is checked without advertising obsolete
  ])assert.ok(s.includes(x),'Missing Native integrity guard: '+x);
  assert.ok(s.includes("published.releaseType,'runtime'"),'Legacy Runtime assertions must be preserved');
  assert.ok(s.includes("assert.equal(sha(await bytes(f.url)),expected"),'Live OTA bytes must still be SHA checked');
+ assert.ok(!s.includes("assert.equal(version,'3.257'"),'Native verification must not be tied to obsolete V3.257');
+ assert.ok(s.includes("assert.equal(nativeShell,version"),'Native release must match local Xcode project');
 });

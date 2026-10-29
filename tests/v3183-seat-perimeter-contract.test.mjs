@@ -43,7 +43,7 @@ test('GM and Player Web receive synchronized layout; Character size and scene pr
   assert.match(source,/count<6\|\|count>30\|\|count%2!==0/);
   assert.match(source,/playUpdateRoomSettings\(\{seatCount:count,seatLayout:shape\}\)/);
  }
- assert.ok(html.includes('village-layout.js?v='+version+'-seat-map-drag-20261024'));
+ assert.ok(html.includes('village-layout.js?v='+version+'-pinch-spacing'));
  assert.ok(player.includes('seat=3195-rigid'));
  assert.match(read('assets/village/index.html'),/seatfix=v3195-rigid/);
  assert.ok(worker.includes('VERSION="V'+version+'"'));

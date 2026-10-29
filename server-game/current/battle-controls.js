@@ -70,7 +70,7 @@
         Array.isArray(chosen?.artifact?.functions)&&chosen.artifact.functions.length?chosen.artifact.functions:
         Array.isArray(chosen?.artifact?.actions)?chosen.artifact.actions:[];
       const actorIds=isArt?[loginOf(owner.loginId)]:(owner.loginIds||[owner.loginId]).filter(Boolean).map(loginOf);
-      const eligible=fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any")&&
+      const eligible=fns.filter(fn=>fn&&!fn.passive&&(fn.phase==="night"||!fn.phase||fn.phase==="any"||fn.phase==="both")&&
         (!fn.fromNight||Number(fn.fromNight)<=Number(night))&&(!fn.toNight||Number(fn.toNight)>=Number(night))&&
         (isArt||String(fn.actionId||fn.id||"")!=="action_wolf_bite"));
       // Never silently hide an assigned Artifact. Non-night/passive cards

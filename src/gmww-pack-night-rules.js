@@ -2,7 +2,7 @@
  * Pure helpers; the Durable Object remains responsible for authorization/writes. */
 const id=v=>String(v||'').trim().toLowerCase().replace(/^member:/,'');
 const faction=row=>String(row?.faction||row?.factionId||row?.roleCard?.factionId||'').toLowerCase();
-export const isWolfRole=row=>{const f=faction(row);return f==='wolf'||f.includes('sói')||f.includes('soi')||String(row?.roleId||'').includes('wolf')};
+export const isWolfRole=row=>{const f=faction(row);if(f)return f==='wolf'||f==='wolves'||f.includes('sói')||f.includes('soi');return row?.roleId!=='role_human_wolf'&&String(row?.roleId||'').includes('wolf')};
 export const aliveInMatch=(row,interactions,matchId)=>!(Array.isArray(interactions)?interactions:[]).some(x=>
  String(x?.matchId||'')===String(matchId)&&x?.type==='dead'&&x?.effectActive!==false&&id(x?.loginId)===id(row?.loginId));
 export const packMembers=(assignments,interactions,matchId)=>(Array.isArray(assignments)?assignments:[])

@@ -25,6 +25,10 @@ export function privateDeliveryRoles(snapshot,legacyRows=[]){
  });
 }
 export function privateDeliveryArtifact(snapshot,legacyArtifact){
+ // A removed card must never be resurrected from the immutable delivery
+ // snapshot during reconnect or a delayed delivery acknowledgment.
+ if(legacyArtifact?.removedFromMatch===true&&
+   (!snapshot||!legacyArtifact.matchId||String(legacyArtifact.matchId)===String(snapshot.matchId)))return null;
  if(!snapshot)return legacyArtifact||null;
  const assigned=snapshot.artifact;
  if(!assigned)return null;

@@ -15,6 +15,7 @@ for(const card of cards)card.actions=card.functions.map(fn=>({id:fn.actionId,nam
 const cfg={id:'server-test',name:'DEMO autonomous',playerCount:8,roles:cards.map((c,i)=>({roleId:c.id,roleName:c.name,count:i===4?4:1,order:i+1,actionDurationSec:4})),artifactsEnabled:false,timing:{wolfDiscussionSec:20,defaultActionSec:4,villageDiscussionSec:2,gallowsNominationSec:10,gallowsVoteSec:10}};
 const created=await req('/api/rooms',{demo:true,roomName:'Server DEMO',roomMode:'offline',seatCount:8,gameConfig:cfg}),code=created.roomCode,gm=(p,b)=>req('/api/gm/rooms/'+code+p,b),matchId='server-'+serial;
 try{
+ assert.ok((await req('/api/rooms')).rooms.some(r=>r.code===code&&r.demo===true),'open DEMO is visible in room directory');
  await gm('/participants',{members:people,replace:true});await gm('/seat-lock',{locked:true});
  await gm('/assignments',{matchId,assignments:people.map((p,i)=>({...p,roleId:cards[Math.min(i,4)].id,roleName:cards[Math.min(i,4)].name,faction:cards[Math.min(i,4)].faction,roleCard:cards[Math.min(i,4)]}))});
  await gm('/start',{matchId});
@@ -38,7 +39,7 @@ try{
  assert.ok(actions.includes('action_wolf_bite'),'wolf bite via real handler');assert.ok(actions.includes('action_seer'),'mandatory seer');assert.ok(actions.includes('action_protect'),'mandatory guard');/* Witch kill is optional; night-one use is forbidden. */assert.ok(winner,'autonomous game reaches winner');
  const end=await gm('/end',{matchId,winnerFaction:(await gm('')).winProposal.winnerFaction});assert.equal(end.ok,true);
  assert.deepEqual(accountSnapshot((await req('/api/gm/members')).members),before,'Demo never changes member stats/history/presence');
- assert.ok(!(await req('/api/rooms')).rooms.some(r=>r.code===code));
+ assert.ok(!(await req('/api/rooms')).rooms.some(r=>r.code===code),'ended DEMO is absent from open room directory');
  // Separate day fixture exercises voting regardless of how early the first game ends.
  const dayRoom=await req('/api/rooms',{demo:true,roomName:'Server day test',roomMode:'online',seatCount:8,gameConfig:cfg}),day=(p,b)=>req('/api/gm/rooms/'+dayRoom.roomCode+p,b),dayMatch='day-'+serial;
  try{

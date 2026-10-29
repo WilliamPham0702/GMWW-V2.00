@@ -1,0 +1,41 @@
+name: CI Stability Gate
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-stability-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  stability-contract:
+    name: CI Stability Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node and npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify scope selection never silently bypasses unknown changes
+        run: node --test tests/ci-browser-scope.test.mjs
+      - name: Verify source packaging contracts
+        run: |
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Verify source and selector syntax
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/gmww-members-live.js
+          node --check server-game/current/app.js

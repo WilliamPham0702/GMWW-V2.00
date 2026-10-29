@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.263</title>
-<link rel="stylesheet" href="style.css?v=gmww-v3263-artifact-align">
+<title>GMWW V3.273</title>
+<link rel="stylesheet" href="style.css?v=gmww-v3268-template-dock">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -139,9 +139,6 @@
           </div>
           <div class="play-gather-mode-row" aria-label="Hình thức chơi">
             <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Chuyển Online, Offline, Demo"><b>CHẾ ĐỘ</b></button>
-          </div>
-          <div class="play-seat-shift-controls" aria-label="Giãn cách và khôi phục vị trí Seat">
-            <label class="play-gather-spacing" for="playGatherSpacing"><span>GIÃN CÁCH</span><input id="playGatherSpacing" type="range" min="70" max="135" step="5" value="100" aria-label="Điều chỉnh khoảng cách người chơi"/><output id="playGatherSpacingValue" for="playGatherSpacing">100%</output></label>
             <div class="play-seat-shift-buttons"><button type="button" data-seat-shift="reset" aria-label="Khôi phục vị trí và giãn cách Seat mặc định" title="Khôi phục mặc định">🔄</button></div>
           </div>
           <div class="play-gather-toolbar-actions">
@@ -200,6 +197,7 @@
             <span class="play-artifact-cap"><i>✦</i><b id="playArtifactCount">0/3</b></span>
           </div>
 
+          <output id="playGatherSpacingValue" class="play-pinch-indicator" aria-label="Khoảng cách vòng ghế" hidden>100%</output>
           <div class="play-player-ring" id="playPlayerRing"></div>
 
           <div class="play-village-core">
@@ -808,7 +806,7 @@
 
 <div class="sheet hidden" id="playGameSheet">
   <div class="sheet-card play-game-sheet-card" data-mode="play">
-    <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div></div>
+    <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div><button id="playGameDockToggle" type="button" aria-label="Thu gọn bảng Ván Mẫu vào menu dưới" aria-expanded="true" title="Thu gọn / mở Ván Mẫu">⌄</button></div>
     <p id="playGameStatus" class="play-game-status" role="status" aria-live="polite" hidden></p>
     <div class="play-template-scroll">
       <div class="play-template-picker-row play-template-actions-row" role="group" aria-label="Ván gợi ý, Auto Ván, Thêm mới">
@@ -1001,14 +999,14 @@
   </div>
 </div>
 <script src="runtime-recovery.js" data-runtime="3.122"></script>
-<script src="village-layout.js?v=3.218-seat-map-drag-20261024"></script>
+<script src="village-layout.js?v=3.265-pinch-spacing"></script>
 <script src="gmww-performance.js?v=gm-perf-3254"></script>
 <script src="gmww-shared-motion.js?v=c40-1-mobile2"></script>
 <script src="battle-controls.js?v=3.175-timeline"></script>
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
 <script src="action-icon-library.js?v=sea-art-v3"></script>
-<script src="app.js?v=gmww-v3250-approved-card-settings"></script>
+<script src="app.js?v=gmww-v3268-template-dock"></script>
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
