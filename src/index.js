@@ -2798,7 +2798,8 @@ export class RoomDurableObject extends DurableObject {
         return j({ok:false,error:"PRIDE_PENDANT_INVALID_RECIPIENT"},409);
       changes.push({kind:"private_role_disclosure",loginId:effectiveTargets[0],
         roleId:String(actorRole.roleId),
-        roleName:String(actorRole.roleName||actorRole.roleCard?.name||actorRole.roleId).slice(0,100)});
+        roleName:String(actorRole.roleName||actorRole.roleCard?.name||actorRole.roleId).slice(0,100),
+        senderName:String(members["member:"+actorId]?.displayName||actorId).slice(0,60)});
       message="Mặt Dây Chuyền Kiêu Hãnh đã gửi thông điệp riêng cho người được chọn.";
       result={message,private:true,delivered:true};
     }else if(artifactId==="artifact_34"&&actionId==="action-ghost-message"){
@@ -2929,7 +2930,7 @@ export class RoomDurableObject extends DurableObject {
           await this.ctx.storage.put(inboxKey,[...previousNotices.slice(-19),{
             id:noticeId,matchId,sourceArtifactId:"artifact_27",
             actorId,roleId:effect.roleId,roleName:effect.roleName,
-            message:"Người gửi Mặt Dây Chuyền Kiêu Hãnh có Vai Trò: "+effect.roleName,
+            message:"Vai Trò thật của "+effect.senderName+" là "+effect.roleName,
             createdAt:time}]);
         continue;
       }
