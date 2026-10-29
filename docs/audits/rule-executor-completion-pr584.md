@@ -81,3 +81,12 @@ Chưa phát hành; các ô chưa nghiệm thu đủ vẫn giữ NOT_VERIFIED/PAR
 - Ma trận `pr584-acceptance-107.json` ghi PASS/PARTIAL theo phạm vi có bằng chứng; **Artifact #25 chưa được chứng nhận đầy đủ**, các hạng mục UI/DEMO/audio/undo và tương tác toàn bộ bài chưa hoàn thành.
 
 PR vẫn Draft. Chỉ merge sau khi 107/107 được chứng nhận và required checks SUCCESS; chưa phát hành Worker/Runtime/IPA, không sửa dữ liệu Production.
+
+
+### Checkpoint PR #584 — Đá Hoán Đổi (#40) và khóa nghiệm thu 107/107 (29/10)
+
+- Đã thêm executor **Ban ngày** cho Đá Hoán Đổi: hoán đổi Vai Trò, Phe, roleCard và ảnh lá của đúng hai người; giữ nguyên login/seat và Artifact của từng người, đặt lượt sử dụng Vai Trò mới cho cả hai.
+- Ghi vai trò riêng tư và snapshot cho reconnect trong transaction, không broadcast danh tính Vai Trò. Kiểm thử unit `tests/card-executors-artifact-role-swap-20261029.test.mjs` và HTTP Worker/SQLite thật `tests/worker-artifact-role-swap-e2e.mjs` đã PASS; test Worker được cô lập để không chạm giới hạn đăng ký/đăng nhập từ các bài khác.
+- **Chưa chứng nhận** #40: thực thi Ban đêm, undo, GM/Player UI, audio, DEMO và tương tác chéo vẫn chưa đủ; các ô nghiệm thu có bằng chứng ngày được đánh dấu PARTIAL, không phải PASS toàn bộ.
+- Thêm `.github/scripts/check-rule-acceptance-107.mjs` và bài kiểm thử vào workflow RULE focused. Cổng phát hành kiểm đủ 63 Vai Trò + 44 Artifact, 14 tiêu chí/lá, bằng chứng và tính khớp catalog. Tại checkpoint, Worker HTTP, GM bundle, dry-run và regression PASS, **cổng chứng nhận FAIL đúng thiết kế** vì 0/107.
+- Artifact #17, #23, #32 và luồng thông điệp riêng vẫn chưa hoàn tất. PR tiếp tục Draft, **không merge/Production/Runtime OTA/IPA** và không sửa dữ liệu Production.
