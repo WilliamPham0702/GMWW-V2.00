@@ -66,7 +66,6 @@ const dualPaths=new Set([
   'src/gmww-dual-renderer-projection.js',
   'tests/dual-renderer-contract.test.mjs',
   'docs/plans/GMWW-DUAL-RENDERER-2026-10-24.md',
-  '.github/workflows/check-dual-renderer.yml',
   'wrangler.arena3d-preview.jsonc',
   'assets/village/arena-3d/preview-worker.mjs',
   'assets/village/arena-3d/build-preview.mjs',
@@ -108,7 +107,6 @@ const dualPaths=new Set([
   'docs/releases/GMWW-ARENA3D-PHASE3-2026-10-24.md',
   '.github/workflows/check-player-web.yml',
   '.github/workflows/check-p0-chrome-edge-realtime.yml',
-  '.github/workflows/build-server-game-ipa.yml',
   '.github/scripts/ci-browser-scope.mjs'
 ]);
 function isDualRendererScope(changes){
@@ -292,6 +290,8 @@ const stableCIPolicyPaths=new Set([
   '.github/workflows/ci-policy-gate.yml',
   '.github/workflows/check-player-web.yml',
   '.github/workflows/check-player-card-browsers.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/build-server-game-ipa.yml',
   '.github/workflows/deploy-production.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/GMWW-CI-POLICY-GATE-20261029.md',
