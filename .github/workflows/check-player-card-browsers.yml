@@ -178,7 +178,7 @@ jobs:
           node-version: 22
       - name: Kiểm icon avatar + Player Web bundle trên PR603
         run: |
-          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-lobby-scene.test.mjs
+          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
   browser-test:
     needs: scope
