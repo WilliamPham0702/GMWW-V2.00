@@ -2465,7 +2465,9 @@ const playerAvatar603Paths=new Set([
   '.github/workflows/check-gallows-redesign.yml',
   '.github/workflows/check-drunk-spiritualist.yml',
   '.github/workflows/check-player-card-browsers.yml',
-  '.github/workflows/check-p0-chrome-edge-realtime.yml'
+  '.github/workflows/check-p0-chrome-edge-realtime.yml',
+  '.github/workflows/check-dual-renderer.yml',
+  '.github/workflows/build-server-game-ipa.yml'
 ]);
 function isPlayerAvatar603Scope(changes){
   if(!Array.isArray(changes)||changes.length<4||changes.some(c=>
