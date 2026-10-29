@@ -31,3 +31,9 @@ Revert commit thêm workflow này, sau khi gỡ required check tương ứng kh�
 - Player Card Browsers FAILURE: assertion `🏴‍☠️ displayed to eligible Player` khi kiểm tra hiển thị đề cử/Lên Giàn; phải kiểm chứng UI hành vi theo luật đang áp dụng, không xóa assertion để ép PASS.
 - P0 Chrome/Edge FAILURE: `TimeoutError` trong E2E realtime; log có 404 ảnh từ role ID giả `role-p0-*`, cần phân biệt dữ liệu fixture với lỗi ảnh Production.
 - **Chặn merge** cho đến khi các kiểm tra lỗi được sửa hoặc chứng minh không liên quan và cấu hình required checks hợp lệ. Không bypass, không deploy.
+
+## Đồng bộ main và sửa kiểm thử ngày 29/10
+- Tích hợp `main` mới nhất vào PR #606 theo merge có hai parent; không mang mã Worker/Player cũ đè lên main.
+- Giữ hai fixture V3.222/V3.234 theo hướng fail-closed, bảo đảm dữ liệu lịch sử không tự lọt vào scope cũ.
+- Sửa bộ phân loại `auto-van-ci`: bộ bốn tệp CI không được chứa marker PR550; các thay đổi RULE PR550 không còn bị nhận sai là CI-only. Bộ test PR550 trong `tests/ci-browser-scope.test.mjs` phải PASS.
+- Chỉ merge khi `CI Policy Gate` và `CI Stability Contract` SUCCESS trên đúng HEAD sau cùng; mọi lỗi kiểm thử chức năng liên quan phải được sửa. Không deploy Production/IPA/OTA.
