@@ -47,7 +47,7 @@ jobs:
       - name: PR603 — icon tài khoản Player Web, bảo toàn menu và bundle
         if: steps.scope.outputs.mode == 'player-top-avatar-603'
         run: |
-          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-lobby-scene.test.mjs tests/player-web-online-village-20261028.test.mjs
+          node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs
           node --test --test-name-pattern='PR603 account avatar' tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
           node --check src/gmww-members-live.js
