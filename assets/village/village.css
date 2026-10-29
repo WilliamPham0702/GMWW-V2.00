@@ -16,8 +16,8 @@
 .player.self .portrait.game-character{filter:drop-shadow(0 0 10px rgba(255,231,133,.75))}
 .player .player-meta{display:flex;align-items:center;justify-content:center;gap:3px;max-width:92px}.player .player-meta .name{min-width:0;overflow:hidden;text-overflow:ellipsis}.player .player-state{position:static;width:16px;height:16px;flex:0 0 16px;display:grid;place-items:center;border-radius:50%;background:#082a3b;border:1px solid rgba(255,255,255,.45);font-size:8px;font-weight:1000;color:#75f5dc;box-shadow:0 3px 8px rgba(0,0,0,.32)}
 html.embedded,html.embedded body{width:100%;height:100%;overflow:hidden!important;background:#071426}
-html.embedded .game{display:block!important;position:relative;width:100vw;height:100svh;overflow:hidden!important}
-html.embedded .stage{position:absolute!important;inset:0!important;width:100%!important;height:100svh!important;min-height:100svh!important}
+html.embedded .game{display:block!important;position:relative;width:100%;height:100%;min-height:0!important;overflow:hidden!important}
+html.embedded .stage{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important}
 html.embedded .panel{display:none!important}
 html.embedded .scene-controls{display:none!important}
 html.embedded .player .name{font-size:9px}
