@@ -36,3 +36,8 @@ Hoàn nguyên merge commit theo GitHub PR và deploy lại bản Worker/Player W
 - Shortcut lá bài dùng trình xem riêng chung, cài đặt dock trước khi mở để tránh lặp giao diện.
 - Đồng bộ main và tái tạo Player Web từ nguồn; giữ sửa bootstrap đã phát hành.
 - Kiểm thử hồi quy đồng hồ và mở lá được ghép vào bộ test PR630 hiện có để CI luôn chạy.
+
+## Phát hành theo phê duyệt ngày 30/10/2026
+- Chủ dự án yêu cầu phát hành Runtime V3.276 và tự nghiệm thu Safari/audio sau cập nhật. Không coi nghiệm thu thiết bị là đã PASS.
+- Khắc phục CI sau merge bằng cùng bộ kiểm tra phạm vi PR630, kèm kiểm chứng bản sửa CI chỉ gồm bốn file và commit game liền trước đúng phạm vi đã duyệt. Không bỏ kiểm tra nội dung chưa biết.
+- Giữ nguyên mã game, IPA, dữ liệu; phát hành qua CI main SUCCESS, GitHub Releases và SHA-256. Rollback Runtime V3.275.

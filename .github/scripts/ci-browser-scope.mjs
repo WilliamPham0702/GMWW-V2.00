@@ -3066,7 +3066,36 @@ function isTemplateDock3268Scope(changes){
   }catch{return false}
 }
 
+export function isPlayerOnlinePrivacy630Release(changes,previousChanges=[]){
+  if(isPlayerOnlinePrivacy630Scope(changes))return true;
+  const repair=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['tests/pr630-release-ci.test.mjs','A'],
+    ['docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md','M']
+  ]);
+  return changes.length===repair.size&&new Set(changes.map(c=>c.path)).size===repair.size&&
+    changes.every(c=>repair.get(c.path)===c.status)&&isPlayerOnlinePrivacy630Scope(previousChanges);
+}
+
 function detect(){
+  // Exact PR630 release or its CI-only recovery; unrelated source stays fail-closed.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const readChanges=(from,to)=>git('diff','--name-status','--no-renames',from,to).trim().split('\n').filter(Boolean).map(row=>{
+          const [status,path]=row.split('\t');
+          return {status,path,before:status==='M'?git('show',from+':'+path):null,
+            after:['M','A'].includes(status)?git('show',to+':'+path):null};
+        });
+        const changes=readChanges(base,'HEAD');
+        if(isPlayerOnlinePrivacy630Release(changes)||isPlayerOnlinePrivacy630Release(changes,readChanges(base+'^1',base)))
+          return {mode:'player-online-privacy-630',reason:'Verified PR630 release/CI recovery; unchanged Runtime, scoped tests and integrity gates'};
+      }
+    }catch{} // Missing ancestry/content never authorizes a narrow release.
+  }
+
   // Same strict classification must run BEFORE the legacy early full-suite fallback.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
