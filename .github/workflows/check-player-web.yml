@@ -893,6 +893,16 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           test -s docs/releases/GMWW-artifact-preview-centering-main-20261029.md
+      - name: PR628 V3.275 — nghiệm thu toàn bộ Mặt Player Web GM và chạm ngoài
+        if: steps.scope.outputs.mode == 'gm-card-outside-3275'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs tests/gm-card-fit-outside-dismiss-20261029.test.mjs tests/gm-card-outside-ci-scope-20261029.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
