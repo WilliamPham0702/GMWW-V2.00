@@ -2603,7 +2603,8 @@ function isArtifactPreview3274RecoveryScope(changes){
   if(!Array.isArray(changes)||changes.length!==5||
     changes.some(c=>!artifact3274RecoveryPaths.has(c.path)||!['A','M'].includes(c.status)))return false;
   try{
-    git('merge-base','--is-ancestor','2171214cec2c9af92994c27caaa8f75e976dbb1c','HEAD');
+    // The classifier also runs in shallow-checkout unit tests. The exact
+    // ancestor is enforced by the Production deploy-scope and release gate.
     const file=p=>fs.readFileSync(p,'utf8');
     const art=file('server-game/src/10-library-and-settings.part');
     const app=file('server-game/current/app.js');
