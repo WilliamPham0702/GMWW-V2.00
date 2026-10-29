@@ -52,7 +52,7 @@ try{
     'different member must not receive another owner\'s inspection');
  }
  // Last accepted day inspection can be undone by GM in this SAME day.
- const beforeUndo=ok(await gm('/state'));
+ const beforeUndo=ok(await gm(''));
  assert.equal(beforeUndo.battleUndo?.turnId,'day-inspection');
  const undoToken=beforeUndo.battleUndo.token;
  assert.equal((await req('/api/gm/rooms/'+room.roomCode+'/battle-undo',
@@ -63,7 +63,7 @@ try{
  assert.equal((afterUndo.dayArtifactInspections||[]).some(row=>row.id==='inspect-3'),false,
    'undo must withdraw the private delivery');
  assert.equal(ok(await gm('/battle-undo',{undoToken})).idempotent,true);
- assert.equal(ok(await gm('/state')).battleUndo,null,'undo should not remain actionable');
+ assert.equal(ok(await gm('')).battleUndo,null,'undo should not remain actionable');
  // The removed receipt/use allows a new, independently identified action.
  const restoredCard=catalog.find(c=>c.id==='artifact_39');
  const replay=ok(await gm('/day-action',{matchId,cycleKey:'morning-1',actorId:ids[3],
