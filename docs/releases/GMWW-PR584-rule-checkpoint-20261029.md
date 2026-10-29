@@ -31,3 +31,10 @@ Chưa nghiệm thu toàn bộ 107/107. Ma trận cập nhật bằng chứng ri�
 - DEMO chọn phiếu theo ràng buộc CỨU/GIẾT và bỏ qua actor không có phiếu hợp lệ khi hai ràng buộc xung đột; không tự tạo phiếu hoặc đổi luật đếm.
 
 Chưa phát hành; các ô chưa nghiệm thu đủ vẫn giữ NOT_VERIFIED/PARTIAL.
+
+### Chưa phát hành — bổ sung Hắc Ngọc Hủy Diệt (Artifact #25)
+
+- Bổ sung xử lý hủy bí mật Artifact chưa lật, kiểm tra lại trong giao dịch và bảo toàn trạng thái reconnect.
+- Từ chối lá đã lật/đã dùng, không hợp lệ, không thuộc ván hiện tại hoặc thuộc chính người sử dụng.
+- Bổ sung kiểm thử hợp đồng và E2E Worker thật, chỉ ghi nhận các tiêu chí đã có bằng chứng.
+- Chưa nghiệm thu đủ 107/107; chưa merge/Production/Runtime OTA, không có file update thủ công hay SHA-256 phát hành; IPA và dữ liệu giữ nguyên.
