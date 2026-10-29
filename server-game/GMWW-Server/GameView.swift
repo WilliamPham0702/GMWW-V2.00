@@ -455,7 +455,7 @@ struct GameWebView: UIViewRepresentable {
                         self.installGithubRelease(version:version,packageURL:latest.1,
                                                   checksumURL:latest.2,webView:webView)
                     })
-                    present(alert,from:webView)
+                    await MainActor.run { self.present(alert,from:webView) }
                 }catch {
                     sendResult(["ok":true,"action":"checkGithubRuntime","status":"fallback",
                                 "error":error.localizedDescription],to:webView)
