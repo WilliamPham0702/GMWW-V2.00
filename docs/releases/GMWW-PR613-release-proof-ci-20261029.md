@@ -12,3 +12,8 @@ PR #613 đã merge Runtime V3.274 lên `main`. Sau PR #614, Worker và 8/8 kiể
 
 ## Rollback
 Dừng nếu CI/SHA/Production không đạt. Nếu đã phát hành lỗi, rollback Runtime theo gói V3.273 đã xác minh, không thay IPA hay dữ liệu Room/DO/lịch sử.
+
+## Khắc phục phát hành Git ancestry (PR #598/Runtime V3.274)
+- Checkout tại `deploy-scope` chuyển sang `fetch-depth: 0` để `git merge-base --is-ancestor` xác minh được commit gốc PR #613 thay vì lỗi `Not a valid commit name`.
+- Bảo toàn các chốt kiểm thử gốc từ PR #613, Worker/Artifact/CI Stability cùng SHA và phạm vi chính xác bốn file CI/release.
+- Runtime V3.274 bao gồm GM/Chat đã merge từ PR #598; không thay đổi gameplay, Worker source, IPA V3.264, Durable Objects hay lịch sử. Chỉ hoàn thành sau khi SHA-256 OTA, file Runtime thủ công và Production health được xác nhận.

@@ -2591,6 +2591,7 @@ function isArtifactPreview3274Scope(changes){
 }
 
 // PR613 post-merge recovery: only CI policy and release gating may change.
+// The Production gate fetches full Git history to verify the immutable ancestor.
 // An ancestor check and live V3.274 artifact/role contract are mandatory.
 const artifact3274RecoveryPaths=new Set([
   '.github/scripts/ci-browser-scope.mjs',
