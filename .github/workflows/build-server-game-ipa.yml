@@ -64,7 +64,12 @@ jobs:
       - name: Verify source before building official IPA
         run: |
           node .github/scripts/verify-gmww-versions.mjs
-          if [ "${{ needs.scope.outputs.mode }}" = "manual-runtime" ]; then
+          if [ "${{ needs.scope.outputs.mode }}" = "native-github-ota-stage2" ]; then
+            node --test tests/native-github-first-ota-stage2.test.mjs
+            node .github/scripts/assemble-gm-app.mjs --verify
+            node --check server-game/current/app.js
+            test -s docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
+          elif [ "${{ needs.scope.outputs.mode }}" = "manual-runtime" ]; then
             node --test tests/manual-runtime-package.test.mjs
             node .github/scripts/assemble-gm-app.mjs --verify
           elif [ "${{ needs.scope.outputs.mode }}" = "ipa-ota-lean-3264" ]; then
