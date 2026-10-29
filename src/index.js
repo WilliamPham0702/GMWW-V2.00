@@ -3988,6 +3988,18 @@ export class RoomDurableObject extends DurableObject {
       attachedArtifact=roleRows.find(r=>r?.artifact&&(!meta.matchId||String(r.matchId||"")===String(meta.matchId)))?.artifact||null,
       currentArtifact=activeSnapshot?privateDeliveryArtifact(activeSnapshot,storedArtifact):(storedArtifact?.removedFromMatch===true?null:storedArtifact&&(!meta.matchId||String(storedArtifact.matchId||"")===String(meta.matchId))?storedArtifact:attachedArtifact),
       artifact=currentArtifact?privateArtifact(currentArtifact):null,artifactCycleKey=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKey))||{accepted:[]};
+    // Linked Artifact intelligence is only available through the owner's
+    // authenticated /me response and is never part of public room state.
+    const linked=await this.ctx.storage.get("artifactLink:"+String(meta.matchId||"")+":"+loginId),
+      linkedDonor=linked?await this.ctx.storage.get("artifact:"+linked.donorId):null,
+      linkedAssignment=linked?(await this.ctx.storage.get("assignments")||[])
+        .find(x=>normalizeLoginId(x.loginId)===linked.donorId):null,
+      linkedStatus=linked?linkedArtifactAction({link:linked,actorId:loginId,
+        actionId:linked.actionId,matchId:String(meta.matchId||""),
+        donorArtifact:linkedDonor,donorAssignment:linkedAssignment}):null,
+      linkedArtifact=linked?{artifactId:linked.sourceArtifactId,
+        artifactName:linkedDonor?.artifactName||"Artifact",
+        available:linkedStatus?.ok===true,actionId:linked.actionId}:null;
     const deliveryManifest=buildPrivateDeliveryManifest({roomCode:meta.code,loginId,matchId:meta.matchId,matchRevision:meta.matchRevision,deliveryVersion:meta.deliveryVersion,publishedAt:meta.roleDeliveredAt,assignments:(await this.ctx.storage.get("assignments"))||[],roles:roleRows,artifact:currentArtifact});
     const deliveryAck=(await this.ctx.storage.get("deliveryAck:"+loginId))||null;
     deliveryManifest.receivedAt=deliveryAck?.deliveryId===deliveryManifest.deliveryId?deliveryAck.receivedAt:null;
@@ -4028,7 +4040,7 @@ export class RoomDurableObject extends DurableObject {
       drunkDeckView(drawn,false):null;
     const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
     const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,linkedArtifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
