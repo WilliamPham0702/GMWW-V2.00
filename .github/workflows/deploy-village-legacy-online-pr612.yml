@@ -13,6 +13,8 @@ concurrency:
 permissions:
   contents: read
   actions: read
+  checks: read
+  pull-requests: read
 jobs:
   deploy:
     runs-on: ubuntu-latest
