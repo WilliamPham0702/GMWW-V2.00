@@ -12,13 +12,13 @@ test('Online uses the existing village without transient card page on delivery',
 });
 test('Private mini cards sit below timeline and retain full-size card on tap',()=>{
   assert.match(village,/function syncPlayerMiniCards\(/);
-  assert.match(village,/width:min\(25vw,104px\)/);
+  assert.match(village,/width:clamp\(56px,19vw,78px\)/);
   assert.match(village,/gmww-player-menu-turn/);
   assert.match(game,/syncPlayerMiniCards\(\)/);
   assert.match(village,/roleName=isSelf\?String\(state\.role\?/);
 });
 test('Chat is a bare bottom icon with close on outside tap and 30s idle',()=>{
-  assert.match(chat,/#gmwwChatLaunch\{[^\n]*border:0;border-radius:0;background:transparent/);
+  assert.match(chat,/#gmwwOnlineFooter/);
   assert.match(chat,/function gmwwChatClosePanel\(/);
   assert.match(chat,/setTimeout\(gmwwChatClosePanel,30000\)/);
   assert.match(chat,/getElementById\('gmwwChatPanel'\)\?\.contains\(target\)/);
