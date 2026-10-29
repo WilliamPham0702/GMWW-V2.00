@@ -43,24 +43,58 @@ function updatePlayerTopMenu(){
   menu.hidden=!state.member;
 }
 
-/* Private mini cards use the existing village and full-size role stage. */
+/* One private dock only: role and artifact are quarter-size shortcuts to the same full-size cards.
+ * Position is a UI preference, never a second copy of the role or an authoritative card state. */
+const GMWW_MINI_POSITIONS_KEY='gmww_online_mini_positions_v2';
+function gmwwMiniPositions(){try{return JSON.parse(localStorage.getItem(GMWW_MINI_POSITIONS_KEY)||'{}')||{}}catch{return{}}}
+function gmwwMiniPosition(button,type){
+  const stored=gmwwMiniPositions()[type],w=Math.min(78,Math.max(56,window.innerWidth*.19)),h=w/0.72;
+  const x=Math.max(4,Math.min(window.innerWidth-w-4,Number(stored?.x??(window.innerWidth-w-8)))),
+    y=Math.max(56,Math.min(window.innerHeight-h-74,Number(stored?.y??(type==='role'?118:118+h+7))));
+  button.style.left=x+'px';button.style.top=y+'px';
+}
+function gmwwMiniDrag(button,type){
+  if(button.dataset.gmwwMiniBound)return;button.dataset.gmwwMiniBound='1';
+  button.addEventListener('pointerdown',event=>{
+    if(event.button!==undefined&&event.button!==0)return;
+    const startX=event.clientX,startY=event.clientY,rect=button.getBoundingClientRect();let moved=false;
+    const move=e=>{if(Math.hypot(e.clientX-startX,e.clientY-startY)<7&&!moved)return;moved=true;
+      button.style.left=Math.max(4,Math.min(window.innerWidth-rect.width-4,rect.left+e.clientX-startX))+'px';
+      button.style.top=Math.max(55,Math.min(window.innerHeight-rect.height-70,rect.top+e.clientY-startY))+'px'};
+    const end=e=>{button.removeEventListener('pointermove',move);button.removeEventListener('pointerup',end);button.removeEventListener('pointercancel',end);
+      if(moved){button.dataset.gmwwMiniMoved='1';try{const positions=gmwwMiniPositions();positions[type]={x:parseFloat(button.style.left),y:parseFloat(button.style.top)};localStorage.setItem(GMWW_MINI_POSITIONS_KEY,JSON.stringify(positions))}catch{}
+        setTimeout(()=>{delete button.dataset.gmwwMiniMoved},250)}};
+    button.setPointerCapture?.(event.pointerId);button.addEventListener('pointermove',move);button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);
+  });
+}
 function syncPlayerMiniCards(){
   let host=document.getElementById('gmwwPlayerMiniCards');
-  const online=String(state.room?.roomMode||'online').toLowerCase()==='online';
-  const allowed=!!(state.member&&state.roomCode&&state.participantId&&state.role&&online&&playerScenePolicy(state.room).mode==='battle');
+  const allowed=!!(state.member&&state.roomCode&&state.participantId&&state.role&&
+    String(state.room?.roomMode||'online').toLowerCase()==='online'&&playerScenePolicy(state.room).mode==='battle');
   if(!allowed){host?.remove();return}
+  if(!document.getElementById('gmwwPlayerMiniCardStyle')){
+    const st=document.createElement('style');st.id='gmwwPlayerMiniCardStyle';
+    st.textContent='#gmwwPlayerMiniCards{position:fixed;inset:0;z-index:234;pointer-events:none}'+
+      '#game:not(.active) #gmwwPlayerMiniCards,#game.gmww-card-expanded #gmwwPlayerMiniCards{display:none!important}'+
+      '#game .role-stage[hidden]{display:none!important}'+
+      '#gmwwPlayerMiniCards button{position:fixed;display:block;width:clamp(56px,19vw,78px);aspect-ratio:.72;padding:0;overflow:hidden;pointer-events:auto;touch-action:none;border:1px solid #d5af68;border-radius:9px;background:#07111b;box-shadow:0 4px 14px #000a;color:white}'+
+      '#gmwwPlayerMiniCards button[hidden]{display:none!important}#gmwwPlayerMiniCards img{display:block;width:100%;height:100%;object-fit:cover}'+
+      '#gmwwPlayerMiniCards .mini-label{position:absolute;inset:auto 0 0;background:#07131dc9;color:#f7e1a1;font:700 9px/1.3 system-ui;padding:2px 1px;text-align:center}';
+    document.head.appendChild(st)
+  }
   if(!host){
-    if(!document.getElementById('gmwwPlayerMiniCardStyle')){
-      const st=document.createElement('style');st.id='gmwwPlayerMiniCardStyle';
-      st.textContent='#gmwwPlayerMiniCards{position:fixed;z-index:234;top:calc(max(7px,env(safe-area-inset-top)) + 51px);left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto}#game:not(.active) #gmwwPlayerMiniCards{display:none!important}#gmwwPlayerMiniCards button{position:relative;display:block;width:min(25vw,104px);aspect-ratio:.72;padding:0;overflow:hidden;border:1px solid #d5af68;border-radius:9px;background:linear-gradient(#132d42,#07111b);box-shadow:0 4px 14px #000a;color:white}#gmwwPlayerMiniCards button[hidden]{display:none!important}#gmwwPlayerMiniCards img{display:block;width:100%;height:100%;object-fit:cover}#gmwwPlayerMiniCards .mini-label{position:absolute;inset:auto 0 0;display:block;background:#07131dc9;color:#f7e1a1;font:700 10px/1.3 system-ui;padding:3px 1px;text-align:center}';
-      document.head.appendChild(st);
-    }
     host=document.createElement('div');host.id='gmwwPlayerMiniCards';
     host.innerHTML='<button type="button" data-mini="role" title="Xem Vai Trò của bạn"><img alt=""><span class="mini-label">Vai Trò</span></button><button type="button" data-mini="artifact" title="Xem Artifact của bạn"><img alt=""><span class="mini-label">Artifact</span></button>';
     document.getElementById('game')?.appendChild(host);
-    host.querySelector('[data-mini="role"]').onclick=()=>{state.artifactFocus='role';setGameViewPane('role',{persist:false});if(!state.roleOpen)toggleRole()};
-    host.querySelector('[data-mini="artifact"]').onclick=()=>{if(!state.artifact)return;state.artifactFocus='artifact';state.artifactOpen=true;setGameViewPane('role',{persist:false});renderArtifactStack()};
+    for(const type of ['role','artifact']){
+      const button=host.querySelector('[data-mini="'+type+'"]');gmwwMiniPosition(button,type);gmwwMiniDrag(button,type);
+      button.onclick=()=>{if(button.dataset.gmwwMiniMoved)return;
+        if(type==='artifact'&&!state.artifact)return;
+        ensurePlayerPrivateDock();openPrivateCardViewer(type);
+      }
+    }
   }
+  host.hidden=$('#game')?.classList.contains('gmww-card-expanded')===true;
   const role=state.role||{},pc=role.roleCard||{},artifact=state.artifact||{},ac=artifact.artifactCard||{};
   const base='/api/rooms/'+encodeURIComponent(state.roomCode)+'/role-assets/';
   const roleAsset=String(role.artworkAssetId||role.artworkId||pc.artworkAssetId||pc.artworkId||role.roleId||'');
@@ -70,7 +104,6 @@ function syncPlayerMiniCards(){
   const artButton=host.querySelector('[data-mini="artifact"]');artButton.hidden=!state.artifact;
   if(state.artifact)setImage('[data-mini="artifact"] img',String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''));
 }
-
 
 function renderPlayerTimeline(timeline){
  const menu=document.getElementById('gmwwPlayerTopMenu');if(!menu)return;
@@ -108,9 +141,8 @@ function ensurePlayerTopMenu(){
   let menu=$('#gmwwPlayerTopMenu');
   if(!menu){
     menu=document.createElement('nav');menu.id='gmwwPlayerTopMenu';menu.setAttribute('aria-label','Menu Player Web');
-    menu.innerHTML='<button class="gmww-player-menu-exit" type="button" aria-label="Thoát Player Web" title="Thoát"><span aria-hidden="true">↩</span></button><div class="gmww-player-menu-info"><b>SẢNH CHỜ</b><small>Chờ Quản Trò gọi vào phòng</small><em class="gmww-player-menu-turn" aria-live="polite"></em></div><button class="gmww-player-menu-account" type="button" aria-label="Tài khoản" title="Tài khoản"><svg class="gmww-player-account-fallback" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.2 21c.7-4 3.4-6 7.8-6s7.1 2 7.8 6"/></svg><img alt="Avatar nhân vật của bạn" hidden></button>';
+    menu.innerHTML='<div class="gmww-player-menu-info"><b>SẢNH CHỜ</b><small>Chờ Quản Trò gọi vào phòng</small><em class="gmww-player-menu-turn" aria-live="polite"></em></div><button class="gmww-player-menu-account" type="button" aria-label="Tài khoản" title="Tài khoản"><svg class="gmww-player-account-fallback" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.2 21c.7-4 3.4-6 7.8-6s7.1 2 7.8 6"/></svg><img alt="Avatar nhân vật của bạn" hidden></button>';
     $('#game')?.appendChild(menu);
-    menu.querySelector('.gmww-player-menu-exit').onclick=async()=>{if(!confirm('Thoát Player Web và rời phòng hiện tại?'))return;if(state.participantId){await leaveRoom();if(state.participantId)return;}logout()};
     menu.querySelector('.gmww-player-menu-account').onclick=openVillageProfile;
   }
   $('#gmwwVillageProfileButton')?.remove();
@@ -118,7 +150,7 @@ function ensurePlayerTopMenu(){
     const st=document.createElement('style');st.id='gmwwPlayerTopMenuStyle';st.textContent=`
       #gmwwVillageProfileButton{display:none!important}
       #gmwwVillageHud .status{display:none!important}
-      #gmwwPlayerTopMenu{position:fixed;z-index:235;left:10px;right:10px;top:max(7px,env(safe-area-inset-top));display:grid;grid-template-columns:48px minmax(0,1fr) 50px;gap:6px;align-items:stretch;pointer-events:auto;opacity:1;transform:translateY(0);transition:opacity .28s ease,transform .28s ease;filter:drop-shadow(0 6px 14px rgba(0,18,30,.24))}
+      #gmwwPlayerTopMenu{position:fixed;z-index:235;left:10px;right:10px;top:max(7px,env(safe-area-inset-top));display:grid;grid-template-columns:minmax(0,1fr) 50px;gap:6px;align-items:stretch;pointer-events:auto;opacity:1;transform:translateY(0);transition:opacity .28s ease,transform .28s ease;filter:drop-shadow(0 6px 14px rgba(0,18,30,.24))}
       #gmwwPlayerTopMenu.is-idle-hidden{opacity:0;transform:translateY(calc(-100% - 18px));pointer-events:none}
       #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:44px;min-height:44px;color:#fff}
       #gmwwPlayerTopMenu button{display:flex;align-items:center;justify-content:center;padding:0;font:900 10px/1 system-ui;cursor:pointer}
@@ -137,7 +169,7 @@ function ensurePlayerTopMenu(){
        #gmwwPlayerTopMenu .gmww-player-menu-turn{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 9px/1.3 system-ui;color:#e4dba7;font-style:normal}
       #gmwwPlayerTopMenu .gmww-player-menu-info b{display:block;max-width:100%;margin:0;font-size:13px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(246,252,247,.92);text-shadow:0 1px 3px rgba(0,20,30,.22)}
       @media(max-width:420px){
-        #gmwwPlayerTopMenu{left:7px;right:7px;gap:5px;grid-template-columns:44px minmax(0,1fr) 46px}
+        #gmwwPlayerTopMenu{left:7px;right:7px;gap:5px;grid-template-columns:minmax(0,1fr) 46px}
         #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:42px;min-height:42px;border-radius:12px}
         #gmwwPlayerTopMenu button{padding:0;font-size:8px;gap:0;flex-direction:column}
         #gmwwPlayerTopMenu button span{font-size:18px}
@@ -148,7 +180,7 @@ function ensurePlayerTopMenu(){
         #game.screen.active{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;transform:none!important}
         #gmwwVillageShell{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;max-height:none!important;margin:0!important;border-radius:0!important}
         #gmwwVillageFrame{display:block!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;border:0!important}
-        #gmwwPlayerTopMenu{left:50%!important;right:auto!important;top:14px!important;width:min(88vw,860px)!important;grid-template-columns:56px minmax(0,1fr) 58px!important;gap:8px!important;transform:translateX(-50%)!important}
+        #gmwwPlayerTopMenu{left:50%!important;right:auto!important;top:14px!important;width:min(88vw,860px)!important;grid-template-columns:minmax(0,1fr) 58px!important;gap:8px!important;transform:translateX(-50%)!important}
         #gmwwPlayerTopMenu.is-idle-hidden{transform:translate(-50%,calc(-100% - 26px))!important}
         #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:50px!important;min-height:50px!important;border-radius:14px!important}
         #gmwwPlayerTopMenu button{font-size:11px!important}
@@ -167,7 +199,7 @@ function ensurePlayerTopMenu(){
     ['pointerdown','mousemove','touchstart','keydown','wheel'].forEach(type=>document.addEventListener(type,activity,{passive:true,capture:true}));
     window.addEventListener('focus',()=>revealPlayerTopMenu(true));
   }
-  updatePlayerTopMenu();revealPlayerTopMenu(true);return menu
+  menu.querySelector('.gmww-player-menu-exit')?.remove();updatePlayerTopMenu();revealPlayerTopMenu(true);return menu
 }
 function ensureVillageHud(){
   ensureVillageGameView();let hud=$('#gmwwVillageHud');if(!hud){hud=document.createElement('div');hud.id='gmwwVillageHud';hud.innerHTML='<div class="status"><b></b><small></small></div><button id="gmwwVillageProfileButton" type="button" aria-label="Thông tin"><img id="gmwwVillageProfileAvatar" alt="Avatar của bạn"></button>';$('#game').appendChild(hud)}
@@ -319,10 +351,10 @@ function villagePublicPlayers(rows){
   for(const p of (Array.isArray(rows)?rows:[])){
     const id=String(p?.participantId||p?.id||'').slice(0,100);
     if(!id||seen.has(id))continue;seen.add(id);
-    const selfId=String(state.participantId||('member:'+state.member?.loginId)),isSelf=id===selfId,characterId=isSelf?String(state.member?.gameCharacterId||p?.gameCharacterId||''):String(p?.gameCharacterId||''),ownEffects=isSelf?Object.values(state.roleEffects||{}).filter(Boolean):[],ownType=ownEffects.some(x=>x?.type==='dead')?'dead':ownEffects.some(x=>x?.type==='expelled')?'expelled':ownEffects.some(x=>x?.type==='frozen')?'frozen':'',statusKey=String(state.roomCode||'lobby')+':'+id;if(Object.prototype.hasOwnProperty.call(p||{},'frozen'))villageFrozenState.set(statusKey,p.frozen===true);const viewStatus=state.room?.statusDisplay||{},showLegacy=id=>Object.prototype.hasOwnProperty.call(viewStatus,id)?viewStatus[id]===true:true,visibleOwnType=ownType&&showLegacy(ownType)?ownType:'',frozen=showLegacy('frozen')&&((villageFrozenState.get(statusKey)===true)||ownType==='frozen'),statusLabel=visibleOwnType==='dead'?'ĐÃ CHẾT':visibleOwnType==='expelled'?'BỊ ĐUỔI':visibleOwnType==='frozen'?'ĐÓNG BĂNG':p?.online===false?'':p?.ready?'READY':'ONLINE',
+    const selfId=String(state.participantId||('member:'+state.member?.loginId)),isSelf=id===selfId,characterId=isSelf?String(state.member?.gameCharacterId||p?.gameCharacterId||''):String(p?.gameCharacterId||''),ownEffects=isSelf?Object.values(state.roleEffects||{}).filter(Boolean):[],ownType=ownEffects.some(x=>x?.type==='dead')?'dead':ownEffects.some(x=>x?.type==='expelled')?'expelled':ownEffects.some(x=>x?.type==='frozen')?'frozen':'',statusKey=String(state.roomCode||'lobby')+':'+id;if(Object.prototype.hasOwnProperty.call(p||{},'frozen'))villageFrozenState.set(statusKey,p.frozen===true);const viewStatus=state.room?.statusDisplay||{},showLegacy=id=>viewStatus[id]===true,visibleOwnType=ownType&&showLegacy(ownType)?ownType:'',frozen=showLegacy('frozen')&&((villageFrozenState.get(statusKey)===true)||ownType==='frozen'),statusLabel=visibleOwnType==='dead'?'ĐÃ CHẾT':visibleOwnType==='expelled'?'BỊ ĐUỔI':visibleOwnType==='frozen'?'ĐÓNG BĂNG':p?.online===false?'':p?.ready?'READY':'ONLINE',
       wolfView=state.wolfRecognition&&String(state.wolfRecognition.matchId||'')===String(state.room?.matchId||'')&&Number(state.wolfRecognition.night)===Number(state.room?.cycleNight)&&String(state.room?.cyclePhase||'')==='night',
       wolfLabel=wolfView?(state.wolfRecognition.labels||[]).find(x=>x.loginId===String(p?.loginId||id).replace(/^member:/,'').toLowerCase()):null,
-      roleName=isSelf?String(state.role?.roleCard?.name||state.role?.roleName||'').slice(0,80):wolfLabel?String(wolfLabel.roleName||'').slice(0,80)+(wolfLabel.converted?' · Phe Sói':''):'';out.push({id,participantId:id,displayName:String(p?.displayName||'Người chơi').slice(0,80),avatarId:String(p?.avatarId||'').slice(0,100),gameCharacterId:characterId.slice(0,100),statusLabel,roleName:playerScenePolicy(state.room).mode==='battle'?roleName:'',frozen,seatId:Number(p?.seatId||0)||null,positionX:p?.positionX==null?null:Number(p.positionX),positionY:p?.positionY==null?null:Number(p.positionY),movementStatus:p?.movementStatus==='moving'?'moving':'idle',villageActivity:String(p?.villageActivity||'idle').slice(0,40),sitStartedAt:Number(p?.sitStartedAt||0)||null,sitUntil:Number(p?.sitUntil||0)||null,moveId:String(p?.moveId||''),moveFromX:p?.moveFromX==null?null:Number(p.moveFromX),moveFromY:p?.moveFromY==null?null:Number(p.moveFromY),moveToX:p?.moveToX==null?null:Number(p.moveToX),moveToY:p?.moveToY==null?null:Number(p.moveToY),moveStartedAt:Number(p?.moveStartedAt||0)||null,moveDurationMs:Number(p?.moveDurationMs||0)||null,moveTargetSeatId:Number(p?.moveTargetSeatId||0)||null,statusTags:Array.isArray(p?.statusTags)?p.statusTags.slice(0,8).map(x=>({statusId:String(x?.statusId||'').slice(0,50),icon:String(x?.icon||'').slice(0,16),label:String(x?.label||'').slice(0,80)})):[],online:p?.online!==false,ready:!!p?.ready,setupComplete:!!p?.setupComplete});
+      roleName=isSelf?String(state.role?.roleCard?.name||state.role?.roleName||'').slice(0,80):wolfLabel?String(wolfLabel.roleName||'').slice(0,80)+(wolfLabel.converted?' · Phe Sói':''):'';out.push({id,participantId:id,displayName:String(p?.displayName||'Người chơi').slice(0,80),avatarId:String(p?.avatarId||'').slice(0,100),gameCharacterId:characterId.slice(0,100),statusLabel,roleName:playerScenePolicy(state.room).mode==='battle'?roleName:'',frozen,seatId:Number(p?.seatId||0)||null,positionX:p?.positionX==null?null:Number(p.positionX),positionY:p?.positionY==null?null:Number(p.positionY),movementStatus:p?.movementStatus==='moving'?'moving':'idle',villageActivity:String(p?.villageActivity||'idle').slice(0,40),sitStartedAt:Number(p?.sitStartedAt||0)||null,sitUntil:Number(p?.sitUntil||0)||null,moveId:String(p?.moveId||''),moveFromX:p?.moveFromX==null?null:Number(p.moveFromX),moveFromY:p?.moveFromY==null?null:Number(p.moveFromY),moveToX:p?.moveToX==null?null:Number(p.moveToX),moveToY:p?.moveToY==null?null:Number(p.moveToY),moveStartedAt:Number(p?.moveStartedAt||0)||null,moveDurationMs:Number(p?.moveDurationMs||0)||null,moveTargetSeatId:Number(p?.moveTargetSeatId||0)||null,statusTags:Array.isArray(p?.statusTags)?p.statusTags.filter(x=>viewStatus[String(x?.statusId||'')]===true).slice(0,8).map(x=>({statusId:String(x?.statusId||'').slice(0,50),icon:String(x?.icon||'').slice(0,16),label:String(x?.label||'').slice(0,80)})):[],online:p?.online!==false,ready:!!p?.ready,setupComplete:!!p?.setupComplete});
     if(out.length>=30)break;
   }
   return out;
@@ -549,11 +581,12 @@ function ensureVillageGameView(){
 function setGameViewPane(pane,{persist=true}={}){
   pane=pane==='role'&&state.role&&playerScenePolicy(state.room).rolesReleased?'role':'village';
   const shell=$('#gmwwVillageShell'),role=$('#game .role-stage');if(!shell||!role)return;
-  shell.hidden=false;role.hidden=pane!=='role';
+  shell.hidden=false;role.hidden=pane!=='role';$('#game')?.classList.toggle('gmww-card-expanded',pane==='role');
+  const mini=$('#gmwwPlayerMiniCards');if(mini)mini.hidden=pane==='role';
   const roleBackdrop=$('#gmwwPlayerRoleBackdrop'),roleReturn=$('#gmwwPlayerRoleReturn');
-  const roleInLobby=pane==='role'&&playerScenePolicy(state.room).mode==='lobby';
-  if(roleBackdrop)roleBackdrop.hidden=!roleInLobby;
-  if(roleReturn)roleReturn.hidden=!roleInLobby;
+  const roleExpanded=pane==='role';
+  if(roleBackdrop)roleBackdrop.hidden=!roleExpanded;
+  if(roleReturn)roleReturn.hidden=!roleExpanded;
   if(persist)try{sessionStorage.setItem('gmww_game_pane_v1',pane)}catch{}
   if(pane==='village')syncVillageFrame();
 }

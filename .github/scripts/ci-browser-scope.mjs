@@ -476,7 +476,7 @@ function isHomePodium3211Scope(changes){
 // Unknown files, different versions and missing release parts fail closed.
 const icon3212Paths=new Set([
  'server-game/current/action-icon-library.js','server-game/current/GMWW.html',
- 'server-game/current/app.js','server-game/src/00-core-and-library.part',
+ 'server-game/current/app.js','server-game/src/00-core-and-library.part','server-game/src/45-online-chat.part',
  'src/index.js','package.json','package-lock.json',
  '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
  '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
@@ -2743,7 +2743,80 @@ function isGithubNativeStage2Scope(changes){
     get('tests/native-github-first-ota-stage2.test.mjs').includes('GitHub network-only fallback');
 }
 
+// P0 #630: allow only reviewed Online Player, public status projection and
+// private chat fixes. Unknown files/branches still use the comprehensive suite.
+const onlinePrivacy630Paths=new Set([
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  'src/gmww-members-live.js','src/gmww-player-private-card-patch.js',
+  'src/gmww-public-room-contract.js','src/index.js',
+  'src/player-web-src/00-bootstrap-and-session.part',
+  'src/player-web-src/20-village-and-profile.part',
+  'src/player-web-src/30-rooms-and-realtime.part',
+  'src/player-web-src/35-online-chat.part',
+  'src/player-web-src/40-cards-and-game.part',
+  'tests/online-chat-authority.test.mjs',
+  'tests/player-online-privacy-bottom-dock-20261029.test.mjs',
+  'tests/player-web-online-actions-20261028.test.mjs',
+  'tests/player-web-online-village-20261028.test.mjs',
+  'tests/player-web-resume-receipt-runtime.test.mjs',
+  'tests/player-web-top-account-avatar-20261029.test.mjs',
+  'tests/status-visuals-v1.test.mjs',
+  'docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md',
+  // Same PR's immutable V3.276 Runtime release identity; no IPA changes.
+  'package.json','package-lock.json','server-game/current/GMWW.html',
+  'server-game/current/app.js','server-game/src/00-core-and-library.part','server-game/src/45-online-chat.part',
+  '.github/scripts/prepare-update-channel.mjs'
+]);
+function isPlayerOnlinePrivacy630Scope(changes){
+  if(!Array.isArray(changes)||!changes.length||changes.length>onlinePrivacy630Paths.size)return false;
+  const byPath=new Map(changes.map(c=>[c.path,c]));
+  const required=['src/index.js','src/gmww-public-room-contract.js','src/gmww-members-live.js',
+    'src/player-web-src/35-online-chat.part','src/player-web-src/30-rooms-and-realtime.part',
+    'tests/player-online-privacy-bottom-dock-20261029.test.mjs',
+    'docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md'];
+  if(!required.every(p=>byPath.has(p)))return false;
+  for(const c of changes){
+    if(!onlinePrivacy630Paths.has(c.path)||!['M','A'].includes(c.status))return false;
+    if(c.path.startsWith('src/')&&c.status!=='M')return false;
+    if(c.path==='src/gmww-public-room-contract.js'){
+      const after=c.after?.replace('const canSee=display[statusId]===true;',
+        'const canSee=Object.prototype.hasOwnProperty.call(display,statusId)?display[statusId]===true:statusId!=="marked";');
+      if(after!==c.before)return false; // Only make legacy statuses more private
+    }
+    if(c.path==='src/index.js'){
+      if(!c.after?.includes('channel:"gm:"+id,scope:"gm"')||
+         !c.after.includes('frozen:meta?.statusDisplay?.frozen===true&&frozenLogins')||
+         !c.after.includes('body:JSON.stringify({loginId:data.member.loginId,text:body.text,channel:'))return false;
+    }
+    if(c.path==='package.json'||c.path==='package-lock.json'||c.path==='server-game/current/GMWW.html'||
+       c.path==='server-game/current/app.js'||c.path==='server-game/src/00-core-and-library.part'||
+       c.path==='.github/scripts/prepare-update-channel.mjs'){
+      if(!c.after||!c.before)return false;
+      const released=c.after.replaceAll('3.276.0','3.275.0').replaceAll('V3.276','V3.275')
+        .replaceAll("const VERSION='3.276'","const VERSION='3.275'");
+      if(c.path!=='server-game/current/app.js'&&c.path!=='.github/scripts/prepare-update-channel.mjs'&&released!==c.before)return false;
+      if(c.path==='server-game/current/app.js'&&!c.after.includes("const VERSION='3.276'"))return false;
+      if(c.path==='.github/scripts/prepare-update-channel.mjs'&&!c.after.includes('V3.276 PR630:'))return false;
+    }
+    // GM chat reply is part of this change: ensure the edit stays inside its own UI,
+    // never bypass a genuinely unreviewed GM/Worker/runtime modification.
+    if(c.path==='server-game/src/45-online-chat.part'){
+      if(!c.before||!c.after||!c.after.includes("startsWith('gm:')")||
+         !c.after.includes("playRoomApi('/chat',{method:'POST'")||
+         !c.after.includes("function gmwwGMChatRefresh("))return false;
+    }
+    if(c.path==='src/player-web-src/35-online-chat.part'){
+      if(!c.after?.includes('function gmwwChatDockSync(')||
+         c.after.includes('new SpeechSynthesisUtterance')||
+         c.after.includes("confirm('Thực hiện "))return false;
+    }
+  }
+  return true;
+}
+
 function classifyBrowserScope(changes){
+  if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
   if(isGithubNativeStage2Scope(changes))return 'native-github-ota-stage2';
   if(isGithubRuntimeCIRepair(changes))return "github-runtime-ota-ci";
   if(isGMCardOutside3275Scope(changes))return "gm-card-outside-3275";

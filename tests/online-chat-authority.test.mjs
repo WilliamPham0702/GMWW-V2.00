@@ -51,5 +51,5 @@ test('Messages are plain text, short, and private room chat never broadcasts con
   assert.match(worker,/\/members\/session/);
   assert.match(player,/text\.textContent|msg\.textContent/);
   assert.match(player,/chat_tick|gmwwChatRefresh/);
-  assert.match(player,/speechSynthesis/);
+  assert.doesNotMatch(player,/new SpeechSynthesisUtterance/);
 });

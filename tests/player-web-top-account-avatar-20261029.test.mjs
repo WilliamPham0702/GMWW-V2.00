@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
 const start=source.indexOf('function updatePlayerTopMenu(){');
-const end=source.indexOf('/* Private mini cards',start);
+const end=source.indexOf('/* One private dock only',start);
 assert.ok(start>=0&&end>start,'Player account menu updater must exist');
 
 function setup(characterId=''){
