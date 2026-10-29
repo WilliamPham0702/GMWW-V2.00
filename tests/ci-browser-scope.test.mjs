@@ -706,5 +706,5 @@ test('PR613 V3.274 full git history release recovery only accepts four audited f
   assert.match(workflow,/fetch-depth: 0/);
   assert.match(workflow,/git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD/);
   assert.match(workflow,/GMWW-PR613-git-history-ci-20261029.md/);
-  assert.match(workflow,/V3\\.274 PR613/);
+  assert.match(workflow,/V3\.274 PR613/);
 });
