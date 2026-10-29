@@ -44,6 +44,15 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Tối ưu Player Web khi chạy nền trên iPhone
+        if: steps.scope.outputs.mode == 'player-web-background-performance'
+        run: |
+          node --test tests/player-web-background-performance.test.mjs tests/player-web-render-budget.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          node --test --test-name-pattern='Player Web background performance patch' tests/ci-browser-scope.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node -e "import('./src/gmww-members-live.js').then(m=>require('fs').writeFileSync('/tmp/gmww-background-performance-player.js',m.gmwwMembersLiveScript))"
+          node --check /tmp/gmww-background-performance-player.js
+          test -s docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md
       - name: V3.273 — Player Web Online trên nền Làng và hành động xác thực
         if: steps.scope.outputs.mode == 'player-online-village-3273'
         run: |

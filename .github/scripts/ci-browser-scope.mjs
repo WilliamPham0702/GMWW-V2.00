@@ -2424,7 +2424,36 @@ function isOnlineVillage3273Scope(changes){
  }catch{return false}
 }
 
+const playerWebBackgroundPerformancePaths=new Set([
+  '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml',
+  'assets/village/scene-manager.mjs','assets/village/village-performance.mjs',
+  'src/gmww-members-live.js','src/player-web-src/30-rooms-and-realtime.part',
+  'src/player-web-src/50-privacy-and-runtime.part','tests/ci-browser-scope.test.mjs',
+  'tests/player-web-background-performance.test.mjs',
+  'docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md',
+  'docs/superpowers/specs/2026-10-29-player-web-background-performance-design.md',
+  'docs/superpowers/plans/2026-10-29-player-web-background-performance.md'
+]);
+function isPlayerWebBackgroundPerformanceScope(changes){
+  if(!Array.isArray(changes)||changes.length<9||changes.some(c=>
+    !playerWebBackgroundPerformancePaths.has(c.path)||!['A','M'].includes(c.status)))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  const required=[
+    'assets/village/scene-manager.mjs','assets/village/village-performance.mjs',
+    'src/gmww-members-live.js','src/player-web-src/30-rooms-and-realtime.part',
+    'src/player-web-src/50-privacy-and-runtime.part',
+    'tests/player-web-background-performance.test.mjs',
+    'docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md'
+  ];
+  return required.every(path=>by.has(path))&&
+    by.get('assets/village/village-performance.mjs')?.after?.includes("document.addEventListener('visibilitychange',visibility)")&&
+    by.get('assets/village/scene-manager.mjs')?.after?.includes('if(!document.hidden)void sync()')&&
+    by.get('src/player-web-src/30-rooms-and-realtime.part')?.after?.includes('if(document.hidden)return;sendPresence()')&&
+    by.get('src/player-web-src/50-privacy-and-runtime.part')?.after?.includes('if(!document.hidden)checkWebUpdate()');
+}
+
 function classifyBrowserScope(changes){
+  if(isPlayerWebBackgroundPerformanceScope(changes))return 'player-web-background-performance';
   if(gmAdmin3272Scope(changes))return 'gm-admin-top-chat-3272';
   if(isOnlineVillage3273Scope(changes))return 'player-online-village-3273';
   if(isDemoPlayerLive3271Scope(changes))return 'demo-player-live-3271';
@@ -3108,6 +3137,7 @@ function detect(){
     return{mode:'full',reason:'Could not verify changes safely: '+String(error.message||error)};
   }
 }
+export {classifyBrowserScope};
 if(process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])){
   const result=detect();
   console.log('GMWW browser CI scope: '+result.mode+' | '+result.reason);
