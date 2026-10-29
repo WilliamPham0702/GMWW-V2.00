@@ -30,7 +30,7 @@ test('legacy mock participants and UI handlers cannot be re-created from village
   }
   assert.match(js,/function applyExternalState\(payload\)/);
   assert.match(js,/type:"gmww:village-ready"/);
-  assert.match(js,/type:"gmww:fire-click"/);
+  assert.match(js,/type:[\x27"]gmww:fire-click[\x27"]/);
   assert.match(js,/type:"gmww:move-arrived"/);
   assert.match(js,/createPublicRoomPoller\(/);
   assert.match(js,/function applyPhase\(nextNight\)/);
