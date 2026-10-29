@@ -6,6 +6,7 @@ import {resolveLinkedDeaths} from "./gmww-linked-death-rules.js";
 import {resolveElderBell} from "./gmww-elder-bell-rules.js";
 import {resolvePassiveWolfBite,wolfCubBiteQuota,oldManAgeVictims,cursedConversionsDue,apprenticeSeersDue,bigfootWolfDue,factionRoleTransitionsDue,activePackAtNight} from "./gmww-card-night-passives.js";
 import {resolveDayArtifactInspection} from "./gmww-day-artifact-inspection.js";
+import {validateUnrevealedArtifactDestroy} from "./gmww-artifact-destruction.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -2777,6 +2778,18 @@ export class RoomDurableObject extends DurableObject {
         for(const id of effectiveTargets)changes.push({kind:"status",loginId:id,
           type:"status",statusId:"artifact_next_night_protect",protectNight:day+1});
         message="Khiên Bảo Hộ sẽ bảo vệ mục tiêu trong đêm kế tiếp.";
+      }else if(artifactId==="artifact_25"&&actionId==="artifact_action_destroy"){
+        // A hidden Artifact may be destroyed, never one already revealed or used.
+        // Recheck inside the removal transaction to defeat a concurrent flip.
+        const id=effectiveTargets[0],target=await this.ctx.storage.get("artifact:"+id),
+          assigned=assignments.find(x=>normalizeLoginId(x.loginId)===id),
+          valid=validateUnrevealedArtifactDestroy({actorId,targetId:id,
+            artifact:target,assignment:assigned,matchId});
+        if(!valid.ok)return j({ok:false,error:valid.error,
+          message:"Mục tiêu phải có Artifact của người khác chưa được lật hoặc sử dụng; chưa trừ lượt."},409);
+        changes.push({kind:"remove_artifact",loginId:id,
+          artifactId:valid.artifactId,requireUnviewed:true});
+        message="Hắc Ngọc Hủy Diệt đã hủy bí mật một Artifact chưa lật.";
       }else if(artifactId==="artifact_15"&&actionId==="artifact_action_negate"){
         // Only a previously used, truly unlimited Artifact qualifies. Do not
         // confuse a one-time Artifact or merely assigned card with "used".
@@ -2848,7 +2861,10 @@ export class RoomDurableObject extends DurableObject {
           if(!target||target.removedFromMatch===true||
             String(target.artifactId||"")!==effect.artifactId||
             (target.matchId&&String(target.matchId)!==matchId)||
-            !assigned||String(assigned.artifactId||"")!==effect.artifactId)
+            !assigned||String(assigned.artifactId||"")!==effect.artifactId||
+            (effect.requireUnviewed&&!validateUnrevealedArtifactDestroy({
+              actorId,targetId:effect.loginId,artifact:target,assignment:assigned,matchId
+            }).ok))
             return {ok:false};
           target.removedFromMatch=true;target.removedAt=time;
           target.removedByArtifactId=artifactId;
@@ -2863,7 +2879,7 @@ export class RoomDurableObject extends DurableObject {
           await txn.put("assignments",rows);
           return {ok:true};
         });
-        if(!removed.ok)return j({ok:false,error:"NEGATE_TARGET_CHANGED"},409);
+        if(!removed.ok)return j({ok:false,error:effect.requireUnviewed?"DESTROY_TARGET_CHANGED":"NEGATE_TARGET_CHANGED"},409);
         continue;
       }
       if(effect.kind==="knight_pending"){await this.ctx.storage.put(effect.key,effect.value);continue}
