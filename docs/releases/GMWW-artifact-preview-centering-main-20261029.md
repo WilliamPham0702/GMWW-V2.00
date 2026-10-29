@@ -16,4 +16,7 @@ Mặt Player Web của một số Artifact, điển hình Kim Cương Phủ Nh�
 - `node .github/scripts/verify-gmww-versions.mjs`
 
 ## Phát hành & rollback
-Chỉ merge, phát hành Runtime OTA khi mọi required CI liên quan đều SUCCESS, phiên bản OTA/manifest SHA-256 được tạo và xác minh. Không đổi IPA. Rollback bằng revert commit và OTA manifest cuối cùng đã xác minh; không tác động dữ liệu/lịch sử.
+- Runtime OTA V3.274; chỉ merge khi các required checks liên quan SUCCESS.
+- Gate phát hành xác minh đúng commit main đã đạt CI Player Web Worker, căn giữa Artifact, Vai Trò và CI Policy.
+- Đóng gói cập nhật thủ công; manifest SHA-256 phải khớp bytes đã phát hành, xác minh health và OTA thực tế.
+- Giữ nguyên IPA V3.264. Rollback về Runtime V3.273 hoặc revert commit theo quy trình OTA an toàn; không tác động dữ liệu/lịch sử.
