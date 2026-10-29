@@ -25,7 +25,9 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$(git ls-remote origin refs/heads/main | cut -f1)"
           test -s docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md
+          test -s docs/releases/GMWW-PLAYER-WEB-AVATAR-QUESTION-MARK-HOTFIX-20261029.md
           test -s tests/player-web-background-performance.test.mjs
+          grep -Fq "u.pathname='/characters/gmww40/originals/'+visual+'.webp'" src/gmww-character40-catalog.js
           grep -Fq "document.addEventListener('visibilitychange',visibility)" assets/village/village-performance.mjs
           grep -Fq 'if(!document.hidden)void sync()' assets/village/scene-manager.mjs
           grep -Fq 'if(document.hidden)return;sendPresence()' src/player-web-src/30-rooms-and-realtime.part
@@ -40,6 +42,8 @@ jobs:
           npm ci
           node --test tests/player-web-background-performance.test.mjs tests/player-web-render-budget.test.mjs tests/gmww-player-web-source-modules.test.mjs
           node --test --test-name-pattern='Player Web background performance patch' tests/ci-browser-scope.test.mjs
+          node --test --test-name-pattern='all forty shipped portraits|active catalog|all portrait routes|every Player Web character image route' tests/character40-live.test.mjs
+          node --test tests/player-web-profile-avatar-40-catalog.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
           node -e "import('./src/gmww-members-live.js').then(m=>require('fs').writeFileSync('/tmp/gmww-background-performance-player.js',m.gmwwMembersLiveScript))"
           node --check /tmp/gmww-background-performance-player.js
@@ -90,10 +94,16 @@ jobs:
                curl -fsS --max-time 20 "$URL/village/village-performance.mjs?$CACHE" -o /tmp/background-village-performance.mjs &&
                grep -Fq "document.addEventListener('visibilitychange',visibility)" /tmp/background-village-performance.mjs &&
                curl -fsS --max-time 20 "$URL/village/scene-manager.mjs?$CACHE" -o /tmp/background-scene-manager.mjs &&
-               grep -Fq 'if(!document.hidden)void sync()' /tmp/background-scene-manager.mjs; then PASS=1; break; fi
+               grep -Fq 'if(!document.hidden)void sync()' /tmp/background-scene-manager.mjs &&
+               curl -fsS --max-time 20 "$URL/api/game-characters/character-01/image?$CACHE" -o /tmp/player-avatar.webp &&
+               test -s /tmp/player-avatar.webp; then PASS=1; break; fi
             sleep 5
           done
           test "$PASS" = 1
+          for N in $(seq -w 1 40); do
+            curl -fsS --max-time 20 "$URL/api/game-characters/character-$N/image?avatar-hotfix=$(date +%s)" -o "/tmp/player-avatar-$N.webp"
+            test -s "/tmp/player-avatar-$N.webp"
+          done
           curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/background-performance-after.json
           node - <<'NODE'

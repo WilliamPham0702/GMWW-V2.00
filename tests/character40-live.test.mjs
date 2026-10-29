@@ -42,7 +42,14 @@ test('stationary death and revival change both production Player command keys wi
 test('all portrait routes serve the accepted art with revalidation and CORS, never old character15',async()=>{
  const env={ASSETS:{fetch:async request=>new Response(new URL(request.url).pathname,{headers:{'content-type':'image/webp'}})}};
  for(let n=1;n<=42;n++){const id='character-'+String(n).padStart(2,'0');const response=await character40Image(env,id,new Request('https://example.test/api/game-characters/'+id+'/image'));
- assert.equal(await response.text(),'/characters/gmww40/portraits/'+character40VisualId(id)+'.webp');assert.equal(response.headers.get('access-control-allow-origin'),'*');assert.match(response.headers.get('cache-control'),/must-revalidate/);}
+ assert.equal(await response.text(),'/characters/gmww40/originals/'+character40VisualId(id)+'.webp');assert.equal(response.headers.get('access-control-allow-origin'),'*');assert.match(response.headers.get('cache-control'),/must-revalidate/);}
+});
+test('every Player Web character image route resolves to a packaged Production asset',async()=>{
+ const env={ASSETS:{fetch:async request=>{const path=new URL(request.url).pathname;return fs.existsSync('assets'+path)?new Response(read('assets'+path),{status:200,headers:{'content-type':'image/webp'}}):new Response('missing',{status:404})}}};
+ for(const row of character40Catalog()){
+  const response=await character40Image(env,row.id,new Request('https://example.test'+row.imageUrl));
+  assert.equal(response.status,200,row.id+' must not render Safari broken-image question mark');
+ }
 });
 test('accepted atlas/original bytes packaged for GM and Web are hash identical to reviewed preview',()=>{
  const catalog=JSON.parse(read('prototype/character40/catalog.json'));
