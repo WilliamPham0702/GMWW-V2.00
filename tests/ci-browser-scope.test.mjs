@@ -11,6 +11,25 @@ const dtoBefore='export function publicRoom(m){return{roomName:m.roomName,matchI
 const dtoAfter=dtoBefore.replace('matchRevision:1', 'lastEndedMatchId:m.lastEndedMatchId||null,matchRevision:1');
 const modified=(path,before,after)=>({path,before,after,status:'M'});
 
+test('Player Web background performance patch selects only its focused verification',()=>{
+  const changes=[
+    modified('assets/village/scene-manager.mjs','setInterval(sync,5000)','setInterval(()=>{if(!document.hidden)void sync()},5000)'),
+    modified('assets/village/village-performance.mjs','requestAnimationFrame(frame)','document.addEventListener(\'visibilitychange\',visibility)'),
+    modified('src/gmww-members-live.js','old bundle','document.hidden bundle'),
+    modified('src/player-web-src/30-rooms-and-realtime.part','sendPresence()','if(document.hidden)return;sendPresence()'),
+    modified('src/player-web-src/50-privacy-and-runtime.part','setInterval(checkWebUpdate,60000)','setInterval(()=>{if(!document.hidden)checkWebUpdate()},60000)'),
+    {path:'tests/player-web-background-performance.test.mjs',status:'A',before:null,after:'visibility guarded'},
+    {path:'docs/releases/GMWW-PLAYER-WEB-BACKGROUND-PERFORMANCE-20261029.md',status:'A',before:null,after:'# release'},
+    {path:'docs/superpowers/specs/2026-10-29-player-web-background-performance-design.md',status:'A',before:null,after:'# spec'},
+    {path:'docs/superpowers/plans/2026-10-29-player-web-background-performance.md',status:'A',before:null,after:'# plan'},
+    modified('.github/scripts/ci-browser-scope.mjs','old selector','player-web-background-performance'),
+    modified('.github/workflows/check-player-web.yml','old workflow','player-web-background-performance'),
+    modified('tests/ci-browser-scope.test.mjs','old tests','Player Web background performance patch')
+  ];
+  assert.equal(classifyBrowserScope(changes),'player-web-background-performance');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',before:'old',after:'unrelated'}]),'full');
+});
+
 test('Correctly scopes the original postgame bug with worker, bundled UI and room DTO',()=>{
   const changes=[
     modified('src/index.js',workerBefore,workerAfter),
