@@ -2719,6 +2719,30 @@ function isGMCardOutside3275Scope(changes){
   }catch{return false}
 }
 
+function isGithubNativeStage2Scope(changes){
+  const required=new Set([
+    'server-game/GMWW-Server/GameView.swift',
+    'server-game/src/10-library-and-settings.part',
+    'server-game/current/app.js',
+    '.github/workflows/build-server-game-ipa.yml',
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-native-github-ota.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/native-github-first-ota-stage2.test.mjs',
+    'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md'
+  ]);
+  if(!Array.isArray(changes)||changes.length!==required.size||
+     changes.some(v=>!v||!required.has(v.path)||!['M','A'].includes(v.status)))return false;
+  const get=path=>changes.find(v=>v.path===path)?.after||'';
+  return [...required].every(p=>changes.some(c=>c.path===p))&&
+    get('server-game/GMWW-Server/GameView.swift').includes('GMWW_NATIVE_GITHUB_OTA=true')&&
+    get('server-game/GMWW-Server/GameView.swift').includes('verifyManualContainer')&&
+    get('server-game/current/app.js').includes('gmwwNativePost("checkGithubRuntime")')&&
+    get('.github/workflows/build-server-game-ipa.yml').includes('inputs.publish_ipa == true')&&
+    get('tests/native-github-first-ota-stage2.test.mjs').includes('GitHub network-only fallback');
+}
+
 // P0 #630: allow only reviewed Online Player, public status projection and
 // private chat fixes. Unknown files/branches still use the comprehensive suite.
 const onlinePrivacy630Paths=new Set([
@@ -2771,6 +2795,7 @@ function isPlayerOnlinePrivacy630Scope(changes){
 
 function classifyBrowserScope(changes){
   if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
+  if(isGithubNativeStage2Scope(changes))return 'native-github-ota-stage2';
   if(isGithubRuntimeCIRepair(changes))return "github-runtime-ota-ci";
   if(isGMCardOutside3275Scope(changes))return "gm-card-outside-3275";
   if(isArtifactPreview3274RecoveryScope(changes))return 'artifact-preview-3274-postmerge';
@@ -3314,6 +3339,22 @@ function detect(){
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
   if(process.env.GMWW_CI_EVENT==='push'){
+    // Native OTA scope only on exact V3.275 Stage 2 merge; unknown diffs remain full.
+    try {
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim()
+        .split('\n').filter(Boolean).map(line=>{const [status,path]=line.split('\t');return {status,path};});
+      const expected=new Set([
+        'server-game/GMWW-Server/GameView.swift',
+        'server-game/src/10-library-and-settings.part','server-game/current/app.js',
+        '.github/workflows/build-server-game-ipa.yml','.github/scripts/ci-browser-scope.mjs',
+        '.github/workflows/check-player-web.yml','.github/workflows/check-native-github-ota.yml',
+        '.github/workflows/deploy-production.yml',
+        'tests/native-github-first-ota-stage2.test.mjs',
+        'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md'
+      ]);
+      if(rows.length===expected.size&&rows.every(row=>expected.has(row.path)&&['M','A'].includes(row.status)))
+        return{mode:'native-github-ota-stage2',reason:'Exact Native OTA Stage 2 merge on V3.275'};
+    }catch{}
     // ART-01 on main must keep the same narrow tests as the reviewed PR.
     try{
       const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);

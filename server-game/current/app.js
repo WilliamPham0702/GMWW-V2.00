@@ -1910,10 +1910,14 @@ function downloadUpdateIPA(){
   if(!gmwwNativePost('downloadIPA',{url,fileName,version}))window.location.assign(url);
   return true;
 }
+let gmwwGithubInstallRequested=false;
+let gmwwGithubNotifyRequested=false;
 async function updateDataNow(){
   const btn=document.getElementById('installRuntimeUpdate');if(btn)btn.disabled=true;
   try{
+    gmwwGithubInstallRequested=Boolean(window.GMWW_NATIVE_GITHUB_OTA);
     const d=await checkAppUpdate({notify:false});if(!d)return;
+    gmwwGithubInstallRequested=false;
     const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,''),type=String(d.releaseType||'server_only').toLowerCase(),newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
     if(newer&&type==='runtime'){await installRuntimeUpdate();return}
     if(newer&&type==='native'){setUpdateAction('native',{latest});setUpdateUi('warn','CẦN FILE IPA','Phiên bản V'+latest+' cần cài ứng dụng mới.','Chọn TẢI FILE IPA.');return}
@@ -1987,7 +1991,15 @@ function gmwwRenderReleaseNotes(manifest){
   }
   box.replaceChildren(title,list);
 }
-async function checkAppUpdate({notify=false}={}){
+async function checkAppUpdate({notify=false,skipGithub=false}={}){
+  if(!skipGithub&&window.GMWW_NATIVE_GITHUB_OTA){
+    if(gmwwUpdateBusy)return null;
+    gmwwUpdateBusy=true;gmwwGithubNotifyRequested=notify;
+    setUpdateAction("unverified");
+    setUpdateUi("checking","GITHUB OTA","Đang kiểm tra bản Runtime trên GitHub…","Cloudflare là kênh dự phòng.");
+    if(gmwwNativePost("checkGithubRuntime"))return null;
+    gmwwUpdateBusy=false;gmwwGithubInstallRequested=false;
+  }
   if(gmwwUpdateBusy)return null;
   const serial=++gmwwUpdateCheckSerial,retry=document.getElementById('retryUpdateCheck'),serverEl=document.getElementById('updateServerVersion');
   if(retry){retry.disabled=true;retry.setAttribute('aria-busy','true')}
@@ -2092,6 +2104,43 @@ window.GMWWUpdateNative={
     gmwwSetUpdateProgress('running',percent,event.action==='installRuntime'?'Đang cài Runtime':'Đang tải IPA');
   },
   onResult(result={}){
+    if(result.action==="checkGithubRuntime"){
+      const status=String(result.status||"");
+      if(status==="available"){
+        gmwwUpdateBusy=true;
+        setUpdateAction("runtime",{latest:result.version});
+        setUpdateUi("warn","GITHUB OTA","Đã tìm thấy GMWW Runtime V"+result.version+".","Xác nhận trên iPhone để tải và kiểm tra SHA-256.");
+        return;
+      }
+      if(status==="installing"){
+        gmwwGithubInstallRequested=false;gmwwUpdateBusy=true;
+        gmwwSetUpdateProgress("running",null,"Đang tải Runtime từ GitHub và kiểm tra SHA-256");
+        setUpdateUi("checking","ĐANG CẬP NHẬT","Đang tải gói Runtime chính thức từ GitHub…","Không tắt ứng dụng khi đang cài.");
+        return;
+      }
+      gmwwUpdateBusy=false;
+      if(result.cancelled){
+        gmwwGithubInstallRequested=false;
+        gmwwSetUpdateProgress("idle",null,"Đã hoãn cập nhật GitHub");
+        setUpdateUi("warn","CÓ CẬP NHẬT","GitHub Runtime V"+String(result.version||"mới")+" đã sẵn sàng.","Nhấn TỰ ĐỘNG khi muốn cài.");
+        return;
+      }
+      if(result.ok&&["fallback","current"].includes(status)){
+        const requested=gmwwGithubInstallRequested,notify=gmwwGithubNotifyRequested;
+        gmwwGithubInstallRequested=false;gmwwGithubNotifyRequested=false;
+        void checkAppUpdate({notify,skipGithub:true}).then(manifest=>{
+          if(requested&&manifest?.releaseType==="runtime"&&gmwwVersionCompare(manifest.releaseVersion,gmwwRuntimeVersion())>0)
+            void installRuntimeUpdate();
+        });
+        return;
+      }
+      gmwwGithubInstallRequested=false;gmwwGithubNotifyRequested=false;
+      gmwwSetUpdateProgress("error",null,"Không thể xác minh gói GitHub");
+      setUpdateUi("bad",result.integrityFailure?"GÓI KHÔNG AN TOÀN":"GITHUB OTA LỖI",
+        String(result.error||"Không thể tải gói GitHub."),
+        result.integrityFailure?"Đã chặn cập nhật; không chuyển sang nguồn khác để bỏ qua kiểm tra SHA-256.":"Runtime hiện tại vẫn được giữ nguyên.");
+      return;
+    }
     gmwwUpdateBusy=false;
     if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;
     if(result.cancelled){gmwwSetUpdateProgress('idle',null,'Đã hủy chọn file');return}

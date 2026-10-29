@@ -44,6 +44,15 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Stage 2 Native GitHub-first OTA, verify only relevant Runtime and Native contracts
+        if: steps.scope.outputs.mode == 'native-github-ota-stage2'
+        run: |
+          node --test tests/native-github-first-ota-stage2.test.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
       - name: PR605 — chỉ kiểm tra GitHub Actions Preview CI, không chạy gameplay/IPA
         if: steps.scope.outputs.mode == 'github-pr-preview-ci'
         run: |
