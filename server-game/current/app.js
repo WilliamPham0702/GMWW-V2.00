@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.274';
+const VERSION='3.275';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1303,7 +1303,7 @@ function artifactArtworkSideMargins(data,width,height){
     }
   }
   if(!samples)return null;
-  const threshold=Math.max(2,Math.ceil(samples*.12));
+  const threshold=Math.max(3,Math.ceil(samples*.22)); // Ignore isolated bright specks in dark artwork gutters.
   const present=x=>columns[x]>=threshold;
   // A minimum two-column run rejects isolated sparkles/noise in black padding.
   let left=0;
@@ -1356,7 +1356,22 @@ function fitPlayerCardTitle(){
   const title=$('#playerName');if(!title)return;
   title.style.fontSize='';
   if(typeof requestAnimationFrame!=='function')return;
-  requestAnimationFrame(()=>{let size=25;while(size>18&&title.scrollWidth>title.clientWidth+1){size=Math.max(18,size-.5);title.style.fontSize=size+'px'}});
+  // Fit BOTH lines and height, not just nowrap width. Long Vietnamese Artifact
+  // titles must remain readable on iPhone instead of overflowing the card edge.
+  const expected=title.textContent;
+  requestAnimationFrame(()=>{
+    if(title.textContent!==expected)return;
+    const head=title.parentElement;
+    if(!head)return;
+    const styles=typeof getComputedStyle==='function'?getComputedStyle(head):null;
+    const verticalPadding=(parseFloat(styles?.paddingTop)||0)+(parseFloat(styles?.paddingBottom)||0);
+    const available=Math.max(0,head.clientHeight-verticalPadding-2);
+    let size=Math.min(23,parseFloat(typeof getComputedStyle==='function'?getComputedStyle(title).fontSize:23)||23);
+    title.style.fontSize=size+'px';
+    while(size>12.5&&(title.scrollWidth>title.clientWidth+1||title.scrollHeight>available+1)){
+      size=Math.max(12.5,size-.5);title.style.fontSize=size+'px';
+    }
+  });
 }
 function fitPlayerCardInformation(){
   const box=$('#playerInformation');if(!box)return;
@@ -1895,14 +1910,10 @@ function downloadUpdateIPA(){
   if(!gmwwNativePost('downloadIPA',{url,fileName,version}))window.location.assign(url);
   return true;
 }
-let gmwwGithubInstallRequested=false;
-let gmwwGithubNotifyRequested=false;
 async function updateDataNow(){
   const btn=document.getElementById('installRuntimeUpdate');if(btn)btn.disabled=true;
   try{
-    gmwwGithubInstallRequested=Boolean(window.GMWW_NATIVE_GITHUB_OTA);
     const d=await checkAppUpdate({notify:false});if(!d)return;
-    gmwwGithubInstallRequested=false;
     const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,''),type=String(d.releaseType||'server_only').toLowerCase(),newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
     if(newer&&type==='runtime'){await installRuntimeUpdate();return}
     if(newer&&type==='native'){setUpdateAction('native',{latest});setUpdateUi('warn','CẦN FILE IPA','Phiên bản V'+latest+' cần cài ứng dụng mới.','Chọn TẢI FILE IPA.');return}
@@ -1976,15 +1987,7 @@ function gmwwRenderReleaseNotes(manifest){
   }
   box.replaceChildren(title,list);
 }
-async function checkAppUpdate({notify=false,skipGithub=false}={}){
-  if(!skipGithub&&window.GMWW_NATIVE_GITHUB_OTA){
-    if(gmwwUpdateBusy)return null;
-    gmwwUpdateBusy=true;gmwwGithubNotifyRequested=notify;
-    setUpdateAction("unverified");
-    setUpdateUi("checking","GITHUB OTA","Đang kiểm tra bản Runtime trên GitHub…","Cloudflare là kênh dự phòng.");
-    if(gmwwNativePost("checkGithubRuntime"))return null;
-    gmwwUpdateBusy=false;gmwwGithubInstallRequested=false;
-  }
+async function checkAppUpdate({notify=false}={}){
   if(gmwwUpdateBusy)return null;
   const serial=++gmwwUpdateCheckSerial,retry=document.getElementById('retryUpdateCheck'),serverEl=document.getElementById('updateServerVersion');
   if(retry){retry.disabled=true;retry.setAttribute('aria-busy','true')}
@@ -2089,43 +2092,6 @@ window.GMWWUpdateNative={
     gmwwSetUpdateProgress('running',percent,event.action==='installRuntime'?'Đang cài Runtime':'Đang tải IPA');
   },
   onResult(result={}){
-    if(result.action==="checkGithubRuntime"){
-      const status=String(result.status||"");
-      if(status==="available"){
-        gmwwUpdateBusy=true;
-        setUpdateAction("runtime",{latest:result.version});
-        setUpdateUi("warn","GITHUB OTA","Đã tìm thấy GMWW Runtime V"+result.version+".","Xác nhận trên iPhone để tải và kiểm tra SHA-256.");
-        return;
-      }
-      if(status==="installing"){
-        gmwwGithubInstallRequested=false;gmwwUpdateBusy=true;
-        gmwwSetUpdateProgress("running",null,"Đang tải Runtime từ GitHub và kiểm tra SHA-256");
-        setUpdateUi("checking","ĐANG CẬP NHẬT","Đang tải gói Runtime chính thức từ GitHub…","Không tắt ứng dụng khi đang cài.");
-        return;
-      }
-      gmwwUpdateBusy=false;
-      if(result.cancelled){
-        gmwwGithubInstallRequested=false;
-        gmwwSetUpdateProgress("idle",null,"Đã hoãn cập nhật GitHub");
-        setUpdateUi("warn","CÓ CẬP NHẬT","GitHub Runtime V"+String(result.version||"mới")+" đã sẵn sàng.","Nhấn TỰ ĐỘNG khi muốn cài.");
-        return;
-      }
-      if(result.ok&&["fallback","current"].includes(status)){
-        const requested=gmwwGithubInstallRequested,notify=gmwwGithubNotifyRequested;
-        gmwwGithubInstallRequested=false;gmwwGithubNotifyRequested=false;
-        void checkAppUpdate({notify,skipGithub:true}).then(manifest=>{
-          if(requested&&manifest?.releaseType==="runtime"&&gmwwVersionCompare(manifest.releaseVersion,gmwwRuntimeVersion())>0)
-            void installRuntimeUpdate();
-        });
-        return;
-      }
-      gmwwGithubInstallRequested=false;gmwwGithubNotifyRequested=false;
-      gmwwSetUpdateProgress("error",null,"Không thể xác minh gói GitHub");
-      setUpdateUi("bad",result.integrityFailure?"GÓI KHÔNG AN TOÀN":"GITHUB OTA LỖI",
-        String(result.error||"Không thể tải gói GitHub."),
-        result.integrityFailure?"Đã chặn cập nhật; không chuyển sang nguồn khác để bỏ qua kiểm tra SHA-256.":"Runtime hiện tại vẫn được giữ nguyên.");
-      return;
-    }
     gmwwUpdateBusy=false;
     if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;
     if(result.cancelled){gmwwSetUpdateProgress('idle',null,'Đã hủy chọn file');return}
@@ -9424,6 +9390,82 @@ async function openPlayEndSheet(){
   sheet.classList.remove('hidden');
 }
 function closePlayEndSheet(){document.getElementById('playEndSheet')?.classList.add('hidden')}
+
+/* Shared Server GM outside-tap policy: dismiss the topmost visible floating
+   sheet, never submit a form, confirm a game action or discard saved data.
+   The active navigation pages remain navigable rather than auto-exiting play. */
+function gmwwDismissOutsidePointer(event){
+  if(event.pointerType==='mouse'&&event.button!==0)return;
+  const target=event.target;
+  if(!target?.closest)return;
+  const sheets=[...document.querySelectorAll('.sheet')].filter(el=>!el.hidden&&!el.classList.contains('hidden')&&getComputedStyle(el).display!=='none');
+  if(sheets.length){
+    // Respect z-index; for equal layers the last DOM node is topmost.
+    const sheet=sheets.map((el,index)=>({el,index,z:Number.parseInt(getComputedStyle(el).zIndex,10)||0}))
+      .sort((a,b)=>a.z-b.z||a.index-b.index).at(-1).el;
+    if(sheet.querySelector('.sheet-card')?.contains(target))return;
+    const close={
+      editSheet:()=>closeSheet(),
+      playGameSheet:()=>closePlayGameSheet(),
+      playMatchCompletionSheet:()=>closePlayCompletionSheet(),
+      playEndSheet:()=>closePlayEndSheet(),
+      playRosterSheet:()=>closePlayRosterSheet(),
+      playSeatSheet:()=>closePlaySeatSheet(),
+      playDisbandSheet:()=>closePlayDisbandSheet(),
+      memberSheet:()=>closeMemberSheet(),
+      playGMSheet:()=>closePlayGMSheet(),
+      playCreateRoomSheet:()=>document.getElementById('playCreateRoomClose')?.click()
+    }[sheet.id];
+    if(!close)return;
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    close();
+    return;
+  }
+  // Dynamically mounted GM chat is also a floating panel.
+  const chat=document.getElementById('gmwwGMChatPanel');
+  if(chat?.classList.contains('open')&&!chat.contains(target)&&
+     !target.closest('#gmwwGMChatLaunch,[data-gm-admin="open-chat"]')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    document.getElementById('gmwwGMChatClose')?.click();
+    return;
+  }
+  const cloudflare=document.getElementById('gmwwCloudflarePanel');
+  if(cloudflare&&!cloudflare.hidden&&!cloudflare.contains(target)&&
+     !target.closest('#gmwwCloudflareOpen,#gmwwServerTrashOpen')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    document.getElementById('gmwwCloudflareOpen')?.click();
+    return;
+  }
+  const assignment=document.getElementById('playRoleAssignmentPanel');
+  if(assignment&&!assignment.hidden&&!assignment.contains(target)&&
+     !target.closest('[data-play-step="roles"]')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    playSceneRuntime.assignmentPanelDismissed=true;
+    renderPlayRoleAssignmentPanel();
+    return;
+  }
+  const preset=document.getElementById('playSeatPresetPanel');
+  if(preset&&!preset.hidden&&!preset.contains(target)&&!target.closest('#playGatherSeatPreset')){
+    closePlaySeatPresetPanel();return;
+  }
+  // Front-of-card is a viewer, not an unsaved edit form. A tap in the blank
+  // library background closes it; Settings/back-face editing is left intact.
+  const editor=document.getElementById('entityEditor');
+  if(editor&&!editor.classList.contains('hidden')&&
+     document.getElementById('library')?.classList.contains('active')&&
+     document.getElementById('entityFront')?.classList.contains('active')&&
+     !target.closest('#playerCard,.editor-bar,#bottomNav')&&
+     (editor.contains(target)||document.getElementById('library')?.contains(target))){
+    closeEntityEditor();
+  }
+}
+function gmwwBindOutsideDismiss(){
+  const app=document.getElementById('app');
+  if(!app||app.dataset.outsideDismissReady==='1')return;
+  app.dataset.outsideDismissReady='1';
+  document.addEventListener('pointerdown',gmwwDismissOutsidePointer,true);
+}
+
 async function confirmPlayEndGame(){
   if(playSceneRuntime.busy)return;
   if(!isLivePlayRoom()){playFlashError('Chưa chọn Phòng để kết thúc ván.');return}
@@ -9935,6 +9977,7 @@ async function handlePlayTimelineStep(step){
   playFlashError('Hãy hoàn tất bước hiện tại trước khi chuyển đến bước này.');
 }
 function initPlayScene(){
+  gmwwBindOutsideDismiss();
   initPlayCompletion();
   const shell=document.getElementById('playShell');if(!shell)return;
   initBattleControls();
