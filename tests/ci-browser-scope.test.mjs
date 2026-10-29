@@ -538,3 +538,19 @@ test('PR550 focused rules regression only (no unrelated gameplay, IPA, OTA)',()=
  assert.equal(classifyBrowserScope([...rows,{path:'src/index.js',status:'M',before:'a',after:'b'}]),'full');
  assert.equal(classifyBrowserScope(rows.map(row=>row.path.startsWith('tests/gmww-rule-snow')?{...row,after:'unrelated'}:row)),'full');
 });
+
+test('PR603 account avatar uses scoped verification and rejects unrelated Worker or role changes',()=>{
+  const rows=[
+    modified('src/gmww-members-live.js','old generated bundle','new generated bundle'),
+    modified('src/player-web-src/20-village-and-profile.part','old avatar',`
+function updatePlayerTopMenu(){const account={};avatar.onload=()=>{account.classList.add('has-avatar')};avatar.onerror=()=>{account.classList.remove('has-avatar')};}
+const cls='gmww-player-account-fallback';
+`),
+    {path:'tests/player-web-top-account-avatar-20261029.test.mjs',status:'A',before:null,after:'Account avatar appears only after loading; Menu avatar is static'},
+    modified('.github/workflows/check-player-web-online-village.yml','old','new')
+  ];
+  assert.equal(classifyBrowserScope(rows),'player-top-avatar-603');
+  assert.equal(classifyBrowserScope([...rows,modified('src/index.js','old','new')]),'full');
+  assert.equal(classifyBrowserScope([...rows,{path:'src/player-web-src/30-rooms-and-realtime.part',status:'M',before:'a',after:'b'}]),'full');
+  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='src/player-web-src/20-village-and-profile.part'?{...x,after:'unrelated UI rewrite'}:x)),'full');
+});
