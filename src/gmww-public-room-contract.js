@@ -61,7 +61,7 @@ export function statusTagsFor(rows,meta,loginId,players={}){
     const kind=STATUS_VISUAL_LEGACY[row?.type];if(!kind||!valid(row)||normalizeLoginId(row?.loginId)!==normalizeLoginId(loginId))continue;
     if(row?.matchId&&matchId&&String(row.matchId)!==matchId)continue;
     const statusId=kind.statusId||row.type;
-    const canSee=Object.prototype.hasOwnProperty.call(display,statusId)?display[statusId]===true:statusId!=="marked";
+    const canSee=display[statusId]===true;
     if(canSee)tags.set(statusId,{statusId,label:kind.label,icon:kind.icon});
   }
   return [...tags.values()];
