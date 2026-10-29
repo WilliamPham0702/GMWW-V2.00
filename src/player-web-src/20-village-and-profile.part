@@ -585,9 +585,9 @@ function setGameViewPane(pane,{persist=true}={}){
   shell.hidden=false;role.hidden=pane!=='role';$('#game')?.classList.toggle('gmww-card-expanded',pane==='role');
   const mini=$('#gmwwPlayerMiniCards');if(mini)mini.hidden=pane==='role';
   const roleBackdrop=$('#gmwwPlayerRoleBackdrop'),roleReturn=$('#gmwwPlayerRoleReturn');
-  const roleInLobby=pane==='role'&&playerScenePolicy(state.room).mode==='lobby';
-  if(roleBackdrop)roleBackdrop.hidden=!roleInLobby;
-  if(roleReturn)roleReturn.hidden=!roleInLobby;
+  const roleExpanded=pane==='role';
+  if(roleBackdrop)roleBackdrop.hidden=!roleExpanded;
+  if(roleReturn)roleReturn.hidden=!roleExpanded;
   if(persist)try{sessionStorage.setItem('gmww_game_pane_v1',pane)}catch{}
   if(pane==='village')syncVillageFrame();
 }
