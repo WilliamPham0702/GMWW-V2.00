@@ -2687,6 +2687,7 @@ const gmCardOutside3275Paths=new Set([
   '.github/workflows/check-gm-card-preview-centering-20261029.yml',
   'tests/gm-card-fit-outside-dismiss-20261029.test.mjs',
   'tests/gm-card-outside-ci-scope-20261029.test.mjs',
+  'tests/ci-browser-scope.test.mjs',
   'docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md'
 ]);
 function isGMCardOutside3275Scope(changes){
