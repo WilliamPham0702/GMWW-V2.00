@@ -37,11 +37,11 @@ test('Chữ đỏ nảy như bóng, không thêm animation JS hoặc box',()=>{
   assert.match(gmCss,/box-shadow:none!important/);
 });
 
-test('Tôn trọng giảm hiệu ứng và giữ bundle trùng nguồn sáu module',()=>{
+test('Tôn trọng giảm hiệu ứng và giữ bundle trùng nguồn bảy module',()=>{
   assert.match(gmCss,/html\[data-gmww-perf-reduced="true"\]/);
   assert.match(gmCss,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(gmCss,/animation:none!important/);
-  const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts']
+  const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','45-online-chat','50-roles-and-artifacts']
     .map(name=>readFileSync('server-game/src/'+name+'.part','utf8')).join('');
   assert.equal(app,parts,'app.js phải dựng đúng từ nguồn module');
 });

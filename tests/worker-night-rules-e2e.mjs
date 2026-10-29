@@ -26,7 +26,9 @@ try{
   await gm('/turn',{action:'jump',targetIndex});s=await gm('');
   return gm('/battle-action',{matchId,cycleKey:s.room.cycleKey,night:1,turnId:s.nightRuntime.currentId,actorId:ids[name],actionId:people.find(x=>x[0]===name)[2],type,targetIds:targets.map(x=>ids[x]),...(reveal?{revealTargetIds:reveal.map(x=>ids[x])}:{}),clientEventId:'rules-'+name});
  }
- assert.equal((await action('seer','effect_notice',['seer'],['wolf'])).revelation.message,'CÓ SÓI');
+ const seerResult=(await action('seer','effect_notice',['seer'],['wolf'])).revelation;
+ assert.equal(seerResult.wolf,true);
+ assert.equal(seerResult.message,'Người bạn soi là Sói');
  assert.equal((await action('aura','effect_notice',['aura'],['immortal'])).revelation.message,'immortal');
  assert.equal((await action('spirit','effect_notice',['spirit'],['wolf','villager'])).revelation.message,'KHÁC PHE');
  const kill=await action('witch','dead',['immortal']);assert.equal(kill.results[0].reason,'NIGHT_IMMUNE');

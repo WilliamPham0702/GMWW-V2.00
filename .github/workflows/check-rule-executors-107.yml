@@ -9,6 +9,9 @@ on:
       - 'src/gmww-wolf-night-resolution.js'
       - 'src/index.js'
       - 'tests/card-executors-*.test.mjs'
+      - 'tests/worker-card-artifact-e2e.mjs'
+      - 'tests/worker-night-rules-e2e.mjs'
+      - '.github/scripts/check-rule-worker-local.mjs'
       - '.github/workflows/check-rule-executors-107.yml'
 permissions:
   contents: read
@@ -34,6 +37,8 @@ jobs:
         run: |
           node --test tests/card-executors-*.test.mjs
           node --test --test-name-pattern='Hunter' tests/v3193-seat-history-hunter.test.mjs
+      - name: Real local Worker HTTP and SQLite rule acceptance
+        run: node .github/scripts/check-rule-worker-local.mjs
       - name: Verify GM executable bundle, isolated Worker and action contract
         run: |
           node --check server-game/current/app.js

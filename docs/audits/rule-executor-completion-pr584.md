@@ -29,3 +29,19 @@ Ngày: 28/10/2026. Cơ sở đồng bộ: Native/Runtime V3.264.
 - Khi đủ điều kiện: đồng bộ Runtime version, SHA-256, release notes tiếng Việt, rollback, xác minh Production.
 
 Mốc hiện tại: triển khai **một phần**, PR giữ Draft. Không khẳng định 107 lá đã hoạt động.
+
+## Xác minh thực tế 29/10/2026
+
+- Đã merge `main` 157b499d vào nhánh bằng commit d8f97e8, giữ cả Strongman executor và privateRoleGroupRecognition. Không force push. Tiếp tục đồng bộ main 8c88afba (PR #612) trong checkpoint kế tiếp.
+- CI tại d8f97e8: `Check RULE Executors 107 (focused)` SUCCESS, run 40845716172; `CI Policy Gate` SUCCESS, run 40845716303. Đây là kết quả bộ test, **không phải chứng nhận 107 lá**.
+- Sửa literal `\n` làm test catalog không parse được; giữ nguyên assertion và chạy lại: 65/65 PASS. Hunter: 2/2 PASS. GM assembly 7 module, syntax và Worker dry-run PASS.
+- Chạy Worker thật với SQLite cục bộ, HTTP thật, không dùng Production: soi, miễn chết đêm, Phù Thủy giết và Sói/bình minh PASS. Assertion Tiên Tri cũ `CÓ SÓI` đã được đối chiếu với luật/voice hiện tại `Người bạn soi là Sói`, đồng thời xác minh boolean wolf.
+- HTTP thật cho Vạc Ma Thuật, Sương Hào Quang, Nhẫn Sự Thật, Trượng Tiên Tri: kết quả riêng, kiểm quyền GM/sở hữu, retry cùng request, xung đột request, single-use quota, reconnect và không lộ Artifact qua public API PASS.
+- 84 bài liên quan scheduler, Dân Làng, Say Rượu, Nhà Tinh Thần Học, GM vote bundle PASS sau khi bổ sung dependency thật vào VM fixture. Không thêm mock executor. Bầy chỉ còn Sói chết phải bỏ lượt cắn; assertion cũ đòi lượt cắn đã được sửa theo hành vi này.
+- Ma trận riêng đủ 107 ID: `docs/audits/pr584-acceptance-107.json`. Chưa lá nào được chứng nhận toàn bộ tiêu chí; mỗi ô chưa kiểm giữ NOT_VERIFIED. Không đổi kết quả test thành PASS dựa trên inventory/nút/icon.
+
+### Chặn phát hành còn tồn tại
+
+Nhiều Artifact vẫn rơi vào `DAY_ARTIFACT_EFFECT_NOT_IMPLEMENTED`; các luồng sao chép/hoán đổi/cấp Artifact, giao tiếp riêng, DEMO/audio/UI, undo và tương tác chéo chưa đủ bằng chứng. Đây là phần triển khai/kiểm thử còn phải làm, không phải yêu cầu chủ dự án chọn kỹ thuật.
+
+**Không merge PR vào main, không phát hành Production/OTA.** Chưa tạo Runtime Update thủ công cho PR này. Không đổi IPA, không ghi/xóa dữ liệu Production. Rollback Production không cần kích hoạt vì chưa có triển khai; checkpoint nhánh có thể revert sau khi đối chiếu head mới nhất, không force push.

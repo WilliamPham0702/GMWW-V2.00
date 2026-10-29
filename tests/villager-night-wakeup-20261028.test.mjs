@@ -1,3 +1,4 @@
+import * as cardNightPassives from '../src/gmww-card-night-passives.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,11 +12,11 @@ import {readNightAssignments,canSnowWolfBite} from '../src/gmww-wolf-night-resol
 
 // Exercise the actual Durable Object night scheduler, not a copied queue builder.
 const source=fs.readFileSync('src/index.js','utf8');
-const start=source.indexOf('  async buildNightRuntime(meta,night){');
+const start=source.indexOf('  async applyCursedRoleConversions(meta,night,assignments){');
 const end=source.indexOf('  async artifactUsedInNight(',start);
 assert.ok(start>=0&&end>start,'Production night scheduler must be found');
 const Room=vm.runInNewContext('(class {'+source.slice(start,end)+'})',{
-  defaultPriorityFirst,combineConfiguredTurns,groupConfiguredRoleTurns,
+  ...cardNightPassives,defaultPriorityFirst,combineConfiguredTurns,groupConfiguredRoleTurns,
   wolfPackMembers,shouldWakeWolfPack,partitionNightSpecialRoles,
   isWolfRole,packMembers,arrangeNightRoles,readNightAssignments,canSnowWolfBite,
   normalizeLoginId:x=>String(x||'').replace(/^member:/,'').trim().toLowerCase()

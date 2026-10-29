@@ -1,3 +1,8 @@
+import {resolveElderBell} from '../src/gmww-elder-bell-rules.js';
+import {resolveLinkedDeaths} from '../src/gmww-linked-death-rules.js';
+import {hunterLinkedDeaths} from '../src/gmww-hunter-death-rules.js';
+import {resolveDayArtifactInspection} from '../src/gmww-day-artifact-inspection.js';
+import * as cardNightPassives from '../src/gmww-card-night-passives.js';
 import test from 'node:test';
 import * as gallowsRules from '../src/gmww-gallows-rules.js';
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from '../src/gmww-demo-runner.js';
@@ -12,7 +17,7 @@ import {resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActio
 import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
-import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
+import {resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,resolveStrongmanWolfBite} from '../src/gmww-wolf-night-resolution.js';
 import {wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition} from '../src/gmww-wolf-recognition.js';
 import {oldWitchActionCheck} from '../src/gmww-old-witch-rules.js';
 import {isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
@@ -39,7 +44,7 @@ const STATUS_DEFS=PRODUCTION_STATUS_DEFS;
 
 
 const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMethods+methods+alarmMethods+activate+drawMethod+' })',{
-  ...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
+  resolveElderBell,resolveLinkedDeaths,hunterLinkedDeaths,resolveDayArtifactInspection,resolveStrongmanWolfBite,...cardNightPassives,...gallowsRules,ROOM_IDLE_TTL:86400000,Date,JSON,Response,Request,projectDemoClock,nextDemoClock,serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,crypto:webcrypto,combineConfiguredTurns,groupConfiguredRoleTurns,jumpTarget,defaultPriorityFirst,
   artifactCycleKey,reserveArtifactActivation,normalizeLoginId,pruneInteractions,isBattleActorBlocked,expireCycleEffects,resolveWolfNight,readNightAssignments,isNightImmune,resolveNightReveal,resolveMaidenNight,canSnowWolfBite,STATUS_DEFS,
   resolveRoleActionPolicy,checkBattleRoleActionUsage,appendBattleRoleActionUsage,wolfPackMembers,shouldWakeWolfPack,privateWolfRecognition,oldWitchActionCheck,
   isWolfRole,packMembers,alphaPackState,previousNightTargets,arrangeNightRoles,
@@ -514,8 +519,7 @@ test('G4 live DO: frozen actor is blocked on night 1, thawed by morning, acts on
     turnId:current.currentId,cycleKey:meta2.cycleKey,clientEventId:'g4-night-2-success'}));
   assert.equal(success.ok,true,'once thawed the actor can use their role');
   const wolfIndex=current.queue.findIndex(row=>row.kind==='wolf-pack-bite');
-  assert.ok(wolfIndex>=0,'shared Pack Bite step exists when a Wolf was configured');
-  await h.room.gmTurn(null,{action:'jump',targetIndex:wolfIndex});
+  assert.equal(wolfIndex,-1,'no Pack Bite step remains when the only Wolf is dead');
   const wolf=await h.room.getNightRuntime(await h.meta(),2,false);
   const denied=await result(await h.room.gmBattleAction(null,{...payload,actorId:'carol',
     actionId:'action_wolf_bite',turnId:wolf.currentId,cycleKey:meta2.cycleKey,

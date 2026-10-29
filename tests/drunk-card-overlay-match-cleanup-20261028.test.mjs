@@ -26,7 +26,7 @@ test('Player Web has no new dialog, title, count or Finish button; selects exact
   assert.match(section,/draw\?\.status==='pending'/);
   assert.match(section,/card\.onclick=\(\)=>submitDrunkDraw\(c\.id\)/);
   assert.doesNotMatch(section,/<h2>|<p>|dd-result|dd-finish|card\.textContent/);
-  assert.match(web,/function disconnectRoom\(\)\{\s*clearDrunkDraw\(\)/);
+  assert.match(web,/function disconnectRoom\(\)\{\s*gmwwChatUnmount\(\);clearDrunkDraw\(\)/);
   assert.match(results,/function showResult[\s\S]*?clearDrunkDraw\(\)/);
   assert.match(results,/async function closeResult\(\)\{\s*clearDrunkDraw\(\)/);
 });
