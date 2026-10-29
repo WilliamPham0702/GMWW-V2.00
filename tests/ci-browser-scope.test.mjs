@@ -629,6 +629,7 @@ test('CI-only merge excludes unrelated Drunk-role tests without waiving gameplay
   assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md')),'full');
 });
 
+const historicArtifact3274=JSON.parse(readFileSync('package.json','utf8')).version==='3.274.0';
 test('PR613 Artifact preview V3.274 scope accepts only reviewed image, runtime and CI files',()=>{
   const allowed=[
     '.github/scripts/ci-browser-scope.mjs',
@@ -645,7 +646,7 @@ test('PR613 Artifact preview V3.274 scope accepts only reviewed image, runtime a
     'tests/ci-browser-scope.test.mjs'
   ];
   const changes=allowed.map(path=>({path,status:path.startsWith('tests/artifact-')?'A':'M'}));
-  assert.equal(classifyBrowserScope(changes),'artifact-preview-3274');
+  assert.equal(classifyBrowserScope(changes),historicArtifact3274?'artifact-preview-3274':'full');
   assert.equal(classifyBrowserScope([...changes,modified('src/gmww-members-live.js','old','unexpected Player logic')]),'full');
   assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='server-game/src/10-library-and-settings.part')),'full');
   assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,status:'D'}:c)),'full');
@@ -660,7 +661,7 @@ test('PR613 Artifact preview V3.274 postmerge CI-only recovery preserves exact r
     'docs/releases/GMWW-PR613-postmerge-ci-20261029.md'
   ];
   const changes=allowed.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
-  assert.equal(classifyBrowserScope(changes),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope(changes),historicArtifact3274?'artifact-preview-3274-postmerge':'full');
   assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
   assert.equal(classifyBrowserScope(changes.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
@@ -685,7 +686,7 @@ test('PR613 Artifact preview V3.274 release proof accepts only exact four CI fil
     'docs/releases/GMWW-PR613-release-proof-ci-20261029.md'
   ];
   const rows=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
-  assert.equal(classifyBrowserScope(rows),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope(rows),historicArtifact3274?'artifact-preview-3274-postmerge':'full');
   assert.equal(classifyBrowserScope([...rows,{path:'server-game/current/app.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(rows.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
   const gate=readFileSync('.github/workflows/deploy-production.yml','utf8');
@@ -703,7 +704,7 @@ test('PR613 V3.274 canonical Character40 verification repair keeps exact CI-only
     'docs/releases/GMWW-PR613-character40-proof-ci-20261029.md'
   ];
   const rows=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
-  assert.equal(classifyBrowserScope(rows),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope(rows),historicArtifact3274?'artifact-preview-3274-postmerge':'full');
   assert.equal(classifyBrowserScope([...rows,{path:'src/index.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(rows.filter(x=>x.path!=='.github/scripts/verify-character40-production.mjs')),'full');
   assert.equal(classifyBrowserScope(rows.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
