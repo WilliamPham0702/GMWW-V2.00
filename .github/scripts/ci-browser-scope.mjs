@@ -476,7 +476,7 @@ function isHomePodium3211Scope(changes){
 // Unknown files, different versions and missing release parts fail closed.
 const icon3212Paths=new Set([
  'server-game/current/action-icon-library.js','server-game/current/GMWW.html',
- 'server-game/current/app.js','server-game/src/00-core-and-library.part',
+ 'server-game/current/app.js','server-game/src/00-core-and-library.part','server-game/src/45-online-chat.part',
  'src/index.js','package.json','package-lock.json',
  '.github/scripts/prepare-update-channel.mjs','.github/scripts/ci-browser-scope.mjs',
  '.github/workflows/check-player-web.yml','.github/workflows/build-server-game-ipa.yml',
@@ -2798,6 +2798,13 @@ function isPlayerOnlinePrivacy630Scope(changes){
       if(c.path!=='server-game/current/app.js'&&c.path!=='.github/scripts/prepare-update-channel.mjs'&&released!==c.before)return false;
       if(c.path==='server-game/current/app.js'&&!c.after.includes("const VERSION='3.276'"))return false;
       if(c.path==='.github/scripts/prepare-update-channel.mjs'&&!c.after.includes('V3.276 PR630:'))return false;
+    }
+    // GM chat reply is part of this change: ensure the edit stays inside its own UI,
+    // never bypass a genuinely unreviewed GM/Worker/runtime modification.
+    if(c.path==='server-game/src/45-online-chat.part'){
+      if(!c.before||!c.after||!c.after.includes("startsWith('gm:')")||
+         !c.after.includes("playRoomApi('/chat',{method:'POST'")||
+         !c.after.includes("function gmwwGMChatRefresh("))return false;
     }
     if(c.path==='src/player-web-src/35-online-chat.part'){
       if(!c.after?.includes('function gmwwChatDockSync(')||
