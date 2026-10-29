@@ -30,7 +30,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          # The immutable PR613 release-proof ancestor is older than two commits.
+          fetch-depth: 0
       - name: Chặn auto-deploy khi commit chỉ sửa CI
         id: scope
         shell: bash
@@ -129,6 +130,21 @@ jobs:
             test "$ACTUAL" = "$EXPECTED" || { echo "::error::V3.274 release-proof scope mismatch"; exit 1; }
             SHOULD_DEPLOY=true
             echo 'PR613: release-only CI proof correction, original role checks retained; no source or IPA changes.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # PR613 third CI-only repair: checkout full history to verify original
+          # source ancestor. Exact four paths, no gameplay/IPA/DO changes.
+          if grep -Fxq 'docs/releases/GMWW-PR613-git-history-ci-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            test "$(node -p 'require("./package.json").version')" = '3.274.0'
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' \
+              'docs/releases/GMWW-PR613-git-history-ci-20261029.md' | sort)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::V3.274 full-history recovery scope mismatch"; exit 1; }
+            SHOULD_DEPLOY=true
+            echo 'PR613 V3.274: full-history ancestor proof repaired, unchanged Runtime source, IPA and data.' >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
