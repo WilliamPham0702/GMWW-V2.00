@@ -14,6 +14,13 @@ on:
       - ".github/workflows/deploy-production.yml"
       - ".github/scripts/prepare-update-channel.mjs"
       - "docs/releases/GMWW-artifact-preview-centering-main-20261029.md"
+      - "tests/artifact-preview-horizontal-centering-20261029.test.mjs"
+      - ".github/workflows/check-gm-card-preview-centering-20261029.yml"
+  push:
+    branches: [main]
+    paths:
+      - "server-game/src/10-library-and-settings.part"
+      - "server-game/current/app.js"
       - "package.json"
       - "package-lock.json"
       - "src/index.js"
@@ -22,13 +29,6 @@ on:
       - ".github/workflows/deploy-production.yml"
       - ".github/scripts/prepare-update-channel.mjs"
       - "docs/releases/GMWW-artifact-preview-centering-main-20261029.md"
-      - "tests/artifact-preview-horizontal-centering-20261029.test.mjs"
-      - ".github/workflows/check-gm-card-preview-centering-20261029.yml"
-  push:
-    branches: [main]
-    paths:
-      - "server-game/src/10-library-and-settings.part"
-      - "server-game/current/app.js"
       - "tests/artifact-preview-horizontal-centering-20261029.test.mjs"
       - ".github/workflows/check-gm-card-preview-centering-20261029.yml"
   workflow_dispatch:
