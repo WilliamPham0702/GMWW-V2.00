@@ -17,3 +17,13 @@
 - Không thay đổi IPA, Runtime OTA, server rules, Durable Objects, Room, lịch sử hoặc dữ liệu.
 - Chỉ được merge/phát hành Production sau khi kiểm tra CI bắt buộc SUCCESS và phê duyệt phát hành.
 - Rollback: revert PR, phát hành lại Worker/static assets theo commit đã được xác minh. Không cần migration.
+
+## Cổng phát hành Worker-only PR #612
+- PR bắt buộc có `CI Policy Gate`, `village-legacy-removal` và `mobile-webkit` thành công trước khi phát hành.
+- CI WebKit mô phỏng Safari iPhone 13, chụp ảnh trang Làng sau khi tải, kiểm tra không còn bộ công cụ cũ; kiểm tra cả trang Player Web thực.
+- Workflow `deploy-village-legacy-online-pr612.yml` chỉ chạy sau khi chính PR #612 đã merge và đối chiếu SHA main + trạng thái CI, danh sách file thay đổi chính xác.
+- So sánh byte-to-byte `assets/updates/latest.json` với Production **trước** và **sau** cập nhật; khác nhau thì chặn phát hành/rollback Worker, không được ghi đè manifest OTA ngoài phạm vi.
+- Pipeline Production mặc định bỏ qua đúng phạm vi PR #612; không đụng IPA, nguồn GM, runtime game, DO/dữ liệu.
+- Xác nhận trực tiếp trên Production: giao diện Làng không còn nội dung mẫu, Player Web và health trả HTTP 200, Worker version mới 100%, WebKit iPhone chạy thành công và lưu ảnh kiểm thử.
+- Nếu kiểm tra Production không đạt, tự chuyển lại Worker version trước đó; trường hợp static asset cần phục hồi ngoài Worker version phải triển khai lại asset từ commit trước.
+- Không coi kiểm thử WebKit giả lập là đã thao tác trực tiếp trên iPhone thật của người dùng.
