@@ -2684,6 +2684,7 @@ const gmCardOutside3275Paths=new Set([
   '.github/scripts/prepare-update-channel.mjs',
   '.github/scripts/ci-browser-scope.mjs',
   '.github/workflows/check-player-web.yml',
+  '.github/workflows/deploy-production.yml',
   '.github/workflows/check-gm-card-preview-centering-20261029.yml',
   'tests/gm-card-fit-outside-dismiss-20261029.test.mjs',
   'tests/gm-card-outside-ci-scope-20261029.test.mjs',
