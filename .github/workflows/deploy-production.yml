@@ -100,6 +100,22 @@ jobs:
              [[ "$SCOPE" == "GMWW browser CI scope: runtime-3248-postmerge |"* ]]; then
             SHOULD_DEPLOY=true
           fi
+          # V3.274 PR613 recovery: deliver the already-merged, previously blocked
+          # artwork runtime ONLY for the exact five-file CI repair and ancestor.
+          if grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            test "$(node -p 'require("./package.json").version')" = '3.274.0'
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' \
+              'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' | sort)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::Unexpected paths in V3.274 OTA CI repair"; exit 1; }
+            SHOULD_DEPLOY=true
+            echo 'PR613: previously merged V3.274 Runtime, strictly audited CI recovery; no IPA or DO modification.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
@@ -1540,13 +1556,30 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           test "$GITHUB_EVENT_NAME" = "workflow_run" || { echo "::error::Manual release requires separate approval"; exit 1; }
+          # With a CI-only follow-up, the original main SHA already proved
+          # role-card isolation. It must be an immutable ancestor with no new
+          # app/runtime files in the five-file recovery scope.
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          IS_RECOVERY=false
+          if [[ "$SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]]; then
+            IS_RECOVERY=true
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            BASE_RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=2171214cec2c9af92994c27caaa8f75e976dbb1c&per_page=100")
+            printf '%s' "$BASE_RUNS" | node -e '
+              let raw="";process.stdin.on("data",c=>raw+=c).on("end",()=>{
+                const a=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.event==="push"&&r.head_sha==="2171214cec2c9af92994c27caaa8f75e976dbb1c");
+                const names=["Check Approved Role Card Settings","Check GM card artwork centering (20261029)"];
+                process.exit(names.every(n=>a.some(r=>r.name===n&&r.conclusion==="success"))?0:1);
+              })' || { echo "::error::Original PR613 main role/Artifact proof missing"; exit 1; }
+          fi
+          export IS_RECOVERY
           VERIFIED=false
           for TRY in $(seq 1 30); do
             RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
             if printf '%s' "$RUNS" | node -e '
               let raw="";process.stdin.on("data",x=>raw+=x).on("end",()=>{
                 const runs=(JSON.parse(raw).workflow_runs||[]).filter(x=>x.head_sha===process.env.TESTED_SHA&&x.event==="push");
-                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","Check Approved Role Card Settings","CI Policy Gate"];
+                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Policy Gate"]; if(process.env.IS_RECOVERY!=="true")required.push("Check Approved Role Card Settings");
                 process.exit(required.every(name=>runs.some(r=>r.name===name&&r.conclusion==="success"))?0:1);
               })
             '; then VERIFIED=true; break; fi
@@ -1614,6 +1647,15 @@ jobs:
           # Publish the cumulative iPhone OTA once, scoped to the exact
           # approved V3.207 merged commit (not a generic CI bypass).
           VERSION=$(node -p "require('./package.json').version")
+          # Exact postmerge Artifact V3.274 repair must publish the pending
+          # Runtime payload, not misclassify five CI-only files as server_only.
+          if [ "$VERSION" = "3.274.0" ] && \
+             grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-changed-files.txt; then
+            RELEASE_SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+            [[ "$RELEASE_SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]] || { echo "::error::V3.274 recovery source scope mismatch"; exit 1; }
+            TYPE=runtime
+            echo 'Runtime OTA V3.274: publish the pending verified Artifact package. IPA V3.264 unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "$VERSION" = "3.207.0" ] && \
              test -s docs/releases/GMWW-V3.207-demo475-production-20261025.md && \
              git merge-base --is-ancestor 8772337ab95e7561aeba6d63b2ec2337d7bbee94 HEAD; then
