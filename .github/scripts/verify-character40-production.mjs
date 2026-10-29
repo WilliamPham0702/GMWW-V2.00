@@ -57,12 +57,13 @@ let index=0;
 await Promise.all(Array.from({length:4},async()=>{
  while(index<40){
   const n=index++,c=accepted[n],live=catalog.characters[n];assert.equal(live.id,c.id);assert.deepEqual(live.actions,actions);
-  // Player profile portraits intentionally use the SAME accepted atlas Idle
-  // frame as the village. Their lossless thumbnails are generated at deploy
-  // time, after OTA packaging; they are server-only and not part of IPA OTA.
-  const portraitPath='assets/characters/gmww40/portraits/'+c.id+'.webp';
-  const generatedPortraitSha=sha(await readFile(portraitPath));
-  assert.equal(sha(await bytes(live.imageUrl)),generatedPortraitSha,c.id+' live portrait must match actual atlas frame');
+  // /api/game-characters/{id}/image explicitly serves /characters/gmww40/originals/{id}.webp.
+  // Generated portraits are distinct derivative files; do not compare API bytes
+  // to a thumbnail, or a valid Production image will falsely fail SHA verification.
+  const originalPath='assets/characters/gmww40/'+c.original;
+  const originalSha=sha(await readFile(originalPath));
+  assert.equal(originalSha,c.originalSHA256,c.id+' original source SHA');
+  assert.equal(sha(await bytes(live.imageUrl)),originalSha,c.id+' live API original-image SHA');
   assert.equal(sha(await bytes(live.motionAtlas)),c.atlasSHA256,c.id+' live motion atlas');
   // Preserve rigorous SHA guards for both unchanged original artwork and
   // all animation atlases in the separately signed native Runtime inventory.
