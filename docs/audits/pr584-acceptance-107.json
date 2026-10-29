@@ -7751,40 +7751,61 @@
       "httpEvidence": [],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-steal-20261029.test.mjs",
+            "tests/worker-artifact-steal-e2e.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-steal-20261029.test.mjs",
+            "tests/worker-artifact-steal-e2e.mjs"
+          ]
         },
         "ownership": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-steal-20261029.test.mjs",
+            "tests/worker-artifact-steal-e2e.mjs"
+          ]
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-steal-20261029.test.mjs",
+            "tests/worker-artifact-steal-e2e.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-steal-20261029.test.mjs",
+            "tests/worker-artifact-steal-e2e.mjs"
+          ]
         },
         "undo": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-steal-20261029.test.mjs",
+            "tests/worker-artifact-steal-e2e.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "privateInformation": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-steal-20261029.test.mjs",
+            "tests/worker-artifact-steal-e2e.mjs"
+          ]
         },
         "gmUi": {
           "status": "NOT_VERIFIED",
@@ -8315,48 +8336,79 @@
       "httpEvidence": [],
       "acceptance": {
         "executor": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+          ]
         },
         "timing": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+          ]
         },
         "ownership": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+          ]
         },
         "quota": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+          ]
         },
         "idempotency": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+          ]
         },
         "undo": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "reconnect": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+          ]
         },
         "deathAndRevival": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "privateInformation": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/card-executors-artifact-function-copy-20261029.test.mjs",
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+          ]
         },
         "gmUi": {
           "status": "NOT_VERIFIED",
           "evidence": []
         },
         "playerWebUi": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-function-copy-e2e.mjs",
+            "tests/card-executors-mirror-owner-isolation-20261029.test.mjs"
+          ]
         },
         "demo": {
           "status": "NOT_VERIFIED",
@@ -8367,8 +8419,10 @@
           "evidence": []
         },
         "crossInteractions": {
-          "status": "NOT_VERIFIED",
-          "evidence": []
+          "status": "PARTIAL",
+          "evidence": [
+            "tests/worker-artifact-function-copy-e2e.mjs"
+          ]
         }
       }
     },
