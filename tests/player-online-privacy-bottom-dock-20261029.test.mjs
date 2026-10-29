@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {statusTagsFor} from '../src/gmww-public-room-contract.js';
+import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
+import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js';
+
 const read=path=>readFileSync(path,'utf8'),worker=read('src/index.js'),
   village=read('src/player-web-src/20-village-and-profile.part'),
   ws=read('src/player-web-src/30-rooms-and-realtime.part'),
@@ -39,4 +42,11 @@ test('Bottom dock, authoritative countdown, private GM chat, direct actions, no 
   assert.ok(!chat.includes("confirm('Thực hiện "));
   has(chat,'gmwwOnlineTargetAt(');
   assert.ok(!chat.includes('new SpeechSynthesisUtterance'));
+});
+
+test('Server-patched Player script never mounts the legacy bottom deck in Online',()=>{
+  const runtime=patchPrivatePlayerCards(gmwwMembersLiveScript);
+  has(runtime,'function renderPlayerPrivateDock(){');
+  has(runtime,'if(String(state.room?.roomMode||"online").toLowerCase()==="online"){$("#gmwwPlayerPrivateDock")?.remove();return}');
+  has(runtime,'function syncPlayerMiniCards(){');
 });
