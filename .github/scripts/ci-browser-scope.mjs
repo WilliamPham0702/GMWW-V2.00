@@ -3118,6 +3118,7 @@ function isGMPlayerLinkShare637Scope(){
     let clean=after;
     if(p==='.github/scripts/ci-browser-scope.mjs'){
       clean=after.replace(/\n\/\/ BEGIN GMWW_PLAYER_LINK_SHARE_SCOPE_637[\s\S]*?\/\/ END GMWW_PLAYER_LINK_SHARE_SCOPE_637\n/,'');
+      clean=clean.replace("  try{if(isGMPlayerLinkShare637Scope())return {mode:'gm-player-web-share-637',reason:'Only GM share UI and exact CI scope guards; no Worker/IPA/OTA/gameplay'};}catch(_){}\n",'');
     }else if(p==='.github/workflows/check-player-web.yml'){
       clean=after.replace(/      # BEGIN GMWW_PLAYER_LINK_SHARE_CHECK_637\n[\s\S]*?      # END GMWW_PLAYER_LINK_SHARE_CHECK_637\n/,'');
     }else{
@@ -3130,7 +3131,6 @@ function isGMPlayerLinkShare637Scope(){
   return true;
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
-
 function detect(){
   try{if(isGMPlayerLinkShare637Scope())return {mode:'gm-player-web-share-637',reason:'Only GM share UI and exact CI scope guards; no Worker/IPA/OTA/gameplay'};}catch(_){}
   // Exact PR630 release or its CI-only recovery; unrelated source stays fail-closed.
