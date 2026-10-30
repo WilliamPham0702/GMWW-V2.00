@@ -2931,7 +2931,71 @@ function isPR645PostmergeReleaseScope(changes){
     changes.every(c=>c?.status==='M'&&expected.has(c.path)&&
       typeof c.after==='string'&&c.after.includes(markers.get(c.path)));
 }
+// PR652: fail-closed, source-bounded Online hotfix. The only production edits
+// are the night Undo endpoint, three GM battle UI blocks, and GM chat monitor.
+// The packaged GM app must match all seven source modules byte-for-byte.
+function isPR652OnlineHotfixScope(changes){
+  const expected=new Map([
+    ['src/index.js','M'],
+    ['server-game/src/40-battle-and-timeline.part','M'],
+    ['server-game/src/45-online-chat.part','M'],
+    ['server-game/current/app.js','M'],
+    ['tests/gmww-v3228-battle-icons-footer.test.mjs','M'],
+    ['tests/v389-night-runtime-integration.test.mjs','M'],
+    ['tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs','A'],
+    ['.github/workflows/check-online-five-defects-20261031.yml','A'],
+    ['docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md','A'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     new Set(changes.map(c=>c?.path)).size!==expected.size||
+     changes.some(c=>!c||expected.get(c.path)!==c.status||
+       typeof c.after!=='string'||(c.status==='M'&&typeof c.before!=='string')))return false;
+  const byPath=new Map(changes.map(c=>[c.path,c]));
+  const bounded=(file,ranges)=>{
+    const {before,after}=byPath.get(file);
+    let old=before,now=after;
+    for(const [start,end] of ranges){
+      old=outsideScope(old,start,end);
+      now=outsideScope(now,start,end);
+      if(old===null||now===null)return false;
+    }
+    return old===now;
+  };
+  if(!bounded('src/index.js',[['  async gmBattleUndo(request,body){','  async gmInteraction(request,body){']]))return false;
+  if(!bounded('server-game/src/40-battle-and-timeline.part',[
+    ['function battleIconResolve(action){','function battleIconPositionKey('],
+    ['function battleIconEntryPoint(){','function battleIconResetPositions(){'],
+    ['function battleShowResultPopup(','/* Morning notices']
+  ]))return false;
+  if(!bounded('server-game/src/45-online-chat.part',[
+    ['/* GM Chat monitor: available only with GM-authorized room API. No public history path. */',null]
+  ]))return false;
+  const worker=byPath.get('src/index.js').after;
+  const battle=byPath.get('server-game/src/40-battle-and-timeline.part').after;
+  const chat=byPath.get('server-game/src/45-online-chat.part').after;
+  const selector=byPath.get('.github/scripts/ci-browser-scope.mjs').after;
+  const workflow=byPath.get('.github/workflows/check-player-web.yml').after;
+  if(!worker.includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)')||
+     !worker.includes('UNDO_STATE_CHANGED')||
+     !battle.includes('soi-can-canonical')||
+     !battle.includes('const wanted=bounds.bottom+8')||
+     !battle.includes('.play-village-core .play-core-pearl')||
+     !chat.includes('function gmwwGMChatAvailable()')||
+     !chat.includes("trigger.hidden=!(active&&playSceneState.step!=='battle')")||
+     !selector.includes("return 'online-hotfix-652'")||
+     !workflow.includes("steps.scope.outputs.mode == 'online-hotfix-652'"))return false;
+  const names=['00-core-and-library.part','10-library-and-settings.part',
+   '20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part',
+   '45-online-chat.part','50-roles-and-artifacts.part'];
+  const assembled=names.map(n=>fs.readFileSync('server-game/src/'+n,'utf8')).join('');
+  if(byPath.get('server-game/current/app.js').after!==assembled)return false;
+  return true;
+}
 function classifyBrowserScope(changes){
+  if(isPR652OnlineHotfixScope(changes))return 'online-hotfix-652';
   if(isPR645PostmergeReleaseScope(changes))return 'pr645-postmerge-release';
   if(isPr648ThermalScope(changes))return 'village-perf-diagnostics-648';
   if(isGMChromeIosViewportScope(changes))return 'gm-chrome-ios-viewport';
