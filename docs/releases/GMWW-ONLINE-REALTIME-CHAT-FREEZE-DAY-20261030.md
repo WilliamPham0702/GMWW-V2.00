@@ -8,7 +8,7 @@
 4. Chat qua kênh được xác thực; khi có tin nhắn của người khác, thanh Chat chớp sáng cho tới khi người chơi mở xem. Tin nhắn đến cập nhật theo WebSocket chat_tick. Không gửi nội dung Chat vào WebSocket công khai.
 5. Đóng Băng không cấm Chat; hiệu ứng Đóng Băng tự hết tại sáng hôm sau theo lifecycle Server. Quyền thảo luận/bỏ phiếu trở lại theo luật, trừ cấm vote/chat riêng độc lập.
 6. Khi Đóng Băng hoặc bị Đuổi, vẫn **thấy** icon hành động đang đến lượt có dấu hiệu chặn, nhưng không thể thực hiện. Server từ chối yêu cầu bằng quyền hiệu ứng thực tế, kể cả khi bypass giao diện.
-7. Menu Server ban ngày: **Đồng Hồ – Thông Cáo Làng – ⚖️ Cán Cân Đại Dương – Chat – Lên Giàn – Khôi phục**. Tận dụng Chat GM xác thực hiện tại (có trả lời tin riêng), làm mới theo WebSocket. Hành động Ban ngày dùng icon trực tiếp tại làng như Ban đêm, bỏ ô hành động ngày.
+7. Menu Server ban ngày: **Đồng Hồ – Thông Cáo Làng – ⚖️ Cán Cân Đại Dương – Chat – Lên Giàn – Khôi phục**. Tận dụng Chat GM xác thực hiện tại (có trả lời tin riêng) và bổ sung ô gửi tin vào Chat Làng chung ban ngày. Chat chung được giới hạn bằng quyền GM ở Server, không gửi nội dung lên WebSocket công khai; làm mới theo sự kiện WebSocket. Hành động Ban ngày dùng icon trực tiếp tại làng như Ban đêm, bỏ ô hành động ngày.
 
 ## Phạm vi kiểm thử
 
