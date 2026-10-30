@@ -399,14 +399,12 @@ async function gmwwVerifyMemberBeforeRemoval(){
    "let gmwwReconnectTimer=null;\nfunction connectWS(){");
  offlineReplace("try{state.ws?.close();const proto=",
    "try{if(gmwwReconnectTimer){clearTimeout(gmwwReconnectTimer);gmwwReconnectTimer=null}if(state.ws){state.ws.onclose=null;state.ws.onmessage=null;state.ws.onopen=null;try{state.ws.close()}catch{}}const proto=");
- offlineReplace("state.ws=new WebSocket(proto+'//'+location.host+'/ws/'+state.roomCode+'?participantId='+encodeURIComponent(state.participantId));",
-   "state.ws=new WebSocket(proto+'//'+location.host+'/ws/'+state.roomCode+'?participantId='+encodeURIComponent(state.participantId));const activeSocket=state.ws;");
- offlineReplace("state.ws.onopen=()=>{",
-   "state.ws.onopen=()=>{if(state.ws!==activeSocket)return;");
- offlineReplace("state.ws.onmessage=e=>{let d;try{d=JSON.parse(e.data)}catch{return};",
-   "state.ws.onmessage=e=>{if(state.ws!==activeSocket)return;let d;try{d=JSON.parse(e.data)}catch{return};if(['room_state','player_move','player_move_complete'].includes(d.type))gmwwLastRoomBroadcastAt=Date.now();");
- offlineReplace("state.ws.onclose=e=>{if(state.wsPingTimer){",
-   "state.ws.onclose=e=>{if(state.ws!==activeSocket)return;state.ws=null;if(state.wsPingTimer){");
+ // The source now owns the socket reference and guards stale onopen/onmessage/onclose.
+ // Keep this output patch focused on last-broadcast ordering and reconnect cleanup.
+ offlineReplace("socket.onmessage=e=>{if(state.ws!==socket)return;let d;try{d=JSON.parse(e.data)}catch{return};",
+   "socket.onmessage=e=>{if(state.ws!==socket)return;let d;try{d=JSON.parse(e.data)}catch{return};if(['room_state','player_move','player_move_complete'].includes(d.type))gmwwLastRoomBroadcastAt=Date.now();");
+ offlineReplace("socket.onclose=e=>{if(state.ws!==socket)return;if(state.wsPingTimer){",
+   "socket.onclose=e=>{if(state.ws!==socket)return;state.ws=null;if(state.wsPingTimer){");
  offlineReplace("setTimeout(connectWS,1800)",
    "gmwwReconnectTimer=setTimeout(()=>{gmwwReconnectTimer=null;if(state.roomCode&&state.participantId)connectWS()},1800)");
  offlineReplace("if(d.type==='gallows_updated'){state.gallows=d.gallows||null;renderGallowsWidget();syncVillageFrame(true);return}",
