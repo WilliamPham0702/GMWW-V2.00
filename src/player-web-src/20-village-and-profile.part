@@ -40,28 +40,33 @@ function updatePlayerTopMenu(){
       }
     }
   }
-  menu.hidden=!state.member;
+  menu.hidden=!state.member;renderPlayerTimeline();
 }
 
-/* One private dock only: role and artifact are quarter-size shortcuts to the same full-size cards.
+/* One private dock only: role and artifact are compact shortcuts to the same full-size cards.
  * Position is a UI preference, never a second copy of the role or an authoritative card state. */
-const GMWW_MINI_POSITIONS_KEY='gmww_online_mini_positions_v2';
+const GMWW_MINI_POSITIONS_KEY='gmww_online_mini_positions_v3';
 function gmwwMiniPositions(){try{return JSON.parse(localStorage.getItem(GMWW_MINI_POSITIONS_KEY)||'{}')||{}}catch{return{}}}
 function gmwwMiniPosition(button,type){
-  const stored=gmwwMiniPositions()[type],w=Math.min(78,Math.max(56,window.innerWidth*.19)),h=w/0.72;
-  const x=Math.max(4,Math.min(window.innerWidth-w-4,Number(stored?.x??(window.innerWidth-w-8)))),
-    y=Math.max(56,Math.min(window.innerHeight-h-74,Number(stored?.y??(type==='role'?118:118+h+7))));
-  button.style.left=x+'px';button.style.top=y+'px';
+  if(button.dataset.gmwwMiniDragging)return;
+  const stored=gmwwMiniPositions()[type],w=Math.min(39,Math.max(28,window.innerWidth*.095)),h=w/.72;
+  const frame=document.getElementById('gmwwVillageFrame')?.getBoundingClientRect();
+  const entryX=frame?frame.left+frame.width*.5:window.innerWidth*.5,entryY=frame?frame.top+frame.height*.23:window.innerHeight*.23;
+  let x=Number(stored?.x??(entryX+(type==='role'?-w-3:3))),y=Number(stored?.y??entryY);
+  const avatar=document.querySelector('#gmwwPlayerTopMenu .gmww-player-menu-account')?.getBoundingClientRect();
+  if(gmwwChatOpen&&avatar){x=avatar.right-w;y=avatar.bottom+5+(type==='artifact'?h+5:0)}
+  button.style.left=Math.max(4,Math.min(window.innerWidth-w-4,x))+'px';
+  button.style.top=Math.max(4,Math.min(window.innerHeight-h-45,y))+'px';
 }
 function gmwwMiniDrag(button,type){
   if(button.dataset.gmwwMiniBound)return;button.dataset.gmwwMiniBound='1';
   button.addEventListener('pointerdown',event=>{
     if(event.button!==undefined&&event.button!==0)return;
-    const startX=event.clientX,startY=event.clientY,rect=button.getBoundingClientRect();let moved=false;
+    event.preventDefault();button.dataset.gmwwMiniDragging='1';const startX=event.clientX,startY=event.clientY,rect=button.getBoundingClientRect();let moved=false;
     const move=e=>{if(Math.hypot(e.clientX-startX,e.clientY-startY)<7&&!moved)return;moved=true;
       button.style.left=Math.max(4,Math.min(window.innerWidth-rect.width-4,rect.left+e.clientX-startX))+'px';
       button.style.top=Math.max(55,Math.min(window.innerHeight-rect.height-70,rect.top+e.clientY-startY))+'px'};
-    const end=e=>{button.removeEventListener('pointermove',move);button.removeEventListener('pointerup',end);button.removeEventListener('pointercancel',end);
+    const end=e=>{delete button.dataset.gmwwMiniDragging;button.removeEventListener('pointermove',move);button.removeEventListener('pointerup',end);button.removeEventListener('pointercancel',end);
       if(moved){button.dataset.gmwwMiniMoved='1';try{const positions=gmwwMiniPositions();positions[type]={x:parseFloat(button.style.left),y:parseFloat(button.style.top)};localStorage.setItem(GMWW_MINI_POSITIONS_KEY,JSON.stringify(positions))}catch{}
         setTimeout(()=>{delete button.dataset.gmwwMiniMoved},250)}};
     button.setPointerCapture?.(event.pointerId);button.addEventListener('pointermove',move);button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);
@@ -70,16 +75,16 @@ function gmwwMiniDrag(button,type){
 function syncPlayerMiniCards(){
   let host=document.getElementById('gmwwPlayerMiniCards');
   const allowed=!!(state.member&&state.roomCode&&state.participantId&&state.role&&
-    String(state.room?.roomMode||'online').toLowerCase()==='online'&&playerScenePolicy(state.room).mode==='battle');
+    String(state.room?.roomMode||'online').toLowerCase()==='online'&&playerScenePolicy(state.room).rolesReleased);
   if(!allowed){host?.remove();return}
   if(!document.getElementById('gmwwPlayerMiniCardStyle')){
     const st=document.createElement('style');st.id='gmwwPlayerMiniCardStyle';
     st.textContent='#gmwwPlayerMiniCards{position:fixed;inset:0;z-index:234;pointer-events:none}'+
       '#game:not(.active) #gmwwPlayerMiniCards,#game.gmww-card-expanded #gmwwPlayerMiniCards{display:none!important}'+
       '#game .role-stage[hidden]{display:none!important}'+
-      '#gmwwPlayerMiniCards button{position:fixed;display:block;width:clamp(56px,19vw,78px);aspect-ratio:.72;padding:0;overflow:hidden;pointer-events:auto;touch-action:none;border:1px solid #d5af68;border-radius:9px;background:#07111b;box-shadow:0 4px 14px #000a;color:white}'+
+      '#gmwwPlayerMiniCards button{position:fixed;display:block;width:clamp(28px,9.5vw,39px);aspect-ratio:.72;padding:0;overflow:hidden;pointer-events:auto;touch-action:none;border:1px solid #d5af68;border-radius:9px;background:#07111b;box-shadow:0 4px 14px #000a;color:white}'+
       '#gmwwPlayerMiniCards button[hidden]{display:none!important}#gmwwPlayerMiniCards img{display:block;width:100%;height:100%;object-fit:cover}'+
-      '#gmwwPlayerMiniCards .mini-label{position:absolute;inset:auto 0 0;background:#07131dc9;color:#f7e1a1;font:700 9px/1.3 system-ui;padding:2px 1px;text-align:center}';
+      '#gmwwPlayerMiniCards .mini-label{position:absolute;inset:auto 0 0;background:#07131dc9;color:#f7e1a1;font:700 6px/1.3 system-ui;padding:1px;text-align:center}';
     document.head.appendChild(st)
   }
   if(!host){
@@ -94,6 +99,7 @@ function syncPlayerMiniCards(){
       }
     }
   }
+  for(const type of ['role','artifact'])gmwwMiniPosition(host.querySelector('[data-mini="'+type+'"]'),type);
   host.hidden=$('#game')?.classList.contains('gmww-card-expanded')===true;
   const role=state.role||{},pc=role.roleCard||{},artifact=state.artifact||{},ac=artifact.artifactCard||{};
   const base='/api/rooms/'+encodeURIComponent(state.roomCode)+'/role-assets/';
@@ -105,37 +111,55 @@ function syncPlayerMiniCards(){
   if(state.artifact)setImage('[data-mini="artifact"] img',String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''));
 }
 
+let gmwwSharedTimeline=null,gmwwSharedTimelineKey='';
 function renderPlayerTimeline(timeline){
+ const timelineKey=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join(':');
+ if(timelineKey!==gmwwSharedTimelineKey){gmwwSharedTimeline=null;gmwwSharedTimelineKey=timelineKey}
+ if(timeline!==undefined)gmwwSharedTimeline=timeline;
  const menu=document.getElementById('gmwwPlayerTopMenu');if(!menu)return;
  let strip=document.getElementById('gmwwPlayerTimeline');
- if(!timeline?.steps?.length){strip?.remove();return}
- if(!document.getElementById('gmwwPlayerTimelineCss')){
-   const style=document.createElement('style');style.id='gmwwPlayerTimelineCss';
-   style.textContent='#gmwwPlayerTimeline{position:absolute;top:calc(100% + 2px);left:52px;right:52px;max-width:calc(100% - 104px);display:flex;justify-content:flex-start;gap:4px;overflow-x:auto;scrollbar-width:none;pointer-events:auto;padding:2px 0 4px}'+
-     '#gmwwPlayerTimeline span{flex:0 0 auto;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;padding:4px 6px;border:1px solid #ffffff44;border-radius:7px;background:#06273bc9;color:#b7e0e4;font:700 9px/1.2 system-ui}'+
-     '#gmwwPlayerTimeline span.active{border-color:#ffdd91;background:#9d6220e6;color:white}'+
-     '#gmwwPlayerTimeline span.done{opacity:.65}';
-   document.head.appendChild(style);
+ if(!strip){
+  strip=document.createElement('div');strip.id='gmwwPlayerTimeline';
+  const root=strip.attachShadow({mode:'open'});
+  root.innerHTML='<style>'+GMWW_SERVER_MENU.css+' :host{display:block;min-width:0}:host #start #playShell #playSetupStrip,:host #start #playShell #playBattleTop{position:relative!important;inset:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important}button{cursor:default}</style><div id="start"><div id="playShell" class="play-shell">'+GMWW_SERVER_MENU.markup+'</div></div>';
+  menu.insertBefore(strip,menu.firstChild);
  }
- if(!strip){strip=document.createElement('div');strip.id='gmwwPlayerTimeline';strip.setAttribute('aria-label','Timeline đồng bộ Quản Trò');menu.appendChild(strip)}
- const steps=timeline.steps.slice(0,150),key=[state.roomCode,state.room?.matchId,timeline.phase,timeline.activeIndex,...steps.map(x=>x.label+':'+x.status)].join('|');
- if(strip.dataset.sig===key)return;strip.dataset.sig=key;strip.replaceChildren();
- for(const step of steps){
-   const node=document.createElement('span');node.className=['done','active'].includes(step.status)?step.status:'';
-   node.textContent=String(step.label||'Lượt').slice(0,110);strip.appendChild(node);
+ const room=state.room||{},stage=room.gmStage==='room'?'lobby':String(room.gmStage||'lobby');
+ const root=strip.shadowRoot,shell=root.querySelector('.play-shell');shell.dataset.step=stage;shell.dataset.phase=room.cyclePhase==='night'?'night':'lobby';
+ const buttons=[...root.querySelectorAll('[data-play-step]')],active=buttons.findIndex(b=>b.dataset.playStep===stage);
+ for(const [i,button] of buttons.entries()){
+  button.classList.toggle('active',i===active);button.classList.toggle('done',i<active);
+  button.setAttribute('aria-disabled','true');button.tabIndex=-1;
+  if(i===active)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');
  }
- strip.querySelector('.active')?.scrollIntoView({behavior:'instant',inline:'center',block:'nearest'});
+ const battle=stage==='battle',setup=root.querySelector('#playSetupStrip'),battleTop=root.querySelector('#playBattleTop');
+ for(const bar of [setup,battleTop])for(const [key,value] of Object.entries({position:'relative',inset:'auto',width:'100%','max-width':'none',margin:'0',transform:'none'}))bar.style.setProperty(key,value,'important');
+ setup.style.setProperty('display',battle?'none':'grid','important');
+ battleTop.hidden=!battle;battleTop.style.setProperty('display',battle?'grid':'none','important');
+ const publicSteps=gmwwSharedTimeline?.steps||[],list=root.querySelector('#battleTimeline');
+ const sig=JSON.stringify(publicSteps);
+ if(list.dataset.sig!==sig){list.dataset.sig=sig;list.replaceChildren();
+  for(const [i,step] of publicSteps.entries()){
+   const node=document.createElement('button');node.type='button';node.tabIndex=-1;node.setAttribute('aria-disabled','true');node.setAttribute('role','listitem');
+   node.className='play-battle-step is-'+(step.status==='done'?'completed':step.status==='active'?'active':'upcoming');
+   node.setAttribute('aria-current',step.status==='active'?'step':'false');
+   const num=document.createElement('span');num.className='battle-step-num';num.textContent=step.status==='done'?'✓':String(i+1);
+   const label=document.createElement('b');label.textContent=String(step.label||'Lượt');node.append(num,label);list.appendChild(node);
+  }
+  list.querySelector('.is-active')?.scrollIntoView({block:'nearest',inline:'center'});
+ }
+ for(const id of ['battleBack','battleAdvance']){const button=root.querySelector('#'+id);button.disabled=true;button.querySelector('b').textContent=(id==='battleBack'?'<Đêm ':'Ngày ')+Math.max(1,Number(room.cycleNight)||1)+(id==='battleAdvance'?'>':'')}
+ menu.querySelector('.gmww-player-menu-info')?.setAttribute('hidden','');
 }
 
 function hidePlayerTopMenu(){
   const menu=$('#gmwwPlayerTopMenu');if(menu&&state.member)menu.classList.add('is-idle-hidden');
-  document.getElementById('gmwwChatLaunch')?.classList.add('is-idle-hidden');
-  document.getElementById('gmwwOnlineDock')?.classList.add('is-idle-hidden');
+  document.getElementById('gmwwOnlineFooter')?.classList.add('is-idle-hidden');gmwwChatClosePanel();
 }
 function revealPlayerTopMenu(force=false){
   const menu=$('#gmwwPlayerTopMenu');if(!menu||!state.member)return;
   const now=Date.now();if(!force&&now-gmwwPlayerTopMenuLastActivity<450)return;gmwwPlayerTopMenuLastActivity=now;
-  menu.classList.remove('is-idle-hidden');document.getElementById('gmwwChatLaunch')?.classList.remove('is-idle-hidden');document.getElementById('gmwwOnlineDock')?.classList.remove('is-idle-hidden');clearTimeout(gmwwPlayerTopMenuTimer);gmwwPlayerTopMenuTimer=setTimeout(hidePlayerTopMenu,30000);
+  menu.classList.remove('is-idle-hidden');document.getElementById('gmwwOnlineFooter')?.classList.remove('is-idle-hidden');clearTimeout(gmwwPlayerTopMenuTimer);gmwwPlayerTopMenuTimer=setTimeout(hidePlayerTopMenu,30000);
 }
 function ensurePlayerTopMenu(){
   let menu=$('#gmwwPlayerTopMenu');
@@ -151,6 +175,7 @@ function ensurePlayerTopMenu(){
       #gmwwVillageProfileButton{display:none!important}
       #gmwwVillageHud .status{display:none!important}
       #gmwwPlayerTopMenu{position:fixed;z-index:235;left:10px;right:10px;top:max(7px,env(safe-area-inset-top));display:grid;grid-template-columns:minmax(0,1fr) 50px;gap:6px;align-items:stretch;pointer-events:auto;opacity:1;transform:translateY(0);transition:opacity .28s ease,transform .28s ease;filter:drop-shadow(0 6px 14px rgba(0,18,30,.24))}
+      #gmwwPlayerTopMenu .gmww-player-menu-info[hidden]{display:none!important}
       #gmwwPlayerTopMenu.is-idle-hidden{opacity:0;transform:translateY(calc(-100% - 18px));pointer-events:none}
       #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:44px;min-height:44px;color:#fff}
       #gmwwPlayerTopMenu button{display:flex;align-items:center;justify-content:center;padding:0;font:900 10px/1 system-ui;cursor:pointer}
@@ -199,7 +224,7 @@ function ensurePlayerTopMenu(){
     ['pointerdown','mousemove','touchstart','keydown','wheel'].forEach(type=>document.addEventListener(type,activity,{passive:true,capture:true}));
     window.addEventListener('focus',()=>revealPlayerTopMenu(true));
   }
-  menu.querySelector('.gmww-player-menu-exit')?.remove();updatePlayerTopMenu();revealPlayerTopMenu(true);return menu
+  menu.querySelector('.gmww-player-menu-exit')?.remove();updatePlayerTopMenu();renderPlayerTimeline();if(!gmwwPlayerTopMenuTimer)revealPlayerTopMenu(true);return menu
 }
 function ensureVillageHud(){
   ensureVillageGameView();let hud=$('#gmwwVillageHud');if(!hud){hud=document.createElement('div');hud.id='gmwwVillageHud';hud.innerHTML='<div class="status"><b></b><small></small></div><button id="gmwwVillageProfileButton" type="button" aria-label="Thông tin"><img id="gmwwVillageProfileAvatar" alt="Avatar của bạn"></button>';$('#game').appendChild(hud)}
@@ -619,7 +644,8 @@ function syncVillageFrame(force=false){
 window.addEventListener('message',event=>{
   const iframe=$('#gmwwVillageFrame');if(event.origin!==location.origin||!iframe||event.source!==iframe.contentWindow)return;
   const d=event.data||{};
-  if(d.type==='gmww:user-activity'){revealPlayerTopMenu();gmwwChatClosePanel();return}
+  if(d.type==='gmww:user-activity'){revealPlayerTopMenu();gmwwChatClosePanel();gmwwChatTouch();return}
+  if(d.type==='gmww:player-click'&&gmwwOnlinePick){gmwwOnlineTarget(d.participantId);return}
   if(d.type==='gmww:village-ready')syncVillageFrame(true);
   else if(d.type==='gmww:gallows-open-nominations'){
     const me=String(state.member?.loginId||''),g=state.gallows;

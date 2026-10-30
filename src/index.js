@@ -1,5 +1,5 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
-import {chatPolicy,chatNormalizeText} from "./gmww-online-chat-policy.js";
+import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -3280,22 +3280,23 @@ export class RoomDurableObject extends DurableObject {
     const id=normalizeLoginId(loginId);
     // Server-only authenticated DM channel. Never deliver through public room chat or room state.
     if(requestedChannel==="gm"){
-      const allowed=!!meta?.matchId&&["running","role_delivery","lobby"].includes(String(meta?.phase||""))&&!!players["member:"+id];
+      const allowed=meta?.enabled!==false&&["running","role_delivery","lobby","waiting"].includes(String(meta?.phase||""))&&!!players["member:"+id];
       const blocked=bans[id]===true;
       const permission=allowed?{canRead:true,canSend:!blocked,channel:"gm:"+id,scope:"gm",reason:blocked?"CHAT_MUTED_GM":null}
         :{canRead:false,canSend:false,channel:null,scope:null,reason:"CHAT_NOT_IN_ROOM"};
-      return{meta,players,permission};
+      return{meta,players,rows,permission};
     }
     const runtime=meta?.cyclePhase==="night"?await this.getNightRuntime(meta,Number(meta.cycleNight||1),false):null;
     const permission=chatPolicy({meta,players,rows,runtime,loginId,bans});
-    return{meta,players,permission};
+    return{meta,players,rows,permission};
   }
   async playerChatRead(body){
-    const loginId=normalizeLoginId(body?.loginId),{meta,permission}=await this.chatAccess(loginId,body?.channel);
-    if(!permission.canRead)return j({ok:true,channel:null,messages:[],canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
-    const key="onlineChat:"+String(meta.matchId)+":"+permission.channel;
+    const loginId=normalizeLoginId(body?.loginId),{meta,players,rows,permission}=await this.chatAccess(loginId,body?.channel);
+    const notices=players["member:"+loginId]?publicChatNotices(meta,players,rows):[];
+    if(!permission.canRead)return j({ok:true,channel:null,messages:[],notices,canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
+    const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel;
     return j({ok:true,channel:permission.channel,scope:permission.scope,
-      messages:(await this.ctx.storage.get(key))||[],canSend:permission.canSend,
+      messages:(await this.ctx.storage.get(key))||[],notices,canSend:permission.canSend,
       reason:permission.reason,phase:meta.cyclePhase,cycleKey:meta.cycleKey});
   }
   async playerChatSend(body){
@@ -3303,9 +3304,9 @@ export class RoomDurableObject extends DurableObject {
     if(!content||String(body?.text||'').length>400)return j({ok:false,error:"CHAT_INVALID_TEXT"},400);
     const {meta,players,permission}=await this.chatAccess(loginId,body?.channel);
     if(!permission.canSend)return j({ok:false,error:permission.reason||"CHAT_FORBIDDEN"},403);
-    const rateKey="onlineChatRate:"+String(meta.matchId)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
+    const rateKey="onlineChatRate:"+chatStorageScope(meta)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
     if(Date.now()-prev<850)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
-    const key="onlineChat:"+String(meta.matchId)+":"+permission.channel,
+    const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel,
       messages=(await this.ctx.storage.get(key))||[],now=Date.now(),
       message={id:crypto.randomUUID(),senderId:loginId,
         senderName:String(players["member:"+loginId]?.displayName||loginId).slice(0,42),
@@ -3317,7 +3318,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmChatRead(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const meta=auth.meta,match=String(meta.matchId||"");
+    const meta=auth.meta,match=chatStorageScope(meta);
     const records=match?await this.ctx.storage.list({prefix:"onlineChat:"+match+":"}):new Map(),
       channels=[...records.entries()].map(([key,messages])=>({
         channel:key.slice(("onlineChat:"+match+":").length),
@@ -3330,13 +3331,13 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
       players=(await this.ctx.storage.get("players"))||{};
-    if(!meta?.matchId||!id||!players["member:"+id]||!content||String(body?.text||"").length>400)
+    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!id||!players["member:"+id]||!content||String(body?.text||"").length>400)
       return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
-    const key="onlineChat:"+String(meta.matchId)+":gm:"+id,now=Date.now(),
-      rateKey="gmChatRate:"+String(meta.matchId)+":"+id;
+    const key="onlineChat:"+chatStorageScope(meta)+":gm:"+id,now=Date.now(),
+      rateKey="gmChatRate:"+chatStorageScope(meta)+":"+id;
     if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
     const messages=(await this.ctx.storage.get(key))||[],
-      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",text:content,at:now,scope:"gm"};
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:"gm"};
     await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
     this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel:"gm:"+id});
   }
