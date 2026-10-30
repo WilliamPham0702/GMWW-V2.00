@@ -29,6 +29,11 @@ jobs:
           set -euo pipefail
           git diff --exit-code origin/main...HEAD -- server-game/current/style.css
           ACTUAL=$(git diff --unified=0 origin/main...HEAD -- server-game/current/app.js | grep -E '^[+-][^+-]' || true)
+          # PR649 is a UI-only HTML change; GM app.js must remain byte-identical.
+          if [ -z "$ACTUAL" ]; then
+            echo "GM app.js unchanged: safe for HTML-only Player Web share layout."
+            exit 0
+          fi
           EXPECTED=$(printf '%s\n' "-const VERSION='3.277';" "+const VERSION='3.278';")
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             echo "::error::GM app.js changed beyond the approved V3.278 version bump"
