@@ -31,10 +31,10 @@ async function context(room,meta){
  const cycle=(await store.get('artifactCycle:'+(meta.cyclePhase==='morning'?meta.matchId+':day:'+meta.cycleNight:artifactCycleKey(meta.matchId,meta.cycleNight))))||{accepted:[]};
  return {store,assignments,players,rows,cfg,cards,artifacts,cycle};
 }
-function nightActions(ctx,meta,turn,usage){
+function nightActions(ctx,meta,turn,usage,showBlocked=false){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
  return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId)).map(action=>({...action,targetCount:action.noTarget?0:demoDivinationTargetCount(action),actorIds:action.actorIds.filter(actorId=>{
-  if(status(ctx.rows,meta,actorId,'expelled')||isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS}))return false;
+  if(!showBlocked&&(status(ctx.rows,meta,actorId,'expelled')||isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS})))return false;
   if(action.artifactId)return !ctx.cycle.accepted.some(x=>x.artifactId===action.artifactId&&x.playerId==='member:'+actorId)&&ctx.cycle.accepted.length<Number(ctx.cfg.artifactLimitPerCycle??3);
   const role=turn.kind==='role-group'?turn.roles.find(r=>r.loginIds.includes(actorId)&&(!action.roleIds?.length||action.roleIds.includes(r.roleId))):turn;
   const roleId=role?.roleId,card=ctx.cards.find(c=>c.id===roleId);
@@ -44,7 +44,7 @@ function nightActions(ctx,meta,turn,usage){
   return checkBattleRoleActionUsage(usage,{matchId:meta.matchId,night:meta.cycleNight,actorId,roleId,actionId:action.actionId,card}).ok;
  })})).filter(a=>!a.unavailable&&a.actorIds.length);
 }
-function dayActions(ctx,meta,usage,ballot){
+function dayActions(ctx,meta,usage,ballot,showBlocked=false){
  const list=[];
  for(const a of ctx.assignments){
   const owners=[{card:ctx.cards.find(c=>c.id===a.roleId),roleId:a.roleId},...(a.artifactId?[{card:ctx.artifacts.find(c=>c.id===a.artifactId),artifactId:a.artifactId}]:[])];
@@ -52,7 +52,8 @@ function dayActions(ctx,meta,usage,ballot){
    for(const fn of card.functions?.length?card.functions:card.actions||[]){
     const actionId=fn.actionId||fn.id,actorId=a.loginId,knight=owner.roleId==='role_knight'&&actionId==='action_knight_last_strike'&&ballot?.stage==='resolved'&&ballot.outcome==='dead'&&ballot.candidateId===actorId;
     if(fn.passive||!['day','any'].includes(fn.phase)||(fn.fromNight!=null&&Number(fn.fromNight)>meta.cycleNight)||(fn.toNight!=null&&Number(fn.toNight)<meta.cycleNight))continue;
-    if(status(ctx.rows,meta,actorId,'expelled')||status(ctx.rows,meta,actorId,'frozen')||(status(ctx.rows,meta,actorId,'dead')&&!fn.actorMayBeDead&&!knight))continue;
+    // Morning removes the previous night's Freeze; it never prevents daytime discussion, voting or actions.
+    if(!showBlocked&&(status(ctx.rows,meta,actorId,'expelled')||(status(ctx.rows,meta,actorId,'dead')&&!fn.actorMayBeDead&&!knight)))continue;
     if(owner.roleId==='role_knight'&&actionId==='action_knight_last_strike'&&!knight)continue;
     const own=usage.filter(x=>x.actorId===actorId&&x.roleId===(owner.roleId||'')&&x.artifactId===(owner.artifactId||'')),hits=own.filter(x=>x.actionId===actionId),quota=Math.max(1,Number(fn.usageCount)||1);
     if(card.flags?.allowMultipleActions===false&&own.some(x=>x.day===meta.cycleNight))continue;
@@ -78,10 +79,10 @@ export async function playerOfferedActions(room,meta,loginId){
  if(meta.cyclePhase==='night'){
   const runtime=await room.getNightRuntime(meta,meta.cycleNight,false);
   const turn=runtime?.queue?.[runtime.cursor];
-  if(turn&&!runtime.completed)actions=nightActions(ctx,meta,turn,await ctx.store.get('battleRoleUsage:'+meta.matchId)||[]);
+  if(turn&&!runtime.completed)actions=nightActions(ctx,meta,turn,await ctx.store.get('battleRoleUsage:'+meta.matchId)||[],meta.demo!==true);
  }else if(meta.cyclePhase==='morning'){
   const ballot=(await room.gallowsState(meta)).ballot;
-  actions=dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot);
+  actions=dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot,meta.demo!==true);
  }
  const blocking=(ctx.rows||[]).find(row=>String(row?.loginId||'').replace(/^member:/,'')===String(loginId)&&row?.effectActive!==false&&(!row?.matchId||String(row.matchId)===String(meta.matchId))&&(!row?.expiresAt||Date.parse(row.expiresAt)>Date.now())&&(row.type==='expelled'||row.type==='dead'||(row.type==='frozen'&&meta.cyclePhase==='night')));
  return actions.filter(a=>a.actorIds.includes(loginId)).map(a=>({
