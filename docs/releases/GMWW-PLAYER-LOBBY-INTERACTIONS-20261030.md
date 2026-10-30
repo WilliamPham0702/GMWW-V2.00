@@ -1,4 +1,4 @@
-# Player Web — Chat phòng chờ, menu và tương tác (chưa phát hành)
+# GMWW Runtime OTA V3.277 — Chat phòng chờ, menu và tương tác
 
 - Cho phép thành viên đã được gọi vào phòng chat trước khi xếp Seat và trong lúc Phát Vai. Người ngoài phòng không có quyền; các nhóm chat ban đêm vẫn tách riêng.
 - Sửa xung đột CSS viewport PR631: khung Chat gắn đúng menu dưới khi Chrome/Edge/Safari iPhone mở bàn phím, không bị kéo lệch bởi kiểu hộp thoại cũ.
@@ -15,3 +15,9 @@ Test tái hiện chat trước trận và thả icon đã thất bại trên b�
 ## An toàn và rollback
 
 Không thay đổi IPA, schema phòng, dữ liệu lịch sử hoặc phát hành Production. Không xóa các hội thoại cũ. Hội thoại trước trận tách theo resetVersion; trong trận giữ khóa matchId. Khi cần rollback, revert PR và triển khai lại bản Worker trước đó; Runtime đang phát hành vẫn V3.276.
+
+## Bản phát hành V3.277
+
+- Đóng gói Runtime OTA sau khi CI bắt buộc và kiểm thử Player Web đúng phạm vi đạt SUCCESS.
+- SHA-256 và đường dẫn file thủ công phải xác minh từ GitHub Release V3.277; không đổi IPA hoặc dữ liệu Durable Objects.
+- Rollback: Runtime V3.276 và commit Production trước khi merge PR #634.
