@@ -35,5 +35,5 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
       # END GMWW_RUNTIME_32771_CI_SCOPE
       - if: steps.scope.outputs.mode != 'gm-player-web-share-637'
-        run: node --test tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs
+        run: node --test tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs
       - run: npm run check
