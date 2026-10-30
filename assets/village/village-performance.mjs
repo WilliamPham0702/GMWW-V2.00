@@ -1,10 +1,12 @@
 export function startVillagePerformanceReporter({target=window.parent,targetOrigin=window.location.origin,sampleMs=5000}={}){
-  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=60,longTasks=0,worstLongTask=0;
+  // Frame-by-frame FPS sampling is diagnostic only; do not keep an idle village at 60Hz.
+  const sampleFps=new URLSearchParams(window.location.search).get("gmwwPerf")==="1";
+  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=null,longTasks=0,worstLongTask=0;
   const frame=now=>{frameId=0;if(stopped||document.hidden)return;frames++;const span=now-lastFrame;if(span>=1000){fps=Math.round(frames*1000/span);frames=0;lastFrame=now}frameId=requestAnimationFrame(frame)};
-  const resumeFrames=()=>{if(stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};
+  const resumeFrames=()=>{if(!sampleFps||stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};
   const visibility=()=>{if(document.hidden){if(frameId)cancelAnimationFrame(frameId);frameId=0;return}resumeFrames()};
   document.addEventListener('visibilitychange',visibility);
-  resumeFrames();
+  if(sampleFps)resumeFrames();
   let observer=null;
   try{
     if("PerformanceObserver" in window){
