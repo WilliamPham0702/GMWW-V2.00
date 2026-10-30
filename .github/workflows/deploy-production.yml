@@ -222,6 +222,28 @@ jobs:
             echo "PR637 staged release: NEVER auto-deploy Worker/Runtime; explicit gated dispatch required." >> "$GITHUB_STEP_SUMMARY"
           fi
           # END GMWW_PR637_STAGED_RELEASE_GUARD
+
+          # PR645 V3.279: postmerge browser gate repair releases the already
+          # owner-accepted Online runtime ONLY for this exact CI-only fix.
+          # This is NOT a general exception: the downstream deploy job still
+          # requires same-SHA Worker CI, Chrome/Edge/WebKit CI and OTA guards.
+          if [ "$(node -p 'require("./package.json").version')" = '3.279.0' ] &&
+             git merge-base --is-ancestor d9527d6625868c0a25395e8ebf982446b4e4712b HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/check-player-card-browsers.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              grep -Fq 'function gmwwOnlinePlaceAtFire(dock){' src/player-web-src/35-online-chat.part || {
+                echo "::error::PR645 modern Online renderer missing; refusing V3.279 release"; exit 1;
+              }
+              SHOULD_DEPLOY=true
+              echo 'PR645 V3.279: exact postmerge browser CI fix; keep all same-SHA browser/Worker/OTA production gates.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
