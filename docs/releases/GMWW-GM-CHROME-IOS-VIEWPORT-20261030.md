@@ -15,5 +15,9 @@
 - Kiểm tra trực tiếp iPhone Chrome vẫn cần thực hiện sau khi phát hành: xem Sảnh chờ → Tập hợp → Vào trận; vuốt nền; xoay máy; mở bàn phím/box; xác nhận dock không tràn.
 - Thanh địa chỉ và điều hướng do **Chrome** quản lý, web không thể tự xóa khi chạy trong tab trình duyệt. Phạm vi fix là vùng **trang game**, không xóa UI của Chrome.
 
+## Bản phát hành V3.278
+- Bump Worker, Runtime, package và HTML V3.277 → V3.278; không xây IPA mới.
+- Bản sửa chỉ ảnh hưởng giao diện GM Chrome iPhone; không thay luồng Player Web, luật chơi, DO và dữ liệu.
+
 ## Phát hành / rollback
 - Chỉ đưa lên Production sau khi required CI SUCCESS và có phê duyệt. Nếu gặp lỗi, revert commit GMWW.html của PR này, không đụng OTA/IPA/dữ liệu.
