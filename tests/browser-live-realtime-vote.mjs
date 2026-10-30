@@ -18,6 +18,7 @@ const sessions=[
  {name:'Edge',loginId:id+'e',channel:'msedge'}
 ];
 const opened=[];
+const candidate={loginId:id+'n',name:'P0 Nominee'};
 try{
  for(const [i,s] of sessions.entries()){
   await api('/api/members/register',{method:'POST',body:{loginId:s.loginId,displayName:'P0 '+s.name,gameCharacterId:'character-0'+(i+1)}});
@@ -28,6 +29,10 @@ try{
   s.member=profile.member;
   await api('/api/rooms/'+code+'/join',{method:'POST',body:{token:s.token}});
  }
+ // A person on the gallows cannot vote. Chrome and Edge remain eligible.
+ await api('/api/members/register',{method:'POST',body:{loginId:candidate.loginId,displayName:candidate.name,gameCharacterId:'character-03'}});
+ const nominated=await api('/api/members/login',{method:'POST',body:{loginId:candidate.loginId}});
+ await api('/api/rooms/'+code+'/join',{method:'POST',body:{token:nominated.token}});
  for(const s of sessions){
   const browser=await chromium.launch({channel:s.channel,headless:true});
   const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
@@ -66,7 +71,7 @@ try{
   let names=[];
   for(let attempt=0;attempt<Math.ceil(timeout/250);attempt++){
     names=await roster(page);
-    if(names.includes('P0 Chrome')&&names.includes('P0 Edge'))return names;
+    if(names.includes('P0 Chrome')&&names.includes('P0 Edge')&&names.includes(candidate.name))return names;
     await new Promise(resolve=>setTimeout(resolve,250));
   }
   const live=await api('/api/rooms/'+code).catch(error=>({error:String(error)}));
@@ -88,13 +93,14 @@ try{
  }
  for(const {page,s} of opened){
   const names=await expectTeam(page,s.name+' lobby');
-  assert.equal(names.length,2,s.name+' lobby must show both players');
+  assert.equal(names.length,3,s.name+' lobby must show both browsers and nominee');
  }
  const match='p0-match-'+id;
  const assignments=sessions.map((s,i)=>({loginId:s.loginId,roleId:'role-p0-'+i,roleName:'Vai '+s.name,
   roleCard:{name:'Vai '+s.name,faction:'Phe Dân',information:'Private card during realtime release'},
   artifact:{artifactId:'artifact-p0-'+i,artifactCard:{name:'Bảo Vật '+s.name,information:'Realtime private artifact'}}
  }));
+ assignments.push({loginId:candidate.loginId,roleId:'role-p0-nominee',roleName:'Vai Nominee',roleCard:{name:'Vai Nominee',faction:'Phe Dân'}});
  // GM sends cards while BOTH browsers are already in the lobby.
  // Online UI uses the single miniature card dock, not the removed legacy private dock.
  await gm('/assignments',{matchId:match,matchRevision:1,deliveryVersion:1,assignments,multiAssign:false});
@@ -130,18 +136,18 @@ try{
   assert.equal((await face.locator('.gmww-card-title').innerText()).toLocaleUpperCase('vi'),('Bảo Vật '+s.name).toLocaleUpperCase('vi'));
   await face.click({position:{x:35,y:35}});
   await face.waitFor({state:'hidden',timeout:10000});
-  assert.equal((await roster(page)).length,2,'opening Role/Artifact cannot collapse roster');
+  assert.equal((await roster(page)).length,3,'opening Role/Artifact cannot collapse roster');
  }
  await gm('/start',{matchId:match});
  await gm('/cycle',{phase:'morning',night:1,cycleKey:'morning-1'});
  await gm('/gallows',{command:'open'});
  for(const {page,s} of opened){
   await page.frameLocator('#gmwwVillageFrame').locator('#gmwwPirateNominate').waitFor({state:'visible',timeout:20000});
-  assert.equal((await roster(page)).length,2,s.name+' roster intact during nomination');
+  assert.equal((await roster(page)).length,3,s.name+' roster intact during nomination');
  }
  const first=opened[0].page;
  await first.frameLocator('#gmwwVillageFrame').locator('#gmwwPirateNominate').press('Enter');
- await first.locator('#gmwwGallowsPlayer [data-gallows-nominee="'+sessions[1].loginId+'"]').click();
+ await first.locator('#gmwwGallowsPlayer [data-gallows-nominee="'+candidate.loginId+'"]').click();
  await first.locator('#gmwwGallowsNominate').click();
  const poll=async(pred,desc)=>{
   for(let n=0;n<40;n++){
@@ -151,9 +157,16 @@ try{
   }
   throw Error('Timeout confirming '+desc);
  };
- await poll(g=>g.nominations?.[sessions[0].loginId]===sessions[1].loginId,'nomination receipt');
- await gm('/gallows',{command:'begin',targetId:sessions[1].loginId});
- for(const {page} of opened)await page.locator('#gmwwGallowsDock [data-gallows-vote="👍"]').waitFor({state:'visible',timeout:15000});
+ await poll(g=>g.nominations?.[sessions[0].loginId]===candidate.loginId,'nomination receipt');
+ await gm('/gallows',{command:'begin',targetId:candidate.loginId});
+ for(const {page,s} of opened){
+  try{await page.locator('#gmwwGallowsDock [data-gallows-vote="👍"]').waitFor({state:'visible',timeout:15000})}
+  catch(error){
+   const client=await page.evaluate(()=>({room:typeof state!=='undefined'?state.room:null,gallows:typeof state!=='undefined'?state.gallows:null,member:typeof state!=='undefined'?state.member?.loginId:null,dockHidden:document.getElementById('gmwwGallowsDock')?.hidden})).catch(e=>({error:String(e)}));
+   const server=await gm('').catch(e=>({error:String(e)}));
+   throw Error(s.name+' did not receive eligible voting stage: '+JSON.stringify({client,serverGallows:server.gallows,original:String(error)}));
+  }
+ }
  await opened[0].page.locator('#gmwwGallowsDock [data-gallows-vote="👍"]').click();
  await opened[1].page.locator('#gmwwGallowsDock [data-gallows-vote="👎"]').click();
  const voted=await poll(g=>g.voteTotals?.cast===2,'both votes');
@@ -163,7 +176,7 @@ try{
   await page.reload({waitUntil:'domcontentloaded'});
   await page.locator('#gmwwPlayerMiniCards [data-mini="role"]').waitFor({state:'visible',timeout:22000});
   await expectTeam(page,s.name+' reload',22000);
-  assert.equal((await roster(page)).length,2,s.name+' roster survives refresh');
+  assert.equal((await roster(page)).length,3,s.name+' roster survives refresh');
  }
  console.log(JSON.stringify({success:true,case:'GM release -> two live browsers -> nomination -> two votes -> refresh',browsers:sessions.map(s=>s.name)}));
 } catch(e){
