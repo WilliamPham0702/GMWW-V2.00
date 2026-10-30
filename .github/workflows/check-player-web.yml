@@ -979,7 +979,7 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/assemble-player-web.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
-          node --test tests/ci-browser-scope.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/gm-admin-top-chat-20261028.test.mjs tests/gm-gallows-vote-markers-ui.test.mjs tests/gallows-hanging-character.test.mjs tests/gallows-hanging-anchor-walk.test.mjs tests/v3148-gallows-integrity.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs tests/gm-chrome-ios-viewport-20261030.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/gmww-cycle-effect-expiry.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/gm-admin-top-chat-20261028.test.mjs tests/gm-gallows-vote-markers-ui.test.mjs tests/gallows-hanging-character.test.mjs tests/gallows-hanging-anchor-walk.test.mjs tests/v3148-gallows-integrity.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs tests/gm-chrome-ios-viewport-20261030.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
           test -s docs/releases/GMWW-ONLINE-REALTIME-CHAT-FREEZE-DAY-20261030.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
@@ -1028,12 +1028,12 @@ jobs:
           grep -q '"memberStorage":"ready"' /tmp/health-deep.json
           curl -fsS http://127.0.0.1:8787/ > /tmp/player.html
           grep -q 'GMWW PLAYER' /tmp/player.html
-          # Each returned portrait is the exact corresponding atlas Idle frame.
+          # Worker intentionally serves the canonical Character40 original (not generated thumbnails).
           for N in $(seq 1 40); do
             ID=$(printf 'character-%02d' "$N")
             curl --fail --silent --show-error "http://127.0.0.1:8787/api/game-characters/$ID/image?rev=c40-4" > /tmp/gmww-avatar-preview.webp
-            cmp -s /tmp/gmww-avatar-preview.webp "assets/characters/gmww40/portraits/$ID.webp" || {
-              echo "::error::Profile avatar and village atlas mismatch: $ID"
+            cmp -s /tmp/gmww-avatar-preview.webp "assets/characters/gmww40/originals/$ID.webp" || {
+              echo "::error::Profile avatar and canonical Character40 original mismatch: $ID"
               exit 1
             }
           done

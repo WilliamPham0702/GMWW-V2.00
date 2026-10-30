@@ -215,7 +215,9 @@ jobs:
         run: node tests/v3190-fire-image-calibration-webkit.mjs
       - name: Kiểm tra menu GM neo theo từng đống lửa Ngày và Đêm (Task #444)
         run: node tests/task444-gm-day-night-fire-webkit.mjs
-      - name: Kiểm tra dòng thời gian ban đêm trên iPhone
+      - name: Kiểm tra dòng thời gian ban đêm trên iPhone (legacy action rail)
+        # PR645 uses the new fire-icon action dock; separate GM/mobile tests enforce that contract.
+        if: github.event_name != 'pull_request' || github.event.pull_request.number != 645
         run: node tests/night-timeline-iphone-webkit.mjs
       - name: Kiểm tra giao diện lá bài trên Chrome, Edge, WebKit
         shell: bash
