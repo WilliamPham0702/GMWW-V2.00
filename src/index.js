@@ -3340,15 +3340,18 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
       players=(await this.ctx.storage.get("players"))||{};
-    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!id||!players["member:"+id]||!content||String(body?.text||"").length>400)
+    const publicDay=String(body?.channel||'')==='room';
+    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!content||String(body?.text||"").length>400||
+      (publicDay?(String(meta.phase)!=='running'||String(meta.cyclePhase)!=='morning'):(!id||!players["member:"+id])))
       return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
-    const key="onlineChat:"+chatStorageScope(meta)+":gm:"+id,now=Date.now(),
-      rateKey="gmChatRate:"+chatStorageScope(meta)+":"+id;
+    const channel=publicDay?"day":"gm:"+id;
+    const key="onlineChat:"+chatStorageScope(meta)+":"+channel,now=Date.now(),
+      rateKey="gmChatRate:"+chatStorageScope(meta)+":"+channel;
     if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
     const messages=(await this.ctx.storage.get(key))||[],
-      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:"gm"};
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:publicDay?"day":"gm"};
     await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
-    this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel:"gm:"+id});
+    this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel});
   }
   async gmChatModerate(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
