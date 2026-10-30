@@ -71,9 +71,9 @@ test('Clock left/right swipe retains one-minute day adjustment, not a cosmetic t
 
 test('Initial action icons anchor to the rendered campfire with a safe footer fallback',()=>{
  const source=piece(app,'function battleIconEntryPoint(){','function battleIconResetPositions(){');
- assert.match(source,/play-village-core \\.play-core-pearl/);
- assert.match(source,/getBoundingClientRect/);
- assert.match(source,/rect\\.left\\+rect\\.width\\/2,rect\\.top\\+rect\\.height\\/2/);
- assert.match(source,/getElementById\\('battleBottomControls'\\)/);
- assert.match(app,/const entry=battleIconEntryPoint\\(\\)/);
+ assert.ok(source.includes("play-village-core .play-core-pearl"));
+ assert.ok(source.includes('getBoundingClientRect'));
+ assert.ok(source.includes('rect.left+rect.width/2,rect.top+rect.height/2'));
+ assert.ok(source.includes("getElementById('battleBottomControls')"));
+ assert.ok(app.includes('const entry=battleIconEntryPoint()'));
 });
