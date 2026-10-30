@@ -798,6 +798,7 @@ test('PR648 diagnostics-only FPS selects focused tests and rejects any gameplay 
     modified('.github/scripts/ci-browser-scope.mjs','previous selector',readFileSync('.github/scripts/ci-browser-scope.mjs','utf8')),
     modified('.github/workflows/check-player-web.yml','previous browser workflow',readFileSync('.github/workflows/check-player-web.yml','utf8')),
     modified('.github/workflows/prepare-runtime-v3202-candidate.yml','previous OTA candidate',readFileSync('.github/workflows/prepare-runtime-v3202-candidate.yml','utf8')),
+    modified('.github/workflows/build-server-game-ipa.yml','previous Native build',readFileSync('.github/workflows/build-server-game-ipa.yml','utf8')),
     {path:'docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md',status:'A',before:null,after:'# Thermal reporter'}
   ];
   assert.equal(classifyBrowserScope(changes),'village-perf-diagnostics-648');
