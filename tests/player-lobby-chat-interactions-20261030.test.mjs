@@ -72,3 +72,11 @@ test('mini cards default below entry, halve width, move under avatar with chat, 
  context.gmwwChatOpen=true;context.gmwwMiniPosition(button,'role');assert.equal(button.style.top,'65px');
  context.gmwwChatOpen=false;context.gmwwMiniPositions=()=>({role:{x:120,y:300}});context.gmwwMiniPosition(button,'role');assert.equal(button.style.top,'300px');
 });
+
+test('footer chat overrides the legacy full-screen overlay and stays anchored to the visible iPhone viewport',()=>{
+ const source=read('src/player-web-src/35-online-chat.part');
+ assert.match(source,/html body #gmwwOnlineFooter\{top:calc\(var\(--gmww-player-visible-top/);
+ assert.match(source,/bottom:auto!important;transform:translateY\(-100%\)!important/);
+ assert.match(source,/html body #gmwwOnlineFooter #gmwwChatPanel\{position:relative!important;inset:auto!important/);
+ assert.match(source,/transform:none!important;width:100%!important;max-width:none!important;height:auto!important/);
+});
