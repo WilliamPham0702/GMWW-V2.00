@@ -2,6 +2,12 @@
 /* Online-first Chat: all reads are authenticated; the WebSocket carries only a generic tick.
  * DO NOT use public room_state to transport chat messages or secret group membership. */
 let gmwwChatOpen=false,gmwwChatSeq=0,gmwwPlayerCueKey='',gmwwChatIdleTimer=null,gmwwOnlineFooterTimer=null,gmwwChatTarget='room';
+const gmwwChatLatestByChannel=new Map();
+function gmwwChatUnread(unread){
+ const panel=document.getElementById('gmwwChatPanel'),footer=document.getElementById('gmwwOnlineFooter');
+ panel?.classList.toggle('gmww-chat-unread',!!unread);footer?.classList.toggle('gmww-chat-unread',!!unread);
+ panel?.setAttribute('aria-label',unread?'Chat Làng • Có tin mới':'Chat Làng');
+}
 function gmwwChatClosePanel(){
  gmwwChatOpen=false;clearTimeout(gmwwChatIdleTimer);
  document.getElementById('gmwwChatPanel')?.classList.remove('open');
@@ -17,6 +23,7 @@ function gmwwChatTouch(){
 }
 function gmwwChatExpand(){
  gmwwChatOpen=true;document.getElementById('gmwwChatPanel')?.classList.add('open');
+ gmwwChatUnread(false);
  if(typeof closePrivateCardViewer==='function')closePrivateCardViewer();
  gmwwChatTouch();syncPlayerMiniCards();
 }
@@ -78,6 +85,10 @@ function gmwwChatMount(){
 html body #gmwwOnlineFooter{top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(6px,env(safe-area-inset-bottom)))!important;bottom:auto!important;transform:translateY(-100%)!important;max-height:calc(var(--gmww-player-visible-height,100dvh) - 16px)!important}
 html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:auto!important;top:auto!important;bottom:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:auto!important;max-height:min(38dvh,320px)!important;min-height:0!important;margin:0!important}
 #gmwwOnlineFooter[hidden]{display:none!important}#gmwwOnlineFooter.is-idle-hidden{opacity:0;pointer-events:none}
+#gmwwOnlineFooter.gmww-chat-unread.is-idle-hidden{opacity:1;pointer-events:auto}
+#gmwwChatPanel.gmww-chat-unread{border-color:#ffe08b!important;box-shadow:0 0 0 2px #ffd46a90,0 0 14px #ffcb49b3;animation:gmww-chat-new-message 1s ease-in-out infinite}
+@keyframes gmww-chat-new-message{0%,100%{box-shadow:0 0 0 1px #ffe08b88}50%{box-shadow:0 0 0 3px #ffe08bcc,0 0 16px #ffe08b}}
+@media(prefers-reduced-motion:reduce){#gmwwChatPanel.gmww-chat-unread{animation:none}}
 #gmwwOnlineFooter .gmww-foot-button{height:38px;min-height:38px;padding:3px;border:1px solid #ffffff3d;border-radius:10px;background:#062e4340;color:white;font:800 11px system-ui;backdrop-filter:blur(8px)}
 #gmwwChatPanel{min-width:0;background:rgba(5,35,49,.25);border:1px solid #b5e6e843;border-radius:12px;color:#fff;overflow:hidden;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 15px #0002}
 #gmwwChatPanel header,#gmwwChatLines,#gmwwChatHelp{display:none}
@@ -143,7 +154,7 @@ function gmwwChatClear(){
 }
 function gmwwChatUnmount(){
   gmwwStopAnnouncement();gmwwAnnouncementPending=null;
-  gmwwChatClear();document.getElementById('gmwwOnlineFooter')?.remove();if(gmwwOnlineFooterTimer)clearInterval(gmwwOnlineFooterTimer);gmwwOnlineFooterTimer=null;gmwwChatOpen=false;gmwwChatTarget='room';gmwwPlayerCueKey='';state.audioCue=null;document.getElementById('gmwwPlayerMiniCards')?.remove();
+  gmwwChatClear();gmwwChatLatestByChannel.clear();gmwwChatUnread(false);document.getElementById('gmwwOnlineFooter')?.remove();if(gmwwOnlineFooterTimer)clearInterval(gmwwOnlineFooterTimer);gmwwOnlineFooterTimer=null;gmwwChatOpen=false;gmwwChatTarget='room';gmwwPlayerCueKey='';state.audioCue=null;document.getElementById('gmwwPlayerMiniCards')?.remove();
   document.getElementById('gmwwChatLaunch')?.remove();document.getElementById('gmwwChatPanel')?.remove();
   try{speechSynthesis.cancel()}catch{}
 }
@@ -159,6 +170,16 @@ async function gmwwChatRefresh(){
     document.getElementById('gmwwChatHeading').textContent=result.scope==='gm'?'🔒 Chat riêng GM':result.scope==='secret'?'🌙 Chat nhóm':'☀️ Chat Làng';
     const items=[...(Array.isArray(result.notices)?result.notices:[]),...(Array.isArray(result.messages)?result.messages:[])];
     const signature=JSON.stringify([gmwwChatTarget,items]);
+    // Never expose message contents through room_state or the WebSocket.
+    // The authenticated chat GET is the source of truth for a new-message cue.
+    const key=room+'|'+gmwwChatTarget+'|'+String(result.channel||'');
+    const last=Array.isArray(result.messages)?result.messages.at(-1):null;
+    const lastId=String(last?.id||'');const previous=gmwwChatLatestByChannel.get(key);
+    if(lastId){
+      if(previous&&previous!==lastId&&!gmwwChatOpen&&String(last?.senderId||'')!==String(state.member?.loginId||''))gmwwChatUnread(true);
+      gmwwChatLatestByChannel.set(key,lastId);
+    }
+    if(gmwwChatOpen)gmwwChatUnread(false);
     if(lines.dataset.sig!==signature){
      const atBottom=lines.scrollHeight-lines.clientHeight-lines.scrollTop<30;lines.dataset.sig=signature;lines.replaceChildren();
      for(const item of items){
@@ -222,7 +243,7 @@ function gmwwOnlineTarget(id){
 async function gmwwOnlineSubmit(){
  const pick=gmwwOnlinePick;if(!pick||state.onlineBusy)return;
  const action=(state.onlineActions||[]).find(a=>a.key===pick.action.key);
- if(!action||state.room?.phase!=='running'){gmwwOnlineStop();return}
+ if(!action||action.blocked||state.room?.phase!=='running'){gmwwOnlineStop();return}
  if(pick.targets.length!==Math.max(0,Number(action.targetCount)||0)){gmwwOnlinePickAction(action);return}
  const names=pick.targets.map(id=>gmwwOnlinePeople().find(p=>p.id===id)?.name||id);
   // Actor and targets are server-authoritative; do not ask for redundant confirmation.
@@ -248,6 +269,7 @@ function gmwwOnlineIconDown(event,action){
  if(event.button!==undefined&&event.button!==0)return;
  event.preventDefault();event.stopPropagation();
  const node=event.currentTarget,startX=event.clientX,startY=event.clientY;
+ if(action.blocked){toast(String(action.blockedReason||'Bạn đang bị hiệu ứng, không thể thực hiện hành động.'));return}
  clearTimeout(gmwwPlayerTopMenuTimer);gmwwChatClosePanel();
  let ghost=null;
  const move=e=>{
@@ -276,6 +298,7 @@ function renderOnlineActionDock(){
    const css=document.createElement('style');css.id='gmwwOnlineDockStyle';
    css.textContent='#gmwwOnlineDock{position:fixed;z-index:100010;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px;max-width:94vw;overflow:visible;touch-action:none;user-select:none;scrollbar-width:none}'+
      '#gmwwOnlineDock.is-idle-hidden{opacity:0;pointer-events:none}'+
+     '#gmwwOnlineDock button[data-blocked="true"]{position:relative;opacity:.7;filter:grayscale(.55)}#gmwwOnlineDock button[data-blocked="true"]:after{content:attr(data-effect-icon);position:absolute;right:-3px;top:-5px;font-size:18px;text-shadow:0 1px 5px #000}'+
      '#gmwwOnlineDock button{flex:0 0 auto;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none}'+
      '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
      '#game:not(.active)~#gmwwOnlineDock{display:none!important}'+
@@ -292,20 +315,28 @@ function renderOnlineActionDock(){
  gmwwOnlinePlaceAtFire(dock);
  if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();dock.classList.remove('is-idle-hidden');
  for(const action of offers){
-   const btn=document.createElement('button');btn.type='button';btn.title=String(action.name||'Hành động');
+   const btn=document.createElement('button');btn.type='button';btn.title=String(action.name||'Hành động')+(action.blocked?' • '+String(action.blockedReason||'Bị hiệu ứng chặn'):'');
+   if(action.blocked){btn.dataset.blocked='true';btn.dataset.effectIcon=action.blockedType==='frozen'?'❄️':action.blockedType==='expelled'?'🚪':'⛔';}
    btn.setAttribute('aria-label',btn.title);
    const img=document.createElement('img');img.src=String(action.iconUrl||'/action-icons/v3/49_sang_tao_artifact.webp');img.alt='';img.draggable=false;btn.appendChild(img);
    btn.onpointerdown=e=>gmwwOnlineIconDown(e,action);
-   btn.onclick=e=>{if(e.detail===0)gmwwOnlinePickAction(action)};
+   btn.onclick=e=>{if(action.blocked){toast(String(action.blockedReason||'Bạn không thể thực hiện hành động ở lượt này.'));return}if(e.detail===0)gmwwOnlinePickAction(action)};
    dock.appendChild(btn);
  }
 }
 
 function gmwwOnlinePlaceAtFire(dock){
+ if(!dock)return;
+ const frame=document.getElementById('gmwwVillageFrame');if(!frame)return;
+ const r=frame.getBoundingClientRect();if(!r.width||!r.height)return;
+ let x=r.left+r.width*.5,y=r.top+r.height*.55;
  try{
-  const frame=document.getElementById('gmwwVillageFrame'),fire=frame?.contentDocument?.querySelector('.fire');
-  if(!fire)return;
-  const r=frame.getBoundingClientRect(),f=fire.getBoundingClientRect(),sx=r.width/(frame.clientWidth||r.width),sy=r.height/(frame.clientHeight||r.height);
-  dock.style.left=(r.left+(f.left+f.width/2)*sx)+'px';dock.style.top=(r.top+(f.top+f.height/2)*sy)+'px';
+  const fire=frame.contentDocument?.querySelector('.fire');
+  if(fire){const f=fire.getBoundingClientRect(),inner=frame.contentWindow;
+    const sx=r.width/Math.max(1,Number(inner?.innerWidth)||frame.clientWidth||r.width),sy=r.height/Math.max(1,Number(inner?.innerHeight)||frame.clientHeight||r.height);
+    if(f.width&&f.height){x=r.left+(f.left+f.width/2)*sx;y=r.top+(f.top+f.height/2)*sy;}}
  }catch{}
+ // Position at the actual campfire, even before the iframe finishes rendering.
+ dock.style.left=Math.max(12,Math.min(window.innerWidth-12,x))+'px';
+ dock.style.top=Math.max(75,Math.min(window.innerHeight-90,y))+'px';
 }
