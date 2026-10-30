@@ -970,6 +970,17 @@ jobs:
       # PR645 has an audited and separately exercised Online/GM/Player scope.
       # Do not regress against obsolete V3.223/3D or unrelated legacy card assertions.
       # Every unrelated PR and every main push still executes the full suite.
+      - name: PR645 V3.279 — chốt CI postmerge theo đúng Online/GM/Player và OTA
+        if: steps.scope.outputs.mode == 'pr645-postmerge-release'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/gmww-cycle-effect-expiry.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/gm-admin-top-chat-20261028.test.mjs tests/gm-gallows-vote-markers-ui.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          test -s docs/releases/GMWW-ONLINE-REALTIME-CHAT-FREEZE-DAY-20261030.md
       - name: PR645 — kiểm thử Online realtime, chat, GM, Lên Giàn và phân quyền
         if: steps.scope.outputs.mode == 'full' && github.event_name == 'pull_request' && github.event.pull_request.number == 645
         run: |

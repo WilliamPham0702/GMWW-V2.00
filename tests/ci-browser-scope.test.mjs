@@ -811,3 +811,18 @@ test('PR648 diagnostics-only FPS selects focused tests and rejects any gameplay 
   assert.equal(classifyBrowserScope(changes.filter(c=>!c.path.startsWith('docs/releases/'))),'full');
   assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay change')]),'full');
 });
+
+test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused release gate',()=>{
+  const expected=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-player-card-browsers.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ].map(path=>modified(path,'previous CI','verified postmerge CI'));
+  assert.equal(classifyBrowserScope(expected),'pr645-postmerge-release');
+  assert.equal(classifyBrowserScope(expected.slice(1)),'full','missing CI guard must not bypass full regression');
+  assert.equal(classifyBrowserScope([...expected,modified('src/index.js','old','runtime changed')]),'full','gameplay edits must never be classified CI-only');
+  assert.equal(classifyBrowserScope(expected.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted CI files must fail closed');
+  assert.equal(classifyBrowserScope([...expected.slice(0,4),expected[0]]),'full','duplicate path cannot impersonate exact scope');
+});

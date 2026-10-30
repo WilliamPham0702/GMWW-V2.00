@@ -182,7 +182,7 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
   browser-test:
     needs: scope
-    if: needs.scope.outputs.mode == 'full'
+    if: needs.scope.outputs.mode == 'full' || needs.scope.outputs.mode == 'pr645-postmerge-release'
     # Pin a Playwright-WebKit supported OS, rather than ubuntu-latest (26.04).
     runs-on: ubuntu-24.04
     timeout-minutes: 25

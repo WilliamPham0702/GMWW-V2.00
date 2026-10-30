@@ -231,8 +231,11 @@ jobs:
              git merge-base --is-ancestor d9527d6625868c0a25395e8ebf982446b4e4712b HEAD; then
             ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
             EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
               '.github/workflows/check-player-card-browsers.yml' \
-              '.github/workflows/deploy-production.yml' | sort)
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
             if [ "$ACTUAL" = "$EXPECTED" ]; then
               grep -Fq 'function gmwwOnlinePlaceAtFire(dock){' src/player-web-src/35-online-chat.part || {
                 echo "::error::PR645 modern Online renderer missing; refusing V3.279 release"; exit 1;
