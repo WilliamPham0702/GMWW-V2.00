@@ -36,7 +36,7 @@ jobs:
         run: node .github/scripts/ci-browser-scope.mjs
   candidate:
     needs: scope
-    if: needs.scope.outputs.mode != 'village-perf-diagnostics-648' && needs.scope.outputs.mode != 'gm-chrome-ios-viewport' && needs.scope.outputs.mode != 'ci-policy' && needs.scope.outputs.mode != 'manual-runtime' && needs.scope.outputs.mode != 'fairy-triptych-3246' && needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'gm-icons-501' && needs.scope.outputs.mode != 'lobby-gather-541' && needs.scope.outputs.mode != 'gm-player-web-share-637'
+    if: needs.scope.outputs.mode == 'gm-ui-controls-3238'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

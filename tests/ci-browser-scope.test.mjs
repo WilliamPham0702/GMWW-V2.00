@@ -802,6 +802,11 @@ test('PR648 diagnostics-only FPS selects focused tests and rejects any gameplay 
     {path:'docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md',status:'A',before:null,after:'# Thermal reporter'}
   ];
   assert.equal(classifyBrowserScope(changes),'village-perf-diagnostics-648');
+  // The retired V3.238 candidate may also be safely limited to its exact old scope.
+  const unsafe=changes.map(c=>c.path==='.github/workflows/prepare-runtime-v3202-candidate.yml'
+    ?{...c,after:c.after.replace("needs.scope.outputs.mode == 'gm-ui-controls-3238'","needs.scope.outputs.mode != 'ci-policy'")}
+    :c);
+  assert.equal(classifyBrowserScope(unsafe),'full');
   assert.equal(classifyBrowserScope(changes.map(c=>c.path==='assets/village/village-performance.mjs'?{...c,after:c.after+'\n// extra change'}:c)),'full');
   assert.equal(classifyBrowserScope(changes.filter(c=>!c.path.startsWith('docs/releases/'))),'full');
   assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay change')]),'full');

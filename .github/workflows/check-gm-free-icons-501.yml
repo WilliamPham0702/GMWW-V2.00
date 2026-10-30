@@ -34,7 +34,8 @@ permissions:
 jobs:
   focused-icons:
     name: "5 icon, GM bundle và an toàn Runtime"
-    runs-on: ubuntu-latest
+    # Playwright 1.58.2 WebKit does not install on Ubuntu 26.04.
+    runs-on: ubuntu-24.04
     steps:
       - name: Lấy mã nguồn PR
         uses: actions/checkout@v4

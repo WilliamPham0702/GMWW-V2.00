@@ -2904,7 +2904,8 @@ function isPr648ThermalScope(changes){
   return test.includes('PR648 normal village has no idle FPS animation')&&
     scopeTest.includes('PR648 diagnostics-only FPS')&&
     browser.includes("steps.scope.outputs.mode == 'village-perf-diagnostics-648'")&&
-    legacy.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'")&&
+    (legacy.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'")||
+     legacy.includes("needs.scope.outputs.mode == 'gm-ui-controls-3238'"))&&
     ipa.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'");
 }
 

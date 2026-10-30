@@ -417,7 +417,7 @@ if(game){
     button.addEventListener("click",e=>{e.stopPropagation();
       const current=button._gmwwLive||{data,actualSeat,playerName,isGM},player=current.data;
       if(current.isGM){if(embedded)window.parent.postMessage({type:"gmww:gm-character-click"},window.location.origin);return}
-      if(embedded){if(String(player.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage({type:"gmww:player-click",participantId:player.id,seatId:current.actualSeat},window.location.origin);return}
+      if(embedded){if(String(player.id)===String(setupState.viewerParticipantId||"")){const now=Date.now();if(now-Number(button._gmwwOwnTapAt||0)<380){button._gmwwOwnTapAt=0;window.parent.postMessage({type:"gmww:own-character-doubletap"},window.location.origin)}else button._gmwwOwnTapAt=now}else window.parent.postMessage({type:"gmww:player-click",participantId:player.id,seatId:current.actualSeat},window.location.origin);return}
       // Standalone scene is read-only; the active shell handles player actions.
     });
     return button
