@@ -30,3 +30,10 @@ Yêu cầu nghiệm thu thiết bị thực: Safari, Chrome và Edge trên iPhon
 - Không thay đổi IPA, dữ liệu lịch sử, database schema, Durable Object namespace, cấu hình Production.
 - Không tự động merge hoặc deploy. Chỉ phát hành khi required CI đạt SUCCESS, kiểm tra thiết bị xong và có phê duyệt theo AGENTS.md.
 - Nếu phát sinh hồi quy sau khi được phê duyệt phát hành: rollback bằng revert commit/PR trong GitHub, deploy Worker/Player Web/GM Runtime từ artifact trước đó; giữ nguyên dữ liệu.
+
+## Chuẩn bị Runtime OTA V3.279 (chưa phát hành)
+
+- Phiên bản V3.279 mới để không ghi đè release V3.278 đã công bố bất biến và có SHA-256 riêng.
+- Test Chrome, Edge và WebKit xác minh cặp lá thu nhỏ duy nhất, mở/đóng lá, riêng tư theo tài khoản và receipt đúng quyền.
+- Chỉ merge và phát hành sau khi CI cùng HEAD SUCCESS, nghiệm thu an toàn. GitHub Actions tự tạo gói .gmwwupdate và SHA-256 sau khi main đạt release gate.
+- Giữ nguyên IPA, Oracle, Durable Objects và dữ liệu; có thể rollback về Runtime V3.278.
