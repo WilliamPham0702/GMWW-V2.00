@@ -732,3 +732,31 @@ test('GitHub-only Runtime CI repair scopes only audited policy and package check
   assert.equal(classifyBrowserScope(changes.slice(1)),'full');
   assert.equal(classifyBrowserScope(changes.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
 });
+
+
+test('PR642 Chrome iOS GM viewport is strict and excludes old gameplay, IPA and OTA candidate CI',async()=>{
+  const {isGMChromeIosViewportScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+  const before='<meta name="viewport">\n<title>GMWW V3.277</title>';
+  const patch='\n\n<!-- GM Server viewport: Chrome -->\n<style>--gmww-gm-visible-height</style>\n<script id="gmwwChromeViewportScript">if(!/CriOS\\//.test(navigator.userAgent))return;</script>\n\n';
+  const after=before.replace('\n<title>',''+patch+'<title>');
+  const changes=[
+    modified('server-game/current/GMWW.html',before,after),
+    {path:'tests/gm-chrome-ios-viewport-20261030.test.mjs',status:'A',before:null,after:'test'},
+    {path:'.github/workflows/check-gm-chrome-ios-viewport.yml',status:'A',before:null,after:'on: pull_request'},
+    {path:'docs/releases/GMWW-GM-CHROME-IOS-VIEWPORT-20261030.md',status:'A',before:null,after:'release notes'}
+  ];
+  assert.equal(isGMChromeIosViewportScope(changes),true);
+  assert.equal(classifyBrowserScope(changes),'gm-chrome-ios-viewport');
+  assert.equal(isGMChromeIosViewportScope([...changes,modified('server-game/current/app.js','game','game changed')]),false);
+  assert.equal(isGMChromeIosViewportScope(changes.map(c=>c.path==='server-game/current/GMWW.html'?{...c,after:c.after+'<script>gameplay change</script>'}:c)),false);
+  const versions=[
+    modified('package.json','3.277.0','3.278.0'),
+    modified('package-lock.json','3.277.0','3.278.0'),
+    modified('src/index.js','VERSION="V3.277"','VERSION="V3.278"'),
+    modified('server-game/current/app.js',"const VERSION='3.277'","const VERSION='3.278'"),
+    modified('server-game/src/00-core-and-library.part',"const VERSION='3.277'","const VERSION='3.278'")
+  ];
+  const bumped=changes.map(c=>c.path==='server-game/current/GMWW.html'?{...c,after:c.after.replace('GMWW V3.277','GMWW V3.278')}:c).concat(versions);
+  assert.equal(isGMChromeIosViewportScope(bumped),true);
+  assert.equal(isGMChromeIosViewportScope(bumped.map(c=>c.path==='src/index.js'?{...c,after:c.after+' // more edits'}:c)),false);
+});
