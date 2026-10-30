@@ -2833,6 +2833,7 @@ const rule626PathStatus=new Map([
   ['src/gmww-members-live.js','M'],
   ['src/index.js','M'],
   ['src/player-web-src/30-rooms-and-realtime.part','M'],
+  ['src/player-web-src/00-bootstrap-and-session.part','M']
   ['tests/card-executors-day-inspection-planners-20261029.test.mjs','A'],
   ['tests/pr626-private-inspection-ui-demo-20261029.test.mjs','A'],
   ['tests/worker-day-artifact-inspection-pr626-e2e.mjs','A'],
@@ -2845,6 +2846,7 @@ const rule626RequiredSource=new Map([
  ['src/gmww-day-artifact-inspection.js',['artifact_09','artifact_24','artifact_29','artifact_39','private:true']],
  ['src/gmww-demo-runner.js',['spentArtifacts','artifactUse:']],
  ['src/player-web-src/30-rooms-and-realtime.part',['gmwwShowDayInspection','dayArtifactInspections']],
+ ['src/player-web-src/00-bootstrap-and-session.part',['const GMWW_SERVER_MENU=']]
  ['server-game/src/40-battle-and-timeline.part',['battlePresentRevelation(a.actionId,response.result)','audio_system_destroyer_role']],
  ['tests/worker-day-artifact-inspection-pr626-e2e.mjs',['battle-undo','dayArtifactInspections','/action']],
  ['tests/pr626-private-inspection-ui-demo-20261029.test.mjs',['Player Web presents private inspection once','GM audio speaks correct','DEMO does not execute']]
