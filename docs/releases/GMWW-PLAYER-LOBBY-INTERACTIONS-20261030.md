@@ -1,6 +1,7 @@
 # Player Web — Chat phòng chờ, menu và tương tác (chưa phát hành)
 
 - Cho phép thành viên đã được gọi vào phòng chat trước khi xếp Seat và trong lúc Phát Vai. Người ngoài phòng không có quyền; các nhóm chat ban đêm vẫn tách riêng.
+- Sửa xung đột CSS viewport PR631: khung Chat gắn đúng menu dưới khi Chrome/Edge/Safari iPhone mở bàn phím, không bị kéo lệch bởi kiểu hộp thoại cũ.
 - Menu dưới gồm đồng hồ, chat mờ và khôi phục thao tác chưa gửi. Nhấn để mở chat, tự ẩn sau 30 giây không thao tác; dữ liệu đồng bộ nền không kéo dài thời gian này.
 - Tin nhắn dạng Tên: nội dung, mỗi người một màu; GM đỏ đậm. Thông cáo chỉ lấy trạng thái tiêu cực đang có hiệu lực và được GM cho công khai.
 - Menu trên dùng HTML/CSS gốc của Server, cạnh avatar; lượt công khai được đồng bộ, không trao quyền điều khiển GM cho Player.
