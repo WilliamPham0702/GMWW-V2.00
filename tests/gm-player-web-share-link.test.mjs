@@ -12,29 +12,53 @@ assert.equal(html.indexOf(start,i+1),-1,'must have one link share initializer');
 const script=html.slice(i+start.length,j);
 const compiled=new Script(script,{filename:'gmww-link-share-inline.js'});
 
-function run(config=null,remembered='legacy'){
+function run(config=null,remembered='legacy',options={}){
   const ids=['gmwwShareLegacy','gmwwShareAlias','gmwwShareAliasLabel','gmwwShareChosenUrl','gmwwShareStatus','gmwwShareCopy','gmwwShareSend'];
   const dom=new Map(ids.map(id=>[id,{
     id,checked:false,disabled:false,textContent:'',listeners:{},
     addEventListener(event,fn){this.listeners[event]=fn;},
   }]));
   const store=new Map([['GMWW_PLAYER_SHARE_LINK_CHOICE_V1',remembered]]);
+  const clipboard=[],fallbackCopies=[],shares=[];
+  let fallbackNode=null;
   const document={
     getElementById(id){return dom.get(id)||null;},
-    createElement(){throw Error('clipboard fallback not expected in test');},
+    body:{appendChild(node){node.appended=true;}},
+    createElement(tag){
+      assert.equal(tag,'textarea');
+      fallbackNode={
+        value:'',style:{},removed:false,focused:false,selected:false,range:[],
+        setAttribute(){},focus(){this.focused=true;},select(){this.selected=true;},
+        setSelectionRange(a,b){this.range=[a,b];},remove(){this.removed=true;},
+      };
+      return fallbackNode;
+    },
+    execCommand(command){
+      assert.equal(command,'copy');
+      if(options.execUnavailable)return false;
+      fallbackCopies.push(fallbackNode.value);
+      return true;
+    },
   };
-  const clipboard=[];
-  const shares=[];
-  const navigator={
-    clipboard:{writeText:async value=>{clipboard.push(value)}},
-    share:async data=>{shares.push(data)},
-  };
+  const navigator={};
+  if(!options.noClipboard){
+    navigator.clipboard={writeText:async value=>{
+      if(options.clipboardDenied)throw new Error('NotAllowedError');
+      clipboard.push(value);
+    }};
+  }
+  if(!options.noShare){
+    navigator.share=async data=>{
+      if(options.shareAborted)throw Object.assign(new Error('cancelled'),{name:'AbortError'});
+      shares.push(data);
+    };
+  }
   const window={
     GMWW_PLAYER_WEB_ALIAS_CONFIG:config,
     localStorage:{getItem(key){return store.get(key)||null},setItem(key,value){store.set(key,value)}},
   };
   compiled.runInNewContext({document,navigator,window,URL});
-  return {dom,store,clipboard,shares};
+  return {dom,store,clipboard,shares,fallbackCopies,getFallbackNode:()=>fallbackNode};
 }
 
 test('GM settings renders old and new link choices but never invents a free domain',()=>{
