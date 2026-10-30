@@ -40,7 +40,7 @@ function updatePlayerTopMenu(){
       }
     }
   }
-  menu.hidden=!state.member;renderPlayerTimeline();
+  menu.hidden=!state.member;if(typeof renderPlayerTimeline==='function')renderPlayerTimeline();
 }
 
 /* One private dock only: role and artifact are compact shortcuts to the same full-size cards.
