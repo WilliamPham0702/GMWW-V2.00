@@ -1084,18 +1084,28 @@
   async function copyUrl(){
     const value=currentUrl();
     if(navigator.clipboard&&navigator.clipboard.writeText){
-      await navigator.clipboard.writeText(value);
-    }else{
-      const input=document.createElement('textarea');
-      input.value=value;
-      input.setAttribute('readonly','');
-      input.style.position='fixed';
-      input.style.opacity='0';
-      document.body.appendChild(input);
+      try{
+        await navigator.clipboard.writeText(value);
+        if(status)status.textContent='Đã sao chép link Player Web.';
+        return;
+      }catch(_){
+        // Safari/iOS may deny Clipboard API even after a user tap.
+        // Fall through to the gesture-scoped text selection fallback.
+      }
+    }
+    const input=document.createElement('textarea');
+    input.value=value;
+    input.setAttribute('readonly','');
+    input.style.position='fixed';
+    input.style.opacity='0';
+    document.body.appendChild(input);
+    try{
+      input.focus();
       input.select();
-      const copied=document.execCommand('copy');
+      if(typeof input.setSelectionRange==='function')input.setSelectionRange(0,value.length);
+      if(!document.execCommand('copy'))throw new Error('copy_unavailable');
+    }finally{
       input.remove();
-      if(!copied)throw new Error('copy_unavailable');
     }
     if(status)status.textContent='Đã sao chép link Player Web.';
   }
