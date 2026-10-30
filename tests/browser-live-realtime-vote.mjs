@@ -96,9 +96,10 @@ try{
   artifact:{artifactId:'artifact-p0-'+i,artifactCard:{name:'Bảo Vật '+s.name,information:'Realtime private artifact'}}
  }));
  // GM sends cards while BOTH browsers are already in the lobby.
+ // Online UI uses the single miniature card dock, not the removed legacy private dock.
  await gm('/assignments',{matchId:match,matchRevision:1,deliveryVersion:1,assignments,multiAssign:false});
  for(const {page,s} of opened){
-  const role=page.locator('#gmwwPlayerPrivateDock [data-private-card="role"]');
+  const role=page.locator('#gmwwPlayerMiniCards [data-mini="role"]');
   try{await role.waitFor({state:'visible',timeout:20000})}
   catch(error){
     const receipt=await api('/api/rooms/'+code+'/me',{token:s.token}).catch(e=>({error:String(e)}));
@@ -122,7 +123,7 @@ try{
   assert.match(await face.locator('.gmww-card-title').innerText(),new RegExp(s.name,'i'));
   await face.click({position:{x:35,y:35}});
   await face.waitFor({state:'hidden',timeout:10000});
-  const artifact=page.locator('#gmwwPlayerPrivateDock [data-private-card="artifact"]');
+  const artifact=page.locator('#gmwwPlayerMiniCards [data-mini="artifact"]');
   await artifact.waitFor({state:'visible',timeout:10000});
   await artifact.click({timeout:10000});
   await face.waitFor({state:'visible',timeout:10000});
@@ -160,7 +161,7 @@ try{
  // Browser refresh must recover room, role and all members without changing the match.
  for(const {page,s} of opened){
   await page.reload({waitUntil:'domcontentloaded'});
-  await page.locator('#gmwwPlayerPrivateDock [data-private-card="role"]').waitFor({state:'visible',timeout:22000});
+  await page.locator('#gmwwPlayerMiniCards [data-mini="role"]').waitFor({state:'visible',timeout:22000});
   await expectTeam(page,s.name+' reload',22000);
   assert.equal((await roster(page)).length,2,s.name+' roster survives refresh');
  }
