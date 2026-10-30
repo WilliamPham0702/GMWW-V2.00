@@ -204,6 +204,14 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node --check src/index.js
           node --check server-game/current/app.js
+      - name: GĐ3 — GM Player share only, verify UI and strict scope
+        if: steps.scope.outputs.mode == 'gm-player-link-share' || steps.scope.outputs.mode == 'gm-player-link-share-ci'
+        run: |
+          node --test tests/gm-player-share-scope.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          if [ "${{ steps.scope.outputs.mode }}" = "gm-player-link-share" ]; then
+            node --test tests/gm-player-web-share-link.test.mjs
+          fi
       - name: Kiểm tra mã nguồn Worker
         if: steps.scope.outputs.mode != 'player-top-avatar-603'
         run: npm run check
