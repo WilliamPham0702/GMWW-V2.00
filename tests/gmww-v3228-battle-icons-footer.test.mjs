@@ -20,9 +20,10 @@ test('GM battle source modules are the ones assembled into the Runtime',()=>{
  assert.ok(app.includes(piece(part40,'function battleIconPositionKey(actionId,iconId)','function battleIconClearDrag(){')));
  assert.ok(app.includes(piece(part40,'function battleIconBind(){','// Repaint the current GM turn')));
 });
-test('Double-sized icons remain separated at village entrance',()=>{
- const code=piece(app,'function battleIconSpawnPoint(','function battleIconEntryPoint(){');
- const c={globalThis:{visualViewport:{width:390,height:844}},innerWidth:390,innerHeight:844,Math};
+test('Double-sized icons remain separated when spawned around the campfire',()=>{
+ const code=piece(app,'function battleIconScaleRatio(){','function battleIconEntryPoint(){');
+ const c={globalThis:{visualViewport:{width:390,height:844}},innerWidth:390,innerHeight:844,Math,
+  document:{documentElement:{style:{getPropertyValue:()=> '1'}}}};
  vm.createContext(c);vm.runInContext(code,c);
  for(const count of [2,3,4,6]){
   const positions=Array.from({length:count},(_,i)=>c.battleIconSpawnPoint({x:195,y:650},i,count));
@@ -50,14 +51,16 @@ test('Frameless icon art is 80px inside a 92px draggable hit area',()=>{
  assert.match(end,/#battleFireIconDock \.battle-fire-icon\{[\s\S]*?width:92px!important/);
  assert.match(css,/#battleFireIconDock \.battle-fire-icon\{[\s\S]*?background:transparent!important/);
 });
-test('Bottom menu has clock, beach/rainbow, action box, gallows and undo in fixed order',()=>{
+test('Bottom menu keeps clock, notice, action, gallows and undo in order while rainbow stays floating',()=>{
  const functionBody=piece(part30,'function gmwwSetupFreeBattleIcons(){','function battleMorningRows(){');
  const required=['playBattleClockFloat','battleSeaShortcuts','battleMainActionSlot','battleDayGallowsFloat','battleUndoFloat'];
  for(const id of required)assert.ok(functionBody.includes(id),id);
- assert.match(functionBody,/for\(const element of \[document\.getElementById\('playBattleClockFloat'\),sea,actionSlot,/);
- assert.match(functionBody,/const id of \['battleDayNoticeFloat','battleFactionStatsFloat'\]/);
- assert.match(functionBody,/for\(const id of \['battleDemoObserver'\]\)/);
- assert.match(css,/#battleBottomControls #battleSeaShortcuts/);
+ assert.ok(functionBody.includes("for(const item of [document.getElementById('playBattleClockFloat'),"));
+ assert.ok(functionBody.includes("document.getElementById('battleDayNoticeFloat'),actionSlot,"));
+ assert.ok(functionBody.includes("document.getElementById('battleDayGallowsFloat')])"));
+ assert.ok(functionBody.includes("if(undo){rail.appendChild(undo);undo.hidden=true;}"));
+ assert.ok(functionBody.includes("for(const id of ['battleDemoObserver','battleFactionStatsFloat'])"));
+ assert.ok(functionBody.includes("document.getElementById('battleSeaShortcuts')?.remove()"));
  assert.match(css,/#battleBottomControls #battleMainActionSlot/);
  for(const id of ['battleClockButton','battleDayNoticeToggle','battleFactionStatsToggle','battleDayGallowsToggle','battleUndoButton'])
   assert.match(html,new RegExp('id="'+id+'"'));
