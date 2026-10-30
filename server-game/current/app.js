@@ -8840,6 +8840,7 @@ function gmwwGMChatMount(){
 .gmwwGmChannel{border:1px solid #365c6c;border-radius:10px;padding:9px;display:grid;gap:5px}
 .gmwwGmChannel.secret{border-color:#795ca9;background:#251c3c}.gmwwGmChannel h4{font-size:12px;font-weight:800;color:#f0dbff;margin:0}
 .gmwwGmChannel p{font-size:12px;margin:0;overflow-wrap:anywhere}
+#gmwwGMChatVillage{display:flex;gap:7px;padding:9px;background:#0b3548}#gmwwGMChatVillage[hidden]{display:none!important}#gmwwGMChatVillage input{flex:1;min-width:0;border:1px solid #527a87;border-radius:8px;background:#082f41;color:white;padding:8px}#gmwwGMChatVillage button{background:#116f8c;color:white;border:1px solid #6aafb9;border-radius:8px;font-weight:800;padding:6px 11px}
 .gmwwGmReply{display:flex;gap:6px;margin-top:6px}.gmwwGmReply input{flex:1;min-width:0;border:1px solid #527a87;border-radius:8px;background:#082f41;color:white;padding:8px}.gmwwGmReply button{background:#116f8c;border:1px solid #6aafb9;border-radius:8px;color:white;padding:6px 10px;font-weight:800}
 `;document.head.appendChild(st)
   }
@@ -8847,11 +8848,18 @@ function gmwwGMChatMount(){
   if(!trigger){
     trigger=document.createElement('button');trigger.id='gmwwGMChatLaunch';trigger.type='button';trigger.textContent='🦩';trigger.title='GM • Mở Chat';trigger.setAttribute('aria-label','GM • Mở Chat');trigger.onclick=()=>{if(trigger.dataset.dragged==='1'){trigger.dataset.dragged='';return}gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);if(gmwwGMChatOpen)void gmwwGMChatRefresh()};gmwwGMChatMakeMovable(trigger);document.body.appendChild(trigger);
     const panel=document.createElement('section');panel.id='gmwwGMChatPanel';panel.setAttribute('aria-label','GM quản lý Chat');
-    panel.innerHTML='<header><strong>GM • Quản lý Chat</strong><button id="gmwwGMChatReload" type="button">↻</button><button id="gmwwGMChatClose" type="button">Đóng</button></header><div id="gmwwGMChatContent"></div>';document.body.appendChild(panel);
+    panel.innerHTML='<header><strong>GM • Quản lý Chat</strong><button id="gmwwGMChatReload" type="button">↻</button><button id="gmwwGMChatClose" type="button">Đóng</button></header><form id="gmwwGMChatVillage" hidden><input type="text" maxlength="280" required placeholder="GM nhắn Chat Làng…" aria-label="GM nhắn Chat Làng"><button type="submit">GỬI LÀNG</button></form><div id="gmwwGMChatContent"></div>';document.body.appendChild(panel);
+    document.getElementById('gmwwGMChatVillage').addEventListener('submit',async event=>{event.preventDefault();
+      if(playSceneState.phase!=='day')return;const input=event.currentTarget.querySelector('input'),button=event.currentTarget.querySelector('button'),text=input.value.trim();if(!text)return;button.disabled=true;
+      try{await playRoomApi('/chat',{method:'POST',body:JSON.stringify({channel:'room',text})});input.value='';await gmwwGMChatRefresh()}
+      catch(e){input.setCustomValidity('Không gửi được: '+String(e.message||''));input.reportValidity();input.setCustomValidity('')}
+      finally{button.disabled=false}
+    });
     document.getElementById('gmwwGMChatClose').onclick=()=>{gmwwGMChatOpen=false;panel.classList.remove('open');document.getElementById('battleGMChatToggle')?.setAttribute('aria-pressed','false')};
     document.getElementById('gmwwGMChatReload').onclick=()=>void gmwwGMChatRefresh();
   }
-  trigger.hidden=true;const dayToggle=document.getElementById('battleGMChatToggle');
+  trigger.hidden=true;const villageForm=document.getElementById('gmwwGMChatVillage');if(villageForm)villageForm.hidden=!(active&&playSceneState.phase==='day');
+  const dayToggle=document.getElementById('battleGMChatToggle');
   if(dayToggle&&!dayToggle.dataset.gmwwChatBound){dayToggle.dataset.gmwwChatBound='1';dayToggle.onclick=()=>{
     gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);
     dayToggle.setAttribute('aria-pressed',String(gmwwGMChatOpen));if(gmwwGMChatOpen)void gmwwGMChatRefresh();
