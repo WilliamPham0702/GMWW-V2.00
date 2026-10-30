@@ -137,3 +137,42 @@ test('canceling the iPhone share sheet does not report a failure or modify choic
   assert.equal(h.dom.get('gmwwShareStatus').textContent,'Đang dùng link Cloudflare hiện tại.');
   assert.equal(h.store.get('GMWW_PLAYER_SHARE_LINK_CHOICE_V1'),'legacy');
 });
+
+test('WebKit mobile viewport: actual UI layout, selection, copy and share', {skip:process.env.GMWW_RUN_MOBILE_WEBKIT!=='1'}, async()=>{
+  const {webkit}=await import('playwright');
+  const uiStart='<!-- BEGIN GMWW_PLAYER_SHARE_UI -->';
+  const uiEnd='<!-- END GMWW_PLAYER_SHARE_UI -->';
+  const styleStart='<!-- BEGIN GMWW_PLAYER_SHARE_STYLE -->';
+  const styleEnd='<!-- END GMWW_PLAYER_SHARE_STYLE -->';
+  const ui=html.slice(html.indexOf(uiStart)+uiStart.length,html.indexOf(uiEnd));
+  const css=html.slice(html.indexOf(styleStart)+styleStart.length,html.indexOf(styleEnd));
+  assert.ok(ui.includes('gmwwShareLegacy') && css.includes('#gmwwPlayerWebShareSettings'));
+  const head='<meta name="viewport" content="width=device-width,initial-scale=1">'+css;
+  const harness='<script>window.__copied=[];window.__shared=[];'+
+    'Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async value=>window.__copied.push(value)}});'+
+    'Object.defineProperty(navigator,"share",{configurable:true,value:async data=>window.__shared.push(data)});</script>';
+  const browser=await webkit.launch({headless:true});
+  try{
+    for(const width of [375,390,430]){
+      const ctx=await browser.newContext({viewport:{width,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:3});
+      const page=await ctx.newPage();
+      await page.setContent('<!doctype html><html lang="vi"><head>'+head+'</head><body>'+
+        ui+harness+'<script>'+script+'</script></body></html>');
+      assert.equal(await page.locator('#gmwwShareLegacy').isChecked(),true);
+      assert.equal(await page.locator('#gmwwShareAlias').isDisabled(),true);
+      assert.equal(await page.locator('#gmwwShareChosenUrl').innerText(),
+        'https://gmww-v2-00.williampham0702.workers.dev/');
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),
+        true,'GM share card overflows '+width+'px');
+      await page.locator('#gmwwShareCopy').click();
+      assert.deepEqual(await page.evaluate(()=>window.__copied),
+        ['https://gmww-v2-00.williampham0702.workers.dev/']);
+      await page.locator('#gmwwShareSend').click();
+      assert.equal((await page.evaluate(()=>window.__shared))[0].url,
+        'https://gmww-v2-00.williampham0702.workers.dev/');
+      await ctx.close();
+    }
+  }finally{
+    await browser.close();
+  }
+});
