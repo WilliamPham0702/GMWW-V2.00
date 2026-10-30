@@ -2866,7 +2866,47 @@ export function isGMChromeIosViewportScope(changes){
   return true;
 }
 
+// PR648_EXACT_FPS_SCOPE: diagnostic FPS sampling only, not game animation or realtime.
+// Require the exact approved reporter delta. A wider change fails closed to full CI.
+const pr648AllowedPaths=new Set([
+  'assets/village/village-performance.mjs',
+  'tests/player-web-background-performance.test.mjs',
+  'tests/ci-browser-scope.test.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  'docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md'
+]);
+function isPr648ThermalScope(changes){
+  if(!Array.isArray(changes)||changes.length!==pr648AllowedPaths.size||
+    changes.some(c=>!c||!pr648AllowedPaths.has(c.path)||
+      !(c.path.startsWith('docs/')?c.status==='A':c.status==='M')))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  if(by.size!==pr648AllowedPaths.size)return false;
+  const perf=by.get('assets/village/village-performance.mjs');
+  if(typeof perf?.before!=='string'||typeof perf?.after!=='string')return false;
+  const oldDecl='  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=60,longTasks=0,worstLongTask=0;';
+  const newDecl='  // Frame-by-frame FPS sampling is diagnostic only; do not keep an idle village at 60Hz.\n  const sampleFps=new URLSearchParams(window.location.search).get("gmwwPerf")==="1";\n  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=null,longTasks=0,worstLongTask=0;';
+  const oldResume='  const resumeFrames=()=>{if(stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};';
+  const newResume='  const resumeFrames=()=>{if(!sampleFps||stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};';
+  const previous=perf.after
+    .replace(newDecl,oldDecl)
+    .replace(newResume,oldResume)
+    .replace('  if(sampleFps)resumeFrames();\n  let observer=null;','  resumeFrames();\n  let observer=null;');
+  if(previous!==perf.before||perf.before===perf.after||
+    !perf.after.includes(newDecl)||!perf.after.includes(newResume))return false;
+  const test=String(by.get('tests/player-web-background-performance.test.mjs')?.after||'');
+  const scopeTest=String(by.get('tests/ci-browser-scope.test.mjs')?.after||'');
+  const browser=String(by.get('.github/workflows/check-player-web.yml')?.after||'');
+  const legacy=String(by.get('.github/workflows/prepare-runtime-v3202-candidate.yml')?.after||'');
+  return test.includes('PR648 normal village has no idle FPS animation')&&
+    scopeTest.includes('PR648 diagnostics-only FPS')&&
+    browser.includes("steps.scope.outputs.mode == 'village-perf-diagnostics-648'")&&
+    legacy.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'");
+}
+
 function classifyBrowserScope(changes){
+  if(isPr648ThermalScope(changes))return 'village-perf-diagnostics-648';
   if(isGMChromeIosViewportScope(changes))return 'gm-chrome-ios-viewport';
   const interactions=playerInteractionsScope(changes);if(interactions)return interactions;
   if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
