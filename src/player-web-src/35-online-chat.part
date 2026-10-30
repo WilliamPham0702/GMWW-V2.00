@@ -176,9 +176,9 @@ async function gmwwChatRefresh(){
     const last=Array.isArray(result.messages)?result.messages.at(-1):null;
     const lastId=String(last?.id||'');const previous=gmwwChatLatestByChannel.get(key);
     if(lastId){
-      if(previous&&previous!==lastId&&!gmwwChatOpen&&String(last?.senderId||'')!==String(state.member?.loginId||''))gmwwChatUnread(true);
-      gmwwChatLatestByChannel.set(key,lastId);
+      if(previous!==undefined&&previous!==lastId&&!gmwwChatOpen&&String(last?.senderId||'')!==String(state.member?.loginId||''))gmwwChatUnread(true);
     }
+    gmwwChatLatestByChannel.set(key,lastId);
     if(gmwwChatOpen)gmwwChatUnread(false);
     if(lines.dataset.sig!==signature){
      const atBottom=lines.scrollHeight-lines.clientHeight-lines.scrollTop<30;lines.dataset.sig=signature;lines.replaceChildren();
