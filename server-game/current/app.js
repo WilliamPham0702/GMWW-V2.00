@@ -6458,7 +6458,7 @@ function battleDivinationSystemAudioCue(actionId,result){
   const prefixes={action_seer:'seer',action_fox_scan:'fox',action_bear_scan:'bear',
     action_scan_three:'piper',action_wolf_seer:'seer',action_rotten_seer:'seer'};
   const prefix=prefixes[action];if(!prefix)return '';
-  const yes=!!result?.wolf;
+  const yes=result?.confirmed===true||!!result?.wolf;
   return prefix==='seer'?(yes?'audio_system_seer_wolf':'audio_system_seer_not_wolf'):
     'audio_system_'+prefix+(yes?'_wolf':'_no_wolf');
 }
@@ -6466,7 +6466,17 @@ function battlePresentRevelation(actionId,revelation){
   if(!revelation?.message)return;
   battleShowResultPopup('',String(revelation.message||''),true);
   const cue=battleDivinationSystemAudioCue(actionId,revelation);
-  if(actionId==='action_compare_faction'){
+  if(['artifact_action_check_villager','artifact_action_check_third_faction'].includes(actionId)){
+    // These cards answer YES/NO, not "is Wolf"; use exact spoken outcome.
+    void battleSpeakCue(revelation.confirmed===true?'ĐÚNG':'KHÔNG ĐÚNG');
+  }else if(actionId==='action_destroyer_scry'&&revelation.private===true&&
+    revelation.roleId){
+    // The card reveals the target's REAL role to GM only.
+    const name=String(revelation.roleName||revelation.message||'');
+    const playName=()=>{if(name)void battlePlayConfiguredAudio('cards',revelation.roleId,name,false,null,5)};
+    void battlePlayConfiguredAudio('system','audio_system_destroyer_role',
+      'Người bạn soi là',false,playName);
+  }else if(actionId==='action_compare_faction'){
     // Spiritualist knows only SAME/DIFFERENT; never play or speak roles.
     if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
   }else if(actionId==='action_aura_read'){
@@ -7532,8 +7542,15 @@ async function battleConfirmDay(confirmed=false){
     renderPlayBattle();
     // Day actions do not advance the completed night turn.
     const message=String(response.result?.message||'').trim();
-    if(message)battleShowResultPopup('',message,true);
-    void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');gmHapticFeedback();
+    if(['artifact_09','artifact_24','artifact_29','artifact_39'].includes(a.artifactId)&&
+      response.result?.private===true){
+      // GM alone receives the full result. Never put it into a public notice.
+      battlePresentRevelation(a.actionId,response.result);
+    }else{
+      if(message)battleShowResultPopup('',message,true);
+      void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');
+    }
+    gmHapticFeedback();
   }catch(err){
     playFlashError('Hành động ban ngày: '+String(err?.message||err));
     battleState.syncPending=false;
