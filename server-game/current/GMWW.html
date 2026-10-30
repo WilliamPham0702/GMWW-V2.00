@@ -91,17 +91,24 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
 
 <!-- BEGIN GMWW_PLAYER_SHARE_STYLE -->
 <style>
-#gmwwPlayerWebShareSettings{display:grid;gap:10px;margin:12px 0;padding:14px;border:1px solid rgba(118,204,235,.36);border-radius:14px;background:rgba(4,49,74,.3)}
-#gmwwPlayerWebShareSettings .gmww-share-choices{display:grid;gap:8px;border:0;padding:0;margin:0;min-width:0}
-#gmwwPlayerWebShareSettings .gmww-share-choice{display:flex;align-items:flex-start;gap:8px;border:1px solid rgba(130,205,233,.25);border-radius:10px;padding:10px;min-width:0;cursor:pointer}
-#gmwwPlayerWebShareSettings .gmww-share-choice:has(input:checked){border-color:rgba(124,217,243,.85);background:rgba(8,87,124,.28)}
-#gmwwPlayerWebShareSettings .gmww-share-choice:has(input:disabled){opacity:.55;cursor:not-allowed}
-#gmwwPlayerWebShareSettings .gmww-share-choice input{flex:none;margin:4px 0 0}
-#gmwwPlayerWebShareSettings .gmww-share-choice span{min-width:0;display:grid;gap:3px}
-#gmwwPlayerWebShareSettings .gmww-share-choice small,#gmwwPlayerWebShareSettings .gmww-share-status{font-size:12px;line-height:1.45;overflow-wrap:anywhere;opacity:.85}
-#gmwwPlayerWebShareSettings .gmww-share-url{font-size:12px;line-height:1.4;overflow-wrap:anywhere}
-#gmwwPlayerWebShareSettings .gmww-share-actions{display:flex;gap:8px}
-#gmwwPlayerWebShareSettings .gmww-share-actions button{flex:1 1 0;min-width:0}
+#gmwwPlayerWebShareSettings{display:grid;gap:7px;margin:8px 0;padding:12px;border:1px solid rgba(118,204,235,.28);border-radius:14px;background:rgba(4,49,74,.23);min-width:0}
+#gmwwPlayerWebShareSettings .gmww-share-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+#gmwwPlayerWebShareSettings .gmww-share-head h3{margin:0;font-size:16px;line-height:1.3}
+#gmwwPlayerWebShareSettings .gmww-share-badge{flex:none;border:1px solid rgba(130,205,233,.36);border-radius:999px;padding:3px 8px;font-size:11px;color:#c9f0ff;background:rgba(12,91,126,.35)}
+#gmwwPlayerWebShareSettings .gmww-share-choices{display:grid;gap:5px;border:0;padding:0;margin:0;min-width:0}
+#gmwwPlayerWebShareSettings .gmww-share-choice{display:flex;align-items:center;gap:7px;min-width:0;cursor:pointer}
+#gmwwPlayerWebShareSettings .gmww-share-choice input{flex:none;margin:0;accent-color:#45c5f4}
+#gmwwPlayerWebShareSettings .gmww-share-choice span{min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#gmwwPlayerWebShareSettings .gmww-share-choice b{font-size:13px}
+#gmwwPlayerWebShareSettings .gmww-share-choice:has(input:disabled){opacity:.65;cursor:not-allowed}
+#gmwwPlayerWebShareSettings .gmww-share-choice small{font-size:11px;line-height:1.3}
+#gmwwPlayerWebShareSettings .gmww-share-url{font-size:12px;line-height:1.35;overflow-wrap:anywhere;user-select:text;color:#d3efff;padding:8px 10px;border:1px solid rgba(118,204,235,.25);border-radius:9px;background:rgba(2,28,46,.3)}
+#gmwwPlayerWebShareSettings .gmww-share-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#gmwwPlayerWebShareSettings .gmww-share-actions button{width:100%;min-width:0;min-height:38px;height:38px;padding:6px 8px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:10px}
+#gmwwPlayerWebShareSettings .gmww-share-actions button span{font-size:17px}
+#gmwwPlayerWebShareSettings .gmww-share-actions button b{font-size:12px}
+#gmwwPlayerWebShareSettings .gmww-share-status{font-size:11px;line-height:1.3;overflow-wrap:anywhere;opacity:.8}
+@media(max-width:390px){#gmwwPlayerWebShareSettings{padding:10px;gap:6px}#gmwwPlayerWebShareSettings .gmww-share-head h3{font-size:15px}#gmwwPlayerWebShareSettings .gmww-share-actions button b{font-size:11px}}
 </style>
 <!-- END GMWW_PLAYER_SHARE_STYLE -->
 </head>
@@ -734,17 +741,17 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
         </div>
         <!-- BEGIN GMWW_PLAYER_SHARE_UI -->
         <section class="settings-tool-inner gmww-web-share-card" id="gmwwPlayerWebShareSettings" aria-labelledby="gmwwShareTitle">
-          <div class="settings-title"><div><h3 id="gmwwShareTitle">🔗 Chia sẻ link Player Web</h3><small>GM chọn địa chỉ để gửi cho người chơi. Không đổi máy chủ Cloudflare/Oracle và không ảnh hưởng ván đang chơi.</small></div></div>
+          <div class="gmww-share-head"><h3 id="gmwwShareTitle">🔗 Chia sẻ Player Web</h3><span class="gmww-share-badge">Cloudflare</span></div>
           <fieldset class="gmww-share-choices" aria-label="Chọn link gửi cho người chơi">
-            <label class="gmww-share-choice" for="gmwwShareLegacy"><input id="gmwwShareLegacy" type="radio" name="gmwwShareChoice" value="legacy" checked><span><b>Link cũ — Cloudflare</b><small>https://gmww-v2-00.williampham0702.workers.dev/</small></span></label>
-            <label class="gmww-share-choice" for="gmwwShareAlias"><input id="gmwwShareAlias" type="radio" name="gmwwShareChoice" value="alias" disabled><span><b>Link mới — Game Ma Sói</b><small id="gmwwShareAliasLabel">Chưa kích hoạt · Chỉ bật sau khi xác minh DNS và HTTPS</small></span></label>
+            <label class="gmww-share-choice" for="gmwwShareLegacy"><input id="gmwwShareLegacy" type="radio" name="gmwwShareChoice" value="legacy" checked><span><b>Link hiện tại</b></span></label>
+            <label class="gmww-share-choice" for="gmwwShareAlias"><input id="gmwwShareAlias" type="radio" name="gmwwShareChoice" value="alias" disabled><span><b>Link mới</b><small id="gmwwShareAliasLabel">Chưa kích hoạt</small></span></label>
           </fieldset>
           <div class="gmww-share-url" id="gmwwShareChosenUrl" aria-live="polite">https://gmww-v2-00.williampham0702.workers.dev/</div>
           <div class="gmww-share-actions">
             <button class="settings-action settings-action-server" id="gmwwShareCopy" type="button"><span>⧉</span><b>SAO CHÉP</b></button>
             <button class="settings-action settings-action-server" id="gmwwShareSend" type="button"><span>↗</span><b>GỬI LINK</b></button>
           </div>
-          <small class="gmww-share-status" id="gmwwShareStatus" role="status">Link cũ đang hoạt động. Link mới sẽ được bật khi hoàn tất nghiệm thu tên miền.</small>
+          <small class="gmww-share-status" id="gmwwShareStatus" role="status">Đang dùng link Cloudflare hiện tại.</small>
         </section>
         <!-- END GMWW_PLAYER_SHARE_UI -->
         </div>
