@@ -165,16 +165,15 @@ function ensurePlayerTopMenu(){
   let menu=$('#gmwwPlayerTopMenu');
   if(!menu){
     menu=document.createElement('nav');menu.id='gmwwPlayerTopMenu';menu.setAttribute('aria-label','Menu Player Web');
-    menu.innerHTML='<div class="gmww-player-menu-info"><b>SẢNH CHỜ</b><small>Chờ Quản Trò gọi vào phòng</small><em class="gmww-player-menu-turn" aria-live="polite"></em></div><button class="gmww-player-menu-account" type="button" aria-label="Tài khoản" title="Tài khoản"><svg class="gmww-player-account-fallback" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.2 21c.7-4 3.4-6 7.8-6s7.1 2 7.8 6"/></svg><img alt="Avatar nhân vật của bạn" hidden></button>';
+    menu.innerHTML='<div class="gmww-player-menu-info"><b>SẢNH CHỜ</b><small>Chờ Quản Trò gọi vào phòng</small><em class="gmww-player-menu-turn" aria-live="polite"></em></div>';
     $('#game')?.appendChild(menu);
-    menu.querySelector('.gmww-player-menu-account').onclick=openVillageProfile;
   }
   $('#gmwwVillageProfileButton')?.remove();
   if(!$('#gmwwPlayerTopMenuStyle')){
     const st=document.createElement('style');st.id='gmwwPlayerTopMenuStyle';st.textContent=`
       #gmwwVillageProfileButton{display:none!important}
       #gmwwVillageHud .status{display:none!important}
-      #gmwwPlayerTopMenu{position:fixed;z-index:235;left:10px;right:10px;top:max(7px,env(safe-area-inset-top));display:grid;grid-template-columns:minmax(0,1fr) 50px;gap:6px;align-items:stretch;pointer-events:auto;opacity:1;transform:translateY(0);transition:opacity .28s ease,transform .28s ease;filter:drop-shadow(0 6px 14px rgba(0,18,30,.24))}
+      #gmwwPlayerTopMenu{position:fixed;z-index:235;left:10px;right:10px;top:max(7px,env(safe-area-inset-top));display:grid;grid-template-columns:minmax(0,1fr);gap:6px;align-items:stretch;pointer-events:auto;opacity:1;transform:translateY(0);transition:opacity .28s ease,transform .28s ease;filter:drop-shadow(0 6px 14px rgba(0,18,30,.24))}
       #gmwwPlayerTopMenu .gmww-player-menu-info[hidden]{display:none!important}
       #gmwwPlayerTopMenu.is-idle-hidden{opacity:0;transform:translateY(calc(-100% - 18px));pointer-events:none}
       #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:44px;min-height:44px;color:#fff}
@@ -194,7 +193,7 @@ function ensurePlayerTopMenu(){
        #gmwwPlayerTopMenu .gmww-player-menu-turn{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 9px/1.3 system-ui;color:#e4dba7;font-style:normal}
       #gmwwPlayerTopMenu .gmww-player-menu-info b{display:block;max-width:100%;margin:0;font-size:13px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(246,252,247,.92);text-shadow:0 1px 3px rgba(0,20,30,.22)}
       @media(max-width:420px){
-        #gmwwPlayerTopMenu{left:7px;right:7px;gap:5px;grid-template-columns:minmax(0,1fr) 46px}
+        #gmwwPlayerTopMenu{left:7px;right:7px;gap:5px;grid-template-columns:minmax(0,1fr)}
         #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:42px;min-height:42px;border-radius:12px}
         #gmwwPlayerTopMenu button{padding:0;font-size:8px;gap:0;flex-direction:column}
         #gmwwPlayerTopMenu button span{font-size:18px}
@@ -205,7 +204,7 @@ function ensurePlayerTopMenu(){
         #game.screen.active{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;transform:none!important}
         #gmwwVillageShell{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;max-height:none!important;margin:0!important;border-radius:0!important}
         #gmwwVillageFrame{display:block!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;border:0!important}
-        #gmwwPlayerTopMenu{left:50%!important;right:auto!important;top:14px!important;width:min(88vw,860px)!important;grid-template-columns:minmax(0,1fr) 58px!important;gap:8px!important;transform:translateX(-50%)!important}
+        #gmwwPlayerTopMenu{left:50%!important;right:auto!important;top:14px!important;width:min(88vw,860px)!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;transform:translateX(-50%)!important}
         #gmwwPlayerTopMenu.is-idle-hidden{transform:translate(-50%,calc(-100% - 26px))!important}
         #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:50px!important;min-height:50px!important;border-radius:14px!important}
         #gmwwPlayerTopMenu button{font-size:11px!important}
@@ -645,8 +644,9 @@ window.addEventListener('message',event=>{
   const iframe=$('#gmwwVillageFrame');if(event.origin!==location.origin||!iframe||event.source!==iframe.contentWindow)return;
   const d=event.data||{};
   if(d.type==='gmww:user-activity'){revealPlayerTopMenu();gmwwChatClosePanel();gmwwChatTouch();return}
+  if(d.type==='gmww:own-character-doubletap'){openVillageProfile();return}
   if(d.type==='gmww:player-click'&&gmwwOnlinePick){gmwwOnlineTarget(d.participantId);return}
-  if(d.type==='gmww:village-ready')syncVillageFrame(true);
+  if(d.type==='gmww:village-ready'){syncVillageFrame(true);gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock'));}
   else if(d.type==='gmww:gallows-open-nominations'){
     const me=String(state.member?.loginId||''),g=state.gallows;
     if(g&&g.mode==='auto'&&gallowsCurrentStage()==='nominating'&&(g.eligible||[]).includes(me)&&
