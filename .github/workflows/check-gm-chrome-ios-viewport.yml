@@ -23,6 +23,9 @@ jobs:
       - name: Focused Chrome iOS viewport regression (GM Server only)
         run: |
           node --test tests/gm-chrome-ios-viewport-20261030.test.mjs
-      - name: Verify unchanged GM script and CSS assets
+      - name: Verify GM CSS untouched and JS changes limited to release version
         run: |
-          git diff --exit-code origin/main...HEAD -- server-game/current/app.js server-game/current/style.css
+          git diff --exit-code origin/main...HEAD -- server-game/current/style.css
+          git diff --unified=0 origin/main...HEAD -- server-game/current/app.js | grep -E '^[+-][^+-]' | grep -Ev '^[+-]const VERSION=.3\.[0-9]+.;
+ | tee /tmp/gm-unexpected-diff.txt
+          test ! -s /tmp/gm-unexpected-diff.txt
