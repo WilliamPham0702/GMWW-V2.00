@@ -300,6 +300,7 @@ const stableCIPolicyPaths=new Set([
   '.github/workflows/check-gm-free-icons-501.yml',
   '.github/workflows/prepare-runtime-v3202-candidate.yml',
   '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/GMWW-CI-POLICY-GATE-20261029.md',
   'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'
@@ -3130,7 +3131,56 @@ export function isPlayerOnlinePrivacy630Release(changes,previousChanges=[]){
     changes.every(c=>repair.get(c.path)===c.status)&&isPlayerOnlinePrivacy630Scope(previousChanges);
 }
 
+// BEGIN GMWW_PLAYER_LINK_SHARE_SCOPE_637
+function isGMPlayerLinkShare637Scope(){
+  if(process.env.GMWW_CI_EVENT!=='pull_request')return false;
+  const base=String(process.env.GMWW_CI_BASE_SHA||'');
+  if(!/^[a-f0-9]{40}$/i.test(base))return false;
+  const expected=new Map([
+    ['server-game/current/GMWW.html','M'],
+    ['tests/gm-player-web-share-link.test.mjs','A'],
+    ['.github/workflows/check-gm-player-link-share.yml','A'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['.github/workflows/check-gallows-redesign.yml','M'],
+    ['.github/workflows/check-gm-free-icons-501.yml','M'],
+    ['.github/workflows/prepare-runtime-v3202-candidate.yml','M'],
+    ['.github/workflows/build-server-game-ipa.yml','M']
+  ]);
+  const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+    .split('\n').filter(Boolean).map(s=>s.split('\t'));
+  if(rows.length!==expected.size||rows.some(([status,p])=>expected.get(p)!==status))return false;
+  const current=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const baseline=git('show',base+':server-game/current/GMWW.html');
+  const stripped=current
+    .replace(/\n<!-- BEGIN GMWW_PLAYER_SHARE_STYLE -->[\s\S]*?<!-- END GMWW_PLAYER_SHARE_STYLE -->\n/,'')
+    .replace(/        <!-- BEGIN GMWW_PLAYER_SHARE_UI -->[\s\S]*?<!-- END GMWW_PLAYER_SHARE_UI -->\n/,'')
+    .replace(/\n<script>\n\/\* BEGIN GMWW_PLAYER_SHARE_SCRIPT \*\/[\s\S]*?\/\* END GMWW_PLAYER_SHARE_SCRIPT \*\/\n<\/script>\n\n/,'');
+  if(stripped!==baseline||!current.includes('window.GMWW_PLAYER_WEB_ALIAS_CONFIG')||
+      !current.includes('config.verified!==true')||
+      !current.includes("parsed.protocol!=='https:'"))return false;
+  for(const [p] of rows){
+    if(!p.startsWith('.github/')||p==='.github/workflows/check-gm-player-link-share.yml')continue;
+    const original=git('show',base+':'+p);
+    const after=fs.readFileSync(p,'utf8');
+    let clean=after;
+    if(p==='.github/scripts/ci-browser-scope.mjs'){
+      clean=after.replace(/\n\/\/ BEGIN GMWW_PLAYER_LINK_SHARE_SCOPE_637[\s\S]*?\/\/ END GMWW_PLAYER_LINK_SHARE_SCOPE_637\n/,'');
+      clean=clean.replace("  try{if(isGMPlayerLinkShare637Scope())return {mode:'gm-player-web-share-637',reason:'Only GM share UI and exact CI scope guards; no Worker/IPA/OTA/gameplay'};}catch(_){}\n",'');
+    }else if(p==='.github/workflows/check-player-web.yml'){
+      clean=after.replace(/      # BEGIN GMWW_PLAYER_LINK_SHARE_CHECK_637\n[\s\S]*?      # END GMWW_PLAYER_LINK_SHARE_CHECK_637\n/,'');
+    }else{
+      clean=after.replaceAll(" && steps.scope.outputs.mode != 'gm-player-web-share-637'",'')
+                 .replaceAll(" && steps.iconsscope.outputs.mode != 'gm-player-web-share-637'",'')
+                 .replaceAll(" && needs.scope.outputs.mode != 'gm-player-web-share-637'",'');
+    }
+    if(clean!==original)return false;
+  }
+  return true;
+}
+// END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  try{if(isGMPlayerLinkShare637Scope())return {mode:'gm-player-web-share-637',reason:'Only GM share UI and exact CI scope guards; no Worker/IPA/OTA/gameplay'};}catch(_){}
   // Main and PR: recognize only the exact Chrome UI change + optional version bump.
   // Use content-aware comparison, not a filename or a PR-title bypass.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){

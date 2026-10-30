@@ -950,6 +950,15 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --test tests/pr630-release-ci.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/online-chat-authority.test.mjs tests/player-visual-notice-status-sync-20261028.test.mjs tests/status-visuals-v1.test.mjs tests/player-web-resume-receipt-runtime.test.mjs
           test -s docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md
+      # BEGIN GMWW_PLAYER_LINK_SHARE_CHECK_637
+      - name: PR637 — verify GM link sharing and bundles
+        if: steps.scope.outputs.mode == 'gm-player-web-share-637'
+        run: |
+          node --test tests/gm-player-web-share-link.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check .github/scripts/ci-browser-scope.mjs
+      # END GMWW_PLAYER_LINK_SHARE_CHECK_637
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full'
         run: npm test
