@@ -117,3 +117,37 @@ test('GM day footer follows approved six controls and day actions use free icons
   assert.match(gmSocket,/d\.type==='chat_tick'/);
   assert.match(gm,/playRoomApi\('\/chat',\{method:'GET'\}\)/);
 });
+
+
+test('GM may send to public day chat using authorization, without leaking secret channels',async()=>{
+  const from=server.indexOf('  async gmChatSend(request,body){');
+  const end=server.indexOf('  async gmChatModerate(request,body)',from);
+  assert.ok(from>=0&&end>from);
+  const Room=vm.runInNewContext('(class Room {'+server.slice(from,end)+'})',{
+    normalizeLoginId:x=>String(x||''),
+    chatNormalizeText:s=>String(s||'').trim(),
+    chatStorageScope:m=>m.matchId,
+    crypto:{randomUUID:()=> 'gm-message-id'},
+    j:(data,status=200)=>({...data,status}),Date
+  });
+  const records=new Map(),messages=[];
+  const room=new Room();
+  room.ctx={storage:{get:async key=>records.get(key),put:async(k,v)=>records.set(k,v)}};
+  const meta={phase:'running',cyclePhase:'morning',matchId:'M'};
+  room.gmAuthorized=async()=>({ok:true,meta});
+  room.broadcast=message=>messages.push(message);
+  const sent=await room.gmChatSend({}, {channel:'room',text:'Xin chào Làng'});
+  assert.equal(sent.status,200);
+  assert.equal(sent.channel,'day');
+  const stored=records.get('onlineChat:M:day');
+  assert.equal(stored.length,1);
+  assert.equal(stored[0].isGM,true);
+  assert.equal(stored[0].text,'Xin chào Làng');
+  assert.deepEqual(messages.map(x=>x.type),['chat_tick']);
+  meta.cyclePhase='night';
+  const blocked=await room.gmChatSend({}, {channel:'room',text:'Không công khai đêm'});
+  assert.equal(blocked.status,400);
+  assert.equal(records.get('onlineChat:M:day').length,1);
+  assert.match(gm,/gmwwGMChatVillage/);
+  assert.match(gm,/channel:'room',text/);
+});
