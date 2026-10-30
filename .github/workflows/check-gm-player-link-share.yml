@@ -15,7 +15,7 @@ jobs:
   verify:
     name: GM Link Sharing UI and isolation
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 15
     steps:
       - name: Checkout exact PR code
         uses: actions/checkout@v4
@@ -27,6 +27,14 @@ jobs:
         with:
           node-version: '22'
       - name: Test link selection, clipboard, sharing and unverified-domain guard
+        run: node --test tests/gm-player-web-share-link.test.mjs
+      - name: Install pinned WebKit browser for mobile viewport regression
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps webkit
+      - name: Check iPhone-sized WebKit UI, copy and native share contract
+        env:
+          GMWW_RUN_MOBILE_WEBKIT: '1'
         run: node --test tests/gm-player-web-share-link.test.mjs
       - name: Verify GM bundle remains unchanged
         run: node .github/scripts/assemble-gm-app.mjs --verify
