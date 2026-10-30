@@ -2875,6 +2875,7 @@ const pr648AllowedPaths=new Set([
   '.github/scripts/ci-browser-scope.mjs',
   '.github/workflows/check-player-web.yml',
   '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  '.github/workflows/build-server-game-ipa.yml',
   'docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md'
 ]);
 function isPr648ThermalScope(changes){
@@ -2899,10 +2900,12 @@ function isPr648ThermalScope(changes){
   const scopeTest=String(by.get('tests/ci-browser-scope.test.mjs')?.after||'');
   const browser=String(by.get('.github/workflows/check-player-web.yml')?.after||'');
   const legacy=String(by.get('.github/workflows/prepare-runtime-v3202-candidate.yml')?.after||'');
+  const ipa=String(by.get('.github/workflows/build-server-game-ipa.yml')?.after||'');
   return test.includes('PR648 normal village has no idle FPS animation')&&
     scopeTest.includes('PR648 diagnostics-only FPS')&&
     browser.includes("steps.scope.outputs.mode == 'village-perf-diagnostics-648'")&&
-    legacy.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'");
+    legacy.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'")&&
+    ipa.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'");
 }
 
 function classifyBrowserScope(changes){
