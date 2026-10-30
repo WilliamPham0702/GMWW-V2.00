@@ -7,6 +7,7 @@ on:
       - ".github/workflows/github-runtime-ota.yml"
       - ".github/runtime-release/**"
       - "docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md"
+      - "docs/releases/GMWW-V3.277.1-GITHUB-RUNTIME-PR637-20261030.md"
   workflow_run:
     workflows: ["Check Player Web Worker"]
     types: [completed]

@@ -222,6 +222,34 @@ jobs:
             echo "PR637 staged release: NEVER auto-deploy Worker/Runtime; explicit gated dispatch required." >> "$GITHUB_STEP_SUMMARY"
           fi
           # END GMWW_PR637_STAGED_RELEASE_GUARD
+
+          # BEGIN GMWW_PR637_V32771_GITHUB_ONLY_RELEASE
+          # Explicitly audited Runtime patch: never update Cloudflare Worker or DO on main merge.
+          # GitHub Runtime workflow alone publishes a new verified .gmwwupdate.
+          if grep -Fxq 'docs/releases/GMWW-V3.277.1-GITHUB-RUNTIME-PR637-20261030.md' /tmp/gmww-production-change-scope.txt; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' '.github/scripts/prepare-update-channel.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              '.github/workflows/github-runtime-ota.yml' \
+              'docs/releases/GMWW-V3.277.1-GITHUB-RUNTIME-PR637-20261030.md' \
+              'package-lock.json' \
+              'package.json' \
+              'server-game/current/GMWW.html' \
+              'server-game/current/app.js' \
+              'server-game/src/00-core-and-library.part' \
+              'src/index.js' \
+              'tests/runtime-32771-github-release.test.mjs' | sort)
+            test "$ACTUAL" = "$EXPECTED" || {
+              echo "::error::Unexpected changes in V3.277.1 GitHub-only patch; block Worker deploy"; exit 1;
+            }
+            test "$(node -p 'require("./package.json").version')" = '3.277.1'
+            grep -Fq 'id="gmwwPlayerWebShareSettings"' server-game/current/GMWW.html
+            grep -Fq 'id="gmwwShareAlias"' server-game/current/GMWW.html
+            grep -Fq "window.GMWW_PLAYER_WEB_ALIAS_CONFIG" server-game/current/GMWW.html
+            SHOULD_DEPLOY=false
+            echo 'PR637 V3.277.1: GitHub-only manual Runtime, NO Cloudflare/DO/IPA deployment.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # END GMWW_PR637_V32771_GITHUB_ONLY_RELEASE
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
