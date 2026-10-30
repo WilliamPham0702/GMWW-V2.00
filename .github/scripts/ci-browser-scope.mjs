@@ -3,6 +3,7 @@
 // Verified main-push scopes use focused checks; icon policy also isolates legacy gallows/shortcut workflows.
 import fs from 'node:fs';
 import {playerInteractionsScope} from './player-interactions-scope.mjs';
+import {isGMPlayerShareScope,isGMPlayerShareCIPolicyScope} from './gm-player-share-scope.mjs';
 import {createHash} from 'node:crypto';
 import {isIconArtworkScope,isIconArtworkPolicyScope} from './icon-artwork-scope.mjs';
 import {execFileSync} from 'node:child_process';
@@ -2817,6 +2818,8 @@ function isPlayerOnlinePrivacy630Scope(changes){
 }
 
 function classifyBrowserScope(changes){
+  if(isGMPlayerShareScope(changes))return 'gm-player-link-share';
+  if(isGMPlayerShareCIPolicyScope(changes))return 'gm-player-link-share-ci';
   const interactions=playerInteractionsScope(changes);if(interactions)return interactions;
   if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
   if(isGithubNativeStage2Scope(changes))return 'native-github-ota-stage2';
@@ -3081,6 +3084,23 @@ export function isPlayerOnlinePrivacy630Release(changes,previousChanges=[]){
 }
 
 function detect(){
+  // GĐ3: prove exact HTML-only share UI or CI-only policy before legacy full-suite routing.
+  // Unknown or expanded diffs keep the existing full verification.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean).map(row=>{
+          const [status,path]=row.split('\t');
+          return {status,path,before:status==='M'?git('show',base+':'+path):null,
+            after:['M','A'].includes(status)?git('show','HEAD:'+path):null};
+        });
+        if(isGMPlayerShareScope(changes))return{mode:'gm-player-link-share',reason:'Verified exact GM settings Player link share markup only'};
+        if(isGMPlayerShareCIPolicyScope(changes))return{mode:'gm-player-link-share-ci',reason:'CI-only GĐ3 link-share policy guard, no game code'};
+      }
+    }catch{} // Refuse broad or unverifiable diffs.
+  }
+
   // Exact PR630 release or its CI-only recovery; unrelated source stays fail-closed.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
