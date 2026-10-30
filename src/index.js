@@ -1048,6 +1048,15 @@ export class RoomDurableObject extends DurableObject {
     if(String(body?.matchId||"")!==String(meta.matchId||"")||
       String(body?.cycleKey||"")!==String(meta.cycleKey||""))
       return j({ok:false,error:"DEMO_ACTION_STALE"},409);
+    // Private action offers remain visible while Frozen/Expelled, but execution is blocked on Server.
+    if(online){
+      const effects=await this.ctx.storage.get('interactions')||[];
+      const blocked=effects.some(x=>normalizeLoginId(x?.loginId)===loginId&&x?.effectActive!==false&&
+        (!x?.matchId||String(x.matchId)===String(meta.matchId))&&
+        (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&
+        (x.type==='dead'||x.type==='expelled'||(x.type==='frozen'&&meta.cyclePhase==='night')));
+      if(blocked)return j({ok:false,error:'ACTOR_CANNOT_ACT',message:'Đã thấy hành động, nhưng bạn đang chịu hiệu ứng và không được thực hiện lượt này.'},409);
+    }
     const actions=online?await playerOfferedActions(this,meta,loginId):await demoPlayerActions(this,meta,loginId),
       action=actions.find(a=>a.key===String(body?.actionKey||""));
     if(!action)return j({ok:false,error:"DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN"},409);
