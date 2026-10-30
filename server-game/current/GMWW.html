@@ -28,6 +28,22 @@
 #settings #gmwwCfActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
 #settings #gmwwCfActions button{min-width:0;flex:1 1 130px}
 </style>
+
+<!-- BEGIN GMWW_PLAYER_SHARE_STYLE -->
+<style>
+#gmwwPlayerWebShareSettings{display:grid;gap:10px;margin:12px 0;padding:14px;border:1px solid rgba(118,204,235,.36);border-radius:14px;background:rgba(4,49,74,.3)}
+#gmwwPlayerWebShareSettings .gmww-share-choices{display:grid;gap:8px;border:0;padding:0;margin:0;min-width:0}
+#gmwwPlayerWebShareSettings .gmww-share-choice{display:flex;align-items:flex-start;gap:8px;border:1px solid rgba(130,205,233,.25);border-radius:10px;padding:10px;min-width:0;cursor:pointer}
+#gmwwPlayerWebShareSettings .gmww-share-choice:has(input:checked){border-color:rgba(124,217,243,.85);background:rgba(8,87,124,.28)}
+#gmwwPlayerWebShareSettings .gmww-share-choice:has(input:disabled){opacity:.55;cursor:not-allowed}
+#gmwwPlayerWebShareSettings .gmww-share-choice input{flex:none;margin:4px 0 0}
+#gmwwPlayerWebShareSettings .gmww-share-choice span{min-width:0;display:grid;gap:3px}
+#gmwwPlayerWebShareSettings .gmww-share-choice small,#gmwwPlayerWebShareSettings .gmww-share-status{font-size:12px;line-height:1.45;overflow-wrap:anywhere;opacity:.85}
+#gmwwPlayerWebShareSettings .gmww-share-url{font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+#gmwwPlayerWebShareSettings .gmww-share-actions{display:flex;gap:8px}
+#gmwwPlayerWebShareSettings .gmww-share-actions button{flex:1 1 0;min-width:0}
+</style>
+<!-- END GMWW_PLAYER_SHARE_STYLE -->
 </head>
 <body>
 <div id="app">
@@ -656,6 +672,21 @@
           </div>
           <div class="health-v236-actions update-actions"><button class="settings-action settings-action-server" id="exportLocalData" type="button" aria-label="Xuất toàn bộ dữ liệu chưa đồng bộ ra file JSON"><span>⬇</span><b>XUẤT DỮ LIỆU CHƯA ĐỒNG BỘ</b></button></div>
         </div>
+        <!-- BEGIN GMWW_PLAYER_SHARE_UI -->
+        <section class="settings-tool-inner gmww-web-share-card" id="gmwwPlayerWebShareSettings" aria-labelledby="gmwwShareTitle">
+          <div class="settings-title"><div><h3 id="gmwwShareTitle">🔗 Chia sẻ link Player Web</h3><small>GM chọn địa chỉ để gửi cho người chơi. Không đổi máy chủ Cloudflare/Oracle và không ảnh hưởng ván đang chơi.</small></div></div>
+          <fieldset class="gmww-share-choices" aria-label="Chọn link gửi cho người chơi">
+            <label class="gmww-share-choice" for="gmwwShareLegacy"><input id="gmwwShareLegacy" type="radio" name="gmwwShareChoice" value="legacy" checked><span><b>Link cũ — Cloudflare</b><small>https://gmww-v2-00.williampham0702.workers.dev/</small></span></label>
+            <label class="gmww-share-choice" for="gmwwShareAlias"><input id="gmwwShareAlias" type="radio" name="gmwwShareChoice" value="alias" disabled><span><b>Link mới — Game Ma Sói</b><small id="gmwwShareAliasLabel">Chưa kích hoạt · Chỉ bật sau khi xác minh DNS và HTTPS</small></span></label>
+          </fieldset>
+          <div class="gmww-share-url" id="gmwwShareChosenUrl" aria-live="polite">https://gmww-v2-00.williampham0702.workers.dev/</div>
+          <div class="gmww-share-actions">
+            <button class="settings-action settings-action-server" id="gmwwShareCopy" type="button"><span>⧉</span><b>SAO CHÉP</b></button>
+            <button class="settings-action settings-action-server" id="gmwwShareSend" type="button"><span>↗</span><b>GỬI LINK</b></button>
+          </div>
+          <small class="gmww-share-status" id="gmwwShareStatus" role="status">Link cũ đang hoạt động. Link mới sẽ được bật khi hoàn tất nghiệm thu tên miền.</small>
+        </section>
+        <!-- END GMWW_PLAYER_SHARE_UI -->
         </div>
         <div class="settings-unified-box" id="settingsGroupHealth">
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
@@ -1007,6 +1038,93 @@
 <script src="status-visuals.js?v=status-v9"></script>
 <script src="action-icon-library.js?v=sea-art-v3"></script>
 <script src="app.js?v=gmww-v3268-template-dock"></script>
+
+<script>
+/* BEGIN GMWW_PLAYER_SHARE_SCRIPT */
+(()=>{
+  'use strict';
+  const oldUrl='https://gmww-v2-00.williampham0702.workers.dev/';
+  const choiceKey='GMWW_PLAYER_SHARE_LINK_CHOICE_V1';
+  // This config MUST only be supplied by an approved, verified domain release.
+  // A DNS name mentioned in docs is NOT sufficient to enable the alias.
+  function verifiedAlias(){
+    const config=window.GMWW_PLAYER_WEB_ALIAS_CONFIG;
+    if(!config||config.verified!==true)return '';
+    try{
+      const parsed=new URL(String(config.url||''));
+      if(parsed.protocol!=='https:'||parsed.username||parsed.password||
+         parsed.search||parsed.hash||parsed.pathname!=='/'||parsed.origin===new URL(oldUrl).origin)return '';
+      return parsed.origin+'/';
+    }catch(_){return ''}
+  }
+  const alias=verifiedAlias();
+  const oldChoice=document.getElementById('gmwwShareLegacy');
+  const newChoice=document.getElementById('gmwwShareAlias');
+  const aliasLabel=document.getElementById('gmwwShareAliasLabel');
+  const chosen=document.getElementById('gmwwShareChosenUrl');
+  const status=document.getElementById('gmwwShareStatus');
+  const copyButton=document.getElementById('gmwwShareCopy');
+  const sendButton=document.getElementById('gmwwShareSend');
+  if(!oldChoice||!newChoice||!chosen||!copyButton||!sendButton)return;
+  newChoice.disabled=!alias;
+  if(alias&&aliasLabel)aliasLabel.textContent=alias;
+  let saved='legacy';
+  try{saved=window.localStorage.getItem(choiceKey)==='alias'?'alias':'legacy'}catch(_){}
+  oldChoice.checked=!alias||saved!=='alias';
+  newChoice.checked=!!alias&&saved==='alias';
+  const currentUrl=()=>newChoice.checked&&alias?alias:oldUrl;
+  function render(){
+    chosen.textContent=currentUrl();
+    if(status)status.textContent=newChoice.checked?'Đang dùng link mới đã được xác minh.':'Đang dùng link Cloudflare hiện tại.';
+    try{window.localStorage.setItem(choiceKey,newChoice.checked?'alias':'legacy')}catch(_){}
+  }
+  oldChoice.addEventListener('change',render);
+  newChoice.addEventListener('change',render);
+  render();
+  async function copyUrl(){
+    const value=currentUrl();
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      try{
+        await navigator.clipboard.writeText(value);
+        if(status)status.textContent='Đã sao chép link Player Web.';
+        return;
+      }catch(_){
+        // Safari/iOS may deny Clipboard API even after a user tap.
+        // Fall through to the gesture-scoped text selection fallback.
+      }
+    }
+    const input=document.createElement('textarea');
+    input.value=value;
+    input.setAttribute('readonly','');
+    input.style.position='fixed';
+    input.style.opacity='0';
+    document.body.appendChild(input);
+    try{
+      input.focus();
+      input.select();
+      if(typeof input.setSelectionRange==='function')input.setSelectionRange(0,value.length);
+      if(!document.execCommand('copy'))throw new Error('copy_unavailable');
+    }finally{
+      input.remove();
+    }
+    if(status)status.textContent='Đã sao chép link Player Web.';
+  }
+  copyButton.addEventListener('click',async()=>{
+    try{await copyUrl()}catch(_){if(status)status.textContent='Không thể sao chép tự động; hãy nhấn giữ vào đường link phía trên để sao chép.'}
+  });
+  sendButton.addEventListener('click',async()=>{
+    try{
+      if(typeof navigator.share==='function')await navigator.share({title:'GMWW — Player Web',url:currentUrl()});
+      else await copyUrl();
+    }catch(e){
+      if(e&&e.name==='AbortError')return;
+      if(status)status.textContent='Không thể mở chia sẻ. Dùng nút SAO CHÉP để lấy link.';
+    }
+  });
+})();
+/* END GMWW_PLAYER_SHARE_SCRIPT */
+</script>
+
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */
