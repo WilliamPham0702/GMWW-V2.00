@@ -718,6 +718,35 @@ test('PR613 V3.274 canonical Character40 verification repair keeps exact CI-only
   assert.match(workflow,/git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD/);
 });
 
+test('PR626 only exact four day Artifact inspection files get fail-closed focused scope',()=>{
+ const manifest=new Map([
+  ['.github/scripts/check-pr626-day-inspections-worker.mjs','A'],
+  ['.github/workflows/check-rule-split-planners-20261029.yml','A'],
+  ['docs/audits/pr584-split-inspections-09-24-29-39.md','A'],
+  ['docs/releases/GMWW-PR626-four-private-inspection-artifacts-draft-20261029.md','A'],
+  ['server-game/current/app.js','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/gmww-day-artifact-inspection.js','A'],
+  ['src/gmww-demo-runner.js','M'],
+  ['src/gmww-members-live.js','M'],
+  ['src/index.js','M'],
+  ['src/player-web-src/30-rooms-and-realtime.part','M'],
+  ['tests/card-executors-day-inspection-planners-20261029.test.mjs','A'],
+  ['tests/pr626-private-inspection-ui-demo-20261029.test.mjs','A'],
+  ['tests/worker-day-artifact-inspection-pr626-e2e.mjs','A'],
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['tests/ci-browser-scope.test.mjs','M']
+ ]);
+ const scoped=[...manifest].map(([path,status])=>({path,status,after:readFileSync(path,'utf8')}));
+ assert.equal(classifyBrowserScope(scoped),'artifact-inspection-626');
+ assert.equal(classifyBrowserScope(scoped.slice(1)),'full','missing source must fail closed');
+ assert.equal(classifyBrowserScope([...scoped,{path:'src/gmww-gallows-rules.js',status:'M'}]),'full','unrelated game code is not allowed');
+ assert.equal(classifyBrowserScope(scoped.map(c=>c.path==='src/index.js'?{...c,status:'D'}:c)),'full','deletion is forbidden');
+ assert.equal(classifyBrowserScope(scoped.map(c=>c.path==='src/index.js'?{...c,after:'console.log(1)'}:c)),'full','missing privacy/undo contract is forbidden');
+ assert.equal(classifyBrowserScope(scoped.map(c=>c.path==='server-game/current/app.js'?{...c,after:'unrelated'}:c)),'artifact-inspection-626','GM assembled integrity is checked separately by direct equality');
+});
+
 test('GitHub-only Runtime CI repair scopes only audited policy and package checks',()=>{
   const paths=[
     '.github/scripts/ci-browser-scope.mjs',
