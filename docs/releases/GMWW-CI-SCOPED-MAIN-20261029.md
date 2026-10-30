@@ -38,3 +38,11 @@ Rollback: revert pull request CI policy này; Production không tự được ph
 - Không chạy lại test cũ Lên Giàn, icon, bản OTA candidate 3.238 hay build IPA khi chỉ thay viewport. Giữ kiểm tra cú pháp, bản bundle, guard phiên bản, CI Policy Gate, CI Stability, kiểm thử Chrome viewport.
 - Các thay đổi chưa được nhận dạng chính xác vẫn chạy CI đầy đủ; bảo vệ Production/IPA/DO, không tự xuất IPA.
 - Rollback: revert PR CI-only, sau đó hệ thống quay về bộ test đầy đủ (fail-closed).
+
+## PR #646 — Cổng phát hành chia hai đợt PR #637 (30/10/2026)
+
+- Chặn tự phát hành Worker/Runtime khi merge đúng phạm vi PR #637; mọi lần phát hành phải có quyết định thủ công, CI cùng SHA và xác minh manifest/SHA-256.
+- Chặn phát hành cả commit sửa workflow CI-only (#646). Không thay đổi IPA, Oracle, room/DO, dữ liệu Production hay luật chơi.
+- Bộ nhận diện `ci-policy` chỉ áp dụng khi đủ 5 file policy, test và release notes; thêm file gameplay hoặc xóa file sẽ tự rơi về kiểm thử `full`.
+- Chỉ cho phép merge sau khi `CI Policy Gate` và các kiểm thử policy thành công.
+- Rollback: revert riêng chính sách CI ở PR #646; không tác động dữ liệu người chơi.

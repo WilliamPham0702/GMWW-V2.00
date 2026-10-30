@@ -189,6 +189,39 @@ jobs:
             echo 'GĐ1–GĐ3 architecture documentation only: skip Production Worker/Runtime.' >> "$GITHUB_STEP_SUMMARY"
           fi
           # END GMWW_ARCHITECTURE_DOCS_GUARD
+
+          # BEGIN GMWW_PR637_STAGED_RELEASE_GUARD
+          # A merge of the link-sharing UI is NOT an automatic Runtime/Worker release.
+          # The CI-only guard PR must likewise not trigger Production.
+          RELEASE_PATHS=$(sort /tmp/gmww-production-change-scope.txt)
+          POLICY_ONLY=$(printf '%s\n' \
+            '.github/scripts/ci-browser-scope.mjs' \
+            '.github/workflows/deploy-production.yml' \
+            '.github/workflows/github-runtime-ota.yml' \
+            'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md' \
+            'tests/ci-browser-scope.test.mjs' | sort)
+          PR637_ONLY=$(printf '%s\n' \
+            '.github/scripts/ci-browser-scope.mjs' \
+            '.github/workflows/build-server-game-ipa.yml' \
+            '.github/workflows/check-gallows-redesign.yml' \
+            '.github/workflows/check-gm-free-icons-501.yml' \
+            '.github/workflows/check-gm-player-link-share.yml' \
+            '.github/workflows/check-player-web.yml' \
+            '.github/workflows/prepare-runtime-v3202-candidate.yml' \
+            'server-game/current/GMWW.html' \
+            'tests/gm-player-web-share-link.test.mjs' | sort)
+          if [ "$RELEASE_PATHS" = "$POLICY_ONLY" ]; then
+            SHOULD_DEPLOY=false
+            echo "CI-only PR637 release guard: no Production deployment." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$RELEASE_PATHS" = "$PR637_ONLY" ] ||
+             git log -1 --format=%B | grep -Eq '(^Merge pull request #637([[:space:]]|$)|\(#637\)$)'; then
+            grep -Fq 'BEGIN GMWW_PLAYER_SHARE_SCRIPT' server-game/current/GMWW.html || {
+              echo "::error::PR637 marker missing; refuse automatic deploy"; exit 1;
+            }
+            SHOULD_DEPLOY=false
+            echo "PR637 staged release: NEVER auto-deploy Worker/Runtime; explicit gated dispatch required." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # END GMWW_PR637_STAGED_RELEASE_GUARD
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
