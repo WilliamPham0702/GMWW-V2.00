@@ -227,17 +227,20 @@
 
 
 
-        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Báo · Hành động · Lên Giàn · Khôi phục">
+        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Thông cáo Làng · Cán Cân Đại Dương · Chat · Lên Giàn · Khôi phục">
         <section id="playBattleClockFloat" class="battle-clock-float-v396" aria-label="Đồng hồ đếm ngược trong thanh dưới" hidden>
           <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><small class="battle-clock-caption" aria-hidden="true"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M24 13v11l8 5"/></svg></small><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
         </section>
 
-        <section id="battleFactionStatsFloat" class="battle-faction-stats-float" aria-label="Thống kê các phe" hidden>
-          <button id="battleFactionStatsToggle" type="button" aria-controls="battleFactionStats" aria-pressed="false" aria-label="Mở thống kê và dự báo phe" title="Thống kê và dự báo phe">🌈</button>
-        </section>
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleDayNoticeFloat" class="battle-day-icon-float" aria-label="Thông cáo Làng" hidden>
           <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 35h20l-3.7-6.2V21c0-5.8-3-9.5-6.3-9.5S17.7 15.2 17.7 21v7.8L14 35Z"/><path d="M21 39h6M24 7v2"/></svg></button>
+        </section>
+        <section id="battleFactionStatsFloat" class="battle-day-icon-float" aria-label="Cán Cân Đại Dương" hidden>
+          <button id="battleFactionStatsToggle" type="button" aria-controls="battleFactionStats" aria-pressed="false" aria-label="Cán Cân Đại Dương" title="Cán Cân Đại Dương">⚖️</button>
+        </section>
+        <section id="battleGMChatFloat" class="battle-day-icon-float" aria-label="Chat Server" hidden>
+          <button id="battleGMChatToggle" type="button" aria-controls="gmwwGMChatPanel" aria-pressed="false" aria-label="Mở Chat GM" title="Chat Làng và Chat riêng">💬</button>
         </section>
         <section id="battleDayActionFloat" class="battle-day-icon-float" aria-label="Hành động ban ngày" hidden>
           <button id="battleDayActionToggle" type="button" aria-controls="battleDayActionMenu" aria-expanded="false"><span aria-hidden="true">✦</span><b>HÀNH ĐỘNG</b><small>Chọn chức năng</small></button>
