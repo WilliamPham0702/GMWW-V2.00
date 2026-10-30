@@ -11,6 +11,9 @@ on:
       - 'tests/player-web-online-actions-20261028.test.mjs'
       - 'src/gmww-online-action-icons.js'
       - 'src/gmww-demo-runner.js'
+      - 'src/gmww-online-chat-policy.js'
+      - 'src/gmww-cycle-effect-expiry.js'
+      - 'tests/player-online-realtime-freeze-day-20261030.test.mjs'
       - '.github/workflows/check-player-web-online-village.yml'
   workflow_dispatch:
 jobs:
@@ -22,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - name: Validate scoped role-group privacy and Player Web UI
-        run: node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs
+        run: node --test tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs
       - name: Verify exact packaged Player Web
         run: node .github/scripts/assemble-player-web.mjs --verify
       - name: Check source syntax

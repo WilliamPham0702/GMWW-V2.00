@@ -34,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mode: ${{ steps.select.outputs.mode }}
+      native_changed: ${{ steps.native.outputs.changed }}
     steps:
       - name: Tải mã nguồn để xác định phạm vi
         uses: actions/checkout@v4
@@ -45,9 +46,24 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Xác nhận chỉ build IPA khi Native thay đổi hoặc chủ dự án yêu cầu trực tiếp
+        id: native
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != 'pull_request' ]; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "${BASE_SHA}...HEAD" -- server-game/GMWW-Server server-game/GMWW-Server.xcodeproj; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'Skip Native IPA: no native source/project files were changed.'
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
   build:
     needs: scope
-    if: needs.scope.outputs.mode != 'gm-chrome-ios-viewport' && needs.scope.outputs.mode != 'ci-policy' && needs.scope.outputs.mode != 'github-pr-preview-ci' && needs.scope.outputs.mode != 'player-top-avatar-603' && needs.scope.outputs.mode != 'native-manual-release-verify' && needs.scope.outputs.mode != 'character40-postverify-3254' && needs.scope.outputs.mode != 'gm-performance-thermal-3254' && needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'post-match-room-532' && needs.scope.outputs.mode != 'postmatch-ci-532' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210' && needs.scope.outputs.mode != 'icon-clean-3212' && needs.scope.outputs.mode != 'icon-wave3-3213' && needs.scope.outputs.mode != 'icon-game-3215' && needs.scope.outputs.mode != 'icon-wave5-3218' && needs.scope.outputs.mode != 'active-icons-3225' && needs.scope.outputs.mode != 'fire-icons-3226' && needs.scope.outputs.mode != 'icon-action-v2-3227' && needs.scope.outputs.mode != 'gm-footer-3229' && needs.scope.outputs.mode != 'entry-icons-3231' && needs.scope.outputs.mode != 'phase-dock-gallows-3234' && needs.scope.outputs.mode != 'gm-ui-glass-3235' && needs.scope.outputs.mode != 'gm-menu-gallows-3236' && needs.scope.outputs.mode != 'gm-ui-menu-3237' && needs.scope.outputs.mode != 'gm-ui-controls-3238' && needs.scope.outputs.mode != 'gm238-deploy-repair' && needs.scope.outputs.mode != 'runtime-warning-3232' && needs.scope.outputs.mode != 'icon-v2-ci-fix' && needs.scope.outputs.mode != 'gm-icons-501' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'lobby-gather-541' && needs.scope.outputs.mode != 'gm-admin-top-chat-3272' && needs.scope.outputs.mode != 'gm-player-web-share-637'
+    if: needs.scope.outputs.native_changed == 'true' && needs.scope.outputs.mode != 'village-perf-diagnostics-648' && needs.scope.outputs.mode != 'gm-chrome-ios-viewport' && needs.scope.outputs.mode != 'ci-policy' && needs.scope.outputs.mode != 'github-pr-preview-ci' && needs.scope.outputs.mode != 'player-top-avatar-603' && needs.scope.outputs.mode != 'native-manual-release-verify' && needs.scope.outputs.mode != 'character40-postverify-3254' && needs.scope.outputs.mode != 'gm-performance-thermal-3254' && needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'post-match-room-532' && needs.scope.outputs.mode != 'postmatch-ci-532' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210' && needs.scope.outputs.mode != 'icon-clean-3212' && needs.scope.outputs.mode != 'icon-wave3-3213' && needs.scope.outputs.mode != 'icon-game-3215' && needs.scope.outputs.mode != 'icon-wave5-3218' && needs.scope.outputs.mode != 'active-icons-3225' && needs.scope.outputs.mode != 'fire-icons-3226' && needs.scope.outputs.mode != 'icon-action-v2-3227' && needs.scope.outputs.mode != 'gm-footer-3229' && needs.scope.outputs.mode != 'entry-icons-3231' && needs.scope.outputs.mode != 'phase-dock-gallows-3234' && needs.scope.outputs.mode != 'gm-ui-glass-3235' && needs.scope.outputs.mode != 'gm-menu-gallows-3236' && needs.scope.outputs.mode != 'gm-ui-menu-3237' && needs.scope.outputs.mode != 'gm-ui-controls-3238' && needs.scope.outputs.mode != 'gm238-deploy-repair' && needs.scope.outputs.mode != 'runtime-warning-3232' && needs.scope.outputs.mode != 'icon-v2-ci-fix' && needs.scope.outputs.mode != 'gm-icons-501' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'lobby-gather-541' && needs.scope.outputs.mode != 'gm-admin-top-chat-3272' && needs.scope.outputs.mode != 'gm-player-web-share-637'
     runs-on: macos-latest
     steps:
       - name: Checkout

@@ -23,20 +23,20 @@ jobs:
       - name: Focused Chrome iOS viewport regression (GM Server only)
         run: |
           node --test tests/gm-chrome-ios-viewport-20261030.test.mjs
-      - name: Verify GM CSS untouched and JS changes limited to release version
+      - name: Verify GM CSS unchanged and source-backed JS changes
         shell: bash
         run: |
           set -euo pipefail
           git diff --exit-code origin/main...HEAD -- server-game/current/style.css
           ACTUAL=$(git diff --unified=0 origin/main...HEAD -- server-game/current/app.js | grep -E '^[+-][^+-]' || true)
-          # PR649 is a UI-only HTML change; GM app.js must remain byte-identical.
-          if [ -z "$ACTUAL" ]; then
-            echo "GM app.js unchanged: safe for HTML-only Player Web share layout."
-            exit 0
-          fi
           EXPECTED=$(printf '%s\n' "-const VERSION='3.277';" "+const VERSION='3.278';")
           if [ "$ACTUAL" != "$EXPECTED" ]; then
-            echo "::error::GM app.js changed beyond the approved V3.278 version bump"
-            printf 'Actual changes:\n%s\n' "$ACTUAL"
-            exit 1
+            # Functional GM PRs may alter JS legitimately, but only with corresponding
+            # source module changes and a byte-for-byte reproducible GM bundle.
+            if git diff --quiet origin/main...HEAD -- server-game/src/; then
+              echo "::error::GM JS changed without source modules (not a version-only PR)"
+              printf 'Actual changes:\n%s\n' "$ACTUAL"
+              exit 1
+            fi
+            node .github/scripts/assemble-gm-app.mjs --verify
           fi

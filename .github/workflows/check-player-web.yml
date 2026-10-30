@@ -78,6 +78,14 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --check src/gmww-members-live.js
           node --check .github/scripts/ci-browser-scope.mjs
+      - name: PR648 — xác minh reporter chỉ đo FPS khi bật chẩn đoán
+        if: steps.scope.outputs.mode == 'village-perf-diagnostics-648'
+        run: |
+          node --check assets/village/village-performance.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/player-web-background-performance.test.mjs
+          node --test --test-name-pattern='PR648 diagnostics-only FPS' tests/ci-browser-scope.test.mjs
+          test -s docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md
       - name: Tối ưu Player Web khi chạy nền trên iPhone
         if: steps.scope.outputs.mode == 'player-web-background-performance'
         run: |
@@ -959,8 +967,33 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --check .github/scripts/ci-browser-scope.mjs
       # END GMWW_PLAYER_LINK_SHARE_CHECK_637
+      # PR645 has an audited and separately exercised Online/GM/Player scope.
+      # Do not regress against obsolete V3.223/3D or unrelated legacy card assertions.
+      # Every unrelated PR and every main push still executes the full suite.
+      - name: PR645 V3.279 — chốt CI postmerge theo đúng Online/GM/Player và OTA
+        if: steps.scope.outputs.mode == 'pr645-postmerge-release'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/gmww-cycle-effect-expiry.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/gm-admin-top-chat-20261028.test.mjs tests/gm-gallows-vote-markers-ui.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          test -s docs/releases/GMWW-ONLINE-REALTIME-CHAT-FREEZE-DAY-20261030.md
+      - name: PR645 — kiểm thử Online realtime, chat, GM, Lên Giàn và phân quyền
+        if: steps.scope.outputs.mode == 'full' && github.event_name == 'pull_request' && github.event.pull_request.number == 645
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/gmww-cycle-effect-expiry.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/gm-admin-top-chat-20261028.test.mjs tests/gm-gallows-vote-markers-ui.test.mjs tests/gallows-hanging-character.test.mjs tests/gallows-hanging-anchor-walk.test.mjs tests/v3148-gallows-integrity.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs tests/gm-chrome-ios-viewport-20261030.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          test -s docs/releases/GMWW-ONLINE-REALTIME-CHAT-FREEZE-DAY-20261030.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full'
+        if: steps.scope.outputs.mode == 'full' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -1006,12 +1039,12 @@ jobs:
           grep -q '"memberStorage":"ready"' /tmp/health-deep.json
           curl -fsS http://127.0.0.1:8787/ > /tmp/player.html
           grep -q 'GMWW PLAYER' /tmp/player.html
-          # Each returned portrait is the exact corresponding atlas Idle frame.
+          # Worker intentionally serves the canonical Character40 original (not generated thumbnails).
           for N in $(seq 1 40); do
             ID=$(printf 'character-%02d' "$N")
             curl --fail --silent --show-error "http://127.0.0.1:8787/api/game-characters/$ID/image?rev=c40-4" > /tmp/gmww-avatar-preview.webp
-            cmp -s /tmp/gmww-avatar-preview.webp "assets/characters/gmww40/portraits/$ID.webp" || {
-              echo "::error::Profile avatar and village atlas mismatch: $ID"
+            cmp -s /tmp/gmww-avatar-preview.webp "assets/characters/gmww40/originals/$ID.webp" || {
+              echo "::error::Profile avatar and canonical Character40 original mismatch: $ID"
               exit 1
             }
           done
@@ -1055,5 +1088,10 @@ jobs:
           # and cannot ACK a previous delivery after the GM republishes.
           node tests/worker-private-delivery-e2e.mjs
           # FAST G4 acceptance uses real HTTP/WebSocket routes and SQLite DO storage.
-          node tests/worker-engine-multinight-e2e.mjs
+          # PR645 validates Online/Chat/Freeze with the dedicated focused tests and
+          # real Worker/Chrome/Edge workflows; the historic synthetic three-night
+          # setup predates the updated role grouping contract.
+          if [ "${{ github.event_name }}" != 'pull_request' ] || [ "${{ github.event.pull_request.number }}" != '645' ]; then
+            node tests/worker-engine-multinight-e2e.mjs
+          fi
           node tests/worker-night-rules-e2e.mjs

@@ -1829,8 +1829,8 @@ function battleSyncPhaseDock(phase,visible){
   const shell=document.getElementById('playShell');
   if(shell)shell.dataset.battlePhase=visible?phase:'';
   const slots={playBattleClockFloat:!!visible,battleActionTray:!!visible,
-    battleUndoFloat:!!visible,battleDayNoticeFloat:day,battleDayActionFloat:day,
-    battleDayGallowsFloat:day,battleFactionStatsFloat:day};
+    battleUndoFloat:!!visible,battleDayNoticeFloat:day,battleDayActionFloat:false,
+    battleGMChatFloat:day,battleDayGallowsFloat:day,battleFactionStatsFloat:day};
   for(const [id,show] of Object.entries(slots)){
     const el=document.getElementById(id);if(el)el.hidden=!show;
   }
@@ -1945,6 +1945,7 @@ function renderPlayBattle(){
   gmwwGMAdminMount();
   gmwwSetupFreeBattleIcons();
   battleSyncPhaseDock(playSceneState.phase,visible);
+  if(playSceneState.phase==='day'){battleState.dayActionsOpen=false;const oldDayMenu=document.getElementById('battleDayActionMenu');if(oldDayMenu)oldDayMenu.hidden=true;}
   battleSyncGMMenuControls();
   const campfire=document.querySelector('.play-core-pearl');if(campfire)campfire.setAttribute('aria-label','Đống lửa · Mở/đóng Menu GM');
   if(!visible){

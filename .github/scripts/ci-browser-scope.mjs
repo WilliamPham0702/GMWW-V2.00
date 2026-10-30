@@ -2866,7 +2866,74 @@ export function isGMChromeIosViewportScope(changes){
   return true;
 }
 
+// PR648_EXACT_FPS_SCOPE: diagnostic FPS sampling only, not game animation or realtime.
+// Require the exact approved reporter delta. A wider change fails closed to full CI.
+const pr648AllowedPaths=new Set([
+  'assets/village/village-performance.mjs',
+  'tests/player-web-background-performance.test.mjs',
+  'tests/ci-browser-scope.test.mjs',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
+  '.github/workflows/build-server-game-ipa.yml',
+  'docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md'
+]);
+function isPr648ThermalScope(changes){
+  if(!Array.isArray(changes)||changes.length!==pr648AllowedPaths.size||
+    changes.some(c=>!c||!pr648AllowedPaths.has(c.path)||
+      !(c.path.startsWith('docs/')?c.status==='A':c.status==='M')))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  if(by.size!==pr648AllowedPaths.size)return false;
+  const perf=by.get('assets/village/village-performance.mjs');
+  if(typeof perf?.before!=='string'||typeof perf?.after!=='string')return false;
+  const oldDecl='  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=60,longTasks=0,worstLongTask=0;';
+  const newDecl='  // Frame-by-frame FPS sampling is diagnostic only; do not keep an idle village at 60Hz.\n  const sampleFps=new URLSearchParams(window.location.search).get("gmwwPerf")==="1";\n  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=null,longTasks=0,worstLongTask=0;';
+  const oldResume='  const resumeFrames=()=>{if(stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};';
+  const newResume='  const resumeFrames=()=>{if(!sampleFps||stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};';
+  const previous=perf.after
+    .replace(newDecl,oldDecl)
+    .replace(newResume,oldResume)
+    .replace('  if(sampleFps)resumeFrames();\n  let observer=null;','  resumeFrames();\n  let observer=null;');
+  if(previous!==perf.before||perf.before===perf.after||
+    !perf.after.includes(newDecl)||!perf.after.includes(newResume))return false;
+  const test=String(by.get('tests/player-web-background-performance.test.mjs')?.after||'');
+  const scopeTest=String(by.get('tests/ci-browser-scope.test.mjs')?.after||'');
+  const browser=String(by.get('.github/workflows/check-player-web.yml')?.after||'');
+  const legacy=String(by.get('.github/workflows/prepare-runtime-v3202-candidate.yml')?.after||'');
+  const ipa=String(by.get('.github/workflows/build-server-game-ipa.yml')?.after||'');
+  return test.includes('PR648 normal village has no idle FPS animation')&&
+    scopeTest.includes('PR648 diagnostics-only FPS')&&
+    browser.includes("steps.scope.outputs.mode == 'village-perf-diagnostics-648'")&&
+    (legacy.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'")||
+     legacy.includes("needs.scope.outputs.mode == 'gm-ui-controls-3238'"))&&
+    ipa.includes("needs.scope.outputs.mode != 'village-perf-diagnostics-648'");
+}
+
+// V3.279 PR645 postmerge: only the five CI/release-gate files may change.
+// A gameplay file, missing path, duplicate or deletion always returns full CI.
+function isPR645PostmergeReleaseScope(changes){
+  const expected=new Set([
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-player-card-browsers.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ]);
+  const markers=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','function isPR645PostmergeReleaseScope(changes)'],
+    ['.github/workflows/check-player-web.yml',"steps.scope.outputs.mode == 'pr645-postmerge-release'"],
+    ['.github/workflows/check-player-card-browsers.yml',"needs.scope.outputs.mode == 'pr645-postmerge-release'"],
+    ['.github/workflows/deploy-production.yml','# PR645 V3.279: postmerge browser gate repair'],
+    ['tests/ci-browser-scope.test.mjs',"PR645 V3.279 postmerge CI repair:"]
+  ]);
+  return Array.isArray(changes)&&changes.length===expected.size&&
+    new Set(changes.map(c=>c?.path)).size===expected.size&&
+    changes.every(c=>c?.status==='M'&&expected.has(c.path)&&
+      typeof c.after==='string'&&c.after.includes(markers.get(c.path)));
+}
 function classifyBrowserScope(changes){
+  if(isPR645PostmergeReleaseScope(changes))return 'pr645-postmerge-release';
+  if(isPr648ThermalScope(changes))return 'village-perf-diagnostics-648';
   if(isGMChromeIosViewportScope(changes))return 'gm-chrome-ios-viewport';
   const interactions=playerInteractionsScope(changes);if(interactions)return interactions;
   if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
@@ -3180,6 +3247,23 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // PR #651 repairs only the exact postmerge PR645 V3.279 release gate.
+  // Resolve source and ancestry before allowing the focused task checks.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if((base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base))&&
+         JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.279.0'){
+        git('merge-base','--is-ancestor','d9527d6625868c0a25395e8ebf982446b4e4712b','HEAD');
+        const lines=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=lines.map(line=>{const [status,path]=line.split('\t');return{status,path,after:status==='M'?fs.readFileSync(path,'utf8'):null}});
+        if(isPR645PostmergeReleaseScope(changes)&&
+           fs.readFileSync('src/player-web-src/35-online-chat.part','utf8').includes('function gmwwOnlinePlaceAtFire(dock){')){
+          return{mode:'pr645-postmerge-release',reason:'Exact PR645 V3.279 postmerge CI safety repair; Player/GM/Worker/browsers and immutable Runtime protected'};
+        }
+      }
+    }catch{} // Fail closed: unexpected diffs run the normal full suite.
+  }
   try{if(isGMPlayerLinkShare637Scope())return {mode:'gm-player-web-share-637',reason:'Only GM share UI and exact CI scope guards; no Worker/IPA/OTA/gameplay'};}catch(_){}
   // Main and PR: recognize only the exact Chrome UI change + optional version bump.
   // Use content-aware comparison, not a filename or a PR-title bypass.

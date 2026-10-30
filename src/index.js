@@ -47,7 +47,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.278",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.279",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1048,6 +1048,15 @@ export class RoomDurableObject extends DurableObject {
     if(String(body?.matchId||"")!==String(meta.matchId||"")||
       String(body?.cycleKey||"")!==String(meta.cycleKey||""))
       return j({ok:false,error:"DEMO_ACTION_STALE"},409);
+    // Private action offers remain visible while Frozen/Expelled, but execution is blocked on Server.
+    if(online){
+      const effects=await this.ctx.storage.get('interactions')||[];
+      const blocked=effects.some(x=>normalizeLoginId(x?.loginId)===loginId&&x?.effectActive!==false&&
+        (!x?.matchId||String(x.matchId)===String(meta.matchId))&&
+        (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&
+        (x.type==='dead'||x.type==='expelled'||(x.type==='frozen'&&meta.cyclePhase==='night')));
+      if(blocked)return j({ok:false,error:'ACTOR_CANNOT_ACT',message:'Đã thấy hành động, nhưng bạn đang chịu hiệu ứng và không được thực hiện lượt này.'},409);
+    }
     const actions=online?await playerOfferedActions(this,meta,loginId):await demoPlayerActions(this,meta,loginId),
       action=actions.find(a=>a.key===String(body?.actionKey||""));
     if(!action)return j({ok:false,error:"DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN"},409);
@@ -3331,15 +3340,18 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
       players=(await this.ctx.storage.get("players"))||{};
-    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!id||!players["member:"+id]||!content||String(body?.text||"").length>400)
+    const publicDay=String(body?.channel||'')==='room';
+    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!content||String(body?.text||"").length>400||
+      (publicDay?(String(meta.phase)!=='running'||String(meta.cyclePhase)!=='morning'):(!id||!players["member:"+id])))
       return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
-    const key="onlineChat:"+chatStorageScope(meta)+":gm:"+id,now=Date.now(),
-      rateKey="gmChatRate:"+chatStorageScope(meta)+":"+id;
+    const channel=publicDay?"day":"gm:"+id;
+    const key="onlineChat:"+chatStorageScope(meta)+":"+channel,now=Date.now(),
+      rateKey="gmChatRate:"+chatStorageScope(meta)+":"+channel;
     if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
     const messages=(await this.ctx.storage.get(key))||[],
-      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:"gm"};
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:publicDay?"day":"gm"};
     await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
-    this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel:"gm:"+id});
+    this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel});
   }
   async gmChatModerate(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;

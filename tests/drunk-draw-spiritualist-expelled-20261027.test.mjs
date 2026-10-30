@@ -53,8 +53,8 @@ test('Exile blocks bad effects but never obstructs neutral faction comparison',(
  assert.equal(isPassiveInformationAction('action_wolf_bite'),false);
  const worker=fs.readFileSync('src/index.js','utf8');
  assert.match(worker,/const isFactionCompare=String\(body\?\.actionId\|\|''\)==='action_compare_faction'/);
- assert.match(worker,/effectiveTargets=isFactionCompare\?targets:targets\.filter/);
- assert.match(worker,/revealIds\.filter\(id=>players\["member:"\+id\]\&\&\(isFactionCompare\|\|!isExpelled\(id\)\)\)/);
+ assert.match(worker,/effectiveTargets=isFactionCompare\?actionTargets:actionTargets\.filter/);
+ assert.match(worker,/revealIds\.filter\(id=>players\[\"member:\"\+id\]&&\(isFactionCompare\|\|revealActionId==='action_seer'\|\|!isExpelled\(id\)\)\)/);
  assert.match(worker,/results\.push\(\{ok:true,loginId:id,observed:true\}\)/);
 });
 test('Authenticated room route never trusts Player Web actor or source role',()=>{
