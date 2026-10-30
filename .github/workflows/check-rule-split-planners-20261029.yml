@@ -1,0 +1,66 @@
+name: Check RULE split planners (focused)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/gmww-artifact-*.js'
+      - 'src/gmww-day-artifact-inspection.js'
+      - 'src/index.js'
+      - 'tests/worker-day-artifact-inspection-pr626-e2e.mjs'
+      - 'tests/pr626-private-inspection-ui-demo-20261029.test.mjs'
+      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'server-game/current/app.js'
+      - 'server-game/src/40-battle-and-timeline.part'
+      - 'src/gmww-demo-runner.js'
+      - '.github/scripts/check-pr626-day-inspections-worker.mjs'
+      - 'src/gmww-ghost-clue.js'
+      - 'src/gmww-ghost-letter.js'
+      - 'tests/card-executors-artifact-*.test.mjs'
+      - 'tests/card-executors-secret-artifact-destroy-20261029.test.mjs'
+      - 'tests/card-executors-ghost-*.test.mjs'
+      - 'tests/card-executors-day-inspection-planners-20261029.test.mjs'
+      - '.github/workflows/check-rule-split-planners-20261029.yml'
+permissions:
+  contents: read
+jobs:
+  planner-units:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run only pure planner units carried into this PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=()
+          for test_file in \
+            tests/card-executors-artifact-steal-20261029.test.mjs \
+            tests/card-executors-artifact-function-copy-20261029.test.mjs \
+            tests/card-executors-secret-artifact-destroy-20261029.test.mjs \
+            tests/card-executors-artifact-link-20261029.test.mjs \
+            tests/card-executors-artifact-role-swap-20261029.test.mjs \
+            tests/card-executors-ghost-clue-20261029.test.mjs \
+            tests/card-executors-ghost-letter-20261029.test.mjs \
+            tests/card-executors-day-inspection-planners-20261029.test.mjs
+          do
+            if [[ -f "$test_file" ]]; then files+=("$test_file"); fi
+          done
+          if (( ${#files[@]} == 0 )); then echo 'No split-unit tests on this PR' >&2; exit 1; fi
+          node --test "${files[@]}"
+      - name: Check GM and Player UI, DEMO, role audio and safe private-undo wiring
+        if: ${{ hashFiles('tests/pr626-private-inspection-ui-demo-20261029.test.mjs') != '' }}
+        run: |
+          node --test tests/pr626-private-inspection-ui-demo-20261029.test.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Verify PR626 day Artifact Server action and real Worker HTTP/SQLite
+        if: ${{ hashFiles('tests/worker-day-artifact-inspection-pr626-e2e.mjs') != '' }}
+        run: |
+          npm ci
+          node --check src/index.js
+          node .github/scripts/check-pr626-day-inspections-worker.mjs
+      - name: Show stage limitation
+        run: echo 'Planner unit PASS is NOT Server/Player/DEMO/audio/undo/E2E acceptance; keep draft.'

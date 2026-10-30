@@ -29,7 +29,10 @@ async function context(room,meta){
   if(a.artifactId&&!artifacts.some(c=>c.id===a.artifactId)){const art=await store.get('artifact:'+a.loginId);artifacts.push({...art?.artifactCard,id:a.artifactId,name:a.artifactName})}
  }
  const cycle=(await store.get('artifactCycle:'+(meta.cyclePhase==='morning'?meta.matchId+':day:'+meta.cycleNight:artifactCycleKey(meta.matchId,meta.cycleNight))))||{accepted:[]};
- return {store,assignments,players,rows,cfg,cards,artifacts,cycle};
+ const spentArtifacts=new Set();
+ for(const a of assignments)if(a.artifactId&&await store.get('artifactUse:'+a.loginId+':'+a.artifactId))
+   spentArtifacts.add(a.loginId+':'+a.artifactId);
+ return {store,assignments,players,rows,cfg,cards,artifacts,cycle,spentArtifacts};
 }
 function nightActions(ctx,meta,turn,usage){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
@@ -58,7 +61,9 @@ function dayActions(ctx,meta,usage,ballot){
     if(card.flags?.allowMultipleActions===false&&own.some(x=>x.day===meta.cycleNight))continue;
     if((['onceGame','nGame'].includes(fn.usageMode)&&hits.length>=quota)||(fn.usageMode==='eachNight'&&hits.filter(x=>x.day===meta.cycleNight).length>=quota))continue;
     if(hits.some(x=>x.day===meta.cycleNight))continue;
-    if(owner.artifactId&&(ctx.cycle.accepted.length>=Number(ctx.cfg.artifactLimitPerCycle??3)||ctx.cycle.accepted.some(x=>x.artifactId===owner.artifactId&&x.playerId==='member:'+actorId)))continue;
+    if(owner.artifactId&&(ctx.cycle.accepted.length>=Number(ctx.cfg.artifactLimitPerCycle??3)||
+       ctx.cycle.accepted.some(x=>x.artifactId===owner.artifactId&&x.playerId==='member:'+actorId)||
+       ctx.spentArtifacts?.has(actorId+':'+owner.artifactId)))continue;
     const id='day:'+(owner.artifactId?'artifact:'+owner.artifactId:'role:'+owner.roleId)+':'+actorId+':'+actionId,name=card.actions?.find(x=>(x.id||x.actionId)===actionId)?.name||fn.name||fn.description||actionId;
     list.push({id,actionId,name,...owner,card:undefined,actorIds:[actorId],targetCount:fn.noTarget?0:Number(fn.targetCount??1),noSelf:fn.noSelf!==false,allowDead:fn.allowDead,noTarget:fn.noTarget,type:rules.resolvedType({...fn,name}),effectIds:fn.effectIds||[]});
    }
