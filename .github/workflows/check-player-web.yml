@@ -44,6 +44,16 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: GM Chrome iOS viewport only (no gameplay, Player cards, Native IPA)
+        if: steps.scope.outputs.mode == 'gm-chrome-ios-viewport'
+        run: |
+          node --test tests/gm-chrome-ios-viewport-20261030.test.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test --test-name-pattern='PR642 Chrome iOS GM viewport' tests/ci-browser-scope.test.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-GM-CHROME-IOS-VIEWPORT-20261030.md
       - name: Stage 2 Native GitHub-first OTA, verify only relevant Runtime and Native contracts
         if: steps.scope.outputs.mode == 'native-github-ota-stage2'
         run: |
