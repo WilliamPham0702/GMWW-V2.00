@@ -2650,9 +2650,15 @@ export class RoomDurableObject extends DurableObject {
     if(!record||String(body?.undoToken||"")!==record.token)return j({ok:false,error:"UNDO_NOT_FOUND"},404);
     if(record.undone)return j({ok:true,idempotent:true,undone:true,turnId:record.turnId});
     if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
-      String(meta.cycleKey||"")!==record.cycleKey||Number(meta.cycleNight||0)!==record.night||
-      String(meta.currentNightTurnId||"")!==record.turnId)
-      return j({ok:false,error:"UNDO_STALE_TURN",message:"Chỉ khôi phục hành động vừa xác nhận trong lượt hiện tại."},409);
+      String(meta.cycleKey||"")!==record.cycleKey||Number(meta.cycleNight||0)!==record.night)
+      return j({ok:false,error:"UNDO_STALE_TURN",message:"Chỉ khôi phục hành động trong cùng đêm hiện tại."},409);
+    // Confirmations may auto-advance the GM timeline before Undo is tapped.
+    // Only allow rewind to this exact recorded turn if no later gameplay state
+    // has changed. Never roll back a different match/night or another action.
+    const runtime=await this.getNightRuntime(meta,Number(meta.cycleNight||1),false);
+    const undoIndex=runtime?.queue?.findIndex(step=>String(step?.id||"")===String(record.turnId))??-1;
+    if(undoIndex<0||!Number.isInteger(runtime.cursor)||runtime.cursor<undoIndex)
+      return j({ok:false,error:"UNDO_STALE_TURN",message:"Lượt đã thay đổi, không thể khôi phục."},409);
     for(const row of record.after){
       const current=await this.ctx.storage.get(row.key),exists=current!==undefined&&current!==null;
       if(exists!==row.exists||JSON.stringify(current??null)!==JSON.stringify(row.value??null))
@@ -2663,6 +2669,8 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }
     if(meta.demo)await this.ctx.storage.delete("demoPlan");
+    if(runtime.cursor!==undoIndex||runtime.completed||String(meta.currentNightTurnId||"")!==record.turnId)
+      await this.advanceNightRuntime(meta,"jump","gm-undo",undoIndex);
     record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
     const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(record.undoneAt)).padStart(13,"0")+":"+logId,{id:logId,type:"battle_undo",loginId:String(record.targetIds||""),matchId,actionId:record.label,message:"GM hoàn tác: "+record.label,createdAt:record.undoneAt,source:"gm"});
     this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
