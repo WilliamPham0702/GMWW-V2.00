@@ -2,6 +2,7 @@
 // Select the smallest SAFE browser scope on PRs. Unknown diffs run the full suite.
 // Verified main-push scopes use focused checks; icon policy also isolates legacy gallows/shortcut workflows.
 import fs from 'node:fs';
+import {playerInteractionsScope} from './player-interactions-scope.mjs';
 import {createHash} from 'node:crypto';
 import {isIconArtworkScope,isIconArtworkPolicyScope} from './icon-artwork-scope.mjs';
 import {execFileSync} from 'node:child_process';
@@ -2816,6 +2817,7 @@ function isPlayerOnlinePrivacy630Scope(changes){
 }
 
 function classifyBrowserScope(changes){
+  const interactions=playerInteractionsScope(changes);if(interactions)return interactions;
   if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
   if(isGithubNativeStage2Scope(changes))return 'native-github-ota-stage2';
   if(isGithubRuntimeCIRepair(changes))return "github-runtime-ota-ci";
@@ -3090,6 +3092,7 @@ function detect(){
             after:['M','A'].includes(status)?git('show',to+':'+path):null};
         });
         const changes=readChanges(base,'HEAD');
+        const interactions=playerInteractionsScope(changes);if(interactions)return {mode:interactions,reason:'Player lobby interactions: exact files and chat-only Worker edits'};
         if(isPlayerOnlinePrivacy630Release(changes)||isPlayerOnlinePrivacy630Release(changes,readChanges(base+'^1',base)))
           return {mode:'player-online-privacy-630',reason:'Verified PR630 release/CI recovery; unchanged Runtime, scoped tests and integrity gates'};
       }

@@ -912,6 +912,19 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           test -s docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md
+      - name: Player lobby interactions — CI routing only
+        if: steps.scope.outputs.mode == 'player-interactions-ci'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/player-interactions-ci.test.mjs
+      - name: Player lobby interactions — chat, menu, cards and drag actions
+        if: steps.scope.outputs.mode == 'player-lobby-interactions'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/player-interactions-ci.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/online-chat-authority.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs tests/player-web-online-actions-20261028.test.mjs
+          test -s docs/releases/GMWW-PLAYER-LOBBY-INTERACTIONS-20261030.md
       - name: PR630 P0 Online Player - riêng tư, chat GM, bài thu nhỏ và hành động
         if: steps.scope.outputs.mode == 'player-online-privacy-630'
         run: |
