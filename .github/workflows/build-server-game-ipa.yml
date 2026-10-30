@@ -64,6 +64,7 @@ jobs:
         run: npm ci
 
       - name: Verify source before building official IPA
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           if [ "${{ needs.scope.outputs.mode }}" = "native-github-ota-stage2" ]; then
@@ -84,6 +85,7 @@ jobs:
           fi
 
       - name: Resolve and stage clean native release metadata
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         id: meta
         shell: bash
         run: |
@@ -116,6 +118,7 @@ jobs:
           NODE
 
       - name: Prepare clean web bundle
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           set -euxo pipefail
           APPDIR="server-game/GMWW-Server"
@@ -284,6 +287,7 @@ jobs:
           ! test -e "$APPDIR/Web/phu-thuy-gia-sea-thumb.webp"
 
       - name: Restore stable legacy artwork package
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           set -euo pipefail
           SOURCE="server-game/legacy-assets/v252"
@@ -310,6 +314,7 @@ jobs:
           echo "Legacy artwork ready: $RESTORED_COUNT WebP files"
 
       - name: Package clean 63-role artwork only
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           set -euo pipefail
           # Keep one clean, high-resolution artwork per role. Do not package old
@@ -355,6 +360,7 @@ jobs:
           grep -q 'role-artwork-v251.js' server-game/GMWW-Server/Web/GMWW.html
 
       - name: Validate JavaScript and baseline structure
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           set -euo pipefail
           node --check server-game/current/app.js
@@ -395,6 +401,7 @@ jobs:
           NODE
 
       - name: Verify optimized default artwork
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           set -euo pipefail
           ART="server-game/GMWW-Server/Web/default-artwork.webp"
@@ -404,6 +411,7 @@ jobs:
           test "$BYTES" -lt 700000
 
       - name: Generate App Icon
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           set -euo pipefail
           ICONSET="server-game/GMWW-Server/Assets.xcassets/AppIcon.appiconset"
@@ -420,6 +428,7 @@ jobs:
           JSON
 
       - name: Build unsigned app
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -435,6 +444,7 @@ jobs:
             build
 
       - name: Package and verify IPA
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           set -euo pipefail
           APP="build-v2/Build/Products/Release-iphoneos/GMWW-Server.app"
@@ -493,6 +503,7 @@ jobs:
           shasum -a 256 "$IPA" | tee "$IPA.sha256"
 
       - name: Upload IPA
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         uses: actions/upload-artifact@v4
         with:
           name: GMWW-V${{ steps.meta.outputs.version }}
@@ -503,6 +514,7 @@ jobs:
       # Owner explicitly approved PR629 publication. Only its exact merge
       # commit may publish once; later pushes remain build-only.
       - name: Authorize owner-approved Stage 2 IPA release only on PR629 merge
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         id: approval
         shell: bash
         run: |
@@ -568,3 +580,10 @@ jobs:
             echo "::error::IPA tag $TAG already exists. Do not overwrite a published IPA.";
             exit 1
           fi
+      - name: Link share CI integrity without IPA or legacy OTA build
+        if: startsWith(needs.scope.outputs.mode, 'gm-player-share')
+        run: |
+          node --test tests/gm-player-share-ci.test.mjs
+          if [ -f tests/gm-player-web-share-link.test.mjs ]; then node --test tests/gm-player-web-share-link.test.mjs; fi
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs

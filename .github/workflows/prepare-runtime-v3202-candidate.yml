@@ -50,6 +50,7 @@ jobs:
       - name: Cài thư viện theo phiên bản cố định
         run: npm ci
       - name: Khôi phục bộ ảnh nguyên bản và kiểm tra SHA-256
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -69,16 +70,20 @@ jobs:
           fi
           test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
       - name: Kiểm thử trực tiếp phiên bản và guard OTA liên quan
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: |
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node --test tests/gmww-v3238-uniform-gm-controls.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
       - name: Đóng gói manifest từ bytes Runtime thật
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: node .github/scripts/prepare-update-channel.mjs runtime
       - name: Kiểm chứng SHA-256 từng file và manifest V3.238
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         run: node .github/scripts/verify-prepared-runtime.mjs 3.238
       - name: Kiểm tra V3.238 lớn hơn bản đang chạy, chặn trùng phiên bản
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         shell: bash
         run: |
           set -euo pipefail
@@ -102,6 +107,7 @@ jobs:
           node .github/scripts/verify-ota-version-advance.mjs \
             assets/updates/latest.json "$LIVE" /tmp/gmww-3218-changed-files.txt
       - name: Xuất chứng cứ cho chủ dự án nghiệm thu (không phát hành)
+        if: ${{ !startsWith(needs.scope.outputs.mode, 'gm-player-share') }}
         uses: actions/upload-artifact@v4
         with:
           name: GMWW-V3.238-OTA-CANDIDATE-SHA256-NO-DEPLOY
@@ -112,6 +118,13 @@ jobs:
             assets/updates/runtime/V3.238/manifest-runtime-3238.json
           if-no-files-found: error
           retention-days: 14
+      - name: Link share CI integrity without IPA or legacy OTA build
+        if: startsWith(needs.scope.outputs.mode, 'gm-player-share')
+        run: |
+          node --test tests/gm-player-share-ci.test.mjs
+          if [ -f tests/gm-player-web-share-link.test.mjs ]; then node --test tests/gm-player-web-share-link.test.mjs; fi
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
 
   lobby541-candidate:
     name: PR541 V3.243 Runtime OTA SHA-256, no IPA

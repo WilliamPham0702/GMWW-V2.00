@@ -2,6 +2,7 @@
 // Select the smallest SAFE browser scope on PRs. Unknown diffs run the full suite.
 // Verified main-push scopes use focused checks; icon policy also isolates legacy gallows/shortcut workflows.
 import fs from 'node:fs';
+import {gmPlayerShareScope} from './gm-player-share-scope.mjs';
 // V3.277 Player lobby release scope checks exact version-only files; unknown diffs still use full CI.
 // PR641 is an exact CI-only shell printf correction.
 import {playerInteractionsScope} from './player-interactions-scope.mjs';
@@ -987,7 +988,7 @@ function isGMIcons501ReleaseScope(changes){
     'assets/village/village.mjs','server-game/current/GMWW.html',
     'server-game/current/app.js','server-game/current/style.css',
     'server-game/src/00-core-and-library.part',
-    'server-game/src/30-village-and-setup.part',
+    'r-game/src/30-village-and-setup.part',
     'server-game/src/40-battle-and-timeline.part',
     '.github/scripts/prepare-update-channel.mjs',
     'src/index.js','package.json','package-lock.json',
@@ -1214,7 +1215,7 @@ const gm3229Files=new Set([
 function isGMFooter3229Scope(changes){
  if(!Array.isArray(changes)||!changes.length)return false;
  const map=new Map(changes.map(x=>[x.path,x]));
- for(const path of ['server-game/current/app.js','server-game/current/style.css',
+ for(const path oerver-game/current/app.js','server-game/current/style.css',
   'server-game/src/30-village-and-setup.part','server-game/src/40-battle-and-timeline.part',
   'server-game/current/GMWW.html','src/index.js','package.json',
   'tests/gmww-v3228-battle-icons-footer.test.mjs',
@@ -2154,7 +2155,7 @@ function isDrunkCardOverlayScope(changes){
     if(!back||!fs.readFileSync('assets/role-card-back.webp').equals(Buffer.from(back,'base64')))return false;
     const gmFiles=['00-core-and-library.part','10-library-and-settings.part',
       '20-members-and-roster.part','30-village-and-setup.part',
-      '40-battle-and-timeline.part','50-roles-and-artifacts.part'];
+      '40-battle-and-timeline.part,'50-roles-and-artifacts.part'];
     const gm=gmFiles.map(x=>fs.readFileSync('server-game/src/'+x,'utf8')).join('');
     if(gm!==fs.readFileSync('server-game/current/app.js','utf8'))return false;
     const webFiles=['00-bootstrap-and-session.part','10-role-card-artwork.part',
@@ -2609,7 +2610,7 @@ const artifact3274ProofPaths=new Set([
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/GMWW-PR613-release-proof-ci-20261029.md'
 ]);
-const artifact3274PortraitProofPaths=new Set([
+const artifact3274PortraitProofPahs=new Set([
   '.github/scripts/ci-browser-scope.mjs',
   '.github/scripts/verify-character40-production.mjs',
   '.github/workflows/deploy-production.yml',
@@ -2819,6 +2820,7 @@ function isPlayerOnlinePrivacy630Scope(changes){
 }
 
 function classifyBrowserScope(changes){
+  const share=gmPlayerShareScope(changes);if(share)return share;
   const interactions=playerInteractionsScope(changes);if(interactions)return interactions;
   if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
   if(isGithubNativeStage2Scope(changes))return 'native-github-ota-stage2';
@@ -3094,6 +3096,7 @@ function detect(){
             after:['M','A'].includes(status)?git('show',to+':'+path):null};
         });
         const changes=readChanges(base,'HEAD');
+        const share=gmPlayerShareScope(changes);if(share)return {mode:share,reason:'Exact link-share blocks or isolated CI policy; no backend changes'};
         const interactions=playerInteractionsScope(changes);if(interactions)return {mode:interactions,reason:'Player lobby interactions: exact files and chat-only Worker edits'};
         if(isPlayerOnlinePrivacy630Release(changes)||isPlayerOnlinePrivacy630Release(changes,readChanges(base+'^1',base)))
           return {mode:'player-online-privacy-630',reason:'Verified PR630 release/CI recovery; unchanged Runtime, scoped tests and integrity gates'};

@@ -44,6 +44,13 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Link sharing scope and isolation
+        if: startsWith(steps.scope.outputs.mode, 'gm-player-share')
+        run: |
+          node --test tests/gm-player-share-ci.test.mjs
+          if [ -f tests/gm-player-web-share-link.test.mjs ]; then node --test tests/gm-player-web-share-link.test.mjs; fi
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
       - name: Stage 2 Native GitHub-first OTA, verify only relevant Runtime and Native contracts
         if: steps.scope.outputs.mode == 'native-github-ota-stage2'
         run: |
@@ -224,7 +231,7 @@ jobs:
           node --check server-game/current/app.js
           node --check src/index.js
           test -s docs/releases/GMWW-V3.262-equal-campfire-radius-20261028.md
-      - name: V3.261 — test GM đi bộ vào vòng lửa, quay mặt và chạy về ghế
+      - name: V3.261 — test GM đi bộ vàovòng lửa, quay mặt và chạy về ghế
         if: steps.scope.outputs.mode == 'gm-fire-walk-3261'
         run: |
           node --test tests/gm-fire-walk-position.test.mjs tests/gm-turn-motion-lowheat.test.mjs
@@ -703,7 +710,7 @@ jobs:
       - name: Chỉ kiểm thử PR475 - Sát Thủ, soi xét, audio và quyền vote
         if: steps.scope.outputs.mode == 'demo-475'
         run: |
-          node --test tests/demo-assassin-gallows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/ci-browser-scope.test.mjs
+          node --test tests/demo-assassin-galows-divination.test.mjs tests/night-rules-audio-regression.test.mjs tests/v3189-fire-gallows-voting.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
 
       - name: V3.244 — chỉ menu tiến trình 6 bước căn đều và an toàn Runtime

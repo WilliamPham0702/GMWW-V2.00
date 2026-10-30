@@ -23,15 +23,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  release-scope:
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.scope.outputs.allowed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Block unapproved link-sharing Runtime release
+        id: scope
+        env:
+          GMWW_CI_EVENT: push
+        run: |
+          SCOPE=$(node .github/scripts/ci-browser-scope.mjs | head -1)
+          case "$SCOPE" in
+            "GMWW browser CI scope: gm-player-share |"*|"GMWW browser CI scope: gm-player-share-ci |"*) echo "allowed=false" >> "$GITHUB_OUTPUT" ;;
+            *) echo "allowed=true" >> "$GITHUB_OUTPUT" ;;
+          esac
   package:
+    needs: release-scope
     name: Verify and build manual Runtime without Cloudflare
     if: >-
+      needs.release-scope.outputs.allowed == 'true' && (
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
+       github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
