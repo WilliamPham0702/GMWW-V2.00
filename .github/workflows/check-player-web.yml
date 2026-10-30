@@ -912,6 +912,7 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           test -s docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md
+      # PR641 CI-only guard repair preserves the existing Player-focused tests.
       - name: Player lobby interactions — CI routing only
         if: steps.scope.outputs.mode == 'player-interactions-ci'
         run: |

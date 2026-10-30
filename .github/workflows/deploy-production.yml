@@ -170,11 +170,11 @@ jobs:
             echo 'PR629 Native OTA only: Cloudflare Worker, IPA Production and game data are isolated.' >> "$GITHUB_STEP_SUMMARY"
           fi
           # The exact CI-only scope extension for Player V3.277 must never deploy gameplay.
-          CI_PLAYER_PATHS=$(printf '%s\\n' \\
-            '.github/scripts/ci-browser-scope.mjs' \\
-            '.github/scripts/player-interactions-scope.mjs' \\
-            '.github/workflows/check-player-web.yml' \\
-            '.github/workflows/deploy-production.yml' \\
+          CI_PLAYER_PATHS=$(printf '%s\n' \
+            '.github/scripts/ci-browser-scope.mjs' \
+            '.github/scripts/player-interactions-scope.mjs' \
+            '.github/workflows/check-player-web.yml' \
+            '.github/workflows/deploy-production.yml' \
             'tests/player-interactions-ci.test.mjs' | sort)
           if [ "$(sort /tmp/gmww-production-change-scope.txt)" = "$CI_PLAYER_PATHS" ]; then
             SHOULD_DEPLOY=false

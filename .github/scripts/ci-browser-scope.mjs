@@ -3,6 +3,7 @@
 // Verified main-push scopes use focused checks; icon policy also isolates legacy gallows/shortcut workflows.
 import fs from 'node:fs';
 // V3.277 Player lobby release scope checks exact version-only files; unknown diffs still use full CI.
+// PR641 is an exact CI-only shell printf correction.
 import {playerInteractionsScope} from './player-interactions-scope.mjs';
 import {createHash} from 'node:crypto';
 import {isIconArtworkScope,isIconArtworkPolicyScope} from './icon-artwork-scope.mjs';
