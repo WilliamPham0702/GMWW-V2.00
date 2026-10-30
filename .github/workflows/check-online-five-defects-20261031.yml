@@ -1,0 +1,44 @@
+name: Check GM Online Wolf, Undo, Seat Chat and Floating Icons
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/index.js"
+      - "server-game/src/40-battle-and-timeline.part"
+      - "server-game/src/45-online-chat.part"
+      - "server-game/current/app.js"
+      - "server-game/current/battle-controls.js"
+      - "tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs"
+      - ".github/workflows/check-online-five-defects-20261031.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  online-five-defects:
+    name: "Online 5 lỗi: Sói, Khôi phục, iCon, Chat Seat, Thông báo"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Cú pháp Server/GM
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check server-game/current/battle-controls.js
+      - name: Xác minh Runtime GM đóng gói đúng nguồn
+        run: node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Chỉ test các lỗi Online và luồng hồi quy trực tiếp
+        run: |
+          node --test tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs \
+            tests/gmww-action-icons-in-battle.test.mjs \
+            tests/v399-group-actions-undo.test.mjs \
+            tests/gm-admin-top-chat-20261028.test.mjs
+      - name: Xác minh thay đổi sạch và SHA-256 chứng cứ
+        run: |
+          git diff --check HEAD^ HEAD
+          sha256sum src/index.js server-game/current/app.js server-game/src/40-battle-and-timeline.part server-game/src/45-online-chat.part
