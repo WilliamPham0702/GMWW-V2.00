@@ -24,8 +24,14 @@ jobs:
         run: |
           node --test tests/gm-chrome-ios-viewport-20261030.test.mjs
       - name: Verify GM CSS untouched and JS changes limited to release version
+        shell: bash
         run: |
+          set -euo pipefail
           git diff --exit-code origin/main...HEAD -- server-game/current/style.css
-          git diff --unified=0 origin/main...HEAD -- server-game/current/app.js | grep -E '^[+-][^+-]' | grep -Ev '^[+-]const VERSION=.3\.[0-9]+.;
- | tee /tmp/gm-unexpected-diff.txt
-          test ! -s /tmp/gm-unexpected-diff.txt
+          ACTUAL=$(git diff --unified=0 origin/main...HEAD -- server-game/current/app.js | grep -E '^[+-][^+-]' || true)
+          EXPECTED=$(printf '%s\n' "-const VERSION='3.277';" "+const VERSION='3.278';")
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::GM app.js changed beyond the approved V3.278 version bump"
+            printf 'Actual changes:\n%s\n' "$ACTUAL"
+            exit 1
+          fi
