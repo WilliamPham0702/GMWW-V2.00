@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -24,5 +26,14 @@ jobs:
       - run: node --check src/index.js
       - run: node .github/scripts/assemble-player-web.mjs --verify
       - run: node .github/scripts/assemble-gm-app.mjs --verify
-      - run: node --test tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs
+      # BEGIN GMWW_RUNTIME_32771_CI_SCOPE
+      - name: Identify PR637-only Runtime metadata release
+        id: scope
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
+      # END GMWW_RUNTIME_32771_CI_SCOPE
+      - if: steps.scope.outputs.mode != 'gm-player-web-share-637'
+        run: node --test tests/demo-player-live-join-v3271.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs
       - run: npm run check

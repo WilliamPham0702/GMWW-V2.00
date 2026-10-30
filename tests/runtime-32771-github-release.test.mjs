@@ -47,3 +47,15 @@ test('CI recognition only for exact version and release metadata, never for game
   assert.ok(scope.includes('after!==before.replaceAll(oldText,newText)'));
   assert.ok(scope.includes('Unexpected changes in V3.277.1'));
 });
+
+test('unrelated DEMO tests remain scoped out, while syntax and bundle safety remain enforced',()=>{
+  for(const file of ['.github/workflows/check-demo-hybrid.yml','.github/workflows/check-demo-player-live-v3271.yml']){
+    const yaml=read(file);
+    assert.ok(yaml.includes('BEGIN GMWW_RUNTIME_32771_CI_SCOPE'),file);
+    assert.ok(yaml.includes("steps.scope.outputs.mode != 'gm-player-web-share-637'"),file);
+    assert.ok(yaml.includes('assemble-player-web.mjs --verify'),file);
+  }
+  const guard=read('.github/workflows/deploy-production.yml');
+  assert.ok(guard.includes("'.github/workflows/check-demo-hybrid.yml'"));
+  assert.ok(guard.includes("'.github/workflows/check-demo-player-live-v3271.yml'"));
+});

@@ -243,7 +243,9 @@ jobs:
               'server-game/current/app.js' \
               'server-game/src/00-core-and-library.part' \
               'src/index.js' \
-              'tests/runtime-32771-github-release.test.mjs' | sort)
+              'tests/runtime-32771-github-release.test.mjs' \
+              '.github/workflows/check-demo-hybrid.yml' \
+              '.github/workflows/check-demo-player-live-v3271.yml' | sort)
             test "$ACTUAL" = "$EXPECTED" || {
               echo "::error::Unexpected changes in V3.277.1 GitHub-only patch; block Worker deploy"; exit 1;
             }

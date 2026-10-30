@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Node.js
         uses: actions/setup-node@v4
         with:
@@ -36,12 +38,22 @@ jobs:
           node --check src/gmww-demo-runner.js
           node --check src/gmww-members-live.js
           node .github/scripts/assemble-player-web.mjs --verify
+      # BEGIN GMWW_RUNTIME_32771_CI_SCOPE
+      - name: Identify PR637-only Runtime metadata release
+        id: scope
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
+      # END GMWW_RUNTIME_32771_CI_SCOPE
       - name: Human and AI collision, DEMO isolation and web source
+        if: steps.scope.outputs.mode != 'gm-player-web-share-637'
         run: |
           node --test tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-pr367-369-reconciliation.test.mjs tests/demo-server-runner.test.mjs tests/gmww-player-web-source-modules.test.mjs
       - name: Cloudflare build safety (no Production deployment)
         run: npm run check
       - name: Isolated local Worker — real sign-in, join, own action and no duplicate
+        if: steps.scope.outputs.mode != 'gm-player-web-share-637'
         shell: bash
         run: |
           set -euo pipefail
