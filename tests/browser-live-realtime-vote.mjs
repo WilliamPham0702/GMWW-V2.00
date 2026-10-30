@@ -136,12 +136,12 @@ try{
  await gm('/cycle',{phase:'morning',night:1,cycleKey:'morning-1'});
  await gm('/gallows',{command:'open'});
  for(const {page,s} of opened){
-  await page.locator('#gmwwGallowsOpenNomination').waitFor({state:'visible',timeout:20000});
+  await page.frameLocator('#gmwwVillageFrame').locator('#gmwwPirateNominate').waitFor({state:'visible',timeout:20000});
   assert.equal((await roster(page)).length,2,s.name+' roster intact during nomination');
  }
  const first=opened[0].page;
- await first.locator('#gmwwGallowsOpenNomination').click();
- await first.locator('#gmwwGallowsNominee').selectOption(sessions[1].loginId);
+ await first.frameLocator('#gmwwVillageFrame').locator('#gmwwPirateNominate').press('Enter');
+ await first.locator('#gmwwGallowsPlayer [data-gallows-nominee="'+sessions[1].loginId+'"]').click();
  await first.locator('#gmwwGallowsNominate').click();
  const poll=async(pred,desc)=>{
   for(let n=0;n<40;n++){
