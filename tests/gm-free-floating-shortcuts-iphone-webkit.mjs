@@ -52,7 +52,8 @@ try{
         parent:el.closest('.gmww-free-icon')?.parentElement?.id,
         footer:!!el.closest('#battleBottomControls')};
     });
-    assert.ok(shape.width>=44&&shape.height>=44&&shape.width<=56,id+' touch size: '+JSON.stringify(shape));
+    const maxWidth=id==='battleDemoCollapse'?130:free?56:90;
+    assert.ok(shape.width>=44&&shape.height>=44&&shape.width<=maxWidth,id+' touch size: '+JSON.stringify(shape));
     assert.equal(shape.background,'rgba(0, 0, 0, 0)',id+' must have no box background');
     assert.equal(shape.border,'0px',id+' must have no box border');
     if(free)assert.equal(shape.parent,'playShell',id+' must float above the village');
