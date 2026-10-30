@@ -2818,7 +2818,56 @@ function isPlayerOnlinePrivacy630Scope(changes){
   return true;
 }
 
+// PR #626: fail-closed scope for exactly four DAY inspection Artifacts.
+// A file/status expansion is NOT a four-card release and falls back to full CI.
+// Keep GM and Player compiled sources verified by dedicated tests and checks.
+const rule626PathStatus=new Map([
+  ['.github/scripts/check-pr626-day-inspections-worker.mjs','A'],
+  ['.github/workflows/check-rule-split-planners-20261029.yml','A'],
+  ['docs/audits/pr584-split-inspections-09-24-29-39.md','A'],
+  ['docs/releases/GMWW-PR626-four-private-inspection-artifacts-draft-20261029.md','A'],
+  ['server-game/current/app.js','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/gmww-day-artifact-inspection.js','A'],
+  ['src/gmww-demo-runner.js','M'],
+  ['src/gmww-members-live.js','M'],
+  ['src/index.js','M'],
+  ['src/player-web-src/30-rooms-and-realtime.part','M'],
+  ['tests/card-executors-day-inspection-planners-20261029.test.mjs','A'],
+  ['tests/pr626-private-inspection-ui-demo-20261029.test.mjs','A'],
+  ['tests/worker-day-artifact-inspection-pr626-e2e.mjs','A'],
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['tests/ci-browser-scope.test.mjs','M']
+]);
+const rule626RequiredSource=new Map([
+ ['src/index.js',['resolveDayArtifactInspection({artifactId,actionId,','dayLastInspection:','dayArtifactInspections:','UNDO_STATE_CHANGED']],
+ ['src/gmww-day-artifact-inspection.js',['artifact_09','artifact_24','artifact_29','artifact_39','private:true']],
+ ['src/gmww-demo-runner.js',['spentArtifacts','artifactUse:']],
+ ['src/player-web-src/30-rooms-and-realtime.part',['gmwwShowDayInspection','dayArtifactInspections']],
+ ['server-game/src/40-battle-and-timeline.part',['battlePresentRevelation(a.actionId,response.result)','audio_system_destroyer_role']],
+ ['tests/worker-day-artifact-inspection-pr626-e2e.mjs',['battle-undo','dayArtifactInspections','/action']],
+ ['tests/pr626-private-inspection-ui-demo-20261029.test.mjs',['Player Web presents private inspection once','GM audio speaks correct','DEMO does not execute']]
+]);
+function isRule626Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==rule626PathStatus.size)return false;
+ const unique=new Set();
+ for(const entry of changes){
+  if(!entry||unique.has(entry.path)||rule626PathStatus.get(entry.path)!==entry.status)return false;
+  unique.add(entry.path);
+ }
+ try{
+  for(const [file,markers] of rule626RequiredSource){
+   const supplied=changes.find(c=>c.path===file)?.after;
+   const source=typeof supplied==='string'?supplied:fs.readFileSync(file,'utf8');
+   if(!markers.every(x=>source.includes(x)))return false;
+  }
+  return true;
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isRule626Scope(changes))return 'artifact-inspection-626';
   const interactions=playerInteractionsScope(changes);if(interactions)return interactions;
   if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
   if(isGithubNativeStage2Scope(changes))return 'native-github-ota-stage2';
@@ -3099,6 +3148,21 @@ function detect(){
           return {mode:'player-online-privacy-630',reason:'Verified PR630 release/CI recovery; unchanged Runtime, scoped tests and integrity gates'};
       }
     }catch{} // Missing ancestry/content never authorizes a narrow release.
+  }
+
+  // Same reviewed exact-file scope on pull requests and on merged main.
+  // Never let unknown paths or deleted files turn a release into a partial CI bypass.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD')
+          .trim().split('\n').filter(Boolean);
+        const changes=rows.map(line=>{const [status,path]=line.split('\t');return {status,path}});
+        if(isRule626Scope(changes))
+          return {mode:'artifact-inspection-626',reason:'PR626 exact 4 private inspection Artifacts, Worker/GM/Player/DEMO/audio/undo E2E'};
+      }
+    }catch{} // Fail closed.
   }
 
   // Same strict classification must run BEFORE the legacy early full-suite fallback.
