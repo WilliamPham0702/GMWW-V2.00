@@ -244,6 +244,25 @@ jobs:
               echo 'PR645 V3.279: exact postmerge browser CI fix; keep all same-SHA browser/Worker/OTA production gates.' >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
+          # PR649 V3.280: exact CI-only postmerge Runtime release.
+          # Preserve all downstream same-SHA Worker, browser, OTA and SHA gates.
+          if [ "$(node -p 'require("./package.json").version')" = '3.280.0' ] &&
+             git merge-base --is-ancestor 447ee60c65319dd2ec4668427b1e498d554c33bc HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/check-player-card-browsers.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              test -s docs/releases/GMWW-V3.280-PR649-PLAYER-WEB-SHARE-20261031.md
+              grep -Fq 'id="gmwwShareCopy"' server-game/current/GMWW.html
+              grep -Fq 'id="gmwwShareSend"' server-game/current/GMWW.html
+              SHOULD_DEPLOY=true
+              echo 'PR649 V3.280: immutable original source, exactly five CI-only files; mandatory same-SHA browser/Worker/OTA release gates remain.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"

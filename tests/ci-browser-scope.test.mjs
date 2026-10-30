@@ -826,3 +826,22 @@ test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused r
   assert.equal(classifyBrowserScope(expected.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted CI files must fail closed');
   assert.equal(classifyBrowserScope([...expected.slice(0,4),expected[0]]),'full','duplicate path cannot impersonate exact scope');
 });
+
+test('PR649 V3.280 postmerge CI repair: exactly five CI-only paths',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-player-card-browsers.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const changes=paths.map(path=>modified(path,'reviewed previous CI',readFileSync(path,'utf8')));
+  assert.equal(classifyBrowserScope(changes),'pr649-postmerge-release');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing selector must fail closed');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','previous','new gameplay')]),'full','Worker changed');
+  assert.equal(classifyBrowserScope([...changes,modified('server-game/current/app.js','previous','gameplay')]),'full','GM app changed');
+  assert.equal(classifyBrowserScope([...changes,modified('server-game/GMWW-Server/GameView.swift','previous','IPA changed')]),'full','IPA changed');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full','duplicate');
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===2?{...c,status:'D'}:c)),'full','deletion');
+  assert.equal(JSON.parse(readFileSync('package.json','utf8')).version,'3.280.0');
+});

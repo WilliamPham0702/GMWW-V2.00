@@ -967,6 +967,18 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --check .github/scripts/ci-browser-scope.mjs
       # END GMWW_PLAYER_LINK_SHARE_CHECK_637
+      # PR649 V3.280: exact CI-only repair of the merged, reviewed share UI Runtime.
+      - name: PR649 — verify same-source GM share UI, Online, Worker and Runtime V3.280
+        if: steps.scope.outputs.mode == 'pr649-postmerge-release'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/gm-player-web-share-link.test.mjs tests/gm-chrome-ios-viewport-20261030.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/gm-admin-top-chat-20261028.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          test -s docs/releases/GMWW-V3.280-PR649-PLAYER-WEB-SHARE-20261031.md
       # PR645 has an audited and separately exercised Online/GM/Player scope.
       # Do not regress against obsolete V3.223/3D or unrelated legacy card assertions.
       # Every unrelated PR and every main push still executes the full suite.

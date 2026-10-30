@@ -2931,7 +2931,23 @@ function isPR645PostmergeReleaseScope(changes){
     changes.every(c=>c?.status==='M'&&expected.has(c.path)&&
       typeof c.after==='string'&&c.after.includes(markers.get(c.path)));
 }
+// V3.280 / PR649: exact five-file postmerge CI-only repair, never a game-code bypass.
+// A missing, extra, deleted, duplicated, or unexpected path fails closed to full CI.
+function isPR649PostmergeReleaseScope(changes){
+  const markers=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','function isPR649PostmergeReleaseScope(changes)'],
+    ['.github/workflows/check-player-web.yml',"steps.scope.outputs.mode == 'pr649-postmerge-release'"],
+    ['.github/workflows/check-player-card-browsers.yml',"needs.scope.outputs.mode == 'pr649-postmerge-release'"],
+    ['.github/workflows/deploy-production.yml','# PR649 V3.280: exact CI-only postmerge Runtime release'],
+    ['tests/ci-browser-scope.test.mjs','PR649 V3.280 postmerge CI repair: exactly five CI-only paths']
+  ]);
+  return Array.isArray(changes)&&changes.length===markers.size&&
+    new Set(changes.map(x=>x?.path)).size===markers.size&&
+    changes.every(x=>x?.status==='M'&&markers.has(x.path)&&
+      typeof x.after==='string'&&x.after.includes(markers.get(x.path)));
+}
 function classifyBrowserScope(changes){
+  if(isPR649PostmergeReleaseScope(changes))return 'pr649-postmerge-release';
   if(isPR645PostmergeReleaseScope(changes))return 'pr645-postmerge-release';
   if(isPr648ThermalScope(changes))return 'village-perf-diagnostics-648';
   if(isGMChromeIosViewportScope(changes))return 'gm-chrome-ios-viewport';
@@ -3247,6 +3263,27 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // Previously merged PR649 V3.280 Runtime; approve only exact five CI-only
+  // recovery paths AFTER verifying immutable ancestry and current source version.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if((base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base))&&
+         JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.280.0'){
+        git('merge-base','--is-ancestor','447ee60c65319dd2ec4668427b1e498d554c33bc','HEAD');
+        const lines=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=lines.map(line=>{
+          const [status,path]=line.split('\t');
+          return{status,path,after:status==='M'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isPR649PostmergeReleaseScope(changes)&&
+           fs.readFileSync('server-game/current/GMWW.html','utf8').includes('id="gmwwShareCopy"')&&
+           fs.readFileSync('server-game/current/GMWW.html','utf8').includes('id="gmwwShareSend"')){
+          return{mode:'pr649-postmerge-release',reason:'Exact V3.280 postmerge CI-only gate; original GM/Player source, IPA and Oracle unchanged'};
+        }
+      }
+    }catch{} // Unknown ancestry/diff must continue to full CI.
+  }
   // PR #651 repairs only the exact postmerge PR645 V3.279 release gate.
   // Resolve source and ancestry before allowing the focused task checks.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
