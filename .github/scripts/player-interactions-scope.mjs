@@ -18,13 +18,16 @@ function outsideChat(source){
  if(typeof source!=='string')return null;
  const start=source.indexOf('  async chatAccess('),end=source.indexOf('  async gmChatModerate(',start);
  if(start<0||end<0)return null;
- return (source.slice(0,start)+source.slice(end)).replace(/import \\{chatPolicy,chatNormalizeText(?:,chatStorageScope,publicChatNotices)?\\} from "\\.\\/gmww-online-chat-policy\\.js";/,'CHAT_IMPORT');
+ const outside=source.slice(0,start)+source.slice(end);
+ return outside.replace('import {chatPolicy,chatNormalizeText} from "./gmww-online-chat-policy.js";','CHAT_IMPORT')
+  .replace('import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices} from "./gmww-online-chat-policy.js";','CHAT_IMPORT');
 }
 function safeReleaseNotes(before,after){
  if(typeof before!=='string'||typeof after!=='string'||!before.includes('releaseNotes:["V3.276 PR630:'))return false;
- const pat=/releaseNotes:\\["V3\\.277 PR634:[^"\\n]{5,1000}","V3\\.276 PR630:/;
- const match=after.match(pat);
- return !!match&&after.replace(pat,'releaseNotes:["V3.276 PR630:')===before;
+ const prefix='releaseNotes:["V3.277 PR634:',suffix='","V3.276 PR630:';
+ const a=after.indexOf(prefix),b=after.indexOf(suffix,a+prefix.length);
+ if(a<0||b<a+prefix.length+5||b-a>1000)return false;
+ return after.slice(0,a)+'releaseNotes:["V3.276 PR630:'+after.slice(b+suffix.length)===before;
 }
 export function playerInteractionsScope(changes){
  if(!Array.isArray(changes)||!changes.length||changes.some(c=>!['A','M'].includes(c.status)))return null;
