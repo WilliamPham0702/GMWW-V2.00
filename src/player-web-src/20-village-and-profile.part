@@ -22,24 +22,6 @@ function updatePlayerTopMenu(){
   const menu=$('#gmwwPlayerTopMenu');if(!menu)return;
   const info=menu.querySelector('.gmww-player-menu-info b');if(info)info.textContent=playerTopMenuStatus();const hint=menu.querySelector('.gmww-player-menu-info small');if(hint)hint.textContent=state.participantId?(Number(currentRoomPlayer()?.seatId||0)>0?'Vị trí '+currentRoomPlayer().seatId+' · Đã sẵn sàng':'Chờ Quản Trò xếp vị trí'):'Chờ Quản Trò gọi vào phòng';
   const turn=menu.querySelector('.gmww-player-menu-turn');if(turn)turn.textContent=playerScenePolicy(state.room).mode==='battle'?String(state.audioCue?.label||'Đang theo dõi lượt GM').slice(0,120):'';
-  const account=menu.querySelector('.gmww-player-menu-account');
-  const avatar=account?.querySelector('img'),characterId=String(state.member?.gameCharacterId||currentRoomPlayer()?.gameCharacterId||'').trim();
-  if(avatar){
-    const key=characterId?characterId+':top-menu':'';
-    if(avatar.dataset.gmwwMenuCharacter!==key){
-      avatar.dataset.gmwwMenuCharacter=key;
-      avatar.hidden=true;
-      account.classList.remove('has-avatar');
-      avatar.removeAttribute('data-gmww-walk-character');
-      if(!characterId){avatar.removeAttribute('src');}
-      else{
-        avatar.onload=()=>{if(avatar.dataset.gmwwMenuCharacter!==key)return;avatar.hidden=false;account.classList.add('has-avatar');};
-        avatar.onerror=()=>{if(avatar.dataset.gmwwMenuCharacter!==key)return;avatar.hidden=true;account.classList.remove('has-avatar');avatar.removeAttribute('src');};
-        avatar.alt='Avatar nhân vật của bạn';
-        avatar.src=gameCharacterImageUrl(characterId);
-      }
-    }
-  }
   menu.hidden=!state.member;if(typeof renderPlayerTimeline==='function')renderPlayerTimeline();
 }
 
