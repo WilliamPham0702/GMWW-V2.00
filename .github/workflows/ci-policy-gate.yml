@@ -34,3 +34,5 @@ jobs:
           grep -Fq 'docs/releases/GMWW-CI-POLICY-GATE-20261029.md' .github/workflows/deploy-production.yml
       - name: Verify GĐ1–GĐ3 architecture docs never auto-deploy
         run: node --test tests/production-deploy-architecture-docs.test.mjs
+      - name: Verify strict GĐ3 GM link-only scope and fail-closed cases
+        run: node --test tests/gm-player-share-scope.test.mjs
