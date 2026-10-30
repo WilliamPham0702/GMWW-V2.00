@@ -2919,9 +2919,17 @@ function isPR645PostmergeReleaseScope(changes){
     '.github/workflows/deploy-production.yml',
     'tests/ci-browser-scope.test.mjs'
   ]);
+  const markers=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','function isPR645PostmergeReleaseScope(changes)'],
+    ['.github/workflows/check-player-web.yml',"steps.scope.outputs.mode == 'pr645-postmerge-release'"],
+    ['.github/workflows/check-player-card-browsers.yml',"needs.scope.outputs.mode == 'pr645-postmerge-release'"],
+    ['.github/workflows/deploy-production.yml','# PR645 V3.279: postmerge browser gate repair'],
+    ['tests/ci-browser-scope.test.mjs',"PR645 V3.279 postmerge CI repair:"]
+  ]);
   return Array.isArray(changes)&&changes.length===expected.size&&
     new Set(changes.map(c=>c?.path)).size===expected.size&&
-    changes.every(c=>c?.status==='M'&&expected.has(c.path));
+    changes.every(c=>c?.status==='M'&&expected.has(c.path)&&
+      typeof c.after==='string'&&c.after.includes(markers.get(c.path)));
 }
 function classifyBrowserScope(changes){
   if(isPR645PostmergeReleaseScope(changes))return 'pr645-postmerge-release';
@@ -3248,7 +3256,7 @@ function detect(){
          JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.279.0'){
         git('merge-base','--is-ancestor','d9527d6625868c0a25395e8ebf982446b4e4712b','HEAD');
         const lines=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
-        const changes=lines.map(line=>{const [status,path]=line.split('\t');return{status,path}});
+        const changes=lines.map(line=>{const [status,path]=line.split('\t');return{status,path,after:status==='M'?fs.readFileSync(path,'utf8'):null}});
         if(isPR645PostmergeReleaseScope(changes)&&
            fs.readFileSync('src/player-web-src/35-online-chat.part','utf8').includes('function gmwwOnlinePlaceAtFire(dock){')){
           return{mode:'pr645-postmerge-release',reason:'Exact PR645 V3.279 postmerge CI safety repair; Player/GM/Worker/browsers and immutable Runtime protected'};
