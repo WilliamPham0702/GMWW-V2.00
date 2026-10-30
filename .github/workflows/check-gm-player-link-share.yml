@@ -1,0 +1,32 @@
+name: Check GM Settings Player Link Sharing
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server-game/current/GMWW.html"
+      - "tests/gm-player-web-share-link.test.mjs"
+      - ".github/workflows/check-gm-player-link-share.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: GM Link Sharing UI and isolation
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout exact PR code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test link selection, clipboard, sharing and unverified-domain guard
+        run: node --test tests/gm-player-web-share-link.test.mjs
+      - name: Verify GM bundle remains unchanged
+        run: node .github/scripts/assemble-gm-app.mjs --verify
