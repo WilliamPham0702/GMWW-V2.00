@@ -300,6 +300,7 @@ const stableCIPolicyPaths=new Set([
   '.github/workflows/check-gm-free-icons-501.yml',
   '.github/workflows/prepare-runtime-v3202-candidate.yml',
   '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/GMWW-CI-POLICY-GATE-20261029.md',
   'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md'

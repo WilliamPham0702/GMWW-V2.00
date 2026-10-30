@@ -37,6 +37,7 @@ jobs:
     outputs:
       version: ${{ steps.identity.outputs.version }}
       source_sha: ${{ steps.identity.outputs.source_sha }}
+      skip_auto_release: ${{ steps.identity.outputs.skip_auto_release }}
     steps:
       - name: Checkout precisely the reviewed or CI-passed SHA
         uses: actions/checkout@v4
@@ -54,6 +55,36 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+
+          # A PR637 merge is not approval to publish a Runtime.
+          # The CI-only release-policy PR must not create a release either.
+          SKIP_AUTO_RELEASE=false
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            MESSAGE=$(git log -1 --format=%B)
+            CHANGED=$(git diff --name-only HEAD^1 HEAD | sort)
+            POLICY_ONLY=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              '.github/workflows/github-runtime-ota.yml' \
+              'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            PR637_ONLY=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/build-server-game-ipa.yml' \
+              '.github/workflows/check-gallows-redesign.yml' \
+              '.github/workflows/check-gm-free-icons-501.yml' \
+              '.github/workflows/check-gm-player-link-share.yml' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/prepare-runtime-v3202-candidate.yml' \
+              'server-game/current/GMWW.html' \
+              'tests/gm-player-web-share-link.test.mjs' | sort)
+            if [ "$CHANGED" = "$POLICY_ONLY" ] || [ "$CHANGED" = "$PR637_ONLY" ] ||
+               printf '%s\n' "$MESSAGE" | grep -Eq '(^Merge pull request #637([[:space:]]|$)|\(#637\)$)'; then
+              SKIP_AUTO_RELEASE=true
+              echo "Staged PR637/CI guard: NO automatic Runtime release." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          echo "skip_auto_release=$SKIP_AUTO_RELEASE" >> "$GITHUB_OUTPUT"
           VERSION=$(node -p 'require("./package.json").version.replace(/[.]0$/, "")')
           test -n "$VERSION"
           echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
@@ -152,7 +183,7 @@ jobs:
   publish:
     name: Publish verified .gmwwupdate to GitHub Releases only
     needs: package
-    if: github.event_name != 'pull_request' && needs.package.result == 'success'
+    if: github.event_name != 'pull_request' && needs.package.result == 'success' && needs.package.outputs.skip_auto_release != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

@@ -760,3 +760,23 @@ test('PR642 Chrome iOS GM viewport is strict and excludes old gameplay, IPA and 
   assert.equal(isGMChromeIosViewportScope(bumped),true);
   assert.equal(isGMChromeIosViewportScope(bumped.map(c=>c.path==='src/index.js'?{...c,after:c.after+' // more edits'}:c)),false);
 });
+
+test('PR646 staged PR637 release policy is CI-only, never gameplay or automatic deployment',()=>{
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  const githubOta=readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old classifier','policy classifier'),
+    modified('.github/workflows/deploy-production.yml','old deploy',deploy),
+    modified('.github/workflows/github-runtime-ota.yml','old OTA',githubOta),
+    modified('tests/ci-browser-scope.test.mjs','old test','release safety'),
+    modified('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md','old notes','new notes')
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.match(deploy,/BEGIN GMWW_PR637_STAGED_RELEASE_GUARD/);
+  assert.match(deploy,/SHOULD_DEPLOY=false/);
+  assert.match(githubOta,/needs\.package\.outputs\.skip_auto_release != 'true'/);
+  assert.match(githubOta,/skip_auto_release=\$SKIP_AUTO_RELEASE/);
+  assert.equal(classifyBrowserScope([...changes,modified('server-game/current/GMWW.html','old','gameplay modified')]),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md')),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='tests/ci-browser-scope.test.mjs'?{...c,status:'D'}:c)),'full');
+});
