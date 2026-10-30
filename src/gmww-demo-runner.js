@@ -83,11 +83,13 @@ export async function playerOfferedActions(room,meta,loginId){
   const ballot=(await room.gallowsState(meta)).ballot;
   actions=dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot);
  }
+ const blocking=(ctx.rows||[]).find(row=>String(row?.loginId||'').replace(/^member:/,'')===String(loginId)&&row?.effectActive!==false&&(!row?.matchId||String(row.matchId)===String(meta.matchId))&&(!row?.expiresAt||Date.parse(row.expiresAt)>Date.now())&&(row.type==='expelled'||row.type==='dead'||(row.type==='frozen'&&meta.cyclePhase==='night')));
  return actions.filter(a=>a.actorIds.includes(loginId)).map(a=>({
   key:a.id,actionId:a.actionId,name:a.name,type:a.type,roleId:a.roleId||'',
   artifactId:a.artifactId||'',targetCount:a.noTarget||a.actionId==='action_transfer_bite'?0:a.targetCount,
   noSelf:a.noSelf,allowDead:a.allowDead,noTarget:a.noTarget,phase:meta.cyclePhase,
-  iconUrl:onlineGmActionIcon(a.actionId)
+  iconUrl:onlineGmActionIcon(a.actionId),
+  blocked:!!blocking,blockedType:blocking?.type||'',blockedReason:blocking?.type==='frozen'?'❄️ Bị Đóng Băng: vẫn thấy icon nhưng không thể hành động đêm nay.':blocking?.type==='expelled'?'🚪 Bị Đuổi Khỏi Làng: không thể hành động lượt này.':blocking?.type==='dead'?'💀 Đã chết: không thể hành động.':''
  }));
 }
 /* The legacy DEMO action API remains DEMO-only; Online uses separate admission. */
