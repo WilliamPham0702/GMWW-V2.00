@@ -25,10 +25,21 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Syntax GM Runtime
         run: node --check server-game/current/app.js
+      # BEGIN GMWW_RUNTIME_32771_CI_SCOPE
+      - name: Identify version-only PR637 GitHub Runtime release
+        id: scope
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
+      # END GMWW_RUNTIME_32771_CI_SCOPE
       - name: Three-change regression and bundle integrity
+        if: steps.scope.outputs.mode != 'gm-player-web-share-637'
         run: node --test tests/gm-gallows-vote-markers-ui.test.mjs

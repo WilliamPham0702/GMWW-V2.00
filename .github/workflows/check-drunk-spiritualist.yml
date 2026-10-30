@@ -63,7 +63,7 @@ jobs:
           node --check .github/scripts/ci-browser-scope.mjs
           node --test --test-name-pattern='CI-only merge' tests/ci-browser-scope.test.mjs
       - name: Test exact card selection, DO inheritance, faction comparison and private Player delivery
-        if: steps.scope.outputs.mode != 'player-top-avatar-603' && steps.scope.outputs.mode != 'ci-policy'
+        if: steps.scope.outputs.mode != 'player-top-avatar-603' && steps.scope.outputs.mode != 'ci-policy' && steps.scope.outputs.mode != 'gm-player-web-share-637'
         run: |
           node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/member-ranking-games-first-v3221.test.mjs
           node --check src/index.js

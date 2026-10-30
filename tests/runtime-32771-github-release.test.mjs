@@ -38,3 +38,12 @@ test('GitHub-only release candidate cannot trigger Cloudflare Worker or IPA depl
   assert.ok(ota.includes("github.event_name != 'pull_request'"));
   assert.ok(read('.github/scripts/prepare-update-channel.mjs').includes('V3.277.1 PR637:'));
 });
+
+test('CI recognition only for exact version and release metadata, never for gameplay',()=>{
+  const scope=read('.github/scripts/ci-browser-scope.mjs');
+  assert.ok(scope.includes('BEGIN GMWW_RUNTIME_32771_SCOPED_CI'));
+  assert.ok(scope.includes('isGMWWRuntime32771Scope()'));
+  assert.ok(scope.includes('rows.length!==expected.size'));
+  assert.ok(scope.includes('after!==before.replaceAll(oldText,newText)'));
+  assert.ok(scope.includes('Unexpected changes in V3.277.1'));
+});

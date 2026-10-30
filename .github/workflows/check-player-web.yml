@@ -954,7 +954,7 @@ jobs:
       - name: PR637 — verify GM link sharing and bundles
         if: steps.scope.outputs.mode == 'gm-player-web-share-637'
         run: |
-          node --test tests/gm-player-web-share-link.test.mjs
+          node --test tests/gm-player-web-share-link.test.mjs tests/runtime-32771-github-release.test.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/assemble-player-web.mjs --verify
           node --check .github/scripts/ci-browser-scope.mjs

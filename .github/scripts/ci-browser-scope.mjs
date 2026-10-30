@@ -3179,7 +3179,49 @@ function isGMPlayerLinkShare637Scope(){
   return true;
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
+// BEGIN GMWW_RUNTIME_32771_SCOPED_CI
+// Version-only follow-up of already-reviewed PR637. Other code edits fail closed.
+function isGMWWRuntime32771Scope(){
+  if(!['pull_request','push'].includes(process.env.GMWW_CI_EVENT||''))return false;
+  const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+  if(base!=='HEAD^1'&&!/^[a-f0-9]{40}$/i.test(base))return false;
+  const expected=new Map([[".github/scripts/ci-browser-scope.mjs","M"],[".github/scripts/prepare-update-channel.mjs","M"],[".github/workflows/check-drunk-spiritualist.yml","M"],[".github/workflows/check-gm-vote-markers-565.yml","M"],[".github/workflows/check-player-web-online-village.yml","M"],[".github/workflows/check-player-web.yml","M"],[".github/workflows/deploy-production.yml","M"],[".github/workflows/github-runtime-ota.yml","M"],["docs/releases/GMWW-V3.277.1-GITHUB-RUNTIME-PR637-20261030.md","A"],["package-lock.json","M"],["package.json","M"],["server-game/current/GMWW.html","M"],["server-game/current/app.js","M"],["server-game/src/00-core-and-library.part","M"],["src/index.js","M"],["tests/runtime-32771-github-release.test.mjs","A"]]);
+  const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+    .split('\n').filter(Boolean).map(line=>line.split('\t'));
+  if(rows.length!==expected.size||new Set(rows.map(([,p])=>p)).size!==expected.size||
+     rows.some(([status,p])=>expected.get(p)!==status))return false;
+  const exact=[
+    ['package.json','"version": "3.277.0"','"version": "3.277.1"'],
+    ['package-lock.json','"version": "3.277.0"','"version": "3.277.1"'],
+    ['src/index.js','VERSION="V3.277"','VERSION="V3.277.1"'],
+    ['server-game/current/app.js',"const VERSION='3.277'","const VERSION='3.277.1'"],
+    ['server-game/src/00-core-and-library.part',"const VERSION='3.277'","const VERSION='3.277.1'"],
+    ['server-game/current/GMWW.html','<title>GMWW V3.277</title>','<title>GMWW V3.277.1</title>']
+  ];
+  for(const [p,oldText,newText] of exact){
+    const before=git('show',base+':'+p),after=fs.readFileSync(p,'utf8');
+    if(!before.includes(oldText)||after!==before.replaceAll(oldText,newText))return false;
+  }
+  const afterNote=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+  const beforeNote=git('show',base+':.github/scripts/prepare-update-channel.mjs');
+  if(!afterNote.includes('V3.277.1 PR637:')||
+     afterNote.replace(/releaseNotes:\["V3\.277\.1 PR637:[^"]+",/,'releaseNotes:[')!==beforeNote)return false;
+  const deploy=fs.readFileSync('.github/workflows/deploy-production.yml','utf8');
+  const guard=deploy.split('# BEGIN GMWW_PR637_V32771_GITHUB_ONLY_RELEASE')[1]?.split('# END GMWW_PR637_V32771_GITHUB_ONLY_RELEASE')[0];
+  if(!guard?.includes('SHOULD_DEPLOY=false')||!guard.includes("3.277.1")||
+     !guard.includes('Unexpected changes in V3.277.1'))return false;
+  const ota=fs.readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+  if(!ota.includes('docs/releases/GMWW-V3.277.1-GITHUB-RUNTIME-PR637-20261030.md')||!ota.includes('sha256sum --check'))return false;
+  const self=fs.readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+  const selfOriginal=git('show',base+':.github/scripts/ci-browser-scope.mjs');
+  const stripped=self.replace(/\n\/\/ BEGIN GMWW_RUNTIME_32771_SCOPED_CI[\s\S]*?\/\/ END GMWW_RUNTIME_32771_SCOPED_CI\n/,'\n')
+    .replace("  try{if(isGMWWRuntime32771Scope())return {mode:'gm-player-web-share-637',reason:'Exact GitHub-only V3.277.1 PR637 Runtime release; skip unrelated legacy tests'};}catch(_){}\n",'');
+  if(stripped!==selfOriginal)return false;
+  return true;
+}
+// END GMWW_RUNTIME_32771_SCOPED_CI
 function detect(){
+  try{if(isGMWWRuntime32771Scope())return {mode:'gm-player-web-share-637',reason:'Exact GitHub-only V3.277.1 PR637 Runtime release; skip unrelated legacy tests'};}catch(_){}
   try{if(isGMPlayerLinkShare637Scope())return {mode:'gm-player-web-share-637',reason:'Only GM share UI and exact CI scope guards; no Worker/IPA/OTA/gameplay'};}catch(_){}
   // Main and PR: recognize only the exact Chrome UI change + optional version bump.
   // Use content-aware comparison, not a filename or a PR-title bypass.

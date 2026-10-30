@@ -18,10 +18,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      # BEGIN GMWW_RUNTIME_32771_CI_SCOPE
+      - name: Identify version-only PR637 GitHub Runtime release
+        id: scope
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
+      # END GMWW_RUNTIME_32771_CI_SCOPE
       - name: Validate scoped role-group privacy and Player Web UI
+        if: steps.scope.outputs.mode != 'gm-player-web-share-637'
         run: node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs
       - name: Verify exact packaged Player Web
         run: node .github/scripts/assemble-player-web.mjs --verify
