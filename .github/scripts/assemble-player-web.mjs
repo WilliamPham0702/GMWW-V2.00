@@ -2,6 +2,7 @@
 // GMWW FAST G3.9: edit plain Player Web source, then reserialize exact deployed ES module.
 // Refuse release if compiled module drifts from current authored sources.
 import fs from 'node:fs';
+import {playerServerMenuBundle} from './player-server-menu.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
@@ -15,7 +16,7 @@ const parts=[
   '40-cards-and-game.part',
   '50-privacy-and-runtime.part'
 ];
-const body=parts.map(file=>fs.readFileSync(path.join(root,'src/player-web-src',file),'utf8')).join('');
+const body=parts.map(file=>fs.readFileSync(path.join(root,'src/player-web-src',file),'utf8')).join('').replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(root))+";\n");
 const compiled='export const gmwwMembersLiveScript = '+JSON.stringify(body)+';\n';
 const target=path.join(root,'src/gmww-members-live.js');
 const sha=b=>createHash('sha256').update(b).digest('hex');
