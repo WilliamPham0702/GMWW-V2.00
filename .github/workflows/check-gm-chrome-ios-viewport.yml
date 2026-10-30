@@ -1,0 +1,26 @@
+name: Check GM iPhone Chrome viewport
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server-game/current/GMWW.html'
+      - 'tests/gm-chrome-ios-viewport-20261030.test.mjs'
+      - '.github/workflows/check-gm-chrome-ios-viewport.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gm-chrome-ios-viewport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Focused Chrome iOS viewport regression (GM Server only)
+        run: |
+          node --test tests/gm-chrome-ios-viewport-20261030.test.mjs
+      - name: Verify unchanged GM script and CSS assets
+        run: |
+          git diff --exit-code origin/main...HEAD -- server-game/current/app.js server-game/current/style.css
