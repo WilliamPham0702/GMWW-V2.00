@@ -731,6 +731,7 @@ test('PR626 only exact four day Artifact inspection files get fail-closed focuse
   ['src/gmww-members-live.js','M'],
   ['src/index.js','M'],
   ['src/player-web-src/30-rooms-and-realtime.part','M'],
+  ['src/player-web-src/00-bootstrap-and-session.part','M']
   ['tests/card-executors-day-inspection-planners-20261029.test.mjs','A'],
   ['tests/pr626-private-inspection-ui-demo-20261029.test.mjs','A'],
   ['tests/worker-day-artifact-inspection-pr626-e2e.mjs','A'],
