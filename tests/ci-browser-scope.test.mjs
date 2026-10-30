@@ -780,3 +780,28 @@ test('PR646 staged PR637 release policy is CI-only, never gameplay or automatic 
   assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md')),'full');
   assert.equal(classifyBrowserScope(changes.map(c=>c.path==='tests/ci-browser-scope.test.mjs'?{...c,status:'D'}:c)),'full');
 });
+
+
+test('PR648 diagnostics-only FPS selects focused tests and rejects any gameplay change',()=>{
+  const after=readFileSync('assets/village/village-performance.mjs','utf8');
+  const before=after
+    .replace('  // Frame-by-frame FPS sampling is diagnostic only; do not keep an idle village at 60Hz.\n  const sampleFps=new URLSearchParams(window.location.search).get("gmwwPerf")==="1";\n  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=null,longTasks=0,worstLongTask=0;',
+      '  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=60,longTasks=0,worstLongTask=0;')
+    .replace('  const resumeFrames=()=>{if(!sampleFps||stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};',
+      '  const resumeFrames=()=>{if(stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};')
+    .replace('  if(sampleFps)resumeFrames();\n  let observer=null;','  resumeFrames();\n  let observer=null;');
+  assert.notEqual(before,after,'the reporter must contain an actual scoped change');
+  const changes=[
+    modified('assets/village/village-performance.mjs',before,after),
+    modified('tests/player-web-background-performance.test.mjs','previous test',readFileSync('tests/player-web-background-performance.test.mjs','utf8')),
+    modified('tests/ci-browser-scope.test.mjs','previous test',readFileSync('tests/ci-browser-scope.test.mjs','utf8')),
+    modified('.github/scripts/ci-browser-scope.mjs','previous selector',readFileSync('.github/scripts/ci-browser-scope.mjs','utf8')),
+    modified('.github/workflows/check-player-web.yml','previous browser workflow',readFileSync('.github/workflows/check-player-web.yml','utf8')),
+    modified('.github/workflows/prepare-runtime-v3202-candidate.yml','previous OTA candidate',readFileSync('.github/workflows/prepare-runtime-v3202-candidate.yml','utf8')),
+    {path:'docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md',status:'A',before:null,after:'# Thermal reporter'}
+  ];
+  assert.equal(classifyBrowserScope(changes),'village-perf-diagnostics-648');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='assets/village/village-performance.mjs'?{...c,after:c.after+'\n// extra change'}:c)),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>!c.path.startsWith('docs/releases/'))),'full');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay change')]),'full');
+});
