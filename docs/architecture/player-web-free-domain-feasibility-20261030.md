@@ -13,6 +13,13 @@
 | DuckDNS trỏ vào một máy chủ reverse proxy | Có thể giữ hostname nếu proxy lo HTTPS/WebSocket | Cần server/tài nguyên; thêm độ trễ/rủi ro; không chọn cho link chính nếu chỉ muốn đổi tên |
 | GitHub Pages / trang chuyển hướng HTTPS | Truy cập link mới rồi redirect về workers.dev | Không proxy realtime, nhưng thanh địa chỉ đổi URL; chỉ chấp nhận nếu người dùng phê duyệt behavior chuyển hướng |
 
+## Phương án miễn phí khả thi mà không cần Cloudflare DNS zone
+- Cloudflare Pages cấp hostname `<project>.pages.dev` sau khi tạo dự án. Ví dụ `gamemasoi.pages.dev` là **ứng viên, chưa xác nhận còn trống hoặc đã cấp**. Nguồn: https://developers.cloudflare.com/pages/framework-guides/deploy-anything/
+- Tạo site tĩnh chỉ có quy tắc `_redirects` HTTP 302 sang `https://gmww-v2-00.williampham0702.workers.dev/`. Pages cho phép redirect đến host khác; static requests không dùng Pages Functions/Workers compute quota. Nguồn: https://developers.cloudflare.com/pages/configuration/redirects/ và https://developers.cloudflare.com/pages/functions/pricing/
+- Lợi ích: người chơi gõ một URL ngắn rồi trình duyệt chuyển đến game hiện tại, không thêm lớp proxy vào WebSocket/gameplay; chi phí độ trễ chủ yếu ở lần chuyển hướng đầu.
+- Hạn chế: thanh địa chỉ sau redirect trở thành link Worker cũ. Nếu mục tiêu **giữ hostname mới trên thanh địa chỉ**, phương án này không đạt; phải có DNS/HTTPS/Worker routing hợp lệ hoặc đánh giá proxy riêng.
+- Alias Pages redirect tới Oracle sau này cần đổi target theo quyết định GM giữa các ván và kiểm tra cache/redirect; **chưa tự động chuyển**.
+
 ## Gate để bật lựa chọn link mới trên GM
 1. Hostname do chủ sở hữu kiểm soát và có thể gia hạn/duy trì miễn phí; không tự tuyên bố tên đã đăng ký.
 2. HTTPS hợp lệ; request đến cả Player Web và API; WebSocket handshake, login và reconnect hoạt động; không phụ thuộc proxy trung gian nếu chưa nghiệm thu độ trễ.
