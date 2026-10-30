@@ -228,21 +228,21 @@ jobs:
           # GitHub Runtime workflow alone publishes a new verified .gmwwupdate.
           if grep -Fxq 'docs/releases/GMWW-V3.277.1-GITHUB-RUNTIME-PR637-20261030.md' /tmp/gmww-production-change-scope.txt; then
             ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
-            EXPECTED=$(printf '%s\n' '.github/scripts/ci-browser-scope.mjs' \\
-              '.github/scripts/prepare-update-channel.mjs' \\
-              '.github/workflows/check-drunk-spiritualist.yml' \\
-              '.github/workflows/check-gm-vote-markers-565.yml' \\
-              '.github/workflows/check-player-web-online-village.yml' \\
-              '.github/workflows/check-player-web.yml' \\
-              '.github/workflows/deploy-production.yml' \\
-              '.github/workflows/github-runtime-ota.yml' \\
-              'docs/releases/GMWW-V3.277.1-GITHUB-RUNTIME-PR637-20261030.md' \\
-              'package-lock.json' \\
-              'package.json' \\
-              'server-game/current/GMWW.html' \\
-              'server-game/current/app.js' \\
-              'server-game/src/00-core-and-library.part' \\
-              'src/index.js' \\
+            EXPECTED=$(printf '%s\n' '.github/scripts/ci-browser-scope.mjs' \
+              '.github/scripts/prepare-update-channel.mjs' \
+              '.github/workflows/check-drunk-spiritualist.yml' \
+              '.github/workflows/check-gm-vote-markers-565.yml' \
+              '.github/workflows/check-player-web-online-village.yml' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/deploy-production.yml' \
+              '.github/workflows/github-runtime-ota.yml' \
+              'docs/releases/GMWW-V3.277.1-GITHUB-RUNTIME-PR637-20261030.md' \
+              'package-lock.json' \
+              'package.json' \
+              'server-game/current/GMWW.html' \
+              'server-game/current/app.js' \
+              'server-game/src/00-core-and-library.part' \
+              'src/index.js' \
               'tests/runtime-32771-github-release.test.mjs' | sort)
             test "$ACTUAL" = "$EXPECTED" || {
               echo "::error::Unexpected changes in V3.277.1 GitHub-only patch; block Worker deploy"; exit 1;
