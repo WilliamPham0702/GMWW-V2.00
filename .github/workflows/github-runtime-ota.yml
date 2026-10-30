@@ -63,8 +63,11 @@ jobs:
             MESSAGE=$(git log -1 --format=%B)
             CHANGED=$(git diff --name-only HEAD^1 HEAD | sort)
             POLICY_ONLY=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
               '.github/workflows/deploy-production.yml' \
-              '.github/workflows/github-runtime-ota.yml' | sort)
+              '.github/workflows/github-runtime-ota.yml' \
+              'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md' \
+              'tests/ci-browser-scope.test.mjs' | sort)
             PR637_ONLY=$(printf '%s\n' \
               '.github/scripts/ci-browser-scope.mjs' \
               '.github/workflows/build-server-game-ipa.yml' \
