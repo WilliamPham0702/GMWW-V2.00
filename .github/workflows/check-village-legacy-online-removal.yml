@@ -38,7 +38,8 @@ jobs:
         run: npm run check
 
   mobile-webkit:
-    runs-on: ubuntu-latest
+    # WebKit 1.58.2 does not support ubuntu26.04 (ubuntu-latest) runner.
+    runs-on: ubuntu-24.04
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4

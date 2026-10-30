@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {playerServerMenuBundle} from '../.github/scripts/player-server-menu.mjs';
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('DEMO running remains in directory after normal lease expiry without exposing ordinary expired rooms',()=>{
  const worker=read('src/index.js');
@@ -25,7 +26,8 @@ test('Player Web joins single live DEMO but never grants another role without an
 });
 test('Source bundles are byte-identical to the released Player Web and GM',()=>{
  const parts=['00-bootstrap-and-session.part','10-role-card-artwork.part','20-village-and-profile.part','30-rooms-and-realtime.part','35-online-chat.part','40-cards-and-game.part','50-privacy-and-runtime.part'];
- assert.equal(read('src/gmww-members-live.js'),'export const gmwwMembersLiveScript = '+JSON.stringify(parts.map(n=>read('src/player-web-src/'+n)).join(''))+';\n');
+ const playerBody=parts.map(n=>read('src/player-web-src/'+n)).join('').replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(process.cwd()))+";\n");
+ assert.equal(read('src/gmww-members-live.js'),'export const gmwwMembersLiveScript = '+JSON.stringify(playerBody)+';\n');
  const gmParts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
  assert.equal(read('server-game/current/app.js'),gmParts.map(n=>read('server-game/src/'+n)).join(''));
 });

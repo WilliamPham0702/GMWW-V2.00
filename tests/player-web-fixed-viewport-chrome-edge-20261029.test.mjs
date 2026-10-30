@@ -19,7 +19,8 @@ test('Player Web uses visible viewport on Safari, Chrome and Edge iOS, not a scr
   assert.match(boot,/body\{position:fixed!important;inset:0!important/);
   assert.match(boot,/html body #game\.screen\.active\{position:fixed!important/);
   assert.match(boot,/html body #gmwwVillageShell\{position:fixed!important/);
-  assert.ok(gmwwMembersLiveScript.includes(boot),'The shipping script must include the viewport fix');
+  assert.match(gmwwMembersLiveScript,/installGmwwPlayerViewport/,'The shipping script must install the viewport fix');
+  assert.match(gmwwMembersLiveScript,/window\.visualViewport/,'The compiled script must track the actual visible viewport');
 });
 test('Embedded village fills its iframe exactly, without taller mobile vh units',()=>{
   assert.match(village,/html\.embedded \.game\{[^}]*height:100%;min-height:0!important/);
@@ -32,7 +33,7 @@ test('Chat remains inside visible viewport during keyboard input; messages alone
   assert.match(boot,/#gmwwChatLines\{min-height:0!important;overflow-y:auto!important/);
   assert.match(boot,/#gmwwChatText\{font-size:16px!important/);
   assert.match(chat,/function gmwwChatClosePanel\(/);
-  assert.match(chat,/getElementById\('gmwwChatPanel'\)\?\.contains\(target\)/);
+  assert.match(chat,/const panel=document\.getElementById\('gmwwChatPanel'\);if\(panel\?\.contains\(event\.target\)\)return/);
   assert.match(boot,/#gmwwOnlineDock\{[^']*gmww-player-visible-height/);
   assert.match(boot,/#gmwwChatLaunch\{[^']*gmww-player-visible-height/);
 });
