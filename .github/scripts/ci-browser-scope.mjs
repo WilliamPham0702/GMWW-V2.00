@@ -2968,6 +2968,7 @@ function isPR652OnlineHotfixScope(changes){
   if(!bounded('server-game/src/40-battle-and-timeline.part',[
     ['function battleIconResolve(action){','function battleIconPositionKey('],
     ['function battleIconEntryPoint(){','function battleIconResetPositions(){'],
+    ['function battleIconDock(actions,phase){','function battleIconTargetAt('],
     ['function battleShowResultPopup(','/* Morning notices']
   ]))return false;
   if(!bounded('server-game/src/45-online-chat.part',[
