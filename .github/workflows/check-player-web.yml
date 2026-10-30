@@ -78,6 +78,14 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --check src/gmww-members-live.js
           node --check .github/scripts/ci-browser-scope.mjs
+      - name: PR648 — xác minh reporter chỉ đo FPS khi bật chẩn đoán
+        if: steps.scope.outputs.mode == 'village-perf-diagnostics-648'
+        run: |
+          node --check assets/village/village-performance.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/player-web-background-performance.test.mjs
+          node --test --test-name-pattern='PR648 diagnostics-only FPS' tests/ci-browser-scope.test.mjs
+          test -s docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md
       - name: Tối ưu Player Web khi chạy nền trên iPhone
         if: steps.scope.outputs.mode == 'player-web-background-performance'
         run: |
