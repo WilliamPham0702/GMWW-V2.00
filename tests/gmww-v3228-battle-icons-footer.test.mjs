@@ -33,7 +33,7 @@ test('Double-sized icons remain separated when spawned around the campfire',()=>
   }
  }
  assert.match(app,/data-fire-index/);
- assert.match(app,/battleIconSpawnPoint\(entry,slot,eligible\.length\)/);
+ assert.ok(app.includes("battleIconSpawnPoint(entry,slot,eligible.length,button.dataset.fireIcon==='yeu-tinh-three-way')"));
 });
 test('Dropping a multi-target action keeps its icon for the next different target',()=>{
  const block=piece(app,'function battleIconBind(){','// Repaint the current GM turn');
