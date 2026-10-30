@@ -296,6 +296,9 @@ const stableCIPolicyPaths=new Set([
   '.github/workflows/check-dual-renderer.yml',
   '.github/workflows/build-server-game-ipa.yml',
   '.github/workflows/check-drunk-spiritualist.yml',
+  '.github/workflows/check-gallows-redesign.yml',
+  '.github/workflows/check-gm-free-icons-501.yml',
+  '.github/workflows/prepare-runtime-v3202-candidate.yml',
   '.github/workflows/deploy-production.yml',
   'tests/ci-browser-scope.test.mjs',
   'docs/releases/GMWW-CI-POLICY-GATE-20261029.md',
@@ -2818,7 +2821,52 @@ function isPlayerOnlinePrivacy630Scope(changes){
   return true;
 }
 
+
+/* PR642 GM Chrome iOS: exact, fail-closed viewport-only release scope.
+   Never classify arbitrary GM HTML/gameplay edits as a small CI change. */
+const gmChromeViewportBase=new Map([
+  ['server-game/current/GMWW.html','M'],
+  ['tests/gm-chrome-ios-viewport-20261030.test.mjs','A'],
+  ['.github/workflows/check-gm-chrome-ios-viewport.yml','A'],
+  ['docs/releases/GMWW-GM-CHROME-IOS-VIEWPORT-20261030.md','A']
+]);
+const gmChromeViewportRelease=new Map([
+  ['package.json','M'],['package-lock.json','M'],
+  ['src/index.js','M'],['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M']
+]);
+export function isGMChromeIosViewportScope(changes){
+  if(!Array.isArray(changes))return false;
+  const release=changes.length===gmChromeViewportBase.size+gmChromeViewportRelease.size;
+  if(changes.length!==gmChromeViewportBase.size&&!release)return false;
+  const expected=new Map(gmChromeViewportBase);
+  if(release)for(const [k,v] of gmChromeViewportRelease)expected.set(k,v);
+  if(changes.some(c=>!c||expected.get(c.path)!==c.status)||
+     new Set(changes.map(c=>c.path)).size!==expected.size)return false;
+  const html=changes.find(c=>c.path==='server-game/current/GMWW.html');
+  if(typeof html.before!=='string'||typeof html.after!=='string')return false;
+  const actual=html.after.replace(/\n\n<!-- GM Server viewport:[\s\S]*?<\/script>\n\n/,'\n')
+    .replace('<title>GMWW V3.278</title>','<title>GMWW V3.277</title>');
+  if(actual!==html.before||!html.after.includes('id="gmwwChromeViewportScript"')||
+     !html.after.includes('/CriOS\\//')||
+     !html.after.includes('--gmww-gm-visible-height'))return false;
+  if(release){
+    for(const c of changes){
+      if(!gmChromeViewportRelease.has(c.path))continue;
+      if(typeof c.before!=='string'||typeof c.after!=='string')return false;
+      let old=c.after;
+      if(['package.json','package-lock.json'].includes(c.path))
+        old=old.replaceAll('3.278.0','3.277.0');
+      else if(c.path==='src/index.js')old=old.replaceAll('V3.278','V3.277');
+      else old=old.replaceAll("'3.278'","'3.277'");
+      if(old!==c.before)return false;
+    }
+  }
+  return true;
+}
+
 function classifyBrowserScope(changes){
+  if(isGMChromeIosViewportScope(changes))return 'gm-chrome-ios-viewport';
   const interactions=playerInteractionsScope(changes);if(interactions)return interactions;
   if(isPlayerOnlinePrivacy630Scope(changes))return "player-online-privacy-630";
   if(isGithubNativeStage2Scope(changes))return 'native-github-ota-stage2';
@@ -3083,6 +3131,23 @@ export function isPlayerOnlinePrivacy630Release(changes,previousChanges=[]){
 }
 
 function detect(){
+  // Main and PR: recognize only the exact Chrome UI change + optional version bump.
+  // Use content-aware comparison, not a filename or a PR-title bypass.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+          .split('\n').filter(Boolean).map(row=>{
+            const [status,file]=row.split('\t');
+            return {status,path:file,before:status==='M'?git('show',base+':'+file):null,
+              after:['M','A'].includes(status)?fs.readFileSync(file,'utf8'):null};
+          });
+        if(isGMChromeIosViewportScope(changes))
+          return {mode:'gm-chrome-ios-viewport',reason:'Exact GM iOS Chrome viewport fix; verified HTML-only + optional version bump; no gameplay/IPA edits'};
+      }
+    }catch{} // Unverified changes always fall back to existing full checks.
+  }
   // Exact PR630 release or its CI-only recovery; unrelated source stays fail-closed.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
