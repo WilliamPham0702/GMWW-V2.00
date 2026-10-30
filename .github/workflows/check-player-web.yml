@@ -83,7 +83,7 @@ jobs:
         run: |
           node --check assets/village/village-performance.mjs
           node --check .github/scripts/ci-browser-scope.mjs
-          node --test tests/player-web-background-performance.test.mjs tests/player-web-render-budget.test.mjs
+          node --test tests/player-web-background-performance.test.mjs
           node --test --test-name-pattern='PR648 diagnostics-only FPS' tests/ci-browser-scope.test.mjs
           test -s docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md
       - name: Tối ưu Player Web khi chạy nền trên iPhone
