@@ -80,3 +80,36 @@ test('invalid/non-HTTPS/same-origin aliases are disabled even if a config says v
     assert.equal(h.dom.get('gmwwShareLegacy').checked,true,url);
   }
 });
+
+
+test('iPhone clipboard denial falls back to focus/selection and removes temporary textarea',async()=>{
+  const h=run(null,'legacy',{clipboardDenied:true});
+  const old='https://gmww-v2-00.williampham0702.workers.dev/';
+  await h.dom.get('gmwwShareCopy').listeners.click();
+  assert.deepEqual(h.clipboard,[]);
+  assert.deepEqual(h.fallbackCopies,[old]);
+  const el=h.getFallbackNode();
+  assert.equal(el.focused,true);
+  assert.equal(el.selected,true);
+  assert.deepEqual(el.range,[0,old.length]);
+  assert.equal(el.removed,true);
+  assert.equal(h.dom.get('gmwwShareStatus').textContent,'Đã sao chép link Player Web.');
+});
+
+test('clipboard absent, Web Share unavailable and fallback copy failure are handled safely',async()=>{
+  const h=run(null,'legacy',{noClipboard:true,noShare:true});
+  await h.dom.get('gmwwShareSend').listeners.click();
+  assert.equal(h.fallbackCopies.length,1);
+  assert.equal(h.shares.length,0);
+  const failed=run(null,'legacy',{noClipboard:true,noShare:true,execUnavailable:true});
+  await failed.dom.get('gmwwShareCopy').listeners.click();
+  assert.ok(failed.dom.get('gmwwShareStatus').textContent.includes('Không thể sao chép'));
+  assert.equal(failed.getFallbackNode().removed,true,'always remove fallback textarea');
+});
+
+test('canceling the iPhone share sheet does not report a failure or modify choice',async()=>{
+  const h=run(null,'legacy',{shareAborted:true});
+  await h.dom.get('gmwwShareSend').listeners.click();
+  assert.equal(h.dom.get('gmwwShareStatus').textContent,'Đang dùng link Cloudflare hiện tại.');
+  assert.equal(h.store.get('GMWW_PLAYER_SHARE_LINK_CHOICE_V1'),'legacy');
+});
