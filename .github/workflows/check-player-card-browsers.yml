@@ -183,7 +183,8 @@ jobs:
   browser-test:
     needs: scope
     if: needs.scope.outputs.mode == 'full'
-    runs-on: ubuntu-latest
+    # Pin a Playwright-WebKit supported OS, rather than ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Tải mã nguồn dự án
