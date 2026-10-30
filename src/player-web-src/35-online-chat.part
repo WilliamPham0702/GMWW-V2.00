@@ -75,6 +75,8 @@ function gmwwChatMount(){
   const style=document.createElement('style');style.id='gmwwChatStyle';
   style.textContent=`
 #gmwwOnlineFooter{position:fixed;z-index:100003;left:8px;right:8px;bottom:max(6px,env(safe-area-inset-bottom));display:grid;grid-template-columns:46px minmax(0,1fr) 38px;gap:5px;align-items:end;color:#fff;transition:opacity .2s;max-height:40dvh}
+html body #gmwwOnlineFooter{top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(6px,env(safe-area-inset-bottom)))!important;bottom:auto!important;transform:translateY(-100%)!important;max-height:calc(var(--gmww-player-visible-height,100dvh) - 16px)!important}
+html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:auto!important;top:auto!important;bottom:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:auto!important;max-height:min(38dvh,320px)!important;min-height:0!important;margin:0!important}
 #gmwwOnlineFooter[hidden]{display:none!important}#gmwwOnlineFooter.is-idle-hidden{opacity:0;pointer-events:none}
 #gmwwOnlineFooter .gmww-foot-button{height:38px;min-height:38px;padding:3px;border:1px solid #ffffff3d;border-radius:10px;background:#062e4340;color:white;font:800 11px system-ui;backdrop-filter:blur(8px)}
 #gmwwChatPanel{min-width:0;background:rgba(5,35,49,.25);border:1px solid #b5e6e843;border-radius:12px;color:#fff;overflow:hidden;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 15px #0002}
