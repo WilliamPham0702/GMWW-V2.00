@@ -2,6 +2,7 @@
 // Select the smallest SAFE browser scope on PRs. Unknown diffs run the full suite.
 // Verified main-push scopes use focused checks; icon policy also isolates legacy gallows/shortcut workflows.
 import fs from 'node:fs';
+// V3.277 Player lobby release scope checks exact version-only files; unknown diffs still use full CI.
 import {playerInteractionsScope} from './player-interactions-scope.mjs';
 import {createHash} from 'node:crypto';
 import {isIconArtworkScope,isIconArtworkPolicyScope} from './icon-artwork-scope.mjs';
