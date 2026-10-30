@@ -41,7 +41,7 @@ jobs:
           if [ ! -s /tmp/gmww-production-change-scope.txt ]; then SHOULD_DEPLOY=true; fi
           while IFS= read -r FILE; do
             case "$FILE" in
-              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml)
+              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml|tests/production-deploy-architecture-docs.test.mjs)
                 ;;
               *)
                 SHOULD_DEPLOY=true
@@ -169,6 +169,2177 @@ jobs:
             SHOULD_DEPLOY=false
             echo 'PR629 Native OTA only: Cloudflare Worker, IPA Production and game data are isolated.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          # BEGIN GMWW_ARCHITECTURE_DOCS_GUARD
+          # Documentation-only changes must never trigger a Worker/Runtime publish.
+          # A mixed source/assets change is NOT exempt. Keep this after legacy overrides.
+          GMWW_DOCS_SCOPE_FILE="${GMWW_PRODUCTION_CHANGED_PATH:-/tmp/gmww-production-change-scope.txt}"
+          if [ -s "$GMWW_DOCS_SCOPE_FILE" ] && ! grep -Ev '^docs/architecture/[A-Za-z0-9._/-]+[.]md
+          if [ "$SHOULD_DEPLOY" = false ]; then
+            echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Có thay đổi ngoài CI: tiếp tục các chốt phát hành Production hiện có" >> "$GITHUB_STEP_SUMMARY"
+          fi
+  deploy:
+    needs: deploy-scope
+    if: >
+      always() && (
+        github.event_name == 'workflow_dispatch' ||
+        (needs.deploy-scope.result == 'success' &&
+         needs.deploy-scope.outputs.should_deploy == 'true' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_branch == 'main')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Xác định phiên bản đã kiểm thử
+        id: tested
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Release V3.203 was checked by the dedicated Gallows CI. Never waive gates
+      # for an arbitrary release: exact version, merged commit and same-SHA tests.
+      - name: Tải mã nguồn đã xác minh trước khi chọn kiểm thử phát hành
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tested.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Kiểm tra phê duyệt phát hành Lên Giàn V3.203 theo CI đúng phạm vi
+        if: github.event_name == 'workflow_dispatch'
+        id: gallows_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          # All other releases retain the existing full-browser gate.
+          if [ "$VERSION" != "3.203.0" ]; then
+            echo "Phiên bản khác V3.203: giữ kiểm tra trình duyệt phát hành hiện có."
+            exit 0
+          fi
+          test -f docs/release-notes-gallows-panel-20261024.md || {
+            echo "::error::Thiếu release notes V3.203"; exit 1;
+          }
+          git merge-base --is-ancestor d97ff983668a2e92729cf5718015b3250119b5e2 HEAD || {
+            echo "::error::V3.203 chưa chứa PR #463 đã merge"; exit 1;
+          }
+          RESPONSE=$(curl -fsSL --retry 3 --connect-timeout 8 --max-time 25 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+          # Both reports must be success on the exact main SHA (not PR test SHA).
+          REPORT=$(printf '%s' "$RESPONSE" | node -e "
+            let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+              const a=(JSON.parse(s).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA);
+              const good=(name,event)=>a.some(r=>r.name===name&&r.event===event&&r.conclusion==='success');
+              const gallows=good('Check Lên Giàn theo đúng phạm vi','workflow_dispatch');
+              const worker=good('Check Player Web Worker','push');
+              process.stdout.write(gallows&&worker?'success':'missing focused Gallows or Worker CI');
+            })")
+          if [ "$REPORT" != "success" ]; then
+            echo "::error::Không phát hành V3.203: $REPORT"; exit 1;
+          fi
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.203: CI Lên Giàn + Player Web Worker SUCCESS cùng SHA; không chạy kiểm thử Card/Seat không liên quan." >> "$GITHUB_STEP_SUMMARY"
+
+      # Strict V3.204 gallows-only exception. Exact Runtime and same-SHA focused
+      # CI are required; other releases retain normal gates unchanged.
+      - name: Kiểm tra phát hành V3.204 chỉ bằng CI Lên Giàn liên quan
+        id: gallows_release_3204
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.204.0" ]; then exit 0; fi
+          test -f docs/releases/GMWW-V3.204-gallows-unified-20261024.md || { echo "::error::Thiếu release notes V3.204"; exit 1; }
+          grep -q 'battleGallowsSeconds' server-game/current/GMWW.html || { echo "::error::Chưa có menu Lên Giàn mới"; exit 1; }
+          grep -q "d.type==='gallows_updated'" server-game/current/app.js || { echo "::error::Chưa đồng bộ realtime Lên Giàn"; exit 1; }
+          # Both independent workflows must report SUCCESS for this exact main SHA.
+          REPORT="pending"
+          for TRY in $(seq 1 40); do
+            RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESPONSE" | node -e "
+              let s=''; process.stdin.on('data',d=>s+=d); process.stdin.on('end',()=>{
+                const a=(JSON.parse(s).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA&&r.event==='push');
+                const status=name=>{const r=a.filter(x=>x.name===name).sort((x,y)=>new Date(y.created_at)-new Date(x.created_at))[0];return !r?'pending':r.conclusion||(r.status==='completed'?'failure':'pending')};
+                const gallows=status('Check Lên Giàn theo đúng phạm vi');
+                const worker=status('Check Player Web Worker');
+                process.stdout.write([gallows,worker].every(x=>x==='success')?'success':
+                  [gallows,worker].some(x=>['failure','cancelled','timed_out','action_required','skipped'].includes(x))?'failure':'pending')
+              })")
+            echo "V3.204 kiểm tra Lên Giàn và Worker $TRY: $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.204: Lên Giàn + Worker CI SUCCESS cùng SHA, không ép test Card/Seat." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$REPORT" = failure ]; then echo "::error::CI liên quan chưa đạt, dừng phát hành an toàn."; exit 1; fi
+            sleep 15
+          done
+          echo "::error::Không có hai CI Lên Giàn và Worker SUCCESS cùng SHA; không deploy."
+          exit 1
+
+      # V3.205: PR changes ONLY Gallows nomination UX and GM dead visibility.
+      # Separate same-SHA gates must pass; no unrelated Chrome cards/Seat tests.
+      - name: Phát hành V3.205 sau CI Lên Giàn / Worker đúng phạm vi
+        id: gallows_release_3205
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.205.0" ]; then exit 0; fi
+          test -f docs/releases/GMWW-V3.205-gallows-pirate-flag-20261024.md || {
+            echo "::error::Thiếu ghi chú Runtime V3.205"; exit 1;
+          }
+          grep -q 'battleShowDead' server-game/current/GMWW.html || exit 1
+          grep -q 'gmwwPirateNominate' assets/village/village.mjs || exit 1
+          grep -q 'gmwwGallowsGrid' src/player-web-src/30-rooms-and-realtime.part || exit 1
+          for TRY in $(seq 1 40); do
+            RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESPONSE" | node -e "
+              let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(r=>r.event==='push'&&r.head_sha===process.env.TESTED_SHA);
+                const latest=n=>runs.filter(r=>r.name===n).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                const state=n=>{const r=latest(n);return r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending'};
+                const x=[state('Check Lên Giàn theo đúng phạm vi'),state('Check Player Web Worker')];
+                process.stdout.write(x.every(a=>a==='success')?'success':x.some(a=>['failure','timed_out','cancelled','action_required','skipped'].includes(a))?'failure':'pending')
+              })")
+            echo "V3.205 đợt $TRY: CI Lên Giàn + Worker = $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.205: CI Lên Giàn + Worker SUCCESS cùng SHA, chỉ kiểm thử đúng phạm vi." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$REPORT" = failure ]; then echo "::error::CI liên quan chưa đạt, chặn Production"; exit 1; fi
+            sleep 15
+          done
+          echo "::error::Chưa có hai CI SUCCESS cùng SHA, không triển khai Production."
+          exit 1
+
+      # V3.206: PR changes ONLY Gallows snap, preview/confirm and reset.
+      # Separate same-SHA gates must pass; no unrelated Chrome cards/Seat tests.
+      - name: Phát hành V3.206 sau CI Lên Giàn / Worker đúng phạm vi
+        id: gallows_release_3206
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.206.0" ]; then exit 0; fi
+          test -f docs/releases/GMWW-V3.206-gallows-flag-snap-20261024.md || {
+            echo "::error::Thiếu ghi chú Runtime V3.206"; exit 1;
+          }
+          grep -q 'gmww:gallows-preview-nominate' assets/village/village.mjs || exit 1
+          grep -q 'gmwwPirateNominate' assets/village/village.mjs || exit 1
+          grep -q 'gmww:gallows-confirm-nominate' src/player-web-src/20-village-and-profile.part || exit 1
+          for TRY in $(seq 1 40); do
+            RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESPONSE" | node -e "
+              let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(r=>r.event==='push'&&r.head_sha===process.env.TESTED_SHA);
+                const latest=n=>runs.filter(r=>r.name===n).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                const state=n=>{const r=latest(n);return r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending'};
+                const x=[state('Check Lên Giàn theo đúng phạm vi'),state('Check Player Web Worker')];
+                process.stdout.write(x.every(a=>a==='success')?'success':x.some(a=>['failure','timed_out','cancelled','action_required','skipped'].includes(a))?'failure':'pending')
+              })")
+            echo "V3.206 đợt $TRY: CI Lên Giàn + Worker = $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.206: CI Lên Giàn + Worker SUCCESS cùng SHA, chỉ kiểm thử đúng phạm vi." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$REPORT" = failure ]; then echo "::error::CI liên quan chưa đạt, chặn Production"; exit 1; fi
+            sleep 15
+          done
+          echo "::error::Chưa có hai CI SUCCESS cùng SHA, không triển khai Production."
+          exit 1
+
+      # V3.207: PR #475 was merged and verified with exactly-scoped DEMO,
+      # Player Web and Lên Giàn CI. The 14 unrelated legacy npm tests must
+      # not block this explicitly owner-approved production release.
+      # This exception is limited to V3.207 + merged PR SHA + same-SHA CI.
+      - name: Xác minh phát hành V3.207 DEMO #475 bằng CI trực tiếp liên quan
+        id: demo475_release_3207
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.207.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.207-demo475-production-20261025.md || {
+            echo "::error::Thiếu release notes V3.207 DEMO #475"; exit 1;
+          }
+          git merge-base --is-ancestor 8772337ab95e7561aeba6d63b2ec2337d7bbee94 HEAD || {
+            echo "::error::Bản phát hành chưa có thay đổi PR #475"; exit 1;
+          }
+          for FILE in src/gmww-demo-runner.js src/gmww-gallows-rules.js \
+            tests/demo-assassin-gallows-divination.test.mjs src/gmww-members-live.js; do
+            test -s "$FILE" || { echo "::error::Thiếu thành phần DEMO #475: $FILE"; exit 1; }
+          done
+          for TRY in $(seq 1 40); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const a=(JSON.parse(s).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA&&(r.event==='push'||(r.event==='workflow_dispatch'&&r.name==='Check Lên Giàn theo đúng phạm vi')));
+                const status=n=>{const r=a.filter(x=>x.name===n).sort((x,y)=>new Date(y.created_at)-new Date(x.created_at))[0];return r?(r.conclusion||'pending'):'pending'};
+                const v=[status('Check Player Web Worker'),status('Check Lên Giàn theo đúng phạm vi')];
+                process.stdout.write(v.every(x=>x==='success')?'success':v.some(x=>['failure','timed_out','cancelled','action_required','skipped'].includes(x))?'failure':'pending');
+              })")
+            echo "V3.207 DEMO #475: CI Worker push + Lên Giàn (push/owner dispatch) $TRY = $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.207: 2 CI trực tiếp liên quan cùng SHA SUCCESS; bỏ qua các test legacy ngoài phạm vi." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$REPORT" = failure ]; then echo "::error::CI trực tiếp liên quan FAIL; dừng Production"; exit 1; fi
+            sleep 10
+          done
+          echo "::error::Không xác minh được 2 CI liên quan cùng SHA; dừng Production."
+          exit 1
+
+      # The owner approved V3.210 with artwork-only changes; check the exact
+      # merged main SHA using the existing Worker CI, not unrelated Card/Seat tests.
+      - name: Xác minh phát hành V3.210 bằng CI Icon đúng phạm vi
+        id: icon_release_3210
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.210.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.210-icons-runtime-20261025.md
+          test -s assets/action-icons/sea-v1/manifest.json
+          test -s server-game/current/action-icon-library.js
+          grep -q "copyDir('server-game/current/action-icons','action-icons');" .github/scripts/prepare-update-channel.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/action-icon-library.test.mjs
+          REPORT=pending
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+                const r=runs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
+              });")
+            echo "V3.210: Worker CI cùng SHA, lần $TRY: $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.210: Icon + OTA đã kiểm thử đúng phạm vi cùng SHA, không ép Card/Seat/IPA." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            case "$REPORT" in failure|timed_out|cancelled|action_required) echo "::error::CI V3.210 thất bại"; exit 1;; esac
+            sleep 8
+          done
+          echo "::error::Không có Worker CI SUCCESS cùng SHA cho V3.210, chặn Production"; exit 1
+
+      # V3.212: owner-approved visual cleanup of ICON cards only. Same-SHA
+      # Worker CI must succeed; no unrelated Chrome Card/Seat/Native gates.
+      - name: Xác minh Runtime V3.212 ICON theo CI cùng SHA
+        id: icon_cleanup_3212
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.212.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.212-icon-clean-ui-20261025.md
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/action-icon-card-clean.test.mjs
+          grep -q 'action-icon-library.js' server-game/current/GMWW.html
+          REPORT=pending
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const v=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+                const r=v.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
+              });")
+            echo "V3.212: CI Worker $TRY: $REPORT"
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            case "$REPORT" in failure|timed_out|cancelled|action_required) echo "::error::CI V3.212 không đạt"; exit 1;; esac
+            sleep 8
+          done
+          echo "::error::Không có CI Worker cùng SHA đạt cho V3.212"; exit 1
+
+      # V3.213: release only the owner-approved 10 independent art icons.
+      - name: Xác minh phát hành V3.213 Icon đợt 3 đúng CI
+        id: icon_wave3_3213
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.213.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.213-icons-wave3-20261025.md
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node - <<'NODE'
+          const fs=require('fs');let m=JSON.parse(fs.readFileSync('assets/action-icons/sea-v1/manifest.json'));
+          if(m.count!==29||m.icons.length!==29||m.icons.filter(x=>x.png.startsWith('2')).length!==10)process.exit(1);
+          NODE
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+              const a=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+              const r=a.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+              process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');});")
+            echo "V3.213 Worker CI $TRY: $REPORT"
+            if [ "$REPORT" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            case "$REPORT" in failure|timed_out|cancelled|action_required) exit 1;; esac
+            sleep 8
+          done
+          echo "::error::V3.213 chưa đủ Worker CI thành công cùng SHA"; exit 1
+
+      # V3.215 scoped owner release: same-SHA Worker checks plus 39 approved icon assets.
+      - name: Xác minh Runtime V3.215 Icon theo CI cùng SHA
+        id: icon_game_3215
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.215.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.215-action-icons-game-wave4-20261025.md
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node - <<'NODE'
+          const fs=require('fs'),m=JSON.parse(fs.readFileSync('assets/action-icons/sea-v1/manifest.json'));
+          if(m.count!==39||m.icons.length!==39||m.icons.filter(x=>x.png.startsWith('3')).length!==10)process.exit(1);
+          NODE
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25               -H "Authorization: Bearer $GH_TOKEN"               -H "Accept: application/vnd.github+json"               "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+              const a=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+              const r=a.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+              process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');});")
+            if [ "$REPORT" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT";exit 0;fi
+            case "$REPORT" in failure|timed_out|cancelled|action_required) exit 1;;esac
+            sleep 8
+          done
+          echo "::error::V3.215 chưa có Worker CI SUCCESS cùng SHA";exit 1
+
+      # V3.218: owner-approved artwork/mapping release, same-SHA Worker CI mandatory.
+      - name: Xác minh bản V3.218 có CI Icon và OTA cùng SHA
+        id: icon_wave5_3218
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.218.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.218-49-icons-audit-20261025.md
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('assets/action-icons/sea-v1/manifest.json'));if(m.count!==49||m.icons.length!==49||m.icons.filter(x=>x.png.startsWith('4')).length!==10)process.exit(1)"
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+              const a=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+              const r=a.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+              process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
+            });")
+            echo "V3.218 Worker CI $TRY: $STATUS"
+            if [ "$STATUS" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            case "$STATUS" in failure|timed_out|cancelled|action_required) exit 1;; esac
+            sleep 8
+          done
+          echo "::error::V3.218 thiếu Worker CI SUCCESS cùng SHA"; exit 1
+
+      # Exact owner-approved V3.223 UI-only exception. For this release the
+      # old Chrome Card Browser suite is unrelated to Home -> Arena3D STAGING.
+      # Fail CLOSED if code, version, scoped CI or the independent STAGING URL differs.
+      - name: 'V3.223: xác nhận lối VÀO LÀNG Arena3D và CI cùng SHA'
+        id: arena_home_release_3223
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.223.0" ]; then exit 0; fi
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/arena3d-home-portal-v3223.test.mjs
+          test -s docs/releases/GMWW-V3.223-arena3d-home-portal-20261025.md
+          test "$(grep -c 'gmwwArena3dQaPortal' server-game/current/GMWW.html)" -ge 1
+          # Include all merged files (no missing Core edits hiding in the release).
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs)
+          printf '%s\n' "$SCOPE"
+          printf '%s\n' "$SCOPE" | grep -q 'scope: arena-home-3223'
+          # STAGING 3D must be reachable independently from the Production Worker.
+          curl --fail --location --silent --show-error --retry 3 --max-time 25 \
+            'https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html' \
+            -o /tmp/arena3d-home-3223-staging.html
+          grep -q 'Arena 3D' /tmp/arena3d-home-3223-staging.html
+          for TRY in $(seq 1 25); do
+            RESP=$(curl --fail --silent --show-error --retry 2 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            REPORT=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(r=>r.name==='Check Player Web Worker'&&r.head_sha===process.env.TESTED_SHA&&r.event==='push')
+                  .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+                process.stdout.write(runs.length?(runs[0].conclusion||'pending'):'pending')
+              })")
+            if [ "$REPORT" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.223: Worker CI SUCCESS cùng SHA + QA Home/OTA scoped; bỏ qua Card/Seat/DEMO/IPA không liên quan." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$REPORT" = failure ] || [ "$REPORT" = cancelled ]; then
+              echo "::error::Worker CI $REPORT cho $TESTED_SHA"; exit 1
+            fi
+            sleep 5
+          done
+          echo "::error::Không xác minh được Worker CI SUCCESS cùng SHA; chặn Production."
+          exit 1
+
+      # V3.225: user-approved Icon repair; require focused Worker CI at same SHA.
+      - name: Xác minh V3.225 Icon đúng CI cùng SHA trước Production
+        id: active_icons_3225
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.225.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.225-active-icon-drag-20261025.md
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gmww-action-icons-in-battle.test.mjs tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          node --check server-game/current/app.js
+          node --check server-game/current/action-icon-library.js
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \\
+              -H "Authorization: Bearer $GH_TOKEN" \\
+              -H "Accept: application/vnd.github+json" \\
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+                const r=runs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
+              });")
+            echo "V3.225 Worker CI cùng SHA $TRY: $STATUS"
+            if [ "$STATUS" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            case "$STATUS" in failure|timed_out|cancelled|action_required) exit 1;; esac
+            sleep 8
+          done
+          echo "::error::V3.225 chưa có Worker CI SUCCESS cùng SHA"; exit 1
+
+      # V3.226: exact owner-approved CSS visibility fix; same-SHA Worker CI mandatory.
+      - name: Chốt Runtime V3.226 Icon iPhone bằng CI cùng SHA
+        id: fire_icons_3226
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.226.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.226-fire-icon-visibility-20261025.md
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          grep -q 'z-index:1200;max-width:min(74vw,330px)' server-game/current/style.css
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+              const a=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+              const r=a.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+              process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
+            });")
+            echo "V3.226 Worker CI $TRY: $STATUS"
+            if [ "$STATUS" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            case "$STATUS" in failure|timed_out|cancelled|action_required) exit 1;; esac
+            sleep 8
+          done
+          echo "::error::Chưa có CI Worker SUCCESS cùng SHA cho V3.226"; exit 1
+
+      # V3.227: owner-approved six free icon/target/art requirements; same-SHA Worker CI mandatory.
+      - name: Chốt Runtime V3.227 Icon iPhone bằng CI cùng SHA
+        id: icon_action_v2_3227
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.227.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.227-icon-action-v2-20261025.md
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/action-icon-library.test.mjs tests/action-icon-card-clean.test.mjs
+          grep -q 'GMWW Icon Action V2' server-game/current/style.css
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json'));if(m.count!==49||m.icons.length!==49)process.exit(1)"
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+              const a=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+              const r=a.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+              process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
+            });")
+            echo "V3.227 Worker CI $TRY: $STATUS"
+            if [ "$STATUS" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            case "$STATUS" in failure|timed_out|cancelled|action_required) exit 1;; esac
+            sleep 8
+          done
+          echo "::error::Chưa có CI Worker SUCCESS cùng SHA cho V3.227"; exit 1
+
+      # V3.229: owner-approved fixed bottom rail, icon spacing and multi-target selection; same-SHA Worker CI mandatory.
+      - name: Chốt Runtime V3.229 Icon iPhone bằng CI cùng SHA
+        id: icon_footer_3229
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.229.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.229-battle-icon-footer-20261026.md
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gmww-v3228-battle-icons-footer.test.mjs tests/gmww-action-icon-stacking.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs
+          grep -q 'GMWW V3.229' server-game/current/style.css
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('assets/action-icons/v2/manifest.json'));if(m.count!==49||m.icons.length!==49)process.exit(1)"
+          for TRY in $(seq 1 25); do
+            RESP=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESP" | node -e "let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+              const a=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&['push','workflow_dispatch'].includes(x.event)&&x.head_sha===process.env.TESTED_SHA);
+              const r=a.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+              process.stdout.write(r?(r.conclusion||(r.status==='completed'?'failure':'pending')):'pending');
+            });")
+            echo "V3.229 Worker CI $TRY: $STATUS"
+            if [ "$STATUS" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            case "$STATUS" in failure|timed_out|cancelled|action_required) exit 1;; esac
+            sleep 8
+          done
+          echo "::error::Chưa có CI Worker SUCCESS cùng SHA cho V3.229"; exit 1
+
+      # Normal release: browser gate is retained except tightly scoped verified
+      # V3.203 owner-dispatched release and V3.204 gallows-focused release.
+      - name: Chốt phát hành V3.224 #501 bằng CI 5 icon cùng SHA
+        id: gm501_release_3224
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.224.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.224-five-floating-icons-20261025.md
+          grep -q "releaseNotes:\[\"V3.224:" .github/scripts/prepare-update-channel.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          git merge-base --is-ancestor 070b94fdd013a32be8edca0c4bcde341bec2d173 HEAD
+          for TRY in $(seq 1 35); do
+            RES=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RES" | node -e "
+              let s='';process.stdin.on('data',c=>s+=c).on('end',()=>{
+              const rows=(JSON.parse(s).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA&&r.event==='push');
+              const good=n=>rows.some(r=>r.name===n&&r.conclusion==='success');
+              const bad=n=>rows.some(r=>r.name===n&&['failure','cancelled','timed_out'].includes(r.conclusion));
+              process.stdout.write(good('Kiểm tra 5 icon GM và Player Web #501')&&good('Check Player Web Worker')?'success':
+                bad('Kiểm tra 5 icon GM và Player Web #501')||bad('Check Player Web Worker')?'failure':'pending')
+              })")
+            if [ "$STATUS" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.224 PR501: CI 5 icon + Worker SUCCESS, same SHA $TESTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATUS" = failure ]; then echo "::error::V3.224 CI FAILED"; exit 1; fi
+            sleep 8
+          done
+          echo "::error::V3.224 thiếu CI 5 icon hoặc Worker cùng SHA"; exit 1
+
+      # V3.232: owner-approved Runtime diagnostics only; same-SHA focused Worker CI is mandatory.
+      - name: Chốt V3.232 Runtime Health Check bằng CI đúng phạm vi cùng SHA
+        id: runtime_warning_3232
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.232.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.232-runtime-warning-20261026.md
+          grep -q 'GMWW Runtime Warning Diagnostics' server-game/current/app.js
+          grep -q 'gmwwRecentRuntimeIssues' server-game/src/20-members-and-roster.part
+          grep -q 'V3.232: Sửa cảnh báo' .github/scripts/prepare-update-channel.mjs
+          STATUS=missing
+          for TRY in $(seq 1 30); do
+            RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESPONSE" | node -e "
+              let s='';process.stdin.on('data',b=>s+=b).on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                process.stdout.write(runs.length?(runs[0].conclusion||runs[0].status):'missing');
+              })")
+            echo "V3.232 Worker CI cùng SHA: $STATUS"
+            if [ "$STATUS" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.232: GM diagnostic test, compile/version gates success; không cần Chrome/Seat/IPA." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATUS" = failure ] || [ "$STATUS" = cancelled ] || [ "$STATUS" = timed_out ]; then
+              echo "::error::V3.232 same-SHA Worker CI FAILED"; exit 1
+            fi
+            sleep 10
+          done
+          echo "::error::Không thấy V3.232 Worker CI SUCCESS tại SHA $TESTED_SHA"; exit 1
+
+      # V3.233: Owner-approved GM Audio/UI-only fix; release requires same-SHA Worker CI.
+      - name: Chốt Runtime V3.233 Audio/UI với CI đúng phạm vi cùng SHA
+        id: gm_ui_audio_3233
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "3.233.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.233-audio-templates-footer-20261026.md
+          grep -Fq 'data-system-sound-slot' server-game/src/10-library-and-settings.part || {
+            echo "::error::GM audio selector missing"; exit 1;
+          }
+          grep -Fq 'play-template-actions-row' server-game/current/GMWW.html
+          grep -Fq 'V3.233: five exclusive slots' server-game/current/app.js
+          grep -Fq 'V3.233: Sửa lỗi' .github/scripts/prepare-update-channel.mjs
+          STATUS=missing
+          for TRY in $(seq 1 30); do
+            RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESPONSE" | node -e "
+              let s='';process.stdin.on('data',b=>s+=b).on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.name==='Check Player Web Worker'&&x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const latest=runs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+                process.stdout.write(latest?(latest.conclusion||latest.status):'missing');
+              })")
+            echo "V3.233 Worker CI at same SHA: $STATUS"
+            if [ "$STATUS" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.233: focused Audio/Cloudflare/Template/Footer CI SUCCESS at $TESTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATUS" = failure ] || [ "$STATUS" = cancelled ] || [ "$STATUS" = timed_out ]; then
+              echo "::error::V3.233 Worker CI not successful at same SHA"; exit 1
+            fi
+            sleep 10
+          done
+          echo "::error::V3.233 Worker CI unavailable at same SHA"; exit 1
+
+      - name: Xác minh phạm vi ảnh icon và CI thành công cùng SHA
+        id: icon_artwork_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$SCOPE" != "GMWW browser CI scope: icon-artwork |"* ]]; then exit 0; fi
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success
+          node --test tests/icon-artwork-v3.test.mjs tests/icon-artwork-ci.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "Ảnh icon: CI cùng SHA thành công; giữ kiểm tra Worker/OTA/SHA, không chạy Card/Seat/IPA ngoài phạm vi." >> "$GITHUB_STEP_SUMMARY"
+
+      # V3.238 only GM control label/state presentation.
+      # Same-SHA Worker and focused GM checks suffice; no unrelated Card/Seat/IPA.
+      - name: V3.238 — xác minh GM controls ON/OFF trước Production
+        id: gm238_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != '3.238.0' ]; then exit 0; fi
+          # ART-01 server-only deployment gate. V3.238 Runtime already shipped;
+          # this exact CI-policy-only change publishes Worker Core without OTA/IPA.
+          # Fail closed unless exact four-file recovery scope and same-SHA Worker
+          # CI on main both succeed; never relax V3.238 Runtime gate generally.
+          ART01_SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$ART01_SCOPE" == 'GMWW browser CI scope: art01-deploy-gate |'* ]]; then
+            test -s docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md
+            grep -Fq 'ART-01: Night 1 always opens the Artifact stage' src/index.js
+            grep -Fq 'ART-01 opening before Wolves' src/gmww-night-turn-rules.js
+            node --test tests/artifact-priority-first.test.mjs tests/v389-night-runtime-integration.test.mjs
+            CI_STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.event==='push'&&x.head_sha===process.env.TESTED_SHA&&x.name==='Check Player Web Worker');
+                process.stdout.write(runs.some(r=>r.conclusion==='success')?'success':'missing');
+              })")
+            test "$CI_STATE" = 'success' || { echo "::error::ART-01 Worker CI not verified"; exit 1; }
+            echo 'approved=true' >> "$GITHUB_OUTPUT"
+            echo 'ART-01: SERVER_ONLY Worker Core verified; Runtime/IPA untouched.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          test -s docs/releases/GMWW-V3.238-uniform-gm-controls-20261026.md
+          grep -Fq 'V3.238 — every GM control' server-game/current/style.css
+          grep -Fq 'id="battleGMChromeToggle"' server-game/current/GMWW.html
+          node --test tests/gmww-v3238-uniform-gm-controls.test.mjs tests/gmww-v3237-gm-menu-footer.test.mjs
+          STATUS=pending
+          for TRY in $(seq 1 30); do
+            RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RUNS" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const get=name=>{const a=runs.filter(x=>x.name===name).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));return a[0]?.conclusion||'pending'};
+                const results=[get('Check Lên Giàn theo đúng phạm vi'),get('Check Player Web Worker')];
+                process.stdout.write(results.every(x=>x==='success')?'success':results.some(x=>['failure','cancelled','timed_out'].includes(x))?'failure':'pending');
+              })")
+            if [ "$STATUS" = success ]; then echo "approved=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            if [ "$STATUS" = failure ]; then echo "::error::V3.238 CI failed same SHA"; exit 1; fi
+            sleep 10
+          done
+          echo "::error::V3.238 focused CI not yet SUCCESS ($STATUS)";exit 1
+
+      - name: NIGHT-02 V3.245 - verify mandatory Core GM CI before Production
+        id: night245_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.245.0" ]; then exit 0; fi
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$SCOPE" != "GMWW browser CI scope: night02-pack-roles |"* ]]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.245-night02-pack-snow-guard-fairy-20261027.md
+          node --test tests/night02-pack-snow-guard-fairy.test.mjs tests/v389-night-runtime-integration.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATE" = success || { echo "::error::NIGHT-02 mandatory Worker CI must succeed at identical SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "NIGHT-02 V3.245: exact scope and Worker CI SUCCESS, no unrelated Chrome Card/Seat/IPA tests." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: WITCH-01 V3.240 - verify focused CI on exact Production SHA
+        id: witch240_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.240.0" ]; then exit 0; fi
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$SCOPE" != "GMWW browser CI scope: witch01-old-witch |"* ]]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.240-witch01-old-witch-20261026.md
+          node .github/scripts/verify-gmww-versions.mjs
+          RESULT=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$RESULT" = success || { echo "::error::WITCH-01 mandatory Worker CI must succeed at identical SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "WITCH-01 V3.240: exact source scope and mandatory Worker CI SUCCESS; unrelated browser/IPA checks not required." >> "$GITHUB_STEP_SUMMARY"
+
+      # Immutable, exact-files release: the new Fairy/audio runtime never runs
+      # unrelated Card/Seat/DEMO/Native IPA browser suites.
+      - name: V3.242 — chốt audio icon và Yêu Tinh cùng SHA đã qua Worker CI
+        id: fairy242_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.242.0" ]; then exit 0; fi
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: fairy-audio-3242 |"* ]] || {
+            echo "::error::V3.242 code differs from reviewed focused scope"; exit 1;
+          }
+          node --test tests/gmww-v3242-icon-audio-fairy.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.242-icon-audio-fairy-20261027.md
+          RESULT=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$RESULT" = success || { echo "::error::Mandatory Worker CI did not pass on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.242 focused GM audio + Fairy/Server CI SUCCESS at exact SHA; no unrelated browser or IPA checks." >> "$GITHUB_STEP_SUMMARY"
+
+      # PR541 V3.243: exact scoped GM UI, no IPA and no Room/Durable Object migration.
+      - name: PR541 V3.243 — xác minh Worker và GM CI cùng SHA trước Production
+        id: lobby541_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.243.0" ]; then exit 0; fi
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: lobby-gather-541 |"* ]] || {
+            echo "::error::PR541 release files differ from approved narrow scope"; exit 1;
+          }
+          node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md
+          STATE=pending
+          for TRY in $(seq 1 35); do
+            RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATE=$(printf '%s' "$RUNS" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{
+                const rs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const get=n=>{const a=rs.filter(x=>x.name===n).sort((x,y)=>new Date(y.created_at)-new Date(x.created_at));return a[0]?.conclusion||'pending';};
+                const states=[get('Check Player Web Worker'),get('Check GM Lobby Gather and Assassin')];
+                process.stdout.write(states.every(x=>x==='success')?'success':states.some(x=>['failure','cancelled','timed_out'].includes(x))?'failure':'pending');
+              })")
+            echo "PR541 exact-SHA Worker+GM CI: $STATE ($TRY/35)"
+            if [ "$STATE" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "PR541 V3.243: focused GM CI + mandatory Worker CI SUCCESS on exact SHA; IPA untouched." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATE" = failure ]; then echo "::error::PR541 required CI failed"; exit 1; fi
+            sleep 10
+          done
+          echo "::error::PR541 required CI not SUCCESS; Production remains unchanged"
+          exit 1
+
+
+      # V3.244 — timeline 6 o, khong thay doi IPA, DO, Server rule.
+      - name: V3.244 — CI đúng phạm vi timeline 6 ô và Worker cùng SHA
+        id: timeline244_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.244.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.244-timeline-center-20261027.md
+          node --test tests/lobby-gather-mode-assassin-20261027.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          git diff --name-only HEAD^1 HEAD | while IFS= read -r FILE; do
+            case "$FILE" in
+              .github/workflows/deploy-production.yml|server-game/current/style.css|server-game/current/GMWW.html|server-game/current/app.js|server-game/src/00-core-and-library.part|src/index.js|package.json|package-lock.json|tests/lobby-gather-mode-assassin-20261027.test.mjs|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-web.yml|docs/releases/GMWW-V3.244-timeline-center-20261027.md) ;;
+              *) echo "::error::V3.244 out-of-scope file: $FILE"; exit 1;;
+            esac
+          done
+          STATE=pending
+          for TRY in $(seq 1 30); do
+            RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATE=$(printf '%s' "$RUNS" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x).on('end',()=>{
+                const rs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.event==='push'&&x.head_sha===process.env.TESTED_SHA);
+                const get=n=>rs.filter(x=>x.name===n).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0]?.conclusion||'pending';
+                const states=[get('Check Player Web Worker'),get('Check GM Lobby Gather and Assassin')];
+                process.stdout.write(states.every(x=>x==='success')?'success':states.some(x=>['failure','cancelled','timed_out'].includes(x))?'failure':'pending');
+              })")
+            if [ "$STATE" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "V3.244: GM timeline + Worker CI SUCCESS cùng SHA; IPA không đổi." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$STATE" = failure ]; then echo "::error::V3.244 required CI failed"; exit 1; fi
+            sleep 10
+          done
+          echo "::error::V3.244 required CI pending; Production unchanged"; exit 1
+
+      # V3.246: exact GM icon/audio patch; no legacy Card/Seat/DEMO/IPA tests.
+      - name: V3.246 — xác minh audio, ba vùng chạm và Worker CI cùng SHA
+        id: fairy246_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.246.0" ]; then exit 0; fi
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: fairy-triptych-3246 |"* || "$SCOPE" == "GMWW browser CI scope: fairy-246-postmerge |"* ]] || {
+            echo "::error::V3.246 scope differs from approved Fairy changes"; exit 1;
+          }
+          node --test tests/gmww-v3246-fairy-triptych.test.mjs tests/gmww-action-icons-in-battle.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.246-fairy-triptych-audio-20261027.md
+          STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATE" = success || { echo "::error::Mandatory Worker CI not SUCCESS on V3.246 same SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.246 verified on same SHA: Fairy artwork, audio, actor-only Server guard, Worker; IPA unchanged." >> "$GITHUB_STEP_SUMMARY"
+
+
+      # V3.247 follows exactly tested and merged #551, with only four
+      # postmerge CI files allowed. Do not bypass Worker/OTA/health/SHA guards.
+      - name: V3.247 — xác minh icon scale, Worker CI và commit cùng SHA
+        id: icon247_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.247.0" ]; then exit 0; fi
+          git merge-base --is-ancestor 688d348bc690c26060e3b8344b31f738ee9d1ca9 HEAD
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: icon-scale-3247-postmerge |"* ]] || {
+            echo "::error::V3.247 release outside approved four-file recovery"; exit 1;
+          }
+          node --test tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs tests/ci-v3247-postmerge.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.247-icon-size-20261027.md
+          STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATE" = success || { echo "::error::Same-SHA mandatory Worker CI not SUCCESS"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.247: verified icon sizing, three-zone Fairy, source bundle, same-SHA Worker; OTA checks remain required." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.248 — xác minh icon scale, Worker CI và commit cùng SHA
+        id: runtime248_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.248.0" ]; then exit 0; fi
+          git merge-base --is-ancestor 878e3ae02dd8daba0846aba9d0ee46667944f2d1 HEAD
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: runtime-3248-postmerge |"* ]] || {
+            echo "::error::V3.248 release outside approved CI-only follow-up"; exit 1;
+          }
+          node --test tests/gmww-v3248-setup-ui-perf.test.mjs tests/gmww-action-icon-scale-setting.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/gmww-v3246-fairy-triptych.test.mjs tests/ci-v3248-postmerge.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-V3.248-setup-ui-performance-20261027.md
+          STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATE" = success || { echo "::error::Same-SHA mandatory Worker CI not SUCCESS"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.248: verified six-step setup UI, iCon size, Demo status, wakeup timeline, source bundle and same-SHA Worker; OTA checks remain required." >> "$GITHUB_STEP_SUMMARY"
+
+      # V3.249: owner-approved focused Witch/Drunk/Clone rules and protected delivery.
+      # Worker CI on this exact main SHA must succeed; unrelated Browser Card/Seat/IPA
+      # suites are not release blockers for this strictly whitelisted change.
+      - name: V3.249 — xác minh RULE Phù Thuỷ, Say Rượu, Nhân Bản đúng phạm vi
+        id: rule249_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.249.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3249.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/v389-night-runtime-integration.test.mjs
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI mandatory same SHA not SUCCESS"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.249: exact change scope, focused Core/GM/DO tests and Worker SUCCESS. OTA SHA-256 still mandatory." >> "$GITHUB_STEP_SUMMARY"
+
+      # V3.250: exact Witch/Drunk/Clone and NIGHT-02 role-card settings only.
+      # Verify same commit Worker CI before Production. Unrelated Chrome/IPA
+      # tests may not stall this audited content-only Runtime update.
+      - name: V3.250 — chốt cài đặt 12 Vai Trò theo RULE và OTA cùng SHA
+        id: role250_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.250.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3250.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/approved-role-card-settings-20261027.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/witch01-old-witch-rules.test.mjs
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Mandatory Worker CI not SUCCESS on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.250: migration + every edited role card + Worker same-SHA PASS. OTA SHA-256 required." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.251 — xác minh 16 công cụ, Cloudflare và CI cùng SHA
+        id: ui3251_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.251.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3251.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gmww-v3251-cloudflare-tiles.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: cloudflare-tiles-3251 |"* ]] || { echo "::error::V3.251 unexpected changes"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI not SUCCESS on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.251: 16 UI tools preserved, Worker same-SHA CI SUCCESS, OTA SHA-256 mandatory." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.252 — kiểm 16 ô đồng đều, Worker CI cùng SHA và OTA
+        id: ui3252_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.252.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3252.mjs
+          node --test tests/gmww-v3252-uniform-maintenance-boxes.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: uniform-maintenance-3252 |"* ]] || { echo "::error::V3.252 scope mismatch"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI not SUCCESS at same SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.252: all 16 boxes same 76px and direct children; 2-minute toggle retained. OTA SHA-256 required." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.253 — chốt CI GM Bay/Chạy đúng phạm vi cùng SHA
+        id: motion3253_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.253.0" ]; then exit 0; fi
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-turn-motion-lowheat.test.mjs
+          test -s docs/releases/GMWW-V3.253-gm-turn-motion-20261027.md
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-turn-motion-lowheat |"* ]] || { echo "::error::V3.253 unexpected changes"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI not SUCCESS on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.253: CI GM đúng phạm vi cùng SHA, OTA SHA-256 bắt buộc." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.254 — phát hành Runtime chống nóng GM đúng SHA
+        id: thermal3254_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.254.0" ]; then exit 0; fi
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$SCOPE" == "GMWW browser CI scope: character40-postverify-3254 |"* ]]; then
+            node --test tests/gmww-v3254-character40-postverify.test.mjs
+            node --check .github/scripts/verify-character40-production.mjs
+          else
+            node .github/scripts/verify-release-v3254.mjs
+          fi
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gmww-performance-thermal.test.mjs tests/gm-turn-motion-lowheat.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-performance-thermal-3254 |"* || "$SCOPE" == "GMWW browser CI scope: character40-postverify-3254 |"* ]] || { echo "::error::V3.254 scope incorrect"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker not SUCCESS on same SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.254 Runtime OTA, SHA-256, release notes tiếng Việt, rollback V3.253; IPA unchanged." >> "$GITHUB_STEP_SUMMARY"
+
+
+      - name: V3.259 — xác minh PR565 trước khi phát hành
+        id: gmvote3259_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.259.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3259.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-gallows-vote-markers-ui.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-vote-3259 |"* || "$SCOPE" == "GMWW browser CI scope: gm-vote-postverify-3259 |"* ]] || { echo "::error::V3.259 ngoài phạm vi"; exit 1; }
+          node --test tests/character40-native-shell-contract-v3259.test.mjs
+          WORKER=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | (.conclusion // "pending")')
+          [ "$WORKER" = success ] || { echo "::error::Worker CI chưa SUCCESS"; exit 1; }
+          for TRY in $(seq 1 36); do
+            FOCUSED=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="GMWW PR565 — GM vote markers (focused)" and .event=="push")] | sort_by(.created_at) | last | (.conclusion // "pending")')
+            if [ "$FOCUSED" = success ]; then
+              echo "approved=true" >> "$GITHUB_OUTPUT"
+              echo "PR565 V3.259: CI SUCCESS cùng SHA, OTA SHA-256, rollback V3.258, IPA V3.257 giữ nguyên." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [ "$FOCUSED" = failure ] || [ "$FOCUSED" = cancelled ] || [ "$FOCUSED" = timed_out ]; then echo "::error::Focused CI FAILED"; exit 1; fi
+            sleep 5
+          done
+          echo "::error::Focused CI chưa hoàn thành"; exit 1
+
+      - name: V3.258 — phát hành Audio OTA theo CI cùng SHA
+        id: audio3258_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.258.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3258.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs
+          test -s docs/releases/GMWW-V3.258-audio-audit-20261027.md
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-audio-3258 |"* ]] || { echo "::error::V3.258 không đúng danh sách file Audio"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI V3.258 chưa SUCCESS cùng SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.258 Audio: same-SHA CI, SHA-256, Vietnamese notes, rollback V3.257 and IPA unchanged." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.256 — chốt CI hành trình GM và OTA cùng SHA
+        id: firewalk3256_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.256.0" ]; then exit 0; fi
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-turn-motion-lowheat.test.mjs
+          test -s docs/releases/GMWW-V3.256-gm-fire-walk-20261027.md
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-fire-walk-3256 |"* ]] || { echo "::error::V3.256 unexpected changes"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI not SUCCESS on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.256: GM Walk/Run tested on same-SHA Worker; OTA SHA-256 and rollback mandatory." >> "$GITHUB_STEP_SUMMARY"
+
+      # V3.255: Drunk player-owned face-down draw and Spiritualist observation.
+      # Never waive same-SHA Worker CI, role tests, compiled source or OTA SHA.
+      - name: V3.255 — kiểm tra Say Rượu bốc lá và Nhà Tinh Thần Học rồi phát hành
+        id: drunk255_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.255.0" ]; then exit 0; fi
+          node .github/scripts/verify-release-v3255.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/player-role-receipt-recovery.test.mjs
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI for exact main SHA did not pass"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.255: private Drunk draw + Spiritualist result + Worker CI SUCCESS, OTA SHA-256 required." >> "$GITHUB_STEP_SUMMARY"
+
+      # Owner-approved PR #577: exact V3.260 patch, release only when
+      # same-SHA Player Worker and Say Ruou role CI succeed. Skip irrelevant
+      # Chrome Card, Arena and native IPA gates, never SHA/OTA protection.
+      - name: V3.260 — xác minh RULE Say Rượu và Runtime OTA đúng phạm vi
+        id: drunk3260_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          test "$(node -p "require('./package.json').version")" = "3.260.0" || exit 0
+          test -s docs/releases/GMWW-DRUNK-CARD-OVERLAY-20261028.md
+          test -s assets/role-card-back.webp
+          grep -Fq "copy('assets/role-card-back.webp','role-card-back.webp')" .github/scripts/prepare-update-channel.mjs
+          grep -Fq 'NATIVE_SHELL_VERSION="3.257"' src/index.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/member-ranking-games-first-v3221.test.mjs
+          VERIFIED=false
+          for TRY in $(seq 1 40); do
+            RESULT=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            if printf '%s' "$RESULT" | node -e '
+                let s=""; process.stdin.on("data",d=>s+=d).on("end",()=>{
+                  const r=JSON.parse(s).workflow_runs||[]; const ok=n=>r.some(x=>x.name===n&&x.head_sha===process.env.TESTED_SHA&&x.event==="push"&&x.conclusion==="success");
+                  process.exit(ok("Check Player Web Worker")&&ok("Check Drunk Card Draw and Expelled Spiritualist")?0:1);
+                })'; then VERIFIED=true; break; fi
+            sleep 8
+          done
+          test "$VERIFIED" = true || { echo "::error::Missing exact SHA focused Worker/Drunk CI"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.260 PR577 CI đúng phạm vi đã đạt, giữ IPA V3.257; yêu cầu OTA SHA-256, release notes và rollback V3.259." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.263 — chốt 3 RULE Artifact, Worker CI cùng SHA
+        id: cardrule3263_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.263.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-V3.263-card-rule-executors-20261028.md
+          grep -Fq 'NATIVE_SHELL_VERSION="3.257"' src/index.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/card-rule-contract-audit-20261028.test.mjs tests/v389-night-runtime-integration.test.mjs tests/gm-fire-walk-position.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: card-rule-3263 |"* ]] || { echo "::error::V3.263 changed files or contracts do not match approved release"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI not SUCCESS for exact V3.263 SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "3 Artifact RULE executors: same-SHA Worker CI and focused tests SUCCESS. Runtime OTA SHA-256, rollback V3.262; IPA V3.257 unchanged." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.262 — chốt vị trí cách đều tâm đống lửa, CI cùng SHA
+        id: fireradius3262_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.262.0" ]; then exit 0; fi
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-fire-walk-position.test.mjs tests/gm-turn-motion-lowheat.test.mjs
+          test -s docs/releases/GMWW-V3.262-equal-campfire-radius-20261028.md
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-fire-radius-3262 |"* ]] || { echo "::error::V3.262 changed files outside approved GM scope"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI not SUCCESS on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.262: all actors equidistant in GM from campfire center; OTA SHA-256 mandatory; IPA and data unchanged." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: V3.261 — GM đi bộ thật và trở về đúng Seat, Worker CI cùng SHA
+        id: firewalk3261_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.261.0" ]; then exit 0; fi
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-fire-walk-position.test.mjs tests/gm-turn-motion-lowheat.test.mjs
+          test -s docs/releases/GMWW-V3.261-gm-firewalk-20261028.md
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-fire-walk-3261 |"* ]] || { echo "::error::V3.261 unexpected file changes"; exit 1; }
+          STATUS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" --jq '[.workflow_runs[] | select(.name=="Check Player Web Worker" and .event=="push")] | sort_by(.created_at) | last | .conclusion')
+          test "$STATUS" = success || { echo "::error::Worker CI not SUCCESS on exact SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.261: GM movement CSS translate, walk/idle facing/run-home, OTA SHA-256 mandatory, IPA V3.257 unchanged." >> "$GITHUB_STEP_SUMMARY"
+
+      # PR595 has its own approved, fail-closed GM/chat release scope.
+      # Never reuse this exception for another version or arbitrary code changes.
+      - name: V3.272 PR595 — chốt CI GM/chat đúng SHA, không xây IPA
+        id: gmadmin3272_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.272.0" ]; then exit 0; fi
+          test -s docs/releases/gm-admin-top-chat-20261028.md
+          grep -Fq 'NATIVE_SHELL_VERSION="3.264"' src/index.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/gm-admin-top-chat-20261028.test.mjs tests/online-chat-authority.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-admin-top-chat-3272 |"* ]] || {
+            echo "::error::PR595 unexpected file changes; release denied."; exit 1;
+          }
+          VERIFIED=false
+          for TRY in $(seq 1 24); do
+            RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            if printf '%s' "$RUNS" | node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.head_sha===process.env.TESTED_SHA&&x.event==="push");
+                const good=n=>runs.some(x=>x.name===n&&x.conclusion==="success");
+                process.exit(good("Check Player Web Worker")&&
+                  good("Check GM Chat Flamingo and 3 Persistent Actions")?0:1);
+              })'; then VERIFIED=true; break; fi
+            sleep 10
+          done
+          test "$VERIFIED" = true || {
+            echo "::error::Missing exact-main-SHA GM chat and Worker CI SUCCESS."; exit 1;
+          }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "GMWW V3.272 PR595: GM Chat 🦩 + Giết/Cứu/Cấm Chat, Runtime OTA SHA-256 và gói thủ công; IPA V3.264 không đổi; rollback V3.271." >> "$GITHUB_STEP_SUMMARY"
+
+      # V3.274: Only approved Artifact artwork translation may bypass unrelated
+      # legacy browser suites. Verify focused CI on the exact main SHA.
+      - name: V3.274 PR613 — xác minh Artifact căn giữa và giữ nguyên Vai Trò
+        id: artifact3274_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.274.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-artifact-preview-centering-main-20261029.md
+          grep -Fq 'V3.274 PR613:' .github/scripts/prepare-update-channel.mjs
+          grep -Fq 'NATIVE_SHELL_VERSION="3.264"' src/index.js
+          node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs
+          node --test --test-name-pattern="PR613 Artifact preview V3.274" tests/ci-browser-scope.test.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test "$GITHUB_EVENT_NAME" = "workflow_run" || { echo "::error::Manual release requires separate approval"; exit 1; }
+          # With a CI-only follow-up, the original main SHA already proved
+          # role-card isolation. It must be an immutable ancestor with no new
+          # app/runtime files in the five-file recovery scope.
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          IS_RECOVERY=false
+          if [[ "$SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]]; then
+            IS_RECOVERY=true
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            BASE_RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=28f62f91dea9538b79b06177cd1d7cdbd7703e57&per_page=100")
+            printf '%s' "$BASE_RUNS" | node -e '
+              let raw="";process.stdin.on("data",c=>raw+=c).on("end",()=>{
+                const a=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.event==="pull_request"&&r.head_sha==="28f62f91dea9538b79b06177cd1d7cdbd7703e57");
+                const names=["Check Approved Role Card Settings","Check GM card artwork centering (20261029)"];
+                process.exit(names.every(n=>a.some(r=>r.name===n&&r.conclusion==="success"))?0:1);
+              })' || { echo "::error::Original PR613 verified PR role/Artifact proof missing"; exit 1; }
+          fi
+          export IS_RECOVERY
+          VERIFIED=false
+          for TRY in $(seq 1 30); do
+            RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            if printf '%s' "$RUNS" | node -e '
+              let raw="";process.stdin.on("data",x=>raw+=x).on("end",()=>{
+                const runs=(JSON.parse(raw).workflow_runs||[]).filter(x=>x.head_sha===process.env.TESTED_SHA&&x.event==="push");
+                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Stability Gate"]; if(process.env.IS_RECOVERY!=="true")required.push("Check Approved Role Card Settings");
+                process.exit(required.every(name=>runs.some(r=>r.name===name&&r.conclusion==="success"))?0:1);
+              })
+            '; then VERIFIED=true; break; fi
+            sleep 6
+          done
+          test "$VERIFIED" = true || { echo "::error::Required scoped checks not SUCCESS at exact main SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.274 PR613: Artifact centered without scale distortion, role isolation, OTA SHA-256; IPA V3.264 unchanged; rollback V3.273." >> "$GITHUB_STEP_SUMMARY"
+      # PR628 V3.275: scope-verified Runtime release without changing IPA.
+      - name: V3.275 PR628 — nghiệm thu GM Card và đóng panel khi chạm ngoài
+        id: card3275_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.275.0" ]; then exit 0; fi
+          test "$GITHUB_EVENT_NAME" = "workflow_run" || { echo "::error::V3.275 requires main push CI"; exit 1; }
+          test -s docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md
+          grep -Fq 'V3.275 PR628:' .github/scripts/prepare-update-channel.mjs
+          grep -Fq 'VERSION="V3.275",NATIVE_SHELL_VERSION="3.264"' src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs tests/gm-card-fit-outside-dismiss-20261029.test.mjs tests/gm-card-outside-ci-scope-20261029.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-card-outside-3275 |"* ]] || { echo "::error::V3.275 release scope mismatch: $SCOPE"; exit 1; }
+          VERIFIED=false
+          for TRY in $(seq 1 30); do
+            RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            if printf '%s' "$RUNS" | node -e '
+              let raw="";process.stdin.on("data",c=>raw+=c).on("end",()=>{
+                const runs=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA&&r.event==="push"&&r.head_branch==="main");
+                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Stability Gate","Check Approved Role Card Settings","Check GM Chat Flamingo and 3 Persistent Actions"];
+                process.exit(required.every(n=>runs.some(r=>r.name===n&&r.conclusion==="success"))?0:1);
+              })'; then VERIFIED=true; break; fi
+            sleep 6
+          done
+          test "$VERIFIED" = true || { echo "::error::V3.275 same-SHA focused checks not SUCCESS"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.275 PR628 GM Card + outside-dismiss PASS. Runtime OTA SHA-256, IPA V3.264 unchanged, rollback V3.274." >> "$GITHUB_STEP_SUMMARY"
+      # Historical V3.236/V3.237 gates are intentionally omitted from the V3.238 release.
+      - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
+        if: steps.card3275_release.outputs.approved != 'true' && steps.artifact3274_release.outputs.approved != 'true' && steps.gmadmin3272_release.outputs.approved != 'true' && steps.cardrule3263_release.outputs.approved != 'true' && steps.drunk3260_release.outputs.approved != 'true' && steps.gmvote3259_release.outputs.approved != 'true' && steps.audio3258_release.outputs.approved != 'true' && steps.fireradius3262_release.outputs.approved != 'true' && steps.firewalk3261_release.outputs.approved != 'true' && steps.firewalk3256_release.outputs.approved != 'true' && steps.drunk255_release.outputs.approved != 'true' && steps.thermal3254_release.outputs.approved != 'true' && steps.motion3253_release.outputs.approved != 'true' && steps.ui3252_release.outputs.approved != 'true' && steps.ui3251_release.outputs.approved != 'true' && steps.role250_release.outputs.approved != 'true' && steps.rule249_release.outputs.approved != 'true' && steps.runtime248_release.outputs.approved != 'true' && steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          STATUS="missing"
+          for TRY in $(seq 1 40); do
+            RESP=$(curl -fsSL --retry 3 --connect-timeout 8 --max-time 25 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            STATUS=$(printf '%s' "$RESP" | node -e "
+              let s='';process.stdin.on('data',x=>s+=x);process.stdin.on('end',()=>{
+                const runs=JSON.parse(s).workflow_runs||[];
+                const match=runs.filter(r=>r.name==='Check Player Card Browsers'&&r.event==='push'&&r.head_sha===process.env.TESTED_SHA)
+                  .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+                process.stdout.write(match.length?(match[0].conclusion||match[0].status):'missing')
+              })")
+            echo "Chrome/Edge/WebKit gate $TRY/40: $STATUS"
+            if [ "$STATUS" = success ]; then exit 0; fi
+            if [ "$STATUS" = failure ] || [ "$STATUS" = cancelled ] || [ "$STATUS" = timed_out ]; then
+              echo "::error::Browser CI $STATUS for $TESTED_SHA; Production blocked without changing data."
+              exit 1
+            fi
+            sleep 15
+          done
+          echo "::error::Browser CI did not complete SUCCESS for $TESTED_SHA ($STATUS); Production blocked."
+          exit 1
+
+      - name: Thiết lập Node.js và bộ nhớ đệm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cài thư viện theo tệp khóa
+        run: npm ci
+      - name: Kiểm tra mã nguồn Worker
+        run: npm run check
+
+      - name: Phân loại và chuẩn bị kênh cập nhật GMWW
+        id: update
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA="${{ steps.tested.outputs.sha }}"
+          git diff-tree --no-commit-id --name-only -r -m "$SHA" | sort -u > /tmp/gmww-changed-files.txt
+          cat /tmp/gmww-changed-files.txt
+          export GMWW_CHANGED_FILES="$(cat /tmp/gmww-changed-files.txt)"
+          TYPE=$(node .github/scripts/classify-update.mjs | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>process.stdout.write(JSON.parse(s).releaseType))")
+          # PR #475 was merged BEFORE this CI-only release fix. The current
+          # diff alone is not the full set of unpublished Runtime assets.
+          # Publish the cumulative iPhone OTA once, scoped to the exact
+          # approved V3.207 merged commit (not a generic CI bypass).
+          VERSION=$(node -p "require('./package.json').version")
+          # Exact postmerge Artifact V3.274 repair must publish the pending
+          # Runtime payload, not misclassify five CI-only files as server_only.
+          if [ "$VERSION" = "3.274.0" ] && \
+             { grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-changed-files.txt || grep -Fxq 'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' /tmp/gmww-changed-files.txt; }; then
+            RELEASE_SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+            [[ "$RELEASE_SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]] || { echo "::error::V3.274 recovery source scope mismatch"; exit 1; }
+            TYPE=runtime
+            echo 'Runtime OTA V3.274: publish the pending verified Artifact package. IPA V3.264 unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$VERSION" = "3.207.0" ] && \
+             test -s docs/releases/GMWW-V3.207-demo475-production-20261025.md && \
+             git merge-base --is-ancestor 8772337ab95e7561aeba6d63b2ec2337d7bbee94 HEAD; then
+            TYPE=runtime
+            echo "Cộng dồn bản sửa PR #475 đã merge: phát hành GM Runtime OTA V3.207, không phải server_only." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "release_type=$TYPE" >> "$GITHUB_OUTPUT"
+
+          # Restore the pinned canonical source, then publish ONLY the 63 clean originals.
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="/tmp/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED_SHA="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+          CLEAN_COUNT=0
+          if test -d "$SOURCE/assets/role-artwork-v251/original"; then
+            CLEAN_COUNT=$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')
+          fi
+          if ! test -s "$SOURCE/role-artwork-v251.js" || test "$CLEAN_COUNT" -ne 63; then
+            rm -rf "$SOURCE"
+            curl --fail --location --retry 4 --retry-delay 3 --output "$ARCHIVE" "$URL"
+            echo "$EXPECTED_SHA  $ARCHIVE" | shasum -a 256 -c -
+            unzip -q "$ARCHIVE" -d .
+          fi
+          test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+
+          node .github/scripts/prepare-update-channel.mjs "$TYPE"
+
+      - name: Đóng gói cập nhật thủ công từ đúng bytes OTA
+        run: |
+          VERSION=$(node -p 'require("./package.json").version.replace(/\.0$/, "")')
+          mkdir -p /tmp/gmww-manual-runtime
+          node .github/scripts/build-manual-runtime.mjs "assets/updates/runtime/V$VERSION/manual-manifest.json" "/tmp/gmww-manual-runtime/GMWW-Runtime-V$VERSION.gmwwupdate"
+      - name: Lưu gói Runtime thủ công và SHA-256
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-Manual-Runtime
+          path: /tmp/gmww-manual-runtime/*
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Kiểm tra tăng phiên bản OTA khi Runtime thay đổi
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://gmww-v2-00.williampham0702.workers.dev"
+          LIVE="/tmp/gmww-production-update-manifest.json"
+          OK=0
+          for i in $(seq 1 4); do
+            if curl --connect-timeout 8 --max-time 20 --fail --silent --show-error \
+              "$URL/api/update/manifest?ota-preflight=$(date +%s)-$i" > "$LIVE"; then
+              if node -e "const fs=require('node:fs');const m=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));if(!/^\\d+\\.\\d+(?:\\.\\d+)?$/.test(String(m.releaseVersion||'')))process.exit(2)" "$LIVE"; then
+                OK=1
+                break
+              fi
+            fi
+            sleep 2
+          done
+
+          # An unhealthy legacy OTA manifest is the defect this release repairs.
+          # If it cannot be read, use only the live Worker's health version as the
+          # comparison baseline; never skip version progression or post-deploy SHA checks.
+          if [ "$OK" != "1" ]; then
+            echo "::warning::Production OTA manifest unavailable; falling back to live Worker health version."
+            HEALTH="/tmp/gmww-production-health-preflight.json"
+            HEALTH_OK=0
+            for i in $(seq 1 4); do
+              if curl --connect-timeout 8 --max-time 15 --fail --silent --show-error \
+                "$URL/api/health?ota-preflight=$(date +%s)-$i" > "$HEALTH"; then
+                if node - "$HEALTH" "$LIVE" <<'NODE'
+          const fs=require('node:fs');
+          const health=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+          if(health.project!=='GMWW-V2.00'||health.status!=='online')
+            throw new Error('Production Worker health identity/status is not verified');
+          const version=String(health.runtimeVersion||health.version||'').trim().replace(/^V/i,'');
+          if(!/^\d+\.\d+(?:\.\d+)?$/.test(version))
+            throw new Error('Production Worker health has no valid Runtime version');
+          fs.writeFileSync(process.argv[3],JSON.stringify({
+            releaseVersion:version,runtimeVersion:version,
+            source:'verified-live-health-fallback'
+          }));
+          console.log('Using verified live Worker version V'+version+' as OTA progression baseline.');
+          NODE
+                then
+                  HEALTH_OK=1
+                  break
+                fi
+              fi
+              sleep 2
+            done
+            test "$HEALTH_OK" = "1" || {
+              echo "::error::Cannot verify Production OTA manifest or live Worker health; release blocked safely."
+              exit 1
+            }
+          fi
+          node .github/scripts/verify-ota-version-advance.mjs assets/updates/latest.json "$LIVE" /tmp/gmww-changed-files.txt
+
+      - name: Xác minh thông tin kết nối Cloudflare
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+
+      - name: Chặn phát hành phiên bản thấp hơn
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEALTH="https://gmww-v2-00.williampham0702.workers.dev/api/health"
+          for i in $(seq 1 8); do
+            if curl --connect-timeout 8 --max-time 15 -fsS "$HEALTH?version-guard=$i" > /tmp/gmww-live-health.json &&
+               node .github/scripts/verify-gmww-versions.mjs /tmp/gmww-live-health.json; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Deployment blocked: candidate is older than Production, versions are inconsistent or Production health is unavailable."
+          exit 1
+
+      - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
+        shell: bash
+        run: |
+          python3 -m venv /tmp/gmww-avatar-venv
+          /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
+          /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
+      - name: Triển khai Worker lên Production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+
+      - name: Kiểm tra Production bộ ảnh icon và OTA SHA-256
+        if: steps.icon_artwork_release.outputs.approved == 'true'
+        run: node .github/scripts/verify-icon-artwork-production.mjs
+
+      - name: V3.242 — đối chiếu đủ 50 ảnh icon, OTA SHA-256, audio Runtime và IPA giữ nguyên
+        if: steps.fairy242_release.outputs.approved == 'true'
+        run: node .github/scripts/verify-icon-artwork-production.mjs
+
+      - name: V3.246 — xác minh ảnh Yêu Tinh, OTA SHA-256 và IPA không đổi
+        if: steps.fairy246_release.outputs.approved == 'true'
+        run: node .github/scripts/verify-fairy-triptych-production.mjs
+
+      - name: Kiểm tra Production sau triển khai
+        if: steps.icon_artwork_release.outputs.approved != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://gmww-v2-00.williampham0702.workers.dev"
+          EXPECTED=$(node -e "const p=require('./package.json');process.stdout.write(String(p.version).replace(/\.0$/,''))")
+          OK=0
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/health?verify=$i" > /tmp/health.json &&
+               grep -q '"project":"GMWW-V2.00"' /tmp/health.json &&
+               grep -q "\"version\":\"V$EXPECTED\"" /tmp/health.json; then
+              OK=1
+              break
+            fi
+            sleep 3
+          done
+          cat /tmp/health.json
+          test "$OK" = "1"
+          # Runtime V3.160 can stay unchanged on a server-only deploy. Health version
+          # alone cannot prove the just-uploaded static assets have reached the edge.
+          # Wait for the canonical original artwork bytes served by character40Image, then verify all 40 IDs. Fail closed if
+          # propagation never finishes; retain the previous deployment for rollback.
+          AVATAR_READY=0
+          for TRY in $(seq 1 40); do
+            if curl --fail --location --silent --show-error --max-time 20 \
+              -H 'Cache-Control: no-cache' \
+              "$URL/api/game-characters/character-01/image?rev=c40-4&edge-propagation=$TRY-$(date +%s)" \
+              > /tmp/gmww-live-avatar.webp; then
+              if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/originals/character-01.webp; then
+                AVATAR_READY=1
+                break
+              fi
+              echo "::warning::Waiting for Character40 original artwork edge propagation ($TRY/40); expected bytes $(wc -c < assets/characters/gmww40/originals/character-01.webp), received $(wc -c < /tmp/gmww-live-avatar.webp)"
+            fi
+            sleep 2
+          done
+          test "$AVATAR_READY" = "1" || {
+            echo "::error::New Worker assets did not propagate; production verification blocked."
+            echo "Expected SHA: $(shasum -a 256 assets/characters/gmww40/originals/character-01.webp)"
+            echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
+            exit 1
+          }
+          echo "Verify Production: canonical Character40 original artwork revision is live."
+
+          for N in $(seq 1 40); do
+            ID=$(printf 'character-%02d' "$N")
+            MATCHED=0
+            for TRY in $(seq 1 5); do
+              if curl --fail --location --silent --show-error --max-time 20 \
+                -H 'Cache-Control: no-cache' \
+                "$URL/api/game-characters/$ID/image?rev=c40-4&verify-avatar=$N-$TRY-$(date +%s)" \
+                > /tmp/gmww-live-avatar.webp && \
+                cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/originals/$ID.webp"; then
+                MATCHED=1
+                break
+              fi
+              sleep 2
+            done
+            test "$MATCHED" = "1" || {
+              echo "::error::Production avatar/atlas bytes differ for $ID"
+              echo "Expected SHA: $(shasum -a 256 "assets/characters/gmww40/originals/$ID.webp")"
+              echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
+              exit 1
+            }
+          done
+          echo "Verify Production: all 40 canonical artwork/animation identities and bytes PASS."
+
+          # Safari Player iframe must resolve full village HTML, not the Worker 404 page.
+          curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 30 "$URL/village/?embed=1&v=303" > /tmp/gmww-production-village.html
+          grep -q '<main class="game day"' /tmp/gmww-production-village.html
+          curl --fail --location --silent --show-error --max-time 30 "$URL/village/village.css?v=303" > /tmp/gmww-production-village.css
+          test -s /tmp/gmww-production-village.css
+          echo "Verify Production: Player Web village iframe HTML+CSS PASS."
+          EXPECTED_SHELL=$(node -e "const fs=require('fs'),s=fs.readFileSync('src/index.js','utf8'),m=s.match(/NATIVE_SHELL_VERSION=\\\"([^\\\"]+)\\\"/);if(!m)process.exit(2);process.stdout.write(m[1])")
+          MANIFEST_OK=0
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/update/manifest?verify=$i-$(date +%s)" > /tmp/manifest.json; then
+              if node - "$EXPECTED" "$EXPECTED_SHELL" <<'NODE'
+          const fs=require('fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const expected=process.argv[2],shell=process.argv[3];
+          if(String(m.releaseVersion||'')!==expected)throw new Error('Manifest releaseVersion is stale');
+          if(expected!==shell){
+            if(m.releaseType!=='runtime')throw new Error('Newer runtime was hidden as '+String(m.releaseType||'missing'));
+            if(String(m.shellVersion||'')!==shell)throw new Error('Runtime shellVersion mismatch');
+            if(String(m.runtimeVersion||'')!==expected)throw new Error('Runtime version does not match releaseVersion');
+            if(!Array.isArray(m.runtime?.files)||m.runtime.files.length===0)throw new Error('Runtime update manifest has no files');
+            for(const f of m.runtime.files){
+              if(!String(f?.path||'').trim()||!String(f?.url||'').startsWith('https://')||!/^[a-f0-9]{64}$/i.test(String(f?.sha256||'')))throw new Error('Invalid runtime file entry');
+            }
+            const required=['GMWW.html','app.js','style.css','character-renderer.js','character-renderer.css','gm/gm-white-wolf.webp'];
+            for(const p of required)if(!m.runtime.files.some(x=>String(x?.path||'')===p))throw new Error('Runtime package missing '+p);
+            const rider=m.runtime.files.filter(x=>String(x?.path||'')==='gm/gm-white-wolf.webp');
+            if(rider.length!==1)throw new Error('GM rider asset must appear exactly once in runtime manifest');
+            const clean=m.runtime.files.filter(x=>/^assets\/role-artwork-v251\/original\/[^/]+\.webp$/.test(String(x?.path||'')));
+            const cleanIndex=m.runtime.files.some(x=>String(x?.path||'')==='role-artwork-v251.js');
+            if((cleanIndex||clean.length>0)&&clean.length!==63)throw new Error('Expected 63 clean role artworks in runtime update');
+          }else if(m.releaseType==='native'){
+            if(String(m.ipa?.version||'')!==expected)throw new Error('Native IPA version does not match releaseVersion');
+            if(String(m.ipa?.fileName||'')!=='GMWW-V'+expected+'.ipa')throw new Error('Native IPA filename is stale');
+          }
+          NODE
+              then
+                MANIFEST_OK=1
+                break
+              fi
+            fi
+            sleep 3
+          done
+          cat /tmp/manifest.json
+          test "$MANIFEST_OK" = "1"
+          # Verify the exact installed iPhone update path, not only the
+          # no-current manifest used by server-side smoke tests.
+          if [ "$EXPECTED" = "3.120" ]; then
+            for FROM in 3.119 3.118; do
+              OTA_STATUS=0
+              for CHECK in $(seq 1 10); do
+                if curl --connect-timeout 8 --max-time 25 -fsS                   "$URL/api/update/manifest?current=$FROM&iphone-verify=$CHECK-$(date +%s)"                   > "/tmp/gmww-iphone-$FROM.json"; then
+                  OTA_STATUS=1
+                  break
+                fi
+                sleep 2
+              done
+              test "$OTA_STATUS" = "1" || { echo "::error::OTA not reachable by iPhone Runtime V$FROM"; exit 1; }
+              node - "$FROM" "$EXPECTED" "$EXPECTED_SHELL" <<'NODE'
+          const fs=require('node:fs');
+          const [from,expected,shell]=process.argv.slice(2);
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-iphone-'+from+'.json','utf8'));
+          if(m.ok!==true||m.releaseType!=='runtime'||m.releaseVersion!==expected||
+             m.runtimeVersion!==expected||m.shellVersion!==shell||
+             !Array.isArray(m.runtime?.files)||!m.runtime.files.length||
+             !m.runtime.files.some(f=>f.path==='app.js'&&/^[a-f0-9]{64}$/i.test(f.sha256)))
+            throw Error('Installed Runtime V'+from+' cannot receive verified OTA V'+expected);
+          console.log('Verify Production: iPhone Runtime V'+from+' -> V'+expected+' manifest PASS');
+          NODE
+            done
+          fi
+          # V3.82: installability must be verified from a running V3.80/V3.81 IPA.
+          if [ "$EXPECTED" = "3.82" ]; then
+            for FROM in 3.81 3.80; do
+              curl --fail --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/api/update/manifest?current=$FROM&verify-v382=$(date +%s)" > "/tmp/gmww-v382-$FROM.json"
+              node - "$FROM" <<'NODE'
+          const fs=require('node:fs');
+          const from=process.argv[2],m=JSON.parse(fs.readFileSync('/tmp/gmww-v382-'+from+'.json','utf8'));
+          const req=['GMWW.html','app.js','style.css','gmww-ai-support.js','gmww-ai-support.css'];
+          if(m.ok!==true||m.releaseVersion!=='3.82'||m.runtimeVersion!=='3.82'||
+             m.shellVersion!=='3.17'||m.releaseType!=='runtime'||
+             m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!==from)
+            throw new Error('OTA V3.82 cannot be installed from Runtime V'+from);
+          if(m.delete?.length)throw new Error('V3.82 would unexpectedly delete client files');
+          if(m.runtime?.files?.length!==req.length)throw new Error('Unexpected OTA file count');
+          for(const path of req){
+            const f=m.runtime.files.find(x=>x.path===path);
+            if(!f||f.url!=='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.82/'+path||
+               !/^[a-f0-9]{64}$/i.test(String(f.sha256||'')))
+              throw new Error('Missing verified V3.82 file '+path);
+          }
+          console.log('V3.82 OTA from '+from+': manifest PASS');
+          NODE
+            done
+            for FILE in GMWW.html app.js style.css gmww-ai-support.js gmww-ai-support.css; do
+              # Cloudflare may redirect HTML assets to their canonical URL.
+              # Hash the final response rather than the 301/302 response body.
+              curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/updates/runtime/V3.82/$FILE" > /tmp/gmww-v382-download
+              ACTUAL_SHA=$(shasum -a 256 /tmp/gmww-v382-download | awk '{print $1}')
+              EXPECTED_SHA=$(node - "$FILE" <<'NODE'
+          const fs=require('node:fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-v382-3.81.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===process.argv[2])?.sha256||'');
+          NODE
+              )
+              test -n "$EXPECTED_SHA"
+              if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+                echo "::error::V3.82 SHA mismatch for $FILE"
+                exit 1
+              fi
+              echo "Verified OTA asset: $FILE"
+            done
+            curl --fail --silent --show-error "$URL/api/gm/ai-support/config" > /tmp/gmww-v382-ai-config.json
+            node - <<'NODE'
+          const fs=require('node:fs'),d=JSON.parse(fs.readFileSync('/tmp/gmww-v382-ai-config.json','utf8'));
+          if(d.ok!==true||typeof d.configured!=='boolean'||d.readOnly!==true)
+            throw new Error('AI support status endpoint invalid');
+          console.log('AI Support configured: '+d.configured);
+          NODE
+            AI_AUTH_STATUS=$(curl --silent --output /tmp/gmww-v382-unauthorized.json \
+              --write-out '%{http_code}' -X POST -H 'content-type: application/json' \
+              -d '{"message":"test"}' "$URL/api/gm/ai-support/chat")
+            test "$AI_AUTH_STATUS" = "401" || {
+              echo "::error::AI Support unauthenticated request returned $AI_AUTH_STATUS (expected 401)"
+              exit 1
+            }
+            echo "AI Support authorization PASS"
+          fi
+          # V3.83: verify IPA overlay for V3.82 installations and exact file integrity.
+          if [ "$EXPECTED" = "3.83" ]; then
+            curl --fail --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+              "$URL/api/update/manifest?current=3.82&verify-v383=$(date +%s)" > /tmp/gmww-v383.json
+            node - <<'NODE'
+          const fs=require('node:fs');
+          const m=JSON.parse(fs.readFileSync('/tmp/gmww-v383.json','utf8'));
+          const names=['GMWW.html','app.js'];
+          if(m.ok!==true||m.releaseVersion!=='3.83'||m.runtimeVersion!=='3.83'||
+             m.shellVersion!=='3.17'||m.releaseType!=='runtime'||
+             m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!=='3.82'||
+             (m.delete||[]).length!==0||m.runtime?.files?.length!==2)
+            throw new Error('GMWW V3.83 OTA overlay is not ready');
+          for(const path of names){
+            const item=m.runtime.files.find(f=>f.path===path);
+            if(!item||item.url!=='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.83/'+path||
+               !/^[a-f0-9]{64}$/i.test(String(item.sha256)))
+              throw new Error('V3.83 OTA integrity metadata missing for '+path);
+          }
+          console.log('V3.83 overlay manifest verified.');
+          NODE
+            for FILE in GMWW.html app.js; do
+              curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 75 \
+                "$URL/updates/runtime/V3.83/$FILE" > /tmp/gmww-v383-file
+              ACTUAL_SHA=$(shasum -a 256 /tmp/gmww-v383-file | awk '{print $1}')
+              EXPECTED_SHA=$(node - "$FILE" <<'NODE'
+          const fs=require('node:fs'),m=JSON.parse(fs.readFileSync('/tmp/gmww-v383.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===process.argv[2])?.sha256||'');
+          NODE
+              )
+              test -n "$EXPECTED_SHA"
+              test "$ACTUAL_SHA" = "$EXPECTED_SHA" || { echo "::error::V3.83 file SHA mismatch: $FILE"; exit 1; }
+              echo "Verified V3.83 Runtime asset: $FILE"
+            done
+          fi
+          # V3.72 canonical-image preflight: the exact role_guard WEBP must be
+          # readable from the deployed Worker, not merely rendered as a thumbnail.
+          if [ "$EXPECTED" = "3.72" ]; then
+            ROLE_ART_READY=0
+            for CHECK in $(seq 1 12); do
+              if curl --max-time 20 -fsS "$URL/api/gm/template-role-artwork/role_guard?production-check=$CHECK-$(date +%s)" > /tmp/gmww-role-guard.webp && node - <<'NODE'
+          const b=require('fs').readFileSync('/tmp/gmww-role-guard.webp');
+          if(b.length<32||b.toString('ascii',0,4)!=='RIFF'||b.toString('ascii',8,12)!=='WEBP')process.exit(1);
+          console.log('Verify Production: role_guard canonical WEBP source PASS.');
+          NODE
+              then ROLE_ART_READY=1; break; fi
+              sleep 2
+            done
+            if [ "$ROLE_ART_READY" != "1" ]; then echo "::error::Production role_guard artwork is unavailable"; exit 1; fi
+          fi
+          # Verify that an actually installed IPA V3.17 Runtime receives the correct small OTA,
+          # not just the full package used by deployment validation.
+          if [ "$EXPECTED" = "3.53" ]; then
+            for FROM in 3.51 3.52; do
+              curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/api/update/manifest?current=$FROM&otacheck=$(date +%s)" > "/tmp/ota-from-$FROM.json"
+              node - "$FROM" <<'NODE'
+          const fs=require('node:fs');
+          const from=process.argv[2],m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          const required=['GMWW.html','app.js','style.css',...(from==='3.51'?['home-art/home-sea-portal-v352.svg']:[])];
+          if(m.ok!==true||m.releaseVersion!=='3.53'||m.runtimeVersion!=='3.53'||m.shellVersion!=='3.17'
+             ||m.upgradeMode!=='verified-overlay'||m.optimizedFromVersion!==from
+             ||JSON.stringify(m.runtime?.files?.map(f=>f.path))!==JSON.stringify(required))process.exit(4);
+          if(!m.runtime.files.every(f=>f.url==='https://gmww-v2-00.williampham0702.workers.dev/updates/runtime/V3.53/'+f.path
+             && /^[a-f0-9]{64}$/i.test(f.sha256)))process.exit(5);
+          console.log('Production OTA V'+from+' -> V3.53 verified '+required.length+' files PASS.');
+          NODE
+              for REL in GMWW.html app.js style.css; do
+                OTA_URL=$(node - "$FROM" "$REL" <<'NODE'
+          const fs=require('node:fs'),from=process.argv[2],path=process.argv[3];
+          const m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===path)?.url||'');
+          NODE
+                )
+                test -n "$OTA_URL"
+                curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$OTA_URL?sha-check=$(date +%s)" > /tmp/gmww-delta-file
+                LOCAL_SHA=$(shasum -a 256 /tmp/gmww-delta-file | awk '{print $1}')
+                EXPECTED_SHA=$(node - "$FROM" "$REL" <<'NODE'
+          const fs=require('node:fs'),from=process.argv[2],path=process.argv[3];
+          const m=JSON.parse(fs.readFileSync('/tmp/ota-from-'+from+'.json','utf8'));
+          process.stdout.write(m.runtime.files.find(f=>f.path===path)?.sha256||'');
+          NODE
+                )
+                test "$LOCAL_SHA" = "$EXPECTED_SHA"
+              done
+              echo "Verify Production: IPA V3.17 OTA V$FROM SHA-256 PASS."
+            done
+          fi
+          if test "$EXPECTED" != "$EXPECTED_SHELL"; then
+            RIDER_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime.files.find(x=>x.path==='gm/gm-white-wolf.webp')?.url||''))")
+            test -n "$RIDER_URL"
+            echo "Verify Production: downloading immutable GM rider asset."
+            curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$RIDER_URL?verify=$(date +%s)" > /tmp/gm-white-wolf-runtime.webp
+            EXPECTED_RIDER_SHA=$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')
+            ACTUAL_RIDER_SHA=$(shasum -a 256 /tmp/gm-white-wolf-runtime.webp | awk '{print $1}')
+            if test "$EXPECTED_RIDER_SHA" != "$ACTUAL_RIDER_SHA"; then
+              echo "::error::Runtime GM rider hash does not match deployed bytes (expected $EXPECTED_RIDER_SHA, observed $ACTUAL_RIDER_SHA)"
+              exit 1
+            fi
+            echo "Verify Production: GM rider hash PASS."
+            # Artwork must be available as exact bytes after OTA, not merely in GitHub.
+            echo "Verify Production: checking every Trang Chu artwork in live Runtime."
+            for ART in home-fantasy-hero-v337.webp home-v1-book.webp home-v1-members.webp home-v1-action.webp home-sea-portal-v352.svg home-sea-portal-v354.svg home-sea-cards-v354.svg home-sea-members-v354.svg home-sea-templates-v354.svg; do
+              REL="home-art/$ART"
+              ART_URL=$(node - "$REL" <<'NODE'
+          const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const file=m.runtime?.files?.find(f=>f.path===process.argv[2]);
+          if(!file?.url)process.exit(2);
+          process.stdout.write(file.url);
+          NODE
+              )
+              echo "Verify Production: Home artwork $ART via $ART_URL"
+              if ! curl --retry 3 --retry-all-errors --retry-delay 2 -fsS "$ART_URL?verify=$(date +%s)" > "/tmp/$ART"; then
+                echo "::error::Runtime Home artwork unavailable: $REL at $ART_URL (404/5xx). Deployment cannot be marked successful."
+                exit 1
+              fi
+              EXPECTED_ART_SHA=$(shasum -a 256 "server-game/current/$REL" | awk '{print $1}')
+              LIVE_ART_SHA=$(shasum -a 256 "/tmp/$ART" | awk '{print $1}')
+              if test "$EXPECTED_ART_SHA" != "$LIVE_ART_SHA"; then
+                echo "::error::Production Home artwork mismatch: $ART"
+                exit 1
+              fi
+              echo "Verify Production: Home artwork $ART PASS."
+            done
+          fi
+          if test "$EXPECTED" != "$EXPECTED_SHELL"; then
+          echo "Verify Production: checking Cloudflare management and retired workboard UI in versioned runtime."
+          # Verify the exact GM runtime UI delivered by the OTA, not only the Worker version.
+          TASK_APP_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='app.js')?.url||''))")
+          TASK_HTML_URL=$(node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));process.stdout.write(String(m.runtime?.files?.find(f=>f.path==='GMWW.html')?.url||''))")
+          test -n "$TASK_APP_URL" && test -n "$TASK_HTML_URL"
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_APP_URL?verify=$(date +%s)" > /tmp/gmww-ota-app.js
+          curl --location --retry 8 --retry-all-errors --retry-delay 2 -fsS "$TASK_HTML_URL?verify=$(date +%s)" > /tmp/gmww-ota.html
+          echo "Verify Production: OTA app and HTML fetched."
+          echo "Verify Production: checking V3.58 Settings grid directly in deployed Runtime."
+          curl --retry 8 --retry-all-errors --retry-delay 2 -fsS "$URL/updates/runtime/V$EXPECTED/style.css?settings-grid-check=$(date +%s)" > /tmp/gmww-ota-settings.css
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const css=fs.readFileSync('/tmp/gmww-ota-settings.css','utf8');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const sha=s=>crypto.createHash('sha256').update(s).digest('hex');
+          const expected=manifest.runtime.files.find(f=>f.path==='style.css')?.sha256;
+          const ids=['settingsRunHealth','auditLocalData','clearRuntimeCache','reloadApp','opsRunFullAudit','opsCheckRoom','opsCheckRelease','opsAutoCheck','checkServerHealth','refreshServerData','openPlayerWeb','runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow'];
+          const settings=html.slice(html.indexOf('id="settingsGroupHealth"'),html.indexOf('id="settingsGroupTasks"'));
+          const checks={
+            '14 distinct tools':ids.every(id=>settings.split('id="'+id+'"').length===2),
+            'single visible grid':settings.includes('id="settingsToolsRail"'),
+            'no horizontal navigation':!settings.includes('id="settingsToolsNext"')&&!settings.includes('id="settingsToolsPrev"'),
+            'three columns':css.includes('grid-template-columns:repeat(3,minmax(0,1fr))!important'),
+            'no horizontal clipping':css.includes('overflow-x:visible!important'),
+            'CSS manifest checksum':Boolean(expected)&&sha(css)===expected
+          };
+          for(const [label,pass] of Object.entries(checks))console.log('Production Settings grid: '+label+' '+(pass?'PASS':'FAIL'));
+          if(Object.values(checks).some(pass=>!pass))process.exit(1);
+          NODE
+          echo "Verify Production: Settings tools visible via responsive grid PASS."
+          node - "$EXPECTED" <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const version=process.argv[2],app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8'),html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const manifest=JSON.parse(fs.readFileSync('/tmp/manifest.json','utf8'));
+          const sha=text=>crypto.createHash('sha256').update(text).digest('hex');
+          const expectedSha=p=>manifest.runtime.files.find(f=>f.path===p)?.sha256;
+          const checks={
+            'JS version':app.includes("const VERSION='"+version+"';"),
+            'Cloudflare maintenance button':html.includes('id="gmwwCloudflareOpen"'),
+            'embedded Cloudflare panel':html.includes('id="gmwwCloudflarePanel"')&&html.includes('id="gmwwCfNamespaces"')&&html.includes('id="gmwwCfEligible"'),
+            'authenticated cleanup action':html.includes('actions/workflows/cloudflare-maintenance.yml')&&html.includes('window.location.assign(actions)'),
+            'task console removed':!html.includes('id="settingsGroupTasks"')&&!html.includes('id="gmwwTasksOpenList"'),
+            'background task refresh removed':!app.includes('function gmwwTasksRefresh(')&&!app.includes('gmwwTaskReviewReturn'),
+            'Cloudflare paragraphs removed':!html.includes('Namespaces, Preview, quét định kỳ')&&!html.includes('Trang quản trị riêng; GM/Player'),
+            'HTML version':html.includes('GMWW V'+version),
+            'manifest JS SHA':sha(app)===expectedSha('app.js'),
+            'manifest HTML SHA':sha(html)===expectedSha('GMWW.html')
+          };
+          for(const [label,pass] of Object.entries(checks))console.log('GMWW OTA asset check: '+label+' '+(pass?'PASS':'FAIL'));
+          if(Object.values(checks).some(x=>!x))process.exit(1);
+          console.log('Cloudflare management entry verified in live OTA runtime V'+version);
+          NODE
+          echo "Verify Production: connected Theme editor controls on live IPA Runtime."
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const app=fs.readFileSync('/tmp/gmww-ota-app.js','utf8');
+          const html=fs.readFileSync('/tmp/gmww-ota.html','utf8');
+          const allowed=['bg.home','bg.play','bg.library','bg.settings',
+            'banner.home','ui.homePortal','ui.exploreDeck','ui.exploreMembers','ui.exploreTemplates','ui.bottomNavArt'];
+          const block=app.match(/const THEME_UI_GROUPS=([\s\S]*?);\n\nconst DEFAULT_STATE=/)?.[1];
+          if(!block)throw Error('Active theme UI control list missing');
+          const actual=[...block.matchAll(/\['([^']+)',/g)].map(m=>m[1]);
+          if(actual.length!==allowed.length||actual.some(x=>!allowed.includes(x)))
+            throw Error('Dead or unlinked theme UI slots visible: '+actual.join(', '));
+          for(const slot of allowed)if(!actual.includes(slot))throw Error('Missing linked theme slot '+slot);
+          for(const marker of ['ACTIVE_THEME_IMAGE_TARGETS','ACTIVE_THEME_BACKGROUND_TARGETS','ACTIVE_THEME_NAV_TARGETS',
+            "ui.exploreTemplates","img.setAttribute('src',src||img.dataset.themeDefaultSrc)"])
+            if(!app.includes(marker))throw Error('Theme consumer missing: '+marker);
+          if(!html.includes('data-home-library-tab="templates"')||!html.includes('id="gmwwHomeEnterVillage"'))
+            throw Error('Homepage does not provide active theme targets');
+          console.log('Verify Production: 10 linked theme slots, 6 homepage image controls and default resets PASS.');
+          NODE
+          fi
+          # A successful Worker deployment is not sufficient: prove that the
+          # installed iPhone IPA V3.110 obtains the small verified OTA from
+          # both previously deployed Runtime versions, including actual SHA.
+          if [ "$EXPECTED" = "3.140" ]; then
+            node .github/scripts/verify-ota-v3140-production.mjs "$URL"
+          fi
+          node .github/scripts/verify-incremental-ota.mjs "$URL" "$EXPECTED"
+          node .github/scripts/verify-character40-production.mjs
+          curl -fsS "$URL/api/web-sync?verify=$(date +%s)" > /tmp/web-sync.json
+          grep -q '"ok":true' /tmp/web-sync.json
+          curl -fsS "$URL/?verify=$(date +%s)" > /tmp/player.html
+          grep -q 'GMWW PLAYER' /tmp/player.html
+          grep -Fq '.app{width:100%;max-width:none;min-height:100dvh;margin:0' /tmp/player.html
+          ! grep -Fq '.app{width:min(430px,100%)' /tmp/player.html
+          curl -fsS "$URL/village/village.mjs?verify=$(date +%s)" > /tmp/village.mjs
+          node --check /tmp/village.mjs
+          grep -Fq 'document.documentElement.classList.add("embedded")' /tmp/village.mjs
+          grep -Fq 'visualFallbackMoves' /tmp/village.mjs
+          grep -Fq 'bridgeIncomingPositions' /tmp/village.mjs
+          curl -fsS "$URL/village/village.css?verify=$(date +%s)" > /tmp/village.css
+          curl -fsS "$URL/village/seat-leaf.webp?verify=$(date +%s)" > /tmp/seat-leaf.webp
+          test "$(shasum -a 256 assets/village/seat-leaf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/seat-leaf.webp | awk '{print $1}')"
+          grep -Fq '/village/seat-leaf.webp' /tmp/village.css
+          grep -Fq 'html.embedded .panel{display:none!important}' /tmp/village.css
+          curl --retry 10 --retry-all-errors --retry-delay 2 -fsS "$URL/gm/gm-white-wolf.webp?verify=$(date +%s)" > /tmp/gm-white-wolf.webp
+          test "$(wc -c < /tmp/gm-white-wolf.webp | tr -d ' ')" -gt 50000
+          test "$(shasum -a 256 assets/gm/gm-white-wolf.webp | awk '{print $1}')" = "$(shasum -a 256 /tmp/gm-white-wolf.webp | awk '{print $1}')"
+          # Skip only unchanged, isolated Character V4/V5 labs. All core guards ran above.
+          VERIFY_CHARACTER_LABS=$(node .github/scripts/fast-verify-scope.mjs /tmp/gmww-changed-files.txt | cut -d= -f2)
+          if [ "$VERIFY_CHARACTER_LABS" != "false" ]; then
+            URL="$URL" bash .github/scripts/verify-isolated-character-labs.sh
+          else
+            echo "Unchanged Character V4/V5 lab checks skipped; active Runtime/OTA/SHA guards still PASS."
+          fi
+
+      - name: Đính kèm gói thủ công vào bản phát hành đã xác minh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p 'require("./package.json").version.replace(/\.0$/, "")')
+          TAG="gmww-v$VERSION"
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("assets/updates/latest.json"));fs.writeFileSync("/tmp/gmww-notes.md",m.releaseNotes.join("\n\n"))'
+            gh release create "$TAG" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes-file /tmp/gmww-notes.md
+          fi
+          gh release upload "$TAG" /tmp/gmww-manual-runtime/* --repo "$GITHUB_REPOSITORY" --clobber
+ "$GMWW_DOCS_SCOPE_FILE" >/dev/null; then
+            SHOULD_DEPLOY=false
+            echo 'GĐ1–GĐ3 architecture documentation only: skip Production Worker/Runtime.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # END GMWW_ARCHITECTURE_DOCS_GUARD
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
