@@ -1,4 +1,5 @@
 // Fail-closed scope for Player lobby/chat/menu/cards/drag and its exact V3.277 release.
+// CI-only Production guard repair does not change gameplay or accepted release paths.
 const ciPaths=new Set(['.github/scripts/ci-browser-scope.mjs','.github/scripts/player-interactions-scope.mjs','.github/workflows/check-player-web.yml','.github/workflows/deploy-production.yml','tests/player-interactions-ci.test.mjs']);
 const featurePaths=new Set(['.github/scripts/assemble-player-web.mjs','.github/scripts/player-server-menu.mjs','src/gmww-members-live.js','src/gmww-online-chat-policy.js','src/index.js','src/player-web-src/20-village-and-profile.part','src/player-web-src/35-online-chat.part','tests/player-lobby-chat-interactions-20261030.test.mjs','tests/player-online-privacy-bottom-dock-20261029.test.mjs','docs/releases/GMWW-PLAYER-LOBBY-INTERACTIONS-20261030.md']);
 const versionEdits=new Map([
