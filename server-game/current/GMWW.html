@@ -3,7 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.277</title>
+
+<!-- GM Server viewport: only Chrome on iOS; Safari, Edge, and native IPA are unchanged. -->
+<style id="gmwwChromeViewportLock">
+html.gmww-ios-chrome,html.gmww-ios-chrome body{
+  width:100%!important;height:var(--gmww-gm-visible-height,100dvh)!important;
+  min-height:0!important;max-height:var(--gmww-gm-visible-height,100dvh)!important;
+  overflow:hidden!important;overscroll-behavior:none
+}
+html.gmww-ios-chrome #app{
+  position:fixed!important;top:var(--gmww-gm-visible-top,0px)!important;
+  bottom:auto!important;left:0!important;right:0!important;width:100%!important;
+  height:var(--gmww-gm-visible-height,100dvh)!important;
+  min-height:0!important;max-height:var(--gmww-gm-visible-height,100dvh)!important;
+  overflow:hidden!important
+}
+html.gmww-ios-chrome #stage{height:100%!important;min-height:0!important;overflow:hidden!important}
+html.gmww-ios-chrome body.play-immersive #start.play-page.active{
+  position:absolute!important;inset:0!important;height:100%!important;
+  min-height:0!important;max-height:100%!important;overflow:hidden!important
+}
+html.gmww-ios-chrome body.play-immersive #start .play-shell{
+  height:100%!important;min-height:0!important;max-height:100%!important;
+  overflow:hidden!important
+}
+</style>
+<script id="gmwwChromeViewportScript">
+(function lockChromeIosGameViewport(){
+  'use strict';
+  // Other iOS browsers and the native GM shell retain their existing layout.
+  if(!/CriOS\//.test(navigator.userAgent)||!/iP(hone|ad|od)/.test(navigator.userAgent))return;
+  var root=document.documentElement;
+  root.classList.add('gmww-ios-chrome');
+  var scheduled=false;
+  function syncViewport(){
+    scheduled=false;
+    var view=window.visualViewport;
+    var height=Math.max(1,Math.round(Number(view&&view.height)||window.innerHeight||root.clientHeight||1));
+    var top=Math.max(0,Math.round(Number(view&&view.offsetTop)||0));
+    root.style.setProperty('--gmww-gm-visible-height',height+'px');
+    root.style.setProperty('--gmww-gm-visible-top',top+'px');
+  }
+  function scheduleViewport(){
+    if(scheduled)return;
+    scheduled=true;
+    window.requestAnimationFrame(syncViewport);
+  }
+  syncViewport();
+  window.addEventListener('resize',scheduleViewport,{passive:true});
+  window.addEventListener('orientationchange',scheduleViewport,{passive:true});
+  window.addEventListener('pageshow',scheduleViewport,{passive:true});
+  document.addEventListener('visibilitychange',scheduleViewport,{passive:true});
+  document.addEventListener('focusin',scheduleViewport,{passive:true});
+  document.addEventListener('focusout',scheduleViewport,{passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',scheduleViewport,{passive:true});
+    window.visualViewport.addEventListener('scroll',scheduleViewport,{passive:true});
+  }
+})();
+</script>
+
+<title>GMWW V3.278</title>
 <link rel="stylesheet" href="style.css?v=gmww-v3268-template-dock">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
