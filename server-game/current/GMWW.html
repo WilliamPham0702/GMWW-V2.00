@@ -29,6 +29,7 @@
 #settings #gmwwCfActions button{min-width:0;flex:1 1 130px}
 </style>
 
+<!-- BEGIN GMWW_PLAYER_SHARE_STYLE -->
 <style>
 #gmwwPlayerWebShareSettings{display:grid;gap:10px;margin:12px 0;padding:14px;border:1px solid rgba(118,204,235,.36);border-radius:14px;background:rgba(4,49,74,.3)}
 #gmwwPlayerWebShareSettings .gmww-share-choices{display:grid;gap:8px;border:0;padding:0;margin:0;min-width:0}
@@ -42,6 +43,7 @@
 #gmwwPlayerWebShareSettings .gmww-share-actions{display:flex;gap:8px}
 #gmwwPlayerWebShareSettings .gmww-share-actions button{flex:1 1 0;min-width:0}
 </style>
+<!-- END GMWW_PLAYER_SHARE_STYLE -->
 </head>
 <body>
 <div id="app">
@@ -670,6 +672,7 @@
           </div>
           <div class="health-v236-actions update-actions"><button class="settings-action settings-action-server" id="exportLocalData" type="button" aria-label="Xuất toàn bộ dữ liệu chưa đồng bộ ra file JSON"><span>⬇</span><b>XUẤT DỮ LIỆU CHƯA ĐỒNG BỘ</b></button></div>
         </div>
+        <!-- BEGIN GMWW_PLAYER_SHARE_UI -->
         <section class="settings-tool-inner gmww-web-share-card" id="gmwwPlayerWebShareSettings" aria-labelledby="gmwwShareTitle">
           <div class="settings-title"><div><h3 id="gmwwShareTitle">🔗 Chia sẻ link Player Web</h3><small>GM chọn địa chỉ để gửi cho người chơi. Không đổi máy chủ Cloudflare/Oracle và không ảnh hưởng ván đang chơi.</small></div></div>
           <fieldset class="gmww-share-choices" aria-label="Chọn link gửi cho người chơi">
@@ -683,6 +686,7 @@
           </div>
           <small class="gmww-share-status" id="gmwwShareStatus" role="status">Link cũ đang hoạt động. Link mới sẽ được bật khi hoàn tất nghiệm thu tên miền.</small>
         </section>
+        <!-- END GMWW_PLAYER_SHARE_UI -->
         </div>
         <div class="settings-unified-box" id="settingsGroupHealth">
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
