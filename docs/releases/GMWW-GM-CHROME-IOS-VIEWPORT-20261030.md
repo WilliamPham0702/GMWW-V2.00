@@ -12,7 +12,7 @@
 
 ## Kiểm thử / nghiệm thu
 - Regression: \`node --test tests/gm-chrome-ios-viewport-20261030.test.mjs\` (viewport động, không-scroll trang, Chrome-only, Safari/Edge không đổi).
-- Kiểm tra trực tiếp iPhone Chrome vẫn cần thực hiện sau khi phát hành: xem Sảnh chờ → Tập hợp → Vào trận; vuốt nền; xoay máy; mở bàn phím/box; xác nhận dock không tràn.
+- Nghiệm thu trên Chrome iPhone: người dùng đã trực tiếp kiểm tra Preview PR #642 và xác nhận **ĐẠT** ngày 30/10/2026, trước khi phát hành. Các kiểm thử CI trên commit cuối vẫn là điều kiện bắt buộc.
 - Thanh địa chỉ và điều hướng do **Chrome** quản lý, web không thể tự xóa khi chạy trong tab trình duyệt. Phạm vi fix là vùng **trang game**, không xóa UI của Chrome.
 
 ## Bản phát hành V3.278
