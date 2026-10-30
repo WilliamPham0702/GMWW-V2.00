@@ -1,5 +1,5 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
-import {chatPolicy,chatNormalizeText} from "./gmww-online-chat-policy.js";
+import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -47,7 +47,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.276",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.277",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -3280,22 +3280,23 @@ export class RoomDurableObject extends DurableObject {
     const id=normalizeLoginId(loginId);
     // Server-only authenticated DM channel. Never deliver through public room chat or room state.
     if(requestedChannel==="gm"){
-      const allowed=!!meta?.matchId&&["running","role_delivery","lobby"].includes(String(meta?.phase||""))&&!!players["member:"+id];
+      const allowed=meta?.enabled!==false&&["running","role_delivery","lobby","waiting"].includes(String(meta?.phase||""))&&!!players["member:"+id];
       const blocked=bans[id]===true;
       const permission=allowed?{canRead:true,canSend:!blocked,channel:"gm:"+id,scope:"gm",reason:blocked?"CHAT_MUTED_GM":null}
         :{canRead:false,canSend:false,channel:null,scope:null,reason:"CHAT_NOT_IN_ROOM"};
-      return{meta,players,permission};
+      return{meta,players,rows,permission};
     }
     const runtime=meta?.cyclePhase==="night"?await this.getNightRuntime(meta,Number(meta.cycleNight||1),false):null;
     const permission=chatPolicy({meta,players,rows,runtime,loginId,bans});
-    return{meta,players,permission};
+    return{meta,players,rows,permission};
   }
   async playerChatRead(body){
-    const loginId=normalizeLoginId(body?.loginId),{meta,permission}=await this.chatAccess(loginId,body?.channel);
-    if(!permission.canRead)return j({ok:true,channel:null,messages:[],canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
-    const key="onlineChat:"+String(meta.matchId)+":"+permission.channel;
+    const loginId=normalizeLoginId(body?.loginId),{meta,players,rows,permission}=await this.chatAccess(loginId,body?.channel);
+    const notices=players["member:"+loginId]?publicChatNotices(meta,players,rows):[];
+    if(!permission.canRead)return j({ok:true,channel:null,messages:[],notices,canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
+    const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel;
     return j({ok:true,channel:permission.channel,scope:permission.scope,
-      messages:(await this.ctx.storage.get(key))||[],canSend:permission.canSend,
+      messages:(await this.ctx.storage.get(key))||[],notices,canSend:permission.canSend,
       reason:permission.reason,phase:meta.cyclePhase,cycleKey:meta.cycleKey});
   }
   async playerChatSend(body){
@@ -3303,9 +3304,9 @@ export class RoomDurableObject extends DurableObject {
     if(!content||String(body?.text||'').length>400)return j({ok:false,error:"CHAT_INVALID_TEXT"},400);
     const {meta,players,permission}=await this.chatAccess(loginId,body?.channel);
     if(!permission.canSend)return j({ok:false,error:permission.reason||"CHAT_FORBIDDEN"},403);
-    const rateKey="onlineChatRate:"+String(meta.matchId)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
+    const rateKey="onlineChatRate:"+chatStorageScope(meta)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
     if(Date.now()-prev<850)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
-    const key="onlineChat:"+String(meta.matchId)+":"+permission.channel,
+    const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel,
       messages=(await this.ctx.storage.get(key))||[],now=Date.now(),
       message={id:crypto.randomUUID(),senderId:loginId,
         senderName:String(players["member:"+loginId]?.displayName||loginId).slice(0,42),
@@ -3317,7 +3318,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmChatRead(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const meta=auth.meta,match=String(meta.matchId||"");
+    const meta=auth.meta,match=chatStorageScope(meta);
     const records=match?await this.ctx.storage.list({prefix:"onlineChat:"+match+":"}):new Map(),
       channels=[...records.entries()].map(([key,messages])=>({
         channel:key.slice(("onlineChat:"+match+":").length),
@@ -3330,13 +3331,13 @@ export class RoomDurableObject extends DurableObject {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
       players=(await this.ctx.storage.get("players"))||{};
-    if(!meta?.matchId||!id||!players["member:"+id]||!content||String(body?.text||"").length>400)
+    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!id||!players["member:"+id]||!content||String(body?.text||"").length>400)
       return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
-    const key="onlineChat:"+String(meta.matchId)+":gm:"+id,now=Date.now(),
-      rateKey="gmChatRate:"+String(meta.matchId)+":"+id;
+    const key="onlineChat:"+chatStorageScope(meta)+":gm:"+id,now=Date.now(),
+      rateKey="gmChatRate:"+chatStorageScope(meta)+":"+id;
     if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
     const messages=(await this.ctx.storage.get(key))||[],
-      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",text:content,at:now,scope:"gm"};
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:"gm"};
     await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
     this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel:"gm:"+id});
   }

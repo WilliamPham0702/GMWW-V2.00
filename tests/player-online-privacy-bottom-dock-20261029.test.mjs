@@ -25,9 +25,9 @@ test('P0: legacy and night-action statuses require explicit GM display approval'
   has(ws,'statusTags:(Array.isArray(p?.statusTags)?p.statusTags:[]).filter(t=>config');
   assert.ok(!ws.includes('previousTags=new Map'));
 });
-test('One draggable quarter-size role/artifact dock and no stale role cache',()=>{
+test('One draggable eighth-size role/artifact dock and no stale role cache',()=>{
   has(village,'function gmwwMiniDrag(');
-  has(village,'gmww_online_mini_positions_v2');
+  has(village,'gmww_online_mini_positions_v3');
   has(village,'#game .role-stage[hidden]{display:none!important}');
   has(village,'#game.gmww-card-expanded #gmwwPlayerMiniCards');
   has(village,"gmww-player-menu-exit')?.remove()");
@@ -35,7 +35,7 @@ test('One draggable quarter-size role/artifact dock and no stale role cache',()=
 });
 test('Bottom dock, authoritative countdown, private GM chat, direct actions, no AI narration',()=>{
   for(const id of ['gmwwOnlineFooter','gmwwPlayerClock','gmwwPlayerRestore'])has(chat,"id='"+id+"'");
-  has(chat,'#gmwwOnlineFooter #gmwwChatLines{height:91px');
+  has(chat,'#gmwwChatPanel.open #gmwwChatLines{display:block;height:90px');
   has(chat,"gmwwChatTarget==='gm'");
   has(worker,'channel:"gm:"+id,scope:"gm"');
   has(worker,'channel:body.channel==="gm"?"gm":"room"');
@@ -131,7 +131,7 @@ test('Player retries late recordings, stops old audio on turn change and rejects
 test('ISO server deadline produces a countdown',()=>{
  const s=read('src/player-web-src/35-online-chat.part');
  const code=s.slice(s.indexOf('function gmwwChatDockSync(){'),s.indexOf('function gmwwChatClear(){'));
- const clock={},panel={classList:{add(){}}},footer={},game={classList:{contains:()=>true}};
+ const clock={},panel={classList:{add(){},toggle(){}}},footer={},game={classList:{contains:()=>true}};
  const c={Date:class extends Date {static now(){return Date.parse('2026-10-29T12:00:00.000Z')}},state:{roomCode:'ABCDEF',participantId:'a',room:{phase:'running',roomMode:'online',dayDeadlineAt:'2026-10-29T12:01:30.000Z'}},document:{getElementById:id=>({gmwwOnlineFooter:footer,gmwwChatPanel:panel,gmwwPlayerClock:clock,game}[id])},clearTimeout(){},setInterval(){return 1}};
  vm.runInNewContext('let gmwwChatOpen=false,gmwwChatIdleTimer=null,gmwwOnlineFooterTimer=null;'+code+'gmwwChatDockSync()',c);
  assert.equal(clock.textContent,'01:30');
