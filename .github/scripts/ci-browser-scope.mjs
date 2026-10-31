@@ -3033,7 +3033,87 @@ function isPR652OnlineHotfixScope(changes){
   if(byPath.get('server-game/current/app.js').after!==assembled)return false;
   return true;
 }
+// V3.281 PR654: exact GM-only role-name Audio Runtime; no Worker API,
+// Player Web or native shell changes. Any unexpected path fails closed.
+function isRoleNameAudio3281Scope(changes){
+  const expected=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/scripts/prepare-update-channel.mjs','M'],
+    ['.github/workflows/check-gm-audio-role-day.yml','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md','A'],
+    ['docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md','M'],
+    ['package-lock.json','M'],['package.json','M'],
+    ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+    ['server-game/src/00-core-and-library.part','M'],
+    ['server-game/src/10-library-and-settings.part','M'],
+    ['server-game/src/30-village-and-setup.part','M'],
+    ['src/index.js','M'],
+    ['tests/audio-binding-integrity-20261027.test.mjs','M'],
+    ['tests/audio-independent-role-name-20261031.test.mjs','A'],
+    ['tests/demo-assassin-gallows-divination.test.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(c=>c?.path)).size!==expected.size||
+    changes.some(c=>!c||expected.get(c.path)!==c.status||
+      typeof c.after!=='string'||(c.status==='M'&&typeof c.before!=='string')))
+    return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  const versionOnly=(path,from,to,count=1)=>{
+    const {before,after}=by.get(path);
+    return before.split(from).length-1===count&&before.split(from).join(to)===after;
+  };
+  if(!versionOnly('src/index.js','VERSION="V3.280"','VERSION="V3.281"')||
+    !versionOnly('server-game/src/00-core-and-library.part',"const VERSION='3.280';","const VERSION='3.281';")||
+    !versionOnly('server-game/current/GMWW.html','<title>GMWW V3.280</title>','<title>GMWW V3.281</title>')||
+    !versionOnly('package.json','"version": "3.280.0"','"version": "3.281.0"')||
+    !versionOnly('package-lock.json','"version": "3.280.0"','"version": "3.281.0"',2))
+    return false;
+  const bounded=(path,start,end)=>{
+    const {before,after}=by.get(path);
+    const oldOutside=outsideScope(before,start,end),newOutside=outsideScope(after,start,end);
+    return oldOutside!==null&&oldOutside===newOutside;
+  };
+  if(!bounded('server-game/src/10-library-and-settings.part',
+      'async function audioBindingStatus(', 'function bindCore(')||
+    !bounded('server-game/src/30-village-and-setup.part',
+      'const battleAudioReady=', 'function battleTurnAudioCue('))
+    return false;
+  const gm=by.get('server-game/current/app.js').after;
+  const names=['00-core-and-library.part','10-library-and-settings.part',
+    '20-members-and-roster.part','30-village-and-setup.part',
+    '40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
+  if(gm!==names.map(n=>fs.readFileSync('server-game/src/'+n,'utf8')).join(''))
+    return false;
+  const library=by.get('server-game/src/10-library-and-settings.part').after;
+  const audio=by.get('server-game/src/30-village-and-setup.part').after;
+  const worker=by.get('src/index.js').after;
+  if(!library.includes('gmwwOpenRoleAudioReplace')||
+    !library.includes("audioBlobKey('cards-name',a.id)")||
+    library.includes('gmwwOpenAudioNameEditor')||
+    !audio.includes("audioKindForSource=nameOnly?'cards-name':kind")||
+    !audio.includes('const requestedCut=null')||
+    !gm.includes("battlePlayConfiguredAudio('cards',target.roleId||'',roleName,false,null,1)")||
+    !worker.includes('NATIVE_SHELL_VERSION="3.264"')||
+    !worker.includes('UNDO_STATE_CHANGED'))
+    return false;
+  const release=by.get('.github/scripts/prepare-update-channel.mjs');
+  if(release.after.replace(/"V3\.281 PR654:[^"]+",/,'')!==release.before)return false;
+  const qa=by.get('docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md');
+  if(!qa.after.startsWith(qa.before)||!qa.after.includes('PR #654 — đóng gói ứng viên Runtime V3.281'))
+    return false;
+  if(!by.get('docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md').after.includes('V3.281')||
+    !by.get('tests/audio-independent-role-name-20261031.test.mjs').after.includes('independent role name')||
+    !by.get('.github/workflows/check-gm-audio-role-day.yml').after.includes('tests/audio-independent-role-name-20261031.test.mjs'))
+    return false;
+  return by.get('.github/scripts/ci-browser-scope.mjs').after.includes('function isRoleNameAudio3281Scope(changes)')&&
+    by.get('.github/workflows/check-player-web.yml').after.includes("steps.scope.outputs.mode == 'role-name-audio-3281'")&&
+    by.get('tests/ci-browser-scope.test.mjs').after.includes('PR654 V3.281 strict role-name audio release scope');
+}
+
 function classifyBrowserScope(changes){
+  if(isRoleNameAudio3281Scope(changes))return 'role-name-audio-3281';
   if(isPR652FinalReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652PostmergeReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652OnlineHotfixScope(changes))return 'online-hotfix-652';
@@ -3352,6 +3432,21 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // PR654 same-SHA release gate: prove every change is strictly audio-local,
+  // even on main after merge. Other changes keep the full safety suite.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(line=>{
+        const [status,path]=line.split('\t');
+        return {status,path,
+          before:status==='M'?git('show','HEAD^1:'+path):null,
+          after:status==='A'||status==='M'?fs.readFileSync(path,'utf8'):null};
+      });
+      if(isRoleNameAudio3281Scope(changes))
+        return{mode:'role-name-audio-3281',reason:'PR654 exact Runtime V3.281 Audio Tên and same-SHA release safeguards'};
+    }catch(_){/* Unknown diff uses full CI. */}
+  }
   // PR #651 repairs only the exact postmerge PR645 V3.279 release gate.
   // Resolve source and ancestry before allowing the focused task checks.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
