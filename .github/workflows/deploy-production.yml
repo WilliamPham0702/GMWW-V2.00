@@ -244,6 +244,28 @@ jobs:
               echo 'PR645 V3.279: exact postmerge browser CI fix; keep all same-SHA browser/Worker/OTA production gates.' >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
+          # PR652 V3.280: exact postmerge CI-only release handshake.
+          # The approved Online gameplay commit must be an ancestor and every
+          # gameplay, IPA, Oracle and data-affecting source must remain unchanged.
+          if [ "$(node -p 'require("./package.json").version')" = '3.280.0' ] &&
+             git merge-base --is-ancestor 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/check-player-card-browsers.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc || {
+                echo "::error::PR652 gameplay or version changed since owner acceptance"; exit 1;
+              }
+              grep -Fq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js || exit 1
+              grep -Fq 'soi-can-canonical' server-game/current/app.js || exit 1
+              SHOULD_DEPLOY=true
+              echo 'PR652 V3.280: same-SHA Worker, browser, integrity and OTA gates remain mandatory; no IPA/Oracle/data change.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
