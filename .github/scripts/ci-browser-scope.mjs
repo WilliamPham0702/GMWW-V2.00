@@ -17,6 +17,26 @@ const scopedMarkers={
   'server-game/src/50-roles-and-artifacts.part':['/* Match completion is shared','async function openPlayEndSheet(){'],
   'server-game/current/app.js':['/* Match completion is shared','async function openPlayEndSheet(){']
 };
+
+// Pages-only alias: never narrow CI when any gameplay, Worker or Native file changes.
+const pagesAliasOnlyPaths=new Set([
+  'infra/pages/gamemasoi/_redirects',
+  'infra/pages/gamemasoi/index.html',
+  'tests/gamemasoi-pages-link.test.mjs',
+  'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md',
+  '.github/workflows/deploy-gamemasoi-pages.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+]);
+function isPagesAliasScope(changes){
+  return Array.isArray(changes)&&changes.length>=7&&
+    changes.some(c=>c.path==='infra/pages/gamemasoi/_redirects'&&c.status==='A')&&
+    changes.some(c=>c.path==='tests/gamemasoi-pages-link.test.mjs'&&c.status==='A')&&
+    changes.every(c=>pagesAliasOnlyPaths.has(c.path)&&['M','A'].includes(c.status));
+}
+
 const testPath=/^tests\/(?:match-completion(?:-server|-reentry)?|forced-end-game)\.test\.mjs$/;
 const notesPath=/^docs\/releases\/[\w.\-]+\.md$/;
 
@@ -3239,6 +3259,7 @@ function isPr662V3284Scope(changes){
 }
 // END PR662_V3284_EXACT_AUDITED_SCOPE
 function classifyBrowserScope(changes){
+  if(isPagesAliasScope(changes))return 'pages-alias';
   if(isPr662V3284Scope(changes))return 'audio-drift-integrated-3284';
   if(isRuntimeDriftScope(changes))return 'runtime-server-drift';
   if(isRoleNameAudio3283Scope(changes))return 'role-name-audio-3283';
@@ -3561,6 +3582,18 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // Verify the exact diff before any legacy full-suite selector.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
+        if(isPagesAliasScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect only; no game source changes'};
+      }
+    }catch{} // Fail closed for any unexpected scope, ref or status.
+  }
+
   // PR654 same-SHA release gate: prove every change is strictly audio-local,
   // even on main after merge. Other changes keep the full safety suite.
   if(process.env.GMWW_CI_EVENT==='push'){
