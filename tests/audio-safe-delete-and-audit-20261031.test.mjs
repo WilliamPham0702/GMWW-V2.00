@@ -109,3 +109,67 @@ test('Name and Full links count independently, even if saved file bytes are miss
   assert.equal(ctx.isLinked(role,bundled,'full'),true);
   assert.equal(ctx.isLinked(role,bundled,'name'),false);
 });
+
+test('iPhone audio panel binds Play Tên, Play Full, Thay thế, Xóa, and every Gắn Audio button',async()=>{
+  const source=library.slice(library.indexOf('function gmwwRoleAudioIsLinked('),
+    library.indexOf('async function playAudioItem(',library.indexOf('function gmwwRoleAudioIsLinked(')));
+  const roles=[{id:'role_guard',name:'Bảo Vệ'},{id:'role_wolf',name:'Sói Thường'}];
+  const audio=roles.map(role=>({id:'audio_'+role.id,targetId:role.id,name:role.name,fileName:'',nameUrl:''}));
+  const tapped=[],linked=[],links=[],rows=[];
+  const mkButton=()=>({onclick:null,listeners:{},addEventListener(kind,fn){this.listeners[kind]=fn}});
+  const grid={
+    html:'',
+    set innerHTML(html){
+      this.html=html;
+      const matched=[...html.matchAll(/data-role-link-id="([^"]+)" data-role-link-slot="(name|full)"/g)];
+      for(const match of matched){
+        const button=mkButton();
+        button.dataset={roleLinkId:match[1],roleLinkSlot:match[2]};
+        links.push(button);
+      }
+      for(const a of audio){
+        const buttons={
+          '[data-audio-play]':mkButton(),
+          '[data-audio-name-play]':mkButton(),
+          '[data-audio-replace]':mkButton(),
+          '[data-audio-delete]':mkButton()
+        };
+        rows.push({dataset:{audioId:a.id},querySelector:s=>buttons[s]??null,buttons});
+      }
+    }
+  };
+  const missingReport=mkButton(),addBox=mkButton();
+  const doc={
+    querySelector(s){return {'#audioGrid':grid,'#audioMissingReport':missingReport,
+      '#addAudioBox':addBox}[s]??null},
+    querySelectorAll(s){return s==='#audioGrid [data-role-link-id]'?links:
+      s==='[data-audio-id]'?rows:[]}
+  };
+  const ctx={document:doc,navigator:{},state:{audio:{cards:audio},cards:roles,audioTrash:[]},
+    audioKind:'cards',audioBindingStatus:async()=> 'missing',gmwwRoleNameAudioStatus:async()=> 'missing',
+    audioHasFile:async()=>false,esc:x=>String(x),uid:()=>'',saveState:()=>{},
+    playAudioItem:(...args)=>tapped.push(['play',...args]),
+    gmwwOpenRoleAudioReplace:a=>tapped.push(['replace',a]),
+    deleteAudioItem:a=>tapped.push(['delete',a]),
+    replaceAudioItem:()=>{},playFlashError:()=>{}};
+  ctx.$=(s,r=doc)=>r.querySelector(s);
+  ctx.$$=(s,r=doc)=>Array.from(r.querySelectorAll(s));
+  vm.runInNewContext(source+';globalThis.render=renderAudio;',ctx);
+  await ctx.render();
+  assert.ok(links.length>=4,'Each missing Name and Full slot has a Gắn Audio button');
+  assert.equal(rows.length,2);
+  assert.equal(typeof rows[0].buttons['[data-audio-play]'].onclick,'function');
+  assert.equal(typeof rows[0].buttons['[data-audio-name-play]'].listeners.click,'function');
+  assert.equal(typeof rows[0].buttons['[data-audio-replace]'].onclick,'function');
+  assert.equal(typeof rows[0].buttons['[data-audio-delete]'].onclick,'function');
+  rows[0].buttons['[data-audio-play]'].onclick();
+  rows[0].buttons['[data-audio-name-play]'].listeners.click();
+  rows[0].buttons['[data-audio-replace]'].onclick();
+  rows[0].buttons['[data-audio-delete]'].onclick();
+  links[0].onclick();
+  assert.deepEqual(tapped.map(x=>x[0]),['play','play','replace','delete','replace']);
+  assert.equal(tapped[0][2],'cards');
+  assert.equal(tapped[0][3],'full');
+  assert.equal(tapped[1][3],'name');
+  assert.ok(grid.html.includes('Đối chiếu liên kết Audio Vai Trò'));
+});
