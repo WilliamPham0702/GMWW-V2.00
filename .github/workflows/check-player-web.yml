@@ -44,6 +44,13 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Runtime shared archive only — one GitHub release, no duplicated package
+        if: steps.scope.outputs.mode == 'runtime-central-store'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/runtime-single-archive-release.test.mjs
+          test -s docs/releases/GMWW-RUNTIME-CENTRAL-ARCHIVE-20261031.md
+          git diff --check
       - name: Oracle STAGING bootstrap only — fail closed and no Production deploy
         if: steps.scope.outputs.mode == 'oracle-staging-bootstrap'
         run: |
