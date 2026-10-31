@@ -29,6 +29,10 @@ jobs:
           set -euo pipefail
           git diff --exit-code origin/main...HEAD -- server-game/current/style.css
           ACTUAL=$(git diff --unified=0 origin/main...HEAD -- server-game/current/app.js | grep -E '^[+-][^+-]' || true)
+          if [ -z "$ACTUAL" ]; then
+            echo "HTML-only compact Player Web share change: no GM app.js modifications."
+            exit 0
+          fi
           EXPECTED=$(printf '%s\n' "-const VERSION='3.277';" "+const VERSION='3.278';")
           if [ "$ACTUAL" != "$EXPECTED" ]; then
             # Functional GM PRs may alter JS legitimately, but only with corresponding
