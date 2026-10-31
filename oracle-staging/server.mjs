@@ -1,5 +1,5 @@
-import {ROOM_SNAPSHOT_SCHEMA} from './room-adapter.mjs';
 #!/usr/bin/env node
+import {ROOM_SNAPSHOT_SCHEMA} from './room-adapter.mjs';
 /**
  * GMWW Oracle STAGING bootstrap. This is NOT a game server yet.
  * Never advertises readiness, stores game data or proxies Production.
