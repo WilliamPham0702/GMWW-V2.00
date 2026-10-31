@@ -3448,12 +3448,15 @@ async function battleWarmAudio(kind,item){
   if(battleAudioLoading.has(key))return battleAudioLoading.get(key);
   const promise=(async()=>{
     const rec=await dbGet(audioBlobKey(kind,item.id)).catch(()=>null);
-    // Legacy role_old_witch has one canonical bundled ROLE:source-18 sound;
-    // never let a stale filename or a mismatched local audio ID silence it.
-    const fallback=kind==='cards'&&String(item.targetId||'')==='role_old_witch'?
+    // Named-role audio has its own storage and URL; never fall back to a
+    // wake-up clip even when a legacy cropped-name setting still exists.
+    const nameOnly=kind==='cards-name';
+    const fallback=!nameOnly&&kind==='cards'&&String(item.targetId||'')==='role_old_witch'?
       bundledAudioBlob({sourceKey:'ROLE:source-18'}):null;
-    const blob=(rec?.blob instanceof Blob&&rec.blob.size>0?rec.blob:null)||bundledAudioBlob(item)||fallback;
-    const url=blob?URL.createObjectURL(blob):(typeof item.url==='string'&&/^(https?:|data:audio\/)/i.test(item.url)?item.url:'');
+    const blob=(rec?.blob instanceof Blob&&rec.blob.size>0?rec.blob:null)||
+      (nameOnly?null:bundledAudioBlob(item))||fallback;
+    const link=nameOnly?item.nameUrl:item.url;
+    const url=blob?URL.createObjectURL(blob):(typeof link==='string'&&/^(https?:|data:audio\/)/i.test(link)?link:'');
     if(url)battleAudioReady.set(key,url);
     return url||null
   })();
@@ -3511,7 +3514,9 @@ async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAu
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
   let row=battleFindAudio(kind,targetId,name);
-  const key=kind+':'+String(targetId||name),now=Date.now();
+  const nameOnly=kind==='cards'&&Number(maxSeconds)>0;
+  const audioKindForSource=nameOnly?'cards-name':kind;
+  const key=audioKindForSource+':'+String(targetId||name),now=Date.now();
   if(!showError&&battleAudioLast.key===key&&battleAudioLast.turn===String(battleState?.key||'')&&now-battleAudioLast.at<350){onFinished?.();return false}
   battleAudioLast={key,at:now,turn:String(battleState?.key||'')};
   const requestId=++battleAudioRequestId;
@@ -3523,15 +3528,12 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   // mask a real GM upload under an older alternate audio ID.
   const candidates=typeof battleFindAudioCandidates==='function'
     ?battleFindAudioCandidates(kind,targetId,name):[row].filter(Boolean);
-  // Name-only revelation must prefer the SAME audio row on which GM saved
-  // the complete Tên crop. Stale duplicate IDs often have an older/short cut.
-  if(Number(maxSeconds)>0)candidates.sort((a,b)=>
-    Number(Number(b.roleNameEnd)>Number(b.roleNameStart||0))-
-    Number(Number(a.roleNameEnd)>Number(a.roleNameStart||0)));
+  // For role-name results, resolve only independently linked name audio.
+  // Candidates without a name file are skipped; the FULL file is never used.
   let src=null;
   for(const candidate of candidates){
-    const found=battleAudioReady.get(kind+':'+String(candidate.id||''))||
-      await battleWarmAudio(kind,candidate);
+    const found=battleAudioReady.get(audioKindForSource+':'+String(candidate.id||''))||
+      await battleWarmAudio(audioKindForSource,candidate);
     if(requestId!==battleAudioRequestId){onFinished?.();return false}
     if(found){row=candidate;src=found;break}
   }
@@ -3610,17 +3612,9 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   })();
   if(!src){if(!row&&showError)playFlashError('Chưa gắn file Audio: '+targetId);
     return safeSpeech?battleSpeakCue(safeSpeech,showError,onFinished):(onFinished?.(),false)}
-  // Exact name clip: prefer decoded WebAudio with explicit offset and duration.
-  // WKWebView HTMLAudioElement timeupdate is not guaranteed to fire while hidden.
-  const nameStart=Math.max(0,Number(row.roleNameStart)||0);
-  const nameEnd=Number(row.roleNameEnd);
-  const hasExactCut=Number.isFinite(nameEnd)&&nameEnd>nameStart;
-  // Never read an arbitrary first five seconds as a ROLE NAME. The V1 wake-up
-  // clip may start with music, silence or "ơi dậy đi".
-  if(Number(maxSeconds)>0&&!hasExactCut){
-    return battleSpeakCue(String(name||'').trim(),showError,onFinished);
-  }
-  const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:nameEnd}:null;
+  // No offsets or excerpts: use the complete independent Tên file.
+  // Existing roleNameStart / roleNameEnd metadata is intentionally ignored.
+  const requestedCut=null;
   if((requestedCut||targetId==='role_old_witch'||targetId==='source-18'||targetId==='audio_system_day_wakeup')&&
      battleUnlockedAudioContext?.state==='running'){
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
@@ -3663,26 +3657,8 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   player.addEventListener('playing',()=>clearTimeout(startupTimer),{once:true});
   player.addEventListener('ended',()=>clearTimeout(startupTimer),{once:true});
   player.addEventListener('error',()=>clearTimeout(startupTimer),{once:true});
-  // Named V1.11 segment: the editor stores its start/end on the EXISTING
-  // role wake-up audio, without duplicating binary data or changing its source.
-  const excerpt=requestedCut;
-  if(excerpt){
-    const stop=()=>{if(finished||battleActiveAudio!==player)return;
-      try{player.pause()}catch(_){}finish()};
-    const seek=()=>{const end=Math.min(Number.isFinite(player.duration)?player.duration:excerpt.end,excerpt.end);
-      if(excerpt.start>=end){stop();return}
-      try{if(Math.abs(player.currentTime-excerpt.start)>.07)player.currentTime=excerpt.start}catch(_){}
-    };
-    player.onloadedmetadata=seek;
-    player.addEventListener('playing',()=>{
-      if(cutTimer!==null)clearTimeout(cutTimer);
-      // A seek/buffer delay must not truncate the final syllable of a name.
-      // Playback timeupdate is authoritative; timer is only a generous failsafe.
-      cutTimer=setTimeout(stop,Math.max(500,Math.ceil((excerpt.end-excerpt.start)*1000)+1800));
-    },{once:true});
-    player.ontimeupdate=()=>{if(player.currentTime>=excerpt.end-.02)stop()};
-    if(player.readyState>=1)seek();
-  }
+  // The full file is played; named-role clips are pre-recorded separately.
+  const excerpt=null;
   try{await player.play();return true}
   catch(err){
     clearTimeout(startupTimer);
