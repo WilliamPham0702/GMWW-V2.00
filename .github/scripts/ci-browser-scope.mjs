@@ -3565,7 +3565,7 @@ function detect(){
           const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
           if(!worker.includes('const roomMode=desiredDemo?"online":')||
              !worker.includes('roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode)')||
-             !source.includes("roomMode:target==='online'||target==='demo'?'online':'offline'")||
+             !source.includes("roomMode:(target==='online'||target==='demo')?'online':'offline'")||
              !gm.includes("const VERSION='3.285'"))throw Error('DEMO Online transport source missing');
           if(!fs.readFileSync('docs/releases/GMWW-RUNTIME-V3.285-DEMO-ONLINE-20261031.md','utf8').includes('Rollback')||
              !fs.readFileSync('tests/demo-runtime-v3285-release.test.mjs','utf8').includes('version-only'))throw Error('Release evidence missing');

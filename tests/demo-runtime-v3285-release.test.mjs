@@ -17,7 +17,7 @@ test('V3.285 Runtime and Worker versions align with unchanged native shell',()=>
   assert.ok(html.includes('<title>GMWW V3.285</title>'));
   assert.ok(worker.includes('const roomMode=desiredDemo?"online":'));
   assert.ok(worker.includes('roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode)'));
-  assert.ok(fs.readFileSync('server-game/src/30-village-and-setup.part','utf8').includes("roomMode:target==='online'||target==='demo'?'online':'offline'"));
+  assert.ok(fs.readFileSync('server-game/src/30-village-and-setup.part','utf8').includes("roomMode:(target==='online'||target==='demo')?'online':'offline'"));
 });
 test('V3.285 package preserves OTA integrity, release notes and rollback',()=>{
   const notes=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
