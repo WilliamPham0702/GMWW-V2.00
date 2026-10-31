@@ -67,7 +67,7 @@ test('GM audio speaks correct YES/NO and actual role; day action keeps popup pri
 
 test('DEMO does not execute an already spent Artifact on following day',()=>{
  const ctx=vm.createContext({status:()=>false,rules:{resolvedType:()=> 'effect_notice'}});
- vm.runInContext(section(demo,'function dayActions(ctx,meta,usage,ballot){',
+ vm.runInContext(section(demo,'function dayActions(ctx,meta,usage,ballot,showBlocked=false){',
   '// Only the authenticated actor'),ctx);
  const card={id:'artifact_09',functions:[{actionId:'artifact_action_check_villager',phase:'day',
     usageMode:'onceGame',usageCount:1,targetCount:1,noSelf:false}]};
