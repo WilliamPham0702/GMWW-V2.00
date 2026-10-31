@@ -46,3 +46,29 @@ test('Only the exact isolated Pages/CI change set can select pages-alias',async(
   assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='infra/pages/gamemasoi/_redirects')),'full');
 });
+
+test('Pages retry restores full Git ancestry and includes both CI-only selector paths',()=>{
+  const pages=read('.github/workflows/deploy-gamemasoi-pages.yml');
+  const runtime=read('.github/workflows/github-runtime-ota.yml');
+  assert.match(pages,/fetch-depth: 0/);
+  assert.match(pages,/git fetch --no-tags origin main/);
+  assert.doesNotMatch(pages,/git fetch origin main --depth=1/);
+  assert.match(pages,/ci-browser-scope[.]mjs/);
+  assert.match(pages,/check-player-web[.]yml/);
+  assert.match(runtime,/ci-browser-scope[.]mjs/);
+  assert.match(runtime,/check-player-web/);
+});
+test('Retry scope rejects any game or backend source change',async()=>{
+  const {classifyBrowserScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+  const retry=[
+    'infra/pages/gamemasoi/_redirects',
+    '.github/workflows/deploy-gamemasoi-pages.yml',
+    '.github/workflows/github-runtime-ota.yml',
+    '.github/scripts/ci-browser-scope.mjs',
+    'tests/gamemasoi-pages-link.test.mjs',
+    'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md'
+  ].map(path=>({path,status:'M'}));
+  assert.equal(classifyBrowserScope(retry),'pages-alias');
+  assert.equal(classifyBrowserScope([...retry,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(retry.filter(x=>x.path!=='infra/pages/gamemasoi/_redirects')),'full');
+});
