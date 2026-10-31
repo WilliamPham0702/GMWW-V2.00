@@ -26,6 +26,7 @@ export function publicVoteSummary(ballot){
 export function createGmDashboard({container,onSelect,onAction,onToggleQuality}){
   if(!container||typeof container.replaceChildren!=='function')throw new TypeError('DASHBOARD_CONTAINER_REQUIRED');
   let frame=null,ballot=null,nightControl=null,selectedId=null,hasGM=false,activeTab='room',lowPower=false,lastNotice='';
+  let selectedTargets=[];
   const controls=[
     ['room','Phòng'],['day','Ngày / Đêm'],['turn','Lượt Đêm'],['gallows','Lên Giàn'],['vfx','Hiệu ứng'],['perf','Hiệu năng']
   ];
@@ -94,18 +95,38 @@ export function createGmDashboard({container,onSelect,onAction,onToggleQuality})
         const actions=el('div','','gm-console-actions');
         actions.append(btn('Sang lượt tiếp theo',()=>onAction?.('nextTurn',nightControl?.turnId),
           {disabled:!nightControl?.turnId}));
-        const trialRoles={role_guard:'🛡️ Bảo Vệ',role_prophet:'🔮 Tiên Tri',
-          role_witch:'💚 Phù Thủy cứu',role_wolf:'🌙 Ma Sói'};
-        const trialActors=nightControl?.roles?.length?
-          nightControl.roles.flatMap(r=>(r.actorIds||[]).map(id=>({roleId:r.roleId,actorId:id}))):
-          owners.map(o=>({roleId:nightControl?.roleId,actorId:o.id}));
-        for(const {roleId,actorId} of trialActors){
-          if(!trialRoles[roleId])continue;
-          actions.append(btn('Thử '+trialRoles[roleId],()=>onAction?.('roleTrial',nightControl.turnId,actorId,roleId,selectedId),
-            {disabled:!target}));
+        // Only the bearer-authenticated GM response may provide actions.
+        // Public room snapshots contain no secret role/Artifact options.
+        const available=hasGM&&Array.isArray(nightControl?.availableActions)?
+          nightControl.availableActions:[];
+        if(available.length){
+          body.append(el('p','Chọn mục tiêu (có thể chọn nhiều). Số mục tiêu được giới hạn theo thẻ Core đã phát.','gm-console-hint'));
+          const targetGrid=el('div','','gm-seat-grid');
+          for(const seat of rows){
+            const active=selectedTargets.includes(seat.id)||(selectedTargets.length===0&&seat.id===selectedId);
+            targetGrid.append(btn((active?'🎯 ':'◯ ')+seat.label,
+              ()=>{
+                if(selectedTargets.includes(seat.id))selectedTargets=selectedTargets.filter(x=>x!==seat.id);
+                else if(selectedTargets.length<5)selectedTargets=[...selectedTargets,seat.id];
+                render();
+              },{selected:active}));
+          }
+          body.append(targetGrid);
+          const chosen=selectedTargets.length?selectedTargets:selectedId?[selectedId]:[];
+          for(const action of available){
+            const targetList=action.targetCount===0?[]:chosen.slice(0,action.targetCount);
+            const selfForbidden=action.noSelf===true&&targetList.includes('member:'+action.actorId);
+            const valid=targetList.length===action.targetCount&&!selfForbidden;
+            const label=action.label||action.actionId;
+            actions.append(btn('Thử '+(action.artifactId?'✨ Artifact · ':'')+label,
+              ()=>onAction?.('coreAction',nightControl.turnId,action,targetList),
+              {disabled:!valid}));
+          }
+        }else{
+          body.append(el('p','Core chưa cung cấp danh sách hành động đã phát cho lượt này. Không tự phát phép khi chưa có quyền.','gm-console-hint'));
         }
         body.append(actions);
-        body.append(el('p','Mỗi hành động phải được Core xác thực theo người, vai và lượt; không tự phát phép ở trình duyệt.','gm-console-hint'));
+        body.append(el('p','Tất cả lệnh phải được Core xác thực theo thẻ đã phát, lượt và mục tiêu; không dùng dữ liệu vai bí mật từ Player.','gm-console-hint'));
       }
     }else if(activeTab==='gallows'){
       body.append(el('p',publicVoteSummary(ballot),'gm-console-vote'));
@@ -138,8 +159,9 @@ export function createGmDashboard({container,onSelect,onAction,onToggleQuality})
   return {
     setState(next){frame=next;if(selectedId&&!publicGMRows(frame).some(p=>p.id===selectedId))selectedId=null;render()},
     setBallot(next){ballot=next;render()},
-    setNightControl(next){nightControl=hasGM?next:null;render()},
-    setGM(next){hasGM=next===true;if(!hasGM)nightControl=null;render()},
+    setNightControl(next){if(next?.turnId!==nightControl?.turnId)selectedTargets=[];
+      nightControl=hasGM?next:null;render()},
+    setGM(next){hasGM=next===true;if(!hasGM){nightControl=null;selectedTargets=[]}render()},
     setSelection(next){selectedId=typeof next==='string'?next:null;render()},
     notify(message){lastNotice=String(message||'').slice(0,200);render()},
     get selectedId(){return selectedId},get authorized(){return hasGM},

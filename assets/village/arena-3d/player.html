@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GMWW Arena 3D · Player Web</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#fff;background:#061e2b}
+*{box-sizing:border-box}body{margin:0;overflow:hidden;touch-action:pan-y}
+#world{position:relative;height:100dvh;width:100vw;overflow:hidden;background:#61bacf}
+#stage{width:100%;height:100%;display:block;touch-action:none}
+#toolbar{position:absolute;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:calc(env(safe-area-inset-top) + 8px) 12px 10px;background:linear-gradient(#071e2add,#071e2a88);z-index:2}
+#toolbar strong{font-size:14px}#state{flex:1;font-size:11px;color:#c1eaec}
+button,a{font:inherit;text-decoration:none;color:#fff;background:#19546bdc;border:1px solid #8ad2d9a0;border-radius:10px;padding:8px 10px;min-height:38px}
+#status{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 12px);left:10px;right:10px;max-width:540px;margin:auto;text-align:center;background:#092b3bc7;border:1px solid #57949a96;border-radius:12px;padding:9px;font-size:12px;pointer-events:none}
+#card{position:absolute;inset:0;background:#061e2b;z-index:5;display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
+#card.open{display:flex}#card-header{display:flex;align-items:center;justify-content:space-between;background:#103646;padding:9px 12px;font-size:14px}
+#player-core{width:100%;height:100%;border:0;flex:1;background:white}
+#hint{position:absolute;right:10px;top:90px;font-size:11px;color:#e6fdffb8}
+@media(max-width:420px){#toolbar{gap:5px;padding-left:7px;padding-right:7px}button,a{padding:7px;font-size:12px}}
+</style></head><body>
+<main id="world" aria-label="Bản đồ làng Arena 3D">
+<canvas id="stage" aria-label="Cảnh làng 3D công khai, kéo để xoay"></canvas>
+<div id="toolbar"><strong>🌊 Arena 3D</strong><span id="state" aria-live="polite">Chưa kết nối phòng</span><button type="button" id="open-card">Lá Vai / Hành động</button></div>
+<div id="hint">Kéo xoay · Chụm phóng · Mở Lá Vai để thao tác</div>
+<div id="status" aria-live="polite">Đang tải làng…</div>
+<section id="card" aria-label="Tương tác Player Web qua Core">
+<div id="card-header"><strong>🎴 Player Web · Tương tác theo luật Core</strong><button type="button" id="close-card">‹ Quay lại 3D</button></div>
+<iframe id="player-core" title="Player Web GMWW" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+</section>
+</main>
+<script type="module" src="./player.mjs"></script>
+</body></html>

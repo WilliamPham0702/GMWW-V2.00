@@ -1,0 +1,212 @@
+name: Arena 3D — Core GM/Player GĐ39 Main-first, E2E STAGING
+on:
+  push:
+    branches: ["feature/arena3d-stage14-16-dynamic-artifacts-audio", "feature/arena3d-g39-main-first-candidate"]
+    paths:
+      - "assets/village/arena-3d/**"
+      - "src/arena3d-stage-worker.mjs"
+      - "assets/village/arena-3d/render-optimization.mjs"
+      - "tests/arena3d-stage11-*"
+      - "tests/arena3d-stage12-*"
+      - "tests/arena3d-stage14-*"
+      - "tests/arena3d-stage15-*"
+      - "tests/arena3d-stage16-*"
+      - "tests/arena3d-stage17-*"
+      - "tests/arena3d-stage18-*"
+      - "tests/arena3d-stage19-*"
+      - "tests/arena3d-stage26-*"
+      - "tests/arena3d-stage29-*"
+      - "tests/arena3d-stage30-*"
+      - "tests/arena3d-stage33-*"
+      - "tests/arena3d-stage37-*"
+      - "tests/arena3d-stage38-*"
+      - "tests/arena3d-stage39-*"
+      - "tests/arena3d-stage40-*"
+      - "tests/arena3d-stage41-*"
+      - "tests/arena3d-stage43-*"
+      - "tests/arena3d-casting.test.mjs"
+      - "tests/arena3d-gm-end.test.mjs"
+      - "tests/arena3d-player-public.test.mjs"
+      - "tests/arena3d-portal-handoff.test.mjs"
+      - "tests/arena3d-room-adoption.test.mjs"
+      - "server-game/src/20-members-and-roster.part"
+      - "server-game/current/app.js"
+      - "server-game/current/GMWW.html"
+      - "tests/arena3d-production-gm-adapter.test.mjs"
+      - "tests/arena3d-production-gm-browser.mjs"
+      - "tests/arena3d-native-gm-bridge.test.mjs"
+      - "tests/arena3d-player-browser.mjs"
+      - "tests/arena3d-stage13-*"
+      - ".github/workflows/arena3d-stage14-16-research.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "assets/village/arena-3d/**"
+      - "src/arena3d-stage-worker.mjs"
+      - "tests/arena3d-stage14-*"
+      - "tests/arena3d-stage15-*"
+      - "tests/arena3d-stage16-*"
+      - "tests/arena3d-stage17-*"
+      - "tests/arena3d-stage18-*"
+      - "tests/arena3d-stage19-*"
+      - "tests/arena3d-stage33-*"
+      - "tests/arena3d-stage37-*"
+      - "tests/arena3d-stage38-*"
+      - "tests/arena3d-stage39-*"
+      - "tests/arena3d-stage40-*"
+      - "tests/arena3d-stage41-*"
+      - "tests/arena3d-stage43-*"
+      - ".github/workflows/arena3d-stage14-16-research.yml"
+  workflow_dispatch:
+    inputs:
+      deploy_stage14:
+        description: 'Triển khai STAGING riêng GĐ14–16 sau khi CI đạt'
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify-stage14:
+    name: "GĐ14–34: kiểm toán Core, Player 3D, animation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: "Kiểm tra cú pháp module liên quan"
+        run: |
+          node --check assets/village/arena-3d/stage11-core-catalog.mjs
+          node --check assets/village/arena-3d/stage11-core-action-bridge.mjs
+          node --check assets/village/arena-3d/stage12-audio-engine.mjs
+          node --check assets/village/arena-3d/stage14-dynamic-actions.mjs
+          node --check assets/village/arena-3d/stage15-local-audio.mjs
+          node --check tests/arena3d-stage16-dynamic-core-e2e.mjs
+          node --check tests/arena3d-stage16-standard-core-e2e.mjs
+          node --check src/arena3d-stage-worker.mjs
+          node --check assets/village/arena-3d/character-atelier.mjs
+          node --check assets/village/arena-3d/live.mjs
+          node --check assets/village/arena-3d/spell-vfx.mjs
+          node --check tests/arena3d-stage14-browser.mjs
+          node --check tests/arena3d-stage17-undo.test.mjs
+          node --check tests/arena3d-stage18-performance.test.mjs
+          node --check assets/village/arena-3d/stage19-mobile-diagnostics.mjs
+          node --check tests/arena3d-stage19-21.test.mjs
+          node --check tests/arena3d-stage33-parity.test.mjs
+          node --check assets/village/arena-3d/stage37-gm-refresh-gate.mjs
+          node --check tests/arena3d-stage37-gm-refresh.test.mjs
+          node --check assets/village/arena-3d/stage38-public-gallows.mjs
+          node --check tests/arena3d-stage38-gallows.test.mjs
+          node --check tests/arena3d-stage39-main-first.test.mjs
+          node --check tests/arena3d-stage40-player-pause.test.mjs
+          node --check tests/arena3d-stage41-crowd-resolution.test.mjs
+          node --check tests/arena3d-stage43-gm-crowd-budget.test.mjs
+          node --check tests/arena3d-player-browser.mjs
+          node --check tests/arena3d-casting.test.mjs
+          node --check assets/village/arena-3d/player.mjs
+          node --check tests/arena3d-player-public.test.mjs
+          node --check tests/arena3d-portal-handoff.test.mjs
+          node --check tests/arena3d-room-adoption.test.mjs
+          node --check tests/arena3d-gm-end.test.mjs
+          node --check tests/arena3d-ci-focused-scope.test.mjs
+          node --check assets/village/arena-3d/production-gm-adapter.mjs
+          node --check tests/arena3d-production-gm-adapter.test.mjs
+          node --check assets/village/arena-3d/gm-native-bridge.mjs
+          node --check tests/arena3d-native-gm-bridge.test.mjs
+          node --check tests/arena3d-production-gm-browser.mjs
+          node --check tests/arena3d-player-browser.mjs
+          node --check tests/arena3d-stage29-31.test.mjs
+          node --check tests/arena3d-stage30-crowd-core-e2e.mjs
+      - name: "Kiểm thử GĐ14–16 và chuyển động phép"
+        run: |
+          node --test tests/arena3d-stage43-gm-crowd-budget.test.mjs tests/arena3d-stage41-crowd-resolution.test.mjs tests/arena3d-stage40-player-pause.test.mjs tests/arena3d-stage39-main-first.test.mjs tests/arena3d-stage38-gallows.test.mjs tests/arena3d-stage37-gm-refresh.test.mjs tests/arena3d-gm-end.test.mjs tests/arena3d-production-gm-adapter.test.mjs tests/arena3d-player-public.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage33-parity.test.mjs tests/arena3d-stage26-28.test.mjs tests/arena3d-stage29-31.test.mjs tests/arena3d-stage22-frame-pacing.test.mjs tests/arena3d-stage19-21.test.mjs tests/arena3d-stage18-performance.test.mjs tests/arena3d-stage17-undo.test.mjs tests/arena3d-stage14-dynamic.test.mjs tests/arena3d-stage15-voice.test.mjs tests/arena3d-stage11-core-bridge.test.mjs tests/arena3d-stage12-audio.test.mjs tests/arena3d-stage13-performance.test.mjs tests/arena3d-stage5-performance.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-stage10-roles.test.mjs tests/arena3d-stage8-director.test.mjs
+      - name: "Xác minh GMWW nguồn/bundle không lệch sau bridge Arena 3D"
+        run: |
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: "Chỉ dry-run cấu hình STAGING, tuyệt đối không deploy"
+        run: npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc --dry-run
+
+  deploy-stage14-preview:
+    name: "GĐ14–34: STAGING, WebKit/Chrome, Core 30"
+    needs: verify-stage14
+    if: >-
+      (github.ref == 'refs/heads/feature/arena3d-stage14-16-dynamic-artifacts-audio' ||
+      github.ref == 'refs/heads/feature/arena3d-g39-main-first-candidate') &&
+      ((github.event_name == 'workflow_dispatch' && inputs.deploy_stage14 == true) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-arena3d-staging]')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: "Deploy Worker nghiên cứu STAGING, không Production"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          export DEPLOY_STARTED_MS="$(node -p 'Date.now()')"
+          # Cloudflare can transiently fail its assets-upload-session with 10013.
+          # Retry ONLY that known transient error. Still require confirmed fresh 100%-rollout below.
+          for attempt in 1 2 3; do
+            set +e
+            npx wrangler deploy --config wrangler.arena3d-stage14-staging.jsonc 2>&1 | tee /tmp/arena3d-stage14-wrangler.log
+            WRANGLER_EXIT=${PIPESTATUS[0]}
+            set -e
+            if [ "$WRANGLER_EXIT" -eq 0 ] || grep -q 'code: 10007' /tmp/arena3d-stage14-wrangler.log; then break; fi
+            if [ "$attempt" -lt 3 ] && grep -q 'code: 10013' /tmp/arena3d-stage14-wrangler.log; then
+              echo "Cloudflare assets-upload-session lỗi tạm thời 10013; thử lại ($attempt/3)"
+              sleep $((attempt * 8))
+              continue
+            fi
+            echo "Wrangler thất bại trước khi có xác nhận Cloudflare"
+            exit "$WRANGLER_EXIT"
+          done
+          CF_URL="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-arena3d-stage14-staging"
+          curl --fail-with-body -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$CF_URL/deployments" > /tmp/arena3d-stage14-deployments.json
+          node -e '
+            const data=require("/tmp/arena3d-stage14-deployments.json");
+            const item=data.result?.deployments?.[0];
+            const started=Number(process.env.DEPLOY_STARTED_MS);
+            if(!data.success||!item||Date.parse(item.created_on)<started-10000||
+              !item.versions?.some(v=>v.percentage===100))
+              throw Error("Cloudflare chưa xác nhận triển khai Worker GĐ14–16 mới nhất");
+            console.log("Cloudflare đã xác nhận version GĐ14–16:",item.versions[0].version_id);
+          '
+          curl --fail-with-body -sS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"enabled":true,"previews_enabled":false}' "$CF_URL/subdomain" > /tmp/arena3d-stage14-subdomain.json
+          node -e '
+            const data=require("/tmp/arena3d-stage14-subdomain.json");
+            if(!data.success||data.result?.enabled!==true)
+              throw Error("Chưa bật được workers.dev cho riêng GĐ14–16");
+            console.log("workers.dev GĐ14–16 đã bật; Production và GĐ6 không thay đổi");
+          '
+      - name: "Chuẩn bị trình duyệt Chrome và WebKit giả lập iPhone"
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps webkit
+      - name: "Kiểm thử STAGING GĐ14–16: 6–30 Character, nghi lễ, Chrome và WebKit"
+        run: node tests/arena3d-stage14-browser.mjs
+      - name: "GM live Core trên STAGING: bearer, phòng thật, WebKit và ẩn chế độ thử"
+        run: node tests/arena3d-production-gm-browser.mjs
+      - name: "Player 3D: cảnh công khai, WebKit iPhone và lá vai Core"
+        run: node tests/arena3d-player-browser.mjs
+      - name: "GĐ13: hai client thực, phân quyền Core, GM làm phép, reconnect và bỏ phiếu"
+        run: node tests/arena3d-stage16-standard-core-e2e.mjs
+      - name: "GĐ16: Core thật — Vai Trò tự tạo và Artifact 3D"
+        run: node tests/arena3d-stage16-dynamic-core-e2e.mjs
+      - name: "GM 3D thực tế: đủ 30 người, phát Vai, Đêm/Ngày, Lên Giàn, kết thúc bằng nút GM"
+        run: node tests/arena3d-stage30-crowd-core-e2e.mjs
+      - name: "Ghi nhận Preview GĐ14–16"
+        run: |
+          echo "Preview GĐ14–16: https://gmww-arena3d-stage14-staging.williampham0702.workers.dev/village/arena-3d/live.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "Chưa phải kiểm thử FPS/pin/nhiệt trên iPhone vật lý. Không Production." >> "$GITHUB_STEP_SUMMARY"

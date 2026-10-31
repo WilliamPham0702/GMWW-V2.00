@@ -2,14 +2,23 @@
 // Geometry reused across up to 30 actors; a fixed 4 draw calls when casting.
 // Never determines gameplay, roles, results, permissions, or target identities.
 export const SPELL_VFX_VERSION='arena-spell-glyph-v1';
+import {ritualArt,ritualFrame,ritualPearlPoint,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 export const SPELL_KINDS=Object.freeze(['shield','inspect','heal','attack','vote']);
 const COLORS=Object.freeze({
   shield:'#70f2ec',inspect:'#cab9ff',heal:'#74f1b6',attack:'#fd9ac7',vote:'#ffdfa0'
 });
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
+// Decorative and bounded variation per Core-confirmed action.
+// Keep all hues in a marine cyan/blue/lavender palette; never imply gameplay results.
+export function spellActionAccent(signature){
+  if(!signature||!Number.isFinite(signature.accentHue))return null;
+  const phase=((Math.floor(signature.accentHue)%360)+360)%360/360;
+  const streaks=Number.isFinite(signature.streakCount)?Math.round(signature.streakCount):5;
+  return Object.freeze({hue:0.47+phase*.18,pearls:clamp(5+streaks,5,12)});
+}
 export function spellAppearance(kind){
-  if(!SPELL_KINDS.includes(kind))return null;
-  return {kind,color:COLORS[kind],
+  const art=ritualArt(kind);if(!art)return null;
+  return {kind,color:art.color,motif:art.motif,
     symbol:{shield:'shell-shield',inspect:'seer-star',heal:'tide-lotus',attack:'moon-flare',vote:'golden-glyph'}[kind]};
 }
 export function createArenaSpellVfx(THREE,root){
@@ -37,7 +46,7 @@ export function createArenaSpellVfx(THREE,root){
   pearls.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   pearls.name='arena-spell-pearls';group.add(pearls);
   const matrix=new THREE.Matrix4(),quaternion=new THREE.Quaternion(),
-    scale=new THREE.Vector3(),position=new THREE.Vector3(),color=new THREE.Color();
+    scale=new THREE.Vector3(),position=new THREE.Vector3(),color=new THREE.Color(),accentColor=new THREE.Color();
   let active=false,reducedMotion=false,lowPower=false,kind=null;
   function setReducedMotion(value){reducedMotion=value===true}
   function setLowPower(value){lowPower=value===true}
@@ -46,7 +55,7 @@ export function createArenaSpellVfx(THREE,root){
     for(const ring of rings)ring.visible=false;
     glow.visible=false;pearls.count=0;
   }
-  function update({type,from,to,start,end},now){
+  function update({type,from,to,start,end,signature=null},now){
     if(!SPELL_KINDS.includes(type)||!from||!to||!Number.isFinite(start)||!Number.isFinite(end)||
       now<start||now>=end){
       clear();return false;
@@ -56,28 +65,31 @@ export function createArenaSpellVfx(THREE,root){
     }
     kind=type;active=true;
     const remaining=clamp((end-now)/Math.max(1,end-start),0,1);
-    const pulse=reducedMotion?1:1+.08*Math.sin(now*.009);
-    color.set(COLORS[type]);
+    const ritual=ritualFrame(type,now,{start,end,reducedMotion});
+    const pulse=ritual.pulse;
+    color.set(ritual.color);
+    const accent=spellActionAccent(signature);
+    if(accent){accentColor.setHSL(accent.hue,.72,.58);color.lerp(accentColor,.28);}
     for(const [i,ring] of rings.entries()){
       ring.visible=true;ring.material.color.copy(color);
       ring.material.opacity=(reducedMotion?.48:.68)*Math.min(1,remaining*5);
       ring.position.set(i?from.x:to.x,(i?from.y:to.y)-.45,i?from.z:to.z);
-      ring.rotation.z=reducedMotion?0:now*.0018*(i?1:-1);
-      ring.scale.setScalar(pulse*(i?.72:1.03));
+      ring.rotation.z=(i?ritual.casterRingRotation:ritual.targetRingRotation)+(signature?.orbitalPhase||0);
+      ring.rotation.x=-Math.PI/2+ritual.ringTilt;
+      ring.scale.setScalar(pulse*(i?.72:1.03)*(signature?.impactScale||1));
     }
     glow.visible=true;glow.position.set(to.x,to.y,to.z);
-    glow.scale.setScalar((reducedMotion?.85:1.06+.14*Math.sin(now*.008))*Math.min(1,remaining*4));
+    glow.scale.setScalar(ritual.glowScale*(signature?.impactScale||1)*Math.min(1,remaining*4));
     glow.material.color.copy(color);glow.material.opacity=.53*remaining;
-    const count=reducedMotion?4:lowPower?7:maxPearls;
+    const count=reducedMotion?4:lowPower?7:(accent?accent.pearls:maxPearls);
     pearls.count=count;pearls.material.color.copy(color);
     pearls.material.opacity=reducedMotion?.55:.85*remaining;
     for(let i=0;i<count;i++){
-      const ratio=i/count,angle=ratio*Math.PI*2+(reducedMotion?0:now*.003);
-      const ringRadius=(i%2? .61:.8)*(reducedMotion?1:pulse);
-      const travel=reducedMotion?.5:(now-start)/(Math.max(1,end-start));
-      const x=to.x+Math.cos(angle)*ringRadius,z=to.z+Math.sin(angle)*ringRadius;
-      const y=to.y-.5+.28*Math.sin(angle*2+travel*7);
-      position.set(x,y,z);scale.setScalar(.65+(i%3)*.19);
+      const art=ritualPearlPoint(type,i,count,now,{start,end,reducedMotion});
+      const a=signature?.orbitalPhase||0;
+      position.set(to.x+art.x*Math.cos(a)-art.z*Math.sin(a),to.y-.5+art.y,
+        to.z+art.x*Math.sin(a)+art.z*Math.cos(a));
+      scale.setScalar(art.scale);
       matrix.compose(position,quaternion,scale);
       pearls.setMatrixAt(i,matrix);
     }
@@ -90,6 +102,7 @@ export function createArenaSpellVfx(THREE,root){
     ringGeometry.dispose();glyphGeometry.dispose();pearlGeometry.dispose();orbGeometry.dispose();
   }
   return {update,clear,setReducedMotion,setLowPower,dispose,
+    ritualArtVersion:RITUAL_ART_VERSION,
     get active(){return active},get effectKind(){return kind},
     get visiblePearls(){return pearls.count},get drawBudget(){return 4}};
 }
