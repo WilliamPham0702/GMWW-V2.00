@@ -4152,9 +4152,9 @@ function detect(){
   // Require immutable merged Player source and precisely four CI/docs paths.
   if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
     try{
-      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\\n').filter(Boolean);
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
       const changes=rows.map(row=>{
-        const [status,path]=row.split('\\t');
+        const [status,path]=row.split('\t');
         return {status,path,
           before:status==='M'?git('show','HEAD^1:'+path):null,
           after:['A','M'].includes(status)?fs.readFileSync(path,'utf8'):null};
