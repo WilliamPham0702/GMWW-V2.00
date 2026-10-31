@@ -54,7 +54,7 @@ jobs:
           // Fail-closed: docs-only means ONLY ordinary Markdown inside docs/, never code or workflow files.
           const docsOnly = changed.length > 0 && changed.every(c => ['A','M'].includes(c.status) && /^docs\/[A-Za-z0-9/_-]+\.md$/.test(c.path));
           // This exact two-file CI-contract change cannot affect gameplay/Worker assets.
-          const ciOnly = changed.length === 2 && changed.every(c => ['A','M'].includes(c.status) && ['.github/workflows/check-pr-preview-github.yml','tests/github-actions-pr-preview-ci.test.mjs'].includes(c.path)) && new Set(changed.map(c => c.path)).size === 2;
+          const ciOnly = changed.length === 4 && changed.every(c => ['A','M'].includes(c.status) && ['.github/workflows/check-pr-preview-github.yml','tests/github-actions-pr-preview-ci.test.mjs','.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'].includes(c.path)) && new Set(changed.map(c => c.path)).size === 4;
           appendFileSync(process.env.GITHUB_OUTPUT,'oracle_only='+String(only)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'docs_only='+String(docsOnly)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'preview_ci_only='+String(ciOnly)+'\n');
