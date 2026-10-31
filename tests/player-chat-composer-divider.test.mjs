@@ -11,7 +11,7 @@ test('expanded Online chat has a subtle 1px divider above the message composer',
   assert.equal(source.split(rule).length-1,1,'One scoped divider rule');
   assert.ok(source.indexOf(rule)>source.indexOf('#gmwwChatPanel.open #gmwwChatLines'),'Divider belongs to expanded message list/composer styles');
   assert.match(source,/#gmwwChatPanel form\{display:flex;gap:4px;padding:3px\}/,'Composer layout unchanged');
-  assert.match(source,/<div id=\\"gmwwChatLines\\" role=\\"log\\"><\/div><div id=\\"gmwwChatHelp\\"><\/div><form id=\\"gmwwChatForm\\">/,'Message list is above the composer');
+  assert.match(source,/<div id="gmwwChatLines" role="log"><\/div><div id="gmwwChatHelp"><\/div><form id="gmwwChatForm">/,'Message list is above the composer');
 });
 
 test('shipped Player Web bundle includes the composer divider',()=>{
