@@ -35,6 +35,8 @@ jobs:
           ! grep -Eq '^/[ *]+https?://' infra/pages/gamemasoi/_redirects
       - name: Install pinned Worker dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install pinned isolated WebSocket test client
+        run: npm install --no-save --no-package-lock --ignore-scripts --no-audit --no-fund ws@8.18.3
       - name: Start local Worker and Pages gateway; no Production data
         shell: bash
         env:
