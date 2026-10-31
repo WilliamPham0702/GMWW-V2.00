@@ -137,6 +137,14 @@ jobs:
               SKIP_AUTO_RELEASE=true
               echo 'Oracle external STAGING preflight only: NO Runtime release.' >> "$GITHUB_STEP_SUMMARY"
             fi
+            # Oracle STAGING SQLite fixture-only code/CI does not publish a Runtime.
+            ORACLE_SQLITE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(oracle-staging/sqlite-fixture-adapter([.]test)?[.]mjs|[.]github/workflows/(check-oracle-staging-bootstrap|github-runtime-ota|check-pr-preview-github)[.]yml|docs/architecture/oracle-staging-bootstrap-20261031[.]md|tests/github-actions-pr-preview-ci[.]test[.]mjs)$' || true)
+            if [ -n "$CHANGED" ] && [ -z "$ORACLE_SQLITE_UNRELATED" ] &&
+               printf '%s\n' "$CHANGED" | grep -Fxq 'oracle-staging/sqlite-fixture-adapter.mjs' &&
+               printf '%s\n' "$CHANGED" | grep -Fxq 'oracle-staging/sqlite-fixture-adapter.test.mjs'; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Oracle SQLite fixture-only adapter: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
             # CI-only Runtime workflow and Oracle gate maintenance never auto-publish a duplicate Runtime.
             RUNTIME_CI_RECOVERY_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(github-runtime-ota|check-oracle-staging-bootstrap)[.]yml)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$RUNTIME_CI_RECOVERY_UNRELATED" ] &&
