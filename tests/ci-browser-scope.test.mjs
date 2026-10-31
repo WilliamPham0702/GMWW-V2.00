@@ -835,7 +835,7 @@ test('PR649 V3.280 postmerge CI repair: exactly five CI-only paths',()=>{
     '.github/workflows/deploy-production.yml',
     'tests/ci-browser-scope.test.mjs'
   ];
-  const changes=paths.map(path=>modified(path,'reviewed previous CI',readFileSync(path,'utf8')));
+  const changes=paths.map(path=>modified(path,path==='.github/scripts/ci-browser-scope.mjs'?'function isPR645PostmergeReleaseScope(changes)':'reviewed previous CI',readFileSync(path,'utf8')));
   assert.equal(classifyBrowserScope(changes),'pr649-postmerge-release');
   assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing selector must fail closed');
   assert.equal(classifyBrowserScope([...changes,modified('src/index.js','previous','new gameplay')]),'full','Worker changed');

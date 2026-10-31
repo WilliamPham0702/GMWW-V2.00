@@ -2941,7 +2941,11 @@ function isPR649PostmergeReleaseScope(changes){
     ['.github/workflows/deploy-production.yml','# PR649 V3.280: exact CI-only postmerge Runtime release'],
     ['tests/ci-browser-scope.test.mjs','PR649 V3.280 postmerge CI repair: exactly five CI-only paths']
   ]);
-  return Array.isArray(changes)&&changes.length===markers.size&&
+  const previous=Array.isArray(changes)?changes.find(x=>x?.path==='.github/scripts/ci-browser-scope.mjs')?.before:null;
+  return typeof previous==='string'&&
+    previous.includes('function isPR645PostmergeReleaseScope(changes)')&&
+    !previous.includes('function isPR649PostmergeReleaseScope(changes)')&&
+    Array.isArray(changes)&&changes.length===markers.size&&
     new Set(changes.map(x=>x?.path)).size===markers.size&&
     changes.every(x=>x?.status==='M'&&markers.has(x.path)&&
       typeof x.after==='string'&&x.after.includes(markers.get(x.path)));
@@ -3274,7 +3278,7 @@ function detect(){
         const lines=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
         const changes=lines.map(line=>{
           const [status,path]=line.split('\t');
-          return{status,path,after:status==='M'?fs.readFileSync(path,'utf8'):null};
+          return{status,path,before:status==='M'?git('show',base+':'+path):null,after:status==='M'?fs.readFileSync(path,'utf8'):null};
         });
         if(isPR649PostmergeReleaseScope(changes)&&
            fs.readFileSync('server-game/current/GMWW.html','utf8').includes('id="gmwwShareCopy"')&&
