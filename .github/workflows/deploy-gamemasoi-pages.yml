@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
       - name: Validate same-SHA CI SUCCESS and isolated diff
         env:
@@ -48,13 +48,25 @@ jobs:
           git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
           test -s "$RUNNER_TEMP/changed.txt"
           FOUND=false
-          while IFS= read -r FILE; do
-            case "$FILE" in
-              infra/pages/gamemasoi/*) FOUND=true ;;
-              tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|.github/workflows/deploy-production.yml|.github/workflows/github-runtime-ota.yml|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md) ;;
-              *) echo "::error::Non-Pages commit; no deployment: $FILE"; exit 1 ;;
-            esac
-          done < "$RUNNER_TEMP/changed.txt"
+          # The original PR661 deployment was blocked by shallow HEAD^1 checkout.
+          # Permit one narrowly scoped CI-only recovery commit after PR661:
+          # exactly this workflow file, unchanged Pages source and required same-SHA CI.
+          if [ "$(cat "$RUNNER_TEMP/changed.txt")" = ".github/workflows/deploy-gamemasoi-pages.yml" ]; then
+            git merge-base --is-ancestor a4e70133286ec89a6c00c9b7aae2586deb5b8afd HEAD
+            git diff --quiet a4e70133286ec89a6c00c9b7aae2586deb5b8afd HEAD -- infra/pages/gamemasoi/ tests/gamemasoi-pages-link.test.mjs docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md
+            grep -Fxq '/ https://gmww-v2-00.williampham0702.workers.dev/ 302' infra/pages/gamemasoi/_redirects
+            grep -Fxq '/* https://gmww-v2-00.williampham0702.workers.dev/:splat 302' infra/pages/gamemasoi/_redirects
+            FOUND=true
+            echo 'PR661 Pages unchanged: exact workflow-only shallow-fetch recovery' >> "$GITHUB_STEP_SUMMARY"
+          else
+            while IFS= read -r FILE; do
+              case "$FILE" in
+                infra/pages/gamemasoi/*) FOUND=true ;;
+                tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|.github/workflows/deploy-production.yml|.github/workflows/github-runtime-ota.yml|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md) ;;
+                *) echo "::error::Non-Pages commit; no deployment: $FILE"; exit 1 ;;
+              esac
+            done < "$RUNNER_TEMP/changed.txt"
+          fi
           test "$FOUND" = true
       - name: Setup Node
         uses: actions/setup-node@v4
