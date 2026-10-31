@@ -100,7 +100,6 @@ jobs:
           node --test tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs
           node --test --test-name-pattern='PR603 account avatar' tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
-          node .github/scripts/assemble-player-page.mjs --verify
           node --check src/gmww-members-live.js
           node --check .github/scripts/ci-browser-scope.mjs
       - name: PR648 — xác minh reporter chỉ đo FPS khi bật chẩn đoán
@@ -1078,7 +1077,9 @@ jobs:
           node --check src/gmww-player-private-card-patch.js
           node .github/scripts/assemble-player-web.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
-          node --test tests/player-postgame-v1-room-retirement-20261031.test.mjs tests/player-web-first-paint-cleanup.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs tests/gm-call-player-auto-room-v354.test.mjs tests/gmww-player-page-source-asset-modules.test.mjs
+          node --check src/gmww-members-page.js
+          node --test tests/player-postgame-v1-room-retirement-20261031.test.mjs tests/player-web-first-paint-cleanup.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs tests/gm-call-player-auto-room-v354.test.mjs
+          node --test --test-name-pattern='G3.10: retired V1 room preview references are absent|G3.10: delivered Player HTML stays valid ES module' tests/gmww-player-page-source-asset-modules.test.mjs
           node --test --test-name-pattern='PR656 postgame:' tests/ci-browser-scope.test.mjs
       - name: Chỉ kiểm thử lỗi ván cũ hiện lại
         if: steps.scope.outputs.mode == 'postgame'
