@@ -3097,7 +3097,8 @@ function isPR652OnlineHotfixScope(changes){
   if(byPath.get('server-game/current/app.js').after!==assembled)return false;
   return true;
 }
-// PR672: exact 5-file DEMO -> Online transport change. Enforce the two Worker
+// PR672: exact 5-file DEMO -> Online transport change.
+// CI fixture validates both original main and merged-source branches. Enforce the two Worker
 // edits and one GM mode payload edit byte-for-byte; all other Worker changes
 // must continue to trigger full CI. Demo isolation stays server-authoritative.
 function isDemoOnlineTransport672Scope(changes){
