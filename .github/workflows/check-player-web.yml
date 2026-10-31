@@ -1051,6 +1051,16 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node --test tests/ci-browser-scope.test.mjs tests/audio-independent-role-name-20261031.test.mjs tests/audio-binding-integrity-20261027.test.mjs tests/audio-role-day-flow-20261027.test.mjs tests/demo-assassin-gallows-divination.test.mjs .github/runtime-release/verify-package.test.mjs
           test -s docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md
+      - name: PR659 — Runtime mới hơn Server, cảnh báo và chặn OTA hạ cấp
+        if: steps.scope.outputs.mode == 'runtime-server-drift'
+        run: |
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/runtime-server-drift-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/runtime-server-version-drift.test.mjs tests/runtime-server-drift-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-version-guard.test.mjs
+          test -s docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
