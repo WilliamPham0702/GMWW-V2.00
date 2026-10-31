@@ -1000,6 +1000,15 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --check .github/scripts/ci-browser-scope.mjs
       # END GMWW_PLAYER_LINK_SHARE_CHECK_637
+      - name: PR682 — verified GM Link mới; UI and bundle only
+        if: steps.scope.outputs.mode == 'gm-player-share-682'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/gm-player-web-share-link.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          test -s docs/releases/GMWW-GM-PLAYER-NEW-LINK-20261031.md
+
       # PR652 V3.280: reviewed gameplay already merged and accepted on real
       # iPhone. This exact postmerge CI repair retains Online, GM, Worker,
       # version, source assembly and fail-closed CI policy verification.

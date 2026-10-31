@@ -747,7 +747,7 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
           <div class="gmww-share-head"><h3 id="gmwwShareTitle">🔗 Chia sẻ Player Web</h3><span class="gmww-share-badge">Cloudflare</span></div>
           <fieldset class="gmww-share-choices" aria-label="Chọn link gửi cho người chơi">
             <label class="gmww-share-choice" for="gmwwShareLegacy"><input id="gmwwShareLegacy" type="radio" name="gmwwShareChoice" value="legacy" checked><span><b>Link hiện tại</b></span></label>
-            <label class="gmww-share-choice" for="gmwwShareAlias"><input id="gmwwShareAlias" type="radio" name="gmwwShareChoice" value="alias" disabled><span><b>Link mới</b><small id="gmwwShareAliasLabel">Chưa kích hoạt</small></span></label>
+            <label class="gmww-share-choice" for="gmwwShareAlias"><input id="gmwwShareAlias" type="radio" name="gmwwShareChoice" value="alias" disabled><span><b>Link mới</b><small id="gmwwShareAliasLabel">https://gamemasoi.pages.dev/</small></span></label>
           </fieldset>
           <div class="gmww-share-url" id="gmwwShareChosenUrl" aria-live="polite">https://gmww-v2-00.williampham0702.workers.dev/</div>
           <div class="gmww-share-actions">
@@ -1115,13 +1115,12 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
   'use strict';
   const oldUrl='https://gmww-v2-00.williampham0702.workers.dev/';
   const choiceKey='GMWW_PLAYER_SHARE_LINK_CHOICE_V1';
-  // This config MUST only be supplied by an approved, verified domain release.
-  // A DNS name mentioned in docs is NOT sufficient to enable the alias.
+  // Verified on iPhone and Cloudflare Pages Production via PR #676 (2026-10-31).
+  // Keep the approved hostname fixed; do not enable arbitrary remote aliases.
+  const approvedAliasUrl='https://gamemasoi.pages.dev/';
   function verifiedAlias(){
-    const config=window.GMWW_PLAYER_WEB_ALIAS_CONFIG;
-    if(!config||config.verified!==true)return '';
     try{
-      const parsed=new URL(String(config.url||''));
+      const parsed=new URL(approvedAliasUrl);
       if(parsed.protocol!=='https:'||parsed.username||parsed.password||
          parsed.search||parsed.hash||parsed.pathname!=='/'||parsed.origin===new URL(oldUrl).origin)return '';
       return parsed.origin+'/';

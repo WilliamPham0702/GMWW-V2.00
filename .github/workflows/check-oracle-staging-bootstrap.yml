@@ -40,6 +40,8 @@ jobs:
             assert.equal(count(needle),n,'duplicate or missing '+needle);
           }
           assert.ok(s.includes('Oracle LOCAL STAGING only: NO automatic Runtime release.'));
+          assert.ok(s.includes('RUNTIME_CI_RECOVERY_UNRELATED='));
+          assert.ok(s.includes('Runtime CI-only YAML guard: NO automatic Runtime release.'));
           assert.ok(s.includes('tests/pages-online-chat-reconnect-e2e[.]mjs'));
           NODE
       - name: Confirm bootstrap cannot mutate game or Production
