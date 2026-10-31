@@ -16,6 +16,8 @@ test('Online chat day: living players can message, dead, expelled, GM-banned and
     ['expelled',[{type:'expelled',loginId:'wolf_a',effectActive:true}]],
     ['mute',[{type:'status',statusId:'mute',loginId:'wolf_a',effectActive:true}]]
   ]){const p=chatPolicy({...base,rows});assert.equal(p.canRead,true,effect);assert.equal(p.canSend,false,effect)}
+  // A frozen participant wakes up with day chat restored, even if cleanup is delayed.
+  assert.equal(chatPolicy({...base,rows:[{type:'frozen',loginId:'wolf_a',effectActive:true}]}).canSend,true);
   assert.equal(chatPolicy({...base,bans:{wolf_a:true}}).canSend,false);
   assert.equal(chatPolicy({...base,rows:[{type:'status',statusId:'mute',loginId:'wolf_a',effectActive:false}]}).canSend,true);
   assert.equal(chatBlockedByEffects([{type:'status',statusId:'mute',loginId:'wolf_a',expiresAt:'2000-01-01T00:00:00Z'}],'MATCH','wolf_a').mute,false);

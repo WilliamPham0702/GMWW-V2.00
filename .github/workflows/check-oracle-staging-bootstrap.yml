@@ -26,6 +26,7 @@ jobs:
           node-version: '22'
       - run: node --check oracle-staging/server.mjs
       - run: node --test tests/oracle-staging-bootstrap.test.mjs
+      - run: node --test oracle-staging/sqlite-fixture-adapter.test.mjs
       - run: bash -n infra/oracle-staging/start-local.sh
       - run: node --test infra/oracle-staging/bootstrap.test.mjs
       - run: node --test infra/oracle-staging/probe-local.test.mjs

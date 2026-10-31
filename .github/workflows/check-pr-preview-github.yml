@@ -14,8 +14,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  oracle-scope:
+    name: Verify Oracle-only Preview exclusion (no gameplay changes)
+    runs-on: ubuntu-latest
+    outputs:
+      oracle_only: ${{ steps.scope.outputs.oracle_only }}
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+      preview_ci_only: ${{ steps.scope.outputs.preview_ci_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: scope
+        name: Exact allowlist; unknown changes require normal Preview
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {execFileSync} from 'node:child_process';
+          import {appendFileSync} from 'node:fs';
+          const changed=execFileSync('git',['diff','--name-status','--no-renames',process.env.BASE,process.env.HEAD],{encoding:'utf8'})
+            .trim().split('\n').filter(Boolean).map(line=>{
+              const tab=line.indexOf('\t');
+              return {status:line.slice(0,tab),path:line.slice(tab+1)};
+            });
+          const allowed=new Set([
+            'oracle-staging/sqlite-fixture-adapter.mjs',
+            'oracle-staging/sqlite-fixture-adapter.test.mjs',
+            '.github/workflows/check-oracle-staging-bootstrap.yml',
+            '.github/workflows/github-runtime-ota.yml',
+            '.github/workflows/check-pr-preview-github.yml',
+            'docs/architecture/oracle-staging-bootstrap-20261031.md',
+            'tests/github-actions-pr-preview-ci.test.mjs'
+          ]);
+          const only=changed.length===7&&new Set(changed.map(c=>c.path)).size===7&&changed.every(c=>allowed.has(c.path)&&['A','M'].includes(c.status));
+          // Fail-closed: docs-only means ONLY ordinary Markdown inside docs/, never code or workflow files.
+          const docsOnly = changed.length > 0 && changed.every(c => ['A','M'].includes(c.status) && /^docs\/[A-Za-z0-9/_-]+\.md$/.test(c.path));
+          // This exact two-file CI-contract change cannot affect gameplay/Worker assets.
+          const ciOnly = changed.length === 4 && changed.every(c => ['A','M'].includes(c.status) && ['.github/workflows/check-pr-preview-github.yml','tests/github-actions-pr-preview-ci.test.mjs','.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'].includes(c.path)) && new Set(changed.map(c => c.path)).size === 4;
+          appendFileSync(process.env.GITHUB_OUTPUT,'oracle_only='+String(only)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'docs_only='+String(docsOnly)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'preview_ci_only='+String(ciOnly)+'\n');
+          console.log(only?'Oracle SQLite-only: no Preview deploy.':docsOnly?'Docs-only: skip Worker build and Cloudflare Preview.':ciOnly?'Preview CI-only: local safety validation, no Cloudflare Preview.':'Gameplay or unknown scope: retain isolated Preview publication gate.');
+          NODE
   validate-preview:
     name: Validate isolated Preview without Cloudflare Builds
+    needs: oracle-scope
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -23,27 +70,41 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
+      - name: Docs-only CI-LITE gate (retains required policy check)
+        if: needs.oracle-scope.outputs.docs_only == 'true'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --check "$BASE" "$HEAD"
+          echo "PASS: documentation-only changes; CI Policy Gate remains required."
       - name: Node.js 22
+        if: needs.oracle-scope.outputs.docs_only != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
       - name: Install pinned dependencies without lifecycle scripts
+        if: needs.oracle-scope.outputs.docs_only != 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Assert Preview config cannot bind Production data
+        if: needs.oracle-scope.outputs.docs_only != 'true'
         run: node .github/scripts/guard-pr-preview-ci.mjs
       - name: Verify GitHub Actions Preview security contract
+        if: needs.oracle-scope.outputs.docs_only != 'true'
         run: node --test tests/github-actions-pr-preview-ci.test.mjs
       - name: Build Worker locally, without publishing or Cloudflare build minutes
+        if: needs.oracle-scope.outputs.docs_only != 'true'
         run: npm run check
 
   publish-preview:
     name: Publish isolated Worker Preview (never Production)
-    needs: validate-preview
+    needs: [validate-preview, oracle-scope]
     # Token use is limited to owner-authored PRs from this same repo.
     # Forks and other authors still receive token-free validation.
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
+    if: ${{ needs.validate-preview.result == 'success' && needs.oracle-scope.result == 'success' && needs.oracle-scope.outputs.oracle_only != 'true' && needs.oracle-scope.outputs.docs_only != 'true' && needs.oracle-scope.outputs.preview_ci_only != 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
