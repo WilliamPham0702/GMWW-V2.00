@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
       - name: Validate same-SHA CI SUCCESS and isolated diff
         env:
@@ -40,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
-          git fetch origin main --depth=1
+          git fetch --no-tags origin main
           test "$(git rev-parse origin/main)" = "$SOURCE_SHA"
           RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$SOURCE_SHA&per_page=100")
           PASS=$(printf '%s' "$RUNS" | jq -r --arg sha "$SOURCE_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .head_branch == "main" and .event == "push" and .name == "Check Player Web Worker")] | sort_by(.run_number) | last | .conclusion // "missing"')
@@ -51,7 +51,7 @@ jobs:
           while IFS= read -r FILE; do
             case "$FILE" in
               infra/pages/gamemasoi/*) FOUND=true ;;
-              tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|.github/workflows/deploy-production.yml|.github/workflows/github-runtime-ota.yml|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md) ;;
+              tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|.github/workflows/deploy-production.yml|.github/workflows/github-runtime-ota.yml|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md) ;;
               *) echo "::error::Non-Pages commit; no deployment: $FILE"; exit 1 ;;
             esac
           done < "$RUNNER_TEMP/changed.txt"
