@@ -1567,9 +1567,9 @@ async function renderAudio(){
       const meta=(file?file+' • ':'')+evidence;
       const nameLabel=nameStatus==='local'?'CÓ FILE TÊN':nameStatus==='remote'?'URL TÊN CHƯA THỬ':'CHƯA GẮN FILE TÊN';
       const nameBox=kind==='cards'?'<small class="gmww-audio-name-status">Tên: '+esc(String(a.nameFileName||''))+(a.nameFileName?' • ':'')+nameLabel+'</small>':'';
-      const namePlay=kind==='cards'?'<button type="button" data-audio-name-play title="Play Tên" aria-label="Play Tên">▶ Tên</button>':'';
+      const namePlay=kind==='cards'?'<button type="button" data-audio-name-play title="Play Tên" aria-label="Play Tên" style="width:43px;flex:0 0 43px;font-size:10px;font-weight:750;padding:0 2px">▶ Tên</button>':'';
       const fullLabel=kind==='cards'?'▶ Full':'▶';
-      return '<article class="audio-row'+(kind==='cards'?' audio-role-row':'')+'" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="Play Full" aria-label="Play Full">'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
+      return '<article class="audio-row'+(kind==='cards'?' audio-role-row':'')+'" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="Play Full" aria-label="Play Full"'+(kind==='cards'?' style="width:43px;flex:0 0 43px;font-size:10px;font-weight:750;padding:0 2px"':'')+'>'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
     }).join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
   $$('[data-audio-id]').forEach(row=>{
