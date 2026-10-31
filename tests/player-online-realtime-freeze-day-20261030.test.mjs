@@ -65,7 +65,7 @@ test('Chat displays a new-message cue on first remote message in an initially em
   assert.doesNotMatch(server,/this\.broadcast\(\{type:"chat_message"/);
 });
 
-test('Frozen players can chat and use day privileges after morning transition',()=>{
+test('Frozen players regain village chat at morning; role-action expiry remains separate',()=>{
   const meta={phase:'running',cyclePhase:'morning',cycleNight:1,matchId:'M',cycleKey:'morning-1'};
   const players={'member:alice':{loginId:'alice'}};
   const effect={id:'fx',type:'frozen',loginId:'alice',matchId:'M',night:1,cycleKey:'night-1',effectActive:true};
