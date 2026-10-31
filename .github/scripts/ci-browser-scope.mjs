@@ -3203,6 +3203,19 @@ function isDemoOnlineTransport672Scope(changes){
     notes.includes('DEMO dùng kết nối Online')&&notes.includes('Rollback');
 }
 // PR693 — exact six-file catalog safety change, never gameplay.
+// PR695 — exact catalog auto-refresh, never gameplay, IPA or Worker source.
+function isRuntimeCatalogAutoSyncScope(changes){
+ const allowed=new Set([".github/workflows/runtime-download-catalog.yml","tests/runtime-download-catalog.test.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/github-runtime-ota.yml"]);
+ if(!Array.isArray(changes)||changes.length!==allowed.size||new Set(changes.map(c=>c?.path)).size!==allowed.size||
+    changes.some(c=>c?.status!=='M'||!allowed.has(c.path)))return false;
+ const files=new Map(changes.map(c=>[c.path,String(c.after||'')]));
+ return files.get('.github/workflows/runtime-download-catalog.yml').includes("(github.event_name == 'push' && github.ref == 'refs/heads/main')")&&
+   files.get('.github/workflows/runtime-download-catalog.yml').includes('needs: verify')&&
+   files.get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'runtime-catalog-auto-sync'")&&
+   files.get('.github/workflows/deploy-production.yml').includes('Runtime download catalog links only: skip Production deploy.')&&
+   files.get('.github/workflows/github-runtime-ota.yml').includes('Download catalog only: no Runtime package release.')&&
+   files.get('tests/runtime-download-catalog.test.mjs').includes('catalog autosync selector fails closed for any source file change');
+}
 function isRuntimeCatalogSafetyScope(changes){
  const allowed=new Set([".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/scripts/update-runtime-download-catalog.mjs","tests/runtime-download-catalog.test.mjs",".github/workflows/deploy-production.yml",".github/workflows/github-runtime-ota.yml"]);
  if(!Array.isArray(changes)||changes.length!==allowed.size||new Set(changes.map(c=>c?.path)).size!==allowed.size||
@@ -3216,6 +3229,7 @@ function isRuntimeCatalogSafetyScope(changes){
    files.get('tests/runtime-download-catalog.test.mjs').includes('QA safety selector fails closed for gameplay changes');
 }
 function classifyBrowserScope(changes){
+  if(isRuntimeCatalogAutoSyncScope(changes))return 'runtime-catalog-auto-sync';
   if(isRuntimeCatalogSafetyScope(changes))return 'runtime-catalog-qa-safety';
   if(isGMShareVerifiedAlias682Scope(changes))return 'gm-player-share-682';
   if(isDemoOnlineTransport672Scope(changes))return 'demo-online-transport-672';
@@ -3541,6 +3555,19 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // PR695 verify exact catalog-only changes before full-suite routing.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const changes=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean).map(line=>{
+          const [status,path]=line.split('\t');
+          return{status,path,after:status==='M'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isRuntimeCatalogAutoSyncScope(changes))return{mode:'runtime-catalog-auto-sync',reason:'Exact link-only catalog auto sync, no game source changes'};
+      }
+    }catch{} // Unverified diff -> normal full CI.
+  }
   // Verify catalog-only diff BEFORE legacy full-suite selection, also after main merge.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
