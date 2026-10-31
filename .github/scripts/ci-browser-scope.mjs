@@ -3338,7 +3338,78 @@ function isPlayerToastPostmergeScope(changes){
   }catch{return false}
 }
 
+// CI-LITE P0 Online: exact file whitelists; any extra source/Worker/permissions
+// change remains on the full required CI path, never silently bypassed.
+function onlineP0ExactChanges(changes, expected){
+  if(!Array.isArray(changes)||changes.length!==expected.length ||
+      new Set(changes.map(c=>c.path)).size!==expected.length)return false;
+  const allowed=new Map(expected);
+  return changes.every(c=>allowed.get(c.path)===c.status &&
+    (c.status!=='M'||typeof c.before==='string')&&typeof c.after==='string');
+}
+function isOnlineP0Player699Scope(changes){
+  const wanted=[
+    ['src/gmww-members-live.js','M'],
+    ['src/player-web-src/20-village-and-profile.part','M'],
+    ['src/player-web-src/35-online-chat.part','M'],
+    ['tests/online-player-fire-turn-dead-ui-20261031.test.mjs','A']
+  ];
+  if(!onlineP0ExactChanges(changes,wanted))return false;
+  const by=new Map(changes.map(c=>[c.path,c.after]));
+  return by.get('src/player-web-src/20-village-and-profile.part').includes('gmwwOnlineTurnEffects(state.onlineActions||[])')&&
+    ['gmwwOnlineTurnEffects(offers)','CHAT_DEAD','CHAT_FROZEN','gmwwOnlinePlaceAtFire(dock)']
+      .every(token=>by.get('src/player-web-src/35-online-chat.part').includes(token))&&
+    by.get('tests/online-player-fire-turn-dead-ui-20261031.test.mjs').includes('fire action offers stay visible');
+}
+function isOnlineP0GmChat700Scope(changes){
+  const wanted=[
+    ['server-game/current/GMWW.html','M'],
+    ['server-game/current/app.js','M'],
+    ['server-game/src/45-online-chat.part','M'],
+    ['tests/gm-online-chat-footer-after-undo-20261031.test.mjs','A'],
+    ['tests/player-online-realtime-freeze-day-20261030.test.mjs','M']
+  ];
+  if(!onlineP0ExactChanges(changes,wanted))return false;
+  const by=new Map(changes.map(c=>[c.path,c.after]));
+  const html=by.get('server-game/current/GMWW.html');
+  return html.includes('battleUndoFloat')&&html.includes('battleGMChatFloat')&&
+    by.get('server-game/src/45-online-chat.part').includes('gmwwGmChatDismiss')&&
+    by.get('server-game/current/app.js').includes('gmwwGmChatDismiss')&&
+    by.get('tests/gm-online-chat-footer-after-undo-20261031.test.mjs').includes('GM footer places Chat directly after Restore');
+}
+function isOnlineP0Audio701Scope(changes){
+  const wanted=[
+    ['src/gmww-members-live.js','M'],
+    ['src/index.js','M'],
+    ['src/player-web-src/30-rooms-and-realtime.part','M'],
+    ['tests/online-audio-ready-realtime-20261031.test.mjs','A']
+  ];
+  if(!onlineP0ExactChanges(changes,wanted))return false;
+  const by=new Map(changes.map(c=>[c.path,c.after]));
+  return by.get('src/index.js').includes('this.broadcast({type:"announcement_ready",serverTime:Date.now()})')&&
+    by.get('src/player-web-src/30-rooms-and-realtime.part').includes("d.type==='announcement_ready'")&&
+    by.get('tests/online-audio-ready-realtime-20261031.test.mjs').includes('GM broadcasts only recording availability');
+}
+function isOnlineP0CiRoutingScope(changes){
+  const wanted=[
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['tests/online-p0-ci-routing-20261031.test.mjs','A'],
+    ['docs/releases/GMWW-ONLINE-P0-CI-20261031.md','A']
+  ];
+  if(!onlineP0ExactChanges(changes,wanted))return false;
+  const by=new Map(changes.map(c=>[c.path,c.after]));
+  return by.get('.github/scripts/ci-browser-scope.mjs').includes('function isOnlineP0CiRoutingScope(changes)')&&
+    by.get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'online-p0-ci-routing'")&&
+    by.get('tests/online-p0-ci-routing-20261031.test.mjs').includes('Online P0 CI routing rejects extra high-risk changes')&&
+    by.get('docs/releases/GMWW-ONLINE-P0-CI-20261031.md').includes('Rollback');
+}
+
 function classifyBrowserScope(changes){
+  if(isOnlineP0CiRoutingScope(changes))return 'online-p0-ci-routing';
+  if(isOnlineP0Player699Scope(changes))return 'online-p0-player-699';
+  if(isOnlineP0GmChat700Scope(changes))return 'online-p0-gm-chat-700';
+  if(isOnlineP0Audio701Scope(changes))return 'online-p0-audio-701';
   if(isPlayerToastPostmergeScope(changes))return 'player-toast-postmerge';
   if(isCiLitePreviewWorkflowScope(changes))return 'ci-lite-preview-workflow';
   if(isPlayerToastCiRoutingScope(changes))return 'player-toast-ci-routing';
