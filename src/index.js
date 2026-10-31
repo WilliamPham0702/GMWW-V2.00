@@ -3875,10 +3875,17 @@ async function playerRoomVoiceApi(env,raw,request,mode,id=""){
   const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
   if(!session.ok)return session;
   const data=await session.json();
+  // Enforce byte limit even when the client omits Content-Length (chunked requests).
   if(mode==="send"&&Number(request.headers.get("content-length")||0)>340000)
     return j({ok:false,error:"VOICE_TOO_LARGE"},413);
-  const body=mode==="send"?await safeJson(request)||{}:{channel:new URL(request.url).searchParams.get("channel"),id};
-  if(mode==="send"&&typeof body?.data!=="string")return j({ok:false,error:"VOICE_INVALID_OR_TOO_LARGE"},400);
+  let body={channel:new URL(request.url).searchParams.get("channel"),id};
+  if(mode==="send"){
+    let bytes;
+    try{bytes=await request.arrayBuffer()}catch{return j({ok:false,error:"VOICE_INVALID_OR_TOO_LARGE"},400)}
+    if(bytes.byteLength>340000)return j({ok:false,error:"VOICE_TOO_LARGE"},413);
+    try{body=JSON.parse(new TextDecoder().decode(bytes))}catch{return j({ok:false,error:"VOICE_INVALID_OR_TOO_LARGE"},400)}
+    if(!body||typeof body.data!=="string")return j({ok:false,error:"VOICE_INVALID_OR_TOO_LARGE"},400);
+  }
   return roomStub(env,code).fetch("https://room.internal/player/chat/voice"+(mode==="get"?"/get":""),{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({loginId:data.member.loginId,channel:body.channel==="gm"?"gm":"room",
