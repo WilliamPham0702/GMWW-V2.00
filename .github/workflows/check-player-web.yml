@@ -51,7 +51,7 @@ jobs:
           node --test tests/oracle-staging-bootstrap.test.mjs
           grep -Fq 'Oracle STAGING-only bootstrap: SKIP Production Worker deploy.' .github/workflows/deploy-production.yml
           grep -Fq 'Oracle STAGING-only bootstrap: NO automatic Runtime release.' .github/workflows/github-runtime-ota.yml
-      - name: Cloudflare Pages alias only — HTTPS 302 and Worker/Runtime isolation
+      - name: Cloudflare Pages same-origin proxy only — Worker/Runtime isolation
         if: steps.scope.outputs.mode == 'pages-alias'
         run: |
           node --check .github/scripts/ci-browser-scope.mjs

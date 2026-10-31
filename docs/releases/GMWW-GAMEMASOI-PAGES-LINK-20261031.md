@@ -26,3 +26,11 @@
 - Commit Oracle, Worker, gameplay hoặc CI không liên quan: workflow Pages kết thúc thành công ở chế độ bỏ qua, không tạo deployment mới.
 - Giữ nguyên đúng hai quy tắc HTTPS 302 tới Cloudflare Production cũ, không đổi IPA/Runtime/DO/data.
 - Rollback: khôi phục workflow trước đó hoặc tắt project Pages; Worker cũ luôn độc lập.
+
+## Bản vá giữ tên miền Pages (31/10/2026)
+- Thay hai redirect 302 bằng gateway Pages Advanced Mode _worker.js; Service Binding GMWW_SERVER đến Worker Production gmww-v2-00.
+- HTTP, API, cookies, auth, WebSocket Upgrade giữ nguyên request origin và dùng chung backend/DO hiện có. Không chạm IPA, Oracle hay dữ liệu.
+- Chỉ redirect Location ngược về hostname Pages nếu upstream trả URL Worker cũ; các Location bên ngoài không thay đổi.
+- Mất binding trả 503, backend lỗi trả 502; fail closed, không đưa người chơi tự động về link cũ.
+- CI kiểm thử đúng scope; deploy Pages chỉ khi main cùng SHA có Check Player Web Worker SUCCESS; verify root=200, health=ok, WebSocket không Upgrade=426.
+- Rollback: khôi phục Pages deployment trước. Worker Production và link cũ độc lập.
