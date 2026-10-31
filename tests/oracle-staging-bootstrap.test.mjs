@@ -53,3 +53,28 @@ test('CLI requires explicit STAGING mode and protects public binding',()=>{
    assert.equal(r.status,2,r.stderr);
  }
 });
+
+// Oracle bootstrap release isolation contract; reject expanded source edits.
+test('Oracle bootstrap release isolation contract', async()=>{
+ const {readFileSync}=await import('node:fs');
+ const {classifyBrowserScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+ const files=[
+  'oracle-staging/server.mjs',
+  'tests/oracle-staging-bootstrap.test.mjs',
+  'docs/architecture/oracle-staging-bootstrap-20261031.md',
+  '.github/workflows/check-oracle-staging-bootstrap.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+ ];
+ const changes=files.map(path=>({path,status:/^(oracle-staging|tests|docs)\//.test(path)||path.endsWith('check-oracle-staging-bootstrap.yml')?'A':'M'}));
+ assert.equal(classifyBrowserScope(changes),'oracle-staging-bootstrap');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+ const worker=readFileSync('.github/workflows/deploy-production.yml','utf8');
+ const runtime=readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+ assert.match(worker,/ORACLE_UNRELATED/);
+ assert.match(worker,/Oracle STAGING-only bootstrap: SKIP Production Worker deploy[.]/);
+ assert.match(runtime,/ORACLE_UNRELATED/);
+ assert.match(runtime,/Oracle STAGING-only bootstrap: NO automatic Runtime release[.]/);
+});
