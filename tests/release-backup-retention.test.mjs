@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { planRetention, POLICY } from '../.github/scripts/release-backup-retention.mjs';
 
 const now = Date.parse('2026-10-31T08:00:00Z');
@@ -57,4 +58,17 @@ test('caps deletion count for safe incremental cleanup', () => {
   const result = plan(items);
   assert.equal(result.deletions.length, POLICY.maxDeletesPerRun);
   assert.equal(result.potentialBytes, POLICY.maxDeletesPerRun * 100000000);
+});
+
+test('infra-only merge cannot trigger Production Worker or Runtime OTA', () => {
+  const deploy = readFileSync('.github/workflows/deploy-production.yml', 'utf8');
+  const ota = readFileSync('.github/workflows/github-runtime-ota.yml', 'utf8');
+  for (const p of ['.github/workflows/github-release-backup-retention.yml',
+    '.github/scripts/release-backup-retention.mjs',
+    'tests/release-backup-retention.test.mjs',
+    'docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md']) {
+    assert.ok(deploy.includes(p), 'deploy whitelist missing ' + p);
+  }
+  assert.match(ota, /STORAGE_UNRELATED=/);
+  assert.match(ota, /Storage-only workflow maintenance: NO automatic Runtime release/);
 });
