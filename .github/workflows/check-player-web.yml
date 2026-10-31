@@ -1031,7 +1031,7 @@ jobs:
           node --check .github/scripts/runtime-server-drift-scope.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
-          node --test tests/runtime-server-version-drift.test.mjs tests/runtime-server-drift-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/update-manager.test.mjs tests/gmww-version-guard.test.mjs
+          node --test tests/runtime-server-version-drift.test.mjs tests/runtime-server-drift-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-version-guard.test.mjs
           test -s docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
