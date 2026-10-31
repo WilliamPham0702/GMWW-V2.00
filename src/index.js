@@ -3749,11 +3749,11 @@ export default {async fetch(request,env){
     return roomStub(env,code).fetch('https://room.internal/player/announcement',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({loginId:data.member.loginId,key:url.searchParams.get('key')})});
   }
   // Authenticated voice API; audio is never served as a public static URL.
-  const playerVoiceSend=url.pathname.match(/^\\/api\\/rooms\\/([A-Za-z0-9]+)\\/chat\\/voice$/);
+  const playerVoiceSend=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat\/voice$/);
   if(playerVoiceSend&&request.method==="POST")return playerRoomVoiceApi(env,playerVoiceSend[1],request,"send");
-  const playerVoiceRead=url.pathname.match(/^\\/api\\/rooms\\/([A-Za-z0-9]+)\\/chat\\/voice\\/([0-9a-f-]{36})$/i);
+  const playerVoiceRead=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat\/voice\/([0-9a-f-]{36})$/i);
   if(playerVoiceRead&&request.method==="GET")return playerRoomVoiceApi(env,playerVoiceRead[1],request,"get",playerVoiceRead[2]);
-  const gmVoiceRead=url.pathname.match(/^\\/api\\/gm\\/rooms\\/([A-Za-z0-9]+)\\/chat\\/voice\\/([0-9a-f-]{36})$/i);
+  const gmVoiceRead=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/voice\/([0-9a-f-]{36})$/i);
   if(gmVoiceRead&&request.method==="GET"){
     const code=normalizeRoomCode(gmVoiceRead[1]);
     if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
