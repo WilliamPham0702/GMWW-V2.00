@@ -887,7 +887,7 @@ test('PR652 V3.280 final selector ordering recovery: exact three CI-only files s
     'tests/ci-browser-scope.test.mjs'
   ];
   const verified=paths.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
-  assert.equal(classifyBrowserScope(verified),'pr652-postmerge-release');
+  assert.notEqual(classifyBrowserScope(verified),'pr652-postmerge-release','V3.282 must not reuse PR652 V3.280 focused release gate');
   assert.equal(classifyBrowserScope(verified.slice(1)),'full','missing selector fails closed');
   assert.equal(classifyBrowserScope([...verified,modified('src/index.js','before','gameplay changed')]),'full','gameplay cannot bypass broad CI');
   assert.equal(classifyBrowserScope([...verified,verified[0]]),'full','duplicate fails closed');
@@ -898,4 +898,55 @@ test('PR652 V3.280 final selector ordering recovery: exact three CI-only files s
   const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
   assert.match(deploy,/git merge-base --is-ancestor fa48216517e692924b47a936767369d0d654523c HEAD/);
   assert.match(deploy,/git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
+});
+
+
+test('PR654 V3.281 strict role-name audio release scope keeps unknown changes in full CI',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/scripts/prepare-update-channel.mjs',
+    '.github/workflows/check-gm-audio-role-day.yml',
+    '.github/workflows/check-player-web.yml',
+    'docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md',
+    'docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md',
+    'package-lock.json','package.json',
+    'server-game/current/GMWW.html','server-game/current/app.js',
+    'server-game/src/00-core-and-library.part',
+    'server-game/src/10-library-and-settings.part',
+    'server-game/src/30-village-and-setup.part',
+    'src/index.js','tests/audio-binding-integrity-20261027.test.mjs',
+    'tests/audio-independent-role-name-20261031.test.mjs',
+    'tests/demo-assassin-gallows-divination.test.mjs',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const added=new Set(['docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md',
+    'tests/audio-independent-role-name-20261031.test.mjs']);
+  const changes=paths.map(path=>{
+    const after=readFileSync(path,'utf8');
+    if(added.has(path))return {path,status:'A',before:null,after};
+    let before=after;
+    if(path==='src/index.js')before=after.replace('VERSION="V3.281"','VERSION="V3.280"');
+    else if(path==='server-game/src/00-core-and-library.part'||path==='server-game/current/app.js')
+      before=after.replace("const VERSION='3.281';","const VERSION='3.280';");
+    else if(path==='server-game/current/GMWW.html')
+      before=after.replace('<title>GMWW V3.281</title>','<title>GMWW V3.280</title>');
+    else if(path==='package.json'||path==='package-lock.json')
+      before=after.replaceAll('"version": "3.281.0"','"version": "3.280.0"');
+    else if(path==='.github/scripts/prepare-update-channel.mjs')
+      before=after.replace(/"V3\.281 PR654:[^"]+",/,'');
+    else if(path==='docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md')
+      before=after.slice(0,after.indexOf('\n\n## PR #654 — đóng gói ứng viên Runtime V3.281'));
+    return {path,status:'M',before,after};
+  });
+  // Additional recoverable-delete features invalidate the former exact release scope.
+  // Fall back to FULL CI; never relax the fail-closed release gate.
+  assert.equal(classifyBrowserScope(changes),'full');
+  assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='src/index.js')),'full');
+  assert.equal(classifyBrowserScope([...changes,modified('src/player-web-src/30-rooms-and-realtime.part','safe','changed')]),'full');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path==='src/index.js'?{...x,after:x.after.replace('UNDO_STATE_CHANGED','UNREVIEWED')}:x)),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path==='server-game/src/30-village-and-setup.part'?{
+    ...x,after:x.after.replace('function battleTurnAudioCue(', 'function unsafeNewGameLogic(){return true}\nfunction battleTurnAudioCue(')
+  }:x)),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path==='package.json'?{...x,after:x.after.replace('"version": "3.281.0"','"version": "3.282.0"')}:x)),'full');
 });

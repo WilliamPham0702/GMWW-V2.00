@@ -1,0 +1,47 @@
+name: PR659 Runtime Server Drift Safety
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server-game/current/app.js'
+      - 'server-game/src/10-library-and-settings.part'
+      - 'server-game/src/20-members-and-roster.part'
+      - 'tests/runtime-server-version-drift.test.mjs'
+      - 'tests/runtime-server-drift-scope.test.mjs'
+      - '.github/scripts/runtime-server-drift-scope.mjs'
+      - '.github/scripts/ci-browser-scope.mjs'
+      - '.github/workflows/check-runtime-server-version-drift.yml'
+      - '.github/workflows/check-player-web.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-server-drift:
+    name: Runtime/Server version, OTA downgrade and bundle safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify all affected source and metadata
+        run: |
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/runtime-server-drift-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+      - name: Run audited Runtime and OTA regression
+        run: |
+          node --test tests/runtime-server-version-drift.test.mjs tests/runtime-server-drift-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-version-guard.test.mjs
+      - name: Verify rollback notes and unchanged IPA
+        run: |
+          test -s docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md
+          test -s update-system/published-ipa.json
