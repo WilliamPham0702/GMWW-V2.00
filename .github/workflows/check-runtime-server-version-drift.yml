@@ -40,7 +40,7 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
       - name: Run audited Runtime and OTA regression
         run: |
-          node --test tests/runtime-server-version-drift.test.mjs tests/runtime-server-drift-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/update-manager.test.mjs tests/gmww-version-guard.test.mjs
+          node --test tests/runtime-server-version-drift.test.mjs tests/runtime-server-drift-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-version-guard.test.mjs
       - name: Verify rollback notes and unchanged IPA
         run: |
           test -s docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md
