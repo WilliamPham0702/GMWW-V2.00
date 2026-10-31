@@ -8844,3 +8844,17 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 #start #playBattleTop:has(#gmwwGMAdminDock){grid-template-columns:revert!important}
 
 #start #gmwwGMAdminDock button[data-gm-admin="open-chat"]{left:calc(100vw - 202px);font-size:32px!important}
+
+/* V3.281: compact, independent role-name and full-audio playback on iPhone. */
+.audio-role-row .audio-row-actions [data-audio-name-play],
+.audio-role-row .audio-row-actions [data-audio-play]{
+  width:48px;flex:0 0 48px;padding:0 3px;font-size:11px;font-weight:750;white-space:nowrap;
+}
+.audio-role-row .gmww-audio-name-status{color:#b9f5ef;overflow-wrap:anywhere}
+@media (max-width:420px){
+  .audio-role-row{gap:4px;padding:8px 6px}
+  .audio-role-row .audio-row-actions{gap:3px}
+  .audio-role-row .audio-row-actions [data-audio-name-play],
+  .audio-role-row .audio-row-actions [data-audio-play]{width:43px;flex-basis:43px;font-size:10px}
+  .audio-role-row .audio-row-actions .replace-audio{padding:0 6px}
+}
