@@ -3298,8 +3298,9 @@ export class RoomDurableObject extends DurableObject {
     // Server-only authenticated DM channel. Never deliver through public room chat or room state.
     if(requestedChannel==="gm"){
       const allowed=meta?.enabled!==false&&["running","role_delivery","lobby","waiting"].includes(String(meta?.phase||""))&&!!players["member:"+id];
-      const blocked=bans[id]===true;
-      const permission=allowed?{canRead:true,canSend:!blocked,channel:"gm:"+id,scope:"gm",reason:blocked?"CHAT_MUTED_GM":null}
+      // GM private chat remains available to every authenticated room member,
+      // including dead, expelled, frozen and muted players.
+      const permission=allowed?{canRead:true,canSend:true,channel:"gm:"+id,scope:"gm",reason:null}
         :{canRead:false,canSend:false,channel:null,scope:null,reason:"CHAT_NOT_IN_ROOM"};
       return{meta,players,rows,permission};
     }
