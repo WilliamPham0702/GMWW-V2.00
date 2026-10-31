@@ -52,6 +52,37 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
+      - name: Online P0 #699 — icon at campfire, own-turn effects, chat status
+        if: steps.scope.outputs.mode == 'online-p0-player-699'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/online-player-fire-turn-dead-ui-20261031.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-frozen-chat-day-20261031.test.mjs
+      - name: Online P0 #700 — GM Chat next to Restore, keep permissions
+        if: steps.scope.outputs.mode == 'online-p0-gm-chat-700'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --test tests/gm-online-chat-footer-after-undo-20261031.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/online-chat-authority.test.mjs
+      - name: Online P0 #701 — authenticated WebSocket audio, no private broadcast
+        if: steps.scope.outputs.mode == 'online-p0-audio-701'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/online-audio-ready-realtime-20261031.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/online-chat-authority.test.mjs tests/player-web-online-actions-20261028.test.mjs
+      - name: CI-only — Online P0 whitelist and unsafe changes fail closed
+        if: steps.scope.outputs.mode == 'online-p0-ci-routing'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/online-p0-ci-routing-20261031.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
       - name: PR702 — Player Web toast below top menu, away from Chat
         if: steps.scope.outputs.mode == 'player-toast-notice'
         run: |
