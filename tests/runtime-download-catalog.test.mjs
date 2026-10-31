@@ -41,3 +41,17 @@ test('reject non-repository scope and invalid input', () => {
   assert.throws(() => buildCatalog([], '../evil'));
   assert.throws(() => buildCatalog(null));
 });
+
+test('production and Runtime OTA guards include only the catalog file set', async () => {
+  const { readFileSync } = await import('node:fs');
+  const production = readFileSync(new URL('../.github/workflows/deploy-production.yml', import.meta.url), 'utf8');
+  const ota = readFileSync(new URL('../.github/workflows/github-runtime-ota.yml', import.meta.url), 'utf8');
+  for (const scope of [production, ota]) {
+    assert.ok(scope.includes("'.github/workflows/runtime-download-catalog.yml'"));
+    assert.ok(scope.includes("'.github/scripts/update-runtime-download-catalog.mjs'"));
+    assert.ok(scope.includes("'tests/runtime-download-catalog.test.mjs'"));
+    assert.ok(scope.includes('CATALOG_ONLY'));
+  }
+  assert.match(production, /SHOULD_DEPLOY=false\s+echo 'Runtime download catalog links only/);
+  assert.match(ota, /SKIP_AUTO_RELEASE=true\s+echo 'Download catalog only/);
+});
