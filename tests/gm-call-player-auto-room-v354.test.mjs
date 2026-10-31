@@ -93,6 +93,9 @@ test('Never auto-join unreserved, foreign, disabled or invalid rooms',async()=>{
 test('Player Web watcher runs on entry and during ongoing lobby polling; Player status remains a waiting room during GM setup',()=>{
   assert.ok(live.includes("finally{void followGmRoomCall()}"));
   assert.ok(live.includes("void followGmRoomCall()}"));
-  assert.ok(live.includes("if(phase==='lobby'||phase==='waiting')return Number(currentRoomPlayer()?.seatId||0)>0?'PHÒNG CHỜ · ĐÃ XẾP VỊ TRÍ':'PHÒNG CHỜ · CHỜ GM'"));
+  assert.ok(live.includes("if(phase==='lobby'||phase==='waiting'){"));
+  assert.ok(live.includes("if(stage==='seats')return'TẬP HỢP · SETUP GHẾ'"));
+  assert.ok(live.includes("if(['game','roles','deal'].includes(stage))return'CHUẨN BỊ VÁN MỚI'"));
+  assert.ok(live.includes("return Number(currentRoomPlayer()?.seatId||0)>0?'PHÒNG CHỜ · ĐÃ XẾP VỊ TRÍ':'PHÒNG CHỜ · CHỜ GM'"));
   assert.match(live,/if\(!state\.roomCode\)return'SẢNH CHỜ'/);
 });
