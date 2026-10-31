@@ -32,3 +32,13 @@ test('Player packaged script remains exact source and keeps GM menu',()=>{
   .replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(process.cwd()))+";\n");
  assert.equal(gmwwMembersLiveScript,body);
 });
+
+test('drag-and-drop keeps targets private and never bypasses Server authorization',()=>{
+ assert.match(chat,/function gmwwOnlineTargetAt\(x,y\)/);
+ assert.match(chat,/node\.setPointerCapture\?\.\(event\.pointerId\)/);
+ assert.match(chat,/gmwwOnlineTarget\(target\)/);
+ assert.match(chat,/if\(action\.blocked\)/);
+ assert.match(chat,/actionKey:action\.key,targetIds:pick\.targets/);
+ assert.match(chat,/function gmwwOnlinePlaceAtFire\(dock\)/);
+ assert.match(chat,/frame\.contentDocument\?\.querySelector\('\.fire'\)/);
+});
