@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const worker=fs.readFileSync('src/index.js','utf8');
+const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+test('GM broadcasts only recording availability after authorized save succeeds',async()=>{
+ const start=worker.indexOf('  async gmAnnouncement(request,body){');
+ const end=worker.indexOf('  async playerAnnouncement(body){',start);
+ assert.ok(start>=0&&end>start);
+ const notifications=[],Room=vm.runInNewContext('(class Room {'+worker.slice(start,end)+'})',{saveAnnouncement:async(_storage,body,key)=>({ok:body.key===key,status:body.key===key?200:409}),Date});
+ const room=new Room();room.ctx={storage:{}};
+ room.gmAuthorized=async()=>({ok:true,meta:{}});room.currentAnnouncement=async()=>({key:'turn-1'});
+ room.broadcast=x=>notifications.push(x);
+ const success=await room.gmAnnouncement({}, {key:'turn-1'});
+ assert.equal(success.ok,true);
+ assert.deepEqual(notifications.map(x=>x.type),['announcement_ready']);
+ assert.deepEqual(Object.keys(notifications[0]).sort(),['serverTime','type']);
+ const stale=await room.gmAnnouncement({}, {key:'turn-old'});
+ assert.equal(stale.ok,false);
+ assert.equal(notifications.length,1,'Stale audio must never be announced');
+ room.gmAuthorized=async()=>({ok:false,response:{status:401}});
+ await room.gmAnnouncement({}, {key:'turn-1'});
+ assert.equal(notifications.length,1,'Unauthorized upload must never be announced');
+});
+test('Player gets audio-ready signal through private state (no public audio content)',()=>{
+ assert.match(player,/d\.type==='announcement_ready'\)\{void refreshPrivateRole\(true\);return\}/);
+ assert.match(worker,/if\(result\.ok\)this\.broadcast\(\{type:"announcement_ready",serverTime:Date\.now\(\)\}\)/);
+ assert.doesNotMatch(worker,/this\.broadcast\(\{type:"announcement_ready"[^}]*audio/);
+});
