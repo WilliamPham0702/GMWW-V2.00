@@ -2,6 +2,8 @@
 // Safe, isolated Cloudflare Pages alias changes MUST NOT publish game Worker/Runtime.
 // Any unknown path fails closed (the existing game release gates remain active).
 import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 
 export const pagesOnlyPaths = new Set([
   '.github/scripts/pages-redirect-scope.mjs',
@@ -21,7 +23,7 @@ export function isPagesOnlyChange(files) {
     new Set(files).size === files.length;
 }
 
-if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const input = readFileSync(0, 'utf8');
   const paths = input.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   if (!isPagesOnlyChange(paths)) {
