@@ -44,6 +44,17 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR712 — authenticated voice recording, private playback and bounded storage
+        if: steps.scope.outputs.mode == 'player-voice-notes-712'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node --check src/gmww-chat-voice-policy.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/chat-voice-message.test.mjs tests/chat-voice-ci-routing.test.mjs tests/online-chat-authority.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          npm run check
       - name: CI-LITE Preview routing — focused validation, no unrelated gameplay tests
         if: steps.scope.outputs.mode == 'ci-lite-preview-workflow'
         run: |

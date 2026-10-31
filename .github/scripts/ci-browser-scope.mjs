@@ -3405,7 +3405,48 @@ function isOnlineP0CiRoutingScope(changes){
     by.get('docs/releases/GMWW-ONLINE-P0-CI-20261031.md').includes('Rollback');
 }
 
+// PR712: bounded audio messaging touches Worker auth, so run *focused security*
+// and real Worker validation rather than brittle, unrelated historic GM Runtime tests.
+// Fail closed for any additional files or wrong status.
+function isVoiceNotes712Scope(changes){
+  const exact=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['docs/releases/GMWW-PLAYER-VOICE-FREE-20261031.md','A'],
+    ['src/gmww-chat-voice-policy.js','A'],
+    ['src/gmww-members-live.js','M'],
+    ['src/index.js','M'],
+    ['src/player-web-src/35-online-chat.part','M'],
+    ['tests/chat-voice-message.test.mjs','A'],
+    ['tests/chat-voice-ci-routing.test.mjs','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==exact.size||
+    new Set(changes.map(c=>c.path)).size!==exact.size||
+    changes.some(c=>exact.get(c.path)!==c.status||
+      typeof c.after!=='string'||(c.status==='M'&&typeof c.before!=='string')))return false;
+  try{
+    const by=new Map(changes.map(c=>[c.path,c.after]));
+    const worker=by.get('src/index.js'),policy=by.get('src/gmww-chat-voice-policy.js');
+    const part=by.get('src/player-web-src/35-online-chat.part');
+    const bundle=JSON.parse(by.get('src/gmww-members-live.js')
+      .slice('export const gmwwMembersLiveScript = '.length).trim().replace(/;$/,''));
+    return worker.includes('async playerChatVoiceSend(body)')&&
+      worker.includes('async playerChatVoiceRead(body)')&&
+      worker.includes('await this.chatAccess(loginId,body?.channel)')&&
+      worker.includes('async gmChatVoiceRead(request,body)')&&
+      worker.includes('playerRoomVoiceApi(env,playerVoiceSend[1],request,"send")')&&
+      worker.includes('playerRoomVoiceApi(env,playerVoiceRead[1],request,"get"')&&
+      policy.includes('decodeVoiceMessage')&&policy.includes('bytes:240*1024')&&
+      part.includes('async function gmwwVoiceToggle()')&&part.includes('async function gmwwVoicePlay(')&&
+      bundle.includes(part)&&
+      by.get('tests/chat-voice-message.test.mjs').includes('voice-note payload validates compressed signature')&&
+      by.get('tests/chat-voice-ci-routing.test.mjs').includes('PR712 voice scope rejects unrelated source changes')&&
+      by.get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'player-voice-notes-712'")&&
+      by.get('docs/releases/GMWW-PLAYER-VOICE-FREE-20261031.md').includes('Rollback');
+  }catch{return false}
+}
 function classifyBrowserScope(changes){
+  if(isVoiceNotes712Scope(changes))return 'player-voice-notes-712';
   if(isOnlineP0CiRoutingScope(changes))return 'online-p0-ci-routing';
   if(isOnlineP0Player699Scope(changes))return 'online-p0-player-699';
   if(isOnlineP0GmChat700Scope(changes))return 'online-p0-gm-chat-700';
