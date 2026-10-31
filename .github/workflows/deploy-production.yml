@@ -48,6 +48,32 @@ jobs:
                 ;;
             esac
           done < /tmp/gmww-production-change-scope.txt
+          # PR659_RUNTIME_NO_AUTO_DEPLOY: exact UI/test/CI fix at V3.280.
+          # Skip same-version asset clobber while QA Runtime V3.283 is installed.
+          if [ "$SHOULD_DEPLOY" = true ] && [ "$(node -p 'require("./package.json").version')" = '3.280.0' ]; then
+            PR659_SCOPE=$(node -e '
+              const fs=require("fs");
+              const allowed=new Set([
+                ".github/scripts/ci-browser-scope.mjs",
+                ".github/scripts/runtime-server-drift-scope.mjs",
+                ".github/workflows/check-player-web.yml",
+                ".github/workflows/check-runtime-server-version-drift.yml",
+                ".github/workflows/deploy-production.yml",
+                "docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md",
+                "server-game/current/app.js",
+                "server-game/src/10-library-and-settings.part",
+                "server-game/src/20-members-and-roster.part",
+                "tests/runtime-server-drift-scope.test.mjs",
+                "tests/runtime-server-version-drift.test.mjs"
+              ]);
+              const paths=fs.readFileSync("/tmp/gmww-production-change-scope.txt","utf8").trim().split("\n");
+              process.stdout.write(paths.length===allowed.size && paths.every(p=>allowed.has(p)) ? "skip" : "deploy");
+            ')
+            if [ "$PR659_SCOPE" = skip ]; then
+              SHOULD_DEPLOY=false
+              echo 'PR659: chặn Production same-version V3.280 asset clobber; chỉ merge mã, chờ QA V3.283 tích hợp và phát hành mới có SHA-256.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
           # PR612: dedicated Worker-only release. Never use this generic Runtime OTA pipeline.
           if grep -Fxq 'docs/releases/GMWW-VILLAGE-REMOVE-OLD-ONLINE-20261029.md' /tmp/gmww-production-change-scope.txt &&
              grep -Fxq 'assets/village/index.html' /tmp/gmww-production-change-scope.txt; then
