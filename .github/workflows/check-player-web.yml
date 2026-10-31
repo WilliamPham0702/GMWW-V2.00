@@ -44,6 +44,15 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR693 — audited QA catalog release safety
+        if: steps.scope.outputs.mode == 'runtime-catalog-qa-safety'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/update-runtime-download-catalog.mjs
+          node --test tests/runtime-download-catalog.test.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/verify-gmww-versions.mjs
       - name: PR690 — focused Worker release gate recovery
         if: steps.scope.outputs.mode == 'pr677-worker-recovery'
         run: |
