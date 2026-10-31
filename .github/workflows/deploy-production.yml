@@ -2472,7 +2472,7 @@ jobs:
 
           # The GitHub-first publisher uses exactly the SAME immutable tag.
           # Reuse the original asset if already published; never upload a copy
-          # under gmww-v*, never --clobber an existing Runtime or release.
+          # under gmww-v*, never overwrite an existing Runtime or release.
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("assets/updates/latest.json"));fs.writeFileSync("/tmp/gmww-notes.md",m.releaseNotes.join("\n\n"))'
             gh release create "$TAG" "$DIR/$NAME" "$DIR/$NAME.sha256" "$MANIFEST" \
