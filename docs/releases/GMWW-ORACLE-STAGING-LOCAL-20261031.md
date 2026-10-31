@@ -26,3 +26,11 @@
 - Snapshot fixture xác thực SHA-256 và khóa nguồn bằng `GITHUB_SHA`, phiên bản engine, room code. Sau restart so sánh digest trước/sau; lệch dữ liệu phải **FAIL** CI, không hợp thức hoá failover.
 - Kho `GMWW_ORACLE_FIXTURE_ONLY=1` chỉ dùng thư mục STAGING có marker riêng, tự dọn sau kiểm thử. **Không phải** bản sao đầy đủ Durable Objects, không thay thế quy trình backup/migration hay đối soát private room state.
 - Oracle Node bootstrap vẫn trả 503; chưa chuyển backend. Rollback: revert thay đổi STAGING-only, không động đến Production/IPA/Runtime/Pages/dữ liệu.
+
+
+## Kiểm thử phân quyền và lưu phiên sau restart (31/10)
+- Chỉ trong fixture STAGING localhost: kiểm thử token đăng nhập đã cấp **vẫn hợp lệ sau khi khởi động lại** Workerd với cùng kho SQLite, không chỉ đăng nhập mới.
+- Token giả lưu tạm trong thư mục test có marker, mode 0600, không xuất log hoặc snapshot; CI xoá sau bài kiểm thử.
+- Bắt buộc từ chối token giả, truy vấn private room state không đăng nhập, chat không đăng nhập; room_state WebSocket không được rò rỉ GM token/hash mật khẩu hoặc quyền riêng.
+- Bài test sử dụng Worker engine chung, **không thay đổi quy tắc login Production**. Chưa xác minh Oracle VM thật, TLS, domain, backup, hay đối soát dữ liệu bí mật của hai backend. Node bootstrap vẫn `/readyz=503`, không bật failover.
+- Rollback: revert thay đổi chỉ trong STAGING/CI, không tác động Room/Production, IPA, Pages, Runtime.
