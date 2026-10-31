@@ -11,6 +11,7 @@ const paths=[
  '.github/scripts/ci-browser-scope.mjs',
  '.github/workflows/check-player-web.yml',
  '.github/workflows/check-runtime-server-version-drift.yml',
+ '.github/workflows/deploy-production.yml',
  'tests/runtime-server-drift-scope.test.mjs',
  'docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md'
 ];
