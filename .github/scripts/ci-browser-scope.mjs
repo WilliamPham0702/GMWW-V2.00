@@ -3228,7 +3228,7 @@ function isPr662V3284Scope(changes){
     [".github/workflows/check-player-web.yml","M","234dffaaaa620731accea255659e040e8f2d146f"],
     [".github/workflows/check-runtime-server-version-drift.yml","A","9f86962738ba71e255b95fd42bbcaa0d82139e90"],
     [".github/workflows/deploy-production.yml","M","de54dbff6adf02449cd06e1aeb25e4756b20644a"],
-    [".github/workflows/github-runtime-ota.yml","M","1d51c847ba92931de72436ee154026cd9eb42a4e"],
+    [".github/workflows/github-runtime-ota.yml","M","756132598f6085e443b75b095870ec5348787b3b"],
     ["docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md","A","405773851f93f79a28baf20c4417dff8be08ef40"],
     ["docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md","M","1448c7fbf65b412ba71c854005c17fa62f769768"],
     ["docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md","A","4757423f647faf71d6ef67f4d2637ca9a941d79d"],
