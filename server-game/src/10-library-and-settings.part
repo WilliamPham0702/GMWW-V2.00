@@ -242,78 +242,17 @@ async function audioBindingStatus(a,kind=audioKind){
 }
 async function audioHasFile(a,kind=audioKind){return (await audioBindingStatus(a,kind))!=='missing'}
 
-function gmwwAudioHasNameCut(a){return Number.isFinite(Number(a?.roleNameEnd))&&Number(a.roleNameEnd)>Number(a?.roleNameStart||0)}
-async function gmwwOpenAudioNameEditor(a){
-  if(!a||audioKind!=='cards')return;
-  const rec=await dbGet(audioBlobKey('cards',a.id)).catch(()=>null);
-  const blob=(rec?.blob instanceof Blob?rec.blob:null)||bundledAudioBlob(a);
-  const ownBlob=!!blob,src=blob?URL.createObjectURL(blob):String(a.url||'');
-  if(!src){alert('Vai trò '+a.name+' chưa được gắn file Audio. Vui lòng tải file trước khi cắt Tên.');return}
-  const overlay=document.createElement('div');overlay.className='gmww-audio-cut-backdrop';
-  overlay.innerHTML='<section class="gmww-audio-cut-dialog" role="dialog" aria-modal="true" aria-label="Chọn đoạn tên vai trò">'+
-    '<h3>✂ CẮT TÊN: '+esc(a.name)+'</h3><p>Chọn đoạn chỉ đọc tên vai trò, bỏ phần “ơi dậy đi”. Chạm đúp vào ô Tên để chỉnh lại.</p>'+
-    '<canvas width="520" height="95" aria-label="Sóng âm thanh"></canvas>'+
-    '<div class="gmww-audio-cut-values"><label>Bắt đầu <output id="gmwwNameStartLabel"></output><input type="range" id="gmwwNameStart" min="0" max="30" step="0.05"></label>'+
-    '<label>Kết thúc <output id="gmwwNameEndLabel"></output><input type="range" id="gmwwNameEnd" min="0.05" max="30" step="0.05"></label></div>'+
-    '<div class="gmww-audio-cut-actions"><button type="button" data-preview>▶ NGHE ĐOẠN TÊN</button><button type="button" data-save>LƯU ĐOẠN TÊN</button><button type="button" data-close>ĐÓNG</button></div>'+
-    '</section>';
-  document.body.append(overlay);
-  const audio=new Audio(src);audio.preload='metadata';
-  const $cut=id=>overlay.querySelector('#'+id),from=$cut('gmwwNameStart'),to=$cut('gmwwNameEnd');
-  let duration=30;
-  const drawSelection=()=>{
-    $cut('gmwwNameStartLabel').textContent=Number(from.value).toFixed(2)+'s';
-    $cut('gmwwNameEndLabel').textContent=Number(to.value).toFixed(2)+'s';
-    const canvas=overlay.querySelector('canvas'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
-    ctx.clearRect(0,0,w,h);ctx.fillStyle='#17475b';ctx.fillRect(0,0,w,h);
-    if(canvas._peaks){ctx.fillStyle='#67d4df';canvas._peaks.forEach((v,i)=>ctx.fillRect(i*w/canvas._peaks.length,(1-v)*h/2,Math.max(1,w/canvas._peaks.length),h*v));}
-    ctx.fillStyle='rgba(255,213,92,.28)';ctx.fillRect(Number(from.value)/duration*w,0,Math.max(2,(Number(to.value)-Number(from.value))/duration*w),h);
-    ctx.strokeStyle='#ffdd78';ctx.lineWidth=2;
-    [Number(from.value),Number(to.value)].forEach(v=>{ctx.beginPath();ctx.moveTo(v/duration*w,0);ctx.lineTo(v/duration*w,h);ctx.stroke()});
-  };
-  const clamp=changed=>{
-    if(changed==='start'&&Number(from.value)>=Number(to.value))to.value=Math.min(duration,Number(from.value)+0.05);
-    if(changed==='end'&&Number(to.value)<=Number(from.value))from.value=Math.max(0,Number(to.value)-0.05);
-    drawSelection();
-  };
-  from.value=String(Math.max(0,Number(a.roleNameStart)||0));
-  to.value=String(Math.max(Number(from.value)+.05,Number(a.roleNameEnd)||5));
-  from.addEventListener('input',()=>clamp('start'));to.addEventListener('input',()=>clamp('end'));
-  audio.onloadedmetadata=()=>{
-    if(Number.isFinite(audio.duration)&&audio.duration>.05)duration=audio.duration;
-    from.max=String(duration);to.max=String(duration);
-    from.value=String(Math.min(Number(from.value),duration-.05));
-    to.value=String(Math.min(Number(to.value),duration));
-    drawSelection();
-  };
-  audio.ontimeupdate=()=>{if(audio.currentTime>=Number(to.value))audio.pause()};
-  audio.onerror=()=>{overlay.querySelector('[data-preview]').textContent='⚠ Audio không thể phát';};
-  const ac=globalThis.AudioContext||globalThis.webkitAudioContext;
-  if(ac){(async()=>{let ctx;try{
-    ctx=new ac();
-    const bytes=blob?await blob.arrayBuffer():await (await fetch(src,{mode:'cors'})).arrayBuffer();
-    const decoded=await ctx.decodeAudioData(bytes),data=decoded.getChannelData(0),count=130,chunk=Math.max(1,Math.floor(data.length/count));
-    overlay.querySelector('canvas')._peaks=Array.from({length:count},(_,i)=>{let max=0;for(let j=i*chunk;j<Math.min(data.length,(i+1)*chunk);j+=8)max=Math.max(max,Math.abs(data[j]));return max});
-    if(overlay.isConnected)drawSelection();
-   }catch(_){ /* Audio remains editable even if remote CORS blocks waveform decoding. */ }
-   finally{if(ctx)void ctx.close().catch(()=>{})}
-  })();}
-  drawSelection();
-  const close=()=>{try{audio.pause();audio.removeAttribute('src');audio.load()}catch{}if(ownBlob)URL.revokeObjectURL(src);overlay.remove()};
-  overlay.querySelector('[data-close]').onclick=close;
-  overlay.addEventListener('click',e=>{if(e.target===overlay)close()});
-  overlay.querySelector('[data-preview]').onclick=()=>{
-    try{audio.pause();audio.currentTime=Number(from.value);void audio.play().catch(()=>alert('Không thể phát đoạn tên.'))}catch{alert('Không thể phát đoạn tên.')}
-  };
-  overlay.querySelector('[data-save]').onclick=()=>{
-    if(Number(to.value)<=Number(from.value)){alert('Điểm kết thúc phải sau điểm bắt đầu.');return}
-    a.roleNameStart=Number(from.value);a.roleNameEnd=Number(to.value);
-    saveState();close();renderAudio();
-  };
+// Audio Tên is an independent file (or URL), never an excerpt of the wake-up clip.
+async function gmwwRoleNameAudioStatus(a){
+  if(!a)return 'missing';
+  const rec=await dbGet(audioBlobKey('cards-name',a.id)).catch(()=>null);
+  if(rec?.blob instanceof Blob&&rec.blob.size>0)return 'local';
+  if(typeof a.nameUrl==='string'&&/^https:\/\//i.test(a.nameUrl.trim()))return 'remote';
+  return 'missing';
 }
 async function renderAudio(){
   const kind=audioKind,list=state.audio[kind]||[];
-  const resolved=await Promise.all(list.map(async a=>({a,status:typeof audioBindingStatus==='function'?await audioBindingStatus(a,kind):await audioHasFile(a,kind)?'local':'missing'})));
+  const resolved=await Promise.all(list.map(async a=>({a,status:typeof audioBindingStatus==='function'?await audioBindingStatus(a,kind):await audioHasFile(a,kind)?'local':'missing',nameStatus:kind==='cards'?await gmwwRoleNameAudioStatus(a):null})));
   if(kind!==audioKind)return; // Ignore late DB reads when user changed tab.
   const sourceStatus=id=>{
     const rows=resolved.filter(({a})=>String(a.targetId||a.id||'')===String(id));
@@ -355,25 +294,23 @@ async function renderAudio(){
           esc(label)+' <small>'+(linked?'✓ CÓ FILE':online?'! URL CHƯA THỬ':'＋ CHƯA GÁN')+'</small></button>';
       }).join('')+'</div></section>':'';
   $('#audioGrid').innerHTML=missingHtml+systemShortcuts+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
-    resolved.map(({a,status})=>{
+    resolved.map(({a,status,nameStatus})=>{
       const file=String(a.fileName||'').trim(),verified=status==='local'||status==='bundled';
       const evidence=verified?'CÓ FILE THỰC':status==='remote'?'URL CHƯA KIỂM TRA':'THIẾU FILE';
       const meta=(file?file+' • ':'')+evidence;
-      const nameBox=audioKind==='cards'?
-        '<button type="button" class="audio-name-cut" data-audio-name title="Nhấn đúp để chọn đoạn âm thanh chỉ đọc tên">Tên '+(gmwwAudioHasNameCut(a)?Number(a.roleNameStart||0).toFixed(1)+'–'+Number(a.roleNameEnd).toFixed(1)+'s':'· Chưa cắt')+'</button>':'';
-      return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
+      const nameLabel=nameStatus==='local'?'CÓ FILE TÊN':nameStatus==='remote'?'URL TÊN CHƯA THỬ':'CHƯA GẮN FILE TÊN';
+      const nameBox=kind==='cards'?'<small class="gmww-audio-name-status">Tên: '+esc(String(a.nameFileName||''))+(a.nameFileName?' • ':'')+nameLabel+'</small>':'';
+      const namePlay=kind==='cards'?'<button type="button" data-audio-name-play title="Play Tên" aria-label="Play Tên">▶ Tên</button>':'';
+      const fullLabel=kind==='cards'?'▶ Full':'▶';
+      return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="Play Full" aria-label="Play Full">'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
     }).join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
   $$('[data-audio-id]').forEach(row=>{
     const a=list.find(x=>String(x.id)===String(row.dataset.audioId));
-    $('[data-audio-play]',row).onclick=()=>playAudioItem(a);
-    $('[data-audio-replace]',row).onclick=()=>replaceAudioItem(a);
+    $('[data-audio-play]',row).onclick=()=>playAudioItem(a,kind,'full');
+    $('[data-audio-name-play]',row)?.addEventListener('click',()=>playAudioItem(a,'cards','name'));
+    $('[data-audio-replace]',row).onclick=()=>kind==='cards'?gmwwOpenRoleAudioReplace(a):replaceAudioItem(a,kind);
     $('[data-audio-delete]',row).onclick=()=>deleteAudioItem(a);
-    const button=$('[data-audio-name]',row);
-    if(button){
-      let lastTap=0;button.addEventListener('dblclick',e=>{e.preventDefault();e.stopPropagation();lastTap=0;void gmwwOpenAudioNameEditor(a)});
-      button.addEventListener('click',()=>{const now=Date.now();if(now-lastTap<400){lastTap=0;void gmwwOpenAudioNameEditor(a)}else lastTap=now});
-    }
   });
   $$('[data-system-sound-slot]').forEach(button=>button.onclick=()=>{
     const id=String(button.dataset.systemSoundSlot||'');
@@ -382,13 +319,15 @@ async function renderAudio(){
     else playFlashError('Chưa tìm được ô Audio Hệ Thống '+id);
   });
 }
-async function playAudioItem(a){
+async function playAudioItem(a,category=audioKind,slot='full'){
   if(!a)return;
-  const kind=audioKind;
+  const kind=category==='cards'&&slot==='name'?'cards-name':String(category||'system');
   const rec=await dbGet(audioBlobKey(kind,a.id)).catch(()=>null);
-  const blob=(rec?.blob instanceof Blob&&rec.blob.size?rec.blob:null)||bundledAudioBlob(a);
-  const localUrl=!!blob,src=blob?URL.createObjectURL(blob):String(a.url||'');
-  if(!src){alert('Audio chưa có file thực. Hãy gán file vào đúng mục.');return}
+  const blob=(rec?.blob instanceof Blob&&rec.blob.size?rec.blob:null)||
+    (kind==='cards-name'?null:bundledAudioBlob(a));
+  const localUrl=!!blob,src=blob?URL.createObjectURL(blob):
+    String(kind==='cards-name'?a.nameUrl||'':a.url||'');
+  if(!src){alert(kind==='cards-name'?'Chưa gắn file Audio Tên cho '+a.name+'.':'Audio chưa có file thực. Hãy gán file vào đúng mục.');return}
   const au=new Audio(src);au.preload='auto';
   let cleaned=false;
   const cleanup=()=>{if(cleaned)return;cleaned=true;if(localUrl)URL.revokeObjectURL(src)};
@@ -396,19 +335,70 @@ async function playAudioItem(a){
   au.onerror=()=>{cleanup();alert('File đã gán không phát được. Cần thay đúng file Audio.')};
   try{await au.play()}catch(e){cleanup();alert('Không phát được file Audio này. Kiểm tra quyền phát trên iPhone và file gốc.')}
 }
-function replaceAudioItem(a,category=audioKind){
+function gmwwOpenRoleAudioReplace(a){
   if(!a)return;
-  // Freeze the category while iOS Files picker is open. The old global audioKind
-  // could change before onchange, silently saving CHỐT SỐNG into a wrong tab.
+  const overlay=document.createElement('div');overlay.className='gmww-audio-cut-backdrop';
+  overlay.innerHTML='<section class="gmww-audio-cut-dialog" role="dialog" aria-modal="true" aria-label="Thay thế Audio Vai Trò">'+
+    '<h3>ÂM THANH • '+esc(a.name)+'</h3><p>File Tên và file Full độc lập. Không cắt tên từ file Full.</p>'+
+    '<div class="gmww-audio-cut-actions" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<button type="button" data-audio-upload-name>↑ File Tên</button>'+
+    '<button type="button" data-audio-link-name>🔗 URL Tên</button>'+
+    '<button type="button" data-audio-upload-full>↑ File Full</button>'+
+    '<button type="button" data-audio-link-full>🔗 URL Full</button>'+
+    '<button type="button" data-audio-clear-name>Bỏ file Tên</button>'+
+    '<button type="button" data-audio-close>Đóng</button></div></section>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.addEventListener('click',event=>{if(event.target===overlay)close()});
+  overlay.querySelector('[data-audio-close]').onclick=close;
+  for(const slot of ['name','full']){
+    overlay.querySelector('[data-audio-upload-'+slot+']').onclick=()=>{close();replaceAudioItem(a,'cards',slot)};
+    overlay.querySelector('[data-audio-link-'+slot+']').onclick=()=>{close();void gmwwLinkRoleAudio(a,slot)};
+  }
+  overlay.querySelector('[data-audio-clear-name]').onclick=()=>{close();void gmwwClearRoleNameAudio(a)};
+}
+async function gmwwLinkRoleAudio(a,slot){
+  const label=slot==='name'?'Tên':'Full';
+  const entered=prompt('Dán liên kết HTTPS tới file Audio '+label+' của '+a.name,'');
+  if(entered===null)return;
+  const value=String(entered).trim();
+  try{const url=new URL(value);if(url.protocol!=='https:'||!url.hostname)throw Error('bad url')}
+  catch{alert('Vui lòng dùng URL HTTPS trực tiếp tới file Audio.');return}
+  const kind=slot==='name'?'cards-name':'cards';
+  try{
+    await dbDelete(audioBlobKey(kind,a.id)).catch(()=>{});
+    battleInvalidateAudioCache(kind,a.id);
+    if(slot==='name'){a.nameUrl=value;a.nameFileName='';a.nameVerifiedBinary=false}
+    else{a.url=value;a.fileName='';a.verifiedBinary=false}
+    saveState();if(audioKind==='cards')void renderAudio();
+  }catch(err){playFlashError('Không lưu được URL Audio: '+String(err.message||err))}
+}
+async function gmwwClearRoleNameAudio(a){
+  try{
+    await dbDelete(audioBlobKey('cards-name',a.id));
+    battleInvalidateAudioCache('cards-name',a.id);
+    a.nameUrl='';a.nameFileName='';a.nameVerifiedBinary=false;
+    saveState();if(audioKind==='cards')void renderAudio();
+  }catch(err){playFlashError('Không bỏ được file Tên: '+String(err.message||err))}
+}
+function replaceAudioItem(a,category=audioKind,slot='full'){
+  if(!a)return;
+  // The destination is frozen while the iOS Files picker is open.
   const kind=String(category||'system');
+  const storeKind=kind==='cards'&&slot==='name'?'cards-name':kind;
   const i=document.createElement('input');i.type='file';i.accept='audio/*';i.hidden=true;
   document.body.appendChild(i);
   i.onchange=async()=>{
     const file=i.files?.[0];i.remove();if(!file)return;
     try{
-      await dbPut(audioBlobKey(kind,a.id),file);
-      battleInvalidateAudioCache(kind,a.id);
-      a.fileName=file.name;a.verifiedBinary=true;delete a.status;saveState();
+      await dbPut(audioBlobKey(storeKind,a.id),file);
+      battleInvalidateAudioCache(storeKind,a.id);
+      if(storeKind==='cards-name'){
+        a.nameFileName=file.name;a.nameVerifiedBinary=true;a.nameUrl='';
+      }else{
+        a.fileName=file.name;a.verifiedBinary=true;delete a.status;a.url='';
+      }
+      saveState();
       if(document.getElementById('library')?.classList.contains('active')&&audioKind===kind)void renderAudio();
       const names={audio_system_gallows_result_saved:'CHỐT SỐNG',audio_system_gallows_result_dead:'CHỐT CHẾT'};
       if(names[a.targetId||a.id])playFlashError('Đã gán Audio '+names[a.targetId||a.id]+': '+file.name);
