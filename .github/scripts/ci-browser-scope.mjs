@@ -3230,7 +3230,7 @@ const v3284CombinedPaths=new Map([
   [".github/workflows/check-player-web.yml",["M",null]],
   [".github/workflows/check-runtime-server-version-drift.yml",["A","9f86962738ba71e255b95fd42bbcaa0d82139e90"]],
   [".github/workflows/deploy-production.yml",["M","de54dbff6adf02449cd06e1aeb25e4756b20644a"]],
-  [".github/workflows/github-runtime-ota.yml",["M","1cf9d81073a31e456da48c690c8b58d887f21afa"]],
+  [".github/workflows/github-runtime-ota.yml",["M","4235c106a87d84fd81d57db9f498a890a2487c3d"]],
   ["docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md",["A","405773851f93f79a28baf20c4417dff8be08ef40"]],
   ["docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md",["M","1448c7fbf65b412ba71c854005c17fa62f769768"]],
   ["docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md",["A","4cc946905db7f2eaf7484240d995039f56a174ff"]],
