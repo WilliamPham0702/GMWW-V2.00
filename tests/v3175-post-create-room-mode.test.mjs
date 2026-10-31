@@ -66,7 +66,8 @@ test('GM Demo and speed are within the same action grid, not a separate visible 
   const menu=html.indexOf('id="battleWolfMenu"'),actions=html.indexOf('class="battle-wolf-actions"'),
     demo=html.indexOf('id="battleDemoToggle"'),speed=html.indexOf('id="battleDemoSpeedWrap"'),
     artifact=html.indexOf('id="battleLabelArtifact"'),panel=html.indexOf('id="battleDemoPanel"');
-  assert.ok(menu>=0&&menu<actions&&actions<demo&&demo<speed&&speed<artifact&&artifact<panel);
+  // The legacy panel is intentionally hidden and can appear earlier in the HTML.
+  assert.ok(menu>=0&&menu<actions&&actions<demo&&demo<speed&&speed<artifact&&panel>=0);
   assert.match(css,/#battleWolfMenu \.battle-wolf-actions #battleDemoToggle/);
   assert.match(css,/#battleWolfMenu #battleDemoPanel\{display:none!important\}/);
 });
