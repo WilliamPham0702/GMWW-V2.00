@@ -19,7 +19,7 @@ test('Audio rows have a single title only; detailed file audits remain in the su
     assert.match(row,/data-audio-replace/);
     assert.match(row,/data-audio-delete/);
     assert.match(source,/id="audioMissingReport"/);
-    assert.match(source,/missing.map\(x=>x.name\+' \('\+x.id\+'\)'\)/);
+    assert.match(source,/noFullLink.map\(x=>x.name\+' \('\+x.id\+'\)'\)/);
   }
 });
 
