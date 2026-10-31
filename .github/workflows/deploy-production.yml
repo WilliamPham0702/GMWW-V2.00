@@ -2459,7 +2459,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION=$(node -p 'require("./package.json").version.replace(/\\.0$/, "")')
+          VERSION=$(node -p 'require("./package.json").version.replace(/\.0$/, "")')
           TAG="gmww-runtime-v$VERSION"
           NAME="GMWW-Runtime-V$VERSION.gmwwupdate"
           DIR="/tmp/gmww-manual-runtime"
@@ -2474,14 +2474,14 @@ jobs:
           # Reuse the original asset if already published; never upload a copy
           # under gmww-v*, never --clobber an existing Runtime or release.
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("assets/updates/latest.json"));fs.writeFileSync("/tmp/gmww-notes.md",m.releaseNotes.join("\\n\\n"))'
-            gh release create "$TAG" "$DIR/$NAME" "$DIR/$NAME.sha256" "$MANIFEST" \\
-              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \\
+            node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("assets/updates/latest.json"));fs.writeFileSync("/tmp/gmww-notes.md",m.releaseNotes.join("\n\n"))'
+            gh release create "$TAG" "$DIR/$NAME" "$DIR/$NAME.sha256" "$MANIFEST" \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --title "GMWW RUNTIME V$VERSION — GITHUB" --notes-file /tmp/gmww-notes.md
           fi
           # Verify the ORIGINAL GitHub asset's published SHA-256.
           # Different bytes for an existing version block the job; do not mutate.
-          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets' | \\
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets' | \
             jq -e --arg n "$NAME" --arg h "sha256:$LOCAL_SHA" '
               ([.[] | select(.name == $n)] | length) == 1 and
               any(.[]; .name == $n and .digest == $h) and
