@@ -2931,6 +2931,25 @@ function isPR645PostmergeReleaseScope(changes){
     changes.every(c=>c?.status==='M'&&expected.has(c.path)&&
       typeof c.after==='string'&&c.after.includes(markers.get(c.path)));
 }
+// PR652 V3.280: only the exact five-file postmerge CI repair can use
+// focused browser/Worker checks. The accepted gameplay commit remains immutable.
+// Unknown paths, deletions, duplicate paths or unreviewed code fail closed.
+function isPR652PostmergeReleaseScope(changes){
+  const markers=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','function isPR652PostmergeReleaseScope(changes)'],
+    ['.github/workflows/check-player-web.yml',"steps.scope.outputs.mode == 'pr652-postmerge-release'"],
+    ['.github/workflows/check-player-card-browsers.yml',"needs.scope.outputs.mode == 'pr652-postmerge-release'"],
+    ['.github/workflows/deploy-production.yml','# PR652 V3.280: exact postmerge CI-only release handshake'],
+    ['tests/ci-browser-scope.test.mjs','PR652 V3.280 postmerge CI repair:']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==markers.size||
+     new Set(changes.map(c=>c?.path)).size!==markers.size)return false;
+  if(!changes.every(c=>c?.status==='M'&&markers.has(c.path)&&
+    typeof c.after==='string'&&typeof c.before==='string'&&c.after.includes(markers.get(c.path))))return false;
+  return fs.readFileSync('src/index.js','utf8').includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
+    fs.readFileSync('server-game/current/app.js','utf8').includes('soi-can-canonical') &&
+    fs.readFileSync('docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md','utf8').includes('ĐẠT');
+}
 // PR652: fail-closed, source-bounded Online hotfix. The only production edits
 // are the night Undo endpoint, three GM battle UI blocks, and GM chat monitor.
 // The packaged GM app must match all seven source modules byte-for-byte.
@@ -2996,6 +3015,7 @@ function isPR652OnlineHotfixScope(changes){
   return true;
 }
 function classifyBrowserScope(changes){
+  if(isPR652PostmergeReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652OnlineHotfixScope(changes))return 'online-hotfix-652';
   if(isPR645PostmergeReleaseScope(changes))return 'pr645-postmerge-release';
   if(isPr648ThermalScope(changes))return 'village-perf-diagnostics-648';
@@ -3807,6 +3827,23 @@ function detect(){
       if(icons.count===19&&Array.isArray(icons.icons)&&icons.icons.length===19)
         return{mode:'icon-runtime-3210',reason:'Owner-dispatched V3.210 only, SHA-256 and icon scope verified'};
     }
+  }
+  // PR652 V3.280: a production push must check this exact CI-only follow-up,
+  // with the accepted merge commit as an ancestor, instead of running unrelated
+  // obsolete full-suite assertions. The same source and browser release gates stay.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.280.0'){
+        git('merge-base','--is-ancestor','76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da','HEAD');
+        const changes=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean).map(row=>{
+          const [status,path]=row.split('\t');
+          return{status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
+            after:status==='M'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isPR652PostmergeReleaseScope(changes))
+          return{mode:'pr652-postmerge-release',reason:'PR652 audited five-file CI-only recovery; gameplay source unchanged'};
+      }
+    }catch{} // Never allow an unknown ref or scope to bypass full checks.
   }
   // Production recovery: all deployed code is identical to merged #551;
   // only the four CI/release files may change. Unknown diffs remain full.
