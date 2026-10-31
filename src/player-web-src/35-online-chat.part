@@ -1,6 +1,7 @@
 
 /* Online-first Chat: all reads are authenticated; the WebSocket carries only a generic tick.
  * DO NOT use public room_state to transport chat messages or secret group membership. */
+let gmwwChatVoiceRecord=null,gmwwChatVoiceAudio=null;
 let gmwwChatOpen=false,gmwwChatSeq=0,gmwwPlayerCueKey='',gmwwChatIdleTimer=null,gmwwOnlineFooterTimer=null,gmwwChatTarget='room';
 const gmwwChatLatestByChannel=new Map();
 function gmwwChatUnread(unread){
@@ -100,12 +101,17 @@ html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:aut
 #gmwwChatPanel form{display:flex;gap:4px;padding:3px}#gmwwChatText{flex:1;min-width:0;width:100%;height:30px;border:0;background:transparent;color:white;font:12px system-ui;outline:none;padding:4px}#gmwwChatText::placeholder{color:#f2f9ffb3}
 #gmwwChatSubmit{display:none;height:30px;min-height:30px;border:0;border-radius:7px;background:#0d59757a;color:#fff;padding:3px 7px}#gmwwChatPanel.open #gmwwChatSubmit{display:block}#gmwwChatHelp{font-size:10px;padding:3px 7px}#gmwwChatHelp.gmww-chat-dead-notice{display:block!important;color:#69d8ff!important;font-weight:800;text-shadow:0 1px 2px #001a2b}
 #gmwwChatPanel.open #gmwwChatHelp:not(:empty){display:block}#gmwwChatText:disabled,#gmwwChatSubmit:disabled{opacity:.55}
+#gmwwChatVoice,#gmwwChatVoiceCancel{display:none;min-width:31px;height:30px;border:1px solid #7ac3d580;border-radius:8px;background:#124d61ad;color:#fff;font-size:15px;flex-shrink:0}
+#gmwwChatPanel.open #gmwwChatVoice{display:block}#gmwwChatVoice.recording{color:#ff5d66;border-color:#ff5d66;animation:gmww-recording-pulse 1s ease-in-out infinite}
+#gmwwChatPanel.open #gmwwChatVoiceCancel:not([hidden]){display:block}#gmwwChatVoice:disabled{opacity:.45}
+@keyframes gmww-recording-pulse{50%{filter:brightness(1.6)}}@media(prefers-reduced-motion:reduce){#gmwwChatVoice.recording{animation:none}}
+#gmwwChatLines button.gmww-voice-play{min-height:27px;max-width:100%;padding:2px 8px;margin:1px 0;border:1px solid #8ad6e1a8;border-radius:12px;background:#10475ccc;color:white;font-size:12px;text-align:left}
 `;
   document.head.appendChild(style);
  }
  if(document.getElementById('gmwwChatPanel')){gmwwChatDockSync();return}
  const panel=document.createElement('section');panel.id='gmwwChatPanel';panel.setAttribute('aria-label','Chat Làng');
- panel.innerHTML='<header><b id="gmwwChatHeading">Chat Làng</b><button type="button" id="gmwwChatToGM" title="Chat riêng GM">GM</button><button type="button" id="gmwwChatAudio" aria-label="Audio thông báo"></button></header><div id="gmwwChatLines" role="log"></div><div id="gmwwChatHelp"></div><form id="gmwwChatForm"><input id="gmwwChatText" maxlength="280" autocomplete="off" aria-label="Tin nhắn" placeholder="Chạm để chat…"><button type="submit" id="gmwwChatSubmit">Gửi</button></form>';
+ panel.innerHTML='<header><b id="gmwwChatHeading">Chat Làng</b><button type="button" id="gmwwChatToGM" title="Chat riêng GM">GM</button><button type="button" id="gmwwChatAudio" aria-label="Audio thông báo"></button></header><div id="gmwwChatLines" role="log"></div><div id="gmwwChatHelp"></div><form id="gmwwChatForm"><input id="gmwwChatText" maxlength="280" autocomplete="off" aria-label="Tin nhắn" placeholder="Chạm để chat…"><button type="button" id="gmwwChatVoice" title="Ghi âm tối đa 20 giây" aria-label="Ghi âm tin nhắn thoại">🎙️</button><button type="button" id="gmwwChatVoiceCancel" title="Hủy ghi âm" hidden>✕</button><button type="submit" id="gmwwChatSubmit">Gửi</button></form>';
  document.body.appendChild(panel);gmwwChatDockSync();gmwwChatTouch();
  panel.addEventListener('pointerdown',()=>{if(!gmwwChatOpen)gmwwChatExpand();else gmwwChatTouch()});
  document.getElementById('gmwwChatText').addEventListener('focus',gmwwChatExpand);
@@ -119,6 +125,8 @@ html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:aut
    gmwwChatClosePanel();gmwwChatTouch();
   },{capture:true,passive:true});
  }
+ document.getElementById('gmwwChatVoice').onclick=()=>void gmwwChatVoiceToggle();
+ document.getElementById('gmwwChatVoiceCancel').onclick=()=>gmwwChatVoiceCancel();
  document.getElementById('gmwwChatAudio').onclick=()=>{
   try{localStorage.setItem('gmww_player_announcement_audio_off',gmwwChatAudioOff()?'0':'1')}catch{}
   gmwwChatAudioButton();if(gmwwChatAudioOff())gmwwStopAnnouncement();else if(gmwwAnnouncementPending){gmwwPlayerCueKey='';void gmwwPlayAnnouncement()}
@@ -153,6 +161,7 @@ function gmwwChatClear(){
   const note=document.getElementById('gmwwChatHelp');if(note)note.textContent='Đang kiểm tra quyền Chat cho lượt mới…';
 }
 function gmwwChatUnmount(){
+  gmwwChatVoiceCancel();if(gmwwChatVoiceAudio){gmwwChatVoiceAudio.pause();gmwwChatVoiceAudio=null}
   gmwwStopAnnouncement();gmwwAnnouncementPending=null;
   gmwwChatClear();gmwwChatLatestByChannel.clear();gmwwChatUnread(false);document.getElementById('gmwwOnlineFooter')?.remove();if(gmwwOnlineFooterTimer)clearInterval(gmwwOnlineFooterTimer);gmwwOnlineFooterTimer=null;gmwwChatOpen=false;gmwwChatTarget='room';gmwwPlayerCueKey='';state.audioCue=null;document.getElementById('gmwwPlayerMiniCards')?.remove();
   document.getElementById('gmwwChatLaunch')?.remove();document.getElementById('gmwwChatPanel')?.remove();
@@ -186,18 +195,103 @@ async function gmwwChatRefresh(){
       const bubble=document.createElement('div');bubble.className='msg'+(item.isGM===true?' gm':item.system===true?' system':'');
       bubble.style.color=gmwwChatColor(item.senderId);
       const name=document.createElement('b');name.textContent=String(item.senderName||'Người chơi')+': ';
-      const msg=document.createElement('span');msg.textContent=String(item.text||'');bubble.append(name,msg);lines.appendChild(bubble);
+      if(item.kind==='voice'&&/^[0-9a-f-]{36}$/i.test(String(item.id||''))){
+        const play=document.createElement('button');play.type='button';play.className='gmww-voice-play';
+        play.textContent='▶ ' +Math.max(1,Math.ceil(Number(item.durationMs||1000)/1000))+' giây';
+        play.setAttribute('aria-label','Nghe tin nhắn thoại của '+String(item.senderName||'người chơi'));
+        play.onclick=()=>void gmwwChatVoicePlay(String(item.id),gmwwChatTarget,play);
+        bubble.append(name,play);
+      }else{const msg=document.createElement('span');msg.textContent=String(item.text||'');bubble.append(name,msg)}
+      lines.appendChild(bubble);
      }
      if(atBottom)lines.scrollTop=lines.scrollHeight;
     }
     const input=document.getElementById('gmwwChatText'),send=document.getElementById('gmwwChatSubmit');
     input.disabled=send.disabled=!result.canSend;
+    const mic=document.getElementById('gmwwChatVoice');if(mic&&!gmwwChatVoiceRecord)mic.disabled=!result.canSend;
     input.placeholder=result.canSend?(gmwwChatOpen?'Nhập tin nhắn…':'Chạm để chat…'):'Chạm xem thông cáo';
     const chatHelp=document.getElementById('gmwwChatHelp');
     const dead=result.reason==='CHAT_DEAD',expelled=result.reason==='CHAT_EXPELLED';chatHelp.classList?.toggle('gmww-chat-dead-notice',dead||expelled);
     chatHelp.textContent=dead?'Bạn đã chết nên không chat được.':expelled?'Bạn đã bị đuổi khỏi làng nên không chat được.':result.reason==='CHAT_FROZEN'?'Bạn đang bị đóng băng nên không chat được.':result.reason==='CHAT_MUTED_GM'?'GM đã cấm bạn chat.':result.reason==='CHAT_MUTED_ARTIFACT'?'Artifact Câm Lặng đang chặn Chat.':result.canSend?(result.scope==='secret'?'Chỉ người cùng lượt được xem tin.':''):result.channel?'Chưa được phép gửi Chat ở kênh này.':'Chưa đến lượt chat; vẫn xem được thông cáo công khai.';
   }catch(error){if(seq===gmwwChatSeq){const note=document.getElementById('gmwwChatHelp');if(note)note.textContent='Lỗi kết nối Chat. Vui lòng thử lại.'}}
 }
+
+function gmwwChatVoiceCancel(){
+  const current=gmwwChatVoiceRecord;if(!current)return;
+  current.cancelled=true;clearTimeout(current.timer);
+  try{if(current.recorder.state!=='inactive')current.recorder.stop()}catch{}
+  current.stream.getTracks().forEach(track=>track.stop());
+  gmwwChatVoiceRecord=null;gmwwChatVoiceButton();
+}
+function gmwwChatVoiceButton(){
+  const b=document.getElementById('gmwwChatVoice'),cancel=document.getElementById('gmwwChatVoiceCancel');
+  if(b){b.classList.toggle('recording',!!gmwwChatVoiceRecord);b.textContent=gmwwChatVoiceRecord?'■':'🎙️';
+    b.title=gmwwChatVoiceRecord?'Dừng và gửi tin nhắn thoại':'Ghi âm tối đa 20 giây';}
+  if(cancel)cancel.hidden=!gmwwChatVoiceRecord;
+}
+async function gmwwChatVoiceToggle(){
+  if(gmwwChatVoiceRecord){
+    try{gmwwChatVoiceRecord.recorder.stop()}catch{gmwwChatVoiceCancel()}
+    return;
+  }
+  const button=document.getElementById('gmwwChatVoice');
+  if(!button||button.disabled||!state.roomCode||!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){
+    toast('Trình duyệt không hỗ trợ ghi âm. Vẫn có thể Chat chữ.');return;
+  }
+  let stream;
+  try{
+    // Recording begins only after the participant taps the microphone.
+    document.getElementById('gmwwChatText')?.blur();
+    stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+    const mime=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg'].find(v=>MediaRecorder.isTypeSupported?.(v));
+    const recorder=new MediaRecorder(stream,mime?{mimeType:mime,audioBitsPerSecond:48000}:{audioBitsPerSecond:48000});
+    const current={recorder,stream,at:Date.now(),channel:gmwwChatTarget,room:state.roomCode,chunks:[],cancelled:false,timer:0};
+    gmwwChatVoiceRecord=current;
+    recorder.ondataavailable=e=>{if(e.data?.size)current.chunks.push(e.data)};
+    recorder.onerror=()=>{current.cancelled=true;toast('Không thể ghi âm. Hãy dùng Chat chữ.')};
+    recorder.onstop=async()=>{
+      clearTimeout(current.timer);stream.getTracks().forEach(track=>track.stop());
+      if(gmwwChatVoiceRecord===current)gmwwChatVoiceRecord=null;
+      gmwwChatVoiceButton();
+      if(current.cancelled||current.room!==state.roomCode||!current.chunks.length)return;
+      const blob=new Blob(current.chunks,{type:recorder.mimeType||current.chunks[0].type});
+      if(blob.size>192*1024){toast('Tin thoại vượt giới hạn dung lượng. Vui lòng ghi ngắn hơn.');return}
+      const mimeType=blob.type.split(';')[0].toLowerCase();
+      if(!['audio/mp4','audio/webm','audio/ogg'].includes(mimeType)){toast('Định dạng âm thanh không được hỗ trợ.');return}
+      try{
+        const base64=await new Promise((resolve,reject)=>{
+          const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');
+          reader.onerror=()=>reject(Error('Đọc file thất bại'));reader.readAsDataURL(blob);
+        });
+        await api('/api/rooms/'+encodeURIComponent(current.room)+'/chat',{
+          method:'POST',headers:auth(),body:JSON.stringify({channel:current.channel,
+            voice:{base64,mime:mimeType,durationMs:Math.min(20000,Math.max(500,Date.now()-current.at))}})
+        });
+        toast('Đã gửi tin nhắn thoại');await gmwwChatRefresh();
+      }catch(e){toast('Không gửi được tin thoại: '+String(e.message||e))}
+    };
+    recorder.start();gmwwChatVoiceButton();gmwwChatTouch();
+    current.timer=setTimeout(()=>{if(recorder.state==='recording')recorder.stop()},20000);
+  }catch(e){stream?.getTracks().forEach(track=>track.stop());toast('Không có quyền dùng mic hoặc trình duyệt không hỗ trợ.')}
+}
+async function gmwwChatVoicePlay(id,channel,button){
+  if(!state.roomCode)return;
+  if(gmwwChatVoiceAudio){gmwwChatVoiceAudio.pause();gmwwChatVoiceAudio=null}
+  if(button.dataset.audioUrl){
+    const a=new Audio(button.dataset.audioUrl);gmwwChatVoiceAudio=a;
+    void a.play().catch(()=>{button.textContent='▶ Nhấn lại để nghe'});return;
+  }
+  button.disabled=true;const original=button.textContent;button.textContent='Đang tải…';
+  try{
+    const voice=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/chat/voice?channel='+encodeURIComponent(channel)+'&id='+encodeURIComponent(id),{headers:auth()});
+    if(!['audio/mp4','audio/webm','audio/ogg'].includes(voice.mime)||!voice.base64)throw Error('Không có file audio');
+    const url='data:'+voice.mime+';base64,'+voice.base64;button.dataset.audioUrl=url;
+    const audio=new Audio(url);gmwwChatVoiceAudio=audio;button.textContent=original;
+    await audio.play();
+  }catch(e){button.textContent=String(e?.name)==='NotAllowedError'?'▶ Nhấn lại để nghe':'Tin thoại đã hết hạn hoặc không thể phát'}
+  finally{button.disabled=false}
+}
+
 async function gmwwChatSend(){
   const input=document.getElementById('gmwwChatText');if(!input||input.disabled||!state.roomCode)return;
   const text=input.value.trim();if(!text)return;input.disabled=true;
