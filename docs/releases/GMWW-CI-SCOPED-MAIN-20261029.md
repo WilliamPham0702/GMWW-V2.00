@@ -46,3 +46,13 @@ Rollback: revert pull request CI policy này; Production không tự được ph
 - Bộ nhận diện `ci-policy` chỉ áp dụng khi đủ 5 file policy, test và release notes; thêm file gameplay hoặc xóa file sẽ tự rơi về kiểm thử `full`.
 - Chỉ cho phép merge sau khi `CI Policy Gate` và các kiểm thử policy thành công.
 - Rollback: revert riêng chính sách CI ở PR #646; không tác động dữ liệu người chơi.
+
+## PR672 — CI DEMO chuyển kết nối Online (31/10/2026)
+
+- Bổ sung bộ chọn fail-closed chỉ cho đúng 5 file đổi trong PR672. Mọi sửa đổi Worker/GM ngoài 3 đoạn đã kiểm toán vẫn chạy toàn bộ CI.
+- Kiểm thử tập trung chuyển Online/Offline/DEMO, quyền người tham gia, bot và tính bất biến gói GM. Tách riêng khỏi PR chức năng theo AGENTS.md.
+- Đây là thay đổi CI-only, không sửa gameplay, IPA, DO hay dữ liệu. Rollback bằng revert PR CI nếu cần.
+
+### PR672 – sửa fixture test CI (31/10/2026)
+
+- Khi đã ghép nhánh CI với bản mã gameplay sửa, test mock phải chuẩn hóa nguồn về trạng thái trước sửa rồi tái lập chính xác ba delta. Không thay đổi cơ chế phân loại fail-closed hoặc gameplay. Rollback: revert PR CI này.

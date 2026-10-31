@@ -1,3 +1,1 @@
-# GMWW alias — temporary redirect only; original Worker remains untouched.
-/ https://gmww-v2-00.williampham0702.workers.dev/ 302
-/* https://gmww-v2-00.williampham0702.workers.dev/:splat 302
+# Same-origin proxy active: no static redirect. All requests go to _worker.js.

@@ -899,3 +899,33 @@ test('PR652 V3.280 final selector ordering recovery: exact three CI-only files s
   assert.match(deploy,/git merge-base --is-ancestor fa48216517e692924b47a936767369d0d654523c HEAD/);
   assert.match(deploy,/git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
 });
+
+test('PR672 exact DEMO Online transport uses focused CI and rejects any extra gameplay edits',()=>{
+  const worker=readFileSync('src/index.js','utf8');
+  const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const app=readFileSync('server-game/current/app.js','utf8');
+  const modeOld="const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};";
+  const modeNew="const patch={demo:target==='demo',roomMode:(target==='online'||target==='demo')?'online':'offline'};";
+  const workerBefore=worker.replace('roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode=','roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=')
+    .replace('const roomMode=desiredDemo?"online":body&&','const roomMode=desiredDemo?"offline":body&&');
+  const afterWorker=workerBefore.replace('roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=','roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode=')
+    .replace('const roomMode=desiredDemo?"offline":body&&','const roomMode=desiredDemo?"online":body&&');
+  const setupBefore=setup.replace(modeNew,modeOld);
+  const appBefore=app.replace(modeNew,modeOld);
+  assert.notEqual(workerBefore,afterWorker,'fixture must exercise Worker delta');
+  assert.notEqual(setupBefore,setupBefore.replace(modeOld,modeNew),'fixture must exercise GM delta');
+  const changes=[
+    modified('src/index.js',workerBefore,afterWorker),
+    modified('server-game/src/30-village-and-setup.part',setupBefore,setupBefore.replace(modeOld,modeNew)),
+    modified('server-game/current/app.js',appBefore,appBefore.replace(modeOld,modeNew)),
+    modified('tests/v3175-post-create-room-mode.test.mjs','old test',"assert.equal(r.room.roomMode,'online'); DEMO chooses online room transport"),
+    {path:'docs/releases/GMWW-DEMO-ONLINE-TRANSPORT-20261031.md',status:'A',before:null,after:'DEMO dùng kết nối Online - Rollback'}
+  ];
+  assert.equal(classifyBrowserScope(changes),'demo-online-transport-672');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/random.js',status:'A',after:'unsafe'}]),'full');
+  const unsafe=changes.map(c=>c.path==='src/index.js'?{...c,after:c.after+'\\n// unexpected worker edit'}:c);
+  assert.equal(classifyBrowserScope(unsafe),'full');
+  const gmUnsafe=changes.map(c=>c.path==='server-game/current/app.js'?{...c,after:c.after+'\\n// other GM edit'}:c);
+  assert.equal(classifyBrowserScope(gmUnsafe),'full');
+});

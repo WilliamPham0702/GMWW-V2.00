@@ -1,0 +1,29 @@
+name: Check Oracle STAGING bootstrap (no deployment)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'oracle-staging/**'
+      - 'tests/oracle-staging-bootstrap.test.mjs'
+      - '.github/workflows/check-oracle-staging-bootstrap.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    name: Oracle STAGING fail-closed readiness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check oracle-staging/server.mjs
+      - run: node --test tests/oracle-staging-bootstrap.test.mjs
+      - name: Confirm bootstrap cannot mutate game or Production
+        run: |
+          ! grep -Eq '(DurableObject|cloudflare:workers|wrangler deploy|\.gmwwupdate|DELETE FROM|TRUNCATE)' oracle-staging/server.mjs
+          test ! -e oracle-staging/.env

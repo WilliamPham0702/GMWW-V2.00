@@ -44,7 +44,14 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
-      - name: Cloudflare Pages alias only — HTTPS 302 and Worker/Runtime isolation
+      - name: Oracle STAGING bootstrap only — fail closed and no Production deploy
+        if: steps.scope.outputs.mode == 'oracle-staging-bootstrap'
+        run: |
+          node --check oracle-staging/server.mjs
+          node --test tests/oracle-staging-bootstrap.test.mjs
+          grep -Fq 'Oracle STAGING-only bootstrap: SKIP Production Worker deploy.' .github/workflows/deploy-production.yml
+          grep -Fq 'Oracle STAGING-only bootstrap: NO automatic Runtime release.' .github/workflows/github-runtime-ota.yml
+      - name: Cloudflare Pages same-origin proxy only — Worker/Runtime isolation
         if: steps.scope.outputs.mode == 'pages-alias'
         run: |
           node --check .github/scripts/ci-browser-scope.mjs
@@ -125,6 +132,15 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node --test tests/gm-admin-top-chat-20261028.test.mjs tests/online-chat-authority.test.mjs
           test -s docs/releases/gm-admin-top-chat-20261028.md
+      - name: PR672 — DEMO dùng Online, giữ bot, xác thực và cách ly phòng
+        if: steps.scope.outputs.mode == 'demo-online-transport-672'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/v3175-post-create-room-mode.test.mjs tests/v3173-room-mode-cycle.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-player-live-join-v3271.test.mjs
+          test -s docs/releases/GMWW-DEMO-ONLINE-TRANSPORT-20261031.md
       - name: V3.271 — khắc phục Player Web theo DEMO đang chạy
         if: steps.scope.outputs.mode == 'demo-player-live-3271'
         run: |

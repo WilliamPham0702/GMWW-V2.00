@@ -20,6 +20,7 @@ const scopedMarkers={
 // Pages-only alias: never narrow CI when any gameplay, Worker or Native file changes.
 const pagesAliasOnlyPaths=new Set([
   'infra/pages/gamemasoi/_redirects',
+  'infra/pages/gamemasoi/_worker.js',
   'infra/pages/gamemasoi/index.html',
   'tests/gamemasoi-pages-link.test.mjs',
   'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md',
@@ -29,11 +30,66 @@ const pagesAliasOnlyPaths=new Set([
   '.github/workflows/check-player-web.yml',
   '.github/scripts/ci-browser-scope.mjs'
 ]);
+// Follow-up to deploy the already-reviewed Pages alias, never gameplay code.
+// Pages-only retry also covers the no-op-on-unrelated-main workflow repair.
+const pagesAliasRetryPaths=new Set([
+  'infra/pages/gamemasoi/_redirects',
+  'infra/pages/gamemasoi/_worker.js',
+  'tests/gamemasoi-pages-link.test.mjs',
+  'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md',
+  '.github/workflows/deploy-gamemasoi-pages.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+]);
+function isPagesAliasRetryScope(changes){
+  return Array.isArray(changes)&&changes.length>=5&&
+    changes.some(c=>c.path==='infra/pages/gamemasoi/_redirects'&&c.status==='M')&&
+    changes.some(c=>c.path==='.github/workflows/deploy-gamemasoi-pages.yml'&&c.status==='M')&&
+    changes.every(c=>pagesAliasRetryPaths.has(c.path)&&c.status==='M');
+}
 function isPagesAliasScope(changes){
   return Array.isArray(changes)&&changes.length>=7&&
     changes.some(c=>c.path==='infra/pages/gamemasoi/_redirects'&&c.status==='A')&&
     changes.some(c=>c.path==='tests/gamemasoi-pages-link.test.mjs'&&c.status==='A')&&
     changes.every(c=>pagesAliasOnlyPaths.has(c.path)&&['M','A'].includes(c.status));
+}
+
+// Only Pages gateway source and its focused CI may use the Pages-only gate.
+function isPagesAliasProxyScope(changes){
+  return Array.isArray(changes)&&changes.length>=6&&
+    changes.some(c=>c.path==='infra/pages/gamemasoi/_worker.js'&&c.status==='A')&&
+    changes.some(c=>c.path==='infra/pages/gamemasoi/_redirects'&&c.status==='M')&&
+    changes.some(c=>c.path==='.github/workflows/deploy-gamemasoi-pages.yml'&&c.status==='M')&&
+    changes.every(c=>pagesAliasOnlyPaths.has(c.path)&&['A','M'].includes(c.status));
+}
+// Oracle bootstrap is backend-isolated; any source/game change fails closed to full CI.
+const oracleBootstrapPaths=new Set([
+  'oracle-staging/server.mjs',
+  'tests/oracle-staging-bootstrap.test.mjs',
+  'docs/architecture/oracle-staging-bootstrap-20261031.md',
+  '.github/workflows/check-oracle-staging-bootstrap.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+]);
+function isOracleBootstrapScope(changes){
+  return Array.isArray(changes)&&changes.length>=4&&
+    changes.some(c=>c.path==='oracle-staging/server.mjs'&&c.status==='A')&&
+    changes.some(c=>c.path==='tests/oracle-staging-bootstrap.test.mjs'&&c.status==='A')&&
+    changes.every(c=>oracleBootstrapPaths.has(c.path)&&['A','M'].includes(c.status));
+}
+
+// Recovery scope: ONLY the four reviewed Oracle YAML guard/selector files.
+const oracleReleaseGateRepairPaths=new Set([
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/scripts/ci-browser-scope.mjs',
+  'tests/oracle-staging-bootstrap.test.mjs'
+]);
+function isOracleReleaseGateRepairScope(changes){
+  return Array.isArray(changes)&&changes.length===4&&changes.every(c=>
+    c.status==='M'&&oracleReleaseGateRepairPaths.has(c.path));
 }
 
 const testPath=/^tests\/(?:match-completion(?:-server|-reentry)?|forced-end-game)\.test\.mjs$/;
@@ -3051,8 +3107,49 @@ function isPR652OnlineHotfixScope(changes){
   if(byPath.get('server-game/current/app.js').after!==assembled)return false;
   return true;
 }
+// PR672: exact 5-file DEMO -> Online transport change.
+// CI fixture validates both original main and merged-source branches. Enforce the two Worker
+// edits and one GM mode payload edit byte-for-byte; all other Worker changes
+// must continue to trigger full CI. Demo isolation stays server-authoritative.
+function isDemoOnlineTransport672Scope(changes){
+  const expected=new Map([
+    ['src/index.js','M'],['server-game/src/30-village-and-setup.part','M'],
+    ['server-game/current/app.js','M'],
+    ['tests/v3175-post-create-room-mode.test.mjs','M'],
+    ['docs/releases/GMWW-DEMO-ONLINE-TRANSPORT-20261031.md','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(c=>c?.path)).size!==expected.size||
+    changes.some(c=>!c||expected.get(c.path)!==c.status||
+      typeof c.after!=='string'||(c.status==='M'&&typeof c.before!=='string')))return false;
+  const files=new Map(changes.map(c=>[c.path,c]));
+  const onlyReplacements=(file,replacements)=>{
+    let projected=files.get(file).before;
+    for(const [oldText,newText] of replacements){
+      if(projected.split(oldText).length!==2)return false;
+      projected=projected.replace(oldText,newText);
+    }
+    return files.get(file).after===projected;
+  };
+  const modeBefore="const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};";
+  const modeAfter="const patch={demo:target==='demo',roomMode:(target==='online'||target==='demo')?'online':'offline'};";
+  const workerOK=onlyReplacements('src/index.js',[
+    ['roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=','roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode='],
+    ['const roomMode=desiredDemo?"offline":body&&','const roomMode=desiredDemo?"online":body&&']
+  ]);
+  const gmOK=onlyReplacements('server-game/src/30-village-and-setup.part',[[modeBefore,modeAfter]])&&
+    onlyReplacements('server-game/current/app.js',[[modeBefore,modeAfter]]);
+  const test=files.get('tests/v3175-post-create-room-mode.test.mjs').after;
+  const notes=files.get('docs/releases/GMWW-DEMO-ONLINE-TRANSPORT-20261031.md').after;
+  return workerOK&&gmOK&&test.includes("assert.equal(r.room.roomMode,'online')")&&
+    test.includes('DEMO chooses online room transport')&&
+    notes.includes('DEMO dùng kết nối Online')&&notes.includes('Rollback');
+}
 function classifyBrowserScope(changes){
-  if(isPagesAliasScope(changes))return 'pages-alias';
+  if(isDemoOnlineTransport672Scope(changes))return 'demo-online-transport-672';
+  if(isOracleReleaseGateRepairScope(changes))return 'oracle-staging-bootstrap';
+  if(isOracleBootstrapScope(changes))return 'oracle-staging-bootstrap';
+  if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes)||isPagesAliasProxyScope(changes))return 'pages-alias';
   if(isPR652FinalReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652PostmergeReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652OnlineHotfixScope(changes))return 'online-hotfix-652';
@@ -3378,7 +3475,9 @@ function detect(){
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
         const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
         const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
-        if(isPagesAliasScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect only; no game source changes'};
+        if(isOracleReleaseGateRepairScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle release YAML and guard repair; CI-only, no gameplay'};
+        if(isOracleBootstrapScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle STAGING bootstrap; no Production changes'};
+        if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes)||isPagesAliasProxyScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect or safe deployment retry; no game source changes'};
       }
     }catch{} // Fail closed for any unexpected scope, ref or status.
   }
