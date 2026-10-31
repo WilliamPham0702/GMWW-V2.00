@@ -119,6 +119,8 @@ test('Oracle adapter snapshot canonical SHA-256 and tamper detection',()=>{
  assert.equal(first.digest.length,64);
  assert.ok(verifySnapshot(first));
  assert.equal(verifySnapshot({...first,revision:5}),false);
+ assert.equal(verifySnapshot({...first,schema:'unknown-schema'}),false);
+ assert.equal(verifySnapshot({...first,extraField:true}),false);
 });
 test('Oracle adapter rejects malformed room, revision or source version',()=>{
  assert.throws(()=>snapshotFixture({...fixture,code:'../foo'}),/INVALID_ROOM_CODE/);
