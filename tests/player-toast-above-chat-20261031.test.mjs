@@ -52,5 +52,5 @@ test('Served Player bundle includes the fix; Online Chat remains an unchanged bo
   assert.ok(gmwwMembersLiveScript.includes('t.style.top=gmwwToastTop()'));
   assert.ok(!code.includes('bottom:24px'));
   assert.match(chat,/#gmwwOnlineFooter\{position:fixed;z-index:100003/);
-  assert.match(chat,/id='gmwwChatText'/);
+  assert.match(chat,/id="gmwwChatText"/);
 });
