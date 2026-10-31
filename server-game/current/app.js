@@ -5028,7 +5028,7 @@ async function flushPlayRoomMode(){
     while(playRoomUiState.pendingMode){
       if(!isLivePlayRoom()||!playRoomUiState.selectedCode){playRoomUiState.pendingMode='';break;}
       const target=playRoomUiState.pendingMode,roomCode=String(playSceneState.roomCode);
-      const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};
+      const patch={demo:target==='demo',roomMode:(target==='online'||target==='demo')?'online':'offline'};
       let data;
       try{data=await playRoomApi('/room-settings',{method:'POST',body:JSON.stringify(patch)})}
       catch(err){
