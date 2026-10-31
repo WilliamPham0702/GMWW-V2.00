@@ -1158,7 +1158,11 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmAnnouncement(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    return saveAnnouncement(this.ctx.storage,body,(await this.currentAnnouncement(auth.meta))?.key);
+    const result=await saveAnnouncement(this.ctx.storage,body,(await this.currentAnnouncement(auth.meta))?.key);
+    // Notify connected Players to fetch the current public recording privately.
+    // No audio bytes, hidden role assignments or target IDs enter the WebSocket.
+    if(result.ok)this.broadcast({type:"announcement_ready",serverTime:Date.now()});
+    return result;
   }
   async playerAnnouncement(body){
     const meta=await this.ctx.storage.get('meta'),players=await this.ctx.storage.get('players')||{};
