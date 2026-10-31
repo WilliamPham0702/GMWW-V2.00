@@ -1,0 +1,129 @@
+name: Deploy PR677 DEMO Online Worker Only
+on:
+  workflow_run:
+    workflows: ["Check Player Web Worker"]
+    types: [completed]
+    branches: [main]
+concurrency:
+  group: gmww-pr677-worker-only-production
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  worker-hotfix:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Exact PR677 source and scope (fail closed)
+        id: gate
+        shell: bash
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          if [[ "$SCOPE" != "GMWW browser CI scope: pr677-worker-only-release |"* ]]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TESTED_SHA" || {
+            echo "::error::main changed; refusing stale deployment";exit 1;
+          }
+          git merge-base --is-ancestor 97e4d328366548983aa8009ab4be646f972c4085 HEAD
+          git diff --quiet 97e4d328366548983aa8009ab4be646f972c4085 HEAD -- src/index.js server-game/current/app.js server-game/src/30-village-and-setup.part
+          git diff --quiet gmww-v3.280 HEAD -- assets wrangler.jsonc package.json package-lock.json
+          test "$(node -p 'require("./package.json").version')" = "3.280.0"
+          grep -Fq 'roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode)' src/index.js
+          grep -Fq 'const roomMode=desiredDemo?"online":' src/index.js
+          echo "release=true" >> "$GITHUB_OUTPUT"
+      - name: Verify focused DEMO room isolation and Worker dry-run
+        if: steps.gate.outputs.release == 'true'
+        run: |
+          npm ci
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/demo-transport-677-release.test.mjs tests/v3175-post-create-room-mode.test.mjs tests/v3173-room-mode-cycle.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-player-live-join-v3271.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-PR677-WORKER-ONLY-RELEASE-20261031.md
+      - name: Save previous Production version
+        id: before
+        if: steps.gate.outputs.release == 'true'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/before.json
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const fs=require('fs'),d=JSON.parse(fs.readFileSync('/tmp/before.json','utf8'));
+          const x=d.result?.deployments?.[0],v=x?.versions?.[0];
+          if(!d.success||!x?.id||x.versions?.length!==1||!v?.version_id||v.percentage!==100)throw Error('Previous Worker deployment unverified');
+          console.log('previous_version='+v.version_id);
+          console.log('previous_deployment='+x.id);
+          NODE
+      - name: Deploy PR677 Worker only (no OTA or IPA)
+        id: publish
+        if: steps.gate.outputs.release == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      - name: Verify Production JS 200, syntax, health and Worker version
+        if: steps.publish.outcome == 'success'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_VERSION: ${{ steps.before.outputs.previous_version }}
+        run: |
+          set -euo pipefail
+          URL="https://gmww-v2-00.williampham0702.workers.dev"
+          PASS=0
+          for N in $(seq 1 16); do
+            if curl -fsS --max-time 20 "$URL/gmww-members-live.js?fix=$N-$(date +%s)" -o /tmp/player-hotfix.js &&
+               node --check /tmp/player-hotfix.js &&
+               grep -q 'function gmwwReadPrivateReceipt()' /tmp/player-hotfix.js &&
+               curl -fsS --max-time 15 "$URL/api/health?fix=$N" -o /tmp/player-health.json &&
+               node -e "const d=require('/tmp/player-health.json');if(d.ok!==true||d.project!=='GMWW-V2.00'||d.status!=='online')process.exit(1)"; then PASS=1;break; fi
+            sleep 5
+          done
+          test "$PASS" = 1 || { echo "::error::Production Player JavaScript/health check failed"; exit 1; }
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/after.json
+          node - <<'NODE'
+          const fs=require('fs'),d=JSON.parse(fs.readFileSync('/tmp/after.json','utf8')),v=d.result?.deployments?.[0]?.versions?.[0];
+          if(!d.success||!v?.version_id||v.percentage!==100||v.version_id===process.env.PREVIOUS_VERSION)throw Error('New Worker version not confirmed');
+          console.log('Verified new Production Worker version:',v.version_id);
+          NODE
+          echo "PASS: Player JS HTTP 200, syntax, health and new Worker version verified. No IPA or OTA." >> "$GITHUB_STEP_SUMMARY"
+      - name: Roll back to saved Worker version if verification fails
+        if: failure() && steps.publish.outcome == 'success' && steps.before.outputs.previous_version != ''
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_VERSION: ${{ steps.before.outputs.previous_version }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > /tmp/rollback.json
+          console.log(JSON.stringify({strategy:'percentage',versions:[{version_id:process.env.PREVIOUS_VERSION,percentage:100}],annotations:{'workers/message':'Rollback PR677 DEMO Worker-only after failed Production smoke'}}));
+          NODE
+          curl -fsS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+            --data-binary @/tmp/rollback.json \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments" > /tmp/rollback-response.json
+          node -e "const r=require('/tmp/rollback-response.json');if(!r.success)process.exit(1)"
+          echo "ROLLBACK: restored previous Worker at 100%; Durable Objects/rooms/history/IPA untouched." >> "$GITHUB_STEP_SUMMARY"
