@@ -58,7 +58,7 @@ test('library audit works on all three categories, not the current tab after a d
   assert.match(audit,/const kind=audioKind/);
   assert.match(audit,/if\(kind!==audioKind\)return/);
   assert.match(audit,/state\.actions\?\.role/);
-  assert.match(audit,/URL bên ngoài chưa được kiểm tra/);
+  assert.match(audit,/KHÔNG kiểm tra tệp thực có tồn tại/);
 });
 
 test('audio replay still resolves Old Witch audio by canonical role and V1 source',()=>{
