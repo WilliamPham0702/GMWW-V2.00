@@ -14,6 +14,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  oracle-scope:
+    name: Verify Oracle-only Preview exclusion (no gameplay changes)
+    runs-on: ubuntu-latest
+    outputs:
+      oracle_only: ${{ steps.scope.outputs.oracle_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: scope
+        name: Exact allowlist; unknown changes require normal Preview
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {execFileSync} from 'node:child_process';
+          import {appendFileSync} from 'node:fs';
+          const changed=execFileSync('git',['diff','--name-only',process.env.BASE,process.env.HEAD],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+          const allowed=new Set([
+            'oracle-staging/sqlite-fixture-adapter.mjs',
+            'oracle-staging/sqlite-fixture-adapter.test.mjs',
+            '.github/workflows/check-oracle-staging-bootstrap.yml',
+            '.github/workflows/github-runtime-ota.yml',
+            '.github/workflows/check-pr-preview-github.yml',
+            'docs/architecture/oracle-staging-bootstrap-20261031.md'
+          ]);
+          const only=changed.length===6&&new Set(changed).size===6&&changed.every(p=>allowed.has(p));
+          appendFileSync(process.env.GITHUB_OUTPUT,'oracle_only='+String(only)+'\n');
+          console.log(only?'Oracle SQLite-only: no new Cloudflare namespace; local build and dedicated Oracle CI still run.':'Normal PR: retain full isolated Preview publication gate.');
+          NODE
   validate-preview:
     name: Validate isolated Preview without Cloudflare Builds
     runs-on: ubuntu-latest
@@ -40,10 +73,10 @@ jobs:
 
   publish-preview:
     name: Publish isolated Worker Preview (never Production)
-    needs: validate-preview
+    needs: [validate-preview, oracle-scope]
     # Token use is limited to owner-authored PRs from this same repo.
     # Forks and other authors still receive token-free validation.
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
+    if: ${{ needs.validate-preview.result == 'success' && needs.oracle-scope.result == 'success' && needs.oracle-scope.outputs.oracle_only != 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
