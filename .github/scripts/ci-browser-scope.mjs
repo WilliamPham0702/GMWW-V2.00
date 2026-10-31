@@ -30,6 +30,21 @@ const pagesAliasOnlyPaths=new Set([
   '.github/workflows/check-player-web.yml',
   '.github/scripts/ci-browser-scope.mjs'
 ]);
+// Follow-up to deploy the already-reviewed Pages alias, never gameplay code.
+const pagesAliasRetryPaths=new Set([
+  'infra/pages/gamemasoi/_redirects',
+  'tests/gamemasoi-pages-link.test.mjs',
+  'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md',
+  '.github/workflows/deploy-gamemasoi-pages.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+]);
+function isPagesAliasRetryScope(changes){
+  return Array.isArray(changes)&&changes.length>=5&&
+    changes.some(c=>c.path==='infra/pages/gamemasoi/_redirects'&&c.status==='M')&&
+    changes.some(c=>c.path==='.github/workflows/deploy-gamemasoi-pages.yml'&&c.status==='M')&&
+    changes.every(c=>pagesAliasRetryPaths.has(c.path)&&c.status==='M');
+}
 function isPagesAliasScope(changes){
   return Array.isArray(changes)&&changes.length>=7&&
     changes.some(c=>c.path==='infra/pages/gamemasoi/_redirects'&&c.status==='A')&&
@@ -3270,7 +3285,7 @@ export function isV3284IntegratedScope(changes,read=path=>fs.readFileSync(path,'
 
 function classifyBrowserScope(changes){
   if(isV3284IntegratedScope(changes))return 'v3284-audio-drift';
-  if(isPagesAliasScope(changes))return 'pages-alias';
+  if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes))return 'pages-alias';
   if(isRuntimeDriftScope(changes))return 'runtime-server-drift';
   if(isRoleNameAudio3283Scope(changes))return 'role-name-audio-3283';
   if(isRoleNameAudio3281Scope(changes))return 'role-name-audio-3281';
@@ -3611,7 +3626,7 @@ function detect(){
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
         const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
         const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
-        if(isPagesAliasScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect only; no game source changes'};
+        if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect or safe deployment retry; no game source changes'};
       }
     }catch{} // Fail closed for any unexpected scope, ref or status.
   }

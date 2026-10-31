@@ -12,3 +12,11 @@
 
 ## Rollback
 - Trên Pages 'gamemasoi', rollback deployment trước nếu có hoặc tạm tắt site; link Worker cũ không đổi. Không xóa hay di chuyển dữ liệu.
+
+## Sửa cổng phát hành Pages 31/10/2026 (PR theo dõi)
+- Lượt đầu sau PR #661: Worker main CI SUCCESS nhưng Pages deploy không chạy vì checkout bị shallow, lệnh HEAD^1 lỗi 128. Không có Pages production deployment từ lượt này.
+- Sửa checkout đầy đủ lịch sử và fetch main không dùng --depth=1; tiếp tục xác thực cùng SHA CI SUCCESS.
+- Whitelist chỉ nhận file Pages và hai script CI liên quan, chặn các file game/backend/IPA.
+- Chặn GitHub Runtime OTA tự phát hành đối với chính xác đợt sửa Pages-only.
+- URL đích và hành vi HTTPS 302 giữ nguyên; không động dữ liệu, Oracle, Worker hay IPA.
+- Rollback: dừng/khôi phục bản Pages trước; Worker Production độc lập.
