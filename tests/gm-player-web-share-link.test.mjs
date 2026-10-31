@@ -61,50 +61,60 @@ function run(config=null,remembered='legacy',options={}){
   return {dom,store,clipboard,shares,fallbackCopies,getFallbackNode:()=>fallbackNode};
 }
 
-test('GM settings renders old and new link choices but never invents a free domain',()=>{
+test('GM settings exposes only the verified Pages hostname as Link mới; legacy link unchanged',()=>{
   for(const name of ['gmwwPlayerWebShareSettings','gmwwShareLegacy','gmwwShareAlias','gmwwShareCopy','gmwwShareSend']){
     assert.ok(html.includes('id="'+name+'"'),name);
   }
-  assert.ok(html.includes('value="alias" disabled'));
-  assert.ok(!html.includes('gamemasoi.duckdns.org'),'unregistered free domain must not be a user-facing URL');
+  assert.ok(html.includes('https://gamemasoi.pages.dev/'));
+  assert.ok(html.includes('value="alias" disabled'),'initially fail closed until script runs');
+  assert.ok(!html.includes('gamemasoi.duckdns.org'),'unregistered domain never published');
+  assert.ok(!script.includes('GMWW_PLAYER_WEB_ALIAS_CONFIG'),'must never trust injected external aliases');
 });
-
-test('without verified DNS/HTTPS alias, old Cloudflare URL remains selected and shareable',async()=>{
+test('legacy link remains selected by default and old copy/share behavior remains intact',async()=>{
   const h=run();
   const old='https://gmww-v2-00.williampham0702.workers.dev/';
-  assert.equal(h.dom.get('gmwwShareAlias').disabled,true);
+  assert.equal(h.dom.get('gmwwShareAlias').disabled,false);
   assert.equal(h.dom.get('gmwwShareLegacy').checked,true);
+  assert.equal(h.dom.get('gmwwShareAliasLabel').textContent,'https://gamemasoi.pages.dev/');
   assert.equal(h.dom.get('gmwwShareChosenUrl').textContent,old);
   await h.dom.get('gmwwShareCopy').listeners.click();
   assert.deepEqual(h.clipboard,[old]);
   await h.dom.get('gmwwShareSend').listeners.click();
   assert.equal(h.shares[0].url,old);
 });
-
-test('verified HTTPS alias can be selected, remembered and shared without switching the game backend',async()=>{
-  const alias='https://gamemasoi.example.org/';
-  const h=run({verified:true,url:alias});
+test('Link mới may be selected, copied, sent, and remembered without changing backend',async()=>{
+  const alias='https://gamemasoi.pages.dev/';
+  const h=run();
   assert.equal(h.dom.get('gmwwShareAlias').disabled,false);
-  assert.equal(h.dom.get('gmwwShareLegacy').checked,true);
   h.dom.get('gmwwShareLegacy').checked=false;
   h.dom.get('gmwwShareAlias').checked=true;
   h.dom.get('gmwwShareAlias').listeners.change();
   assert.equal(h.dom.get('gmwwShareChosenUrl').textContent,alias);
   assert.equal(h.store.get('GMWW_PLAYER_SHARE_LINK_CHOICE_V1'),'alias');
+  await h.dom.get('gmwwShareCopy').listeners.click();
+  assert.deepEqual(h.clipboard,[alias]);
   await h.dom.get('gmwwShareSend').listeners.click();
   assert.equal(h.shares[0].url,alias);
-  assert.ok(!script.includes('fetch(')&&!script.includes('/api/gm/'),'link picker must not change backend or game data');
-  assert.equal(run({verified:true,url:alias},'alias').dom.get('gmwwShareAlias').checked,true);
+  assert.ok(!script.includes('fetch(')&&!script.includes('/api/gm/'),'share picker cannot change game data');
+  assert.equal(run(null,'alias').dom.get('gmwwShareAlias').checked,true);
+  assert.equal(run(null,'alias').dom.get('gmwwShareChosenUrl').textContent,alias);
 });
-
-test('invalid/non-HTTPS/same-origin aliases are disabled even if a config says verified',()=>{
-  for(const url of ['http://gamemasoi.example.org/','https://gmww-v2-00.williampham0702.workers.dev/','https://bad.example.org/some-path','javascript:alert(1)','https://user:password@bad.example.org/']){
-    const h=run({verified:true,url},'alias');
-    assert.equal(h.dom.get('gmwwShareAlias').disabled,true,url);
-    assert.equal(h.dom.get('gmwwShareLegacy').checked,true,url);
+test('unverified or malicious injected alias cannot replace the approved fixed Pages hostname',async()=>{
+  const approved='https://gamemasoi.pages.dev/';
+  for(const config of [
+    {verified:false,url:'https://gamemasoi.pages.dev/'},
+    {verified:true,url:'https://unowned.example.org/'},
+    {verified:true,url:'http://gamemasoi.pages.dev/'},
+    {verified:true,url:'javascript:alert(1)'},
+    {verified:true,url:'https://gmww-v2-00.williampham0702.workers.dev/'}
+  ]){
+    const h=run(config,'alias');
+    assert.equal(h.dom.get('gmwwShareAlias').disabled,false);
+    assert.equal(h.dom.get('gmwwShareChosenUrl').textContent,approved);
+    await h.dom.get('gmwwShareSend').listeners.click();
+    assert.equal(h.shares[0].url,approved);
   }
 });
-
 
 test('iPhone clipboard denial falls back to focus/selection and removes temporary textarea',async()=>{
   const h=run(null,'legacy',{clipboardDenied:true});
@@ -159,7 +169,8 @@ test('WebKit mobile viewport: actual UI layout, selection, copy and share', {ski
       await page.setContent('<!doctype html><html lang="vi"><head>'+head+'</head><body>'+
         ui+harness+'<script>'+script+'</script></body></html>');
       assert.equal(await page.locator('#gmwwShareLegacy').isChecked(),true);
-      assert.equal(await page.locator('#gmwwShareAlias').isDisabled(),true);
+      assert.equal(await page.locator('#gmwwShareAlias').isEnabled(),true);
+      assert.equal(await page.locator('#gmwwShareAliasLabel').innerText(),'https://gamemasoi.pages.dev/');
       assert.equal(await page.locator('#gmwwShareChosenUrl').innerText(),
         'https://gmww-v2-00.williampham0702.workers.dev/');
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),
@@ -170,6 +181,12 @@ test('WebKit mobile viewport: actual UI layout, selection, copy and share', {ski
       await page.locator('#gmwwShareSend').click();
       assert.equal((await page.evaluate(()=>window.__shared))[0].url,
         'https://gmww-v2-00.williampham0702.workers.dev/');
+      await page.locator('#gmwwShareAlias').check();
+      assert.equal(await page.locator('#gmwwShareChosenUrl').innerText(),'https://gamemasoi.pages.dev/');
+      await page.locator('#gmwwShareCopy').click();
+      await page.locator('#gmwwShareSend').click();
+      assert.equal((await page.evaluate(()=>window.__copied)).at(-1),'https://gamemasoi.pages.dev/');
+      assert.equal((await page.evaluate(()=>window.__shared)).at(-1).url,'https://gamemasoi.pages.dev/');
       await ctx.close();
     }
   }finally{
