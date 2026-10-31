@@ -14,7 +14,7 @@ test('PR Preview is triggered by pull_request only, not a Production push',()=>{
 });
 
 test('GitHub Actions validates before publish and uses Wrangler Preview only',()=>{
-  assert.match(workflow,/needs: (?:validate-preview|\\[validate-preview, oracle-scope\\])/);
+  assert.ok(workflow.includes('needs: validate-preview') || workflow.includes('needs: [validate-preview, oracle-scope]'));
   assert.match(workflow,/oracle-scope.outputs.oracle_only != 'true'/);
   assert.match(workflow,/npm run check/);
   assert.match(workflow,/node \.github\/scripts\/guard-pr-preview-ci\.mjs/);
