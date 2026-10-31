@@ -41,7 +41,7 @@ function isGMShareVerifiedAlias682Scope(changes){
     const strip=(v,label)=> {
       const start=v.indexOf(begin),stop=v.indexOf(end);
       if(start<0||stop<=start||v.indexOf(begin,start+1)>=0||v.indexOf(end,stop+1)>=0)return null;
-      return v.slice(0,start)+begin+' [ALIAS SHARE SCRIPT] '+end+v.slice(stop+end.length).replace(label,labelOld);
+      return (v.slice(0,start)+begin+' [ALIAS SHARE SCRIPT] '+end+v.slice(stop+end.length)).replace(label,labelOld);
     };
     // The only permitted HTML diff is the share label + self-contained share script.
     if(strip(before,labelOld)!==strip(after,labelNew))return false;
