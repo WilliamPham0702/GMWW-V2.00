@@ -92,3 +92,45 @@ test('monthly backups are links only and are never created by the catalog', () =
   assert.match(docs.index, /GMWW-Backup-ipa-2026-10-V3\.275\.ipa/);
   assert.match(docs.index, /Runtime backup/);
 });
+
+test('new verified QA artifact appears in same catalog without being mislabeled Production', () => {
+  const artifact = {
+    id: 13030570990, name: 'GMWW-Runtime-V3.284-GitHub-verified',
+    expired: false, created_at: '2026-10-31T04:30:02Z',
+    expires_at: '2027-01-29T04:28:55Z',
+    digest: 'sha256:' + 'a'.repeat(64),
+    workflow_run: { id: 41168734658 }
+  };
+  const docs = buildCatalogs([release('3.280')], repo, [artifact]);
+  assert.match(docs.index, /V3\.284 — QA/);
+  assert.match(docs.index, /actions\/runs\/41168734658\/artifacts\/13030570990/);
+  assert.match(docs.index, /V3\.280/);
+  assert.ok(docs.index.indexOf('V3.284') < docs.index.indexOf('V3.280'));
+  assert.match(docs.index, /chưa phát hành Production/);
+  assert.ok(!docs.index.includes('releases/download/gmww-v3.284'));
+  assert.ok(!docs.runtimeHistory.includes('3.284'));
+});
+test('expired, invalid and already released QA artifacts do not appear', () => {
+  const make = (version,id,expired=false) => ({
+    id, name:'GMWW-Runtime-V' + version + '-GitHub-verified', expired,
+    workflow_run: {id: 41168734658}
+  });
+  const docs = buildCatalogs([release('3.280')],repo,[
+    make('3.284',22,true), make('3.283',0), make('3.280',45),
+    {...make('3.282',55), workflow_run: {id:0}}, make('3.285',88)
+  ]);
+  assert.ok(docs.index.includes('V3.285 — QA'));
+  assert.ok(!docs.index.includes('V3.284 — QA'));
+  assert.ok(!docs.index.includes('V3.280 — QA'));
+  assert.ok(!docs.index.includes('V3.283 — QA'));
+});
+test('catalog synchronization triggers on verified Actions completion and refreshes expired links', async () => {
+  const { readFileSync } = await import('node:fs');
+  const workflow = readFileSync(new URL('../.github/workflows/runtime-download-catalog.yml', import.meta.url), 'utf8');
+  assert.match(workflow,/workflow_run:/);
+  assert.match(workflow,/Publish GMWW Runtime on GitHub \(No Cloudflare\)/);
+  assert.match(workflow,/workflow_run\.conclusion == 'success'/);
+  assert.match(workflow,/actions: read/);
+  assert.match(workflow,/schedule:/);
+  assert.ok(!workflow.includes('actions/download-artifact'));
+});
