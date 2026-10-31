@@ -820,6 +820,8 @@ test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused r
     '.github/workflows/deploy-production.yml',
     'tests/ci-browser-scope.test.mjs'
   ].map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  // Recreate the historical PR645 signature without the later PR652 selector.
+  expected[0].after=expected[0].after.replace('function isPR652PostmergeReleaseScope(changes)','legacy PR645 selector only');
   assert.equal(classifyBrowserScope(expected),'pr645-postmerge-release');
   assert.equal(classifyBrowserScope(expected.slice(1)),'full','missing CI guard must not bypass full regression');
   assert.equal(classifyBrowserScope([...expected,modified('src/index.js','old','runtime changed')]),'full','gameplay edits must never be classified CI-only');
@@ -856,4 +858,24 @@ test('PR652 online hotfix: exact bounded production diff selects focused Worker 
  assert.equal(classifyBrowserScope(changedBattle),'full','Unrelated GM behavior is not covered by hotfix');
  const changedChat=changes.map(c=>c.path==='server-game/src/45-online-chat.part'?{...c,after:'// unexpected change before chat\n'+c.after}:c);
  assert.equal(classifyBrowserScope(changedChat),'full','Unexpected code before Chat must select full CI');
+});
+
+test('PR652 V3.280 postmerge CI repair: only five audited CI-only files can select release checks',()=>{
+  const files=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-player-card-browsers.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const changes=files.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  assert.equal(classifyBrowserScope(changes),'pr652-postmerge-release');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing source selector fails closed');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay mutation')]),'full','gameplay mutation cannot be CI-only');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full','duplicate CI file cannot impersonate audited change');
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted file fails closed');
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,after:'changed without guard'}:c)),'full','missing selector guard fails closed');
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(deploy,/git merge-base --is-ancestor 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
+  assert.match(deploy,/git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
 });
