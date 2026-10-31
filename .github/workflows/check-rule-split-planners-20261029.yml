@@ -62,7 +62,7 @@ jobs:
           import fs from 'node:fs';
           import crypto from 'node:crypto';
           const parts=['00-bootstrap-and-session.part','10-role-card-artwork.part','20-village-and-profile.part','30-rooms-and-realtime.part','35-online-chat.part','40-cards-and-game.part','50-privacy-and-runtime.part'];
-          const expected=Buffer.from('export const gmwwMembersLiveScript = '+JSON.stringify(parts.map(part=>fs.readFileSync('src/player-web-src/'+part,'utf8')).join(''))+';\\n');
+          const expected=Buffer.from('export const gmwwMembersLiveScript = '+JSON.stringify(parts.map(part=>fs.readFileSync('src/player-web-src/'+part,'utf8')).join(''))+';\n');
           const packaged=fs.readFileSync('src/gmww-members-live.js');
           let i=0;while(i<expected.length&&i<packaged.length&&expected[i]===packaged[i])i++;
           console.log('Packaging bytes',JSON.stringify({expected:expected.length,packaged:packaged.length,firstMismatch:i,expectedAt:expected.subarray(Math.max(0,i-50),i+50).toString(),packagedAt:packaged.subarray(Math.max(0,i-50),i+50).toString(),expectedHash:crypto.createHash('sha256').update(expected).digest('hex'),packagedHash:crypto.createHash('sha256').update(packaged).digest('hex')}));
