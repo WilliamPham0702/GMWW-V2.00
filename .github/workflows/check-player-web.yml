@@ -44,6 +44,13 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Cloudflare Pages alias only — HTTPS 302 and Worker/Runtime isolation
+        if: steps.scope.outputs.mode == 'pages-alias'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/gamemasoi-pages-link.test.mjs tests/production-deploy-architecture-docs.test.mjs
+          node -e "import('./.github/scripts/ci-browser-scope.mjs').then(m => { if(!m.classifyBrowserScope) process.exit(1) })"
+          test -s docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md
       - name: GM Chrome iOS viewport only (no gameplay, Player cards, Native IPA)
         if: steps.scope.outputs.mode == 'gm-chrome-ios-viewport'
         run: |
