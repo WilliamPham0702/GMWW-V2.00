@@ -1,0 +1,75 @@
+name: GMWW V3.285 QA from SHA-256-verified V3.284
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/scripts/build-runtime-v3285-qa-from-v3284.py"
+      - ".github/workflows/runtime-v3285-qa.yml"
+  workflow_dispatch:
+
+# QA artifact only. Never publish Releases or deploy Production/IPA.
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: gmww-v3285-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa-package:
+    name: Rebuild and verify V3.285 QA (no Production deployment)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify source tests and no GM bundle mutation
+        run: |
+          node --test tests/gm-player-web-share-link.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          python3 -m py_compile .github/scripts/build-runtime-v3285-qa-from-v3284.py
+      - name: Retrieve pinned successful V3.284 QA artifact from this repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/gmww-qa-v3285/source" "$RUNNER_TEMP/gmww-qa-v3285/output"
+          gh run download 41169326543 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name GMWW-Runtime-V3.284-GitHub-verified \
+            --dir "$RUNNER_TEMP/gmww-qa-v3285/source"
+          mapfile -t sources < <(find "$RUNNER_TEMP/gmww-qa-v3285/source" \
+            -type f -name GMWW-Runtime-V3.284.gmwwupdate)
+          test "${#sources[@]}" -eq 1 || { echo "::error::Exactly one original V3.284 package required"; exit 1; }
+          cp "${sources[0]}" "$RUNNER_TEMP/gmww-qa-v3285/output/GMWW-Runtime-V3.284.gmwwupdate"
+          printf '%s  %s\n' \
+            5501f03749676b22b18ef03aad86fcaf1a5ad90e2393a5373c4c1889d0e5b9fb \
+            "$RUNNER_TEMP/gmww-qa-v3285/output/GMWW-Runtime-V3.284.gmwwupdate" |
+            sha256sum --check
+      - name: Build V3.285 QA and verify all 276 files without touching source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/gmww-qa-v3285/output"
+          python3 "$GITHUB_WORKSPACE/.github/scripts/build-runtime-v3285-qa-from-v3284.py" .
+          sha256sum --check GMWW-Runtime-V3.285.gmwwupdate.sha256
+          test "$(stat -c %s GMWW-Runtime-V3.285.gmwwupdate)" -eq 134590809
+          rm GMWW-Runtime-V3.284.gmwwupdate
+          test -s GMWW-Runtime-V3.285-release-notes-vi.txt
+          echo "QA-only V3.285 from verified V3.284. NO Production deploy." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload original QA artifact for the single shared download catalog
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-Runtime-V3.285-GitHub-verified
+          path: |
+            ${{ runner.temp }}/gmww-qa-v3285/output/GMWW-Runtime-V3.285.gmwwupdate
+            ${{ runner.temp }}/gmww-qa-v3285/output/GMWW-Runtime-V3.285.gmwwupdate.sha256
+            ${{ runner.temp }}/gmww-qa-v3285/output/GMWW-Runtime-V3.285-release-notes-vi.txt
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
