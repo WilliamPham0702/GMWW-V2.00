@@ -167,7 +167,8 @@ jobs:
               '.github/workflows/github-runtime-ota.yml' | sort)
             # Do not publish binaries for any subset of catalog-only source changes.
             if [ -n "$CHANGED" ] &&
-               printf '%s\n' "$CHANGED" | grep -Fxq '.github/scripts/update-runtime-download-catalog.mjs' &&
+               { printf '%s\n' "$CHANGED" | grep -Fxq '.github/scripts/update-runtime-download-catalog.mjs' ||
+                 printf '%s\n' "$CHANGED" | grep -Fxq '.github/workflows/runtime-download-catalog.yml'; } &&
                ! printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(runtime-download-catalog|deploy-production|github-runtime-ota)[.]yml|[.]github/scripts/(update-runtime-download-catalog|ci-browser-scope)[.]mjs|[.]github/workflows/check-player-web[.]yml|tests/runtime-download-catalog[.]test[.]mjs)$' >/dev/null; then
 
               SKIP_AUTO_RELEASE=true

@@ -154,3 +154,24 @@ test('QA safety selector fails closed for gameplay changes',async()=>{
  const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
  assert.match(workflow,/runtime-catalog-qa-safety/);
 });
+
+test('catalog main push automatically synchronizes links after verified CI',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const wf=readFileSync('.github/workflows/runtime-download-catalog.yml','utf8');
+ assert.match(wf,/github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
+ assert.match(wf,/needs: verify/);
+ assert.match(wf,/git push origin HEAD:runtime-downloads/);
+ assert.ok(!wf.includes('actions/download-artifact'));
+ for(const p of ['.github/workflows/deploy-production.yml','.github/workflows/github-runtime-ota.yml'])
+   assert.ok(readFileSync(p,'utf8').includes("grep -Fxq '.github/workflows/runtime-download-catalog.yml'"));
+});
+test('catalog autosync selector fails closed for any source file change',async()=>{
+ const {classifyBrowserScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+ const {readFileSync}=await import('node:fs');
+ const files=[".github/workflows/runtime-download-catalog.yml","tests/runtime-download-catalog.test.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/deploy-production.yml",".github/workflows/github-runtime-ota.yml"];
+ const changes=files.map(path=>({path,status:'M',before:'old',after:readFileSync(path,'utf8')}));
+ assert.equal(classifyBrowserScope(changes),'runtime-catalog-auto-sync');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'gameplay'}]),'full');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path===files[0]?{...c,status:'D'}:c)),'full');
+});
