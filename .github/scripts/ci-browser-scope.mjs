@@ -3210,10 +3210,10 @@ function isPr662V3284Scope(changes){
     [".github/scripts/prepare-update-channel.mjs","M","9ac3785868c1cefdda029966524541b448584008"],
     [".github/scripts/runtime-server-drift-scope.mjs","A","41df76a8767c8045f4adf028b95c63277127bd95"],
     [".github/workflows/check-gm-audio-role-day.yml","M","7b6d6bed0cfd06b4f700438b8cf364a5b99290a0"],
-    [".github/workflows/check-player-web.yml","M","ffc308c655371930db9588de2196f88b67665103"],
+    [".github/workflows/check-player-web.yml","M","234dffaaaa620731accea255659e040e8f2d146f"],
     [".github/workflows/check-runtime-server-version-drift.yml","A","9f86962738ba71e255b95fd42bbcaa0d82139e90"],
-    [".github/workflows/deploy-production.yml","M","77a7d080835b989f300d2ab0ec67407cff3ae491"],
-    [".github/workflows/github-runtime-ota.yml","M","fb7db27b2a7fa353c31cdf036182f3255717a7f1"],
+    [".github/workflows/deploy-production.yml","M","de54dbff6adf02449cd06e1aeb25e4756b20644a"],
+    [".github/workflows/github-runtime-ota.yml","M","1d51c847ba92931de72436ee154026cd9eb42a4e"],
     ["docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md","A","405773851f93f79a28baf20c4417dff8be08ef40"],
     ["docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md","M","1448c7fbf65b412ba71c854005c17fa62f769768"],
     ["docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md","A","4757423f647faf71d6ef67f4d2637ca9a941d79d"],
@@ -3250,7 +3250,7 @@ function isPr662V3284Scope(changes){
   if(!self||self.status!=='M'||typeof self.after!=='string')return false;
   const baseline=self.after.replace(/\/\/ BEGIN PR662_V3284_EXACT_AUDITED_SCOPE[\s\S]*?\/\/ END PR662_V3284_EXACT_AUDITED_SCOPE\n/,'')
     .replace("  if(isPr662V3284Scope(changes))return 'audio-drift-integrated-3284';\n",'');
-  if(digest(baseline)!=="0358a301f0f362dc23e4ef2c6486e95ec353544e")return false;
+  if(digest(baseline)!=="0ee7db5c1c245cb0594c6558ee1a3a084f3c087f")return false;
   return by.get('package.json').after.includes('"version": "3.284.0"')&&
     by.get('server-game/current/app.js').after.includes("gmwwUpdateAlignment(gmwwRuntimeVersion(),server,latest)==='runtime_ahead'")&&
     by.get('server-game/src/10-library-and-settings.part').after.includes('data-audio-name-play')&&
