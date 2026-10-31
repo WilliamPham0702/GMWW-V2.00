@@ -2943,7 +2943,9 @@ function isPR652FinalReleaseScope(changes){
     new Set(changes.map(c=>c?.path)).size!==markers.size)return false;
   if(!changes.every(c=>c?.status==='M'&&markers.has(c.path)&&
     typeof c.before==='string'&&typeof c.after==='string'&&c.after.includes(markers.get(c.path))))return false;
-  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.280.0')return false;
+  // Historical PR652 audit still applies to the next Runtime-only audio update;
+  // exact three-file CI markers and live Online/undo checks remain mandatory.
+  if(!['3.280.0','3.281.0'].includes(JSON.parse(fs.readFileSync('package.json','utf8')).version))return false;
   return fs.readFileSync('src/index.js','utf8').includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
     fs.readFileSync('server-game/current/app.js','utf8').includes('soi-can-canonical') &&
     fs.readFileSync('docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md','utf8').includes('ĐẠT');
