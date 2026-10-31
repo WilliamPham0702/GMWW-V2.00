@@ -140,3 +140,17 @@ test('catalog synchronization triggers on verified Actions completion and refres
   assert.match(workflow,/schedule:/);
   assert.ok(!workflow.includes('actions/download-artifact'));
 });
+
+test('QA safety selector fails closed for gameplay changes',async()=>{
+ const {classifyBrowserScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+ const {readFileSync}=await import('node:fs');
+ const paths=[".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/scripts/update-runtime-download-catalog.mjs","tests/runtime-download-catalog.test.mjs",".github/workflows/deploy-production.yml",".github/workflows/github-runtime-ota.yml"];
+ const changes=paths.map(path=>({path,status:'M',before:'old',after:readFileSync(path,'utf8')}));
+ assert.equal(classifyBrowserScope(changes),'runtime-catalog-qa-safety');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'gameplay'}]),'full');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='tests/runtime-download-catalog.test.mjs'?{...c,status:'D'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='.github/scripts/update-runtime-download-catalog.mjs'?{...c,after:'corrupt'}:c)),'full');
+ const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ assert.match(workflow,/runtime-catalog-qa-safety/);
+});
