@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.283';
+const VERSION='3.284';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -1927,6 +1927,13 @@ const gmwwRuntimeVersion=()=>String(VERSION||'').replace(/^V/i,'');
 const gmwwShellVersion=()=>String(window.GMWW_NATIVE_SHELL_VERSION||VERSION||'').replace(/^V/i,'');
 function gmwwVersionParts(v){return String(v||'').replace(/^V/i,'').split('.').map(x=>Math.max(0,Number.parseInt(x,10)||0))}
 function gmwwVersionCompare(a,b){const aa=gmwwVersionParts(a),bb=gmwwVersionParts(b),n=Math.max(aa.length,bb.length);for(let i=0;i<n;i++){const d=(aa[i]||0)-(bb[i]||0);if(d)return d>0?1:-1}return 0}
+function gmwwUpdateAlignment(runtime,server,latest){
+  const values=[runtime,server,latest].map(v=>String(v||'').replace(/^V/i,''));
+  if(!values.every(v=>/^\d+\.\d+(?:\.\d+)?$/.test(v)))return 'unverified';
+  if(gmwwVersionCompare(server,latest)!==0)return 'channel_mismatch';
+  const delta=gmwwVersionCompare(runtime,server);
+  return delta>0?'runtime_ahead':delta<0?'update_available':'synchronized';
+}
 function gmwwNativePost(action,payload={}){
   try{const h=window.webkit?.messageHandlers?.gmwwUpdater;if(!h)return false;h.postMessage({action,...payload});return true}catch(e){console.warn('GMWW_NATIVE_UPDATE_BRIDGE',e);return false}
 }
@@ -1949,6 +1956,7 @@ function setUpdateAction(kind,context={}){
   if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn TỰ ĐỘNG. Không cần tải IPA mới.'}
   else if(kind==='native'){enable(ipa);if(title)title.textContent='Bắt buộc cài IPA V'+latest;if(hint)hint.textContent='Nhấn TẢI IPA. Cập nhật Runtime không thay thế được phiên bản ứng dụng này.'}
   else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
+  else if(kind==='ahead'){if(title)title.textContent='Runtime mới hơn Server — cần xác minh.';if(hint)hint.textContent='Giữ nguyên Runtime đang cài. Không hạ cấp hoặc cài lại IPA.'}
   else if(kind==='compatible'){if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Ứng dụng V'+shell+' vẫn tương thích với Runtime/Server V'+runtimeV+'.'}
   else if(kind==='restart'){if(title)title.textContent='Chỉ cần khởi động lại ứng dụng';if(hint)hint.textContent='IPA V'+shell+' đã có sẵn; không tải lại IPA.'}
   else if(kind==='pending'){if(title)title.textContent='Server đang phát hành bản cập nhật.';if(hint)hint.textContent='Chưa có gói Runtime sẵn sàng. Không cần nhấn Cập nhật lúc này.'}
@@ -1968,6 +1976,12 @@ function installManualRuntimeUpdate(){
 }
 async function installRuntimeUpdate(){
   if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
+  const target=String(gmwwUpdateManifest.releaseVersion||gmwwUpdateManifest.runtimeVersion||'').replace(/^V/i,'');
+  if(!gmwwVersionVerified(target)||gmwwVersionCompare(target,gmwwRuntimeVersion())<=0){
+    setUpdateAction('ahead');
+    setUpdateUi('warn','KHÔNG HẠ CẤP','Runtime V'+gmwwRuntimeVersion()+' đang cài không cũ hơn gói V'+(target||'—')+'.','Chỉ cài bản phát hành chính thức mới hơn, đã kiểm tra SHA-256.');
+    return false;
+  }
   const files=gmwwUpdateManifest?.runtime?.files;
   if(!Array.isArray(files)||!files.length){setUpdateUi('warn','KHÔNG CÓ GÓI DỮ LIỆU','Không có gói Runtime cần cài.','Nếu cần bản ứng dụng mới, chọn TẢI FILE IPA.');return false}
   gmwwUpdateBusy=true;gmwwSetUpdateProgress('running',null,'Đang tải Runtime • chờ dữ liệu thực tế');setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
@@ -2126,6 +2140,11 @@ async function checkAppUpdate({notify=false,skipGithub=false}={}){
     if(!gmwwVersionVerified(manifestServer)||gmwwVersionCompare(manifestServer,server)!==0){
       setUpdateAction('unverified');
       setUpdateUi('warn','SERVER CHƯA ĐỒNG BỘ','Server V'+server+' và kênh cập nhật V'+manifestServer+' chưa khớp.','Nhấn ↻ kiểm tra lại sau khi hệ thống đồng bộ.');
+      return null;
+    }
+    if(gmwwUpdateAlignment(gmwwRuntimeVersion(),server,latest)==='runtime_ahead'){
+      setUpdateAction('ahead');
+      setUpdateUi('warn','LỆCH PHIÊN BẢN','Game Runtime V'+gmwwRuntimeVersion()+' mới hơn Server V'+server+'.','Giữ Runtime hiện tại, không hạ cấp. Chỉ đồng bộ khi Server và gói phát hành đã được xác minh.');
       return null;
     }
     gmwwUpdateManifest=manifest;
@@ -2681,12 +2700,12 @@ async function gmwwOpsRun({kind='all',silent=false}={}){
         {http:deep.status}):gmwwOpsResult('bad','KHÔNG SẴN SÀNG','Kiểm tra lưu trữ thất bại.',{http:deep?.status||0});
       const serverVersion=String(server?.data?.version||'').replace(/^V/i,'');
       const updateVersion=String(manifest?.data?.releaseVersion||'').replace(/^V/i,'');
-      const aligned=manifest?.ok&&server?.ok&&serverVersion===updateVersion;
       const shell=typeof gmwwShellVersion==='function'?gmwwShellVersion():'—';
       const runtime=typeof gmwwRuntimeVersion==='function'?gmwwRuntimeVersion():'—';
+      const aligned=manifest?.ok&&server?.ok&&gmwwUpdateAlignment(runtime,serverVersion,updateVersion)==='synchronized';
       checks.update=aligned?gmwwOpsResult('ok','ĐỒNG BỘ','Server '+serverVersion+' • Runtime '+runtime+' • IPA '+shell,
         {serverVersion,releaseVersion:updateVersion,runtimeVersion:runtime,shellVersion:shell,http:manifest.status})
-        :gmwwOpsResult('warn','KIỂM TRA LẠI','Server và kênh cập nhật chưa khớp, xem Cập Nhật Hệ Thống.',
+        :gmwwOpsResult('warn','KIỂM TRA LẠI','Runtime, Server hoặc kênh cập nhật chưa khớp, xem Cập Nhật Hệ Thống.',
           {serverVersion,releaseVersion:updateVersion,runtimeVersion:runtime,shellVersion:shell,http:manifest?.status||0});
       if(runAll){
         const [player,characters]=results.slice(3);
