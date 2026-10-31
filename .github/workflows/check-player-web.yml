@@ -44,6 +44,14 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: CI-LITE Preview routing — focused validation, no unrelated gameplay tests
+        if: steps.scope.outputs.mode == 'ci-lite-preview-workflow'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/github-actions-pr-preview-ci.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
       - name: PR702 — Player Web toast below top menu, away from Chat
         if: steps.scope.outputs.mode == 'player-toast-notice'
         run: |
