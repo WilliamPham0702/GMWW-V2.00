@@ -27,3 +27,10 @@ Ngày: 31/10/2026 · Phạm vi: Thư Viện → Âm Thanh → Vai Trò và kết
 - Cho phép khôi phục từng mục bị xóa; tránh ghi đè file đã gắn lại sau đó.
 - Bảng đối chiếu có nút sao chép danh sách nguồn thiếu, phân biệt thiếu nguồn với đã xóa; chỉ xác minh file trên thiết bị mới biết file nào thực sự còn.
 - File bị xóa bằng các phiên bản cũ không thể cam kết phục hồi nếu binary đã bị xóa khỏi IndexedDB và không có bản sao lưu.
+
+## Đối chiếu liên kết Audio theo Vai Trò
+- Thay bảng **File thực còn thiếu** bằng **Vai Trò chưa liên kết Audio Full** và **Vai Trò chưa liên kết Audio Tên**; hai nguồn được đếm độc lập.
+- Một vai trò có liên kết file tải lên, URL hoặc nguồn tích hợp vẫn được xem là **đã liên kết**, ngay cả khi tệp cục bộ sau đó bị mất; báo cáo không khẳng định khả năng phát.
+- Danh sách chi tiết hiển thị **tên Vai Trò** và nút **Gắn Audio** mở đúng phần Thay thế để chọn file hoặc URL.
+- Có thể sao chép danh sách Vai Trò chưa liên kết (kèm ID) để bổ sung audio. Không tự gán audio sai vai, không xoá file.
+- Trạng thái 33 Audio thiếu nguồn trong bản trước không được suy ra là 33 Vai Trò chưa liên kết; số mới phải kiểm tra từ dữ liệu thực trên iPhone.
