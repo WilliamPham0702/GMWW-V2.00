@@ -11,6 +11,11 @@ on:
       - '.github/workflows/github-runtime-ota.yml'
   release:
     types: [published, edited]
+  workflow_run:
+    workflows: ['Publish GMWW Runtime on GitHub (No Cloudflare)']
+    types: [completed]
+  schedule:
+    - cron: '23 3 * * *'
   workflow_dispatch:
   pull_request:
     branches: [main]
@@ -21,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: gmww-download-catalog
@@ -45,6 +51,8 @@ jobs:
     needs: verify
     if: >-
       github.event_name == 'release' ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -58,7 +66,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Collect original Release links without downloading binary files
+      - name: Collect verified QA artifact and official Release links without copying files
         env:
           GH_TOKEN: ${{ github.token }}
         run: node .github/scripts/update-runtime-download-catalog.mjs "$RUNNER_TEMP/RUNTIME-DOWNLOADS.md"
