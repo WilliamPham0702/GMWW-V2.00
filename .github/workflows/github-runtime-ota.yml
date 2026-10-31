@@ -90,6 +90,15 @@ jobs:
               echo "Staged PR637/CI guard: NO automatic Runtime release." >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
+          # BEGIN GMWW_PAGES_ALIAS_NO_RUNTIME
+          # Pages hostname files / CI guard do not change GMWW Runtime bytes.
+          # Mixed game source changes fail closed and retain full publish checks.
+          if [ "${{ github.event_name }}" = "workflow_run" ] &&
+             printf '%s\n' "$CHANGED" | node .github/scripts/pages-redirect-scope.mjs; then
+            SKIP_AUTO_RELEASE=true
+            echo 'Pages-only alias changes: no GMWW Runtime Release.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # END GMWW_PAGES_ALIAS_NO_RUNTIME
           echo "skip_auto_release=$SKIP_AUTO_RELEASE" >> "$GITHUB_OUTPUT"
           VERSION=$(node -p 'require("./package.json").version.replace(/[.]0$/, "")')
           test -n "$VERSION"
