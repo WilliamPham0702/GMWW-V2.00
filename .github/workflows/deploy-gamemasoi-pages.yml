@@ -1,4 +1,4 @@
-name: Deploy GameMaSoi Pages Alias Only
+name: Deploy GameMaSoi Pages Same-Origin Gateway Only
 on:
   workflow_run:
     workflows: ["Check Player Web Worker"]
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   deploy-pages:
-    name: Deploy isolated Pages redirect (never GMWW Worker)
+    name: Deploy isolated Pages proxy (never GMWW Worker)
     if: >-
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
@@ -80,7 +80,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test safe redirect and auto-release isolation
+      - name: Test same-origin proxy and isolation
         if: steps.pages_scope.outputs.should_deploy == 'true'
         run: node --test tests/gamemasoi-pages-link.test.mjs
       - name: Install existing Wrangler
@@ -96,19 +96,30 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+          PROJECT=$(curl -fsS --max-time 20 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/gamemasoi")
+          BINDING=$(printf '%s' "$PROJECT" | jq -r '.result.deployment_configs.production.services.GMWW_SERVER.service // "missing"')
+          test "$BINDING" = "gmww-v2-00" || { echo "::error::Production GMWW_SERVER service binding missing"; exit 1; }
           npx --no-install wrangler pages deploy infra/pages/gamemasoi --project-name=gamemasoi --branch=main --commit-hash="$(git rev-parse HEAD)"
-      - name: Verify redirect to exact Worker URL
+      - name: Verify same-origin HTML, API and WebSocket entrypoint
         if: steps.pages_scope.outputs.should_deploy == 'true'
         shell: bash
         run: |
           set -euo pipefail
           for i in 1 2 3 4 5; do
-            RESP=$(curl -sS -D - -o /dev/null --max-time 15 https://gamemasoi.pages.dev/ || true)
-            if printf '%s' "$RESP" | tr -d '\r' | grep -Eq '^HTTP/[^ ]+ 302' && printf '%s' "$RESP" | tr -d '\r' | grep -Eiq '^location: https://gmww-v2-00[.]williampham0702[.]workers[.]dev/?$'; then
-              echo 'Verified HTTPS Pages 302 to existing production Worker.' >> "$GITHUB_STEP_SUMMARY"
-              exit 0
+            ROOT=$(curl -sS -D - -o /dev/null --max-time 15 https://gamemasoi.pages.dev/ || true)
+            CODE=$(printf '%s' "$ROOT" | tr -d '\r' | grep '^HTTP/' | tail -1 | awk '{print $2}')
+            if [ "$CODE" = 200 ] && ! printf '%s' "$ROOT" | grep -iq '^location:'; then
+              API=$(curl -fsS --max-time 15 https://gamemasoi.pages.dev/api/health || true)
+              if printf '%s' "$API" | jq -e '.ok == true and .service == "GMWW Online"' >/dev/null 2>&1; then
+                WS=$(curl -sS -D - -o /dev/null --max-time 15 https://gamemasoi.pages.dev/ws/ABCD || true)
+                if printf '%s' "$WS" | tr -d '\r' | grep -Eq '^HTTP/[^ ]+ 426'; then
+                  echo 'Same hostname HTML/API/WS gateway verified; no redirect.' >> "$GITHUB_STEP_SUMMARY"
+                  exit 0
+                fi
+              fi
             fi
             sleep 8
           done
-          echo "::error::Pages redirect not verified; old Worker remains unchanged"
+          echo "::error::Pages gateway not verified; Worker Production remains untouched. Roll back Pages."
           exit 1
