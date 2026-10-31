@@ -4,10 +4,11 @@
 
 ## 1. RUNTIME — CẬP NHẬT THỦ CÔNG
 
-**Mới nhất đã xác minh trên GitHub: V3.280.** File V3.284 được báo đã có ngoài kho nhưng **chưa thấy Release V3.284**; không tự gắn nhãn V3.284 cho V3.280.
+**File Runtime mới nhất tìm thấy: V3.284 (QA).** Bản Production chính thức mới nhất trên GitHub Releases: **V3.280**. Kho này liên kết file gốc, không sao chép; bản QA chưa được nghiệm thu để cài Production.
 
-| Bản | Tải .gmwwupdate | Xác minh | Chi tiết |
+| Bản | Tải Runtime / gói QA | Xác minh | Chi tiết |
 |:--|:--|:--|:--|
+| **V3.284 — QA, chưa phát hành** | [⬇️ TẢI GÓI QA (ZIP, chứa .gmwwupdate)](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41168734658/artifacts/13030570990) | SHA-256 file bên trong: `73ff4bd85a1e11c5714ab7e9d9638d8bc5dda33bb03e81a041f038683fd946e4` | [PR #665](https://github.com/WilliamPham0702/GMWW-V2.00/pull/665) |
 | **V3.280** | [⬇️ TẢI FILE](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.280/GMWW-Runtime-V3.280.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.280/GMWW-Runtime-V3.280.gmwwupdate.sha256) | [Ghi chú](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.280) |
 | **V3.279** | [⬇️ TẢI FILE](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.279/GMWW-Runtime-V3.279.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.279/GMWW-Runtime-V3.279.gmwwupdate.sha256) | [Ghi chú](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.279) |
 | **V3.278** | [⬇️ TẢI FILE](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.278/GMWW-Runtime-V3.278.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.278/GMWW-Runtime-V3.278.gmwwupdate.sha256) | [Ghi chú](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.278) |
