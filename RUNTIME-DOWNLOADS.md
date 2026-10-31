@@ -34,6 +34,6 @@
 
 - [Runtime cũ (không nằm trong 5 phiên bản tải nhanh)](RUNTIME-HISTORY.md)
 - [IPA cũ (không nằm trong 3 phiên bản tải nhanh)](IPA-HISTORY.md)
-- [Chính sách sao lưu và dọn GitHub](../../blob/main/docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md)
+- [Chính sách sao lưu và dọn GitHub](https://github.com/WilliamPham0702/GMWW-V2.00/blob/main/docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md)
 
 **Dọn file:** Giữ 5 bản Runtime + 3 bản IPA, các mốc rollback/được tham chiếu và file phát hành chưa đủ 14 ngày. Tối đa dọn 25 file mỗi lần sau khi backup + SHA-256 hợp lệ. **Không xóa file chỉ vì bị ẩn khỏi danh mục.**
