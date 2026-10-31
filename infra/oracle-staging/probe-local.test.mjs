@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {localUrl,runLocalProbe} from './probe-local.mjs';
+import {localUrl,runLocalProbe,stableRoomProjection} from './probe-local.mjs';
 
 const testEnv={GMWW_ORACLE_STAGING:'1',GMWW_ORACLE_PROBE_ONLY:'1',GMWW_ORACLE_PORT:'8787'};
 test('Oracle probe only ever targets loopback, never Production',()=>{
@@ -20,4 +20,12 @@ test('Probe refuses unknown phase before touching STAGING state',async()=>{
 });
 test('Probe fails closed without a marked isolated state directory',async()=>{
   await assert.rejects(runLocalProbe('create',testEnv),/ISOLATED_STATE_DIR_REQUIRED/);
+});
+
+test('Room reconciliation includes only stable, nonsecret public fields',()=>{
+ const input={room:{code:'ABC234',roomName:'Oracle STAGING',seatCount:8,phase:'lobby',status:'waiting',gmToken:'NEVER_COPY',updatedAt:42},
+ players:[{participantId:'member:test456',secret:'NO'},{participantId:'member:test123',roleName:'SECRET'}]};
+ assert.deepEqual(stableRoomProjection(input),{room:{code:'ABC234',roomName:'Oracle STAGING',seatCount:8,phase:'lobby',status:'waiting'},participantIds:['member:test123','member:test456']});
+ assert.throws(()=>stableRoomProjection({room:input.room,players:[{participantId:'x'},{participantId:'x'}]}));
+ assert.throws(()=>stableRoomProjection({room:{code:'INVALID'},players:[]}));
 });

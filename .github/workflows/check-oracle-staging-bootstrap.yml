@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --ignore-scripts --no-audit --no-fund
-          export GMWW_ORACLE_STAGING=1 GMWW_ORACLE_PROBE_ONLY=1 GMWW_ORACLE_PORT=8877
+          export GMWW_ORACLE_STAGING=1 GMWW_ORACLE_PROBE_ONLY=1 GMWW_ORACLE_PORT=8877 GMWW_ORACLE_FIXTURE_ONLY=1
           export GMWW_ORACLE_STATE_DIR="$(mktemp -d)"
           LOG="$(mktemp)"
           PID=""

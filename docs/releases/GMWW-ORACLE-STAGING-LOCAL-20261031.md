@@ -20,3 +20,9 @@
 - `/readyz` ở Node bootstrap vẫn 503; chưa được coi là Oracle VM Production hoặc Dual Server failover thật. Còn phải kiểm tra chuyển dữ liệu có kiểm soát, TLS, quyền truy cập, phân quyền, WS reconnect trên Oracle VM và đối soát trạng thái hai backend.
 - CI workflow tăng timeout giới hạn để đủ khởi động workerd; Runtime OTA bỏ qua commit chỉ chứa đúng nhóm script/test/workflow STAGING, không tạo file update không cần thiết.
 - Rollback: revert PR bổ sung; giữ nguyên Prod/Pages/IPA/Runtime, không có migration thật.
+
+## Đối soát snapshot STAGING sau restart (bổ sung)
+- Khi kiểm thử trên Workerd LOCAL, chỉ trích xuất projection công khai và ổn định: mã phòng, tên phòng, số ghế, pha/trạng thái, danh sách participantId đã sắp xếp; không lấy session token, GM token, lá Vai Trò hay Artifact riêng.
+- Snapshot fixture xác thực SHA-256 và khóa nguồn bằng `GITHUB_SHA`, phiên bản engine, room code. Sau restart so sánh digest trước/sau; lệch dữ liệu phải **FAIL** CI, không hợp thức hoá failover.
+- Kho `GMWW_ORACLE_FIXTURE_ONLY=1` chỉ dùng thư mục STAGING có marker riêng, tự dọn sau kiểm thử. **Không phải** bản sao đầy đủ Durable Objects, không thay thế quy trình backup/migration hay đối soát private room state.
+- Oracle Node bootstrap vẫn trả 503; chưa chuyển backend. Rollback: revert thay đổi STAGING-only, không động đến Production/IPA/Runtime/Pages/dữ liệu.
