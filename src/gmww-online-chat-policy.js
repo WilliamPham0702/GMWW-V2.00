@@ -15,17 +15,6 @@ export function chatBlockedByEffects(rows,match,loginId,now=Date.now()){
   }
   return{dead,expelled,frozen,mute};
 }
-// Freeze has expired for role actions at MORNING_START, but prevents day chat
-// until the following night. Never resurrect an undone/GM-cleared effect.
-export function chatFrozenForDay(rows,meta,loginId){
-  if(!['morning','day'].includes(String(meta?.cyclePhase||'')))return false;
-  const id=normalize(loginId),night=Number(meta?.cycleNight||0);
-  return (Array.isArray(rows)?rows:[]).some(x=>
-    x?.type==='frozen'&&normalize(x.loginId)===id&&
-    (!x.matchId||String(x.matchId)===String(meta?.matchId||''))&&
-    Number(x.night||0)===night&&night>0&&x.undone!==true&&
-    (active(x,meta?.matchId,Date.now())||x.expiredReason==='MORNING_START'));
-}
 function stepGroups(step){
   if(!step||typeof step!=='object')return [];
   if(['wolf-introduction','wolf-pack-bite'].includes(step.kind)){
@@ -42,10 +31,12 @@ export function chatPolicy({meta,players,rows,runtime,loginId,bans={},now=Date.n
     return{canRead:false,canSend:false,channel:null,reason:'CHAT_NOT_IN_RUNNING_ROOM'};
   if(['lobby','waiting','role_delivery'].includes(String(meta.phase)))return{canRead:true,canSend:bans[id]!==true,channel:'lobby',scope:'village',reason:bans[id]===true?'CHAT_MUTED_GM':null};
   const effects=chatBlockedByEffects(rows,meta?.matchId,id,now);
-  const frozen=effects.frozen||chatFrozenForDay(rows,meta,id);
+  const phase=String(meta.cyclePhase||'');
+  // Freeze blocks group/village chat at night only. Morning restores it.
+  // Death and exile continue to block village and group chat in every phase.
+  const frozen=phase==='night'&&effects.frozen;
   const blocked=effects.dead||effects.expelled||frozen||effects.mute||bans[id]===true;
   const reason=effects.dead?'CHAT_DEAD':effects.expelled?'CHAT_EXPELLED':frozen?'CHAT_FROZEN':effects.mute?'CHAT_MUTED_ARTIFACT':bans[id]===true?'CHAT_MUTED_GM':null;
-  const phase=String(meta.cyclePhase||'');
   if(phase==='morning'||phase==='day')
     return{canRead:true,canSend:!blocked,channel:'day',scope:'village',reason};
   if(phase!=='night'||effects.dead||effects.expelled||effects.frozen)
