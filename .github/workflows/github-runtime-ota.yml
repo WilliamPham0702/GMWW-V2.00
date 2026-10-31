@@ -84,8 +84,8 @@ jobs:
               SKIP_AUTO_RELEASE=true
               echo "Storage-only workflow maintenance: NO automatic Runtime release." >> "$GITHUB_STEP_SUMMARY"
             fi
-            # The isolated gamemasoi Pages alias is not a GMWW Runtime release.
-            PAGES_UNRELATED=$(printf '%s\\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(deploy-production|github-runtime-ota|deploy-gamemasoi-pages)[.]yml|infra/pages/gamemasoi/(_redirects|index[.]html)|tests/gamemasoi-pages-link[.]test[.]mjs|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031[.]md)
+            # Pages-only alias must never trigger a GMWW Runtime package.
+            PAGES_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(deploy-production|github-runtime-ota|deploy-gamemasoi-pages)[.]yml|infra/pages/gamemasoi/(_redirects|index[.]html)|tests/gamemasoi-pages-link[.]test[.]mjs|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031[.]md)
                printf '%s\n' "$MESSAGE" | grep -Eq '(^Merge pull request #637([[:space:]]|$)|\(#637\)$)'; then
               SKIP_AUTO_RELEASE=true
               echo "Staged PR637/CI guard: NO automatic Runtime release." >> "$GITHUB_STEP_SUMMARY"
@@ -238,7 +238,7 @@ jobs:
  || true)
             if [ -n "$CHANGED" ] && [ -z "$PAGES_UNRELATED" ]; then
               SKIP_AUTO_RELEASE=true
-              echo "Pages-only link deployment: no Runtime OTA release." >> "$GITHUB_STEP_SUMMARY"
+              echo "Pages-only alias: no Runtime release." >> "$GITHUB_STEP_SUMMARY"
             fi
             if [ "$CHANGED" = "$POLICY_ONLY" ] || [ "$CHANGED" = "$PR637_ONLY" ] ||
                printf '%s\n' "$MESSAGE" | grep -Eq '(^Merge pull request #637([[:space:]]|$)|\(#637\)$)'; then
