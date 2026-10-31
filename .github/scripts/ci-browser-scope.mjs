@@ -51,6 +51,24 @@ function isPagesAliasScope(changes){
     changes.every(c=>pagesAliasOnlyPaths.has(c.path)&&['M','A'].includes(c.status));
 }
 
+// Oracle bootstrap is backend-isolated; any source/game change fails closed to full CI.
+const oracleBootstrapPaths=new Set([
+  'oracle-staging/server.mjs',
+  'tests/oracle-staging-bootstrap.test.mjs',
+  'docs/architecture/oracle-staging-bootstrap-20261031.md',
+  '.github/workflows/check-oracle-staging-bootstrap.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+]);
+function isOracleBootstrapScope(changes){
+  return Array.isArray(changes)&&changes.length>=4&&
+    changes.some(c=>c.path==='oracle-staging/server.mjs'&&c.status==='A')&&
+    changes.some(c=>c.path==='tests/oracle-staging-bootstrap.test.mjs'&&c.status==='A')&&
+    changes.every(c=>oracleBootstrapPaths.has(c.path)&&['A','M'].includes(c.status));
+}
+
 const testPath=/^tests\/(?:match-completion(?:-server|-reentry)?|forced-end-game)\.test\.mjs$/;
 const notesPath=/^docs\/releases\/[\w.\-]+\.md$/;
 
@@ -3067,6 +3085,7 @@ function isPR652OnlineHotfixScope(changes){
   return true;
 }
 function classifyBrowserScope(changes){
+  if(isOracleBootstrapScope(changes))return 'oracle-staging-bootstrap';
   if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes))return 'pages-alias';
   if(isPR652FinalReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652PostmergeReleaseScope(changes))return 'pr652-postmerge-release';
@@ -3393,6 +3412,7 @@ function detect(){
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
         const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
         const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
+        if(isOracleBootstrapScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle STAGING bootstrap; no Production changes'};
         if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect or safe deployment retry; no game source changes'};
       }
     }catch{} // Fail closed for any unexpected scope, ref or status.
