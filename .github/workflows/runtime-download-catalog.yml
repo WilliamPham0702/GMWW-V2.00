@@ -69,7 +69,9 @@ jobs:
           git fetch origin runtime-downloads
           git switch -C runtime-downloads origin/runtime-downloads
           cp "$RUNNER_TEMP/RUNTIME-DOWNLOADS.md" RUNTIME-DOWNLOADS.md
-          git add RUNTIME-DOWNLOADS.md
+          cp "$RUNNER_TEMP/RUNTIME-HISTORY.md" RUNTIME-HISTORY.md
+          cp "$RUNNER_TEMP/IPA-HISTORY.md" IPA-HISTORY.md
+          git add RUNTIME-DOWNLOADS.md RUNTIME-HISTORY.md IPA-HISTORY.md
           if git diff --cached --quiet; then
             echo 'Catalog already current; no commit necessary.' >> "$GITHUB_STEP_SUMMARY"
             exit 0
