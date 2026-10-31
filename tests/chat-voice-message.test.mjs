@@ -7,7 +7,7 @@ import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 const source=readFileSync('src/player-web-src/35-online-chat.part','utf8');
 const worker=readFileSync('src/index.js','utf8');
 const ogg=Buffer.from('OggS'+String.fromCharCode(0,2,0,0,0,0,0,0,0,0,0,0),'binary').toString('base64');
-const webm=Buffer.from([0x1a,0x45,0xdf,0xa3,0x42,0x82,0x84,0x77,0x65,0x62,0x6d]).toString('base64');
+const webm=Buffer.from([0x1a,0x45,0xdf,0xa3,0x42,0x82,0x84,0x77,0x65,0x62,0x6d,0]).toString('base64');
 const mp4=Buffer.from([0,0,0,20,0x66,0x74,0x79,0x70,0x4d,0x34,0x41,0x20]).toString('base64');
 
 test('voice-note MIME allowlist handles Safari MP4 and browsers with Opus',()=>{
