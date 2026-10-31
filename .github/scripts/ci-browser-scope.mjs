@@ -3419,6 +3419,32 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // BEGIN GMWW_RUNTIME_CENTRAL_STORE_SCOPE: exact CI/docs-only archive PR.
+  // Any extra game/Worker/IPA/Oracle source change falls back to FULL regression.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const expected=new Map([
+          ['.github/scripts/ci-browser-scope.mjs','M'],
+          ['.github/workflows/check-player-web.yml','M'],
+          ['.github/workflows/deploy-production.yml','M'],
+          ['.github/workflows/github-runtime-ota.yml','M'],
+          ['README.md','M'],
+          ['docs/releases/GMWW-RUNTIME-CENTRAL-ARCHIVE-20261031.md','A'],
+          ['tests/runtime-single-archive-release.test.mjs','A']
+        ]);
+        const changed=git('diff','--name-status','--no-renames',base,'HEAD').trim()
+          .split('\n').filter(Boolean).map(line=>line.split('\t'));
+        if(changed.length===expected.size &&
+           new Set(changed.map(([,path])=>path)).size===expected.size &&
+           changed.every(([status,path])=>expected.get(path)===status)){
+          return {mode:'runtime-central-store',reason:'Single canonical GitHub Runtime Release; no gameplay, Worker or IPA edits'};
+        }
+      }
+    }catch{} // Unknown/ambiguous diff must run full CI.
+  }
+  // END GMWW_RUNTIME_CENTRAL_STORE_SCOPE
   // Verify the exact diff before any legacy full-suite selector.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
