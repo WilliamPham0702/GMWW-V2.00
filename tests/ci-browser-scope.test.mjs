@@ -887,7 +887,7 @@ test('PR652 V3.280 final selector ordering recovery: exact three CI-only files s
     'tests/ci-browser-scope.test.mjs'
   ];
   const verified=paths.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
-  assert.equal(classifyBrowserScope(verified),'pr652-postmerge-release');
+  assert.notEqual(classifyBrowserScope(verified),'pr652-postmerge-release','V3.282 must not reuse PR652 V3.280 focused release gate');
   assert.equal(classifyBrowserScope(verified.slice(1)),'full','missing selector fails closed');
   assert.equal(classifyBrowserScope([...verified,modified('src/index.js','before','gameplay changed')]),'full','gameplay cannot bypass broad CI');
   assert.equal(classifyBrowserScope([...verified,verified[0]]),'full','duplicate fails closed');
