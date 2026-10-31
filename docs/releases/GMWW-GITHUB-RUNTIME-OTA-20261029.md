@@ -27,3 +27,11 @@
 4. Thử trên STAGING: không có Cloudflare, mất GitHub, checksum sai, mất mạng, OTA trùng version, ROM/dung lượng nhỏ, iPhone Safari/Native. Chỉ phát hành IPA mới khi CI, xác minh OTA/rollback trên iPhone đạt và có release notes tiếng Việt.
 
 **Trạng thái:** Giai đoạn 1 là PR độc lập với Cloudflare. Giai đoạn 2 mới là tài liệu thiết kế, chưa thay IPA hay Production.
+
+
+## PR #654 — đóng gói ứng viên Runtime V3.281 để nghiệm thu iPhone
+
+- Chạy **chỉ job package trên sự kiện pull_request** của GitHub Runtime OTA; lưu `.gmwwupdate`, `.sha256`, manifest và ghi chú tiếng Việt vào Actions Artifact.
+- Không tạo GitHub Release, không triển khai Worker/Cloudflare Production, không thay đổi IPA, Oracle hay dữ liệu. Chỉ sử dụng artifact sau khi SHA-256 và kiểm thử gói đều PASS.
+- Đây là **ứng viên QA**, không phải bản Production được nghiệm thu. Lời đọc Tên Vai Trò phải phát từ file Tên riêng; không cắt audio Full.
+- Sau nghiệm thu iPhone và tất cả required checks SUCCESS tại đúng HEAD, mới xem xét merge và phát hành bản chính thức với kiểm tra checksum, release notes và rollback.

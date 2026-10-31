@@ -7,11 +7,19 @@ on:
       - ".github/workflows/github-runtime-ota.yml"
       - ".github/runtime-release/**"
       - "docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md"
+      - "docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md"
+      - "tests/audio-safe-delete-and-audit-20261031.test.mjs"
   workflow_run:
     workflows: ["Check Player Web Worker"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      qa_only:
+        description: 'Create PR654 QA artifact only (no Production release)'
+        type: boolean
+        default: false
+        required: false
 
 # PR validation is read-only. Publishing is limited to verified main commits.
 permissions:
@@ -28,6 +36,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.qa_only == true && github.ref == 'refs/heads/feat/role-name-audio-separate-20261031') ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main' &&
@@ -101,7 +110,7 @@ jobs:
           test -n "$VERSION"
           echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] || { [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.qa_only }}" = "true" ] && [ "${{ github.ref }}" = "refs/heads/feat/role-name-audio-separate-20261031" ]; }; then
             echo "PR validation only: no release, Worker deployment, IPA or Production access." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -195,7 +204,7 @@ jobs:
   publish:
     name: Publish verified .gmwwupdate to GitHub Releases only
     needs: package
-    if: github.event_name != 'pull_request' && needs.package.result == 'success' && needs.package.outputs.skip_auto_release != 'true'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.package.result == 'success' && needs.package.outputs.skip_auto_release != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
