@@ -20,19 +20,19 @@ concurrency:
 
 jobs:
   verify-live-redirect:
-    name: Verify existing Pages HTTPS 302 (read-only)
+    name: Verify Pages HTTPS 302 (read-only)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
-      - name: Request Pages alias without following redirects
+      - name: Check live Pages redirect
         shell: bash
         run: |
           set -euo pipefail
           curl -sS -D /tmp/pages-headers -o /dev/null --max-time 20 https://gamemasoi.pages.dev/
-          tr -d '\\r' < /tmp/pages-headers > /tmp/pages-clean
-          grep -Eq '^HTTP/[^ ]+ 302' /tmp/pages-clean
-          grep -Eiq '^location: https://gmww-v2-00[.]williampham0702[.]workers[.]dev/?
+          grep -Eq '^HTTP/[0-9.]+ 302' /tmp/pages-headers
+          grep -Fqi 'location: https://gmww-v2-00.williampham0702.workers.dev/' /tmp/pages-headers
+  deploy-pages:
     name: Deploy isolated Pages redirect (never GMWW Worker)
     if: >-
       (github.event_name == 'workflow_run' &&
