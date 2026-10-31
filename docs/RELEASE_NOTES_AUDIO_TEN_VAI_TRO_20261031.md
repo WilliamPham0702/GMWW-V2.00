@@ -19,3 +19,11 @@ Ngày: 31/10/2026 · Phạm vi: Thư Viện → Âm Thanh → Vai Trò và kết
 ## Rollback
 - Revert commit thay đổi trên PR này trước khi phát hành, hoặc quay về Runtime OTA production đã xác minh gần nhất.
 - Audio Full cũ lưu nguyên vẹn trừ khi GM tự chọn “Thay thế Full”.
+
+## An toàn xóa Audio (31/10/2026)
+- Dòng Audio chỉ hiển thị tên và các nút Play Tên / Play Full / Thay thế / Xóa, bỏ ghi chú file bên dưới.
+- Trước khi xóa hỏi xác nhận rõ tên mục, có thể chọn HỦY.
+- Xóa nay chỉ chuyển mục vào **Thùng rác Audio**; **không xóa file âm thanh** trong IndexedDB, giữ nguyên file Tên và Full.
+- Cho phép khôi phục từng mục bị xóa; tránh ghi đè file đã gắn lại sau đó.
+- Bảng đối chiếu có nút sao chép danh sách nguồn thiếu, phân biệt thiếu nguồn với đã xóa; chỉ xác minh file trên thiết bị mới biết file nào thực sự còn.
+- File bị xóa bằng các phiên bản cũ không thể cam kết phục hồi nếu binary đã bị xóa khỏi IndexedDB và không có bản sao lưu.
