@@ -1,0 +1,74 @@
+name: Check Pages Online Chat & Reconnect (Isolated)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tests/pages-online-chat-reconnect-e2e.mjs"
+      - ".github/workflows/check-pages-online-chat-reconnect.yml"
+  workflow_dispatch:
+
+# Never push, deploy, touch Production, or publish IPA/Runtime.
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-pages-online-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local-pages-online-e2e:
+    name: Isolated Pages binding + 2-player chat + WS reconnect
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Check test security boundary and sources
+        run: |
+          node --check tests/pages-online-chat-reconnect-e2e.mjs
+          test -f infra/pages/gamemasoi/_worker.js
+          test -f infra/pages/gamemasoi/_redirects
+          ! grep -Eq '^/[ *]+https?://' infra/pages/gamemasoi/_redirects
+      - name: Install pinned Worker dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Start local Worker and Pages gateway; no Production data
+        shell: bash
+        env:
+          GMWW_TEST_URL: http://127.0.0.1:8788
+          GMWW_WORKER_URL: http://127.0.0.1:8787
+        run: |
+          set -euo pipefail
+          npx --no-install wrangler dev --local --ip 127.0.0.1 --port 8787 > "$RUNNER_TEMP/gmww-online-worker.log" 2>&1 &
+          WPID=$!
+          npx --no-install wrangler pages dev infra/pages/gamemasoi \
+            --ip 127.0.0.1 --port 8788 \
+            --service GMWW_SERVER=gmww-v2-00 > "$RUNNER_TEMP/gmww-online-pages.log" 2>&1 &
+          PPID_GMWW=$!
+          cleanup() {
+            kill "$PPID_GMWW" "$WPID" 2>/dev/null || true
+            wait "$PPID_GMWW" "$WPID" 2>/dev/null || true
+            echo '--- Last 60 lines of isolated Worker ---'
+            tail -60 "$RUNNER_TEMP/gmww-online-worker.log" || true
+            echo '--- Last 60 lines of isolated Pages ---'
+            tail -60 "$RUNNER_TEMP/gmww-online-pages.log" || true
+          }
+          trap cleanup EXIT
+          READY=false
+          for i in $(seq 1 75); do
+            if curl -fsS --max-time 2 "$GMWW_WORKER_URL/api/health" > "$RUNNER_TEMP/gmww-worker-health.json" 2>/dev/null &&
+               curl -fsS --max-time 2 "$GMWW_TEST_URL/api/health" > "$RUNNER_TEMP/gmww-pages-health.json" 2>/dev/null; then
+              READY=true
+              break
+            fi
+            if ! kill -0 "$WPID" 2>/dev/null || ! kill -0 "$PPID_GMWW" 2>/dev/null; then
+              echo '::error::Isolated development server exited unexpectedly'
+              break
+            fi
+            sleep 1
+          done
+          test "$READY" = true || { echo '::error::Isolated Pages/Worker not ready'; exit 1; }
+          node tests/pages-online-chat-reconnect-e2e.mjs
