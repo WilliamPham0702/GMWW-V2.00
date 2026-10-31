@@ -279,7 +279,7 @@ async function gmwwVoiceToggle(){
   recorder.start();
   gmwwVoiceUi(true);gmwwChatExpand();
   active.timeout=setTimeout(()=>{if(gmwwVoiceRecording===active&&recorder.state==='recording')recorder.stop()},20000);
- }catch(e){stream?.getTracks().forEach(t=>t.stop());toast('Không thể sử dụng micro: '+String(e.message||'Chưa cấp quyền'))}
+ }catch(e){gmwwVoiceAbort();stream?.getTracks().forEach(t=>t.stop());toast('Không thể sử dụng micro: '+String(e.message||'Chưa cấp quyền'))}
  finally{gmwwVoiceBusy=false}
 }
 async function gmwwVoicePlay(item,button,channel){
