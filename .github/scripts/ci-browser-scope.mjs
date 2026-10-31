@@ -2931,6 +2931,23 @@ function isPR645PostmergeReleaseScope(changes){
     changes.every(c=>c?.status==='M'&&expected.has(c.path)&&
       typeof c.after==='string'&&c.after.includes(markers.get(c.path)));
 }
+// PR652 V3.280: final selector ordering recovery, only three CI files.
+// Every runtime source remains identical to the owner-accepted PR652 merge.
+function isPR652FinalReleaseScope(changes){
+  const markers=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','function isPR652FinalReleaseScope(changes)'],
+    ['.github/workflows/deploy-production.yml','# PR652 V3.280: final selector ordering repair'],
+    ['tests/ci-browser-scope.test.mjs','PR652 V3.280 final selector ordering recovery:']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==markers.size||
+    new Set(changes.map(c=>c?.path)).size!==markers.size)return false;
+  if(!changes.every(c=>c?.status==='M'&&markers.has(c.path)&&
+    typeof c.before==='string'&&typeof c.after==='string'&&c.after.includes(markers.get(c.path))))return false;
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.280.0')return false;
+  return fs.readFileSync('src/index.js','utf8').includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
+    fs.readFileSync('server-game/current/app.js','utf8').includes('soi-can-canonical') &&
+    fs.readFileSync('docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md','utf8').includes('ĐẠT');
+}
 // PR652 V3.280: only the exact five-file postmerge CI repair can use
 // focused browser/Worker checks. The accepted gameplay commit remains immutable.
 // Unknown paths, deletions, duplicate paths or unreviewed code fail closed.
@@ -3015,6 +3032,7 @@ function isPR652OnlineHotfixScope(changes){
   return true;
 }
 function classifyBrowserScope(changes){
+  if(isPR652FinalReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652PostmergeReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652OnlineHotfixScope(changes))return 'online-hotfix-652';
   if(isPR645PostmergeReleaseScope(changes))return 'pr645-postmerge-release';
@@ -3675,6 +3693,22 @@ function detect(){
         }
       }
     }catch{} // Fail closed: run full CI for any unreviewed change.
+  }
+  // PR652: inspect the exact three-file ordering fix BEFORE legacy main push
+  // dispatchers return 'full'. Any unknown path/source reverts to full CI.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.280.0'){
+        git('merge-base','--is-ancestor','fa48216517e692924b47a936767369d0d654523c','HEAD');
+        const changes=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean).map(row=>{
+          const [status,path]=row.split('\t');
+          return{status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
+            after:status==='M'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isPR652FinalReleaseScope(changes))
+          return{mode:'pr652-postmerge-release',reason:'PR652 final exact three-file CI selector ordering; approved Online gameplay immutable'};
+      }
+    }catch{} // Strict fail-closed: unknown diff does not narrow main CI.
   }
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.

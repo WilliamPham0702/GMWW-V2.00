@@ -879,3 +879,23 @@ test('PR652 V3.280 postmerge CI repair: only five audited CI-only files can sele
   assert.match(deploy,/git merge-base --is-ancestor 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
   assert.match(deploy,/git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
 });
+
+test('PR652 V3.280 final selector ordering recovery: exact three CI-only files select focused release',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const verified=paths.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  assert.equal(classifyBrowserScope(verified),'pr652-postmerge-release');
+  assert.equal(classifyBrowserScope(verified.slice(1)),'full','missing selector fails closed');
+  assert.equal(classifyBrowserScope([...verified,modified('src/index.js','before','gameplay changed')]),'full','gameplay cannot bypass broad CI');
+  assert.equal(classifyBrowserScope([...verified,verified[0]]),'full','duplicate fails closed');
+  assert.equal(classifyBrowserScope(verified.map((c,i)=>i===1?{...c,status:'D'}:c)),'full','deleted production gate fails closed');
+  assert.equal(classifyBrowserScope(verified.map((c,i)=>i===1?{...c,after:'missing release marker'}:c)),'full','marker is mandatory');
+  const selector=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+  assert.ok(selector.indexOf('PR652: inspect the exact three-file ordering fix')<selector.indexOf('Push of CI-policy-only main merges'));
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(deploy,/git merge-base --is-ancestor fa48216517e692924b47a936767369d0d654523c HEAD/);
+  assert.match(deploy,/git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
+});
