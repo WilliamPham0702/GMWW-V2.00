@@ -41,7 +41,11 @@ battleMorningPlayAudio=function(){void gmwwPublishAnnouncement(null);return gmww
 /* GM Chat monitor: available only with GM-authorized room API. No public history path. */
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
 // Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
-window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&playSceneState.step==='battle')void gmwwGMChatRefresh()},7000);
+window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&gmwwGMChatAvailable())void gmwwGMChatRefresh()},7000);
+function gmwwGMChatAvailable(){
+  return isLivePlayRoom()&&!!playSceneState.roomCode&&
+    ['seats','game','roles','deal','battle'].includes(playSceneState.step);
+}
 function gmwwGMChatMakeMovable(trigger){
   let drag=null;
   trigger.addEventListener('pointerdown',event=>{
@@ -68,7 +72,7 @@ function gmwwGMChatMakeMovable(trigger){
   try{const p=JSON.parse(localStorage.getItem('gmww-gm-chat-icon-position')||'null');if(p&&/^\\d+(?:\\.\\d+)?px$/.test(p.left)&&/^\\d+(?:\\.\\d+)?px$/.test(p.top)){trigger.style.left=p.left;trigger.style.top=p.top;trigger.style.right='auto'}}catch{}
 }
 function gmwwGMChatMount(){
-  const active=playSceneState.step==='battle'&&!!playSceneState.roomCode;
+  const active=gmwwGMChatAvailable();
   if(!document.getElementById('gmwwGMChatStyle')){
     const st=document.createElement('style');st.id='gmwwGMChatStyle';st.textContent=`
 #battleGMChatFloat button{font-size:24px;min-width:40px;min-height:40px;background:transparent;color:#eafaff;border:0}#battleGMChatFloat button[aria-pressed="true"]{filter:drop-shadow(0 0 7px #87e4ff)}
@@ -98,7 +102,9 @@ function gmwwGMChatMount(){
     document.getElementById('gmwwGMChatClose').onclick=()=>{gmwwGMChatOpen=false;panel.classList.remove('open');document.getElementById('battleGMChatToggle')?.setAttribute('aria-pressed','false')};
     document.getElementById('gmwwGMChatReload').onclick=()=>void gmwwGMChatRefresh();
   }
-  trigger.hidden=true;const villageForm=document.getElementById('gmwwGMChatVillage');if(villageForm)villageForm.hidden=!(active&&playSceneState.phase==='day');
+  // During Seat setup there is no Battle footer. Offer the same authenticated
+  // GM Chat monitor as a movable flamingo without creating a second chat.
+  trigger.hidden=!(active&&playSceneState.step!=='battle');const villageForm=document.getElementById('gmwwGMChatVillage');if(villageForm)villageForm.hidden=!(active&&playSceneState.phase==='day');
   const dayToggle=document.getElementById('battleGMChatToggle');
   if(dayToggle&&!dayToggle.dataset.gmwwChatBound){dayToggle.dataset.gmwwChatBound='1';dayToggle.onclick=()=>{
     gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);
@@ -111,12 +117,12 @@ function gmwwGMChatMount(){
   }
 }
 async function gmwwGMChatRefresh(){
-  if(!gmwwGMChatOpen||playSceneState.step!=='battle'||!isLivePlayRoom())return;
+  if(!gmwwGMChatOpen||!gmwwGMChatAvailable())return;
   try{
     const res=await playRoomApi('/chat',{method:'GET'}),content=document.getElementById('gmwwGMChatContent');
     if(!content)return;content.replaceChildren();
     const channels=(res.channels||[]).filter(x=>x.messages?.length).slice(-25);
-    if(!channels.length)content.textContent='Chưa có tin nhắn trong ván.';
+    if(!channels.length)content.textContent='Chưa có tin nhắn trong phòng.';
     for(const ch of channels){
       const box=document.createElement('div');box.className='gmwwGmChannel'+(String(ch.channel).startsWith('night:')?' secret':'');
       const h=document.createElement('h4');h.textContent=String(ch.channel).startsWith('night:')?'🌙 Chat bí mật • '+String(ch.channel).slice(0,75):'☀️ Chat Làng';box.appendChild(h);

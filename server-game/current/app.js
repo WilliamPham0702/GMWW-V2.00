@@ -5869,11 +5869,15 @@ function battleIconOn(){try{return localStorage.getItem(BATTLE_ICON_ON_KEY)!=='0
 function battleIconSetOn(on){try{localStorage.setItem(BATTLE_ICON_ON_KEY,on?'1':'0')}catch{};battleIconClearDrag();renderPlayBattle()}
 function battleIconResolve(action){
  const api=globalThis.GMWWActionIconLibrary;
- if(!api)return [];
- // One approved 3-way Fairy artwork with three independent touch regions.
- if(action.actionId==='action_transfer_bite'&&api.resolve(action.actionId))
+ // The Fairy uses its approved triptych even when other icons are customized.
+ if(action.actionId==='action_transfer_bite'&&api?.resolve?.(action.actionId))
   return [{id:'yeu-tinh-three-way',name:'Yêu Tinh',assetId:'51_yeu_tinh_three_way.png',image:'',isFairyTriptych:true}];
- return api.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
+ const resolved=api?.resolveAll?.(action.actionId)?.filter(icon=>!!icon?.assetId||!!icon?.image)||[];
+ if(resolved.length)return resolved;
+ // A stale/missing iPhone icon catalog must not hide the only Wolf Bite action.
+ if(action.actionId==='action_wolf_bite')
+  return [{id:'soi-can-canonical',name:'Sói Cắn',assetId:'05_soi_can.png',image:'action-icons/v3/05_soi_can.webp'}];
+ return [];
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
 // V3.231: start above the fixed footer at the village entrance stairs, not GM fire.
@@ -5900,10 +5904,17 @@ function battleIconClamp(x,y,isFairy=false){
  return {x:Math.min(Math.max(px,x),Math.max(px,vw-px)),y:Math.min(Math.max(py,y),Math.max(py,vh-py))};
 }
 function battleIconEntryPoint(){
- const rail=document.getElementById('battleBottomControls');
- const rect=rail?.getBoundingClientRect?.();
+ // Spawn by the actual rendered campfire, not the bottom menu/entrance.
+ const fire=document.querySelector('.play-village-core .play-core-pearl')||
+   document.querySelector('.play-village-core')?.querySelector('.play-core-pearl');
+ const rect=fire?.getBoundingClientRect?.();
  if(rect&&rect.width>0&&rect.height>0)
-  return battleIconClamp(rect.left+rect.width/2,rect.top-60);
+  return battleIconClamp(rect.left+rect.width/2,rect.top+rect.height/2);
+ // Keep controls usable until the village/scene image has finished mounting.
+ const rail=document.getElementById('battleBottomControls');
+ const backup=rail?.getBoundingClientRect?.();
+ if(backup&&backup.width>0&&backup.height>0)
+  return battleIconClamp(backup.left+backup.width/2,backup.top-60);
  return battleIconClamp((globalThis.visualViewport?.width||innerWidth)/2,(globalThis.visualViewport?.height||innerHeight)-150);
 }
 function battleIconResetPositions(){
@@ -5947,7 +5958,8 @@ function battleIconDock(actions,phase){
   const saved=battleIconPositions.get(battleIconPositionKey(a.id,icon.id));
   const point=saved?battleIconClamp(saved.x,saved.y,!!icon.isFairyTriptych):
     battleIconSpawnPoint(entry,i,eligible.length,!!icon.isFairyTriptych);
-  const visual='<img draggable="false" src="'+playEsc(api.image(icon))+'" alt="">';
+  const imagePath=api?.image?.(icon)||icon.image||('action-icons/v3/'+String(icon.assetId||'').replace(/\.png$/,'.webp'));
+  const visual='<img draggable="false" src="'+playEsc(imagePath)+'" alt="">';
   return '<button type="button" '+(waiting?'disabled ':'')+'class="battle-fire-icon'+(icon.isFairyTriptych?' is-fairy-triptych':'')+'" '+
    'style="left:'+point.x+'px;top:'+point.y+'px" data-fire-action="'+playEsc(a.id)+
    '" data-fire-icon="'+playEsc(icon.id)+'" data-fire-index="'+i+'" aria-label="'+playEsc(a.name)+
@@ -6391,6 +6403,16 @@ function battleShowResultPopup(title,message,scanOnly=false){
   const negative=/bị giết|bị cắn|sói cắn|vết cắn|bị chết|đầu độc|bị đóng băng|bị đuổi|thất bại|không thành công|tử vong|bị phạt/i.test(String(title||'')+' '+String(message||''));
   popup.dataset.resultTone=negative?'negative':'positive';
   popup.hidden=false;popup.dataset.turnKey=battleState.key;
+  // Function outcomes live directly under the GM's upper control menu, not
+  // over the status bar or an old fixed screen coordinate.
+  const menu=document.getElementById('playBattleDock'),bounds=menu?.getBoundingClientRect?.();
+  if(bounds&&bounds.height>0){
+    const viewport=globalThis.visualViewport,height=viewport?.height||innerHeight,offset=viewport?.offsetTop||0;
+    const wanted=bounds.bottom+8,maxTop=offset+height-(popup.offsetHeight||120)-8;
+    popup.style.top=Math.max(offset+8,Math.min(wanted,maxTop))+'px';
+    popup.style.left='50%';popup.style.right='auto';popup.style.bottom='auto';
+    popup.style.transform='translateX(-50%)';
+  }
 }
 /* Morning notices are derived only from committed interactions for this match and night.
    They must never be synthesized from a selected target or a private role card. */
@@ -8801,7 +8823,11 @@ battleMorningPlayAudio=function(){void gmwwPublishAnnouncement(null);return gmww
 /* GM Chat monitor: available only with GM-authorized room API. No public history path. */
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
 // Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
-window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&playSceneState.step==='battle')void gmwwGMChatRefresh()},7000);
+window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&gmwwGMChatAvailable())void gmwwGMChatRefresh()},7000);
+function gmwwGMChatAvailable(){
+  return isLivePlayRoom()&&!!playSceneState.roomCode&&
+    ['seats','game','roles','deal','battle'].includes(playSceneState.step);
+}
 function gmwwGMChatMakeMovable(trigger){
   let drag=null;
   trigger.addEventListener('pointerdown',event=>{
@@ -8828,7 +8854,7 @@ function gmwwGMChatMakeMovable(trigger){
   try{const p=JSON.parse(localStorage.getItem('gmww-gm-chat-icon-position')||'null');if(p&&/^\\d+(?:\\.\\d+)?px$/.test(p.left)&&/^\\d+(?:\\.\\d+)?px$/.test(p.top)){trigger.style.left=p.left;trigger.style.top=p.top;trigger.style.right='auto'}}catch{}
 }
 function gmwwGMChatMount(){
-  const active=playSceneState.step==='battle'&&!!playSceneState.roomCode;
+  const active=gmwwGMChatAvailable();
   if(!document.getElementById('gmwwGMChatStyle')){
     const st=document.createElement('style');st.id='gmwwGMChatStyle';st.textContent=`
 #battleGMChatFloat button{font-size:24px;min-width:40px;min-height:40px;background:transparent;color:#eafaff;border:0}#battleGMChatFloat button[aria-pressed="true"]{filter:drop-shadow(0 0 7px #87e4ff)}
@@ -8858,7 +8884,9 @@ function gmwwGMChatMount(){
     document.getElementById('gmwwGMChatClose').onclick=()=>{gmwwGMChatOpen=false;panel.classList.remove('open');document.getElementById('battleGMChatToggle')?.setAttribute('aria-pressed','false')};
     document.getElementById('gmwwGMChatReload').onclick=()=>void gmwwGMChatRefresh();
   }
-  trigger.hidden=true;const villageForm=document.getElementById('gmwwGMChatVillage');if(villageForm)villageForm.hidden=!(active&&playSceneState.phase==='day');
+  // During Seat setup there is no Battle footer. Offer the same authenticated
+  // GM Chat monitor as a movable flamingo without creating a second chat.
+  trigger.hidden=!(active&&playSceneState.step!=='battle');const villageForm=document.getElementById('gmwwGMChatVillage');if(villageForm)villageForm.hidden=!(active&&playSceneState.phase==='day');
   const dayToggle=document.getElementById('battleGMChatToggle');
   if(dayToggle&&!dayToggle.dataset.gmwwChatBound){dayToggle.dataset.gmwwChatBound='1';dayToggle.onclick=()=>{
     gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);
@@ -8871,12 +8899,12 @@ function gmwwGMChatMount(){
   }
 }
 async function gmwwGMChatRefresh(){
-  if(!gmwwGMChatOpen||playSceneState.step!=='battle'||!isLivePlayRoom())return;
+  if(!gmwwGMChatOpen||!gmwwGMChatAvailable())return;
   try{
     const res=await playRoomApi('/chat',{method:'GET'}),content=document.getElementById('gmwwGMChatContent');
     if(!content)return;content.replaceChildren();
     const channels=(res.channels||[]).filter(x=>x.messages?.length).slice(-25);
-    if(!channels.length)content.textContent='Chưa có tin nhắn trong ván.';
+    if(!channels.length)content.textContent='Chưa có tin nhắn trong phòng.';
     for(const ch of channels){
       const box=document.createElement('div');box.className='gmwwGmChannel'+(String(ch.channel).startsWith('night:')?' secret':'');
       const h=document.createElement('h4');h.textContent=String(ch.channel).startsWith('night:')?'🌙 Chat bí mật • '+String(ch.channel).slice(0,75):'☀️ Chat Làng';box.appendChild(h);

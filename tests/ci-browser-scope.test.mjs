@@ -826,3 +826,34 @@ test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused r
   assert.equal(classifyBrowserScope(expected.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted CI files must fail closed');
   assert.equal(classifyBrowserScope([...expected.slice(0,4),expected[0]]),'full','duplicate path cannot impersonate exact scope');
 });
+
+
+test('PR652 online hotfix: exact bounded production diff selects focused Worker checks',()=>{
+ const paths={
+  'src/index.js':'M',
+  'server-game/src/40-battle-and-timeline.part':'M',
+  'server-game/src/45-online-chat.part':'M',
+  'server-game/current/app.js':'M',
+  'tests/gmww-v3228-battle-icons-footer.test.mjs':'M',
+  'tests/v389-night-runtime-integration.test.mjs':'M',
+  'tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs':'A',
+  '.github/workflows/check-online-five-defects-20261031.yml':'A',
+  'docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md':'A',
+  '.github/scripts/ci-browser-scope.mjs':'M',
+  '.github/workflows/check-player-web.yml':'M',
+  'tests/ci-browser-scope.test.mjs':'M'
+ };
+ const changes=Object.entries(paths).map(([path,status])=>{
+  const after=readFileSync(new URL('../'+path,import.meta.url),'utf8');
+  return{path,status,before:status==='M'?after:null,after};
+ });
+ assert.equal(classifyBrowserScope(changes),'online-hotfix-652');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full','Missing Worker source cannot be exempted');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/extra-worker.js',status:'A',before:null,after:'new logic'}]),'full','New Worker logic must be audited');
+ const unsafe=changes.map(c=>c.path==='src/index.js'?{...c,after:'// unrelated code change\n'+c.after}:c);
+ assert.equal(classifyBrowserScope(unsafe),'full','Unrelated Worker line must select full CI');
+ const changedBattle=changes.map(c=>c.path==='server-game/src/40-battle-and-timeline.part'?{...c,after:c.after+'\n// another behavior change'}:c);
+ assert.equal(classifyBrowserScope(changedBattle),'full','Unrelated GM behavior is not covered by hotfix');
+ const changedChat=changes.map(c=>c.path==='server-game/src/45-online-chat.part'?{...c,after:'// unexpected change before chat\n'+c.after}:c);
+ assert.equal(classifyBrowserScope(changedChat),'full','Unexpected code before Chat must select full CI');
+});
