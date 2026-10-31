@@ -16,6 +16,10 @@
 - `tests/gm-admin-top-chat-20261028.test.mjs`: bảng Chat GM không mất chức năng.
 - `node .github/scripts/assemble-gm-app.mjs --verify`, `node --check src/index.js`, `node --check server-game/current/app.js`.
 
+## Nghiệm thu trên thiết bị thật
+- Chủ dự án xác nhận ngày 31/10/2026: **ĐẠT** cả 5 lỗi Online trên iPhone thật với Safari, Chrome và Edge.
+- Kết quả nghiệm thu chỉ xác nhận bản Preview. Production phải tiếp tục vượt CI tại HEAD sau đồng bộ `main`, chốt phát hành và toàn vẹn SHA-256.
+
 ## Điều kiện phát hành và rollback
 - Bản vá nằm trên PR riêng; **chưa merge, chưa deploy Production, chưa phát hành .gmwwupdate** khi chưa đạt CI required checks và nghiệm thu.
 - Không sửa IPA, Oracle, dữ liệu Production, schema hay Durable Object namespace.
