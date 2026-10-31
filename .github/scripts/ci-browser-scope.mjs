@@ -17,6 +17,45 @@ const scopedMarkers={
   'server-game/current/app.js':['/* Match completion is shared','async function openPlayEndSheet(){']
 };
 
+// PR682: exact verified hostname in GM Settings share card; fail closed for all other files.
+function isGMShareVerifiedAlias682Scope(changes){
+  const expected=new Map([
+    ['server-game/current/GMWW.html','M'],
+    ['tests/gm-player-web-share-link.test.mjs','M'],
+    ['docs/releases/GMWW-GM-PLAYER-NEW-LINK-20261031.md','A'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     changes.some(c=>expected.get(c.path)!==c.status)||new Set(changes.map(c=>c.path)).size!==expected.size)return false;
+  try{
+    const row=changes.find(c=>c.path==='server-game/current/GMWW.html');
+    let base=String(process.env.GMWW_CI_EVENT)==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+    if(!row.before&&!(/^[a-f0-9]{40}$/i.test(base)||base==='HEAD^1'))return false;
+    const before=row.before||git('show',base+':server-game/current/GMWW.html');
+    const after=row.after||fs.readFileSync('server-game/current/GMWW.html','utf8');
+    const labelOld='id="gmwwShareAliasLabel">Chưa kích hoạt</small>';
+    const labelNew='id="gmwwShareAliasLabel">https://gamemasoi.pages.dev/</small>';
+    if(!before.includes(labelOld)||!after.includes(labelNew))return false;
+    const begin='/* BEGIN GMWW_PLAYER_SHARE_SCRIPT */',end='/* END GMWW_PLAYER_SHARE_SCRIPT */';
+    const strip=(v,label)=> {
+      const start=v.indexOf(begin),stop=v.indexOf(end);
+      if(start<0||stop<=start||v.indexOf(begin,start+1)>=0||v.indexOf(end,stop+1)>=0)return null;
+      return (v.slice(0,start)+begin+' [ALIAS SHARE SCRIPT] '+end+v.slice(stop+end.length)).replace(label,labelOld);
+    };
+    // The only permitted HTML diff is the share label + self-contained share script.
+    if(strip(before,labelOld)!==strip(after,labelNew))return false;
+    const body=after.slice(after.indexOf(begin)+begin.length,after.indexOf(end));
+    if(!body.includes("const approvedAliasUrl='https://gamemasoi.pages.dev/';")||
+       body.includes('GMWW_PLAYER_WEB_ALIAS_CONFIG')||body.includes('fetch(')||body.includes('/api/gm/')||
+       !body.includes('navigator.share')||!body.includes('navigator.clipboard'))return false;
+    const tests=fs.readFileSync('tests/gm-player-web-share-link.test.mjs','utf8');
+    return tests.includes("Link mới may be selected, copied, sent")&&
+      tests.includes('WebKit mobile viewport')&&
+      fs.existsSync('docs/releases/GMWW-GM-PLAYER-NEW-LINK-20261031.md');
+  }catch{return false;}
+}
+
 // Pages-only alias: never narrow CI when any gameplay, Worker or Native file changes.
 const pagesAliasOnlyPaths=new Set([
   'infra/pages/gamemasoi/_redirects',
@@ -3164,6 +3203,7 @@ function isDemoOnlineTransport672Scope(changes){
     notes.includes('DEMO dùng kết nối Online')&&notes.includes('Rollback');
 }
 function classifyBrowserScope(changes){
+  if(isGMShareVerifiedAlias682Scope(changes))return 'gm-player-share-682';
   if(isDemoOnlineTransport672Scope(changes))return 'demo-online-transport-672';
   if(isOracleLocalStagingScope(changes))return 'oracle-local-staging';
   if(isOracleReleaseGateRepairScope(changes))return 'oracle-staging-bootstrap';
@@ -3494,6 +3534,7 @@ function detect(){
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
         const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
         const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
+        if(isGMShareVerifiedAlias682Scope(changes))return{mode:'gm-player-share-682',reason:'PR682 exact verified GM share alias; no gameplay, Worker or IPA changes'};
         if(isOracleLocalStagingScope(changes))return{mode:'oracle-local-staging',reason:'Only 9 Oracle local STAGING files; no Worker/gameplay/IPA or deployment'};
         if(isOracleReleaseGateRepairScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle release YAML and guard repair; CI-only, no gameplay'};
         if(isOracleBootstrapScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle STAGING bootstrap; no Production changes'};
