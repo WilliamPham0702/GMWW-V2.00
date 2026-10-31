@@ -52,6 +52,13 @@ jobs:
           node --test tests/player-toast-above-chat-20261031.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs
           node --test tests/player-toast-ci-routing-20261031.test.mjs
           node --check .github/scripts/ci-browser-scope.mjs
+      - name: PR702 — postmerge CI-only recovery for immutable toast source
+        if: steps.scope.outputs.mode == 'player-toast-postmerge'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/player-toast-postmerge-20261031.test.mjs tests/player-toast-above-chat-20261031.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/gmww-members-live.js
       - name: CI-only — verify PR702 fail-closed focused selector
         if: steps.scope.outputs.mode == 'player-toast-ci-routing'
         run: |
