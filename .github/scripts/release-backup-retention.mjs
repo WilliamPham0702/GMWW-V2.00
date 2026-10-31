@@ -163,15 +163,28 @@ async function ensureMonthlyBackup(repo, month, snapshots) {
   try {
     const manifest = [];
     for (const source of snapshots) {
-      const name = 'GMWW-Backup-' + source.type + '-' + month + '-V' + source.version +
-        (source.type === 'ipa' ? '.ipa' : '.gmwwupdate');
-      const existing = (release.assets || []).find(a => a.name === name);
-      if (!existing) {
-        const path = join(temp, name);
-        await downloadVerified(source, path);
-        gh(['release', 'upload', tag, path, '--repo', repo]);
-        release = getBackupRelease(repo, tag);
+      const prefix = 'GMWW-Backup-' + source.type + '-' + month + '-V';
+      const extension = source.type === 'ipa' ? '.ipa' : '.gmwwupdate';
+      const prior = (release.assets || []).filter(a =>
+        a.name.startsWith(prefix) && a.name.endsWith(extension));
+      // One immutable snapshot per type/month; do not accumulate 100 MB
+      // copies on every new Runtime release within the same month.
+      if (prior.length > 1) throw new Error('Multiple backups of one type/month: ' + source.type);
+      if (prior.length === 1) {
+        const saved = prior[0];
+        if (!SHA_RE.test(String(saved.digest || '')) || saved.size <= 0)
+          throw new Error('Existing monthly snapshot has no trusted digest');
+        manifest.push({ type: source.type,
+          version: saved.name.slice(prefix.length, -extension.length),
+          assetName: saved.name, sha256: saved.digest, size: saved.size,
+          backupRelease: tag, reusedVerifiedBackup: true });
+        continue;
       }
+      const name = prefix + source.version + extension;
+      const path = join(temp, name);
+      await downloadVerified(source, path);
+      gh(['release', 'upload', tag, path, '--repo', repo]);
+      release = getBackupRelease(repo, tag);
       const saved = (release.assets || []).find(a => a.name === name);
       if (!saved || saved.digest !== source.digest || saved.size !== source.size) {
         throw new Error('Backup SHA-256/size is not verified for ' + name);
