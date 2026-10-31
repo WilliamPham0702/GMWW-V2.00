@@ -27,3 +27,22 @@ test('Pages workflow and legacy deployment guards are isolated',()=>{
   assert.match(ota,/PAGES_UNRELATED/);
   assert.match(ota,/SKIP_AUTO_RELEASE=true/);
 });
+
+test('Only the exact isolated Pages/CI change set can select pages-alias',async()=>{
+  const {classifyBrowserScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+  const paths=[
+    'infra/pages/gamemasoi/_redirects',
+    'infra/pages/gamemasoi/index.html',
+    'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md',
+    'tests/gamemasoi-pages-link.test.mjs',
+    '.github/workflows/deploy-gamemasoi-pages.yml',
+    '.github/workflows/deploy-production.yml',
+    '.github/workflows/github-runtime-ota.yml',
+    '.github/workflows/check-player-web.yml',
+    '.github/scripts/ci-browser-scope.mjs'
+  ];
+  const changes=paths.map(path=>({path,status:path.startsWith('infra/')||path.startsWith('docs/')||path.startsWith('tests/')||path.endsWith('deploy-gamemasoi-pages.yml')?'A':'M'}));
+  assert.equal(classifyBrowserScope(changes),'pages-alias');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='infra/pages/gamemasoi/_redirects')),'full');
+});
