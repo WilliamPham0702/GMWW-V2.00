@@ -310,6 +310,17 @@ jobs:
             SHOULD_DEPLOY=false
             echo 'Oracle release-guard CI repair: SKIP Production Worker deploy.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          # Exactly scoped link-only Runtime catalog automation. No Worker/Runtime/IPA deploy.
+          CATALOG_ONLY=$(printf '%s\n' \
+            '.github/workflows/runtime-download-catalog.yml' \
+            '.github/scripts/update-runtime-download-catalog.mjs' \
+            'tests/runtime-download-catalog.test.mjs' \
+            '.github/workflows/deploy-production.yml' \
+            '.github/workflows/github-runtime-ota.yml' | sort)
+          if [ "$(sort /tmp/gmww-production-change-scope.txt)" = "$CATALOG_ONLY" ]; then
+            SHOULD_DEPLOY=false
+            echo 'Runtime download catalog links only: skip Production deploy.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
