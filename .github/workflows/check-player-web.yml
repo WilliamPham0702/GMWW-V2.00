@@ -44,6 +44,21 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR702 — Player Web toast below top menu, away from Chat
+        if: steps.scope.outputs.mode == 'player-toast-notice'
+        run: |
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/player-toast-above-chat-20261031.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs
+          node --test tests/player-toast-ci-routing-20261031.test.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+      - name: CI-only — verify PR702 fail-closed focused selector
+        if: steps.scope.outputs.mode == 'player-toast-ci-routing'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/player-toast-ci-routing-20261031.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/gmww-members-live.js
       - name: PR695 — auto-update shared download catalog after main merge
         if: steps.scope.outputs.mode == 'runtime-catalog-auto-sync'
         run: |
