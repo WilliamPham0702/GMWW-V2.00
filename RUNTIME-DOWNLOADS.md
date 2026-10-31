@@ -39,8 +39,6 @@
 |:--|:--|:--|:--|
 | **V3.284 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41169326543/artifacts/13030496723) (chứa .gmwwupdate) | `547f59a7f90f78d753db7d8ce3401330c7fee19ffebc4068d6b7fc737407d36a` (ZIP) | Hết hạn: 2027-01-29; **chưa phát hành Production** |
 | **V3.283 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41163576787/artifacts/13028083434) (chứa .gmwwupdate) | `6e59048c9b108ff8aac6fe924a48457312e597feaddc7addb9fd6726534e1dd6` (ZIP) | Hết hạn: 2027-01-29; **chưa phát hành Production** |
-| **V3.282 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41155595879/artifacts/13023944071) (chứa .gmwwupdate) | `711cc2d9d9fb046483df60290aa5e75d1a79f768247246e75b0eb1a379f889ac` (ZIP) | Hết hạn: 2027-01-29; **chưa phát hành Production** |
-| **V3.281 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41152165416/artifacts/13023876025) (chứa .gmwwupdate) | `8ca7baa4e0e27ca9de41c6d5ac1e90342e852c0c195bd845ad5414f68ec8c8c3` (ZIP) | Hết hạn: 2027-01-29; **chưa phát hành Production** |
 
 ## 5. LỊCH SỬ VÀ CHÍNH SÁCH
 
