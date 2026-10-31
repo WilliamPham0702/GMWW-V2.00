@@ -3376,8 +3376,8 @@ function detect(){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
-        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\\n').filter(Boolean);
-        const changes=rows.map(row=>{const [status,path]=row.split('\\t');return{status,path};});
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
         if(isPagesAliasScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect only; no game source changes'};
       }
     }catch{} // Fail closed for any unexpected scope, ref or status.
