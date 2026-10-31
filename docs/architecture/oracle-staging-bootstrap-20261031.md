@@ -34,3 +34,12 @@ Không có dữ liệu hay server Production nào được sửa ở PR bootstra
 - Chạy `node --test tests/oracle-staging-bootstrap.test.mjs` và `node --check oracle-staging/server.mjs`.
 - CI Oracle STAGING phải SUCCESS, các required check của PR phải SUCCESS mới cân nhắc merge. Không chạy test trên phòng thật.
 - Nếu xảy ra lỗi, revert PR để quay về bootstrap trước đó; không cần can thiệp Cloudflare Production, Pages, IPA, Runtime hoặc lịch sử người chơi.
+
+## Oracle STAGING synthetic SQLite adapter — additive isolation (31/10/2026)
+- `oracle-staging/sqlite-fixture-adapter.mjs` dùng Node 22 `node:sqlite` riêng biệt, chỉ mở khi bật `GMWW_ORACLE_STAGING=1` và `GMWW_ORACLE_FIXTURE_ONLY=1` trong thư mục có marker STAGING.
+- Lưu snapshot phòng **thử nghiệm** có SHA-256 và schema version, SQLite FULL sync + transaction, revision monotonic, rollback khi xung đột, phát hiện checksum bị sửa qua process restart.
+- Chặn field nhạy cảm: token, session, mật khẩu, GM token, danh sách role/artifact/assignment riêng; giới hạn kích thước, symlink và thư mục không an toàn.
+- Engine online hiện vẫn là Cloudflare Worker source chạy trong Workerd với Durable Object SQLite riêng; adapter này **không** thay thế DO Production, không triển khai VM và không nhận WebSocket hoặc login traffic.
+- Nghiệm thu: `node --test oracle-staging/sqlite-fixture-adapter.test.mjs`, Oracle CI cùng SHA; không phát hành Runtime/IPA chỉ vì PR STAGING.
+- Trước chuyển server thực: cần Oracle VM có thể truy cập, engine/schema/source parity, backup/migration riêng, session/WS e2e trên HTTPS, checksum private room state, kết thúc ván, GM phê duyệt và rollback VM.
+- Rollback: revert PR, không sửa namespace Cloudflare hoặc dữ liệu phòng thật; không xóa snapshot test nếu chưa được xác nhận ngoài CI.
