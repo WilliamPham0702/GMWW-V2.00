@@ -6,6 +6,7 @@ import fs from 'node:fs';
 // PR641 is an exact CI-only shell printf correction.
 import {playerInteractionsScope} from './player-interactions-scope.mjs';
 import {createHash} from 'node:crypto';
+import {isRuntimeDriftScope} from './runtime-server-drift-scope.mjs';
 import {isIconArtworkScope,isIconArtworkPolicyScope} from './icon-artwork-scope.mjs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -3032,6 +3033,7 @@ function isPR652OnlineHotfixScope(changes){
   return true;
 }
 function classifyBrowserScope(changes){
+  if(isRuntimeDriftScope(changes))return 'runtime-server-drift';
   if(isPR652FinalReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652PostmergeReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652OnlineHotfixScope(changes))return 'online-hotfix-652';
