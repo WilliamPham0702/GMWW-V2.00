@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'oracle-staging/**'
+      - 'infra/oracle-staging/**'
+      - 'docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031.md'
       - 'tests/oracle-staging-bootstrap.test.mjs'
       - '.github/workflows/check-oracle-staging-bootstrap.yml'
 permissions:
@@ -23,6 +25,8 @@ jobs:
           node-version: '22'
       - run: node --check oracle-staging/server.mjs
       - run: node --test tests/oracle-staging-bootstrap.test.mjs
+      - run: bash -n infra/oracle-staging/start-local.sh
+      - run: node --test infra/oracle-staging/bootstrap.test.mjs
       - name: Confirm bootstrap cannot mutate game or Production
         run: |
           ! grep -Eq '(DurableObject|cloudflare:workers|wrangler deploy|\.gmwwupdate|DELETE FROM|TRUNCATE)' oracle-staging/server.mjs
