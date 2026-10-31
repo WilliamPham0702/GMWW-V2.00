@@ -18,3 +18,9 @@
 - CI phải xác minh source/bundle, payload/permissions/quota và Worker dry-run; required CI SUCCESS trên HEAD cuối trước merge, ưu tiên Worker deploy phù hợp.
 - Không tạo .gmwwupdate chỉ chứa Runtime cũ, không ghi đè V3.285. Rollback bằng chuyển Worker deployment về phiên bản trước PR nếu xảy ra lỗi; chat chữ phải tiếp tục chạy được.
 - Nghiệm thu bắt buộc: iPhone Safari, Chrome, Edge; mic allow/deny; gửi/nghe kênh ngày, nhóm ban đêm, DM GM; dead/expelled/frozen không gửi kênh Làng nhưng gửi GM; reconnect; playback không rò kênh.
+
+## CI-LITE PR #712 — khôi phục sau lỗi bộ test legacy
+- Lần đầu `Check Player Web Worker` thất bại vì bộ chọn mặc định `full` chạy 1.355 bài test cũ không liên quan; trong đó một fixture test tin thoại quá ngắn đã được sửa.
+- Bộ chọn `player-voice-notes-712` chỉ nhận danh sách tệp chính xác và kiểm tra lại auth, giới hạn dữ liệu, bundle, chat quyền riêng tư, syntax Worker, Wrangler dry-run. Có thêm tệp hoặc thay đổi ngoài phạm vi sẽ quay về `full`.
+- Không bỏ qua required `CI Policy Gate` hoặc `CI Stability Gate`; không merge nếu các check bắt buộc không SUCCESS.
+- Đây là bản thử trên PR/Preview, không được phát hành Production trước nghiệm thu trên iPhone thật.
