@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import vm from 'node:vm';
+import {classifyBrowserScope} from '../.github/scripts/ci-browser-scope.mjs';
 
 const workflow = readFileSync('.github/workflows/check-pr-preview-github.yml','utf8');
 
@@ -68,7 +69,9 @@ test('CI-LITE docs-only and Preview-CI-only selectors fail closed without droppi
   ])assert.equal(evaluate('docsOnly',changes),false,JSON.stringify(changes));
   const ciOnly=[
     M('.github/workflows/check-pr-preview-github.yml'),
-    M('tests/github-actions-pr-preview-ci.test.mjs')
+    M('tests/github-actions-pr-preview-ci.test.mjs'),
+    M('.github/scripts/ci-browser-scope.mjs'),
+    M('.github/workflows/check-player-web.yml')
   ];
   assert.equal(evaluate('ciOnly',ciOnly),true);
   assert.equal(evaluate('ciOnly',[...ciOnly,M('src/index.js')]),false);
@@ -81,4 +84,23 @@ test('CI-LITE docs-only and Preview-CI-only selectors fail closed without droppi
   assert.match(workflow,/npm run check/);
   assert.match(workflow,/name: Validate isolated Preview without Cloudflare Builds/);
   assert.match(workflow,/name: Publish isolated Worker Preview \(never Production\)/);
+});
+
+test('CI-LITE Preview selector uses focused checks only for exact four-file repair',()=>{
+  const four=[
+    '.github/workflows/check-pr-preview-github.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs',
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml'
+  ];
+  const entries=four.map(path=>({status:'M',path,before:'old CI',after:readFileSync(path,'utf8')}));
+  assert.equal(classifyBrowserScope(entries),'ci-lite-preview-workflow');
+  assert.equal(classifyBrowserScope([...entries,{status:'M',path:'src/index.js',before:'x',after:'y'}]),'full');
+  assert.equal(classifyBrowserScope(entries.slice(0,3)),'full');
+  assert.equal(classifyBrowserScope(entries.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+  assert.equal(classifyBrowserScope([...entries,entries[0]]),'full');
+  const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  assert.match(worker,/steps\.scope\.outputs\.mode == 'ci-lite-preview-workflow'/);
+  assert.match(worker,/node --test tests\/github-actions-pr-preview-ci\.test\.mjs/);
+  assert.match(worker,/npm run check/);
 });
