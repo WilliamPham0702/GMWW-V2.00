@@ -821,7 +821,7 @@ test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused r
     'tests/ci-browser-scope.test.mjs'
   ].map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
   // Recreate the historical PR645 signature without the later PR652 selector.
-  expected[0].after=expected[0].after.replace('function isPR652PostmergeReleaseScope(changes)','legacy PR645 selector only');
+  expected[1].after=expected[1].after.replace("steps.scope.outputs.mode == 'pr652-postmerge-release'",'legacy PR645 checks only');
   assert.equal(classifyBrowserScope(expected),'pr645-postmerge-release');
   assert.equal(classifyBrowserScope(expected.slice(1)),'full','missing CI guard must not bypass full regression');
   assert.equal(classifyBrowserScope([...expected,modified('src/index.js','old','runtime changed')]),'full','gameplay edits must never be classified CI-only');
