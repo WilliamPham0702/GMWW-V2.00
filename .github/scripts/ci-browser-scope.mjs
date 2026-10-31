@@ -20,6 +20,7 @@ const scopedMarkers={
 // Pages-only alias: never narrow CI when any gameplay, Worker or Native file changes.
 const pagesAliasOnlyPaths=new Set([
   'infra/pages/gamemasoi/_redirects',
+  'infra/pages/gamemasoi/_worker.js',
   'infra/pages/gamemasoi/index.html',
   'tests/gamemasoi-pages-link.test.mjs',
   'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md',
@@ -33,6 +34,7 @@ const pagesAliasOnlyPaths=new Set([
 // Pages-only retry also covers the no-op-on-unrelated-main workflow repair.
 const pagesAliasRetryPaths=new Set([
   'infra/pages/gamemasoi/_redirects',
+  'infra/pages/gamemasoi/_worker.js',
   'tests/gamemasoi-pages-link.test.mjs',
   'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md',
   '.github/workflows/deploy-gamemasoi-pages.yml',
@@ -52,6 +54,14 @@ function isPagesAliasScope(changes){
     changes.every(c=>pagesAliasOnlyPaths.has(c.path)&&['M','A'].includes(c.status));
 }
 
+// Only Pages gateway source and its focused CI may use the Pages-only gate.
+function isPagesAliasProxyScope(changes){
+  return Array.isArray(changes)&&changes.length>=6&&
+    changes.some(c=>c.path==='infra/pages/gamemasoi/_worker.js'&&c.status==='A')&&
+    changes.some(c=>c.path==='infra/pages/gamemasoi/_redirects'&&c.status==='M')&&
+    changes.some(c=>c.path==='.github/workflows/deploy-gamemasoi-pages.yml'&&c.status==='M')&&
+    changes.every(c=>pagesAliasOnlyPaths.has(c.path)&&['A','M'].includes(c.status));
+}
 // Oracle bootstrap is backend-isolated; any source/game change fails closed to full CI.
 const oracleBootstrapPaths=new Set([
   'oracle-staging/server.mjs',
@@ -3139,7 +3149,7 @@ function classifyBrowserScope(changes){
   if(isDemoOnlineTransport672Scope(changes))return 'demo-online-transport-672';
   if(isOracleReleaseGateRepairScope(changes))return 'oracle-staging-bootstrap';
   if(isOracleBootstrapScope(changes))return 'oracle-staging-bootstrap';
-  if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes))return 'pages-alias';
+  if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes)||isPagesAliasProxyScope(changes))return 'pages-alias';
   if(isPR652FinalReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652PostmergeReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652OnlineHotfixScope(changes))return 'online-hotfix-652';
@@ -3467,7 +3477,7 @@ function detect(){
         const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
         if(isOracleReleaseGateRepairScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle release YAML and guard repair; CI-only, no gameplay'};
         if(isOracleBootstrapScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle STAGING bootstrap; no Production changes'};
-        if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect or safe deployment retry; no game source changes'};
+        if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes)||isPagesAliasProxyScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect or safe deployment retry; no game source changes'};
       }
     }catch{} // Fail closed for any unexpected scope, ref or status.
   }
