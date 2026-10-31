@@ -78,3 +78,29 @@ test('Oracle bootstrap release isolation contract', async()=>{
  assert.match(runtime,/ORACLE_UNRELATED/);
  assert.match(runtime,/Oracle STAGING-only bootstrap: NO automatic Runtime release[.]/);
 });
+
+// Guard repair must remain a four-file CI-only update with no duplicated YAML blocks.
+test('Oracle YAML release gate repair has one valid guarded block',async()=>{
+ const {readFileSync}=await import('node:fs');
+ const {classifyBrowserScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+ const files=[
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/scripts/ci-browser-scope.mjs',
+  'tests/oracle-staging-bootstrap.test.mjs'
+ ];
+ const changes=files.map(path=>({path,status:'M'}));
+ assert.equal(classifyBrowserScope(changes),'oracle-staging-bootstrap');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+ const worker=readFileSync(files[0],'utf8');
+ const runtime=readFileSync(files[1],'utf8');
+ const count=(source,token)=>source.split(token).length-1;
+ assert.equal(count(worker,'ORACLE_UNRELATED='),1);
+ assert.equal(count(worker,'ORACLE_REPAIR_UNRELATED='),1);
+ assert.equal(count(runtime,'ORACLE_UNRELATED='),1);
+ assert.equal(count(runtime,'ORACLE_REPAIR_UNRELATED='),1);
+ assert.equal(count(runtime,'# Pages-only alias must never trigger a GMWW Runtime package.'),1);
+ assert.match(worker,/Oracle release-guard CI repair: SKIP Production Worker deploy[.]/);
+ assert.match(runtime,/Oracle release-guard repair only: NO automatic Runtime release[.]/);
+ assert.match(runtime,/ORACLE_UNRELATED=\$\(printf.*mjs\)\$' \|\| true\)/);
+});
