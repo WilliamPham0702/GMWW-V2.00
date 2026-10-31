@@ -54,5 +54,6 @@ test('Pages proxy exact-scope CI; any game change requires full CI',async()=>{
   ].map(([path,status])=>({path,status}));
   assert.equal(classifyBrowserScope(changes),'pages-alias');
   assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
-  assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='infra/pages/gamemasoi/_worker.js')),'full');
+  // Removing the new file leaves the previously approved Pages-only retry scope.
+  assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='infra/pages/gamemasoi/_worker.js')),'pages-alias');
 });
