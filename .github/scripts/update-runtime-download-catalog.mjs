@@ -67,7 +67,7 @@ function qaRow({ version, artifact }, repo) {
   const checksum = /^sha256:([a-f0-9]{64})$/.exec(String(artifact.digest || ''));
   const expiry = /^\d{4}-\d{2}-\d{2}T/.test(String(artifact.expires_at || '')) ?
     String(artifact.expires_at).slice(0,10) : 'không rõ';
-  return '| **V' + version + ' — QA** | [⬇️ Tải gói gốc ZIP](' + link +
+  return '| **V' + version + ' — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](' + link +
     ') (chứa .gmwwupdate) | ' + (checksum ? '\`' + checksum[1] + '\` (ZIP)' : '—') +
     ' | Hết hạn: ' + expiry + '; **chưa phát hành Production** |';
 }
@@ -104,17 +104,10 @@ export function buildCatalogs(releases, repo = DEFAULT_REPO, artifacts = []) {
     '',
     '> **Một địa chỉ tải chung.** Link bản Production trỏ tới GitHub Releases; link QA trỏ tới GitHub Actions. Không lưu bản sao.',
     '',
-    '## 1. RUNTIME — CẬP NHẬT THỦ CÔNG',
+    '## 1. RUNTIME PRODUCTION — CẬP NHẬT THỦ CÔNG',
     '',
-    ...(qa.length ? [
-      '**Gói mới nhất trên GitHub: V' + qa[0].version +
-        ' — QA chưa phát hành.** Đây là ZIP từ Actions, không phải bản cài Production; giải nén mới có .gmwwupdate.',
-      '',
-      '| QA | File gốc | SHA-256 ZIP | Trạng thái |',
-      '|:--|:--|:--|:--|',
-      ...qa.slice(0,5).map(x => qaRow(x, repo)),
-      ''
-    ] : []),
+    '> **CHỈ CÀI RUNTIME PRODUCTION.** Bản QA từ GitHub Actions chưa được đồng bộ với Server Production; không dùng để cập nhật iPhone đang chơi. Không hạ cấp Runtime đã cài.',
+    '',
     '**Runtime Production đã xác minh mới nhất: ' +
       (runtimes[0] ? 'V' + runtimes[0].version : 'chưa có') +
       '.** Các bản QA không thay thế bản chính thức.',
@@ -142,7 +135,17 @@ export function buildCatalogs(releases, repo = DEFAULT_REPO, artifacts = []) {
     ...(!backups.some(x => x.asset.name.endsWith('.gmwwupdate')) ?
       ['**Runtime backup:** hiện chưa có file trong các Release backup.'] : []),
     '',
-    '## 4. LỊCH SỬ VÀ CHÍNH SÁCH',
+    '## 4. QA — CHỈ KIỂM THỬ, KHÔNG CÀI TRÊN PRODUCTION',
+    '',
+    '> **CẢNH BÁO:** QA là file thử nghiệm chưa phát hành, có thể mới hơn Server và gây lệch phiên bản. ZIP chỉ dành cho kiểm thử độc lập; KHÔNG dùng .gmwwupdate QA để cập nhật ứng dụng đang chơi.',
+    '',
+    ...(qa.length ? [
+      '| QA — KHÔNG CÀI | Tệp kiểm thử gốc | SHA-256 ZIP | Trạng thái |',
+      '|:--|:--|:--|:--|',
+      ...qa.slice(0,5).map(x => qaRow(x, repo)),
+      ''
+    ] : ['Không có gói QA còn hiệu lực.', '']),
+    '## 5. LỊCH SỬ VÀ CHÍNH SÁCH',
     '',
     '- [Runtime cũ](RUNTIME-HISTORY.md)',
     '- [IPA cũ](IPA-HISTORY.md)',
