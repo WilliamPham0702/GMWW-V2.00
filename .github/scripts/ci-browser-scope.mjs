@@ -4135,8 +4135,13 @@ function detect(){
   if(process.env.GMWW_CI_EVENT==='pull_request'){
     try{
       const auditedBase='90fa2099f7e3d17a4b2fab56a0ff556bb6aa5ad0';
-      git('merge-base','--is-ancestor',auditedBase,'HEAD');
-      const rows=git('diff','--name-status','--no-renames',auditedBase,'HEAD').trim().split('\n').filter(Boolean);
+      // Actions checks out refs/pull/<id>/merge (main + PR). Inspect the
+      // *second parent* to validate the PR delta, then test the actual merge
+      // checkout against exact approved file hashes.
+      const parents=git('rev-list','--parents','-n','1','HEAD').trim().split(/\s+/);
+      const prHead=parents.length===3?parents[2]:'HEAD';
+      git('merge-base','--is-ancestor',auditedBase,prHead);
+      const rows=git('diff','--name-status','--no-renames',auditedBase,prHead).trim().split('\n').filter(Boolean);
       const changes=rows.map(row=>{
         const [status,filePath]=row.split('\t');
         return{path:filePath,status,after:status==='M'||status==='A'?fs.readFileSync(filePath,'utf8'):null};
