@@ -329,9 +329,21 @@ window.go=go;window.gmwwBack=gmwwBack;
 window.addEventListener('popstate',e=>{const id=e.state?.gmwwScreen;if(id){if(id==='rooms')state.roomNavigationAuthorized=true;go(id,{fromHistory:true})}});
 
 let toastTimer;
+// Keep transient notices below the real top menu, not behind the fixed Online Chat footer.
+function gmwwToastTop(){
+  const visibleTop=Math.max(0,Number(window.visualViewport?.offsetTop)||0);
+  const menuBottom=document.getElementById('gmwwPlayerTopMenu')?.getBoundingClientRect().bottom;
+  return Math.ceil(Math.max(visibleTop+12,Number.isFinite(menuBottom)&&menuBottom>visibleTop?menuBottom+10:visibleTop+68));
+}
 function toast(text){
   let t=$('#gmwwToast');
-  if(!t){t=document.createElement('div');t.id='gmwwToast';t.style.cssText='position:fixed;z-index:300;left:50%;bottom:24px;transform:translateX(-50%);max-width:360px;padding:10px 14px;border:1px solid #c7893e;border-radius:12px;background:#080b12ee;color:#ffe0a1;font-size:11px;font-weight:800;box-shadow:0 10px 30px #000b;text-align:center';document.body.appendChild(t)}
+  if(!t){
+    t=document.createElement('div');t.id='gmwwToast';
+    t.setAttribute('role','status');t.setAttribute('aria-live','polite');
+    t.style.cssText='position:fixed;z-index:300;left:50%;top:0;bottom:auto;transform:translateX(-50%);width:max-content;max-width:min(360px,calc(100vw - 24px));box-sizing:border-box;padding:10px 14px;border:1px solid #c7893e;border-radius:12px;background:#080b12ee;color:#ffe0a1;font-size:11px;font-weight:800;box-shadow:0 10px 30px #000b;text-align:center;pointer-events:none';
+    document.body.appendChild(t);
+  }
+  t.style.top=gmwwToastTop()+'px';
   t.textContent=text||'';t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',2400);
 }
 window.toast=toast;

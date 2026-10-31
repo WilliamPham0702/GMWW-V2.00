@@ -5,14 +5,15 @@ const normalize=id=>String(id||'').trim().toLowerCase().replace(/^member:/,'');
 const active=(row,match,now)=>row&&row.effectActive!==false&&(!row.matchId||String(row.matchId)===String(match||''))&&(!row.expiresAt||Date.parse(row.expiresAt)>now);
 export function chatBlockedByEffects(rows,match,loginId,now=Date.now()){
   const id=normalize(loginId);
-  let dead=false,expelled=false,mute=false;
+  let dead=false,expelled=false,frozen=false,mute=false;
   for(const x of Array.isArray(rows)?rows:[]){
     if(normalize(x?.loginId)!==id||!active(x,match,now))continue;
     if(x.type==='dead')dead=true;
+    if(x.type==='frozen')frozen=true;
     if(x.type==='expelled')expelled=true;
     if(x.type==='status'&&x.statusId==='mute')mute=true;
   }
-  return{dead,expelled,mute};
+  return{dead,expelled,frozen,mute};
 }
 function stepGroups(step){
   if(!step||typeof step!=='object')return [];
@@ -30,12 +31,15 @@ export function chatPolicy({meta,players,rows,runtime,loginId,bans={},now=Date.n
     return{canRead:false,canSend:false,channel:null,reason:'CHAT_NOT_IN_RUNNING_ROOM'};
   if(['lobby','waiting','role_delivery'].includes(String(meta.phase)))return{canRead:true,canSend:bans[id]!==true,channel:'lobby',scope:'village',reason:bans[id]===true?'CHAT_MUTED_GM':null};
   const effects=chatBlockedByEffects(rows,meta?.matchId,id,now);
-  const blocked=effects.dead||effects.expelled||effects.mute||bans[id]===true;
-  const reason=effects.dead?'CHAT_DEAD':effects.expelled?'CHAT_EXPELLED':effects.mute?'CHAT_MUTED_ARTIFACT':bans[id]===true?'CHAT_MUTED_GM':null;
   const phase=String(meta.cyclePhase||'');
+  // Freeze blocks group/village chat at night only. Morning restores it.
+  // Death and exile continue to block village and group chat in every phase.
+  const frozen=phase==='night'&&effects.frozen;
+  const blocked=effects.dead||effects.expelled||frozen||effects.mute||bans[id]===true;
+  const reason=effects.dead?'CHAT_DEAD':effects.expelled?'CHAT_EXPELLED':frozen?'CHAT_FROZEN':effects.mute?'CHAT_MUTED_ARTIFACT':bans[id]===true?'CHAT_MUTED_GM':null;
   if(phase==='morning'||phase==='day')
     return{canRead:true,canSend:!blocked,channel:'day',scope:'village',reason};
-  if(phase!=='night'||effects.dead||effects.expelled)
+  if(phase!=='night'||effects.dead||effects.expelled||effects.frozen)
     return{canRead:false,canSend:false,channel:null,reason:reason||'CHAT_NIGHT_CLOSED'};
   const step=!runtime?.completed?runtime?.queue?.[runtime.cursor]:null;
   const groups=stepGroups(step);
