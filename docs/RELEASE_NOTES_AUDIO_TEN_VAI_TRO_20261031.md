@@ -1,4 +1,4 @@
-# GMWW — RELEASE NOTES (DỰ KIẾN) — AUDIO TÊN VAI TRÒ
+# GMWW — RELEASE NOTES V3.281 (DỰ KIẾN) — AUDIO TÊN VAI TRÒ
 
 Ngày: 31/10/2026 · Phạm vi: Thư Viện → Âm Thanh → Vai Trò và kết quả soi Tiên Tri Hào Quang.
 
@@ -14,7 +14,7 @@ Ngày: 31/10/2026 · Phạm vi: Thư Viện → Âm Thanh → Vai Trò và kết
 ## Kiểm thử / nghiệm thu
 - Kiểm thử đúng phạm vi: hiển thị nút và gắn nguồn độc lập; không phát nhầm file Full; trình tự Tiên Tri Hào Quang; hồi quy âm thanh gọi vai.
 - Cần xác minh nghe thật trên iPhone đối với file Tên do GM tải lên hoặc liên kết. URL ngoài cần thử phát trực tiếp.
-- Chưa phát hành Production. Chỉ merge và OTA sau khi CI SUCCESS, nghiệm thu an toàn và chủ dự án phê duyệt.
+- Chưa phát hành Production; mã phiên bản ứng viên V3.281, bản hiện hành trong main là V3.280. Chỉ merge và OTA sau khi CI SUCCESS, nghiệm thu an toàn và chủ dự án phê duyệt.
 
 ## Rollback
 - Revert commit thay đổi trên PR này trước khi phát hành, hoặc quay về Runtime OTA production đã xác minh gần nhất.
