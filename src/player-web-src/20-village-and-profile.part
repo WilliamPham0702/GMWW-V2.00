@@ -640,7 +640,7 @@ window.addEventListener('message',event=>{
   if(d.type==='gmww:user-activity'){revealPlayerTopMenu();gmwwChatClosePanel();gmwwChatTouch();return}
   if(d.type==='gmww:own-character-doubletap'){openVillageProfile();return}
   if(d.type==='gmww:player-click'&&gmwwOnlinePick){gmwwOnlineTarget(d.participantId);return}
-  if(d.type==='gmww:village-ready'){syncVillageFrame(true);gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock'));}
+  if(d.type==='gmww:village-ready'){syncVillageFrame(true);gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock'));gmwwOnlineTurnEffects(state.onlineActions||[]);}
   else if(d.type==='gmww:gallows-open-nominations'){
     const me=String(state.member?.loginId||''),g=state.gallows;
     if(g&&g.mode==='auto'&&gallowsCurrentStage()==='nominating'&&(g.eligible||[]).includes(me)&&
