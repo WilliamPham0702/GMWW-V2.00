@@ -34,6 +34,9 @@ export function snapshotFixture({code,revision,phase,matchId=null,activeMatch=fa
 }
 export function verifySnapshot(snapshot){
   try{
+    const expected=['schema','code','revision','phase','matchId','activeMatch','sourceSha','engineVersion','data','digest'];
+    if(!snapshot||snapshot.schema!==ROOM_SNAPSHOT_SCHEMA||Object.keys(snapshot).length!==expected.length||
+       expected.some(key=>!Object.prototype.hasOwnProperty.call(snapshot,key)))return false;
     const {digest,...p}=snapshot;
     return typeof digest==='string'&&/^[a-f0-9]{64}$/.test(digest)&&
       snapshotFixture(p).digest===digest;
