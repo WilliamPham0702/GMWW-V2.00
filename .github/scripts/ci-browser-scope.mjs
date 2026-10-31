@@ -3097,7 +3097,45 @@ function isPR652OnlineHotfixScope(changes){
   if(byPath.get('server-game/current/app.js').after!==assembled)return false;
   return true;
 }
+// PR672: exact 5-file DEMO -> Online transport change. Enforce the two Worker
+// edits and one GM mode payload edit byte-for-byte; all other Worker changes
+// must continue to trigger full CI. Demo isolation stays server-authoritative.
+function isDemoOnlineTransport672Scope(changes){
+  const expected=new Map([
+    ['src/index.js','M'],['server-game/src/30-village-and-setup.part','M'],
+    ['server-game/current/app.js','M'],
+    ['tests/v3175-post-create-room-mode.test.mjs','M'],
+    ['docs/releases/GMWW-DEMO-ONLINE-TRANSPORT-20261031.md','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(c=>c?.path)).size!==expected.size||
+    changes.some(c=>!c||expected.get(c.path)!==c.status||
+      typeof c.after!=='string'||(c.status==='M'&&typeof c.before!=='string')))return false;
+  const files=new Map(changes.map(c=>[c.path,c]));
+  const onlyReplacements=(file,replacements)=>{
+    let projected=files.get(file).before;
+    for(const [oldText,newText] of replacements){
+      if(projected.split(oldText).length!==2)return false;
+      projected=projected.replace(oldText,newText);
+    }
+    return files.get(file).after===projected;
+  };
+  const modeBefore="const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};";
+  const modeAfter="const patch={demo:target==='demo',roomMode:(target==='online'||target==='demo')?'online':'offline'};";
+  const workerOK=onlyReplacements('src/index.js',[
+    ['roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=','roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode='],
+    ['const roomMode=desiredDemo?"offline":body&&','const roomMode=desiredDemo?"online":body&&']
+  ]);
+  const gmOK=onlyReplacements('server-game/src/30-village-and-setup.part',[[modeBefore,modeAfter]])&&
+    onlyReplacements('server-game/current/app.js',[[modeBefore,modeAfter]]);
+  const test=files.get('tests/v3175-post-create-room-mode.test.mjs').after;
+  const notes=files.get('docs/releases/GMWW-DEMO-ONLINE-TRANSPORT-20261031.md').after;
+  return workerOK&&gmOK&&test.includes("assert.equal(r.room.roomMode,'online')")&&
+    test.includes('DEMO chooses online room transport')&&
+    notes.includes('DEMO dùng kết nối Online')&&notes.includes('Rollback');
+}
 function classifyBrowserScope(changes){
+  if(isDemoOnlineTransport672Scope(changes))return 'demo-online-transport-672';
   if(isOracleReleaseGateRepairScope(changes))return 'oracle-staging-bootstrap';
   if(isOracleBootstrapScope(changes))return 'oracle-staging-bootstrap';
   if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes))return 'pages-alias';
