@@ -3835,8 +3835,8 @@ function detect(){
     try{
       if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.280.0'){
         git('merge-base','--is-ancestor','76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da','HEAD');
-        const changes=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\\n').filter(Boolean).map(row=>{
-          const [status,path]=row.split('\\t');
+        const changes=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean).map(row=>{
+          const [status,path]=row.split('\t');
           return{status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
             after:status==='M'?fs.readFileSync(path,'utf8'):null};
         });
