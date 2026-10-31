@@ -51,6 +51,16 @@ jobs:
           node --test tests/oracle-staging-bootstrap.test.mjs
           grep -Fq 'Oracle STAGING-only bootstrap: SKIP Production Worker deploy.' .github/workflows/deploy-production.yml
           grep -Fq 'Oracle STAGING-only bootstrap: NO automatic Runtime release.' .github/workflows/github-runtime-ota.yml
+      - name: Oracle LOCAL STAGING — exact scoped bootstrap & release guard tests
+        if: steps.scope.outputs.mode == 'oracle-local-staging'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check oracle-staging/server.mjs
+          bash -n infra/oracle-staging/start-local.sh
+          node --test tests/oracle-staging-bootstrap.test.mjs infra/oracle-staging/bootstrap.test.mjs
+          grep -Fq 'Oracle LOCAL STAGING only: SKIP Production Worker deploy.' .github/workflows/deploy-production.yml
+          grep -Fq 'Oracle LOCAL STAGING only: NO automatic Runtime release.' .github/workflows/github-runtime-ota.yml
+          test -s docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031.md
       - name: Cloudflare Pages same-origin proxy only — Worker/Runtime isolation
         if: steps.scope.outputs.mode == 'pages-alias'
         run: |
@@ -990,6 +1000,15 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --check .github/scripts/ci-browser-scope.mjs
       # END GMWW_PLAYER_LINK_SHARE_CHECK_637
+      - name: PR682 — verified GM Link mới; UI and bundle only
+        if: steps.scope.outputs.mode == 'gm-player-share-682'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/gm-player-web-share-link.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          test -s docs/releases/GMWW-GM-PLAYER-NEW-LINK-20261031.md
+
       # PR652 V3.280: reviewed gameplay already merged and accepted on real
       # iPhone. This exact postmerge CI repair retains Online, GM, Worker,
       # version, source assembly and fail-closed CI policy verification.

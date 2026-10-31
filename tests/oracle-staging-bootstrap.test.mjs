@@ -104,3 +104,64 @@ test('Oracle YAML release gate repair has one valid guarded block',async()=>{
  assert.match(runtime,/Oracle release-guard repair only: NO automatic Runtime release[.]/);
  assert.match(runtime,/ORACLE_UNRELATED=\$\(printf.*mjs\)\$' \|\| true\)/);
 });
+
+
+import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {snapshotFixture,verifySnapshot,simulateFailover,fixtureStore,ROOM_SNAPSHOT_SCHEMA} from '../oracle-staging/room-adapter.mjs';
+const fixture={code:'ABC234',revision:4,phase:'lobby',sourceSha:'a'.repeat(40),engineVersion:'V3.280',data:{players:{a:{seat:1}},meta:{phase:'lobby'}}};
+
+test('Oracle adapter snapshot canonical SHA-256 and tamper detection',()=>{
+ const first=snapshotFixture(fixture),second=snapshotFixture({...fixture,data:{meta:{phase:'lobby'},players:{a:{seat:1}}}});
+ assert.equal(first.schema,ROOM_SNAPSHOT_SCHEMA);
+ assert.equal(first.digest,second.digest);
+ assert.equal(first.digest.length,64);
+ assert.ok(verifySnapshot(first));
+ assert.equal(verifySnapshot({...first,revision:5}),false);
+ assert.equal(verifySnapshot({...first,schema:'unknown-schema'}),false);
+ assert.equal(verifySnapshot({...first,extraField:true}),false);
+});
+test('Oracle adapter rejects malformed room, revision or source version',()=>{
+ assert.throws(()=>snapshotFixture({...fixture,code:'../foo'}),/INVALID_ROOM_CODE/);
+ assert.throws(()=>snapshotFixture({...fixture,sourceSha:'V3.280'}),/INVALID_SOURCE_SHA/);
+ assert.throws(()=>snapshotFixture({...fixture,revision:-1}),/INVALID_REVISION/);
+});
+test('Oracle failover simulation never authorizes a live backend switch',()=>{
+ const stable=snapshotFixture(fixture);
+ assert.deepEqual(simulateFailover({primary:stable,standby:stable}).blockers,['GM_APPROVAL_REQUIRED']);
+ const ok=simulateFailover({primary:stable,standby:stable,gmApproved:true});
+ assert.equal(ok.simulationPass,true);
+ assert.equal(ok.productionSwitchAllowed,false);
+ assert.ok(simulateFailover({primary:stable,standby:stable,gmApproved:true,activeSockets:1}).blockers.includes('CONNECTED_CLIENTS'));
+ const playing=snapshotFixture({...fixture,phase:'night',activeMatch:true});
+ assert.ok(simulateFailover({primary:playing,standby:playing,gmApproved:true}).blockers.includes('MATCH_ACTIVE'));
+ const diverged=snapshotFixture({...fixture,sourceSha:'b'.repeat(40)});
+ assert.ok(simulateFailover({primary:stable,standby:diverged,gmApproved:true}).blockers.includes('MISMATCH_SOURCESHA'));
+});
+test('Oracle snapshot fixture storage requires isolated marker and refuses stale or modified state',async()=>{
+ const root=await mkdtemp(join(tmpdir(),'gmww-oracle-adapter-'));
+ const oldStaging=process.env.GMWW_ORACLE_STAGING,oldFixture=process.env.GMWW_ORACLE_FIXTURE_ONLY;
+ try{
+  delete process.env.GMWW_ORACLE_STAGING;delete process.env.GMWW_ORACLE_FIXTURE_ONLY;
+  await assert.rejects(fixtureStore(root),/STAGING_FIXTURE_OPT_IN_REQUIRED/);
+  process.env.GMWW_ORACLE_STAGING='1';process.env.GMWW_ORACLE_FIXTURE_ONLY='1';
+  await assert.rejects(fixtureStore(root),/ENOENT/);
+  await writeFile(join(root,'.gmww-oracle-staging-only'),'GMWW-ORACLE-STAGING-ONLY\n');
+  const store=await fixtureStore(root),snap=snapshotFixture(fixture);
+  assert.equal(await store.read(fixture.code),null);
+  await store.write(snap);
+  assert.deepEqual(await store.read(fixture.code),snap);
+  assert.deepEqual(await store.write(snap),snap);
+  await assert.rejects(store.write(snapshotFixture({...fixture,data:{other:1}})),/STALE_OR_CONFLICTING_REVISION/);
+  await store.write(snapshotFixture({...fixture,revision:5}));
+  const path=join(root,fixture.code+'.json'),modified=JSON.parse(await readFile(path,'utf8'));
+  modified.digest='0'.repeat(64);
+  await writeFile(path,JSON.stringify(modified));
+  await assert.rejects(store.read(fixture.code),/FIXTURE_CHECKSUM_MISMATCH/);
+ }finally{
+  if(oldStaging===undefined)delete process.env.GMWW_ORACLE_STAGING;else process.env.GMWW_ORACLE_STAGING=oldStaging;
+  if(oldFixture===undefined)delete process.env.GMWW_ORACLE_FIXTURE_ONLY;else process.env.GMWW_ORACLE_FIXTURE_ONLY=oldFixture;
+  await rm(root,{recursive:true,force:true});
+ }
+});
