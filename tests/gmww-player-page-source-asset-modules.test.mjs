@@ -16,10 +16,11 @@ const rebuild=()=>{
   let script=parts.map(p=>readFileSync(p,'utf8')).join('');
   for(const [i,filename] of files.entries()){
     const token='__GMWW_EMBED_IMAGE_'+i+'__';
-    assert.equal(script.split(token).length,2,'Missing or duplicated token '+token);
+    const count=script.split(token).length-1;
+    assert.ok(count===0||count===1,'Duplicated embedded artwork token '+token);
     const data=readFileSync('src/player-page-src/embedded/'+filename,'utf8');
     assert.match(data,/^data:image\/(?:png|webp);base64,[A-Za-z0-9+/=]+$/);
-    script=script.replace(token,data);
+    if(count===1)script=script.replace(token,data);
   }
   return script;
 };
@@ -29,7 +30,7 @@ test('G3.10: editable Player page modules reconstruct the exact 1.5 MB shipping 
   const output=rebuild();
   assert.equal(hash(output),hash(original),'Generated Player HTML module changed');
   assert.equal(output,original,'HTML/CSS/inline JS and embedded artwork must match every byte');
-  assert.equal((output.match(/data:image\/(?:png|webp);base64,/g)||[]).length,7);
+  assert.equal((output.match(/data:image\/(?:png|webp);base64,/g)||[]).length,4,'Only active artwork is embedded after retiring V1');
 });
 
 test('G3.10: retired V1 room preview references are absent; original media files remain preserved',()=>{

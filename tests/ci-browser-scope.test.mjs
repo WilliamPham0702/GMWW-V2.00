@@ -932,6 +932,7 @@ test('PR672 exact DEMO Online transport uses focused CI and rejects any extra ga
 
 test('PR656 postgame: exact verified files select focused required CI; unrelated edits fail closed',()=>{
  const paths=[
+ ['.github/scripts/assemble-player-page.mjs','M'],
  [
   "docs/RELEASE_NOTES_PLAYER_POSTGAME_V1_REMOVAL_20261031.md",
   "A"

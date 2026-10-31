@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {shouldSkipMemberHeartbeat} from '../src/gmww-do-write-optimizer.js';
 
 const server=fs.readFileSync('src/index.js','utf8');
 const raw=fs.readFileSync('src/gmww-members-live.js','utf8');
@@ -22,9 +23,10 @@ function memberHarness(){
     normalizeRoomCode:v=>String(v||'').toUpperCase(),
     isValidRoomCode:v=>/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(v||'')),
     directoryMember:v=>({...v}),
+    shouldSkipMemberHeartbeat,
     j:o=>o,Date
   };
-  vm.runInNewContext('class Harness {constructor(storage){this.ctx={storage}}'+server.slice(memberStart,memberEnd)+'};globalThis.Harness=Harness;',context);
+  vm.runInNewContext('class Harness {constructor(storage){this.ctx={storage}}gmwwWriteSkipped(){}'+server.slice(memberStart,memberEnd)+'};globalThis.Harness=Harness;',context);
   return{record,storage,actor:new context.Harness({get:key=>Promise.resolve(storage.get(key)),put:(key,value)=>{storage.set(key,value);return Promise.resolve()}})};
 }
 test('GM reservation remains authoritative across null lobby heartbeats and clears on leave',async()=>{

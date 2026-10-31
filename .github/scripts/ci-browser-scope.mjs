@@ -3163,8 +3163,9 @@ function isDemoOnlineTransport672Scope(changes){
     test.includes('DEMO chooses online room transport')&&
     notes.includes('DEMO dùng kết nối Online')&&notes.includes('Rollback');
 }
-// PR #656: fail-closed postgame scope, exact reviewed blob content + three CI files.
+// PR #656: fail-closed postgame scope, exact reviewed source/assembler blob content + three CI files.
 const playerPostgame656Blobs=new Map([
+  [".github/scripts/assemble-player-page.mjs","8dbea23103cd936f211570ab2f7f9df00de7f45a"],
   [
     "docs/RELEASE_NOTES_PLAYER_POSTGAME_V1_REMOVAL_20261031.md",
     "63d8b42f72f69453e1d866c83b61a3beb910b2d9"
@@ -3199,11 +3200,11 @@ const playerPostgame656Blobs=new Map([
   ],
   [
     "tests/gm-call-player-auto-room-v354.test.mjs",
-    "e85048af22019784879d64edacfa6c29da8107d8"
+    "73a06f41de28a4ac63d496ee67c915e62314ef80"
   ],
   [
     "tests/gmww-player-page-source-asset-modules.test.mjs",
-    "220eec198d78b066ad0fb9d8b68dbcf0f35ef280"
+    "f44fd7174fd1259f5c074f1083769ee92b001be4"
   ],
   [
     "tests/player-postgame-v1-room-retirement-20261031.test.mjs",
