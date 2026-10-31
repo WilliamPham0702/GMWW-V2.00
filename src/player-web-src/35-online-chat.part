@@ -99,7 +99,7 @@ html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:aut
 #gmwwChatLines .msg b{display:inline;font:inherit}#gmwwChatLines .msg.gm,#gmwwChatLines .msg.system{color:#ff5353!important;font-weight:800}
 #gmwwChatPanel.open #gmwwChatForm{border-top:1px solid rgba(255,255,255,.48)}
 #gmwwChatPanel form{display:flex;gap:4px;padding:3px}#gmwwChatText{flex:1;min-width:0;width:100%;height:30px;border:0;background:transparent;color:white;font:12px system-ui;outline:none;padding:4px}#gmwwChatText::placeholder{color:#f2f9ffb3}
-#gmwwChatSubmit{display:none;height:30px;min-height:30px;border:0;border-radius:7px;background:#0d59757a;color:#fff;padding:3px 7px}#gmwwChatPanel.open #gmwwChatSubmit{display:block}#gmwwChatHelp{font-size:10px;padding:3px 7px}
+#gmwwChatSubmit{display:none;height:30px;min-height:30px;border:0;border-radius:7px;background:#0d59757a;color:#fff;padding:3px 7px}#gmwwChatPanel.open #gmwwChatSubmit{display:block}#gmwwChatHelp{font-size:10px;padding:3px 7px}#gmwwChatHelp.gmww-chat-dead-notice{display:block!important;color:#69d8ff!important;font-weight:800;text-shadow:0 1px 2px #001a2b}
 #gmwwChatPanel.open #gmwwChatHelp:not(:empty){display:block}#gmwwChatText:disabled,#gmwwChatSubmit:disabled{opacity:.55}
 `;
   document.head.appendChild(style);
@@ -194,7 +194,9 @@ async function gmwwChatRefresh(){
     const input=document.getElementById('gmwwChatText'),send=document.getElementById('gmwwChatSubmit');
     input.disabled=send.disabled=!result.canSend;
     input.placeholder=result.canSend?(gmwwChatOpen?'Nhập tin nhắn…':'Chạm để chat…'):'Chạm xem thông cáo';
-    document.getElementById('gmwwChatHelp').textContent=result.canSend?(result.scope==='secret'?'Chỉ người cùng lượt được xem tin.':''):result.channel?'Bạn đang bị cấm gửi Chat.':'Chưa đến lượt chat; vẫn xem được thông cáo công khai.';
+    const chatHelp=document.getElementById('gmwwChatHelp');
+    const dead=result.reason==='CHAT_DEAD',expelled=result.reason==='CHAT_EXPELLED';chatHelp.classList?.toggle('gmww-chat-dead-notice',dead||expelled);
+    chatHelp.textContent=dead?'Bạn đã chết nên không chat được.':expelled?'Bạn đã bị đuổi khỏi làng nên không chat được.':result.reason==='CHAT_FROZEN'?'Bạn đang bị đóng băng nên không chat được.':result.reason==='CHAT_MUTED_GM'?'GM đã cấm bạn chat.':result.reason==='CHAT_MUTED_ARTIFACT'?'Artifact Câm Lặng đang chặn Chat.':result.canSend?(result.scope==='secret'?'Chỉ người cùng lượt được xem tin.':''):result.channel?'Chưa được phép gửi Chat ở kênh này.':'Chưa đến lượt chat; vẫn xem được thông cáo công khai.';
   }catch(error){if(seq===gmwwChatSeq){const note=document.getElementById('gmwwChatHelp');if(note)note.textContent='Lỗi kết nối Chat. Vui lòng thử lại.'}}
 }
 async function gmwwChatSend(){
@@ -291,14 +293,42 @@ function gmwwOnlineIconDown(event,action){
  try{node.setPointerCapture?.(event.pointerId)}catch{}
  node.addEventListener('pointermove',move);node.addEventListener('pointerup',end);node.addEventListener('pointercancel',end);
 }
+// Only authenticated action offers trigger this local effect; no private role is broadcast.
+function gmwwOnlineTurnEffects(offers){
+ const active=Array.isArray(offers)&&offers.length>0&&state.room?.phase==='running';
+ const me=String(state.member?.loginId||'').replace(/^member:/,'');
+ document.getElementById('gmwwPlayerTopMenu')?.classList.toggle('gmww-my-action-turn',active);
+ if(!document.getElementById('gmwwMyActionTurnStyle')){
+  const style=document.createElement('style');style.id='gmwwMyActionTurnStyle';
+  style.textContent='#gmwwPlayerTopMenu.gmww-my-action-turn .gmww-player-menu-account{filter:drop-shadow(0 0 11px #ffe27a)!important;animation:gmww-my-action-pulse 1.2s ease-in-out infinite}'+
+  '@keyframes gmww-my-action-pulse{50%{filter:drop-shadow(0 0 22px #81ffec) brightness(1.25)}}'+
+  '@media(prefers-reduced-motion:reduce){#gmwwPlayerTopMenu.gmww-my-action-turn .gmww-player-menu-account{animation:none}}';
+  document.head.appendChild(style);
+ }
+ try{
+  const doc=document.getElementById('gmwwVillageFrame')?.contentDocument;
+  if(!doc)return;
+  if(!doc.getElementById('gmwwMyActionGlowStyle')){
+   const css=doc.createElement('style');css.id='gmwwMyActionGlowStyle';
+   css.textContent='#players .player.gmww-my-action-turn{filter:drop-shadow(0 0 16px #ffe27a) brightness(1.2)!important;animation:gmww-turn-glow 1.2s ease-in-out infinite}'+
+   '@keyframes gmww-turn-glow{50%{filter:drop-shadow(0 0 22px #80ffdf) brightness(1.3)}}'+
+   '@media(prefers-reduced-motion:reduce){#players .player.gmww-my-action-turn{animation:none}}';
+   doc.head.appendChild(css);
+  }
+  for(const node of doc.querySelectorAll('#players .player[data-player-id]')){
+   node.classList.toggle('gmww-my-action-turn',active&&String(node.dataset.playerId||'').replace(/^member:/,'')===me);
+  }
+ }catch{}
+}
 function renderOnlineActionDock(){
  let dock=document.getElementById('gmwwOnlineDock');
  const offers=state.room?.demo!==true&&String(state.room?.roomMode||'').toLowerCase()==='online'&&state.room?.phase==='running'?state.onlineActions||[]:[];
+ gmwwOnlineTurnEffects(offers);
  if(!offers.length){dock?.remove();gmwwOnlineStop();return}
  if(!document.getElementById('gmwwOnlineDockStyle')){
    const css=document.createElement('style');css.id='gmwwOnlineDockStyle';
    css.textContent='#gmwwOnlineDock{position:fixed;z-index:100010;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px;max-width:94vw;overflow:visible;touch-action:none;user-select:none;scrollbar-width:none}'+
-     '#gmwwOnlineDock.is-idle-hidden{opacity:0;pointer-events:none}'+
+     '#gmwwOnlineDock.is-idle-hidden{opacity:1;pointer-events:auto}'+
      '#gmwwOnlineDock button[data-blocked="true"]{position:relative;opacity:.7;filter:grayscale(.55)}#gmwwOnlineDock button[data-blocked="true"]:after{content:attr(data-effect-icon);position:absolute;right:-3px;top:-5px;font-size:18px;text-shadow:0 1px 5px #000}'+
      '#gmwwOnlineDock button{flex:0 0 auto;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none}'+
      '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
@@ -309,7 +339,7 @@ function renderOnlineActionDock(){
      '#gmwwOnlinePick button{min-height:36px;background:#16506c;color:white;border:1px solid #7196a9;border-radius:9px;font-weight:700}';
    document.head.appendChild(css)
  }
- if(!dock){dock=document.createElement('div');dock.id='gmwwOnlineDock';document.body.appendChild(dock);if(document.getElementById('gmwwPlayerTopMenu')?.classList.contains('is-idle-hidden'))dock.classList.add('is-idle-hidden')}
+ if(!dock){dock=document.createElement('div');dock.id='gmwwOnlineDock';document.body.appendChild(dock)}
  const scale=[25,50,75,100,125,150].includes(Number(state.actionIconScale))?Number(state.actionIconScale):100;
  dock.style.setProperty('--online-action-scale',String(scale/100));
  const sig=[state.roomCode,state.room?.matchId,state.room?.cycleKey,...offers.map(a=>a.key+':'+a.iconUrl)].join('|');
