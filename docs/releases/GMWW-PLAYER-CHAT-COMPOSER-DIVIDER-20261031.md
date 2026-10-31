@@ -1,4 +1,4 @@
-# Player Web Online – Phân cách vùng nhập Chat (31/10/2026)
+# Player Web Online – Phân cách vùng nhập Chat, Runtime V3.286 (31/10/2026)
 
 ## Thay đổi
 - Thêm đường kẻ ngang 1px, màu trắng mờ (48% độ đục) ngay trên ô nhập “Chạm để chat…” khi Chat Làng mở.
@@ -13,3 +13,8 @@
 
 ## Rollback
 - Revert commit/PR này nếu đường kẻ ảnh hưởng giao diện; phát hành lại Worker/Player Web sau kiểm thử tương ứng. Không khôi phục hay xóa dữ liệu người chơi.
+
+## Phát hành V3.286
+- Đồng bộ Worker/GM Runtime, giữ nguyên IPA Native và dữ liệu.
+- Phát hành OTA `.gmwwupdate`, SHA-256, manifest lên GitHub Releases sau CI SUCCESS.
+- Không ghi đè V3.285; rollback Runtime V3.285 và Worker Production trước nâng cấp nếu có lỗi.
