@@ -7,6 +7,8 @@ on:
       - ".github/workflows/github-runtime-ota.yml"
       - ".github/runtime-release/**"
       - "docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md"
+      - "docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md"
+      - "tests/audio-safe-delete-and-audit-20261031.test.mjs"
   workflow_run:
     workflows: ["Check Player Web Worker"]
     types: [completed]
