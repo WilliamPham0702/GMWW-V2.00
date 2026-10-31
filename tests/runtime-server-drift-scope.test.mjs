@@ -39,7 +39,7 @@ test('V3.284 integrates Audio and drift: the historical PR659-only CI exemption 
   '20-members-and-roster.part','30-village-and-setup.part',
   '40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
  assert.equal(app,modules.map(file=>fs.readFileSync('server-game/src/'+file,'utf8')).join(''));
- assert.match(app,/function gmwwUpdateAlignment\\(/);
+ assert.ok(app.includes('function gmwwUpdateAlignment('));
  assert.match(app,/KHÔNG HẠ CẤP/);
  assert.match(app,/gmwwOpenRoleAudioReplace/);
 });
