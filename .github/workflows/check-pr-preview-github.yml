@@ -41,9 +41,10 @@ jobs:
             '.github/workflows/check-oracle-staging-bootstrap.yml',
             '.github/workflows/github-runtime-ota.yml',
             '.github/workflows/check-pr-preview-github.yml',
-            'docs/architecture/oracle-staging-bootstrap-20261031.md'
+            'docs/architecture/oracle-staging-bootstrap-20261031.md',
+            'tests/github-actions-pr-preview-ci.test.mjs'
           ]);
-          const only=changed.length===6&&new Set(changed).size===6&&changed.every(p=>allowed.has(p));
+          const only=changed.length===7&&new Set(changed).size===7&&changed.every(p=>allowed.has(p));
           appendFileSync(process.env.GITHUB_OUTPUT,'oracle_only='+String(only)+'\n');
           console.log(only?'Oracle SQLite-only: no new Cloudflare namespace; local build and dedicated Oracle CI still run.':'Normal PR: retain full isolated Preview publication gate.');
           NODE
