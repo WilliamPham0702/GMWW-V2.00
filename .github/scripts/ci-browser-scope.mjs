@@ -3290,7 +3290,27 @@ function isPlayerToastCiRoutingScope(changes){
   }catch{return false}
 }
 
+// CI-LITE A: only the exact four-file Preview routing repair may use focused CI.
+// Any gameplay/runtime/permission file or unexpected deletion falls back to full tests.
+function isCiLitePreviewWorkflowScope(changes){
+  const required=new Set([
+    '.github/workflows/check-pr-preview-github.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs',
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml'
+  ]);
+  if(!Array.isArray(changes)||changes.length!==required.size||
+     new Set(changes.map(c=>c.path)).size!==required.size||
+     changes.some(c=>!required.has(c.path)||c.status!=='M'))return false;
+  const get=path=>changes.find(c=>c.path===path)?.after||'';
+  return get('.github/workflows/check-pr-preview-github.yml').includes('needs.oracle-scope.outputs.preview_ci_only')&&
+    get('tests/github-actions-pr-preview-ci.test.mjs').includes('CI-LITE docs-only and Preview-CI-only selectors fail closed')&&
+    get('.github/scripts/ci-browser-scope.mjs').includes('function isCiLitePreviewWorkflowScope(changes)')&&
+    get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'ci-lite-preview-workflow'");
+}
+
 function classifyBrowserScope(changes){
+  if(isCiLitePreviewWorkflowScope(changes))return 'ci-lite-preview-workflow';
   if(isPlayerToastCiRoutingScope(changes))return 'player-toast-ci-routing';
   if(isPlayerToastNoticeScope(changes))return 'player-toast-notice';
   if(isRuntimeCatalogAutoSyncScope(changes))return 'runtime-catalog-auto-sync';
