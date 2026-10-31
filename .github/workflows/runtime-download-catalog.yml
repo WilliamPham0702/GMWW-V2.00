@@ -1,6 +1,14 @@
 name: GMWW Runtime download catalog (link-only)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/runtime-download-catalog.yml'
+      - '.github/scripts/update-runtime-download-catalog.mjs'
+      - 'tests/runtime-download-catalog.test.mjs'
+      - '.github/workflows/deploy-production.yml'
+      - '.github/workflows/github-runtime-ota.yml'
   release:
     types: [published, edited]
   workflow_dispatch:
