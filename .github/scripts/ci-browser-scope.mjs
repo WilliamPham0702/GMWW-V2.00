@@ -3080,6 +3080,11 @@ function isRoleNameAudio3281Scope(changes){
     !bounded('server-game/src/30-village-and-setup.part',
       'const battleAudioReady=', 'function battleTurnAudioCue('))
     return false;
+  // Lock the reviewed module bytes; an arbitrary function injected inside
+  // the otherwise audio-only region cannot bypass the release gate.
+  const gitBlob=s=>createHash('sha1').update('blob '+Buffer.byteLength(s)+'\\0'+s,'utf8').digest('hex');
+  if(gitBlob(by.get('server-game/src/10-library-and-settings.part').after)!=='20ffbcbbb2d48b9b8cc9a76ce405287ff17ce226'||
+    gitBlob(by.get('server-game/src/30-village-and-setup.part').after)!=='5528ec23f9f81cf01aa2347e19f56238aad8cc5e')return false;
   const gm=by.get('server-game/current/app.js').after;
   const names=['00-core-and-library.part','10-library-and-settings.part',
     '20-members-and-roster.part','30-village-and-setup.part',
