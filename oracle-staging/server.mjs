@@ -1,3 +1,4 @@
+import {ROOM_SNAPSHOT_SCHEMA} from './room-adapter.mjs';
 #!/usr/bin/env node
 /**
  * GMWW Oracle STAGING bootstrap. This is NOT a game server yet.
@@ -25,7 +26,7 @@ export function makeStagingServer() {
   const server=createServer({requestTimeout:15000,maxHeaderSize:8192},(req,res)=>{
     const path=(req.url||'').split('?')[0];
     if(req.method==='GET'&&path==='/healthz') {
-      json(res,200,{service:'gmww-oracle-staging',environment:'STAGING',alive:true,ready:false});
+      json(res,200,{service:'gmww-oracle-staging',environment:'STAGING',alive:true,ready:false,adapterSchema:ROOM_SNAPSHOT_SCHEMA});
       return;
     }
     if(req.method==='GET'&&path==='/readyz') {json(res,503,unavailable);return;}
