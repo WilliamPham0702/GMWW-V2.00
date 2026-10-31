@@ -87,6 +87,12 @@ jobs:
               '.github/workflows/prepare-runtime-v3202-candidate.yml' \
               'server-game/current/GMWW.html' \
               'tests/gm-player-web-share-link.test.mjs' | sort)
+            # Infrastructure-only backup retention must never publish a Runtime.
+            STORAGE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/github-release-backup-retention[.]yml|[.]github/scripts/release-backup-retention[.]mjs|tests/release-backup-retention[.]test[.]mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031[.]md|[.]github/workflows/deploy-production[.]yml|[.]github/workflows/github-runtime-ota[.]yml)$' || true)
+            if [ -n "$CHANGED" ] && [ -z "$STORAGE_UNRELATED" ]; then
+              SKIP_AUTO_RELEASE=true
+              echo "Storage-only workflow maintenance: NO automatic Runtime release." >> "$GITHUB_STEP_SUMMARY"
+            fi
             if [ "$CHANGED" = "$POLICY_ONLY" ] || [ "$CHANGED" = "$PR637_ONLY" ] ||
                printf '%s\n' "$MESSAGE" | grep -Eq '(^Merge pull request #637([[:space:]]|$)|\(#637\)$)'; then
               SKIP_AUTO_RELEASE=true

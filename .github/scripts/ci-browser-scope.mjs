@@ -3041,7 +3041,7 @@ function isRoleNameAudio3283Scope(changes){
     [".github/runtime-release/V3.282-PR654-candidate.md","A","98a4dc50cd635e0a10fd54d336f4db9c337ade30"],
     [".github/scripts/prepare-update-channel.mjs","M","edd5a4cbd2607c6fa231da68833452c0d09a7627"],
     [".github/workflows/check-gm-audio-role-day.yml","M","7b6d6bed0cfd06b4f700438b8cf364a5b99290a0"],
-    [".github/workflows/github-runtime-ota.yml","M","dfe8a7e18a2df3038f3ad80b96a7b775b29b9948"],
+    [".github/workflows/github-runtime-ota.yml","M","e1a54f290aa1b65c8245429104c221a83078c1a1"],
     ["docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md","A","405773851f93f79a28baf20c4417dff8be08ef40"],
     ["docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md","M","1448c7fbf65b412ba71c854005c17fa62f769768"],
     ["package-lock.json","M","5d99fbfb3d666aab34d735f2fbb8d3ccdafd0d8f"],
