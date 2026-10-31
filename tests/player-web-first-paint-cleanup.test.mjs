@@ -18,8 +18,9 @@ test('first paint is gated in the HTML head before any screen markup',()=>{
 });
 
 test('no old static Online sample rooms or fake players are rendered',()=>{
-  assert.match(page,/<section id="rooms" class="screen">/);
-  assert.match(page,/<div class="room-list" aria-live="polite"><\/div>/);
+  assert.doesNotMatch(page,/<section id="rooms" class="screen">/);
+  assert.doesNotMatch(page,/PHÒNG ĐANG HOẠT ĐỘNG|<h1 class="page-title">Chọn Phòng/);
+  assert.match(gmwwMembersLiveScript,/if\(id==='rooms'\)id=state.member\?'game':'login'/);
   assert.doesNotMatch(page,/id="roomA"|Mã Z3ZAPP|Mã WOLF88|Thành Phố Sói/);
   assert.doesNotMatch(page,/onclick="joinRoom\('roomA'\)"/);
   assert.match(gmwwMembersLiveScript,/function renderRooms\(\)/);
