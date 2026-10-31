@@ -4129,6 +4129,22 @@ function detect(){
       }
     }catch{} // Unknown source or CI edits must run full checks.
   }
+  // PR #656: GitHub may attach a stale base SHA when unrelated Oracle commits
+  // merge concurrently. Verify the entire branch diff against the audited
+  // merge parent, NOT an arbitrary event base; fail closed on any extra file.
+  if(process.env.GMWW_CI_EVENT==='pull_request'){
+    try{
+      const auditedBase='90fa2099f7e3d17a4b2fab56a0ff556bb6aa5ad0';
+      git('merge-base','--is-ancestor',auditedBase,'HEAD');
+      const rows=git('diff','--name-status','--no-renames',auditedBase,'HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{
+        const [status,filePath]=row.split('\t');
+        return{path:filePath,status,after:status==='M'||status==='A'?fs.readFileSync(filePath,'utf8'):null};
+      });
+      if(isPlayerPostgame656Scope(changes))
+        return{mode:'player-postgame-656',reason:'Audited PR656 branch diff from immutable main '+auditedBase+'; rebase against current main required before merge'};
+    }catch{} // Never exempt unverified or rewritten source.
+  }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
   if(!/^[0-9a-f]{40}$/i.test(base))return {mode:'full',reason:'No verified PR base SHA'};
