@@ -1090,6 +1090,17 @@ jobs:
       - name: Chỉ kiểm thử phân loại CI không thay đổi gameplay
         if: steps.scope.outputs.mode == 'postmatch-ci-532'
         run: node --test --test-name-pattern='PR532' tests/ci-browser-scope.test.mjs
+      - name: PR656 — loại bỏ Chọn Phòng V1, GM stage và reconnect
+        if: steps.scope.outputs.mode == 'player-postgame-656'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/gmww-player-private-card-patch.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check src/gmww-members-page.js
+          node --test tests/player-postgame-v1-room-retirement-20261031.test.mjs tests/player-web-first-paint-cleanup.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs tests/gm-call-player-auto-room-v354.test.mjs
+          node --test --test-name-pattern='G3.10: retired V1 room preview references are absent|G3.10: delivered Player HTML stays valid ES module' tests/gmww-player-page-source-asset-modules.test.mjs
+          node --test --test-name-pattern='PR656 postgame:' tests/ci-browser-scope.test.mjs
       - name: Chỉ kiểm thử lỗi ván cũ hiện lại
         if: steps.scope.outputs.mode == 'postgame'
         run: node --test tests/match-completion*.test.mjs tests/forced-end-game.test.mjs

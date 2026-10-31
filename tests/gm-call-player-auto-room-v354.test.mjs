@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {shouldSkipMemberHeartbeat} from '../src/gmww-do-write-optimizer.js';
 
 const server=fs.readFileSync('src/index.js','utf8');
 const raw=fs.readFileSync('src/gmww-members-live.js','utf8');
@@ -22,9 +23,10 @@ function memberHarness(){
     normalizeRoomCode:v=>String(v||'').toUpperCase(),
     isValidRoomCode:v=>/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(String(v||'')),
     directoryMember:v=>({...v}),
+    shouldSkipMemberHeartbeat,
     j:o=>o,Date
   };
-  vm.runInNewContext('class Harness {constructor(storage){this.ctx={storage}}'+server.slice(memberStart,memberEnd)+'};globalThis.Harness=Harness;',context);
+  vm.runInNewContext('class Harness {constructor(storage){this.ctx={storage}}gmwwWriteSkipped(){}'+server.slice(memberStart,memberEnd)+'};globalThis.Harness=Harness;',context);
   return{record,storage,actor:new context.Harness({get:key=>Promise.resolve(storage.get(key)),put:(key,value)=>{storage.set(key,value);return Promise.resolve()}})};
 }
 test('GM reservation remains authoritative across null lobby heartbeats and clears on leave',async()=>{
@@ -93,6 +95,9 @@ test('Never auto-join unreserved, foreign, disabled or invalid rooms',async()=>{
 test('Player Web watcher runs on entry and during ongoing lobby polling; Player status remains a waiting room during GM setup',()=>{
   assert.ok(live.includes("finally{void followGmRoomCall()}"));
   assert.ok(live.includes("void followGmRoomCall()}"));
-  assert.ok(live.includes("if(phase==='lobby'||phase==='waiting')return Number(currentRoomPlayer()?.seatId||0)>0?'PHÒNG CHỜ · ĐÃ XẾP VỊ TRÍ':'PHÒNG CHỜ · CHỜ GM'"));
+  assert.ok(live.includes("if(phase==='lobby'||phase==='waiting'){"));
+  assert.ok(live.includes("if(stage==='seats')return'TẬP HỢP · SETUP GHẾ'"));
+  assert.ok(live.includes("if(['game','roles','deal'].includes(stage))return'CHUẨN BỊ VÁN MỚI'"));
+  assert.ok(live.includes("return Number(currentRoomPlayer()?.seatId||0)>0?'PHÒNG CHỜ · ĐÃ XẾP VỊ TRÍ':'PHÒNG CHỜ · CHỜ GM'"));
   assert.match(live,/if\(!state\.roomCode\)return'SẢNH CHỜ'/);
 });

@@ -32,11 +32,13 @@ test('unknown receipt source must fail closed instead of serving broken JavaScri
 test('V3.273 Online Chat resume does not break the served login JavaScript',()=>{
   // Regression: a changed Online timeline/action tail made the patch throw,
   // so GET /gmww-members-live.js failed before the login handler could load.
-  assert.match(gmwwMembersLiveScript,/renderRooms\(\);gmwwChatMount\(\);gmwwChatAnnounce\(d\?\.audioCue\);renderPlayerTimeline\(d\?\.publicTimeline\);/);
+  assert.match(gmwwMembersLiveScript,/gmwwChatMount\(\);gmwwChatAnnounce\(d\?\.audioCue\);renderPlayerTimeline\(d\?\.publicTimeline\);/);
+  assert.doesNotMatch(gmwwMembersLiveScript,/renderRooms\(\);gmwwChatMount\(\);/);
   const served=patchPrivatePlayerCards(gmwwMembersLiveScript);
   assert.doesNotThrow(()=>new Function(served));
   assert.ok(served.includes('window.login=login;'),'login callback remains globally available');
-  assert.ok(served.includes('await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)])'),'room resume refreshes public roster');
+  assert.ok(served.includes('await gmwwRefreshPublicRoster(code,state.participantId);'),'room resume refreshes public roster without old V1 room list');
+  assert.ok(!served.includes('await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)])'));
   assert.ok(served.includes('renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();'),'Online timeline and action UI survive the fix');
 });
 

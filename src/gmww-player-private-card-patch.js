@@ -381,8 +381,10 @@ async function gmwwVerifyMemberBeforeRemoval(){
    "  }catch(e){console.warn('[GMWW roster refresh]',e)}\n"+
    "  return false;\n"+
    "}\nasync function autoResumeActiveRoom({stayInVillage=false}={}){");
- offlineReplace("    try{await loadRooms(false)}catch{}\n    renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();connectWS();startRoomStateWatch();sendPresence();",
-   "    await Promise.allSettled([loadRooms(false),gmwwRefreshPublicRoster(code,state.participantId)]);\n    renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();connectWS();startRoomStateWatch();sendPresence();");
+ // In V2 the GM-assigned room is resumed in the existing village, never via
+ // the retired V1 room picker. Refresh the roster without opening old UI.
+ offlineReplace("    gmwwChatMount();gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();connectWS();startRoomStateWatch();sendPresence();",
+   "    await gmwwRefreshPublicRoster(code,state.participantId);\n    gmwwChatMount();gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();connectWS();startRoomStateWatch();sendPresence();");
  offlineReplace("await sendPresence();connectWS();startRoomStateWatch();await refreshPrivateRole(true);",
    "await sendPresence();await gmwwRefreshPublicRoster(code,state.participantId);connectWS();startRoomStateWatch();await refreshPrivateRole(true);");
 

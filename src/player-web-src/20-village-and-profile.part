@@ -15,7 +15,12 @@ function playerTopMenuStatus(){
     return'ĐANG TRONG VÁN';
   }
   if(phase==='role_delivery')return'PHÒNG CHỜ · ĐÃ PHÁT VAI';
-  if(phase==='lobby'||phase==='waiting')return Number(currentRoomPlayer()?.seatId||0)>0?'PHÒNG CHỜ · ĐÃ XẾP VỊ TRÍ':'PHÒNG CHỜ · CHỜ GM';
+  if(phase==='lobby'||phase==='waiting'){
+    const stage=String(room.gmStage||'').toLowerCase();
+    if(stage==='seats')return'TẬP HỢP · SETUP GHẾ';
+    if(['game','roles','deal'].includes(stage))return'CHUẨN BỊ VÁN MỚI';
+    return Number(currentRoomPlayer()?.seatId||0)>0?'PHÒNG CHỜ · ĐÃ XẾP VỊ TRÍ':'PHÒNG CHỜ · CHỜ GM';
+  }
   return String(room.roomName||'PHÒNG CHỜ').trim()||'PHÒNG CHỜ';
 }
 function updatePlayerTopMenu(){
@@ -308,7 +313,8 @@ async function releaseMySeat(){
 let roomListRefreshBusy=false;
 
 function go(id,opts={}){
-  if(id==='rooms'&&!state.roomNavigationAuthorized&&!opts.fromHistory)return false;
+  // V1 room picker retired. Legacy history/links resolve to the current village.
+  if(id==='rooms')id=state.member?'game':'login';
   if(id==='profile'&&!opts.fromHistory)state.roomNavigationAuthorized=false;
   $$('.screen').forEach(x=>x.classList.remove('active'));if(state.member&&['profile','rooms'].includes(id))$('#game')?.classList.add('active');
   const el=$('#'+id);if(!el)return false;
@@ -326,7 +332,7 @@ function gmwwBack(){
   try{history.back()}catch{}
 }
 window.go=go;window.gmwwBack=gmwwBack;
-window.addEventListener('popstate',e=>{const id=e.state?.gmwwScreen;if(id){if(id==='rooms')state.roomNavigationAuthorized=true;go(id,{fromHistory:true})}});
+window.addEventListener('popstate',e=>{const id=e.state?.gmwwScreen;if(id){go(id,{fromHistory:true})}});
 
 let toastTimer;
 function toast(text){
@@ -664,7 +670,7 @@ window.addEventListener('message',event=>{
     renderGallowsWidget();syncVillageFrame(true);
   }
   else if(d.type==='gmww:seat-click')toast(Number(currentRoomPlayer()?.seatId||0)?'Ghế do GM quản lý. Dùng RỜI GHẾ nếu cần rời vị trí.':'Vị trí do GM xếp. Vui lòng chờ Quản Trò.');
-  else if(d.type==='gmww:fire-click'){state.roomNavigationAuthorized=true;loadRooms(false).then(()=>go('rooms'))}
+  else if(d.type==='gmww:fire-click'){void enterVillage()}
   else if(d.type==='gmww:ground-click'){if(state.roomCode)startFreeWalk(Number(d.x),Number(d.y));else walkInVillage(Number(d.x),Number(d.y))}
   else if(d.type==='gmww:move-arrived'&&state.roomCode&&String(d.participantId||'')===String(state.participantId||''))completeVillageMove(String(d.moveId||''));
   else if(d.type==='gmww:village-perf'){
@@ -854,19 +860,10 @@ async function openProfileAvatarLibrary(){state.avatarPickerMode='profile';if(!s
 window.openProfileAvatarLibrary=openProfileAvatarLibrary;
 
 async function openRooms(){
+  // Retain compatibility with old profile actions, not the V1 page.
   if(!state.token){go('login');return}
-  state.roomNavigationAuthorized=true;
-  go('rooms');
-  await loadRooms(false);
-  if(targetRoom){
-    const card=$('[data-room-code="'+targetRoom+'"]');
-    if(card){
-      card.scrollIntoView({block:'center'});
-      card.style.boxShadow='0 0 0 2px #ffd27b,0 14px 34px #0008';
-      setTimeout(()=>card.style.boxShadow='',1800);
-    }
-    sessionStorage.removeItem('gmww_pending_room');
-  }
+  await enterVillage();
+  void followGmRoomCall();
 }
 window.openRooms=openRooms;
 

@@ -59,14 +59,19 @@ function showResult(faction,matchId=''){
 }
 async function closeResult(){
   clearDrunkDraw();
-  clearRolePrivacyTimer();rememberDismissedResult(resultMatchKey());stopVictorySound();clearTimeout(gmwwResultReturnTimer);gmwwResultReturnTimer=null;$('#resultOverlay').classList.remove('show');state.role=null;state.roles=[];state.roleOpen=false;state.artifact=null;state.artifactOpen=false;state.artifactCycle={cycleKey:'',count:0,max:3};state.artifactFocus='';clearArtifactDraft();state.dead=false;state.roleEffects={};renderRoleEffects();state.ready=true;state.roomNavigationAuthorized=true;try{localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{}
+  clearRolePrivacyTimer();rememberDismissedResult(resultMatchKey());stopVictorySound();clearTimeout(gmwwResultReturnTimer);gmwwResultReturnTimer=null;$('#resultOverlay').classList.remove('show');state.role=null;state.roles=[];state.roleOpen=false;state.artifact=null;state.artifactOpen=false;state.artifactCycle={cycleKey:'',count:0,max:3};state.artifactFocus='';clearArtifactDraft();state.dead=false;state.roleEffects={};renderRoleEffects();state.ready=true;state.roomNavigationAuthorized=false;try{localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{}
   if(state.roomCode&&state.participantId){
     const code=state.roomCode,id=state.participantId;rememberActiveRoom(code,id);
     try{const d=await api('/api/rooms/'+encodeURIComponent(code)+'/ready',{method:'POST',body:JSON.stringify({participantId:id,ready:true})});if(d?.player)state.ready=!!d.player.ready}catch(_){state.ready=true}
-    try{const d=await api('/api/rooms/'+encodeURIComponent(code)+'/me',{headers:auth()});if(d?.room)state.room=d.room;if(d?.player){state.participantId=d.player.participantId||id;state.ready=true}rememberActiveRoom(code,state.participantId)}catch(_){}
+    let membershipMissing=false;
+    try{const d=await api('/api/rooms/'+encodeURIComponent(code)+'/me',{headers:auth()});if(d?.room)state.room=d.room;if(d?.player){state.participantId=d.player.participantId||id;state.ready=true;rememberActiveRoom(code,state.participantId)}else membershipMissing=true}
+    catch(error){membershipMissing=[403,404,423].includes(Number(error?.status))||error?.code==='ROOM_DISABLED'}
+    if(membershipMissing){await handleRoomMembershipLost('GM đã đưa bạn về Sảnh chờ.');return}
     try{const pub=await api('/api/rooms/'+encodeURIComponent(code));if(pub?.room)state.room=pub.room;if(Array.isArray(pub?.players))state.players=pub.players}catch(_){}
-    const keep={...(state.room||{}),code:String(state.room?.code||code),roomCode:code,joinedCount:state.players.length};state.rooms=[keep,...state.rooms.filter(x=>String(x?.code||x?.roomCode||'')!==code)];
-    renderRooms();go('rooms');connectWS();startRoomStateWatch();sendPresence();return
+    // The authoritative GM stage determines whether the player waits in the
+    // lobby or stays at the seat/new-game setup within the shared village.
+    connectWS();startRoomStateWatch();void sendPresence();
+    await enterVillage();return
   }
   renderProfile();await enterVillage()
 } window.closeResult=closeResult;
@@ -83,9 +88,8 @@ async function autoResumeActiveRoom({stayInVillage=false}={}){
     state.roomCode=code;state.room=d.room;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];
     if(d.role){state.role=d.role;rememberActiveRole(d.role)}else{state.role=null;restoreCachedRole()}state.artifact=d.artifact||null;state.artifactCycle=d.artifactCycle||{cycleKey:'',count:0,max:3};
     applyRoleCardBack();renderDrunkDraw(d?.drunkDraw);handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);
-    rememberActiveRoom(code,state.participantId);state.roomNavigationAuthorized=true;
-    try{await loadRooms(false)}catch{}
-    renderRooms();gmwwChatMount();gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();connectWS();startRoomStateWatch();sendPresence();
+    rememberActiveRoom(code,state.participantId);state.roomNavigationAuthorized=false;
+    gmwwChatMount();gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];renderOnlineActionDock();connectWS();startRoomStateWatch();sendPresence();
     if(stayInVillage){await enterVillage();return true}
     if(ph==='ended'){showResult(d.room.winnerFaction||d.room.winnerLabel||'',d.room.matchId||'');return true}
     if(['role_delivery','running'].includes(ph)){
@@ -139,7 +143,6 @@ async function init(){
     if(t.dataset?.gmwwAvatar)selectAvatarChoice(t.dataset.gmwwAvatar);
   });
   const chooseBtn=$('#profile .primary.gold');if(chooseBtn)chooseBtn.onclick=openRooms;
-  const back=$('#rooms .back');if(back)back.onclick=()=>{state.roomNavigationAuthorized=false;enterVillage()};
   await Promise.allSettled([loadAvatars(),restore()]);
   startWebUpdateWatch();
   if(state.member){renderProfile();state.roomNavigationAuthorized=false;await enterVillage();await autoResumeActiveRoom({stayInVillage:true})}else go('login');
