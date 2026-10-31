@@ -5,6 +5,7 @@ import {randomBytes} from 'node:crypto';
 import {readFile,writeFile,realpath} from 'node:fs/promises';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {fixtureStore,snapshotFixture} from '../../oracle-staging/room-adapter.mjs';
 export function localUrl(env=process.env){
   if(env.GMWW_ORACLE_STAGING!=='1'||env.GMWW_ORACLE_PROBE_ONLY!=='1')
     throw Error('LOCAL_ORACLE_PROBE_OPT_IN_REQUIRED');
@@ -46,6 +47,14 @@ async function assertWebSocket(base,code,participantId){
     });
   });
 }
+export function stableRoomProjection(response){
+  const room=response?.room;
+  assert.ok(room&&typeof room==='object'&&/^[A-HJ-NP-Z2-9]{6}$/.test(room.code));
+  assert.ok(Array.isArray(response.players),'Room roster must be present');
+  const ids=response.players.map(p=>String(p.participantId||'')).sort();
+  assert.ok(ids.every(id=>id.length>0)&&new Set(ids).size===ids.length,'Unique player identities required');
+  return {room:{code:room.code,roomName:String(room.roomName||''),seatCount:Number(room.seatCount||0),phase:String(room.phase||''),status:String(room.status||'')},participantIds:ids};
+}
 export async function runLocalProbe(phase,env=process.env){
   if(!['create','resume'].includes(phase))throw Error('INVALID_PROBE_PHASE');
   const base=localUrl(env),file=await checkpointPath(env);
@@ -82,8 +91,21 @@ export async function runLocalProbe(phase,env=process.env){
   assert.equal(join.status,200,'Fixture room join');
   assert.equal(join.result.player?.participantId,'member:'+checkpoint.loginId);
   await assertWebSocket(base,checkpoint.roomCode,join.result.player.participantId);
+  // Compare only the safe, stable public room projection. This is NOT full DO migration.
+  const current=await send(base,'/api/rooms/'+checkpoint.roomCode);
+  assert.equal(current.status,200);
+  const projection=stableRoomProjection(current.result),store=await fixtureStore(env.GMWW_ORACLE_STATE_DIR);
+  assert.equal(projection.room.code,checkpoint.roomCode);
+  const snapshot=snapshotFixture({code:checkpoint.roomCode,revision:0,phase:'lobby',activeMatch:false,
+    sourceSha:env.GITHUB_SHA,engineVersion:health.result.version,data:projection});
+  if(phase==='create')await store.write(snapshot);
+  else{
+    const previous=await store.read(checkpoint.roomCode);
+    assert.ok(previous,'Missing original room fixture snapshot');
+    assert.equal(previous.digest,snapshot.digest,'Room public projection drifted after restart');
+  }
   if(phase==='create')await writeFile(file,JSON.stringify(checkpoint),{mode:0o600,flag:'wx'});
-  return {ok:true,phase,roomCode:checkpoint.roomCode,authenticated:true,websocket:true,persistent:phase==='resume',liveSwitch:false};
+  return {ok:true,phase,roomCode:checkpoint.roomCode,authenticated:true,websocket:true,persistent:phase==='resume',reconciled:true,liveSwitch:false};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
   runLocalProbe(process.argv[2]).then(x=>console.log(JSON.stringify(x)),e=>{console.error('Oracle LOCAL probe FAILED:',e.message);process.exitCode=1});
