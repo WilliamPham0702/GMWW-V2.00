@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: player-web-check-v2-${{ github.ref }}
+  group: player-web-check-v3-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
