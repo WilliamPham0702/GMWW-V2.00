@@ -10,6 +10,7 @@ on:
       - 'src/gmww-demo-runner.js'
       - 'src/index.js'
       - 'tests/audio-role-day-flow-20261027.test.mjs'
+      - 'tests/audio-independent-role-name-20261031.test.mjs'
       - 'tests/demo-audio-clock-sync-20261028.test.mjs'
       - 'tests/audio-binding-integrity-20261027.test.mjs'
       - '.github/workflows/check-gm-audio-role-day.yml'
@@ -25,4 +26,4 @@ jobs:
           node --check server-game/current/app.js
           node .github/scripts/assemble-gm-app.mjs --verify
       - name: Audio role/day/countdown/assassin/vote targeted regression
-        run: node --test tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs tests/demo-audio-clock-sync-20261028.test.mjs
+        run: node --test tests/audio-independent-role-name-20261031.test.mjs tests/audio-role-day-flow-20261027.test.mjs tests/audio-binding-integrity-20261027.test.mjs tests/v3103-battle-audio-limits.test.mjs tests/v3133-timeline-audio-role-intel.test.mjs
