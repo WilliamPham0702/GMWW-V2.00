@@ -4,7 +4,7 @@
 
 ## 1. RUNTIME PRODUCTION — CẬP NHẬT THỦ CÔNG
 
-> **CHỈ CÀI RUNTIME PRODUCTION.** Runtime QA chưa được đồng bộ với Server Production. Không dùng để cập nhật iPhone đang chơi và không hạ cấp Runtime đã cài.
+> **CHỈ CÀI RUNTIME PRODUCTION.** Bản QA từ GitHub Actions chưa được đồng bộ với Server Production; không dùng để cập nhật iPhone đang chơi. Không hạ cấp Runtime đã cài.
 
 **Runtime Production đã xác minh mới nhất: V3.280.** Các bản QA không thay thế bản chính thức.
 
@@ -33,7 +33,7 @@
 
 ## 4. QA — CHỈ KIỂM THỬ, KHÔNG CÀI TRÊN PRODUCTION
 
-> **CẢNH BÁO:** QA là file thử nghiệm chưa phát hành, có thể mới hơn Server và gây lệch phiên bản. KHÔNG dùng .gmwwupdate QA để cập nhật ứng dụng đang chơi.
+> **CẢNH BÁO:** QA là file thử nghiệm chưa phát hành, có thể mới hơn Server và gây lệch phiên bản. ZIP chỉ dành cho kiểm thử độc lập; KHÔNG dùng .gmwwupdate QA để cập nhật ứng dụng đang chơi.
 
 | QA — KHÔNG CÀI | Tệp kiểm thử gốc | SHA-256 ZIP | Trạng thái |
 |:--|:--|:--|:--|
