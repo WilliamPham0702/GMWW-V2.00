@@ -96,7 +96,7 @@ try{
   assert.equal(readB.messages.find(m=>m.text===first).senderId,alice.loginId);
 
   // Simulate a transport disconnect and a brand-new WebSocket without leaving room.
-  wsA.socket.close(1001,'ci-reconnect');
+  wsA.socket.close(4001,'ci-reconnect');
   await eventually(wsA.closed,'transport close');
   const connectedAgain=openSocket(code,alice.participantId);
   await waitOpen(connectedAgain);
