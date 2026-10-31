@@ -20,3 +20,9 @@
 - Chặn GitHub Runtime OTA tự phát hành đối với chính xác đợt sửa Pages-only.
 - URL đích và hành vi HTTPS 302 giữ nguyên; không động dữ liệu, Oracle, Worker hay IPA.
 - Rollback: dừng/khôi phục bản Pages trước; Worker Production độc lập.
+
+## Khắc phục nhiễu CI 31/10/2026
+- Chỉ triển khai Pages khi commit sửa `infra/pages/gamemasoi/*` và toàn bộ file thay đổi thuộc whitelist an toàn.
+- Commit Oracle, Worker, gameplay hoặc CI không liên quan: workflow Pages kết thúc thành công ở chế độ bỏ qua, không tạo deployment mới.
+- Giữ nguyên đúng hai quy tắc HTTPS 302 tới Cloudflare Production cũ, không đổi IPA/Runtime/DO/data.
+- Rollback: khôi phục workflow trước đó hoặc tắt project Pages; Worker cũ luôn độc lập.
