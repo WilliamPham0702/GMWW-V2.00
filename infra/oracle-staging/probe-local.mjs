@@ -41,7 +41,12 @@ async function assertWebSocket(base,code,participantId){
     ws.addEventListener('message',event=>{
       try{
         const msg=JSON.parse(String(event.data));
-        if(msg.type==='room_state'){assert.equal(msg.room?.code,code);state=true;ws.send(JSON.stringify({type:'ping'}))}
+        if(msg.type==='room_state'){
+          assert.equal(msg.room?.code,code);
+          assert.ok(Array.isArray(msg.players));
+          assert.doesNotMatch(JSON.stringify(msg),/"(?:gmToken|passwordHash|passwordSalt|roleAssignments|privateRole|sessionToken)":/);
+          state=true;ws.send(JSON.stringify({type:'ping'}))
+        }
         if(msg.type==='pong'){pong=true;assert.ok(state);finish()}
       }catch(e){finish(e)}
     });
@@ -77,6 +82,11 @@ export async function runLocalProbe(phase,env=process.env){
     checkpoint=JSON.parse(await readFile(file,'utf8'));
     assert.match(checkpoint.loginId,/^orastg[a-f0-9]{8}$/);
     assert.match(checkpoint.roomCode,/^[A-HJ-NP-Z2-9]{6}$/);
+    // The token was minted by this same local fixture, never sourced from Production.
+    assert.ok(typeof checkpoint.sessionToken==='string'&&checkpoint.sessionToken.length>=16);
+    const existingSession=await send(base,'/api/members/me',{token:checkpoint.sessionToken});
+    assert.equal(existingSession.status,200,'Existing session survives local Workerd restart');
+    assert.equal(existingSession.result.member?.loginId,checkpoint.loginId);
   }
   const login=await send(base,'/api/members/login',{method:'POST',body:{loginId:checkpoint.loginId}});
   assert.equal(login.status,200,'Fixture login '+JSON.stringify(login.result).slice(0,170));
@@ -84,6 +94,12 @@ export async function runLocalProbe(phase,env=process.env){
   const me=await send(base,'/api/members/me',{token:login.result.token});
   assert.equal(me.status,200);
   assert.equal(me.result.member.loginId,checkpoint.loginId);
+  const invalid=await send(base,'/api/members/me',{token:login.result.token+'bad'});
+  assert.equal(invalid.status,401,'Invalid session token must fail closed');
+  const privateDenied=await send(base,'/api/rooms/'+checkpoint.roomCode+'/me');
+  assert.equal(privateDenied.status,401,'Private room state requires session');
+  const chatDenied=await send(base,'/api/rooms/'+checkpoint.roomCode+'/chat',{method:'POST',body:{text:'unauthorized'}});
+  assert.equal(chatDenied.status,401,'Player chat requires session');
   const room=await send(base,'/api/rooms/'+checkpoint.roomCode);
   assert.equal(room.status,200,'Persisted room exists');
   assert.equal(room.result.room?.code,checkpoint.roomCode);
@@ -104,8 +120,13 @@ export async function runLocalProbe(phase,env=process.env){
     assert.ok(previous,'Missing original room fixture snapshot');
     assert.equal(previous.digest,snapshot.digest,'Room public projection drifted after restart');
   }
-  if(phase==='create')await writeFile(file,JSON.stringify(checkpoint),{mode:0o600,flag:'wx'});
-  return {ok:true,phase,roomCode:checkpoint.roomCode,authenticated:true,websocket:true,persistent:phase==='resume',reconciled:true,liveSwitch:false};
+  if(phase==='create'){
+    // Synthetic token remains only inside the marked, 0700 temp STAGING directory.
+    // Never expose tokens in logs or in a public snapshot. CI erases the fixture.
+    checkpoint.sessionToken=login.result.token;
+    await writeFile(file,JSON.stringify(checkpoint),{mode:0o600,flag:'wx'});
+  }
+  return {ok:true,phase,roomCode:checkpoint.roomCode,authenticated:true,websocket:true,persistent:phase==='resume',reconciled:true,authGate:true,sessionAfterRestart:phase==='resume',liveSwitch:false};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
   runLocalProbe(process.argv[2]).then(x=>console.log(JSON.stringify(x)),e=>{console.error('Oracle LOCAL probe FAILED:',e.message);process.exitCode=1});
