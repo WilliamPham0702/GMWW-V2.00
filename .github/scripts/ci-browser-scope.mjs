@@ -3104,7 +3104,7 @@ function isRoleNameAudio3281Scope(changes){
   if(!qa.after.startsWith(qa.before)||!qa.after.includes('PR #654 — đóng gói ứng viên Runtime V3.281'))
     return false;
   if(!by.get('docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md').after.includes('V3.281')||
-    !by.get('tests/audio-independent-role-name-20261031.test.mjs').after.includes('independent role name')||
+    !by.get('tests/audio-independent-role-name-20261031.test.mjs').after.includes('Role-name playback honors separately linked source')||
     !by.get('.github/workflows/check-gm-audio-role-day.yml').after.includes('tests/audio-independent-role-name-20261031.test.mjs'))
     return false;
   return by.get('.github/scripts/ci-browser-scope.mjs').after.includes('function isRoleNameAudio3281Scope(changes)')&&
