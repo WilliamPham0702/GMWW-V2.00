@@ -115,6 +115,14 @@ jobs:
               SKIP_AUTO_RELEASE=true
               echo 'Oracle STAGING auth probe only: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
             fi
+            # Read-only external Oracle/Cloudflare contract tests do not publish a Runtime.
+            ORACLE_REMOTE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(infra/oracle-staging/verify-two-backends([.]test)?[.]mjs|[.]github/workflows/(check-oracle-staging-bootstrap|github-runtime-ota)[.]yml|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031[.]md)$' || true)
+            if [ -n "$CHANGED" ] && [ -z "$ORACLE_REMOTE_UNRELATED" ] &&
+               printf '%s\n' "$CHANGED" | grep -Fxq 'infra/oracle-staging/verify-two-backends.mjs' &&
+               printf '%s\n' "$CHANGED" | grep -Fxq 'infra/oracle-staging/verify-two-backends.test.mjs'; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Oracle external STAGING preflight only: NO Runtime release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
             # CI-only Runtime workflow and Oracle gate maintenance never auto-publish a duplicate Runtime.
             RUNTIME_CI_RECOVERY_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(github-runtime-ota|check-oracle-staging-bootstrap)[.]yml)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$RUNTIME_CI_RECOVERY_UNRELATED" ] &&
