@@ -53,20 +53,28 @@ test('DEMO prepares one dawn response per eligible, unanswered Assassin mark onl
  const players=Object.fromEntries(['alice','bob','charlie','dave'].map(id=>['member:'+id,{loginId:id}]));
  assert.deepEqual(pendingDemoAssassinResponses({rows,players},{matchId:'m',cycleNight:1}).map(x=>x.interactionId),['good']);
 });
-test('GM audio honors an excerpt instead of playing a full role wake-up file',async()=>{
+test('GM Aura audio plays its independent role name, never a cropped wake-up clip',async()=>{
  const audio=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
  const start=audio.indexOf('async function battlePlayConfiguredAudio('),end=audio.indexOf('function battleTurnAudioCue(',start);
  assert.ok(start>=0&&end>start);
- let calls=0,last;
+ let calls=0,last,tts=0;
+ const ready=new Map([['cards:clip','full-role.m4a'],['cards-name:clip','name-only.m4a']]);
  const ctx={battleState:{key:''},battleUnlockedAudioContext:null,playSceneRuntime:{room:{demo:false}},state:{cards:[]},
-  setTimeout:()=>1,clearTimeout:()=>{},playAudioMuted:()=>false,battleFindAudio:()=>({id:'clip',roleNameEnd:4}),
-  battleAudioLast:{key:'',at:0},battleAudioReady:new Map([['cards:clip','role.m4a']]),
+  setTimeout:()=>1,clearTimeout:()=>{},playAudioMuted:()=>false,battleFindAudio:()=>({id:'clip',roleNameStart:0,roleNameEnd:4}),
+  battleAudioLast:{key:'',at:0},battleAudioReady:ready,
   battleAudioRequestId:0,battleActiveAudio:null,battleWarmAudio:async()=>null,
-  battlePlayWebAudioFallback:async()=>false,battleSpeakCue:()=>false,Date,
-  Audio:class{constructor(src){this.src=src;this.readyState=0;last=this}addEventListener(){}async play(){this.currentTime=4;this.ontimeupdate?.();return true}pause(){this.paused=true}}};
+  battlePlayWebAudioFallback:async()=>false,battleSpeakCue:()=>{tts++;return false},Date,
+  Audio:class{constructor(src){this.src=src;this.readyState=0;last=this}addEventListener(){}async play(){return true}pause(){this.paused=true}}};
  const play=vm.runInNewContext(audio.slice(start,end)+';battlePlayConfiguredAudio',ctx);
- await play('cards','role_wolf','Sói',false,()=>calls++,4);
- assert.equal(last.src,'role.m4a');assert.equal(last.paused,true);assert.equal(calls,1);
+ await play('cards','role_wolf','Sói',false,()=>calls++,1);
+ assert.equal(last.src,'name-only.m4a');
+ assert.notEqual(last.src,'full-role.m4a');
+ assert.equal(last.paused,undefined,'No segment seek or forced cut is allowed');
+ last.onended?.();assert.equal(calls,1);
+ ready.delete('cards-name:clip');last=null;
+ await play('cards','role_wolf','Sói',true,null,1);
+ assert.equal(last,null,'Missing name audio must not play the full role clip');
+ assert.equal(tts,1,'Missing name audio falls back to the exact spoken role name');
 });
 test('the real battle handler rejects incomplete multi-target scans before state writes',()=>{
  const src=fs.readFileSync('src/index.js','utf8');

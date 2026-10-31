@@ -50,7 +50,7 @@ test('legacy migration keeps alternate uploaded IDs rather than deleting their I
 });
 
 test('source audit requires real local or bundled bytes; filename metadata is never proof',async()=>{
- const src=cut(lib,'async function audioBindingStatus(', 'function gmwwAudioHasNameCut(');
+ const src=cut(lib,'async function audioBindingStatus(', 'async function gmwwRoleNameAudioStatus(');
  const ctx={
    audioKind:'system',Blob,window:{GMWW_V1_AUDIO:{}},gmwwBundledLegacyAudio:{'ROLE:source-18':{base64:'X'.repeat(150)}},
    audioBlobKey:(kind,id)=>kind+':'+id,
@@ -64,10 +64,12 @@ test('source audit requires real local or bundled bytes; filename metadata is ne
  assert.equal(await ctx.status({id:'remote',url:'https://example.invalid/audio.mp3'},'system'),'remote');
 });
 
-test('a name-only reveal without exact cut NEVER plays first 5 seconds of wake-up',()=>{
+test('a name-only reveal never plays an excerpt or falls back to the Full audio',()=>{
  const src=cut(battle,'async function battlePlayConfiguredAudio(', 'function battleTurnAudioCue(');
- assert.match(src,/Number\(maxSeconds\)>0&&!hasExactCut/);
- assert.match(src,/battleSpeakCue\(String\(name\|\|''\)\.trim\(\),showError,onFinished\)/);
+ assert.match(src,/audioKindForSource=nameOnly\?'cards-name':kind/);
+ assert.match(src,/await battleWarmAudio\(audioKindForSource,candidate\)/);
+ assert.match(src,/const requestedCut=null/);
+ assert.doesNotMatch(src,/hasExactCut|roleNameEnd>/);
 });
 
 test('GM assembly still matches seven source files byte-for-byte',()=>{
