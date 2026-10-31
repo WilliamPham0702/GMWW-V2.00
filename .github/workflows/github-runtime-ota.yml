@@ -106,6 +106,17 @@ jobs:
               SKIP_AUTO_RELEASE=true
               echo "Pages-only alias: no Runtime release." >> "$GITHUB_STEP_SUMMARY"
             fi
+            # Catalog-only automation has NO new runtime binary. Avoid duplicate releases.
+            CATALOG_ONLY=$(printf '%s\n' \
+              '.github/workflows/runtime-download-catalog.yml' \
+              '.github/scripts/update-runtime-download-catalog.mjs' \
+              'tests/runtime-download-catalog.test.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              '.github/workflows/github-runtime-ota.yml' | sort)
+            if [ "$CHANGED" = "$CATALOG_ONLY" ]; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Download catalog only: no Runtime package release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
             if [ "$CHANGED" = "$POLICY_ONLY" ] || [ "$CHANGED" = "$PR637_ONLY" ] ||
                printf '%s\n' "$MESSAGE" | grep -Eq '(^Merge pull request #637([[:space:]]|$)|\(#637\)$)'; then
               SKIP_AUTO_RELEASE=true
