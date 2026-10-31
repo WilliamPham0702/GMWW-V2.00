@@ -3538,7 +3538,7 @@ function detect(){
           'M .github/workflows/check-player-web.yml','M package.json','M package-lock.json',
           'M src/index.js','M server-game/current/GMWW.html','M server-game/current/app.js',
           'M server-game/src/00-core-and-library.part',
-          'A tests/demo-runtime-v3285-release.test.mjs',
+          'A tests/demo-runtime-v3285-release.test.mjs','M tests/ci-browser-scope.test.mjs',
           'A docs/releases/GMWW-RUNTIME-V3.285-DEMO-ONLINE-20261031.md'
         ].sort();
         if(JSON.stringify(rows)===JSON.stringify(expected)){
