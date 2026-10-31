@@ -887,7 +887,8 @@ test('PR652 V3.280 final selector ordering recovery: exact three CI-only files s
     'tests/ci-browser-scope.test.mjs'
   ];
   const verified=paths.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
-  assert.equal(classifyBrowserScope(verified),'pr652-postmerge-release');
+  if(JSON.parse(readFileSync('package.json','utf8')).version==='3.280.0')assert.equal(classifyBrowserScope(verified),'pr652-postmerge-release');
+  else assert.notEqual(classifyBrowserScope(verified),'pr652-postmerge-release','V3.280 release scope cannot authorize a newer Runtime');
   assert.equal(classifyBrowserScope(verified.slice(1)),'full','missing selector fails closed');
   assert.equal(classifyBrowserScope([...verified,modified('src/index.js','before','gameplay changed')]),'full','gameplay cannot bypass broad CI');
   assert.equal(classifyBrowserScope([...verified,verified[0]]),'full','duplicate fails closed');

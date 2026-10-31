@@ -3555,6 +3555,54 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // V3.285 DEMO Online OTA: verify exact version-only release; otherwise use full CI.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean).map(x=>x.replace('\t',' ')).sort();
+        const expected=[
+          'M .github/scripts/ci-browser-scope.mjs','M .github/scripts/prepare-update-channel.mjs',
+          'M .github/workflows/check-player-web.yml','M package.json','M package-lock.json',
+          'M src/index.js','M server-game/current/GMWW.html','M server-game/current/app.js',
+          'M server-game/src/00-core-and-library.part',
+          'A tests/demo-runtime-v3285-release.test.mjs','M tests/ci-browser-scope.test.mjs',
+          'A docs/releases/GMWW-RUNTIME-V3.285-DEMO-ONLINE-20261031.md'
+        ].sort();
+        if(JSON.stringify(rows)===JSON.stringify(expected)){
+          const exact=new Map([
+            ['src/index.js',[['VERSION="V3.280",NATIVE_SHELL_VERSION="3.264"','VERSION="V3.285",NATIVE_SHELL_VERSION="3.264"']]],
+            ['server-game/src/00-core-and-library.part',[["const VERSION='3.280';","const VERSION='3.285';"]]],
+            ['server-game/current/app.js',[["const VERSION='3.280';","const VERSION='3.285';"]]],
+            ['server-game/current/GMWW.html',[['<title>GMWW V3.280</title>','<title>GMWW V3.285</title>']]],
+            ['package.json',[['"version": "3.280.0"','"version": "3.285.0"']]],
+            ['package-lock.json',[['"version": "3.280.0"','"version": "3.285.0"']]]
+          ]);
+          for(const [file,repls] of exact){
+            const before=git('show',base+':'+file),after=fs.readFileSync(file,'utf8');
+            let expectedContent=before;
+            for(const [oldText,newText] of repls)expectedContent=expectedContent.replaceAll(oldText,newText);
+            if(expectedContent===before||after!==expectedContent)throw Error('Unbounded version edit: '+file);
+          }
+          const beforeNotes=git('show',base+':.github/scripts/prepare-update-channel.mjs');
+          const afterNotes=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+          const note='V3.285 PR677/PR694: Chuyển chế độ DEMO sang vận chuyển Online đồng bộ với người chơi thật; giữ các kiểm soát bot, phân quyền, chat và bảo toàn phòng. Đồng bộ Runtime/Worker V3.285, không đổi IPA Native V3.264, Oracle hoặc dữ liệu. Gói thủ công .gmwwupdate có SHA-256; rollback Runtime V3.280 và Worker version trước khi nâng cấp.';
+          if(afterNotes!==beforeNotes.replace('releaseNotes:["V3.280','releaseNotes:["'+note+'","V3.280'))throw Error('Unbounded release notes edit');
+          const worker=fs.readFileSync('src/index.js','utf8');
+          const gm=fs.readFileSync('server-game/current/app.js','utf8');
+          const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+          if(!worker.includes('const roomMode=desiredDemo?"online":')||
+             !worker.includes('roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode)')||
+             !source.includes("roomMode:(target==='online'||target==='demo')?'online':'offline'")||
+             !gm.includes("const VERSION='3.285'"))throw Error('DEMO Online transport source missing');
+          if(!fs.readFileSync('docs/releases/GMWW-RUNTIME-V3.285-DEMO-ONLINE-20261031.md','utf8').includes('Rollback')||
+             !fs.readFileSync('tests/demo-runtime-v3285-release.test.mjs','utf8').includes('version-only'))throw Error('Release evidence missing');
+          return{mode:'demo-runtime-v3285',reason:'Exact version-only Runtime/Worker release with existing DEMO Online source, IPA untouched'};
+        }
+      }
+    }catch{} // Unexpected content or scope means full CI.
+  }
+
   // PR695 verify exact catalog-only changes before full-suite routing.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
