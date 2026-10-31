@@ -1,5 +1,5 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
-import {chatPolicy,chatNormalizeText} from "./gmww-online-chat-policy.js";
+import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -48,7 +48,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.274",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3274-artifact-preview-centering",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.280",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -74,6 +74,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async fetch(request){
     const path=new URL(request.url).pathname;
+    if(path==="/gm/announcement"&&request.method==="PUT")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     // GR01 recovery marker: internal DO stub requests only, read-only.
     // No Production restore route exists here; unconfigured credentials fail closed.
     if(path==="/__gr01/pitr/bookmark"){
@@ -113,6 +114,8 @@ export class RoomDurableObject extends DurableObject {
   }
   async handleFetch(request){
     const url=new URL(request.url);
+    if(url.pathname==="/gm/announcement"&&request.method==="PUT")return this.gmAnnouncement(request,await safeJson(request));
+    if(url.pathname==="/player/announcement"&&request.method==="POST")return this.playerAnnouncement(await safeJson(request));
     if(url.pathname==="/security/rate-limit"&&request.method==="POST")return this.securityRateLimit(await safeJson(request));
     if(url.pathname==="/storage-optimizer/stats"&&request.method==="GET")return j(this.gmwwWriteOptimizerStatus());
     if(url.pathname==="/health/storage"&&request.method==="GET"){
@@ -186,6 +189,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/player/chat"&&request.method==="POST")return this.playerChatRead(await safeJson(request));
     if(url.pathname==="/player/chat/send"&&request.method==="POST")return this.playerChatSend(await safeJson(request));
     if(url.pathname==="/gm/chat"&&request.method==="GET")return this.gmChatRead(request);
+    if(url.pathname==="/gm/chat"&&request.method==="POST")return this.gmChatSend(request,await safeJson(request));
     if(url.pathname==="/gm/chat/moderate"&&request.method==="POST")return this.gmChatModerate(request,await safeJson(request));
     if(url.pathname==="/gm/state"&&request.method==="GET")return this.gmState(request);
     if(url.pathname==="/gm/action-log"&&request.method==="GET")return this.gmActionLog(request);
@@ -797,7 +801,7 @@ export class RoomDurableObject extends DurableObject {
     // by publicPlayer().online instead of deleting the roster entry.
     return{players:players||{},removed:[]};
   }
-  async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],frozenLogins=activeFrozenLoginIds(interactions,meta,Date.now());return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(p=>({...publicPlayer(p),frozen:meta?.statusDisplay?.frozen===false?false:frozenLogins.has(normalizeLoginId(p?.loginId)),statusTags:statusTagsFor(interactions,meta,p?.loginId,players)})),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
+  async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],frozenLogins=activeFrozenLoginIds(interactions,meta,Date.now());return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(p=>({...publicPlayer(p),frozen:meta?.statusDisplay?.frozen===true&&frozenLogins.has(normalizeLoginId(p?.loginId)),statusTags:statusTagsFor(interactions,meta,p?.loginId,players)})),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
   async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};
     if(meta.demo&&request.method==="POST"&&/^\/gm\/(?:battle-action|day-action|day-clock|gallows|turn|cycle|end)$/.test(new URL(request.url).pathname)){
       const lease=await this.ctx.storage.get("demoLease");
@@ -1045,6 +1049,15 @@ export class RoomDurableObject extends DurableObject {
     if(String(body?.matchId||"")!==String(meta.matchId||"")||
       String(body?.cycleKey||"")!==String(meta.cycleKey||""))
       return j({ok:false,error:"DEMO_ACTION_STALE"},409);
+    // Private action offers remain visible while Frozen/Expelled, but execution is blocked on Server.
+    if(online){
+      const effects=await this.ctx.storage.get('interactions')||[];
+      const blocked=effects.some(x=>normalizeLoginId(x?.loginId)===loginId&&x?.effectActive!==false&&
+        (!x?.matchId||String(x.matchId)===String(meta.matchId))&&
+        (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&
+        (x.type==='dead'||x.type==='expelled'||(x.type==='frozen'&&meta.cyclePhase==='night')));
+      if(blocked)return j({ok:false,error:'ACTOR_CANNOT_ACT',message:'Đã thấy hành động, nhưng bạn đang chịu hiệu ứng và không được thực hiện lượt này.'},409);
+    }
     const actions=online?await playerOfferedActions(this,meta,loginId):await demoPlayerActions(this,meta,loginId),
       action=actions.find(a=>a.key===String(body?.actionKey||""));
     if(!action)return j({ok:false,error:"DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN"},409);
@@ -1144,6 +1157,19 @@ export class RoomDurableObject extends DurableObject {
       // Never derive the village bulletin from only the short-lived rules buffer.
       villageHistory:await this.villageHistoryForMatch(meta,interactions),
       interactionResponses,activeEffects,drunkDraws,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+  }
+  async currentAnnouncement(meta){
+    const runtime=meta?.cyclePhase==='night'?await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
+    return announcementCue(meta,runtime);
+  }
+  async gmAnnouncement(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    return saveAnnouncement(this.ctx.storage,body,(await this.currentAnnouncement(auth.meta))?.key);
+  }
+  async playerAnnouncement(body){
+    const meta=await this.ctx.storage.get('meta'),players=await this.ctx.storage.get('players')||{};
+    if(!meta||meta.enabled===false||!players['member:'+normalizeLoginId(body?.loginId)])return j({ok:false,error:'PLAYER_NOT_IN_ROOM'},403);
+    return readAnnouncement(this.ctx.storage,String(body?.key||''),(await this.currentAnnouncement(meta))?.key);
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -2702,9 +2728,15 @@ export class RoomDurableObject extends DurableObject {
     if(!record||String(body?.undoToken||"")!==record.token)return j({ok:false,error:"UNDO_NOT_FOUND"},404);
     if(record.undone)return j({ok:true,idempotent:true,undone:true,turnId:record.turnId});
     if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
-      String(meta.cycleKey||"")!==record.cycleKey||Number(meta.cycleNight||0)!==record.night||
-      String(meta.currentNightTurnId||"")!==record.turnId)
-      return j({ok:false,error:"UNDO_STALE_TURN",message:"Chỉ khôi phục hành động vừa xác nhận trong lượt hiện tại."},409);
+      String(meta.cycleKey||"")!==record.cycleKey||Number(meta.cycleNight||0)!==record.night)
+      return j({ok:false,error:"UNDO_STALE_TURN",message:"Chỉ khôi phục hành động trong cùng đêm hiện tại."},409);
+    // Confirmations may auto-advance the GM timeline before Undo is tapped.
+    // Only allow rewind to this exact recorded turn if no later gameplay state
+    // has changed. Never roll back a different match/night or another action.
+    const runtime=await this.getNightRuntime(meta,Number(meta.cycleNight||1),false);
+    const undoIndex=runtime?.queue?.findIndex(step=>String(step?.id||"")===String(record.turnId))??-1;
+    if(undoIndex<0||!Number.isInteger(runtime.cursor)||runtime.cursor<undoIndex)
+      return j({ok:false,error:"UNDO_STALE_TURN",message:"Lượt đã thay đổi, không thể khôi phục."},409);
     for(const row of record.after){
       const current=await this.ctx.storage.get(row.key),exists=current!==undefined&&current!==null;
       if(exists!==row.exists||JSON.stringify(current??null)!==JSON.stringify(row.value??null))
@@ -2715,6 +2747,8 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }
     if(meta.demo)await this.ctx.storage.delete("demoPlan");
+    if(runtime.cursor!==undoIndex||runtime.completed||String(meta.currentNightTurnId||"")!==record.turnId)
+      await this.advanceNightRuntime(meta,"jump","gm-undo",undoIndex);
     record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
     const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(record.undoneAt)).padStart(13,"0")+":"+logId,{id:logId,type:"battle_undo",loginId:String(record.targetIds||""),matchId,actionId:record.label,message:"GM hoàn tác: "+record.label,createdAt:record.undoneAt,source:"gm"});
     this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
@@ -3103,13 +3137,9 @@ export class RoomDurableObject extends DurableObject {
           steps:[{label:"Làng ơi dậy đi",status:"active"},{label:"Thông cáo Làng",status:"upcoming"},{label:"Lên Giàn",status:"upcoming"}]}
       :null;
     // Public role call only. Never reveal the actor, role owner or hidden target.
-    const audioCue=String(meta.phase)==="running"?
-      String(meta.cyclePhase)==="night"&&turn?
-        {key:String(meta.matchId)+":"+String(meta.cycleKey)+":"+String(turn.id),
-          label:String(turn.label||"Đến lượt Vai Trò").slice(0,120)}:
-      String(meta.cyclePhase)==="morning"?
-        {key:String(meta.matchId)+":"+String(meta.cycleKey)+":wakeup",label:"Làng ơi dậy đi"}:null
-      :null;
+    const audioCue=announcementCue(meta,wolfRuntime);
+    const recorded=audioCue?await this.ctx.storage.get('announcement:meta'):null;
+    if(audioCue&&recorded?.key===audioCue.key)audioCue.audioUrl='/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?key='+encodeURIComponent(audioCue.key);
     const drawn=Number(meta.cycleNight)===3&&String(meta.cyclePhase)==='night'?
       await this.ctx.storage.get('drunkDeck:'+String(meta.matchId)+':3:'+loginId):null;
     const drunkDraw=drawn&&(drawn.selectedId||
@@ -3342,29 +3372,39 @@ export class RoomDurableObject extends DurableObject {
   async leave(body){const players=(await this.ctx.storage.get("players"))||{},id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!id||!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn không còn ở trong phòng."},404);delete players[id];await this.ctx.storage.put("players",players);if(meta){meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta)}for(const ws of this.ctx.getWebSockets()){try{if(ws.deserializeAttachment()?.participantId===id)ws.close(1000,"PLAYER_LEFT_ROOM")}catch{}}this.broadcast({type:"room_state",room:meta?publicRoom(meta):null,players:Object.values(players).map(publicPlayer)});return j({ok:true,left:true})}
   // Chat content NEVER enters the public room DTO or broadcast WebSocket.
   // The generic chat_tick only asks each authenticated client to fetch its own channel.
-  async chatAccess(loginId){
+  async chatAccess(loginId,requestedChannel="room"){
     const meta=await this.ctx.storage.get("meta"),players=(await this.ctx.storage.get("players"))||{},
       rows=(await this.ctx.storage.get("interactions"))||[],bans=(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{};
+    const id=normalizeLoginId(loginId);
+    // Server-only authenticated DM channel. Never deliver through public room chat or room state.
+    if(requestedChannel==="gm"){
+      const allowed=meta?.enabled!==false&&["running","role_delivery","lobby","waiting"].includes(String(meta?.phase||""))&&!!players["member:"+id];
+      const blocked=bans[id]===true;
+      const permission=allowed?{canRead:true,canSend:!blocked,channel:"gm:"+id,scope:"gm",reason:blocked?"CHAT_MUTED_GM":null}
+        :{canRead:false,canSend:false,channel:null,scope:null,reason:"CHAT_NOT_IN_ROOM"};
+      return{meta,players,rows,permission};
+    }
     const runtime=meta?.cyclePhase==="night"?await this.getNightRuntime(meta,Number(meta.cycleNight||1),false):null;
     const permission=chatPolicy({meta,players,rows,runtime,loginId,bans});
-    return{meta,players,permission};
+    return{meta,players,rows,permission};
   }
   async playerChatRead(body){
-    const loginId=normalizeLoginId(body?.loginId),{meta,permission}=await this.chatAccess(loginId);
-    if(!permission.canRead)return j({ok:true,channel:null,messages:[],canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
-    const key="onlineChat:"+String(meta.matchId)+":"+permission.channel;
+    const loginId=normalizeLoginId(body?.loginId),{meta,players,rows,permission}=await this.chatAccess(loginId,body?.channel);
+    const notices=players["member:"+loginId]?publicChatNotices(meta,players,rows):[];
+    if(!permission.canRead)return j({ok:true,channel:null,messages:[],notices,canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
+    const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel;
     return j({ok:true,channel:permission.channel,scope:permission.scope,
-      messages:(await this.ctx.storage.get(key))||[],canSend:permission.canSend,
+      messages:(await this.ctx.storage.get(key))||[],notices,canSend:permission.canSend,
       reason:permission.reason,phase:meta.cyclePhase,cycleKey:meta.cycleKey});
   }
   async playerChatSend(body){
     const loginId=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text);
     if(!content||String(body?.text||'').length>400)return j({ok:false,error:"CHAT_INVALID_TEXT"},400);
-    const {meta,players,permission}=await this.chatAccess(loginId);
+    const {meta,players,permission}=await this.chatAccess(loginId,body?.channel);
     if(!permission.canSend)return j({ok:false,error:permission.reason||"CHAT_FORBIDDEN"},403);
-    const rateKey="onlineChatRate:"+String(meta.matchId)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
+    const rateKey="onlineChatRate:"+chatStorageScope(meta)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
     if(Date.now()-prev<850)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
-    const key="onlineChat:"+String(meta.matchId)+":"+permission.channel,
+    const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel,
       messages=(await this.ctx.storage.get(key))||[],now=Date.now(),
       message={id:crypto.randomUUID(),senderId:loginId,
         senderName:String(players["member:"+loginId]?.displayName||loginId).slice(0,42),
@@ -3376,7 +3416,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmChatRead(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const meta=auth.meta,match=String(meta.matchId||"");
+    const meta=auth.meta,match=chatStorageScope(meta);
     const records=match?await this.ctx.storage.list({prefix:"onlineChat:"+match+":"}):new Map(),
       channels=[...records.entries()].map(([key,messages])=>({
         channel:key.slice(("onlineChat:"+match+":").length),
@@ -3384,6 +3424,23 @@ export class RoomDurableObject extends DurableObject {
       }));
     return j({ok:true,matchId:match,phase:meta.cyclePhase||null,
       bans:(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{},channels});
+  }
+  async gmChatSend(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
+      players=(await this.ctx.storage.get("players"))||{};
+    const publicDay=String(body?.channel||'')==='room';
+    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!content||String(body?.text||"").length>400||
+      (publicDay?(String(meta.phase)!=='running'||String(meta.cyclePhase)!=='morning'):(!id||!players["member:"+id])))
+      return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
+    const channel=publicDay?"day":"gm:"+id;
+    const key="onlineChat:"+chatStorageScope(meta)+":"+channel,now=Date.now(),
+      rateKey="gmChatRate:"+chatStorageScope(meta)+":"+channel;
+    if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
+    const messages=(await this.ctx.storage.get(key))||[],
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:publicDay?"day":"gm"};
+    await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
+    this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel});
   }
   async gmChatModerate(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -3694,10 +3751,20 @@ export default {async fetch(request,env){
   const leaveApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/leave$/);if(leaveApi&&request.method==="POST")return leaveRoomApi(env,leaveApi[1],request);
   const drunkDraw=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/drunk\/draw$/);
   if(drunkDraw&&request.method==='POST')return playerDrunkDrawApi(env,drunkDraw[1],request);
+  const gmAnnouncement=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
+  if(gmAnnouncement&&request.method==='PUT')return roomProxy(env,gmAnnouncement[1],'/gm/announcement',request);
+  const playerAnnouncement=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
+  if(playerAnnouncement&&request.method==='GET'){
+    const code=normalizeRoomCode(playerAnnouncement[1]);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
+    const session=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));
+    if(!session.ok)return session;
+    const data=await session.json();
+    return roomStub(env,code).fetch('https://room.internal/player/announcement',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({loginId:data.member.loginId,key:url.searchParams.get('key')})});
+  }
   const playerChat=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat$/);
   if(playerChat&&(request.method==="GET"||request.method==="POST"))return playerRoomChatApi(env,playerChat[1],request);
   const gmChat=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat$/);
-  if(gmChat&&request.method==="GET")return roomProxy(env,gmChat[1],"/gm/chat",request);
+  if(gmChat&&(request.method==="GET"||request.method==="POST"))return roomProxy(env,gmChat[1],"/gm/chat",request);
   const gmChatMute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/moderate$/);
   if(gmChatMute&&request.method==="POST")return roomProxy(env,gmChatMute[1],"/gm/chat/moderate",request);
   const playerState=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/me$/);if(playerState&&request.method==="GET")return playerPrivateState(env,playerState[1],request);
@@ -3807,11 +3874,11 @@ async function playerRoomChatApi(env,raw,request){
   // The external client controls neither loginId nor channel membership.
   const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
   if(!session.ok)return session;
-  const data=await session.json(),body=request.method==="POST"?await safeJson(request)||{}:{};
+  const data=await session.json(),body=request.method==="POST"?await safeJson(request)||{}:{channel:new URL(request.url).searchParams.get("channel")};
   const route=request.method==="POST"?"/player/chat/send":"/player/chat";
   return roomStub(env,code).fetch(new Request("https://room.internal"+route,{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({loginId:data.member.loginId,text:body.text})
+    body:JSON.stringify({loginId:data.member.loginId,text:body.text,channel:body.channel==="gm"?"gm":"room"})
   }));
 }
 async function playerPrivateState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),res=await roomStub(env,c).fetch("https://room.internal/player/state",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,member:data.member})});if(res.ok)await syncRoomDirectory(env,c);return res}
@@ -4090,3 +4157,54 @@ function normalizeDisplayName(v){return titleCaseDisplayName(String(v||"").trim(
 function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a.charCodeAt(i)^b.charCodeAt(i);return x===0}function randomToken(n){return bytesToBase64(crypto.getRandomValues(new Uint8Array(n))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}function bytesToBase64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s)}function base64ToBytes(v){const s=atob(v);return Uint8Array.from(s,c=>c.charCodeAt(0))}function bearer(r){const h=r.headers.get("Authorization")||"";return h.startsWith("Bearer ")?h.slice(7).trim():""}async function safeJson(r){try{return await r.json()}catch{return null}}function j(data,status=200){return Response.json(data,{status,headers:{...corsHeaders(),"cache-control":"no-store"}})}function corsHeaders(){return{"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,PUT,DELETE,OPTIONS","access-control-allow-headers":"content-type,authorization,x-gmww-demo-owner","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}}
 
 async function playerSeatSwapApi(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);const me=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,code).fetch('https://room.internal/player/seat-swap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...body,loginId:data.member.loginId})})}
+
+// BEGIN RECORDED PUBLIC ANNOUNCEMENTS
+// Only the current public wake-up cue is eligible. Never publish action/result audio.
+function announcementCue(meta,runtime){
+  if(meta?.phase!=='running')return null;
+  const turn=runtime?.queue?.[runtime.cursor];
+  if(meta.cyclePhase==='night'&&turn)return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':'+String(turn.id),label:String(turn.label||'Đến lượt Vai Trò').slice(0,120)};
+  if(meta.cyclePhase==='morning')return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':wakeup',label:'Làng ơi dậy đi'};
+  return null;
+}
+const chunkSize=60000,maxBytes=2*1024*1024;
+function decodeRecording(body){
+  if(typeof body?.base64!=='string'||body.base64.length>Math.ceil(maxBytes/3)*4||!body.base64.length||!/^[-A-Za-z0-9+/]*={0,2}$/.test(body.base64))return null;
+  try{
+    const raw=atob(body.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+    if(!bytes.length||bytes.length>maxBytes)return null;
+    const text=(a,b)=>String.fromCharCode(...bytes.slice(a,b)),mime=String(body.mime||'').split(';')[0].toLowerCase();
+    const valid=mime==='audio/mpeg'&&(text(0,3)==='ID3'||bytes[0]===255&&(bytes[1]&224)===224)||
+      ['audio/mp4','audio/x-m4a'].includes(mime)&&text(4,8)==='ftyp'||
+      mime==='audio/ogg'&&text(0,4)==='OggS'||
+      ['audio/wav','audio/x-wav'].includes(mime)&&text(0,4)==='RIFF'&&text(8,12)==='WAVE';
+    return valid?{bytes,mime}:null;
+  }catch{return null}
+}
+async function saveAnnouncement(storage,body,currentKey){
+  if(!currentKey||body?.key!==currentKey)return Response.json({ok:false,error:'STALE_AUDIO_CUE'},{status:409});
+  const recording=decodeRecording(body);
+  if(!recording)return Response.json({ok:false,error:'INVALID_RECORDED_AUDIO'},{status:400});
+  await storage.transaction(async tx=>{
+    const previous=await tx.get('announcement:meta'),count=Math.ceil(recording.bytes.length/chunkSize);
+    for(let i=0;i<count;i++)await tx.put('announcement:chunk:'+i,recording.bytes.slice(i*chunkSize,(i+1)*chunkSize));
+    for(let i=count;i<Number(previous?.count||0);i++)await tx.delete('announcement:chunk:'+i);
+    await tx.put('announcement:meta',{key:currentKey,mime:recording.mime,count,size:recording.bytes.length});
+  });
+  return Response.json({ok:true,key:currentKey});
+}
+async function readAnnouncement(storage,key,currentKey){
+  if(!key||key!==currentKey)return new Response(null,{status:404});
+  return storage.transaction(async tx=>{
+    const meta=await tx.get('announcement:meta');
+    if(meta?.key!==key)return new Response(null,{status:404});
+    const bytes=new Uint8Array(meta.size);let offset=0;
+    for(let i=0;i<meta.count;i++){
+      const chunk=await tx.get('announcement:chunk:'+i);
+      if(!chunk)return new Response(null,{status:404});
+      bytes.set(chunk,offset);offset+=chunk.length;
+    }
+    return new Response(bytes,{headers:{'content-type':meta.mime,'cache-control':'no-store','x-content-type-options':'nosniff'}});
+  });
+}
+// END RECORDED PUBLIC ANNOUNCEMENTS

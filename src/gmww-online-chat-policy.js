@@ -1,3 +1,4 @@
+import {statusTagsFor} from './gmww-public-room-contract.js';
 // GMWW Online chat: private, server-authoritative permissions.
 // The room's night queue is the single source of truth; never infer access from faction alone.
 const normalize=id=>String(id||'').trim().toLowerCase().replace(/^member:/,'');
@@ -25,8 +26,9 @@ function stepGroups(step){
 }
 export function chatPolicy({meta,players,rows,runtime,loginId,bans={},now=Date.now()}){
   const id=normalize(loginId),member=players?.['member:'+id];
-  if(!id||!member||String(meta?.phase||'')!=='running')
+  if(!id||!member||meta?.enabled===false||!['lobby','waiting','role_delivery','running'].includes(String(meta?.phase||'')))
     return{canRead:false,canSend:false,channel:null,reason:'CHAT_NOT_IN_RUNNING_ROOM'};
+  if(['lobby','waiting','role_delivery'].includes(String(meta.phase)))return{canRead:true,canSend:bans[id]!==true,channel:'lobby',scope:'village',reason:bans[id]===true?'CHAT_MUTED_GM':null};
   const effects=chatBlockedByEffects(rows,meta?.matchId,id,now);
   const blocked=effects.dead||effects.expelled||effects.mute||bans[id]===true;
   const reason=effects.dead?'CHAT_DEAD':effects.expelled?'CHAT_EXPELLED':effects.mute?'CHAT_MUTED_ARTIFACT':bans[id]===true?'CHAT_MUTED_GM':null;
@@ -50,4 +52,22 @@ export function chatPolicy({meta,players,rows,runtime,loginId,bans={},now=Date.n
 export function chatNormalizeText(value){
   if(typeof value!=='string')return'';
   return value.replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,280);
+}
+
+// Lobby conversations are isolated by room reset; old match effects cannot mute a new lobby.
+export function chatStorageScope(meta){return String(meta?.phase)==='running'?String(meta?.matchId||''):('lobby-'+String(meta?.resetVersion||0))}
+export function publicChatNotices(meta,players,rows){
+ if(meta?.enabled===false||meta?.phase!=='running')return [];
+ const negative=new Set(['dead','marked','expelled','frozen','wolf_bitten','infected','mute','disabled_permanent','disabled_2n']);
+ const messages=[];
+ for(const p of Object.values(players||{})){
+  const id=normalize(p.loginId||p.participantId);if(!id)continue;
+  for(const tag of statusTagsFor(rows,meta,id,players)){
+   if(!negative.has(tag.statusId))continue;
+   messages.push({id:'notice:'+String(meta.matchId)+':'+String(meta.cycleKey||'')+':'+id+':'+tag.statusId,
+    senderId:'system',senderName:'Thông cáo Làng',system:true,isGM:false,
+    text:String(p.displayName||id)+': '+tag.label,at:0});
+  }
+ }
+ return messages;
 }

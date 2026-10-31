@@ -629,6 +629,7 @@ test('CI-only merge excludes unrelated Drunk-role tests without waiving gameplay
   assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md')),'full');
 });
 
+const historicArtifact3274=JSON.parse(readFileSync('package.json','utf8')).version==='3.274.0';
 test('PR613 Artifact preview V3.274 scope accepts only reviewed image, runtime and CI files',()=>{
   const allowed=[
     '.github/scripts/ci-browser-scope.mjs',
@@ -645,7 +646,7 @@ test('PR613 Artifact preview V3.274 scope accepts only reviewed image, runtime a
     'tests/ci-browser-scope.test.mjs'
   ];
   const changes=allowed.map(path=>({path,status:path.startsWith('tests/artifact-')?'A':'M'}));
-  assert.equal(classifyBrowserScope(changes),'artifact-preview-3274');
+  assert.equal(classifyBrowserScope(changes),historicArtifact3274?'artifact-preview-3274':'full');
   assert.equal(classifyBrowserScope([...changes,modified('src/gmww-members-live.js','old','unexpected Player logic')]),'full');
   assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='server-game/src/10-library-and-settings.part')),'full');
   assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,status:'D'}:c)),'full');
@@ -660,7 +661,7 @@ test('PR613 Artifact preview V3.274 postmerge CI-only recovery preserves exact r
     'docs/releases/GMWW-PR613-postmerge-ci-20261029.md'
   ];
   const changes=allowed.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
-  assert.equal(classifyBrowserScope(changes),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope(changes),historicArtifact3274?'artifact-preview-3274-postmerge':'full');
   assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
   assert.equal(classifyBrowserScope(changes.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
@@ -685,7 +686,7 @@ test('PR613 Artifact preview V3.274 release proof accepts only exact four CI fil
     'docs/releases/GMWW-PR613-release-proof-ci-20261029.md'
   ];
   const rows=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
-  assert.equal(classifyBrowserScope(rows),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope(rows),historicArtifact3274?'artifact-preview-3274-postmerge':'full');
   assert.equal(classifyBrowserScope([...rows,{path:'server-game/current/app.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(rows.filter(x=>x.path!=='.github/workflows/deploy-production.yml')),'full');
   const gate=readFileSync('.github/workflows/deploy-production.yml','utf8');
@@ -703,7 +704,7 @@ test('PR613 V3.274 canonical Character40 verification repair keeps exact CI-only
     'docs/releases/GMWW-PR613-character40-proof-ci-20261029.md'
   ];
   const rows=paths.map(path=>({path,status:path.startsWith('docs/')?'A':'M'}));
-  assert.equal(classifyBrowserScope(rows),'artifact-preview-3274-postmerge');
+  assert.equal(classifyBrowserScope(rows),historicArtifact3274?'artifact-preview-3274-postmerge':'full');
   assert.equal(classifyBrowserScope([...rows,{path:'src/index.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(rows.filter(x=>x.path!=='.github/scripts/verify-character40-production.mjs')),'full');
   assert.equal(classifyBrowserScope(rows.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
@@ -717,31 +718,184 @@ test('PR613 V3.274 canonical Character40 verification repair keeps exact CI-only
   assert.match(workflow,/git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD/);
 });
 
-test('PR626 only exact four day Artifact inspection files get fail-closed focused scope',()=>{
- const manifest=new Map([
-  ['.github/scripts/check-pr626-day-inspections-worker.mjs','A'],
-  ['.github/workflows/check-rule-split-planners-20261029.yml','A'],
-  ['docs/audits/pr584-split-inspections-09-24-29-39.md','A'],
-  ['docs/releases/GMWW-PR626-four-private-inspection-artifacts-draft-20261029.md','A'],
-  ['server-game/current/app.js','M'],
-  ['server-game/src/40-battle-and-timeline.part','M'],
-  ['src/gmww-day-artifact-inspection.js','A'],
-  ['src/gmww-demo-runner.js','M'],
-  ['src/gmww-members-live.js','M'],
-  ['src/index.js','M'],
-  ['src/player-web-src/30-rooms-and-realtime.part','M'],
-  ['tests/card-executors-day-inspection-planners-20261029.test.mjs','A'],
-  ['tests/pr626-private-inspection-ui-demo-20261029.test.mjs','A'],
-  ['tests/worker-day-artifact-inspection-pr626-e2e.mjs','A'],
-  ['.github/scripts/ci-browser-scope.mjs','M'],
-  ['.github/workflows/check-player-web.yml','M'],
-  ['tests/ci-browser-scope.test.mjs','M']
- ]);
- const scoped=[...manifest].map(([path,status])=>({path,status,after:readFileSync(path,'utf8')}));
- assert.equal(classifyBrowserScope(scoped),'artifact-inspection-626');
- assert.equal(classifyBrowserScope(scoped.slice(1)),'full','missing source must fail closed');
- assert.equal(classifyBrowserScope([...scoped,{path:'src/gmww-gallows-rules.js',status:'M'}]),'full','unrelated game code is not allowed');
- assert.equal(classifyBrowserScope(scoped.map(c=>c.path==='src/index.js'?{...c,status:'D'}:c)),'full','deletion is forbidden');
- assert.equal(classifyBrowserScope(scoped.map(c=>c.path==='src/index.js'?{...c,after:'console.log(1)'}:c)),'full','missing privacy/undo contract is forbidden');
- assert.equal(classifyBrowserScope(scoped.map(c=>c.path==='server-game/current/app.js'?{...c,after:'unrelated'}:c)),'artifact-inspection-626','GM assembled integrity is checked separately by direct equality');
+test('GitHub-only Runtime CI repair scopes only audited policy and package checks',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/deploy-production.yml',
+    '.github/runtime-release/verify-package.test.mjs',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const changes=paths.map(path=>({path,status:'M'}));
+  assert.equal(classifyBrowserScope(changes),'github-runtime-ota-ci');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path==='tests/ci-browser-scope.test.mjs'?{...x,status:'D'}:x)),'full');
+});
+
+
+test('PR642 Chrome iOS GM viewport is strict and excludes old gameplay, IPA and OTA candidate CI',async()=>{
+  const {isGMChromeIosViewportScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+  const before='<meta name="viewport">\n<title>GMWW V3.277</title>';
+  const patch='\n\n<!-- GM Server viewport: Chrome -->\n<style>--gmww-gm-visible-height</style>\n<script id="gmwwChromeViewportScript">if(!/CriOS\\//.test(navigator.userAgent))return;</script>\n\n';
+  const after=before.replace('\n<title>',''+patch+'<title>');
+  const changes=[
+    modified('server-game/current/GMWW.html',before,after),
+    {path:'tests/gm-chrome-ios-viewport-20261030.test.mjs',status:'A',before:null,after:'test'},
+    {path:'.github/workflows/check-gm-chrome-ios-viewport.yml',status:'A',before:null,after:'on: pull_request'},
+    {path:'docs/releases/GMWW-GM-CHROME-IOS-VIEWPORT-20261030.md',status:'A',before:null,after:'release notes'}
+  ];
+  assert.equal(isGMChromeIosViewportScope(changes),true);
+  assert.equal(classifyBrowserScope(changes),'gm-chrome-ios-viewport');
+  assert.equal(isGMChromeIosViewportScope([...changes,modified('server-game/current/app.js','game','game changed')]),false);
+  assert.equal(isGMChromeIosViewportScope(changes.map(c=>c.path==='server-game/current/GMWW.html'?{...c,after:c.after+'<script>gameplay change</script>'}:c)),false);
+  const versions=[
+    modified('package.json','3.277.0','3.278.0'),
+    modified('package-lock.json','3.277.0','3.278.0'),
+    modified('src/index.js','VERSION="V3.277"','VERSION="V3.278"'),
+    modified('server-game/current/app.js',"const VERSION='3.277'","const VERSION='3.278'"),
+    modified('server-game/src/00-core-and-library.part',"const VERSION='3.277'","const VERSION='3.278'")
+  ];
+  const bumped=changes.map(c=>c.path==='server-game/current/GMWW.html'?{...c,after:c.after.replace('GMWW V3.277','GMWW V3.278')}:c).concat(versions);
+  assert.equal(isGMChromeIosViewportScope(bumped),true);
+  assert.equal(isGMChromeIosViewportScope(bumped.map(c=>c.path==='src/index.js'?{...c,after:c.after+' // more edits'}:c)),false);
+});
+
+test('PR646 staged PR637 release policy is CI-only, never gameplay or automatic deployment',()=>{
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  const githubOta=readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+  const changes=[
+    modified('.github/scripts/ci-browser-scope.mjs','old classifier','policy classifier'),
+    modified('.github/workflows/deploy-production.yml','old deploy',deploy),
+    modified('.github/workflows/github-runtime-ota.yml','old OTA',githubOta),
+    modified('tests/ci-browser-scope.test.mjs','old test','release safety'),
+    modified('docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md','old notes','new notes')
+  ];
+  assert.equal(classifyBrowserScope(changes),'ci-policy');
+  assert.match(deploy,/BEGIN GMWW_PR637_STAGED_RELEASE_GUARD/);
+  assert.match(deploy,/SHOULD_DEPLOY=false/);
+  assert.match(githubOta,/needs\.package\.outputs\.skip_auto_release != 'true'/);
+  assert.match(githubOta,/skip_auto_release=\$SKIP_AUTO_RELEASE/);
+  assert.equal(classifyBrowserScope([...changes,modified('server-game/current/GMWW.html','old','gameplay modified')]),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md')),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='tests/ci-browser-scope.test.mjs'?{...c,status:'D'}:c)),'full');
+});
+
+
+test('PR648 diagnostics-only FPS selects focused tests and rejects any gameplay change',()=>{
+  const after=readFileSync('assets/village/village-performance.mjs','utf8');
+  const before=after
+    .replace('  // Frame-by-frame FPS sampling is diagnostic only; do not keep an idle village at 60Hz.\n  const sampleFps=new URLSearchParams(window.location.search).get("gmwwPerf")==="1";\n  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=null,longTasks=0,worstLongTask=0;',
+      '  let stopped=false,frameId=0,frames=0,lastFrame=performance.now(),fps=60,longTasks=0,worstLongTask=0;')
+    .replace('  const resumeFrames=()=>{if(!sampleFps||stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};',
+      '  const resumeFrames=()=>{if(stopped||document.hidden||frameId)return;frames=0;lastFrame=performance.now();frameId=requestAnimationFrame(frame)};')
+    .replace('  if(sampleFps)resumeFrames();\n  let observer=null;','  resumeFrames();\n  let observer=null;');
+  assert.notEqual(before,after,'the reporter must contain an actual scoped change');
+  const changes=[
+    modified('assets/village/village-performance.mjs',before,after),
+    modified('tests/player-web-background-performance.test.mjs','previous test',readFileSync('tests/player-web-background-performance.test.mjs','utf8')),
+    modified('tests/ci-browser-scope.test.mjs','previous test',readFileSync('tests/ci-browser-scope.test.mjs','utf8')),
+    modified('.github/scripts/ci-browser-scope.mjs','previous selector',readFileSync('.github/scripts/ci-browser-scope.mjs','utf8')),
+    modified('.github/workflows/check-player-web.yml','previous browser workflow',readFileSync('.github/workflows/check-player-web.yml','utf8')),
+    modified('.github/workflows/prepare-runtime-v3202-candidate.yml','previous OTA candidate',readFileSync('.github/workflows/prepare-runtime-v3202-candidate.yml','utf8')),
+    modified('.github/workflows/build-server-game-ipa.yml','previous Native build',readFileSync('.github/workflows/build-server-game-ipa.yml','utf8')),
+    {path:'docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md',status:'A',before:null,after:'# Thermal reporter'}
+  ];
+  assert.equal(classifyBrowserScope(changes),'village-perf-diagnostics-648');
+  // The retired V3.238 candidate may also be safely limited to its exact old scope.
+  const unsafe=changes.map(c=>c.path==='.github/workflows/prepare-runtime-v3202-candidate.yml'
+    ?{...c,after:c.after.replace("needs.scope.outputs.mode == 'gm-ui-controls-3238'","needs.scope.outputs.mode != 'ci-policy'")}
+    :c);
+  assert.equal(classifyBrowserScope(unsafe),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='assets/village/village-performance.mjs'?{...c,after:c.after+'\n// extra change'}:c)),'full');
+  assert.equal(classifyBrowserScope(changes.filter(c=>!c.path.startsWith('docs/releases/'))),'full');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay change')]),'full');
+});
+
+test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused release gate',()=>{
+  const expected=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-player-card-browsers.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ].map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  // Recreate the historical PR645 signature without the later PR652 selector.
+  expected[1].after=expected[1].after.replace("steps.scope.outputs.mode == 'pr652-postmerge-release'",'legacy PR645 checks only');
+  assert.equal(classifyBrowserScope(expected),'pr645-postmerge-release');
+  assert.equal(classifyBrowserScope(expected.slice(1)),'full','missing CI guard must not bypass full regression');
+  assert.equal(classifyBrowserScope([...expected,modified('src/index.js','old','runtime changed')]),'full','gameplay edits must never be classified CI-only');
+  assert.equal(classifyBrowserScope(expected.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted CI files must fail closed');
+  assert.equal(classifyBrowserScope([...expected.slice(0,4),expected[0]]),'full','duplicate path cannot impersonate exact scope');
+});
+
+
+test('PR652 online hotfix: exact bounded production diff selects focused Worker checks',()=>{
+ const paths={
+  'src/index.js':'M',
+  'server-game/src/40-battle-and-timeline.part':'M',
+  'server-game/src/45-online-chat.part':'M',
+  'server-game/current/app.js':'M',
+  'tests/gmww-v3228-battle-icons-footer.test.mjs':'M',
+  'tests/v389-night-runtime-integration.test.mjs':'M',
+  'tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs':'A',
+  '.github/workflows/check-online-five-defects-20261031.yml':'A',
+  'docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md':'A',
+  '.github/scripts/ci-browser-scope.mjs':'M',
+  '.github/workflows/check-player-web.yml':'M',
+  'tests/ci-browser-scope.test.mjs':'M'
+ };
+ const changes=Object.entries(paths).map(([path,status])=>{
+  const after=readFileSync(new URL('../'+path,import.meta.url),'utf8');
+  return{path,status,before:status==='M'?after:null,after};
+ });
+ assert.equal(classifyBrowserScope(changes),'online-hotfix-652');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full','Missing Worker source cannot be exempted');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/extra-worker.js',status:'A',before:null,after:'new logic'}]),'full','New Worker logic must be audited');
+ const unsafe=changes.map(c=>c.path==='src/index.js'?{...c,after:'// unrelated code change\n'+c.after}:c);
+ assert.equal(classifyBrowserScope(unsafe),'full','Unrelated Worker line must select full CI');
+ const changedBattle=changes.map(c=>c.path==='server-game/src/40-battle-and-timeline.part'?{...c,after:c.after+'\n// another behavior change'}:c);
+ assert.equal(classifyBrowserScope(changedBattle),'full','Unrelated GM behavior is not covered by hotfix');
+ const changedChat=changes.map(c=>c.path==='server-game/src/45-online-chat.part'?{...c,after:'// unexpected change before chat\n'+c.after}:c);
+ assert.equal(classifyBrowserScope(changedChat),'full','Unexpected code before Chat must select full CI');
+});
+
+test('PR652 V3.280 postmerge CI repair: only five audited CI-only files can select release checks',()=>{
+  const files=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-player-card-browsers.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const changes=files.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  assert.equal(classifyBrowserScope(changes),'pr652-postmerge-release');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing source selector fails closed');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay mutation')]),'full','gameplay mutation cannot be CI-only');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full','duplicate CI file cannot impersonate audited change');
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted file fails closed');
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,after:'changed without guard'}:c)),'full','missing selector guard fails closed');
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(deploy,/git merge-base --is-ancestor 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
+  assert.match(deploy,/git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
+});
+
+test('PR652 V3.280 final selector ordering recovery: exact three CI-only files select focused release',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const verified=paths.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  assert.equal(classifyBrowserScope(verified),'pr652-postmerge-release');
+  assert.equal(classifyBrowserScope(verified.slice(1)),'full','missing selector fails closed');
+  assert.equal(classifyBrowserScope([...verified,modified('src/index.js','before','gameplay changed')]),'full','gameplay cannot bypass broad CI');
+  assert.equal(classifyBrowserScope([...verified,verified[0]]),'full','duplicate fails closed');
+  assert.equal(classifyBrowserScope(verified.map((c,i)=>i===1?{...c,status:'D'}:c)),'full','deleted production gate fails closed');
+  assert.equal(classifyBrowserScope(verified.map((c,i)=>i===1?{...c,after:'missing release marker'}:c)),'full','marker is mandatory');
+  const selector=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+  assert.ok(selector.indexOf('PR652: inspect the exact three-file ordering fix')<selector.indexOf('Push of CI-policy-only main merges'));
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(deploy,/git merge-base --is-ancestor fa48216517e692924b47a936767369d0d654523c HEAD/);
+  assert.match(deploy,/git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
 });

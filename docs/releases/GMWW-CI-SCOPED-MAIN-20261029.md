@@ -29,3 +29,20 @@ Rollback: revert pull request CI policy này; Production không tự được ph
 - Bổ sung kiểm thử chống bỏ sót: thay đổi Worker, gameplay, luật Say Rượu hoặc thiếu release notes bắt buộc phân loại `full`.
 - Thêm workflow Say Rượu vào danh sách thay đổi CI-only được phép và chặn tự phát hành Production. Không thay đổi tính năng game, IPA, Runtime OTA, dữ liệu và lịch sử.
 - Rollback: revert PR CI Say Rượu tương ứng.
+
+
+## Chrome iOS PR642 — sửa CI theo phạm vi (30/10/2026)
+
+- Nhận diện chính xác 4 tệp sửa viewport GM Server: HTML, test, workflow, release notes; hỗ trợ riêng thay đổi phiên bản V3.277 → V3.278 tại 5 tệp định danh Runtime.
+- Kiểm tra trước/sau của HTML, chỉ cho phép CSS/JS khóa vùng hiển thị và cập nhật số phiên bản, chặn thay đổi gameplay/IPA/Worker ngoài số phiên bản.
+- Không chạy lại test cũ Lên Giàn, icon, bản OTA candidate 3.238 hay build IPA khi chỉ thay viewport. Giữ kiểm tra cú pháp, bản bundle, guard phiên bản, CI Policy Gate, CI Stability, kiểm thử Chrome viewport.
+- Các thay đổi chưa được nhận dạng chính xác vẫn chạy CI đầy đủ; bảo vệ Production/IPA/DO, không tự xuất IPA.
+- Rollback: revert PR CI-only, sau đó hệ thống quay về bộ test đầy đủ (fail-closed).
+
+## PR #646 — Cổng phát hành chia hai đợt PR #637 (30/10/2026)
+
+- Chặn tự phát hành Worker/Runtime khi merge đúng phạm vi PR #637; mọi lần phát hành phải có quyết định thủ công, CI cùng SHA và xác minh manifest/SHA-256.
+- Chặn phát hành cả commit sửa workflow CI-only (#646). Không thay đổi IPA, Oracle, room/DO, dữ liệu Production hay luật chơi.
+- Bộ nhận diện `ci-policy` chỉ áp dụng khi đủ 5 file policy, test và release notes; thêm file gameplay hoặc xóa file sẽ tự rơi về kiểm thử `full`.
+- Chỉ cho phép merge sau khi `CI Policy Gate` và các kiểm thử policy thành công.
+- Rollback: revert riêng chính sách CI ở PR #646; không tác động dữ liệu người chơi.

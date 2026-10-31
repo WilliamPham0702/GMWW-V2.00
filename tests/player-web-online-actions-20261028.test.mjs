@@ -39,7 +39,7 @@ test('Action dock uses the same GM artwork, pointer drag to live player and Serv
  assert.match(ui,/renderOnlineActionDock\(/);
  assert.match(ui,/\/api\/rooms\/'\+encodeURIComponent\(state\.roomCode\)\+'\/action/);
  assert.match(ui,/actionKey:action\.key,targetIds:pick\.targets/);
- assert.match(ui,/confirm\('Thực hiện /);
+ assert.doesNotMatch(ui,/confirm\('Thực hiện /);
 });
 test('Online offers fail closed for Offline and preserve DEMO human-control admission',async()=>{
  const room={ctx:{storage:{get:async key=>key==='players'?{'member:a':{loginId:'a'}}:[]}}};

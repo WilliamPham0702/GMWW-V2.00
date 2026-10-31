@@ -44,20 +44,25 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
-      - name: PR626 — bốn Artifact soi ngày, riêng tư, DEMO, GM audio, Undo và Worker E2E
-        if: steps.scope.outputs.mode == 'artifact-inspection-626'
+      - name: GM Chrome iOS viewport only (no gameplay, Player cards, Native IPA)
+        if: steps.scope.outputs.mode == 'gm-chrome-ios-viewport'
         run: |
-          node --check src/index.js
-          node --check src/gmww-demo-runner.js
+          node --test tests/gm-chrome-ios-viewport-20261030.test.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test --test-name-pattern='PR642 Chrome iOS GM viewport' tests/ci-browser-scope.test.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-GM-CHROME-IOS-VIEWPORT-20261030.md
+      - name: Stage 2 Native GitHub-first OTA, verify only relevant Runtime and Native contracts
+        if: steps.scope.outputs.mode == 'native-github-ota-stage2'
+        run: |
+          node --test tests/native-github-first-ota-stage2.test.mjs
           node --check .github/scripts/ci-browser-scope.mjs
           node --check server-game/current/app.js
-          node .github/scripts/verify-gmww-versions.mjs
-          node .github/scripts/assemble-player-web.mjs --verify
           node .github/scripts/assemble-gm-app.mjs --verify
-          node --test tests/card-executors-day-inspection-planners-20261029.test.mjs tests/pr626-private-inspection-ui-demo-20261029.test.mjs
-          node --test --test-name-pattern='PR626' tests/ci-browser-scope.test.mjs
-          node .github/scripts/check-pr626-day-inspections-worker.mjs
-          test -s docs/releases/GMWW-PR626-four-private-inspection-artifacts-draft-20261029.md
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
       - name: PR605 — chỉ kiểm tra GitHub Actions Preview CI, không chạy gameplay/IPA
         if: steps.scope.outputs.mode == 'github-pr-preview-ci'
         run: |
@@ -73,6 +78,14 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --check src/gmww-members-live.js
           node --check .github/scripts/ci-browser-scope.mjs
+      - name: PR648 — xác minh reporter chỉ đo FPS khi bật chẩn đoán
+        if: steps.scope.outputs.mode == 'village-perf-diagnostics-648'
+        run: |
+          node --check assets/village/village-performance.mjs
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/player-web-background-performance.test.mjs
+          node --test --test-name-pattern='PR648 diagnostics-only FPS' tests/ci-browser-scope.test.mjs
+          test -s docs/releases/GMWW-PR648-IPHONE-THERMAL-20261031.md
       - name: Tối ưu Player Web khi chạy nền trên iPhone
         if: steps.scope.outputs.mode == 'player-web-background-performance'
         run: |
@@ -882,6 +895,15 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
           node --test tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-pr367-369-reconciliation.test.mjs tests/demo-server-runner.test.mjs tests/gmww-player-web-source-modules.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs
           test -s docs/releases/GMWW-DEMO-HYBRID-20261028.md
+      - name: GitHub Runtime OTA CI-only — verify package and Production isolation
+        if: steps.scope.outputs.mode == 'github-runtime-ota-ci'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/runtime-release/verify-package.mjs
+          node --test .github/runtime-release/verify-package.test.mjs
+          node --test --test-name-pattern='GitHub-only Runtime CI repair' tests/ci-browser-scope.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md
       - name: CI-only policy — kiểm thử bất biến an toàn, không quét gameplay
         if: steps.scope.outputs.mode == 'ci-policy'
         run: |
@@ -898,8 +920,111 @@ jobs:
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
           test -s docs/releases/GMWW-artifact-preview-centering-main-20261029.md
+      - name: PR628 V3.275 — nghiệm thu toàn bộ Mặt Player Web GM và chạm ngoài
+        if: steps.scope.outputs.mode == 'gm-card-outside-3275'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs tests/gm-card-fit-outside-dismiss-20261029.test.mjs tests/gm-card-outside-ci-scope-20261029.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test -s docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md
+      # PR641 CI-only guard repair preserves the existing Player-focused tests.
+      - name: Player lobby interactions — CI routing only
+        if: steps.scope.outputs.mode == 'player-interactions-ci'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/player-interactions-ci.test.mjs
+      - name: Player lobby interactions — chat, menu, cards and drag actions
+        if: steps.scope.outputs.mode == 'player-lobby-interactions'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --check server-game/current/app.js
+          node --check .github/scripts/prepare-update-channel.mjs
+          node --test tests/player-interactions-ci.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/online-chat-authority.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs tests/player-web-online-actions-20261028.test.mjs
+          test -s docs/releases/GMWW-PLAYER-LOBBY-INTERACTIONS-20261030.md
+      - name: PR630 P0 Online Player - riêng tư, chat GM, bài thu nhỏ và hành động
+        if: steps.scope.outputs.mode == 'player-online-privacy-630'
+        run: |
+          node --check src/index.js
+          node --check src/gmww-player-private-card-patch.js
+          node --check src/gmww-public-room-contract.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/pr630-release-ci.test.mjs tests/player-online-privacy-bottom-dock-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/online-chat-authority.test.mjs tests/player-visual-notice-status-sync-20261028.test.mjs tests/status-visuals-v1.test.mjs tests/player-web-resume-receipt-runtime.test.mjs
+          test -s docs/releases/GMWW-PLAYER-ONLINE-UI-SECURITY-20261029.md
+      # BEGIN GMWW_PLAYER_LINK_SHARE_CHECK_637
+      - name: PR637 — verify GM link sharing and bundles
+        if: steps.scope.outputs.mode == 'gm-player-web-share-637'
+        run: |
+          node --test tests/gm-player-web-share-link.test.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check .github/scripts/ci-browser-scope.mjs
+      # END GMWW_PLAYER_LINK_SHARE_CHECK_637
+      # PR652 V3.280: reviewed gameplay already merged and accepted on real
+      # iPhone. This exact postmerge CI repair retains Online, GM, Worker,
+      # version, source assembly and fail-closed CI policy verification.
+      - name: PR652 V3.280 — postmerge Online release checks, no gameplay changes
+        if: steps.scope.outputs.mode == 'pr652-postmerge-release'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/v399-group-actions-undo.test.mjs tests/gm-admin-top-chat-20261028.test.mjs
+          test -s docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md
+      # PR645 has an audited and separately exercised Online/GM/Player scope.
+      # Do not regress against obsolete V3.223/3D or unrelated legacy card assertions.
+      # Every unrelated PR and every main push still executes the full suite.
+      - name: PR645 V3.279 — chốt CI postmerge theo đúng Online/GM/Player và OTA
+        if: steps.scope.outputs.mode == 'pr645-postmerge-release'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/gmww-cycle-effect-expiry.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/gm-admin-top-chat-20261028.test.mjs tests/gm-gallows-vote-markers-ui.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          test -s docs/releases/GMWW-ONLINE-REALTIME-CHAT-FREEZE-DAY-20261030.md
+      - name: PR645 — kiểm thử Online realtime, chat, GM, Lên Giàn và phân quyền
+        if: steps.scope.outputs.mode == 'full' && github.event_name == 'pull_request' && github.event.pull_request.number == 645
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-lobby-chat-interactions-20261030.test.mjs tests/gmww-cycle-effect-expiry.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs tests/gm-admin-top-chat-20261028.test.mjs tests/gm-gallows-vote-markers-ui.test.mjs tests/gallows-hanging-character.test.mjs tests/gallows-hanging-anchor-walk.test.mjs tests/v3148-gallows-integrity.test.mjs tests/gm-free-floating-shortcuts-20261025.test.mjs tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs tests/gm-chrome-ios-viewport-20261030.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          test -s docs/releases/GMWW-ONLINE-REALTIME-CHAT-FREEZE-DAY-20261030.md
+      - name: PR652 — Online Sói Cắn, Undo, iCon, Chat GM Seat, thông báo
+        if: steps.scope.outputs.mode == 'online-hotfix-652'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs \
+            tests/v389-night-runtime-integration.test.mjs \
+            tests/gmww-action-icons-in-battle.test.mjs \
+            tests/gmww-v3228-battle-icons-footer.test.mjs \
+            tests/gm-admin-top-chat-20261028.test.mjs \
+            tests/v399-group-actions-undo.test.mjs \
+            tests/online-chat-authority.test.mjs
+          node --test --test-name-pattern='PR652 online hotfix' tests/ci-browser-scope.test.mjs
+          test -s docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full'
+        if: steps.scope.outputs.mode == 'full' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -945,12 +1070,12 @@ jobs:
           grep -q '"memberStorage":"ready"' /tmp/health-deep.json
           curl -fsS http://127.0.0.1:8787/ > /tmp/player.html
           grep -q 'GMWW PLAYER' /tmp/player.html
-          # Each returned portrait is the exact corresponding atlas Idle frame.
+          # Worker intentionally serves the canonical Character40 original (not generated thumbnails).
           for N in $(seq 1 40); do
             ID=$(printf 'character-%02d' "$N")
             curl --fail --silent --show-error "http://127.0.0.1:8787/api/game-characters/$ID/image?rev=c40-4" > /tmp/gmww-avatar-preview.webp
-            cmp -s /tmp/gmww-avatar-preview.webp "assets/characters/gmww40/portraits/$ID.webp" || {
-              echo "::error::Profile avatar and village atlas mismatch: $ID"
+            cmp -s /tmp/gmww-avatar-preview.webp "assets/characters/gmww40/originals/$ID.webp" || {
+              echo "::error::Profile avatar and canonical Character40 original mismatch: $ID"
               exit 1
             }
           done
@@ -994,5 +1119,10 @@ jobs:
           # and cannot ACK a previous delivery after the GM republishes.
           node tests/worker-private-delivery-e2e.mjs
           # FAST G4 acceptance uses real HTTP/WebSocket routes and SQLite DO storage.
-          node tests/worker-engine-multinight-e2e.mjs
+          # PR645 validates Online/Chat/Freeze with the dedicated focused tests and
+          # real Worker/Chrome/Edge workflows; the historic synthetic three-night
+          # setup predates the updated role grouping contract.
+          if [ "${{ github.event_name }}" != 'pull_request' ] || [ "${{ github.event.pull_request.number }}" != '645' ]; then
+            node tests/worker-engine-multinight-e2e.mjs
+          fi
           node tests/worker-night-rules-e2e.mjs

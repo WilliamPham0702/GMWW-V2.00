@@ -40,6 +40,8 @@ try{
  const exitPlayImmersive=()=>{},openPlayEndSheet=()=>{},openPlayCompletionSheet=()=>{},initDemoPanel=()=>{},demoRenderObserver=()=>{},demoRenderVisual=()=>{},demoVisualCurrent=()=>null,demoObserve=()=>{},advancePlayPhase=()=>{},togglePlayAutoGM=()=>{},togglePlayAudio=()=>{};
  // Overlay positioning is tested independently; isolate it from timeline controls.
  const gmwwRestoreDock=()=>false,gmwwPlaceWolfMenuAtFire=()=>{};
+ // Module 30 and 45 are not extracted into this isolated legacy timeline harness.
+ const gmwwSetupFreeBattleIcons=()=>{},gmwwGMChatMount=()=>{};
  // This isolated test extracts only the battle handlers. Audio playback is
  // integration-tested separately with the actual media/IndexedDB helper.
  const battleAudioForTurn=()=>{},battleTurnAudioCue=()=>({kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'}),battleFindAudio=()=>null,battleWarmAudio=async()=>null,battlePlayConfiguredAudio=async()=>false,battleReplayAudio=()=>{},battleUnlockAudioFromGesture=()=>{};

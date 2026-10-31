@@ -3,6 +3,12 @@ name: Build Native GMWW IPA
 # Full Xcode build also supports owner-requested consolidated IPA releases.
 on:
   workflow_dispatch:
+    inputs:
+      publish_ipa:
+        description: "Explicitly publish a NEW verified IPA after CI and iPhone acceptance"
+        type: boolean
+        required: false
+        default: false
   pull_request:
     branches: [main]
     paths:
@@ -28,6 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mode: ${{ steps.select.outputs.mode }}
+      native_changed: ${{ steps.native.outputs.changed }}
     steps:
       - name: Tải mã nguồn để xác định phạm vi
         uses: actions/checkout@v4
@@ -39,13 +46,30 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Xác nhận chỉ build IPA khi Native thay đổi hoặc chủ dự án yêu cầu trực tiếp
+        id: native
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != 'pull_request' ]; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "${BASE_SHA}...HEAD" -- server-game/GMWW-Server server-game/GMWW-Server.xcodeproj; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'Skip Native IPA: no native source/project files were changed.'
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
   build:
     needs: scope
-    if: needs.scope.outputs.mode != 'ci-policy' && needs.scope.outputs.mode != 'github-pr-preview-ci' && needs.scope.outputs.mode != 'player-top-avatar-603' && needs.scope.outputs.mode != 'native-manual-release-verify' && needs.scope.outputs.mode != 'character40-postverify-3254' && needs.scope.outputs.mode != 'gm-performance-thermal-3254' && needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'post-match-room-532' && needs.scope.outputs.mode != 'postmatch-ci-532' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210' && needs.scope.outputs.mode != 'icon-clean-3212' && needs.scope.outputs.mode != 'icon-wave3-3213' && needs.scope.outputs.mode != 'icon-game-3215' && needs.scope.outputs.mode != 'icon-wave5-3218' && needs.scope.outputs.mode != 'active-icons-3225' && needs.scope.outputs.mode != 'fire-icons-3226' && needs.scope.outputs.mode != 'icon-action-v2-3227' && needs.scope.outputs.mode != 'gm-footer-3229' && needs.scope.outputs.mode != 'entry-icons-3231' && needs.scope.outputs.mode != 'phase-dock-gallows-3234' && needs.scope.outputs.mode != 'gm-ui-glass-3235' && needs.scope.outputs.mode != 'gm-menu-gallows-3236' && needs.scope.outputs.mode != 'gm-ui-menu-3237' && needs.scope.outputs.mode != 'gm-ui-controls-3238' && needs.scope.outputs.mode != 'gm238-deploy-repair' && needs.scope.outputs.mode != 'runtime-warning-3232' && needs.scope.outputs.mode != 'icon-v2-ci-fix' && needs.scope.outputs.mode != 'gm-icons-501' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'lobby-gather-541' && needs.scope.outputs.mode != 'gm-admin-top-chat-3272'
+    if: needs.scope.outputs.native_changed == 'true' && needs.scope.outputs.mode != 'village-perf-diagnostics-648' && needs.scope.outputs.mode != 'gm-chrome-ios-viewport' && needs.scope.outputs.mode != 'ci-policy' && needs.scope.outputs.mode != 'github-pr-preview-ci' && needs.scope.outputs.mode != 'player-top-avatar-603' && needs.scope.outputs.mode != 'native-manual-release-verify' && needs.scope.outputs.mode != 'character40-postverify-3254' && needs.scope.outputs.mode != 'gm-performance-thermal-3254' && needs.scope.outputs.mode != 'fairy-audio-3242' && needs.scope.outputs.mode != 'fairy-ci-policy' && needs.scope.outputs.mode != 'post-match-room-532' && needs.scope.outputs.mode != 'postmatch-ci-532' && needs.scope.outputs.mode != 'icon-artwork' && needs.scope.outputs.mode != 'icon-artwork-policy' && needs.scope.outputs.mode != 'dual-renderer' && needs.scope.outputs.mode != 'icon-runtime-3210' && needs.scope.outputs.mode != 'icon-clean-3212' && needs.scope.outputs.mode != 'icon-wave3-3213' && needs.scope.outputs.mode != 'icon-game-3215' && needs.scope.outputs.mode != 'icon-wave5-3218' && needs.scope.outputs.mode != 'active-icons-3225' && needs.scope.outputs.mode != 'fire-icons-3226' && needs.scope.outputs.mode != 'icon-action-v2-3227' && needs.scope.outputs.mode != 'gm-footer-3229' && needs.scope.outputs.mode != 'entry-icons-3231' && needs.scope.outputs.mode != 'phase-dock-gallows-3234' && needs.scope.outputs.mode != 'gm-ui-glass-3235' && needs.scope.outputs.mode != 'gm-menu-gallows-3236' && needs.scope.outputs.mode != 'gm-ui-menu-3237' && needs.scope.outputs.mode != 'gm-ui-controls-3238' && needs.scope.outputs.mode != 'gm238-deploy-repair' && needs.scope.outputs.mode != 'runtime-warning-3232' && needs.scope.outputs.mode != 'icon-v2-ci-fix' && needs.scope.outputs.mode != 'gm-icons-501' && needs.scope.outputs.mode != 'gm-icons-501-release' && needs.scope.outputs.mode != 'lobby-gather-541' && needs.scope.outputs.mode != 'gm-admin-top-chat-3272' && needs.scope.outputs.mode != 'gm-player-web-share-637'
     runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -58,7 +82,12 @@ jobs:
       - name: Verify source before building official IPA
         run: |
           node .github/scripts/verify-gmww-versions.mjs
-          if [ "${{ needs.scope.outputs.mode }}" = "manual-runtime" ]; then
+          if [ "${{ needs.scope.outputs.mode }}" = "native-github-ota-stage2" ]; then
+            node --test tests/native-github-first-ota-stage2.test.mjs
+            node .github/scripts/assemble-gm-app.mjs --verify
+            node --check server-game/current/app.js
+            test -s docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
+          elif [ "${{ needs.scope.outputs.mode }}" = "manual-runtime" ]; then
             node --test tests/manual-runtime-package.test.mjs
             node .github/scripts/assemble-gm-app.mjs --verify
           elif [ "${{ needs.scope.outputs.mode }}" = "ipa-ota-lean-3264" ]; then
@@ -487,9 +516,58 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # Never create/update an official GitHub Release from an unapproved PR.
+      # Owner explicitly approved PR629 publication. Only its exact merge
+      # commit may publish once; later pushes remain build-only.
+      - name: Authorize owner-approved Stage 2 IPA release only on PR629 merge
+        id: approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          APPROVED=false
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            SUBJECT=$(git log -1 --format=%s)
+            if [ "$SUBJECT" = "Merge PR #629: release Native GitHub-first OTA Stage 2" ]; then
+              APPROVED=true
+            fi
+          fi
+          echo "approved=$APPROVED" >> "$GITHUB_OUTPUT"
+          echo "PR629 one-time IPA authorization: $APPROVED" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify release permission and required CI on exact main SHA
+        if: >-
+          (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_ipa == true) ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.approval.outputs.approved == 'true')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse refs/remotes/origin/main)" = "$GITHUB_SHA" || {
+            echo "::error::Main moved during build; never publish stale IPA."; exit 1;
+          }
+          for TRIAL in $(seq 1 24); do
+            RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100")
+            OK=true
+            for NAME in "Check Player Web Worker" "Check Native GitHub-first OTA Stage 2"; do
+              PASS=$(printf '%s' "$RUNS" | jq -r --arg sha "$GITHUB_SHA" --arg name "$NAME" \
+                '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .name == $name)] | sort_by(.run_number) | last | .conclusion // "missing"')
+              if [ "$PASS" != success ]; then
+                OK=false
+                case "$PASS" in failure|cancelled|timed_out|action_required) echo "::error::$NAME failed: $PASS"; exit 1;; esac
+              fi
+            done
+            if [ "$OK" = true ]; then break; fi
+            if [ "$TRIAL" -eq 24 ]; then echo "::error::Required same-SHA CI not SUCCESS"; exit 1; fi
+            sleep 10
+          done
+          test -s docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
+
       - name: Publish IPA for in-app download
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: >-
+          (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_ipa == true) ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.approval.outputs.approved == 'true')
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -497,8 +575,12 @@ jobs:
           set -euo pipefail
           TAG="gmww-v$VERSION"
           IPA="GMWW-V$VERSION.ipa"
+          test -s "$IPA"
+          test -s "$IPA.sha256"
+          shasum -a 256 -c "$IPA.sha256"
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes "GMWW IPA V$VERSION: bổ sung chọn file cập nhật Runtime thủ công, kiểm tra SHA-256 và khôi phục Runtime trước; bốn nút cập nhật cùng một hàng."
+            gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION — NATIVE GITHUB-FIRST OTA" --notes-file docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
           else
-            gh release upload "$TAG" "$IPA" "$IPA.sha256" --repo "$GITHUB_REPOSITORY" --clobber
+            echo "::error::IPA tag $TAG already exists. Do not overwrite a published IPA.";
+            exit 1
           fi

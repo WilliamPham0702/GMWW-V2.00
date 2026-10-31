@@ -182,8 +182,9 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
   browser-test:
     needs: scope
-    if: needs.scope.outputs.mode == 'full'
-    runs-on: ubuntu-latest
+    if: needs.scope.outputs.mode == 'full' || needs.scope.outputs.mode == 'pr645-postmerge-release' || needs.scope.outputs.mode == 'pr652-postmerge-release'
+    # Pin a Playwright-WebKit supported OS, rather than ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Tải mã nguồn dự án
@@ -214,8 +215,20 @@ jobs:
         run: node tests/v3190-fire-image-calibration-webkit.mjs
       - name: Kiểm tra menu GM neo theo từng đống lửa Ngày và Đêm (Task #444)
         run: node tests/task444-gm-day-night-fire-webkit.mjs
-      - name: Kiểm tra dòng thời gian ban đêm trên iPhone
-        run: node tests/night-timeline-iphone-webkit.mjs
+      - name: Kiểm tra timeline/iPhone theo renderer thực tế (không phụ thuộc số PR)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Online fire-icon dock supersedes the retired [data-battle-action] rail.
+          # The legacy fixture expects two rail buttons and cannot exercise the new UI.
+          # Test the actual renderer on PR AND main after the V3.279 merge.
+          if grep -Fq 'function gmwwOnlinePlaceAtFire(dock){' src/player-web-src/35-online-chat.part &&
+             grep -Fq 'function gmwwSetupFreeBattleIcons()' server-game/src/30-village-and-setup.part; then
+            node --test tests/player-online-realtime-freeze-day-20261030.test.mjs
+            node tests/gm-free-floating-shortcuts-iphone-webkit.mjs
+          else
+            node tests/night-timeline-iphone-webkit.mjs
+          fi
       - name: Kiểm tra giao diện lá bài trên Chrome, Edge, WebKit
         shell: bash
         run: |
@@ -228,8 +241,15 @@ jobs:
             sleep 1
           done
           grep -q '"project":"GMWW-V2.00"' /tmp/gmww-browser-health.json
-          node tests/demo-server-autonomous-e2e.mjs
-          node tests/demo-room-cross-origin-webkit.mjs
+          # Modern server-owned DEMO can advance from night to day before
+          # the historic fixed-timestamp fixtures wake up. Select by source,
+          # not PR number: the same rule MUST apply to postmerge main CI.
+          if grep -Fq 'function gmwwOnlinePlaceAtFire(dock){' src/player-web-src/35-online-chat.part; then
+            node --test tests/demo-player-live-join-v3271.test.mjs
+          else
+            node tests/demo-server-autonomous-e2e.mjs
+            node tests/demo-room-cross-origin-webkit.mjs
+          fi
           node tests/browser-live-realtime-vote.mjs
           node tests/browser-private-cards.mjs
           node tests/gp2-qa-webkit.mjs

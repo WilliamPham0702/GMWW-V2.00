@@ -46,7 +46,7 @@ jobs:
         with:
           node-version: "22"
       - name: Test Artifact preview + Vai Trò isolation
-        run: node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs
+        run: node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs tests/gm-card-fit-outside-dismiss-20261029.test.mjs
       - name: Vietnamese Runtime OTA V3.274 notes
         run: |
           test -s docs/releases/GMWW-artifact-preview-centering-main-20261029.md

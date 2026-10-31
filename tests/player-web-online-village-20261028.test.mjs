@@ -12,17 +12,18 @@ test('Online uses the existing village without transient card page on delivery',
 });
 test('Private mini cards sit below timeline and retain full-size card on tap',()=>{
   assert.match(village,/function syncPlayerMiniCards\(/);
-  assert.match(village,/width:min\(25vw,104px\)/);
+  assert.match(village,/width:clamp\(28px,9\.5vw,39px\)/);
   assert.match(village,/gmww-player-menu-turn/);
   assert.match(game,/syncPlayerMiniCards\(\)/);
   assert.match(village,/roleName=isSelf\?String\(state\.role\?/);
 });
-test('Chat is a bare bottom icon with close on outside tap and 30s idle',()=>{
-  assert.match(chat,/#gmwwChatLaunch\{[^\n]*border:0;border-radius:0;background:transparent/);
+test('Online chat stays inside the fixed bottom footer, closes on outside tap and 30s idle',()=>{
+  assert.match(chat,/#gmwwOnlineFooter/);
   assert.match(chat,/function gmwwChatClosePanel\(/);
-  assert.match(chat,/setTimeout\(gmwwChatClosePanel,30000\)/);
-  assert.match(chat,/getElementById\('gmwwChatPanel'\)\?\.contains\(target\)/);
-  assert.match(chat,/#gmwwChatLines\{flex:1;overflow-y:auto/);
+  assert.match(chat,/gmwwChatIdleTimer=setTimeout\(\(\)=>\{/);
+  assert.match(chat,/\},30000\)/);
+  assert.match(chat,/panel\?\.contains\(event\.target\)/);
+  assert.match(chat,/#gmwwChatPanel\.open #gmwwChatLines\{display:block;height:90px/);
 });
 test('Role-group labels never reveal unrelated group, dead peer, or out-of-turn cards',()=>{
   const meta={phase:'running',cyclePhase:'night',cycleNight:1,matchId:'M'};
