@@ -938,7 +938,9 @@ test('PR654 V3.281 strict role-name audio release scope keeps unknown changes in
       before=after.slice(0,after.indexOf('\n\n## PR #654 — đóng gói ứng viên Runtime V3.281'));
     return {path,status:'M',before,after};
   });
-  assert.equal(classifyBrowserScope(changes),'role-name-audio-3281');
+  // Additional recoverable-delete features invalidate the former exact release scope.
+  // Fall back to FULL CI; never relax the fail-closed release gate.
+  assert.equal(classifyBrowserScope(changes),'full');
   assert.equal(classifyBrowserScope(changes.filter(x=>x.path!=='src/index.js')),'full');
   assert.equal(classifyBrowserScope([...changes,modified('src/player-web-src/30-rooms-and-realtime.part','safe','changed')]),'full');
   assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
