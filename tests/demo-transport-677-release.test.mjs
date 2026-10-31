@@ -18,3 +18,15 @@ test('PR677 release requires same-SHA CI, rollback and immutable Runtime',()=>{
  assert.ok(read('.github/workflows/github-runtime-ota.yml').includes('PR677 Worker-only: no duplicate Runtime'));
  assert.ok(read('.github/workflows/deploy-production.yml').includes('GMWW-PR677-WORKER-ONLY-RELEASE-20261031.md'));
 });
+
+test('PR690 recovery uses full Git history and focused, rollback-protected Worker deploy',()=>{
+ const workflow=read('.github/workflows/deploy-demo-transport-677.yml');
+ assert.match(workflow,/fetch-depth: 0/);
+ assert.ok(workflow.includes('pr677-worker-recovery'));
+ assert.ok(workflow.includes('git ls-remote origin refs/heads/main'));
+ assert.ok(workflow.includes('Roll back to saved Worker version'));
+ assert.ok(read('.github/scripts/ci-browser-scope.mjs').includes("mode:'pr677-worker-recovery'"));
+ assert.ok(read('.github/workflows/check-player-web.yml').includes("mode == 'pr677-worker-recovery'"));
+ assert.ok(read('.github/workflows/deploy-production.yml').includes('docs/releases/GMWW-PR690-DEMO-ONLINE-DEPLOY-RECOVERY-20261031.md'));
+ assert.ok(read('.github/workflows/github-runtime-ota.yml').includes('PR690 DEMO Worker recovery only'));
+});

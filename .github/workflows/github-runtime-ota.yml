@@ -62,6 +62,13 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             MESSAGE=$(git log -1 --format=%B)
             CHANGED=$(git diff --name-only HEAD^1 HEAD | sort)
+            # PR690 Worker-only depth repair: do not duplicate Runtime/IPA.
+            if printf '%s\n' "$CHANGED" | grep -Fxq 'docs/releases/GMWW-PR690-DEMO-ONLINE-DEPLOY-RECOVERY-20261031.md'; then
+              EXPECTED=$(printf '%s\n' '.github/scripts/ci-browser-scope.mjs' '.github/workflows/check-player-web.yml' '.github/workflows/deploy-demo-transport-677.yml' '.github/workflows/deploy-production.yml' '.github/workflows/github-runtime-ota.yml' 'tests/demo-transport-677-release.test.mjs' 'docs/releases/GMWW-PR690-DEMO-ONLINE-DEPLOY-RECOVERY-20261031.md' | sort)
+              test "$CHANGED" = "$EXPECTED" || { echo "::error::PR690 recovery scope mismatch"; exit 1; }
+              SKIP_AUTO_RELEASE=true
+              echo 'PR690 DEMO Worker recovery only: Runtime/IPA unchanged.' >> "$GITHUB_STEP_SUMMARY"
+            fi
             # Worker-only release for PR677; never duplicate or overwrite Runtime/IPA.
             if printf '%s\n' "$CHANGED" | grep -Fxq 'docs/releases/GMWW-PR677-WORKER-ONLY-RELEASE-20261031.md'; then
               EXPECTED=$(printf '%s\n' '.github/scripts/ci-browser-scope.mjs' '.github/workflows/check-player-web.yml' '.github/workflows/deploy-production.yml' '.github/workflows/github-runtime-ota.yml' '.github/workflows/deploy-demo-transport-677.yml' 'tests/demo-transport-677-release.test.mjs' 'docs/releases/GMWW-PR677-WORKER-ONLY-RELEASE-20261031.md' | sort)
