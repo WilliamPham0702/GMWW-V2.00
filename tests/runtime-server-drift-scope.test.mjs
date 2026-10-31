@@ -28,10 +28,14 @@ function fixture(){
    before:ids?restoreRuntimeDrift(after,ids):null,after};
  });
 }
-test('PR659 exact audited update-only scope passes, bundle must match',()=>{
+test('PR659 historic update-only scope must not authorize the expanded V3.286 integration',()=>{
  const changes=fixture();
  assert.equal(changes.filter(x=>!x.before&&indices[x.path]).length,0);
- assert.equal(isRuntimeDriftScope(changes),true);
+ assert.equal(isRuntimeDriftScope(changes),false,'Audio, DEMO and version integration is broader than the original PR659-only whitelist');
+ const modules=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
+  '30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
+ assert.equal(fs.readFileSync('server-game/current/app.js','utf8'),
+  modules.map(n=>fs.readFileSync('server-game/src/'+n,'utf8')).join(''),'new Runtime still requires byte-identical GM assembly');
 });
 test('PR659 fail closed on changed runtime, deleted file or unrelated source',()=>{
  const changes=fixture();
