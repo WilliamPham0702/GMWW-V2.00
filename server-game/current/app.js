@@ -1569,7 +1569,7 @@ async function renderAudio(){
       const nameBox=kind==='cards'?'<small class="gmww-audio-name-status">Tên: '+esc(String(a.nameFileName||''))+(a.nameFileName?' • ':'')+nameLabel+'</small>':'';
       const namePlay=kind==='cards'?'<button type="button" data-audio-name-play title="Play Tên" aria-label="Play Tên">▶ Tên</button>':'';
       const fullLabel=kind==='cards'?'▶ Full':'▶';
-      return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="Play Full" aria-label="Play Full">'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
+      return '<article class="audio-row'+(kind==='cards'?' audio-role-row':'')+'" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="Play Full" aria-label="Play Full">'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
     }).join('');
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
   $$('[data-audio-id]').forEach(row=>{
@@ -1673,7 +1673,18 @@ function replaceAudioItem(a,category=audioKind,slot='full'){
   };
   i.click()
 }
-async function deleteAudioItem(a){if(!a||!confirm('Xoá Âm Thanh "'+(a.name||'')+'"?'))return;const list=state.audio[audioKind]||[],i=list.findIndex(x=>String(x.id)===String(a.id));if(i>=0)list.splice(i,1);await dbDelete(audioBlobKey(audioKind,a.id)).catch(()=>{});battleInvalidateAudioCache(audioKind,a.id);saveState();renderAudio()}
+async function deleteAudioItem(a){
+  if(!a||!confirm('Xoá Âm Thanh "'+(a.name||'')+'"?'))return;
+  const kind=audioKind,list=state.audio[kind]||[],i=list.findIndex(x=>String(x.id)===String(a.id));
+  if(i>=0)list.splice(i,1);
+  await dbDelete(audioBlobKey(kind,a.id)).catch(()=>{});
+  battleInvalidateAudioCache(kind,a.id);
+  if(kind==='cards'){
+    await dbDelete(audioBlobKey('cards-name',a.id)).catch(()=>{});
+    battleInvalidateAudioCache('cards-name',a.id);
+  }
+  saveState();renderAudio();
+}
 
 function bindCore(){
   $$('.nav').forEach(n=>n.onclick=()=>{$$('.page').forEach(p=>p.classList.toggle('active',p.id===n.dataset.page));$$('.nav').forEach(x=>x.classList.toggle('active',x===n));const p=$('#'+n.dataset.page);if(p)p.scrollTop=0});
