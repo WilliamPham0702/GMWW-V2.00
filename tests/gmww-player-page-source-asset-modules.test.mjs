@@ -32,13 +32,17 @@ test('G3.10: editable Player page modules reconstruct the exact 1.5 MB shipping 
   assert.equal((output.match(/data:image\/(?:png|webp);base64,/g)||[]).length,7);
 });
 
-test('G3.10: duplicated artwork is stored once while both displayed references survive',()=>{
+test('G3.10: retired V1 room preview references are absent; original media files remain preserved',()=>{
   const paths=new Set(files);
-  assert.equal(paths.size,6,'Exactly 6 unique original media payloads');
+  assert.equal(paths.size,6,'Preserve all six original media payload files');
   const body=parts.map(p=>readFileSync(p,'utf8')).join('');
-  assert.ok(body.includes('__GMWW_EMBED_IMAGE_2__'));
-  assert.ok(body.includes('__GMWW_EMBED_IMAGE_4__'));
-  assert.equal(files[2],files[4]);
+  for(const index of [0,1,2,6]){
+    assert.ok(body.includes('__GMWW_EMBED_IMAGE_'+index+'__'),'Retain active artwork marker '+index);
+  }
+  for(const index of [3,4,5]){
+    assert.ok(!body.includes('__GMWW_EMBED_IMAGE_'+index+'__'),'Retired V1-only marker '+index+' must not render');
+  }
+  assert.ok(!body.includes('<section id="rooms"'),'Retired V1 room picker must not return');
   assert.ok(body.includes('<body'));
   assert.ok(body.includes('export function gmwwMembersPage('));
 });
