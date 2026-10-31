@@ -1023,6 +1023,20 @@ jobs:
             tests/online-chat-authority.test.mjs
           node --test --test-name-pattern='PR652 online hotfix' tests/ci-browser-scope.test.mjs
           test -s docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md
+      # PR654: worker/player gateway behavior is unchanged; validate the
+      # independently named role audio, complete GM bundle, OTA and fail-closed CI.
+      - name: PR654 V3.281 — Audio Tên độc lập, Worker và Runtime release gate
+        if: steps.scope.outputs.mode == 'role-name-audio-3281'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/prepare-update-channel.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/audio-independent-role-name-20261031.test.mjs tests/audio-binding-integrity-20261027.test.mjs tests/audio-role-day-flow-20261027.test.mjs tests/demo-assassin-gallows-divination.test.mjs .github/runtime-release/verify-package.test.mjs
+          test -s docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
