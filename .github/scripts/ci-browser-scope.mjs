@@ -3290,7 +3290,37 @@ function isPlayerToastCiRoutingScope(changes){
   }catch{return false}
 }
 
+// PR702 after-merge CI recovery. Only the exact CI/test/docs repair is scoped;
+// the actual Player Web fix must remain byte-identical to merged PR #702.
+function isPlayerToastPostmergeScope(changes){
+  const expected=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['tests/player-toast-postmerge-20261031.test.mjs','A'],
+    ['docs/releases/GMWW-PR702-POSTMERGE-CI-20261031.md','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     new Set(changes.map(c=>c.path)).size!==expected.size||
+     changes.some(c=>expected.get(c.path)!==c.status))return false;
+  try{
+    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.285.0')return false;
+    git('merge-base','--is-ancestor','1ac94fc8835220b5a0bd4fd9d361f2a118ddc6d6','HEAD');
+    // Fail closed on any gameplay, Runtime, Native or asset drift since #702.
+    git('diff','--quiet','1ac94fc8835220b5a0bd4fd9d361f2a118ddc6d6','HEAD','--','src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc');
+    const code=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+    const bundle=fs.readFileSync('src/gmww-members-live.js','utf8');
+    if(!code.includes('function gmwwToastTop(){')||!code.includes("t.style.top=gmwwToastTop()+'px'")||
+       !bundle.includes('function gmwwToastTop(){'))return false;
+    const by=new Map(changes.map(c=>[c.path,String(c.after||'')]));
+    return by.get('.github/scripts/ci-browser-scope.mjs').includes('isPlayerToastPostmergeScope(changes)')&&
+      by.get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'player-toast-postmerge'")&&
+      by.get('tests/player-toast-postmerge-20261031.test.mjs').includes('PR702 postmerge exact CI-only scope')&&
+      by.get('docs/releases/GMWW-PR702-POSTMERGE-CI-20261031.md').includes('Rollback');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isPlayerToastPostmergeScope(changes))return 'player-toast-postmerge';
   if(isPlayerToastCiRoutingScope(changes))return 'player-toast-ci-routing';
   if(isPlayerToastNoticeScope(changes))return 'player-toast-notice';
   if(isRuntimeCatalogAutoSyncScope(changes))return 'runtime-catalog-auto-sync';
@@ -4117,6 +4147,21 @@ function detect(){
           return{mode:'pr652-postmerge-release',reason:'PR652 final exact three-file CI selector ordering; approved Online gameplay immutable'};
       }
     }catch{} // Strict fail-closed: unknown diff does not narrow main CI.
+  }
+  // PR702: a CI-only follow-up must not re-run 1300 unrelated legacy tests.
+  // Require immutable merged Player source and precisely four CI/docs paths.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\\n').filter(Boolean);
+      const changes=rows.map(row=>{
+        const [status,path]=row.split('\\t');
+        return {status,path,
+          before:status==='M'?git('show','HEAD^1:'+path):null,
+          after:['A','M'].includes(status)?fs.readFileSync(path,'utf8'):null};
+      });
+      if(isPlayerToastPostmergeScope(changes))
+        return{mode:'player-toast-postmerge',reason:'Exact CI-only postmerge #702; Player Web source immutable'};
+    }catch{} // Unknown diff runs full checks.
   }
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
