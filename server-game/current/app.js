@@ -1517,6 +1517,17 @@ async function gmwwRoleNameAudioStatus(a){
   if(typeof a.nameUrl==='string'&&/^https:\/\//i.test(a.nameUrl.trim()))return 'remote';
   return 'missing';
 }
+// Count assigned role audio links, not the existence of files in IndexedDB.
+function gmwwRoleAudioIsLinked(role,resolved,slot='full'){
+  if(!role?.id)return false;
+  return resolved.some(({a,status,nameStatus})=>{
+    if(String(a?.targetId||a?.id||'')!==String(role.id))return false;
+    if(slot==='name')return Boolean(String(a.nameUrl||'').trim()||
+      String(a.nameFileName||'').trim()||nameStatus==='local');
+    return Boolean(String(a.url||'').trim()||String(a.fileName||'').trim()||
+      String(a.sourceKey||'').trim()||status==='local'||status==='bundled');
+  });
+}
 async function renderAudio(){
   const kind=audioKind,list=state.audio[kind]||[];
   const resolved=await Promise.all(list.map(async a=>({a,status:typeof audioBindingStatus==='function'?await audioBindingStatus(a,kind):await audioHasFile(a,kind)?'local':'missing',nameStatus:kind==='cards'?await gmwwRoleNameAudioStatus(a):null})));
@@ -1534,14 +1545,31 @@ async function renderAudio(){
   const missing=required.filter(item=>sourceStatus(item.id)==='missing');
   const remote=required.filter(item=>sourceStatus(item.id)==='remote');
   const category=kind==='cards'?'Vai trò':kind==='artifacts'?'Artifact':kind==='actions'?'Hành động':'Hệ thống';
-  const missingHtml='<div class="gmww-missing-role-audio"><b>Đối chiếu Audio '+category+': '+missing.length+' chưa có nguồn, '+remote.length+' URL chưa thử phát</b>'+
+  // Role links are evaluated from saved associations, not whether audio bytes play.
+  const roles=kind==='cards'?required:[];
+  const noFullLink=roles.filter(role=>!gmwwRoleAudioIsLinked(role,resolved,'full'));
+  const noNameLink=roles.filter(role=>!gmwwRoleAudioIsLinked(role,resolved,'name'));
+  const linkSection=(items,slot,title)=>items.length?
+    '<details class="gmww-role-audio-links"><summary>'+title+' ('+items.length+')</summary>'+
+    '<div style="display:grid;gap:7px;margin-top:8px">'+items.map(role=>
+      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<span>'+esc(role.name)+'</span><button type="button" data-role-link-id="'+esc(role.id)+
+      '" data-role-link-slot="'+slot+'" style="padding:7px 10px;min-height:38px;border-radius:9px;border:1px solid #71cbd5;background:#153d56;color:#ecffff">Gắn Audio</button></div>'
+    ).join('')+'</div></details>':'';
+  const missingHtml=kind==='cards'?
+    '<div class="gmww-missing-role-audio"><b>Đối chiếu liên kết Audio Vai Trò</b>'+
+    '<p>Chưa gắn Audio Full: <strong>'+noFullLink.length+'</strong> · Chưa gắn Audio Tên: <strong>'+noNameLink.length+'</strong></p>'+
+    linkSection(noFullLink,'full','Vai Trò chưa liên kết Audio Full')+
+    linkSection(noNameLink,'name','Vai Trò chưa liên kết Audio Tên')+
+    (!noFullLink.length&&!noNameLink.length?'<p>Tất cả Vai Trò đã có liên kết Audio.</p>':'')+
+    '<button type="button" id="audioMissingReport" title="Sao chép Vai Trò chưa gắn Audio">📋 Sao chép danh sách Vai Trò chưa gắn Audio</button>'+
+    '<small>Chỉ đối chiếu link/nguồn đã gắn cho từng Vai Trò (file tải lên, URL hoặc audio tích hợp), KHÔNG kiểm tra tệp thực có tồn tại. Tên và Full là hai liên kết riêng.</small></div>':
+    '<div class="gmww-missing-role-audio"><b>Đối chiếu Audio '+category+': '+missing.length+' chưa có nguồn, '+remote.length+' URL chưa thử phát</b>'+
     (missing.length?'<details><summary>File thực còn thiếu ('+missing.length+')</summary><p>'+
-      missing.map(item=>esc(item.name)+' ('+esc(item.id)+')').join(' · ')+'</p></details>'+
-      '<button type="button" id="audioMissingReport" title="Sao chép đầy đủ tên và ID audio thiếu nguồn">📋 Sao chép danh sách thiếu ('+missing.length+')</button>':'')+
+      missing.map(item=>esc(item.name)+' ('+esc(item.id)+')').join(' · ')+'</p></details>':'')+
     (remote.length?'<details><summary>URL chưa xác minh ('+remote.length+')</summary><p>'+
       remote.map(item=>esc(item.name)+' ('+esc(item.id)+')').join(' · ')+'</p></details>':'')+
-    (!missing.length&&!remote.length?'<p>Tìm thấy file cục bộ hoặc bản kèm ứng dụng cho mọi mục.</p>':'')+
-    '<small>Tên file, dấu verifiedBinary và URL chưa được phát thử KHÔNG được tính là file hợp lệ. Nguồn thực phải được thử nghe trên iPhone. URL bên ngoài chưa được kiểm tra.</small></div>';
+    (!missing.length&&!remote.length?'<p>Đã phát hiện nguồn cho mọi mục.</p>':'')+'</div>';
   // Dedicated SYSTEM audio shortcuts: the verdict's sounds are NOT part of the
   // Gallows controls and must not be saved under Vai Trò or Hành Động.
   const systemSlots=[
@@ -1573,12 +1601,21 @@ async function renderAudio(){
       return '<article class="audio-row'+(kind==='cards'?' audio-role-row':'')+'" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b></div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="'+esc(fullStatus)+(kind==='cards'?' • '+esc(nameStatusLabel):'')+'" aria-label="Play Full"'+(kind==='cards'?' style="width:43px;flex:0 0 43px;font-size:10px;font-weight:750;padding:0 2px"':'')+'>'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Chuyển vào thùng rác">🗑</button></div></article>';
     }).join('');
   $('#audioTrashRestore')?.addEventListener('click',()=>gmwwOpenAudioTrash(kind));
+  $('#audioGrid [data-role-link-id]').forEach(button=>button.onclick=()=>{
+    const targetId=String(button.dataset.roleLinkId||'');
+    const slot=String(button.dataset.roleLinkSlot||'full');
+    const a=list.find(item=>String(item.targetId||item.id)===targetId);
+    if(!a){alert('Vai Trò chưa có dòng Audio. Hãy khôi phục từ Thùng rác nếu đã xóa.');return}
+    gmwwOpenRoleAudioReplace(a);
+  });
   $('#audioMissingReport')?.addEventListener('click',()=>{
-    const lines=missing.map(x=>x.name+' ('+x.id+')');
-    const report='GMWW — Âm thanh '+category+' chưa có nguồn ('+lines.length+')\n'+lines.join('\n');
+    const lines=['GMWW — Vai Trò CHƯA LIÊN KẾT AUDIO','Chưa gắn Full ('+noFullLink.length+'):',
+      ...noFullLink.map(x=>x.name+' ('+x.id+')'),'','Chưa gắn Tên ('+noNameLink.length+'):',
+      ...noNameLink.map(x=>x.name+' ('+x.id+')')];
+    const report=lines.join('\n');
     if(navigator.clipboard?.writeText){
-      void navigator.clipboard.writeText(report).then(()=>alert('Đã sao chép '+lines.length+' mục thiếu nguồn.')).catch(()=>prompt('Sao chép danh sách Audio thiếu:',report));
-    }else prompt('Sao chép danh sách Audio thiếu:',report);
+      void navigator.clipboard.writeText(report).then(()=>alert('Đã sao chép danh sách Vai Trò chưa gắn Audio.')).catch(()=>prompt('Sao chép danh sách:',report));
+    }else prompt('Sao chép danh sách:',report);
   });
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
   $$('[data-audio-id]').forEach(row=>{
