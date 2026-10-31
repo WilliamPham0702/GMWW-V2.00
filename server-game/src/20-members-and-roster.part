@@ -192,12 +192,12 @@ async function gmwwOpsRun({kind='all',silent=false}={}){
         {http:deep.status}):gmwwOpsResult('bad','KHÔNG SẴN SÀNG','Kiểm tra lưu trữ thất bại.',{http:deep?.status||0});
       const serverVersion=String(server?.data?.version||'').replace(/^V/i,'');
       const updateVersion=String(manifest?.data?.releaseVersion||'').replace(/^V/i,'');
-      const aligned=manifest?.ok&&server?.ok&&serverVersion===updateVersion;
       const shell=typeof gmwwShellVersion==='function'?gmwwShellVersion():'—';
       const runtime=typeof gmwwRuntimeVersion==='function'?gmwwRuntimeVersion():'—';
+      const aligned=manifest?.ok&&server?.ok&&gmwwUpdateAlignment(runtime,serverVersion,updateVersion)==='synchronized';
       checks.update=aligned?gmwwOpsResult('ok','ĐỒNG BỘ','Server '+serverVersion+' • Runtime '+runtime+' • IPA '+shell,
         {serverVersion,releaseVersion:updateVersion,runtimeVersion:runtime,shellVersion:shell,http:manifest.status})
-        :gmwwOpsResult('warn','KIỂM TRA LẠI','Server và kênh cập nhật chưa khớp, xem Cập Nhật Hệ Thống.',
+        :gmwwOpsResult('warn','KIỂM TRA LẠI','Runtime, Server hoặc kênh cập nhật chưa khớp, xem Cập Nhật Hệ Thống.',
           {serverVersion,releaseVersion:updateVersion,runtimeVersion:runtime,shellVersion:shell,http:manifest?.status||0});
       if(runAll){
         const [player,characters]=results.slice(3);
