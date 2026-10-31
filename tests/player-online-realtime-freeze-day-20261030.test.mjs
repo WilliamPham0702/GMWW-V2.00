@@ -103,7 +103,7 @@ test('Blocked players retain visible action offers but cannot execute',async()=>
 });
 
 test('GM day footer follows approved six controls and day actions use free icons',()=>{
-  const ids=['playBattleClockFloat','battleDayNoticeFloat','battleFactionStatsFloat','battleGMChatFloat','battleDayGallowsFloat','battleUndoFloat'];
+  const ids=['playBattleClockFloat','battleDayNoticeFloat','battleFactionStatsFloat','battleDayGallowsFloat','battleUndoFloat','battleGMChatFloat'];
   const footer=gmHtml.slice(gmHtml.indexOf('id="battleBottomControls"'),gmHtml.indexOf('id="battleTargetSheet"'));
   const offsets=ids.map(id=>footer.indexOf('id="'+id+'"'));
   assert.ok(offsets.every(x=>x>=0));
