@@ -1601,7 +1601,7 @@ async function renderAudio(){
       return '<article class="audio-row'+(kind==='cards'?' audio-role-row':'')+'" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b></div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="'+esc(fullStatus)+(kind==='cards'?' • '+esc(nameStatusLabel):'')+'" aria-label="Play Full"'+(kind==='cards'?' style="width:43px;flex:0 0 43px;font-size:10px;font-weight:750;padding:0 2px"':'')+'>'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Chuyển vào thùng rác">🗑</button></div></article>';
     }).join('');
   $('#audioTrashRestore')?.addEventListener('click',()=>gmwwOpenAudioTrash(kind));
-  $('#audioGrid [data-role-link-id]').forEach(button=>button.onclick=()=>{
+  $$('#audioGrid [data-role-link-id]').forEach(button=>button.onclick=()=>{
     const targetId=String(button.dataset.roleLinkId||'');
     const slot=String(button.dataset.roleLinkSlot||'full');
     const a=list.find(item=>String(item.targetId||item.id)===targetId);
