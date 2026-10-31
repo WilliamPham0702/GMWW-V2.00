@@ -15,7 +15,7 @@ jobs:
   verify:
     name: Oracle STAGING fail-closed readiness
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,6 +28,39 @@ jobs:
       - run: node --test tests/oracle-staging-bootstrap.test.mjs
       - run: bash -n infra/oracle-staging/start-local.sh
       - run: node --test infra/oracle-staging/bootstrap.test.mjs
+      - run: node --test infra/oracle-staging/probe-local.test.mjs
+      - run: node --test infra/oracle-staging/verify-two-backends.test.mjs
+      - name: Oracle STAGING real Worker login, room, WS and persisted reconnect (LOCAL only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          export GMWW_ORACLE_STAGING=1 GMWW_ORACLE_PROBE_ONLY=1 GMWW_ORACLE_PORT=8877 GMWW_ORACLE_FIXTURE_ONLY=1
+          export GMWW_ORACLE_STATE_DIR="$(mktemp -d)"
+          LOG="$(mktemp)"
+          PID=""
+          cleanup() {
+            if [[ -n "$PID" ]]; then kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true; fi
+            if [[ "${GMWW_ORACLE_STATE_DIR}" == /tmp/* ]]; then rm -rf -- "$GMWW_ORACLE_STATE_DIR"; fi
+            rm -f -- "$LOG"
+          }
+          trap cleanup EXIT
+          start_worker() {
+            bash infra/oracle-staging/start-local.sh > "$LOG" 2>&1 &
+            PID=$!
+            for i in {1..80}; do
+              if curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:8877/api/health > /dev/null 2>&1; then return 0; fi
+              if ! kill -0 "$PID" 2>/dev/null; then cat "$LOG"; return 1; fi
+              sleep 2
+            done
+            cat "$LOG"
+            return 1
+          }
+          start_worker
+          node infra/oracle-staging/probe-local.mjs create || { cat "$LOG"; exit 1; }
+          kill "$PID"; wait "$PID" || true; PID=""
+          start_worker
+          node infra/oracle-staging/probe-local.mjs resume || { cat "$LOG"; exit 1; }
       - name: Verify unique GitHub Runtime package/publish jobs and isolated Oracle guard
         shell: bash
         run: |

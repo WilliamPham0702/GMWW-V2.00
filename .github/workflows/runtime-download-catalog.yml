@@ -1,0 +1,90 @@
+name: GMWW Runtime download catalog (link-only)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/runtime-download-catalog.yml'
+      - '.github/scripts/update-runtime-download-catalog.mjs'
+      - 'tests/runtime-download-catalog.test.mjs'
+      - '.github/workflows/deploy-production.yml'
+      - '.github/workflows/github-runtime-ota.yml'
+  release:
+    types: [published, edited]
+  workflow_run:
+    workflows: ['Publish GMWW Runtime on GitHub (No Cloudflare)']
+    types: [completed]
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/runtime-download-catalog.yml'
+      - '.github/scripts/update-runtime-download-catalog.mjs'
+      - 'tests/runtime-download-catalog.test.mjs'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: gmww-download-catalog
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify download catalog generator
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          node --check .github/scripts/update-runtime-download-catalog.mjs
+          node --test tests/runtime-download-catalog.test.mjs
+
+  sync:
+    name: Update download links in isolated catalog branch
+    needs: verify
+    if: >-
+      github.event_name == 'release' ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Collect verified QA artifact and official Release links without copying files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/update-runtime-download-catalog.mjs "$RUNNER_TEMP/RUNTIME-DOWNLOADS.md"
+      - name: Update dedicated catalog branch only (never Production or main)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin runtime-downloads
+          git switch -C runtime-downloads origin/runtime-downloads
+          cp "$RUNNER_TEMP/RUNTIME-DOWNLOADS.md" RUNTIME-DOWNLOADS.md
+          cp "$RUNNER_TEMP/RUNTIME-HISTORY.md" RUNTIME-HISTORY.md
+          cp "$RUNNER_TEMP/IPA-HISTORY.md" IPA-HISTORY.md
+          git add RUNTIME-DOWNLOADS.md RUNTIME-HISTORY.md IPA-HISTORY.md
+          if git diff --cached --quiet; then
+            echo 'Catalog already current; no commit necessary.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'docs: sync original Runtime download links'
+          git push origin HEAD:runtime-downloads
+          echo 'Runtime download index refreshed. No Runtime binary duplicated.' >> "$GITHUB_STEP_SUMMARY"

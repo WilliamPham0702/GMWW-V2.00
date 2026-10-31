@@ -41,7 +41,7 @@ jobs:
           if [ ! -s /tmp/gmww-production-change-scope.txt ]; then SHOULD_DEPLOY=true; fi
           while IFS= read -r FILE; do
             case "$FILE" in
-              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml|.github/workflows/github-release-backup-retention.yml|.github/scripts/release-backup-retention.mjs|tests/release-backup-retention.test.mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md|oracle-staging/*|infra/oracle-staging/*|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031.md|tests/oracle-staging-bootstrap.test.mjs|.github/workflows/check-oracle-staging-bootstrap.yml|docs/architecture/oracle-staging-bootstrap-20261031.md|infra/pages/gamemasoi/*|tests/pages-online-chat-reconnect-e2e.mjs|.github/workflows/check-pages-online-chat-reconnect.yml|tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md|tests/production-deploy-architecture-docs.test.mjs)
+              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml|.github/workflows/github-release-backup-retention.yml|.github/scripts/release-backup-retention.mjs|tests/release-backup-retention.test.mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md|oracle-staging/*|infra/oracle-staging/*|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031.md|tests/oracle-staging-bootstrap.test.mjs|.github/workflows/check-oracle-staging-bootstrap.yml|docs/architecture/oracle-staging-bootstrap-20261031.md|infra/pages/gamemasoi/*|tests/pages-online-chat-reconnect-e2e.mjs|.github/workflows/check-pages-online-chat-reconnect.yml|tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|.github/workflows/deploy-demo-transport-677.yml|tests/demo-transport-677-release.test.mjs|docs/releases/GMWW-PR677-WORKER-ONLY-RELEASE-20261031.md|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md|tests/production-deploy-architecture-docs.test.mjs)
                 ;;
               *)
                 SHOULD_DEPLOY=true
@@ -309,6 +309,17 @@ jobs:
              grep -Fxq '.github/workflows/deploy-production.yml' /tmp/gmww-production-change-scope.txt; then
             SHOULD_DEPLOY=false
             echo 'Oracle release-guard CI repair: SKIP Production Worker deploy.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # Exactly scoped link-only Runtime catalog automation. No Worker/Runtime/IPA deploy.
+          CATALOG_ONLY=$(printf '%s\n' \
+            '.github/workflows/runtime-download-catalog.yml' \
+            '.github/scripts/update-runtime-download-catalog.mjs' \
+            'tests/runtime-download-catalog.test.mjs' \
+            '.github/workflows/deploy-production.yml' \
+            '.github/workflows/github-runtime-ota.yml' | sort)
+          if [ "$(sort /tmp/gmww-production-change-scope.txt)" = "$CATALOG_ONLY" ]; then
+            SHOULD_DEPLOY=false
+            echo 'Runtime download catalog links only: skip Production deploy.' >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
