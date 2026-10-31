@@ -50,6 +50,7 @@ jobs:
     name: Update download links in isolated catalog branch
     needs: verify
     if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       github.event_name == 'release' ||
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
