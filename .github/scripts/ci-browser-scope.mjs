@@ -3290,7 +3290,128 @@ function isPlayerToastCiRoutingScope(changes){
   }catch{return false}
 }
 
+// CI-LITE A: only the exact four-file Preview routing repair may use focused CI.
+// Any gameplay/runtime/permission file or unexpected deletion falls back to full tests.
+function isCiLitePreviewWorkflowScope(changes){
+  const required=new Set([
+    '.github/workflows/check-pr-preview-github.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs',
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml'
+  ]);
+  if(!Array.isArray(changes)||changes.length!==required.size||
+     new Set(changes.map(c=>c.path)).size!==required.size||
+     changes.some(c=>!required.has(c.path)||c.status!=='M'))return false;
+  const get=path=>changes.find(c=>c.path===path)?.after||'';
+  return get('.github/workflows/check-pr-preview-github.yml').includes('needs.oracle-scope.outputs.preview_ci_only')&&
+    get('tests/github-actions-pr-preview-ci.test.mjs').includes('CI-LITE docs-only and Preview-CI-only selectors fail closed')&&
+    get('.github/scripts/ci-browser-scope.mjs').includes('function isCiLitePreviewWorkflowScope(changes)')&&
+    get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'ci-lite-preview-workflow'");
+}
+
+// PR702 after-merge CI recovery. Only the exact CI/test/docs repair is scoped;
+// the actual Player Web fix must remain byte-identical to merged PR #702.
+function isPlayerToastPostmergeScope(changes){
+  const expected=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['tests/player-toast-postmerge-20261031.test.mjs','A'],
+    ['docs/releases/GMWW-PR702-POSTMERGE-CI-20261031.md','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     new Set(changes.map(c=>c.path)).size!==expected.size||
+     changes.some(c=>expected.get(c.path)!==c.status))return false;
+  try{
+    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.285.0')return false;
+    git('merge-base','--is-ancestor','1ac94fc8835220b5a0bd4fd9d361f2a118ddc6d6','HEAD');
+    // Fail closed on any gameplay, Runtime, Native or asset drift since #702.
+    git('diff','--quiet','1ac94fc8835220b5a0bd4fd9d361f2a118ddc6d6','HEAD','--','src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc');
+    const code=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+    const bundle=fs.readFileSync('src/gmww-members-live.js','utf8');
+    if(!code.includes('function gmwwToastTop(){')||!code.includes("t.style.top=gmwwToastTop()+'px'")||
+       !bundle.includes('function gmwwToastTop(){'))return false;
+    const by=new Map(changes.map(c=>[c.path,String(c.after||'')]));
+    return by.get('.github/scripts/ci-browser-scope.mjs').includes('isPlayerToastPostmergeScope(changes)')&&
+      by.get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'player-toast-postmerge'")&&
+      by.get('tests/player-toast-postmerge-20261031.test.mjs').includes('PR702 postmerge exact CI-only scope')&&
+      by.get('docs/releases/GMWW-PR702-POSTMERGE-CI-20261031.md').includes('Rollback');
+  }catch{return false}
+}
+
+// CI-LITE P0 Online: exact file whitelists; any extra source/Worker/permissions
+// change remains on the full required CI path, never silently bypassed.
+function onlineP0ExactChanges(changes, expected){
+  if(!Array.isArray(changes)||changes.length!==expected.length ||
+      new Set(changes.map(c=>c.path)).size!==expected.length)return false;
+  const allowed=new Map(expected);
+  return changes.every(c=>allowed.get(c.path)===c.status &&
+    (c.status!=='M'||typeof c.before==='string')&&typeof c.after==='string');
+}
+function isOnlineP0Player699Scope(changes){
+  const wanted=[
+    ['src/gmww-members-live.js','M'],
+    ['src/player-web-src/20-village-and-profile.part','M'],
+    ['src/player-web-src/35-online-chat.part','M'],
+    ['tests/online-player-fire-turn-dead-ui-20261031.test.mjs','A']
+  ];
+  if(!onlineP0ExactChanges(changes,wanted))return false;
+  const by=new Map(changes.map(c=>[c.path,c.after]));
+  return by.get('src/player-web-src/20-village-and-profile.part').includes('gmwwOnlineTurnEffects(state.onlineActions||[])')&&
+    ['gmwwOnlineTurnEffects(offers)','CHAT_DEAD','CHAT_FROZEN','gmwwOnlinePlaceAtFire(dock)']
+      .every(token=>by.get('src/player-web-src/35-online-chat.part').includes(token))&&
+    by.get('tests/online-player-fire-turn-dead-ui-20261031.test.mjs').includes('fire action offers stay visible');
+}
+function isOnlineP0GmChat700Scope(changes){
+  const wanted=[
+    ['server-game/current/GMWW.html','M'],
+    ['server-game/current/app.js','M'],
+    ['server-game/src/45-online-chat.part','M'],
+    ['tests/gm-online-chat-footer-after-undo-20261031.test.mjs','A'],
+    ['tests/player-online-realtime-freeze-day-20261030.test.mjs','M']
+  ];
+  if(!onlineP0ExactChanges(changes,wanted))return false;
+  const by=new Map(changes.map(c=>[c.path,c.after]));
+  const html=by.get('server-game/current/GMWW.html');
+  return html.includes('battleUndoFloat')&&html.includes('battleGMChatFloat')&&
+    by.get('server-game/src/45-online-chat.part').includes('gmwwGmChatDismiss')&&
+    by.get('server-game/current/app.js').includes('gmwwGmChatDismiss')&&
+    by.get('tests/gm-online-chat-footer-after-undo-20261031.test.mjs').includes('GM footer places Chat directly after Restore');
+}
+function isOnlineP0Audio701Scope(changes){
+  const wanted=[
+    ['src/gmww-members-live.js','M'],
+    ['src/index.js','M'],
+    ['src/player-web-src/30-rooms-and-realtime.part','M'],
+    ['tests/online-audio-ready-realtime-20261031.test.mjs','A']
+  ];
+  if(!onlineP0ExactChanges(changes,wanted))return false;
+  const by=new Map(changes.map(c=>[c.path,c.after]));
+  return by.get('src/index.js').includes('this.broadcast({type:"announcement_ready",serverTime:Date.now()})')&&
+    by.get('src/player-web-src/30-rooms-and-realtime.part').includes("d.type==='announcement_ready'")&&
+    by.get('tests/online-audio-ready-realtime-20261031.test.mjs').includes('GM broadcasts only recording availability');
+}
+function isOnlineP0CiRoutingScope(changes){
+  const wanted=[
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['tests/online-p0-ci-routing-20261031.test.mjs','A'],
+    ['docs/releases/GMWW-ONLINE-P0-CI-20261031.md','A']
+  ];
+  if(!onlineP0ExactChanges(changes,wanted))return false;
+  const by=new Map(changes.map(c=>[c.path,c.after]));
+  return by.get('.github/scripts/ci-browser-scope.mjs').includes('function isOnlineP0CiRoutingScope(changes)')&&
+    by.get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'online-p0-ci-routing'")&&
+    by.get('tests/online-p0-ci-routing-20261031.test.mjs').includes('Online P0 CI routing rejects extra high-risk changes')&&
+    by.get('docs/releases/GMWW-ONLINE-P0-CI-20261031.md').includes('Rollback');
+}
+
 function classifyBrowserScope(changes){
+  if(isOnlineP0CiRoutingScope(changes))return 'online-p0-ci-routing';
+  if(isOnlineP0Player699Scope(changes))return 'online-p0-player-699';
+  if(isOnlineP0GmChat700Scope(changes))return 'online-p0-gm-chat-700';
+  if(isOnlineP0Audio701Scope(changes))return 'online-p0-audio-701';
+  if(isPlayerToastPostmergeScope(changes))return 'player-toast-postmerge';
+  if(isCiLitePreviewWorkflowScope(changes))return 'ci-lite-preview-workflow';
   if(isPlayerToastCiRoutingScope(changes))return 'player-toast-ci-routing';
   if(isPlayerToastNoticeScope(changes))return 'player-toast-notice';
   if(isRuntimeCatalogAutoSyncScope(changes))return 'runtime-catalog-auto-sync';
@@ -4117,6 +4238,21 @@ function detect(){
           return{mode:'pr652-postmerge-release',reason:'PR652 final exact three-file CI selector ordering; approved Online gameplay immutable'};
       }
     }catch{} // Strict fail-closed: unknown diff does not narrow main CI.
+  }
+  // PR702: a CI-only follow-up must not re-run 1300 unrelated legacy tests.
+  // Require immutable merged Player source and precisely four CI/docs paths.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{
+        const [status,path]=row.split('\t');
+        return {status,path,
+          before:status==='M'?git('show','HEAD^1:'+path):null,
+          after:['A','M'].includes(status)?fs.readFileSync(path,'utf8'):null};
+      });
+      if(isPlayerToastPostmergeScope(changes))
+        return{mode:'player-toast-postmerge',reason:'Exact CI-only postmerge #702; Player Web source immutable'};
+    }catch{} // Unknown diff runs full checks.
   }
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
