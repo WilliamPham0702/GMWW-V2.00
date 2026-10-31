@@ -48,7 +48,7 @@ jobs:
           cat > "$RUNNER_TEMP/gmww-pages-ci/wrangler.toml" <<'EOF'
           name = "gamemasoi-ci-only"
           pages_build_output_dir = "."
-          compatibility_date = "2026-10-30"
+          compatibility_date = "2026-09-30"
           EOF
           npx --no-install wrangler dev --local --ip 127.0.0.1 --port 8787 \
             --inspector-port 9230 > "$RUNNER_TEMP/gmww-online-worker.log" 2>&1 &
