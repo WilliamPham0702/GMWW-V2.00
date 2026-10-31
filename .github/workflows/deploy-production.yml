@@ -266,6 +266,27 @@ jobs:
               echo 'PR652 V3.280: same-SHA Worker, browser, integrity and OTA gates remain mandatory; no IPA/Oracle/data change.' >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
+          # PR652 V3.280: final selector ordering repair.
+          # The prior five-file CI release gate was tested but main-push selection
+          # returned early. Permit this exact three-file CI-only correction, never
+          # altered source, IPA, data or a new Runtime version.
+          if [ "$(node -p 'require("./package.json").version')" = '3.280.0' ] &&
+             git merge-base --is-ancestor fa48216517e692924b47a936767369d0d654523c HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc || {
+                echo "::error::PR652 Runtime source changed since owner acceptance"; exit 1;
+              }
+              grep -Fq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js || exit 1
+              grep -Fq 'soi-can-canonical' server-game/current/app.js || exit 1
+              SHOULD_DEPLOY=true
+              echo 'PR652 V3.280 final release gate: exact 3 CI-only files; Worker/browser/OTA same SHA mandatory.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
