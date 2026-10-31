@@ -41,7 +41,7 @@ jobs:
           if [ ! -s /tmp/gmww-production-change-scope.txt ]; then SHOULD_DEPLOY=true; fi
           while IFS= read -r FILE; do
             case "$FILE" in
-              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml|.github/workflows/github-release-backup-retention.yml|.github/scripts/release-backup-retention.mjs|tests/release-backup-retention.test.mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md|oracle-staging/*|tests/oracle-staging-bootstrap.test.mjs|.github/workflows/check-oracle-staging-bootstrap.yml|docs/architecture/oracle-staging-bootstrap-20261031.md|infra/pages/gamemasoi/*|tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md|tests/production-deploy-architecture-docs.test.mjs)
+              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml|.github/workflows/github-release-backup-retention.yml|.github/scripts/release-backup-retention.mjs|tests/release-backup-retention.test.mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md|oracle-staging/*|tests/oracle-staging-bootstrap.test.mjs|.github/workflows/check-oracle-staging-bootstrap.yml|docs/architecture/oracle-staging-bootstrap-20261031.md|README.md|tests/runtime-single-archive-release.test.mjs|docs/releases/GMWW-RUNTIME-CENTRAL-ARCHIVE-20261031.md|infra/pages/gamemasoi/*|tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md|tests/production-deploy-architecture-docs.test.mjs)
                 ;;
               *)
                 SHOULD_DEPLOY=true
@@ -2453,14 +2453,38 @@ jobs:
             echo "Unchanged Character V4/V5 lab checks skipped; active Runtime/OTA/SHA guards still PASS."
           fi
 
-      - name: Đính kèm gói thủ công vào bản phát hành đã xác minh
+      - name: Lưu Runtime gốc duy nhất vào kho GitHub Releases chung (không nhân đôi)
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          VERSION=$(node -p 'require("./package.json").version.replace(/\.0$/, "")')
-          TAG="gmww-v$VERSION"
+          set -euo pipefail
+          VERSION=$(node -p 'require("./package.json").version.replace(/\\.0$/, "")')
+          TAG="gmww-runtime-v$VERSION"
+          NAME="GMWW-Runtime-V$VERSION.gmwwupdate"
+          DIR="/tmp/gmww-manual-runtime"
+          MANIFEST="assets/updates/runtime/V$VERSION/manual-manifest.json"
+          test -s "$DIR/$NAME"
+          test -s "$DIR/$NAME.sha256"
+          test -s "$MANIFEST"
+          (cd "$DIR" && sha256sum --check "$NAME.sha256")
+          LOCAL_SHA=$(sha256sum "$DIR/$NAME" | awk '{print $1}')
+
+          # The GitHub-first publisher uses exactly the SAME immutable tag.
+          # Reuse the original asset if already published; never upload a copy
+          # under gmww-v*, never --clobber an existing Runtime or release.
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("assets/updates/latest.json"));fs.writeFileSync("/tmp/gmww-notes.md",m.releaseNotes.join("\n\n"))'
-            gh release create "$TAG" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION" --notes-file /tmp/gmww-notes.md
+            node -e 'const fs=require("fs");const m=JSON.parse(fs.readFileSync("assets/updates/latest.json"));fs.writeFileSync("/tmp/gmww-notes.md",m.releaseNotes.join("\\n\\n"))'
+            gh release create "$TAG" "$DIR/$NAME" "$DIR/$NAME.sha256" "$MANIFEST" \\
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \\
+              --title "GMWW RUNTIME V$VERSION — GITHUB" --notes-file /tmp/gmww-notes.md
           fi
-          gh release upload "$TAG" /tmp/gmww-manual-runtime/* --repo "$GITHUB_REPOSITORY" --clobber
+          # Verify the ORIGINAL GitHub asset's published SHA-256.
+          # Different bytes for an existing version block the job; do not mutate.
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.assets' | \\
+            jq -e --arg n "$NAME" --arg h "sha256:$LOCAL_SHA" '
+              ([.[] | select(.name == $n)] | length) == 1 and
+              any(.[]; .name == $n and .digest == $h) and
+              any(.[]; .name == ($n + ".sha256"))
+            ' >/dev/null
+          echo "Canonical Runtime V$VERSION: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG (ONE verified asset, no duplicate upload)." >> "$GITHUB_STEP_SUMMARY"
