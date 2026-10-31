@@ -100,6 +100,185 @@ jobs:
               SKIP_AUTO_RELEASE=true
               echo 'Oracle LOCAL STAGING only: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
             fi
+            # Oracle STAGING local contract probe is never a Runtime release.
+            ORACLE_PROBE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(infra/oracle-staging/(probe-local[.]mjs|probe-local[.]test[.]mjs)|[.]github/workflows/(check-oracle-staging-bootstrap|github-runtime-ota)[.]yml|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031[.]md)
+            RUNTIME_CI_RECOVERY_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(github-runtime-ota|check-oracle-staging-bootstrap)[.]yml)$' || true)
+            if [ -n "$CHANGED" ] && [ -z "$RUNTIME_CI_RECOVERY_UNRELATED" ] &&
+               printf '%s\n' "$CHANGED" | grep -Fxq '.github/workflows/github-runtime-ota.yml'; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Runtime CI-only YAML guard: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+            # Exact follow-up fix for Oracle release guards is CI-only too.
+            ORACLE_REPAIR_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(deploy-production|github-runtime-ota)[.]yml|[.]github/scripts/ci-browser-scope[.]mjs|tests/oracle-staging-bootstrap[.]test[.]mjs)$' || true)
+            if [ -n "$CHANGED" ] && [ -z "$ORACLE_REPAIR_UNRELATED" ] &&
+               printf '%s\n' "$CHANGED" | grep -Fxq 'tests/oracle-staging-bootstrap.test.mjs' &&
+               printf '%s\n' "$CHANGED" | grep -Fxq '.github/workflows/deploy-production.yml'; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Oracle release-guard repair only: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+            # Pages-only alias must never trigger a GMWW Runtime package.
+            PAGES_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(deploy-production|github-runtime-ota|deploy-gamemasoi-pages|check-player-web)[.]yml|[.]github/scripts/ci-browser-scope[.]mjs|infra/pages/gamemasoi/(_redirects|_worker[.]js|index[.]html)|tests/pages-online-chat-reconnect-e2e[.]mjs|[.]github/workflows/check-pages-online-chat-reconnect[.]yml|tests/gamemasoi-pages-link[.]test[.]mjs|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031[.]md)$' || true)
+            if [ -n "$CHANGED" ] && [ -z "$PAGES_UNRELATED" ]; then
+              SKIP_AUTO_RELEASE=true
+              echo "Pages-only alias: no Runtime release." >> "$GITHUB_STEP_SUMMARY"
+            fi
+            if [ "$CHANGED" = "$POLICY_ONLY" ] || [ "$CHANGED" = "$PR637_ONLY" ] ||
+               printf '%s\n' "$MESSAGE" | grep -Eq '(^Merge pull request #637([[:space:]]|$)|\(#637\)$)'; then
+              SKIP_AUTO_RELEASE=true
+              echo "Staged PR637/CI guard: NO automatic Runtime release." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          echo "skip_auto_release=$SKIP_AUTO_RELEASE" >> "$GITHUB_OUTPUT"
+          VERSION=$(node -p 'require("./package.json").version.replace(/[.]0$/, "")')
+          test -n "$VERSION"
+          echo "source_sha=$SOURCE_SHA" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "PR validation only: no release, Worker deployment, IPA or Production access." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git fetch --no-tags origin main --depth=1
+          test "$(git rev-parse refs/remotes/origin/main)" = "$SOURCE_SHA" || {
+            echo "::error::Source SHA is not the current main head"; exit 1;
+          }
+          RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$SOURCE_SHA&per_page=100")
+          PASS=$(printf '%s' "$RUNS" | jq -r --arg sha "$SOURCE_SHA" '
+            [.workflow_runs[] | select(.head_sha == $sha and
+              .head_branch == "main" and .event == "push" and
+              .name == "Check Player Web Worker")] |
+            sort_by(.run_number) | last | .conclusion // "missing"')
+          test "$PASS" = "success" || {
+            echo "::error::Required Check Player Web Worker push CI is not SUCCESS at same SHA: $PASS"; exit 1;
+          }
+          echo "Same-SHA main CI SUCCESS: $SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Test offline Runtime integrity and release safety
+        run: |
+          node --check .github/runtime-release/verify-package.mjs
+          node --test .github/runtime-release/verify-package.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+
+      - name: Restore canonical 63 role artworks exclusively from a pinned GitHub Release
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="$RUNNER_TEMP/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+          COUNT=0
+          if test -d "$SOURCE/assets/role-artwork-v251/original"; then
+            COUNT=$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')
+          fi
+          if ! test -s "$SOURCE/role-artwork-v251.js" || test "$COUNT" -ne 63; then
+            rm -rf "$SOURCE"
+            curl --fail --location --retry 4 --retry-delay 3 --output "$ARCHIVE" "$URL"
+            echo "$EXPECTED  $ARCHIVE" | sha256sum --check
+            unzip -q "$ARCHIVE" -d .
+          fi
+          test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+
+      - name: Build existing V3.274-compatible manual Runtime bytes without deployment
+        id: build
+        shell: bash
+        env:
+          VERSION: ${{ steps.identity.outputs.version }}
+        run: |
+          set -euo pipefail
+          node .github/scripts/prepare-update-channel.mjs runtime
+          ROOT="assets/updates/runtime/V$VERSION"
+          test -s "$ROOT/manual-manifest.json"
+          mkdir -p "$RUNNER_TEMP/gmww-manual-runtime"
+          OUT="$RUNNER_TEMP/gmww-manual-runtime/GMWW-Runtime-V$VERSION.gmwwupdate"
+          node .github/scripts/build-manual-runtime.mjs "$ROOT/manual-manifest.json" "$OUT"
+          node .github/runtime-release/verify-package.mjs "$ROOT/manual-manifest.json" "$OUT"
+          (cd "$RUNNER_TEMP/gmww-manual-runtime" && sha256sum --check "GMWW-Runtime-V$VERSION.gmwwupdate.sha256")
+          cp "$ROOT/manual-manifest.json" "$RUNNER_TEMP/gmww-manual-runtime/manual-manifest.json"
+          node -e '
+            const fs=require("fs"),m=JSON.parse(fs.readFileSync(process.argv[1]));
+            if(m.releaseType!=="runtime")throw Error("Not a Runtime release");
+            const newline=String.fromCharCode(10);
+            fs.writeFileSync(process.argv[2],
+              ["GMWW Runtime OTA V"+m.runtimeVersion+" — GitHub-only manual update",
+                ...(m.releaseNotes||[]).slice(0,1),
+                "Bản .gmwwupdate dành cho nút THỦ CÔNG trong IPA hiện tại. Không deploy Cloudflare, không đổi IPA hay dữ liệu. Mọi file và toàn gói đều có SHA-256."
+              ].join(newline+newline)+newline);
+          ' "$ROOT/manual-manifest.json" "$RUNNER_TEMP/gmww-manual-runtime/release-notes.txt"
+          echo "Offline native package verified: Runtime V$VERSION" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save verified manual update as a GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMWW-Runtime-V${{ steps.identity.outputs.version }}-GitHub-verified
+          path: ${{ runner.temp }}/gmww-manual-runtime/
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    name: Publish verified .gmwwupdate to GitHub Releases only
+    needs: package
+    if: github.event_name != 'pull_request' && needs.package.result == 'success' && needs.package.outputs.skip_auto_release != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download the exact verified package from this workflow
+        uses: actions/download-artifact@v4
+        with:
+          name: GMWW-Runtime-V${{ needs.package.outputs.version }}-GitHub-verified
+          path: ${{ runner.temp }}/gmww-runtime-publish
+
+      - name: Verify whole-package checksum again and publish immutable version tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ needs.package.outputs.source_sha }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/gmww-runtime-publish"
+          NAME="GMWW-Runtime-V$VERSION.gmwwupdate"
+          sha256sum --check "$NAME.sha256"
+          test -s manual-manifest.json
+          test -s release-notes.txt
+          TAG="gmww-runtime-v$VERSION"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            mkdir -p "$RUNNER_TEMP/existing-release"
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --pattern "$NAME.sha256" --dir "$RUNNER_TEMP/existing-release"
+            cmp "$NAME.sha256" "$RUNNER_TEMP/existing-release/$NAME.sha256" || {
+              echo "::error::Version tag exists with DIFFERENT bytes. Version bump required."; exit 1;
+            }
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq "$NAME" || {
+              echo "::error::Existing GitHub Release is missing verified .gmwwupdate"; exit 1;
+            }
+            echo "Existing GitHub Runtime V$VERSION has identical SHA-256. No overwrite." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          gh release create "$TAG" "$NAME" "$NAME.sha256" "manual-manifest.json" \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
+            --title "GMWW RUNTIME V$VERSION — GITHUB" \
+            --notes-file release-notes.txt
+          echo "Published GitHub Runtime V$VERSION at $SOURCE_SHA; no Cloudflare deployment." >> "$GITHUB_STEP_SUMMARY"
+ || true)
+            if [ -n "$CHANGED" ] && [ -z "$ORACLE_PROBE_UNRELATED" ] &&
+               printf '%s\n' "$CHANGED" | grep -Fxq 'infra/oracle-staging/probe-local.mjs' &&
+               printf '%s\n' "$CHANGED" | grep -Fxq 'infra/oracle-staging/probe-local.test.mjs'; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Oracle STAGING local probe only: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
             # CI-only Runtime workflow and Oracle gate maintenance never auto-publish a duplicate Runtime.
             RUNTIME_CI_RECOVERY_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(github-runtime-ota|check-oracle-staging-bootstrap)[.]yml)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$RUNTIME_CI_RECOVERY_UNRELATED" ] &&
