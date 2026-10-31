@@ -61,6 +61,7 @@ export function isRuntimeDriftScope(changes){
     ['.github/scripts/runtime-server-drift-scope.mjs','A'],
     ['.github/scripts/ci-browser-scope.mjs','M'],
     ['.github/workflows/check-player-web.yml','M'],
+    ['.github/workflows/check-runtime-server-version-drift.yml','A'],
     ['tests/runtime-server-drift-scope.test.mjs','A'],
     ['docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md','A']
   ]);
@@ -80,6 +81,7 @@ export function isRuntimeDriftScope(changes){
   if(!byPath.get('tests/runtime-server-version-drift.test.mjs')?.after?.includes("'runtime_ahead'"))return false;
   if(!byPath.get('.github/scripts/ci-browser-scope.mjs')?.after?.includes("if(isRuntimeDriftScope(changes))return 'runtime-server-drift'"))return false;
   if(!byPath.get('.github/workflows/check-player-web.yml')?.after?.includes("steps.scope.outputs.mode == 'runtime-server-drift'"))return false;
+  if(!byPath.get('.github/workflows/check-runtime-server-version-drift.yml')?.after?.includes('node --test tests/runtime-server-version-drift.test.mjs'))return false;
   if(!byPath.get('tests/runtime-server-drift-scope.test.mjs')?.after?.includes("fail closed"))return false;
   if(!byPath.get('docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md')?.after?.includes('V3.283'))return false;
   const modules=['00-core-and-library.part','10-library-and-settings.part',
