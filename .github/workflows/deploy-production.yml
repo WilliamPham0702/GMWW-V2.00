@@ -287,6 +287,14 @@ jobs:
               echo 'PR652 V3.280 final release gate: exact 3 CI-only files; Worker/browser/OTA same SHA mandatory.' >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
+          # BEGIN GMWW_PAGES_ALIAS_NO_PRODUCTION
+          # A standalone pages.dev redirect must never publish the GMWW Worker/Runtime.
+          # Unknown or mixed file changes stay on the existing strict release path.
+          if git diff --name-only HEAD^1 HEAD | node .github/scripts/pages-redirect-scope.mjs; then
+            SHOULD_DEPLOY=false
+            echo 'Pages-only alias changes: skip game Production and Runtime.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # END GMWW_PAGES_ALIAS_NO_PRODUCTION
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
             echo "CHỈ CI: BỎ QUA DEPLOY PRODUCTION" >> "$GITHUB_STEP_SUMMARY"
