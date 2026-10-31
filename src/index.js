@@ -3390,7 +3390,7 @@ export class RoomDurableObject extends DurableObject {
     if(body?.voice&&!voice)return j({ok:false,error:"CHAT_INVALID_VOICE"},400);
     if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!content||
       (!voice&&String(body?.text||"").length>400)||
-      (publicDay?(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning"):(!id||!players["member:"+id])))
+      (publicDay?(String(meta.phase)!=="running"||!["morning","day"].includes(String(meta.cyclePhase))):(!id||!players["member:"+id])))
       return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
     const channel=publicDay?"day":"gm:"+id;
     const key="onlineChat:"+chatStorageScope(meta)+":"+channel,now=Date.now(),
