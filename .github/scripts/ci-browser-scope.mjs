@@ -80,6 +80,24 @@ function isOracleBootstrapScope(changes){
     changes.every(c=>oracleBootstrapPaths.has(c.path)&&['A','M'].includes(c.status));
 }
 
+// Exact 9-file Oracle local staging recovery. Any gameplay/code/unknown path uses full CI.
+const oracleLocalPaths=new Map([
+  ['infra/oracle-staging/README.md','A'],
+  ['infra/oracle-staging/start-local.sh','A'],
+  ['infra/oracle-staging/bootstrap.test.mjs','A'],
+  ['docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031.md','A'],
+  ['.github/workflows/deploy-production.yml','M'],
+  ['.github/workflows/github-runtime-ota.yml','M'],
+  ['.github/workflows/check-oracle-staging-bootstrap.yml','M'],
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M']
+]);
+function isOracleLocalStagingScope(changes){
+  return Array.isArray(changes)&&changes.length===oracleLocalPaths.size&&
+    new Set(changes.map(c=>c.path)).size===oracleLocalPaths.size&&
+    changes.every(c=>oracleLocalPaths.get(c.path)===c.status);
+}
+
 // Recovery scope: ONLY the four reviewed Oracle YAML guard/selector files.
 const oracleReleaseGateRepairPaths=new Set([
   '.github/workflows/deploy-production.yml',
@@ -3223,6 +3241,7 @@ function isPlayerPostgame656Scope(changes){
 function classifyBrowserScope(changes){
   if(isPlayerPostgame656Scope(changes))return 'player-postgame-656';
   if(isDemoOnlineTransport672Scope(changes))return 'demo-online-transport-672';
+  if(isOracleLocalStagingScope(changes))return 'oracle-local-staging';
   if(isOracleReleaseGateRepairScope(changes))return 'oracle-staging-bootstrap';
   if(isOracleBootstrapScope(changes))return 'oracle-staging-bootstrap';
   if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes)||isPagesAliasProxyScope(changes))return 'pages-alias';
@@ -3551,6 +3570,7 @@ function detect(){
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
         const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
         const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
+        if(isOracleLocalStagingScope(changes))return{mode:'oracle-local-staging',reason:'Only 9 Oracle local STAGING files; no Worker/gameplay/IPA or deployment'};
         if(isOracleReleaseGateRepairScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle release YAML and guard repair; CI-only, no gameplay'};
         if(isOracleBootstrapScope(changes))return{mode:'oracle-staging-bootstrap',reason:'Exact Oracle STAGING bootstrap; no Production changes'};
         if(isPagesAliasScope(changes)||isPagesAliasRetryScope(changes)||isPagesAliasProxyScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect or safe deployment retry; no game source changes'};
