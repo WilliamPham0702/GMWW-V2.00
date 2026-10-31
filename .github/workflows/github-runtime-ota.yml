@@ -78,6 +78,19 @@ jobs:
               '.github/workflows/prepare-runtime-v3202-candidate.yml' \
               'server-game/current/GMWW.html' \
               'tests/gm-player-web-share-link.test.mjs' | sort)
+            # Pure release-storage consolidation: never build or publish an
+            # unchanged game version just because we centralized its download URL.
+            ARCHIVE_ONLY=$(printf '%s\\n' "$CHANGED" | sort)
+            ARCHIVE_EXPECTED=$(printf '%s\\n' \\
+              '.github/workflows/deploy-production.yml' \\
+              '.github/workflows/github-runtime-ota.yml' \\
+              'README.md' \\
+              'docs/releases/GMWW-RUNTIME-CENTRAL-ARCHIVE-20261031.md' \\
+              'tests/runtime-single-archive-release.test.mjs' | sort)
+            if [ "$ARCHIVE_ONLY" = "$ARCHIVE_EXPECTED" ]; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Storage-only consolidation: NO new Runtime version, package or Production deployment.' >> "$GITHUB_STEP_SUMMARY"
+            fi
             # Infrastructure-only backup retention must never publish a Runtime.
             STORAGE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/github-release-backup-retention[.]yml|[.]github/scripts/release-backup-retention[.]mjs|tests/release-backup-retention[.]test[.]mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031[.]md|[.]github/workflows/deploy-production[.]yml|[.]github/workflows/github-runtime-ota[.]yml)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$STORAGE_UNRELATED" ]; then
