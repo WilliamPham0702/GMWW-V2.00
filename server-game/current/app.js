@@ -1536,7 +1536,8 @@ async function renderAudio(){
   const category=kind==='cards'?'Vai trò':kind==='artifacts'?'Artifact':kind==='actions'?'Hành động':'Hệ thống';
   const missingHtml='<div class="gmww-missing-role-audio"><b>Đối chiếu Audio '+category+': '+missing.length+' chưa có nguồn, '+remote.length+' URL chưa thử phát</b>'+
     (missing.length?'<details><summary>File thực còn thiếu ('+missing.length+')</summary><p>'+
-      missing.map(item=>esc(item.name)+' ('+esc(item.id)+')').join(' · ')+'</p></details>':'')+
+      missing.map(item=>esc(item.name)+' ('+esc(item.id)+')').join(' · ')+'</p></details>'+
+      '<button type="button" id="audioMissingReport" title="Sao chép đầy đủ tên và ID audio thiếu nguồn">📋 Sao chép danh sách thiếu ('+missing.length+')</button>':'')+
     (remote.length?'<details><summary>URL chưa xác minh ('+remote.length+')</summary><p>'+
       remote.map(item=>esc(item.name)+' ('+esc(item.id)+')').join(' · ')+'</p></details>':'')+
     (!missing.length&&!remote.length?'<p>Tìm thấy file cục bộ hoặc bản kèm ứng dụng cho mọi mục.</p>':'')+
@@ -1560,17 +1561,25 @@ async function renderAudio(){
         return '<button type="button" data-system-sound-slot="'+esc(id)+'">'+
           esc(label)+' <small>'+(linked?'✓ CÓ FILE':online?'! URL CHƯA THỬ':'＋ CHƯA GÁN')+'</small></button>';
       }).join('')+'</div></section>':'';
-  $('#audioGrid').innerHTML=missingHtml+systemShortcuts+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
+  const trashCount=(state.audioTrash||[]).filter(x=>x.kind===kind).length;
+  const trashButton=trashCount?'<button type="button" class="audio-add-row" id="audioTrashRestore" style="font-size:13px" aria-label="Khôi phục âm thanh đã xoá">♻ Thùng rác Audio ('+trashCount+')</button>':'';
+  $('#audioGrid').innerHTML=missingHtml+systemShortcuts+trashButton+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
     resolved.map(({a,status,nameStatus})=>{
-      const file=String(a.fileName||'').trim(),verified=status==='local'||status==='bundled';
-      const evidence=verified?'CÓ FILE THỰC':status==='remote'?'URL CHƯA KIỂM TRA':'THIẾU FILE';
-      const meta=(file?file+' • ':'')+evidence;
-      const nameLabel=nameStatus==='local'?'CÓ FILE TÊN':nameStatus==='remote'?'URL TÊN CHƯA THỬ':'CHƯA GẮN FILE TÊN';
-      const nameBox=kind==='cards'?'<small class="gmww-audio-name-status">Tên: '+esc(String(a.nameFileName||''))+(a.nameFileName?' • ':'')+nameLabel+'</small>':'';
+      // Compact rows: metadata is still audited above, never repeated under the name.
       const namePlay=kind==='cards'?'<button type="button" data-audio-name-play title="Play Tên" aria-label="Play Tên" style="width:43px;flex:0 0 43px;font-size:10px;font-weight:750;padding:0 2px">▶ Tên</button>':'';
       const fullLabel=kind==='cards'?'▶ Full':'▶';
-      return '<article class="audio-row'+(kind==='cards'?' audio-role-row':'')+'" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="Play Full" aria-label="Play Full"'+(kind==='cards'?' style="width:43px;flex:0 0 43px;font-size:10px;font-weight:750;padding:0 2px"':'')+'>'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
+      const fullStatus=status==='local'||status==='bundled'?'Có file Full':status==='remote'?'URL Full chưa kiểm tra':'Chưa gắn Full';
+      const nameStatusLabel=nameStatus==='local'?'Có file Tên':nameStatus==='remote'?'URL Tên chưa kiểm tra':'Chưa gắn Tên';
+      return '<article class="audio-row'+(kind==='cards'?' audio-role-row':'')+'" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b></div><div class="audio-row-actions">'+namePlay+'<button type="button" data-audio-play title="'+esc(fullStatus)+(kind==='cards'?' • '+esc(nameStatusLabel):'')+'" aria-label="Play Full"'+(kind==='cards'?' style="width:43px;flex:0 0 43px;font-size:10px;font-weight:750;padding:0 2px"':'')+'>'+fullLabel+'</button><button type="button" class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button type="button" class="delete-audio" data-audio-delete title="Chuyển vào thùng rác">🗑</button></div></article>';
     }).join('');
+  $('#audioTrashRestore')?.addEventListener('click',()=>gmwwOpenAudioTrash(kind));
+  $('#audioMissingReport')?.addEventListener('click',()=>{
+    const lines=missing.map(x=>x.name+' ('+x.id+')');
+    const report='GMWW — Âm thanh '+category+' chưa có nguồn ('+lines.length+')\n'+lines.join('\n');
+    if(navigator.clipboard?.writeText){
+      void navigator.clipboard.writeText(report).then(()=>alert('Đã sao chép '+lines.length+' mục thiếu nguồn.')).catch(()=>prompt('Sao chép danh sách Audio thiếu:',report));
+    }else prompt('Sao chép danh sách Audio thiếu:',report);
+  });
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
   $$('[data-audio-id]').forEach(row=>{
     const a=list.find(x=>String(x.id)===String(row.dataset.audioId));
@@ -1673,17 +1682,56 @@ function replaceAudioItem(a,category=audioKind,slot='full'){
   };
   i.click()
 }
+// Deleted audio rows are recoverable. Never delete IndexedDB binary bytes.
+function gmwwOpenAudioTrash(kind=audioKind){
+  const deleted=(state.audioTrash||[]).filter(x=>x.kind===kind);
+  if(!deleted.length){alert('Không có Audio trong Thùng rác.');return}
+  const overlay=document.createElement('div');overlay.className='gmww-audio-cut-backdrop';
+  overlay.innerHTML='<section class="gmww-audio-cut-dialog" role="dialog" aria-modal="true" aria-label="Thùng rác Audio">'+
+    '<h3>♻ THÙNG RÁC AUDIO</h3><p>Khôi phục từng mục. File Full và file Tên vẫn được giữ nguyên trên iPhone.</p>'+
+    deleted.map((entry,i)=>'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0">'+
+      '<b style="overflow-wrap:anywhere">'+esc(entry.item?.name||entry.item?.id||'Audio')+'</b>'+
+      '<button type="button" data-trash-restore="'+i+'" style="min-height:38px;flex-shrink:0;border-radius:9px;padding:5px 10px;background:#17475b;color:#e6fbff;border:1px solid #70cad1">Khôi phục</button></div>').join('')+
+    '<div class="gmww-audio-cut-actions"><button type="button" data-close>Đóng</button></div></section>';
+  document.body.appendChild(overlay);
+  const close=()=>overlay.remove();
+  overlay.querySelector('[data-close]').onclick=close;
+  overlay.addEventListener('click',e=>{if(e.target===overlay)close()});
+  overlay.querySelectorAll('[data-trash-restore]').forEach(button=>button.onclick=()=>{
+    const entry=deleted[Number(button.dataset.trashRestore)];
+    if(!entry||!(state.audioTrash||[]).includes(entry))return;
+    const item=entry.item;
+    if(!item||!item.id){alert('Dữ liệu Thùng rác không hợp lệ.');return}
+    const list=state.audio[kind]||(state.audio[kind]=[]);
+    const current=list.find(x=>String(x.id)===String(item.id));
+    // Never overwrite a newer linked recording while restoring an old row.
+    if(current&&(current.url||current.nameUrl||current.fileName)){
+      alert('Mục "'+item.name+'" đã có nguồn mới. Giữ nguyên để tránh ghi đè Audio.');return;
+    }
+    if(current)Object.assign(current,item);
+    else list.unshift(clone(item));
+    state.audioTrash.splice(state.audioTrash.indexOf(entry),1);
+    saveState();close();void renderAudio();
+  });
+}
 async function deleteAudioItem(a){
-  if(!a||!confirm('Xoá Âm Thanh "'+(a.name||'')+'"?'))return;
-  const kind=audioKind,list=state.audio[kind]||[],i=list.findIndex(x=>String(x.id)===String(a.id));
-  if(i>=0)list.splice(i,1);
-  await dbDelete(audioBlobKey(kind,a.id)).catch(()=>{});
+  if(!a)return;
+  const kind=audioKind,list=state.audio[kind]||[];
+  const index=list.findIndex(x=>String(x.id)===String(a.id));
+  if(index<0)return;
+  const message='Chuyển Audio "'+(a.name||'')+'" vào Thùng rác?\n\n'+
+    'Dòng sẽ ẩn khỏi thư viện, nhưng file Tên/Full vẫn được giữ và có thể khôi phục.\n'+
+    'Chọn HỦY nếu chạm nhầm.';
+  if(!confirm(message))return;
+  // Re-check the row after confirmation: never remove another row after tab changes.
+  if(kind!==audioKind||String(list[index]?.id)!==String(a.id))return;
+  state.audioTrash=Array.isArray(state.audioTrash)?state.audioTrash:[];
+  state.audioTrash.unshift({kind,item:clone(list[index]),deletedAt:Date.now()});
+  list.splice(index,1);
+  // Invalidate playable object URLs, NOT the stored binary data.
   battleInvalidateAudioCache(kind,a.id);
-  if(kind==='cards'){
-    await dbDelete(audioBlobKey('cards-name',a.id)).catch(()=>{});
-    battleInvalidateAudioCache('cards-name',a.id);
-  }
-  saveState();renderAudio();
+  if(kind==='cards')battleInvalidateAudioCache('cards-name',a.id);
+  saveState();void renderAudio();
 }
 
 function bindCore(){
