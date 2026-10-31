@@ -28,10 +28,20 @@ function fixture(){
    before:ids?restoreRuntimeDrift(after,ids):null,after};
  });
 }
-test('PR659 exact audited update-only scope passes, bundle must match',()=>{
+test('V3.284 integrates Audio and drift: the historical PR659-only CI exemption must fail closed',()=>{
  const changes=fixture();
  assert.equal(changes.filter(x=>!x.before&&indices[x.path]).length,0);
- assert.equal(isRuntimeDriftScope(changes),true);
+ // Only the original isolated PR659 may select its narrow CI fast path.
+ // Combined V3.284 must be checked by the FULL suite instead.
+ assert.equal(isRuntimeDriftScope(changes),false);
+ const app=fs.readFileSync('server-game/current/app.js','utf8');
+ const modules=['00-core-and-library.part','10-library-and-settings.part',
+  '20-members-and-roster.part','30-village-and-setup.part',
+  '40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
+ assert.equal(app,modules.map(file=>fs.readFileSync('server-game/src/'+file,'utf8')).join(''));
+ assert.match(app,/function gmwwUpdateAlignment\\(/);
+ assert.match(app,/KHÔNG HẠ CẤP/);
+ assert.match(app,/gmwwOpenRoleAudioReplace/);
 });
 test('PR659 fail closed on changed runtime, deleted file or unrelated source',()=>{
  const changes=fixture();
