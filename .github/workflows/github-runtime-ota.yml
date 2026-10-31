@@ -138,7 +138,7 @@ jobs:
               echo 'Oracle external STAGING preflight only: NO Runtime release.' >> "$GITHUB_STEP_SUMMARY"
             fi
             # Oracle STAGING SQLite adapter and tests are not a Runtime payload.
-            ORACLE_SQLITE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(oracle-staging/sqlite-fixture-adapter([.]test)?[.]mjs|[.]github/workflows/(check-oracle-staging-bootstrap|github-runtime-ota)[.]yml|docs/architecture/oracle-staging-bootstrap-20261031[.]md)$' || true)
+            ORACLE_SQLITE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(oracle-staging/sqlite-fixture-adapter([.]test)?[.]mjs|[.]github/workflows/(check-oracle-staging-bootstrap|github-runtime-ota|check-pr-preview-github)[.]yml|docs/architecture/oracle-staging-bootstrap-20261031[.]md)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$ORACLE_SQLITE_UNRELATED" ] &&
                printf '%s\n' "$CHANGED" | grep -Fxq 'oracle-staging/sqlite-fixture-adapter.mjs' &&
                printf '%s\n' "$CHANGED" | grep -Fxq 'oracle-staging/sqlite-fixture-adapter.test.mjs'; then
