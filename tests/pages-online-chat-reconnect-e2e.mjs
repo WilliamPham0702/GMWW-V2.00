@@ -2,6 +2,7 @@
 // Never point this test at Production, even accidentally.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import WebSocket from 'ws';
 
 const publicUrl=process.env.GMWW_TEST_URL;
 const upstreamUrl=process.env.GMWW_WORKER_URL;
@@ -38,8 +39,8 @@ function openSocket(code,participantId){
   url.protocol='ws:';url.pathname='/ws/'+code;url.searchParams.set('participantId',participantId);
   const socket=new WebSocket(url.toString());
   const messages=[];let closed=false;
-  socket.addEventListener('message',e=>{try{messages.push(JSON.parse(String(e.data)))}catch{}});
-  socket.addEventListener('close',()=>{closed=true});
+  socket.on('message',data=>{try{messages.push(JSON.parse(String(data)))}catch{}});
+  socket.on('close',()=>{closed=true});
   sockets.push(socket);
   return {socket,messages,has:(type)=>messages.some(m=>m.type===type),closed:()=>closed};
 }
@@ -96,7 +97,7 @@ try{
   assert.equal(readB.messages.find(m=>m.text===first).senderId,alice.loginId);
 
   // Simulate a transport disconnect and a brand-new WebSocket without leaving room.
-  wsA.socket.close(4001,'ci-reconnect');
+  wsA.socket.terminate();
   await eventually(wsA.closed,'transport close');
   const connectedAgain=openSocket(code,alice.participantId);
   await waitOpen(connectedAgain);
