@@ -3066,7 +3066,7 @@ function isRoleNameAudio3283Scope(changes){
   if(!Array.isArray(changes)||changes.length!==pins.size+special.size||
     new Set(changes.map(c=>c?.path)).size!==changes.length)return false;
   const by=new Map(changes.map(c=>[c.path,c]));
-  const gitBlob=s=>createHash('sha1').update('blob '+Buffer.byteLength(s)+'\\0'+s,'utf8').digest('hex');
+  const gitBlob=s=>createHash('sha1').update('blob '+Buffer.byteLength(s)+'\0'+s,'utf8').digest('hex');
   for(const [path,{status,sha}] of pins){
     const c=by.get(path);
     if(!c||c.status!==status||typeof c.after!=='string'||
