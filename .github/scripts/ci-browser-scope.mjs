@@ -3145,7 +3145,83 @@ function isDemoOnlineTransport672Scope(changes){
     test.includes('DEMO chooses online room transport')&&
     notes.includes('DEMO dùng kết nối Online')&&notes.includes('Rollback');
 }
+// PR #656: fail-closed postgame scope, exact reviewed blob content + three CI files.
+const playerPostgame656Blobs=new Map([
+  [
+    "docs/RELEASE_NOTES_PLAYER_POSTGAME_V1_REMOVAL_20261031.md",
+    "63d8b42f72f69453e1d866c83b61a3beb910b2d9"
+  ],
+  [
+    "src/gmww-members-live.js",
+    "9840bed35aeb929ddc06cceb6fb157f5f738eb72"
+  ],
+  [
+    "src/gmww-members-page.js",
+    "2f5d114e03818caa89d922e7a9c773235a0e5f55"
+  ],
+  [
+    "src/gmww-player-private-card-patch.js",
+    "cf0700f1a315da3aa4bdaff0904c05621ea69ed6"
+  ],
+  [
+    "src/player-page-src/10-body-and-roles.part",
+    "409bdaa1f6950b414856590e7ba3e69202dd1137"
+  ],
+  [
+    "src/player-web-src/20-village-and-profile.part",
+    "15741a5e67d76c94874edc17bcb10fcb61b640b6"
+  ],
+  [
+    "src/player-web-src/30-rooms-and-realtime.part",
+    "2bcc2a61c5d708ecdb261e58364353ef425e0a48"
+  ],
+  [
+    "src/player-web-src/50-privacy-and-runtime.part",
+    "efa10c903e2c9600b03781f703a3de585b3b7f97"
+  ],
+  [
+    "tests/gm-call-player-auto-room-v354.test.mjs",
+    "e85048af22019784879d64edacfa6c29da8107d8"
+  ],
+  [
+    "tests/gmww-player-page-source-asset-modules.test.mjs",
+    "220eec198d78b066ad0fb9d8b68dbcf0f35ef280"
+  ],
+  [
+    "tests/player-postgame-v1-room-retirement-20261031.test.mjs",
+    "01f2921623b61502f82457aedc3a50db320618f0"
+  ],
+  [
+    "tests/player-web-first-paint-cleanup.test.mjs",
+    "6d7b71496db4c9ab7115ba2d1bfb2ada3cd31ca5"
+  ],
+  [
+    "tests/player-web-receipt-patch-hotfix.test.mjs",
+    "84ad8f029f2857bab9191a2938f066aaf457312c"
+  ]
+]);
+function isPlayerPostgame656Scope(changes){
+  if(!Array.isArray(changes)||changes.length!==playerPostgame656Blobs.size+3)return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  if(by.size!==changes.length)return false;
+  for(const [path,sha] of playerPostgame656Blobs){
+    const c=by.get(path);
+    const status=path.startsWith('docs/')||path==='tests/player-postgame-v1-room-retirement-20261031.test.mjs'?'A':'M';
+    if(!c||c.status!==status||typeof c.after!=='string')return false;
+    const size=Buffer.byteLength(c.after,'utf8');
+    if(createHash('sha1').update('blob '+size+String.fromCharCode(0)).update(c.after).digest('hex')!==sha)return false;
+  }
+  const ci=by.get('.github/scripts/ci-browser-scope.mjs');
+  const wf=by.get('.github/workflows/check-player-web.yml');
+  const tests=by.get('tests/ci-browser-scope.test.mjs');
+  if(![ci,wf,tests].every(c=>c?.status==='M'&&typeof c.after==='string'))return false;
+  return ci.after.includes('function isPlayerPostgame656Scope(changes)')&&
+    wf.after.includes("steps.scope.outputs.mode == 'player-postgame-656'")&&
+    tests.after.includes('PR656 postgame: exact verified files');
+}
+
 function classifyBrowserScope(changes){
+  if(isPlayerPostgame656Scope(changes))return 'player-postgame-656';
   if(isDemoOnlineTransport672Scope(changes))return 'demo-online-transport-672';
   if(isOracleReleaseGateRepairScope(changes))return 'oracle-staging-bootstrap';
   if(isOracleBootstrapScope(changes))return 'oracle-staging-bootstrap';

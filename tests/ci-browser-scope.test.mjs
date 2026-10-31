@@ -929,3 +929,68 @@ test('PR672 exact DEMO Online transport uses focused CI and rejects any extra ga
   const gmUnsafe=changes.map(c=>c.path==='server-game/current/app.js'?{...c,after:c.after+'\\n// other GM edit'}:c);
   assert.equal(classifyBrowserScope(gmUnsafe),'full');
 });
+
+test('PR656 postgame: exact verified files select focused required CI; unrelated edits fail closed',()=>{
+ const paths=[
+ [
+  "docs/RELEASE_NOTES_PLAYER_POSTGAME_V1_REMOVAL_20261031.md",
+  "A"
+ ],
+ [
+  "src/gmww-members-live.js",
+  "M"
+ ],
+ [
+  "src/gmww-members-page.js",
+  "M"
+ ],
+ [
+  "src/gmww-player-private-card-patch.js",
+  "M"
+ ],
+ [
+  "src/player-page-src/10-body-and-roles.part",
+  "M"
+ ],
+ [
+  "src/player-web-src/20-village-and-profile.part",
+  "M"
+ ],
+ [
+  "src/player-web-src/30-rooms-and-realtime.part",
+  "M"
+ ],
+ [
+  "src/player-web-src/50-privacy-and-runtime.part",
+  "M"
+ ],
+ [
+  "tests/gm-call-player-auto-room-v354.test.mjs",
+  "M"
+ ],
+ [
+  "tests/gmww-player-page-source-asset-modules.test.mjs",
+  "M"
+ ],
+ [
+  "tests/player-postgame-v1-room-retirement-20261031.test.mjs",
+  "A"
+ ],
+ [
+  "tests/player-web-first-paint-cleanup.test.mjs",
+  "M"
+ ],
+ [
+  "tests/player-web-receipt-patch-hotfix.test.mjs",
+  "M"
+ ]
+];
+ paths.push(['.github/scripts/ci-browser-scope.mjs','M'],['.github/workflows/check-player-web.yml','M'],['tests/ci-browser-scope.test.mjs','M']);
+ const changes=paths.map(([path,status])=>({path,status,before:status==='M'?'previous':null,after:readFileSync(path,'utf8')}));
+ assert.equal(classifyBrowserScope(changes),'player-postgame-656');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing source fails closed');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',before:'x',after:'y'}]),'full','Worker change must run full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full','duplicate must fail closed');
+ const unsafe=changes.map(c=>c.path==='src/player-web-src/30-rooms-and-realtime.part'?{...c,after:'UNREVIEWED\n'+c.after}:c);
+ assert.equal(classifyBrowserScope(unsafe),'full','unreviewed realtime change must run full');
+});
