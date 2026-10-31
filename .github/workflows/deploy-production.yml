@@ -288,7 +288,7 @@ jobs:
             fi
           fi
           # Isolated Oracle local workerd bootstrap must not auto-deploy Production.
-          ORACLE_LOCAL_UNRELATED=$(grep -Ev '^(infra/oracle-staging/[^/]+|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031[.]md|[.]github/workflows/(deploy-production|github-runtime-ota|check-oracle-staging-bootstrap)[.]yml)$' /tmp/gmww-production-change-scope.txt || true)
+          ORACLE_LOCAL_UNRELATED=$(grep -Ev '^(infra/oracle-staging/[^/]+|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031[.]md|[.]github/workflows/(deploy-production|github-runtime-ota|check-oracle-staging-bootstrap|check-player-web)[.]yml|[.]github/scripts/ci-browser-scope[.]mjs)$' /tmp/gmww-production-change-scope.txt || true)
           if [ -s /tmp/gmww-production-change-scope.txt ] && [ -z "$ORACLE_LOCAL_UNRELATED" ] &&
              grep -Fxq 'infra/oracle-staging/start-local.sh' /tmp/gmww-production-change-scope.txt &&
              grep -Fxq 'infra/oracle-staging/bootstrap.test.mjs' /tmp/gmww-production-change-scope.txt; then

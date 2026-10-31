@@ -93,7 +93,7 @@ jobs:
               echo 'Oracle STAGING-only bootstrap: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
             fi
             # Isolated Oracle LOCAL STAGING bootstrap must not auto-release Runtime.
-            ORACLE_LOCAL_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(infra/oracle-staging/[^/]+|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031[.]md|[.]github/workflows/(deploy-production|github-runtime-ota|check-oracle-staging-bootstrap)[.]yml)$' || true)
+            ORACLE_LOCAL_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(infra/oracle-staging/[^/]+|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031[.]md|[.]github/workflows/(deploy-production|github-runtime-ota|check-oracle-staging-bootstrap|check-player-web)[.]yml|[.]github/scripts/ci-browser-scope[.]mjs)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$ORACLE_LOCAL_UNRELATED" ] &&
                printf '%s\n' "$CHANGED" | grep -Fxq 'infra/oracle-staging/start-local.sh' &&
                printf '%s\n' "$CHANGED" | grep -Fxq 'infra/oracle-staging/bootstrap.test.mjs'; then

@@ -64,3 +64,21 @@ test('Oracle LOCAL STAGING stays out of Production and OTA release workflows',()
   }
   assert.match(ci,/node --test infra\/oracle-staging\/bootstrap[.]test[.]mjs/);
 });
+
+test('Oracle local bootstrap runs isolated CI only for the exact 9 paths',async()=>{
+  const {classifyBrowserScope}=await import('../../.github/scripts/ci-browser-scope.mjs');
+  const files=[
+    ['infra/oracle-staging/README.md','A'],
+    ['infra/oracle-staging/start-local.sh','A'],
+    ['infra/oracle-staging/bootstrap.test.mjs','A'],
+    ['docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031.md','A'],
+    ['.github/workflows/deploy-production.yml','M'],
+    ['.github/workflows/github-runtime-ota.yml','M'],
+    ['.github/workflows/check-oracle-staging-bootstrap.yml','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(files),'oracle-local-staging');
+  assert.equal(classifyBrowserScope([...files,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(files.slice(1)),'full');
+});
