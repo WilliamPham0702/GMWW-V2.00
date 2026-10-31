@@ -65,11 +65,11 @@ test('Chat displays a new-message cue on first remote message in an initially em
   assert.doesNotMatch(server,/this\.broadcast\(\{type:"chat_message"/);
 });
 
-test('Frozen players can chat and use day privileges after morning transition',()=>{
+test('Frozen players cannot chat during following morning; role-action expiry remains separate',()=>{
   const meta={phase:'running',cyclePhase:'morning',cycleNight:1,matchId:'M',cycleKey:'morning-1'};
   const players={'member:alice':{loginId:'alice'}};
   const effect={id:'fx',type:'frozen',loginId:'alice',matchId:'M',night:1,cycleKey:'night-1',effectActive:true};
-  assert.equal(chatPolicy({meta,players,rows:[effect],loginId:'alice'}).canSend,true);
+  assert.equal(chatPolicy({meta,players,rows:[effect],loginId:'alice'}).canSend,false);
   const expired=expireCycleEffects([effect],{phase:'morning',night:1,cycleKey:'morning-1',matchId:'M',statusDefs:{},now:'2026-10-30T00:00:00Z'});
   assert.equal(expired.length,1);assert.equal(effect.effectActive,false);
   assert.match(server,/expireCycleEffects\(rows,\{phase:p,night:n,cycleKey:key,matchId:meta\.matchId,statusDefs:STATUS_DEFS,now\}\)/);
