@@ -1,0 +1,75 @@
+name: Check and Deploy GameMaSoi Pages (isolated)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sites/gamemasoi-pages/**'
+      - 'tests/gamemasoi-pages-redirect.test.mjs'
+      - '.github/workflows/check-gamemasoi-pages.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sites/gamemasoi-pages/**'
+      - 'tests/gamemasoi-pages-redirect.test.mjs'
+      - '.github/workflows/check-gamemasoi-pages.yml'
+permissions:
+  contents: read
+concurrency:
+  group: gamemasoi-pages-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    name: Validate ONLY static Pages alias
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Focused redirect and deployment-scope regression
+        run: |
+          node --test tests/gamemasoi-pages-redirect.test.mjs
+          node --test tests/pages-redirect-scope.test.mjs
+          test -f sites/gamemasoi-pages/_redirects
+          test -f sites/gamemasoi-pages/index.html
+          ! find sites/gamemasoi-pages -type f | grep -Ev '/(index[.]html|_redirects)$'
+  deploy-pages:
+    name: Publish ONLY gamemasoi.pages.dev after merge
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: gamemasoi-pages
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm original Production Worker and IPA are untouched
+        run: |
+          test -f sites/gamemasoi-pages/_redirects
+          grep -Fxq '/* https://gmww-v2-00.williampham0702.workers.dev/:splat 302' sites/gamemasoi-pages/_redirects
+          test "$(node -p 'require("./package.json").version')" != ''
+      - name: Deploy isolated Pages site (NOT Wrangler Worker deploy)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@4.145.0 pages deploy sites/gamemasoi-pages --project-name gamemasoi --branch main --commit-hash "$GITHUB_SHA"
+      - name: Verify HTTPS redirect without proxying gameplay
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20 -D /tmp/gamemasoi-headers -o /dev/null https://gamemasoi.pages.dev/ || true
+          grep -Eq '^HTTP/[0-9.]+ 302' /tmp/gamemasoi-headers
+          grep -Eiq '^location: https://gmww-v2-00[.]williampham0702[.]workers[.]dev/?\r?$' /tmp/gamemasoi-headers
+          echo 'GameMaSoi alias redirects to unchanged Worker Production. URL address bar will change.' >> "$GITHUB_STEP_SUMMARY"
