@@ -20,3 +20,17 @@
 
 ## Rollback
 Không có dữ liệu hay server Production nào được sửa ở PR bootstrap; rollback bằng cách dừng process STAGING hoặc revert PR. Không cần hạ Runtime/IPA.
+
+
+## Bổ sung STAGING snapshot/failover simulation (chưa đủ điều kiện chạy thật)
+- `oracle-staging/room-adapter.mjs` tạo snapshot **chỉ từ fixture thử nghiệm**, chuẩn hoá nội dung và băm SHA-256; chưa phải cơ chế xuất/nhập trạng thái đầy đủ của Cloudflare Durable Objects.
+- Lưu file atomically trong thư mục STAGING đã có marker `.gmww-oracle-staging-only`, chỉ khi bật đồng thời `GMWW_ORACLE_STAGING=1` và `GMWW_ORACLE_FIXTURE_ONLY=1`; không sao chép Production data, không chứa hoặc tái sử dụng token đăng nhập.
+- Từ chối snapshot sai định dạng/bị sửa checksum, room code bất hợp lệ, revision lùi, mâu thuẫn version/schema/source SHA.
+- `simulateFailover` từ chối ván đang chơi, WebSocket còn kết nối, thiếu phê duyệt GM hoặc nội dung snapshot lệch; **luôn trả `productionSwitchAllowed: false`**, kể cả khi simulation PASS.
+- `/healthz` chỉ hiển thị adapter schema, **không công bố readiness**. `/readyz`, API, WebSocket vẫn HTTP 503.
+- **Chưa đạt:** adapter DO SQL thực, login/session và phân quyền, migration/rollback dữ liệu, WebSocket parity và reconnect, Oracle VM TLS/backup, kiểm tra failover end-to-end. Không merge tính năng vào Production gameplay. Không phát hành IPA/Runtime từ thay đổi STAGING này.
+
+## Nghiệm thu và rollback bổ sung
+- Chạy `node --test tests/oracle-staging-bootstrap.test.mjs` và `node --check oracle-staging/server.mjs`.
+- CI Oracle STAGING phải SUCCESS, các required check của PR phải SUCCESS mới cân nhắc merge. Không chạy test trên phòng thật.
+- Nếu xảy ra lỗi, revert PR để quay về bootstrap trước đó; không cần can thiệp Cloudflare Production, Pages, IPA, Runtime hoặc lịch sử người chơi.
