@@ -320,7 +320,7 @@ jobs:
           # Keep any subset of catalog-only paths CI-only, never Production.
           if [ -s /tmp/gmww-production-change-scope.txt ] &&
              grep -Fxq '.github/scripts/update-runtime-download-catalog.mjs' /tmp/gmww-production-change-scope.txt &&
-             ! grep -Ev '^([.]github/workflows/(runtime-download-catalog|deploy-production|github-runtime-ota)[.]yml|[.]github/scripts/update-runtime-download-catalog[.]mjs|tests/runtime-download-catalog[.]test[.]mjs)$' /tmp/gmww-production-change-scope.txt >/dev/null; then
+             ! grep -Ev '^([.]github/workflows/(runtime-download-catalog|deploy-production|github-runtime-ota)[.]yml|[.]github/scripts/(update-runtime-download-catalog|ci-browser-scope)[.]mjs|[.]github/workflows/check-player-web[.]yml|tests/runtime-download-catalog[.]test[.]mjs)$' /tmp/gmww-production-change-scope.txt >/dev/null; then
             SHOULD_DEPLOY=false
             echo 'Runtime download catalog links only: skip Production deploy.' >> "$GITHUB_STEP_SUMMARY"
           fi
