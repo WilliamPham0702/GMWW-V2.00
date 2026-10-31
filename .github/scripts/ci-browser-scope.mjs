@@ -3527,6 +3527,33 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // PR677 release plumbing only: every source/runtime byte remains reviewed and immutable.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split(String.fromCharCode(10)).filter(Boolean);
+        const changes=rows.map(row=>row.split(String.fromCharCode(9)).join(' ')).sort();
+        const expected=[
+          'M .github/scripts/ci-browser-scope.mjs',
+          'M .github/workflows/check-player-web.yml',
+          'M .github/workflows/deploy-production.yml',
+          'M .github/workflows/github-runtime-ota.yml',
+          'A .github/workflows/deploy-demo-transport-677.yml',
+          'A tests/demo-transport-677-release.test.mjs',
+          'A docs/releases/GMWW-PR677-WORKER-ONLY-RELEASE-20261031.md'
+        ].sort();
+        if(JSON.stringify(changes)===JSON.stringify(expected)){
+          git('merge-base','--is-ancestor','97e4d328366548983aa8009ab4be646f972c4085','HEAD');
+          git('diff','--quiet','97e4d328366548983aa8009ab4be646f972c4085','HEAD','--','src/index.js','server-game/current/app.js','server-game/src/30-village-and-setup.part');
+          git('diff','--quiet','gmww-v3.280','HEAD','--','assets','wrangler.jsonc','package.json','package-lock.json');
+          if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.280.0')throw Error('Runtime changed');
+          return{mode:'pr677-worker-only-release',reason:'Exact seven-file release repair with immutable DEMO source and Runtime'};
+        }
+      }
+    }catch{} // Unknown changes must run complete CI, never narrow tests.
+  }
+
   // Verify the exact diff before any legacy full-suite selector.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
