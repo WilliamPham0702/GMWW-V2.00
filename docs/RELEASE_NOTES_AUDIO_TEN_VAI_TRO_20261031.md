@@ -34,3 +34,9 @@ Ngày: 31/10/2026 · Phạm vi: Thư Viện → Âm Thanh → Vai Trò và kết
 - Danh sách chi tiết hiển thị **tên Vai Trò** và nút **Gắn Audio** mở đúng phần Thay thế để chọn file hoặc URL.
 - Có thể sao chép danh sách Vai Trò chưa liên kết (kèm ID) để bổ sung audio. Không tự gán audio sai vai, không xoá file.
 - Trạng thái 33 Audio thiếu nguồn trong bản trước không được suy ra là 33 Vai Trò chưa liên kết; số mới phải kiểm tra từ dữ liệu thực trên iPhone.
+
+## V3.283 — Bản sửa không nhấn được nút Audio trên iPhone
+- Sửa dùng nhầm bộ chọn 1 phần tử `$()` thay vì danh sách `$$()` trong bước gắn sự kiện của Audio Vai Trò.
+- Không còn ngắt gắn handler Play Tên, Play Full, Thay thế, Xoá khi xuất hiện danh sách Vai Trò chưa liên kết Audio.
+- Thêm regression test mô phỏng render danh sách thiếu liên kết và thao tác 5 nút Play Tên/Full, Thay thế, Xoá, Gắn Audio.
+- Chỉ đóng gói bản QA; chưa phát hành Production khi CI / iPhone nghiệm thu chưa đạt. Bảo toàn IPA, Oracle, dữ liệu. Rollback về bản Runtime đã nghiệm thu.
