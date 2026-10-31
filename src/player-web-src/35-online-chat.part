@@ -194,7 +194,7 @@ async function gmwwChatRefresh(){
     input.disabled=send.disabled=!result.canSend;
     input.placeholder=result.canSend?(gmwwChatOpen?'Nhập tin nhắn…':'Chạm để chat…'):'Chạm xem thông cáo';
     const chatHelp=document.getElementById('gmwwChatHelp');
-    const dead=result.reason==='CHAT_DEAD';chatHelp.classList.toggle('gmww-chat-dead-notice',dead);
+    const dead=result.reason==='CHAT_DEAD';chatHelp.classList?.toggle('gmww-chat-dead-notice',dead);
     chatHelp.textContent=dead?'Bạn đã chết nên không chat được.':result.reason==='CHAT_FROZEN'?'Bạn đang bị đóng băng nên không chat được.':result.canSend?(result.scope==='secret'?'Chỉ người cùng lượt được xem tin.':''):result.channel?'Bạn đang bị cấm gửi Chat.':'Chưa đến lượt chat; vẫn xem được thông cáo công khai.';
   }catch(error){if(seq===gmwwChatSeq){const note=document.getElementById('gmwwChatHelp');if(note)note.textContent='Lỗi kết nối Chat. Vui lòng thử lại.'}}
 }
