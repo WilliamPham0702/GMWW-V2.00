@@ -51,6 +51,7 @@ test('production and Runtime OTA guards include only the catalog file set', asyn
     assert.ok(scope.includes("'.github/scripts/update-runtime-download-catalog.mjs'"));
     assert.ok(scope.includes("'tests/runtime-download-catalog.test.mjs'"));
     assert.ok(scope.includes('CATALOG_ONLY'));
+    assert.ok(scope.includes('update-runtime-download-catalog.mjs'));
   }
   assert.match(production, /SHOULD_DEPLOY=false\s+echo 'Runtime download catalog links only/);
   assert.match(ota, /SKIP_AUTO_RELEASE=true\s+echo 'Download catalog only/);
@@ -102,10 +103,15 @@ test('new verified QA artifact appears in same catalog without being mislabeled 
     workflow_run: { id: 41168734658 }
   };
   const docs = buildCatalogs([release('3.280')], repo, [artifact]);
-  assert.match(docs.index, /V3\.284 — QA/);
+  assert.match(docs.index, /V3\.284 — QA \/ KHÔNG CÀI/);
+  assert.match(docs.index, /CHỈ CÀI RUNTIME PRODUCTION/);
+  assert.match(docs.index, /KHÔNG dùng \.gmwwupdate QA/);
+  assert.ok(docs.index.indexOf('## 4. QA') > docs.index.indexOf('## 3. BACKUP'));
+  assert.ok(!docs.index.includes('Gói mới nhất trên GitHub: V3.284'));
+  assert.ok(!docs.index.split('## 2. IPA')[0].includes('V3.284'));
   assert.match(docs.index, /actions\/runs\/41168734658\/artifacts\/13030570990/);
   assert.match(docs.index, /V3\.280/);
-  assert.ok(docs.index.indexOf('V3.284') < docs.index.indexOf('V3.280'));
+  assert.ok(docs.index.indexOf('V3.280') < docs.index.indexOf('V3.284'));
   assert.match(docs.index, /chưa phát hành Production/);
   assert.ok(!docs.index.includes('releases/download/gmww-v3.284'));
   assert.ok(!docs.runtimeHistory.includes('3.284'));
@@ -119,10 +125,10 @@ test('expired, invalid and already released QA artifacts do not appear', () => {
     make('3.284',22,true), make('3.283',0), make('3.280',45),
     {...make('3.282',55), workflow_run: {id:0}}, make('3.285',88)
   ]);
-  assert.ok(docs.index.includes('V3.285 — QA'));
-  assert.ok(!docs.index.includes('V3.284 — QA'));
-  assert.ok(!docs.index.includes('V3.280 — QA'));
-  assert.ok(!docs.index.includes('V3.283 — QA'));
+  assert.ok(docs.index.includes('V3.285 — QA / KHÔNG CÀI'));
+  assert.ok(!docs.index.includes('V3.284 — QA / KHÔNG CÀI'));
+  assert.ok(!docs.index.includes('V3.280 — QA / KHÔNG CÀI'));
+  assert.ok(!docs.index.includes('V3.283 — QA / KHÔNG CÀI'));
 });
 test('catalog synchronization triggers on verified Actions completion and refreshes expired links', async () => {
   const { readFileSync } = await import('node:fs');
@@ -133,4 +139,18 @@ test('catalog synchronization triggers on verified Actions completion and refres
   assert.match(workflow,/actions: read/);
   assert.match(workflow,/schedule:/);
   assert.ok(!workflow.includes('actions/download-artifact'));
+});
+
+test('QA safety selector fails closed for gameplay changes',async()=>{
+ const {classifyBrowserScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+ const {readFileSync}=await import('node:fs');
+ const paths=[".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/scripts/update-runtime-download-catalog.mjs","tests/runtime-download-catalog.test.mjs",".github/workflows/deploy-production.yml",".github/workflows/github-runtime-ota.yml"];
+ const changes=paths.map(path=>({path,status:'M',before:'old',after:readFileSync(path,'utf8')}));
+ assert.equal(classifyBrowserScope(changes),'runtime-catalog-qa-safety');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'gameplay'}]),'full');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='tests/runtime-download-catalog.test.mjs'?{...c,status:'D'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='.github/scripts/update-runtime-download-catalog.mjs'?{...c,after:'corrupt'}:c)),'full');
+ const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ assert.match(workflow,/runtime-catalog-qa-safety/);
 });
