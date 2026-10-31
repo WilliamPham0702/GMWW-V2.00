@@ -32,7 +32,26 @@ jobs:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Skip unrelated main commits (preserve existing Pages deployment)
+        id: pages_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
+          FOUND=false
+          while IFS= read -r FILE; do
+            case "$FILE" in
+              infra/pages/gamemasoi/*) FOUND=true ;;
+            esac
+          done < "$RUNNER_TEMP/changed.txt"
+          if [ "$FOUND" = false ]; then
+            echo 'should_deploy=false' >> "$GITHUB_OUTPUT"
+            echo 'No Pages files changed: SKIP Pages deploy.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo 'should_deploy=true' >> "$GITHUB_OUTPUT"
       - name: Validate same-SHA CI SUCCESS and isolated diff
+        if: steps.pages_scope.outputs.should_deploy == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
@@ -57,14 +76,18 @@ jobs:
           done < "$RUNNER_TEMP/changed.txt"
           test "$FOUND" = true
       - name: Setup Node
+        if: steps.pages_scope.outputs.should_deploy == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Test safe redirect and auto-release isolation
+        if: steps.pages_scope.outputs.should_deploy == 'true'
         run: node --test tests/gamemasoi-pages-link.test.mjs
       - name: Install existing Wrangler
+        if: steps.pages_scope.outputs.should_deploy == 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Deploy to gamemasoi Pages only
+        if: steps.pages_scope.outputs.should_deploy == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -75,6 +98,7 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           npx --no-install wrangler pages deploy infra/pages/gamemasoi --project-name=gamemasoi --branch=main --commit-hash="$(git rev-parse HEAD)"
       - name: Verify redirect to exact Worker URL
+        if: steps.pages_scope.outputs.should_deploy == 'true'
         shell: bash
         run: |
           set -euo pipefail

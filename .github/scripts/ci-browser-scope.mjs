@@ -30,6 +30,7 @@ const pagesAliasOnlyPaths=new Set([
   '.github/scripts/ci-browser-scope.mjs'
 ]);
 // Follow-up to deploy the already-reviewed Pages alias, never gameplay code.
+// Pages-only retry also covers the no-op-on-unrelated-main workflow repair.
 const pagesAliasRetryPaths=new Set([
   'infra/pages/gamemasoi/_redirects',
   'tests/gamemasoi-pages-link.test.mjs',

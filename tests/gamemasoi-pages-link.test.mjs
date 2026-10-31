@@ -72,3 +72,13 @@ test('Retry scope rejects any game or backend source change',async()=>{
   assert.equal(classifyBrowserScope([...retry,{path:'src/index.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(retry.filter(x=>x.path!=='infra/pages/gamemasoi/_redirects')),'full');
 });
+
+test('Non-Pages main commits skip safely; real Pages changes retain complete 302 gate',()=>{
+ const pages=read('.github/workflows/deploy-gamemasoi-pages.yml');
+ assert.match(pages,/id: pages_scope/);
+ assert.match(pages,/No Pages files changed: SKIP Pages deploy/);
+ assert.match(pages,/infra\/pages\/gamemasoi\/\*\) FOUND=true/);
+ assert.equal((pages.match(/if: steps\.pages_scope\.outputs\.should_deploy == 'true'/g)||[]).length,6);
+ assert.match(pages,/Validate same-SHA CI SUCCESS and isolated diff/);
+ assert.match(pages,/Verify redirect to exact Worker URL/);
+});
