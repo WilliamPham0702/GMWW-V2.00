@@ -1,3 +1,3 @@
-# GMWW alias v1.0.1 — same HTTPS 302, deployment safety retry only.
+# GMWW alias v1.0.2 — ignore unrelated main commits; two HTTPS 302 rules unchanged.
 / https://gmww-v2-00.williampham0702.workers.dev/ 302
 /* https://gmww-v2-00.williampham0702.workers.dev/:splat 302
