@@ -86,6 +86,20 @@ jobs:
       - name: Install existing Wrangler
         if: steps.pages_scope.outputs.should_deploy == 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Snapshot previous Pages Production deployment for rollback
+        id: previous_pages
+        if: steps.pages_scope.outputs.should_deploy == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROJECT=$(curl -fsS --max-time 20 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/gamemasoi")
+          OLD=$(printf '%s' "$PROJECT" | jq -r '.result.latest_deployment.id // empty')
+          test -n "$OLD"
+          echo "deployment_id=$OLD" >> "$GITHUB_OUTPUT"
       - name: Deploy to gamemasoi Pages only
         if: steps.pages_scope.outputs.should_deploy == 'true'
         env:
@@ -112,7 +126,7 @@ jobs:
             if [ "$CODE" = 200 ] && ! printf '%s' "$ROOT" | grep -iq '^location:'; then
               API=$(curl -fsS --max-time 15 https://gamemasoi.pages.dev/api/health || true)
               if printf '%s' "$API" | jq -e '.ok == true and .service == "GMWW Online"' >/dev/null 2>&1; then
-                WS=$(curl -sS -D - -o /dev/null --max-time 15 https://gamemasoi.pages.dev/ws/ABCD || true)
+                WS=$(curl -sS -D - -o /dev/null --max-time 15 https://gamemasoi.pages.dev/ws/ABCDEF || true)
                 if printf '%s' "$WS" | tr -d '\r' | grep -Eq '^HTTP/[^ ]+ 426'; then
                   echo 'Same hostname HTML/API/WS gateway verified; no redirect.' >> "$GITHUB_STEP_SUMMARY"
                   exit 0
@@ -123,3 +137,16 @@ jobs:
           done
           echo "::error::Pages gateway not verified; Worker Production remains untouched. Roll back Pages."
           exit 1
+      - name: Roll back Pages only if gateway verification fails
+        if: failure() && steps.previous_pages.outputs.deployment_id != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS_DEPLOYMENT: ${{ steps.previous_pages.outputs.deployment_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 30 -X POST \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/gamemasoi/deployments/$PREVIOUS_DEPLOYMENT/rollback"
+          echo "Rolled back Pages to last deployment; GMWW Worker and DO unaffected." >> "$GITHUB_STEP_SUMMARY"
