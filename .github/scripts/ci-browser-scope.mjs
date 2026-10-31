@@ -3228,7 +3228,71 @@ function isRuntimeCatalogSafetyScope(changes){
    files.get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'runtime-catalog-qa-safety'")&&
    files.get('tests/runtime-download-catalog.test.mjs').includes('QA safety selector fails closed for gameplay changes');
 }
+
+/* PR702 notice placement: only the Player Web toast block may change.
+ * Verify the generated bundle has exactly the corresponding substitution. */
+function isPlayerToastNoticeScope(changes){
+  const wanted=new Map([
+    ['src/player-web-src/20-village-and-profile.part','M'],
+    ['src/gmww-members-live.js','M'],
+    ['tests/player-toast-above-chat-20261031.test.mjs','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==wanted.size||
+    new Set(changes.map(c=>c.path)).size!==wanted.size||
+    changes.some(c=>wanted.get(c.path)!==c.status))return false;
+  try{
+    const src=changes.find(c=>c.path==='src/player-web-src/20-village-and-profile.part');
+    const bundle=changes.find(c=>c.path==='src/gmww-members-live.js');
+    const test=changes.find(c=>c.path==='tests/player-toast-above-chat-20261031.test.mjs');
+    const slice=s=>{
+      const a=s.indexOf('let toastTimer;');
+      const z=s.indexOf('window.toast=toast;',a);
+      return a<0||z<a||s.indexOf('window.toast=toast;',z+1)>=0?null:
+        {start:a,end:z+'window.toast=toast;'.length,code:s.slice(a,z+'window.toast=toast;'.length)};
+    };
+    const old=slice(src.before),newer=slice(src.after);
+    if(!old||!newer||!old.code.includes('bottom:24px')||
+      !newer.code.includes('function gmwwToastTop(){')||
+      !newer.code.includes('getBoundingClientRect().bottom')||
+      !newer.code.includes('top:0;bottom:auto')||
+      !newer.code.includes('pointer-events:none')||
+      !newer.code.includes("t.style.top=gmwwToastTop()+'px'"))return false;
+    if(src.before.slice(0,old.start)!==src.after.slice(0,newer.start)||
+      src.before.slice(old.end)!==src.after.slice(newer.end))return false;
+    const unwrap=s=>JSON.parse(s.slice(s.indexOf('=')+1).trim().replace(/;$/,''));
+    const previous=unwrap(bundle.before),updated=unwrap(bundle.after);
+    if(!previous.includes(old.code)||previous.split(old.code).length!==2)return false;
+    if(updated!==previous.replace(old.code,newer.code))return false;
+    return test.after.includes('Player toast appears directly below')&&
+      test.after.includes('Online Chat remains an unchanged bottom dock');
+  }catch{return false;}
+}
+// CI-only contract: no source, assets, Worker, Native or runtime release changes.
+function isPlayerToastCiRoutingScope(changes){
+  const wanted=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['tests/player-toast-ci-routing-20261031.test.mjs','A'],
+    ['docs/releases/GMWW-PLAYER-TOAST-CI-20261031.md','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==wanted.size||
+    new Set(changes.map(c=>c.path)).size!==wanted.size||
+    changes.some(c=>wanted.get(c.path)!==c.status))return false;
+  try{
+    const source=changes.find(c=>c.path==='.github/scripts/ci-browser-scope.mjs');
+    const wf=changes.find(c=>c.path==='.github/workflows/check-player-web.yml');
+    const t=changes.find(c=>c.path==='tests/player-toast-ci-routing-20261031.test.mjs');
+    return source.after.includes('function isPlayerToastNoticeScope(changes)')&&
+      source.after.includes('function isPlayerToastCiRoutingScope(changes)')&&
+      wf.after.includes("steps.scope.outputs.mode == 'player-toast-notice'")&&
+      wf.after.includes("steps.scope.outputs.mode == 'player-toast-ci-routing'")&&
+      t.after.includes('CI routing fails closed on extra gameplay changes');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isPlayerToastCiRoutingScope(changes))return 'player-toast-ci-routing';
+  if(isPlayerToastNoticeScope(changes))return 'player-toast-notice';
   if(isRuntimeCatalogAutoSyncScope(changes))return 'runtime-catalog-auto-sync';
   if(isRuntimeCatalogSafetyScope(changes))return 'runtime-catalog-qa-safety';
   if(isGMShareVerifiedAlias682Scope(changes))return 'gm-player-share-682';
