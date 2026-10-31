@@ -3202,7 +3202,74 @@ function isRoleNameAudio3281Scope(changes){
     by.get('tests/ci-browser-scope.test.mjs').after.includes('PR654 V3.281 strict role-name audio release scope');
 }
 
+// BEGIN V3284_COMBINED_FAIL_CLOSED_SCOPE
+// Audited merge of PR #654 audio and PR #659 runtime/server drift. Pins all
+// unchanged 28 source/test/metadata blobs; CI files are checked by required
+// workflow and regression tests, not self-hashed.
+const v3284CombinedPaths=new Map([
+  [".github/runtime-release/V3.282-PR654-candidate.md",["A","98a4dc50cd635e0a10fd54d336f4db9c337ade30"]],
+  [".github/scripts/ci-browser-scope.mjs",["M",null]],
+  [".github/scripts/prepare-update-channel.mjs",["M","abd9850e8bcbbe7f32e3ae0a139f4fbcbbfca288"]],
+  [".github/scripts/runtime-server-drift-scope.mjs",["A","41df76a8767c8045f4adf028b95c63277127bd95"]],
+  [".github/workflows/check-gm-audio-role-day.yml",["M","7b6d6bed0cfd06b4f700438b8cf364a5b99290a0"]],
+  [".github/workflows/check-player-web.yml",["M",null]],
+  [".github/workflows/check-runtime-server-version-drift.yml",["A","9f86962738ba71e255b95fd42bbcaa0d82139e90"]],
+  [".github/workflows/deploy-production.yml",["M","de54dbff6adf02449cd06e1aeb25e4756b20644a"]],
+  [".github/workflows/github-runtime-ota.yml",["M","1cf9d81073a31e456da48c690c8b58d887f21afa"]],
+  ["docs/RELEASE_NOTES_AUDIO_TEN_VAI_TRO_20261031.md",["A","405773851f93f79a28baf20c4417dff8be08ef40"]],
+  ["docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md",["M","1448c7fbf65b412ba71c854005c17fa62f769768"]],
+  ["docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md",["A","4cc946905db7f2eaf7484240d995039f56a174ff"]],
+  ["docs/releases/GMWW-V3.284-AUDIO-RUNTIME-ALIGNMENT-CANDIDATE-20261031.md",["A","70ba7f9e20fa08499b0f5f71bf1fc9d7f2a695f1"]],
+  ["package-lock.json",["M","1810e7357fa15c332206639fe081129c7790dd47"]],
+  ["package.json",["M","cd6ac3ff83bfa864a19939f4d8b32d9c460c82f4"]],
+  ["server-game/current/GMWW.html",["M","075572cba3e0b36f7cf48f5937f12a2f863ab1d6"]],
+  ["server-game/current/app.js",["M","68fe00555a68faa370b502d5b8e0e4fb5922586f"]],
+  ["server-game/src/00-core-and-library.part",["M","e47a8af48a9f18f88408a809849d44f2a929bc96"]],
+  ["server-game/src/10-library-and-settings.part",["M","30af1e80f8ec83415fdbb858cb3c8ef03b3bc9fb"]],
+  ["server-game/src/20-members-and-roster.part",["M","acbb87ad0aadd3a68bd81d88f2d3c39b162fd8c0"]],
+  ["server-game/src/30-village-and-setup.part",["M","5528ec23f9f81cf01aa2347e19f56238aad8cc5e"]],
+  ["src/index.js",["M","a9a3724a0b5303fa491a7f8544bbb6597f64bdb1"]],
+  ["tests/audio-binding-integrity-20261027.test.mjs",["M","59765e7c33bd9257e5be8ddf053d88ed76001c81"]],
+  ["tests/audio-independent-role-name-20261031.test.mjs",["A","e33437a6ef470a25f1cfc8090225b2a2cc94f327"]],
+  ["tests/audio-role-day-flow-20261027.test.mjs",["M","4f8a468d7b74a9a750eba8896a004e9148d84f85"]],
+  ["tests/audio-safe-delete-and-audit-20261031.test.mjs",["A","c3b6f587436f5b66a432354b85a4ab33ece79ddb"]],
+  ["tests/ci-browser-scope.test.mjs",["M","f0809de25ee7fbd28e9aabbec20c5cc9a9c87993"]],
+  ["tests/demo-assassin-gallows-divination.test.mjs",["M","de699082c64d00721ae783ecea7b0b9fbb65b4ee"]],
+  ["tests/runtime-server-drift-scope.test.mjs",["A","cf79f138e86b5af756f7181dd8db911d6af0e092"]],
+  ["tests/runtime-server-version-drift.test.mjs",["A","040f2295783c33261ba5e2b17f41984476d5d125"]],
+  ["tests/v3284-combined-ci-scope.test.mjs",["A",null]],
+  ["docs/releases/GMWW-V3.284-FOCUSED-CI-20261031.md",["A",null]],
+]);
+const v3284BlobSha=s=>createHash('sha1').update('blob '+Buffer.byteLength(s)+String.fromCharCode(0)+s).digest('hex');
+export function isV3284IntegratedScope(changes,read=path=>fs.readFileSync(path,'utf8')){
+  if(!Array.isArray(changes)||changes.length!==v3284CombinedPaths.size)return false;
+  const seen=new Set();
+  for(const c of changes){
+    const e=v3284CombinedPaths.get(c?.path);
+    if(!e||seen.has(c.path)||e[0]!==c.status)return false;
+    seen.add(c.path);
+  }
+  try{
+    for(const [path,[,pin]] of v3284CombinedPaths)if(pin&&v3284BlobSha(read(path))!==pin)return false;
+    const app=read('server-game/current/app.js');
+    const worker=read('src/index.js');
+    const flow=read('.github/workflows/check-player-web.yml');
+    const self=read('.github/scripts/ci-browser-scope.mjs');
+    if(!app.includes("const VERSION='3.284';")||!app.includes('gmwwUpdateAlignment(')||
+       !app.includes('LỆCH PHIÊN BẢN')||!app.includes('KHÔNG HẠ CẤP')||
+       !worker.includes('VERSION="V3.284"')||
+       !flow.includes("steps.scope.outputs.mode == 'v3284-audio-drift'")||
+       !self.includes("if(isV3284IntegratedScope(changes))return 'v3284-audio-drift'"))return false;
+    const modules=['00-core-and-library.part','10-library-and-settings.part',
+      '20-members-and-roster.part','30-village-and-setup.part',
+      '40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
+    return app===modules.map(x=>read('server-game/src/'+x)).join('');
+  }catch{return false;}
+}
+// END V3284_COMBINED_FAIL_CLOSED_SCOPE
+
 function classifyBrowserScope(changes){
+  if(isV3284IntegratedScope(changes))return 'v3284-audio-drift';
   if(isPagesAliasScope(changes))return 'pages-alias';
   if(isRuntimeDriftScope(changes))return 'runtime-server-drift';
   if(isRoleNameAudio3283Scope(changes))return 'role-name-audio-3283';
@@ -3525,6 +3592,18 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // V3.284 combination is permitted only when every changed path and its audited
+  // Git blob match. An unknown byte, test, version or source requires full CI.
+  if(process.env.GMWW_CI_EVENT==='pull_request'){
+    try{
+      const base=String(process.env.GMWW_CI_BASE_SHA||'');
+      if(/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split(String.fromCharCode(10)).filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split(String.fromCharCode(9));return{status,path};});
+        if(isV3284IntegratedScope(changes))return{mode:'v3284-audio-drift',reason:'Audited V3.284 32-file audio/runtime drift integration; all source Git blobs pinned'};
+      }
+    }catch{} // fail-closed: full CI
+  }
   // Verify the exact diff before any legacy full-suite selector.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{

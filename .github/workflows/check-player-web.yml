@@ -44,6 +44,22 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: V3.284 audited integration — Audio, Runtime drift, Player/Worker, OTA, CI
+        if: steps.scope.outputs.mode == 'v3284-audio-drift'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/runtime-server-drift-scope.mjs
+          node --check .github/scripts/prepare-update-channel.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/v3284-combined-ci-scope.test.mjs tests/runtime-server-version-drift.test.mjs tests/runtime-server-drift-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/gmww-version-guard.test.mjs
+          node --test tests/audio-independent-role-name-20261031.test.mjs tests/audio-safe-delete-and-audit-20261031.test.mjs tests/audio-binding-integrity-20261027.test.mjs tests/audio-role-day-flow-20261027.test.mjs tests/demo-assassin-gallows-divination.test.mjs .github/runtime-release/verify-package.test.mjs
+          node --test tests/gamemasoi-pages-link.test.mjs tests/production-deploy-architecture-docs.test.mjs
+          test -s docs/releases/GMWW-V3.284-FOCUSED-CI-20261031.md
+          test -s docs/releases/GMWW-V3.284-AUDIO-RUNTIME-ALIGNMENT-CANDIDATE-20261031.md
       - name: Cloudflare Pages alias only — HTTPS 302 and Worker/Runtime isolation
         if: steps.scope.outputs.mode == 'pages-alias'
         run: |
