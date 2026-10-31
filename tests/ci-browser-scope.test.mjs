@@ -820,9 +820,62 @@ test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused r
     '.github/workflows/deploy-production.yml',
     'tests/ci-browser-scope.test.mjs'
   ].map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  // Recreate the historical PR645 signature without the later PR652 selector.
+  expected[1].after=expected[1].after.replace("steps.scope.outputs.mode == 'pr652-postmerge-release'",'legacy PR645 checks only');
   assert.equal(classifyBrowserScope(expected),'pr645-postmerge-release');
   assert.equal(classifyBrowserScope(expected.slice(1)),'full','missing CI guard must not bypass full regression');
   assert.equal(classifyBrowserScope([...expected,modified('src/index.js','old','runtime changed')]),'full','gameplay edits must never be classified CI-only');
   assert.equal(classifyBrowserScope(expected.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted CI files must fail closed');
   assert.equal(classifyBrowserScope([...expected.slice(0,4),expected[0]]),'full','duplicate path cannot impersonate exact scope');
+});
+
+
+test('PR652 online hotfix: exact bounded production diff selects focused Worker checks',()=>{
+ const paths={
+  'src/index.js':'M',
+  'server-game/src/40-battle-and-timeline.part':'M',
+  'server-game/src/45-online-chat.part':'M',
+  'server-game/current/app.js':'M',
+  'tests/gmww-v3228-battle-icons-footer.test.mjs':'M',
+  'tests/v389-night-runtime-integration.test.mjs':'M',
+  'tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs':'A',
+  '.github/workflows/check-online-five-defects-20261031.yml':'A',
+  'docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md':'A',
+  '.github/scripts/ci-browser-scope.mjs':'M',
+  '.github/workflows/check-player-web.yml':'M',
+  'tests/ci-browser-scope.test.mjs':'M'
+ };
+ const changes=Object.entries(paths).map(([path,status])=>{
+  const after=readFileSync(new URL('../'+path,import.meta.url),'utf8');
+  return{path,status,before:status==='M'?after:null,after};
+ });
+ assert.equal(classifyBrowserScope(changes),'online-hotfix-652');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full','Missing Worker source cannot be exempted');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/extra-worker.js',status:'A',before:null,after:'new logic'}]),'full','New Worker logic must be audited');
+ const unsafe=changes.map(c=>c.path==='src/index.js'?{...c,after:'// unrelated code change\n'+c.after}:c);
+ assert.equal(classifyBrowserScope(unsafe),'full','Unrelated Worker line must select full CI');
+ const changedBattle=changes.map(c=>c.path==='server-game/src/40-battle-and-timeline.part'?{...c,after:c.after+'\n// another behavior change'}:c);
+ assert.equal(classifyBrowserScope(changedBattle),'full','Unrelated GM behavior is not covered by hotfix');
+ const changedChat=changes.map(c=>c.path==='server-game/src/45-online-chat.part'?{...c,after:'// unexpected change before chat\n'+c.after}:c);
+ assert.equal(classifyBrowserScope(changedChat),'full','Unexpected code before Chat must select full CI');
+});
+
+test('PR652 V3.280 postmerge CI repair: only five audited CI-only files can select release checks',()=>{
+  const files=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-player-card-browsers.yml',
+    '.github/workflows/deploy-production.yml',
+    'tests/ci-browser-scope.test.mjs'
+  ];
+  const changes=files.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  assert.equal(classifyBrowserScope(changes),'pr652-postmerge-release');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing source selector fails closed');
+  assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay mutation')]),'full','gameplay mutation cannot be CI-only');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full','duplicate CI file cannot impersonate audited change');
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted file fails closed');
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,after:'changed without guard'}:c)),'full','missing selector guard fails closed');
+  const deploy=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  assert.match(deploy,/git merge-base --is-ancestor 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
+  assert.match(deploy,/git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD/);
 });
