@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCatalog } from '../.github/scripts/update-runtime-download-catalog.mjs';
+import { buildCatalog, buildCatalogs } from '../.github/scripts/update-runtime-download-catalog.mjs';
 
 const repo = 'WilliamPham0702/GMWW-V2.00';
 function release(version, channel = 'gmww-v', valid = true) {
@@ -54,4 +54,41 @@ test('production and Runtime OTA guards include only the catalog file set', asyn
   }
   assert.match(production, /SHOULD_DEPLOY=false\s+echo 'Runtime download catalog links only/);
   assert.match(ota, /SKIP_AUTO_RELEASE=true\s+echo 'Download catalog only/);
+});
+
+test('index shows up to five Runtime and three IPA; old downloads remain in history', () => {
+  const releases = [];
+  for (const version of ['3.280','3.279','3.278','3.277','3.276','3.275','3.274']) {
+    releases.push(release(version));
+    const tag = 'gmww-v' + version;
+    const name = 'GMWW-V' + version + '.ipa';
+    releases.push({
+      tag_name: tag,
+      assets: [{name, browser_download_url:
+        'https://github.com/' + repo + '/releases/download/' + tag + '/' + name}]
+    });
+  }
+  const docs = buildCatalogs(releases);
+  assert.match(docs.index, /## 2\. IPA/);
+  assert.match(docs.index, /## 3\. BACKUP/);
+  assert.ok(docs.index.includes('V3.280'));
+  assert.ok(!docs.index.includes('[⬇️ Tải gốc](https://github.com/' +
+    repo + '/releases/download/gmww-v3.274/GMWW-Runtime-V3.274.gmwwupdate)'));
+  assert.ok(docs.runtimeHistory.includes('GMWW-Runtime-V3.274.gmwwupdate'));
+  assert.ok(docs.ipaHistory.includes('GMWW-V3.274.ipa'));
+  const rtIndex = docs.index.split('## 2. IPA')[0];
+  assert.equal((rtIndex.match(/\[⬇️ Tải gốc\]/g) || []).length, 5);
+  const ipaIndex = docs.index.split('## 2. IPA')[1].split('## 3. BACKUP')[0];
+  assert.equal((ipaIndex.match(/\[⬇️ Tải gốc\]/g) || []).length, 3);
+});
+test('monthly backups are links only and are never created by the catalog', () => {
+  const tag = 'gmww-backup-2026-10';
+  const name = 'GMWW-Backup-ipa-2026-10-V3.275.ipa';
+  const docs = buildCatalogs([{
+    tag_name: tag, published_at: '2026-10-31T00:00:00Z',
+    assets: [{name, browser_download_url:
+      'https://github.com/' + repo + '/releases/download/' + tag + '/' + name}]
+  }]);
+  assert.match(docs.index, /GMWW-Backup-ipa-2026-10-V3\.275\.ipa/);
+  assert.match(docs.index, /Runtime backup/);
 });
