@@ -830,7 +830,7 @@ test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused r
 });
 
 
-test('PR652 scope guard fails closed when later update-manager source differs from historic hotfix',()=>{
+test('PR652 online hotfix: exact bounded production diff selects focused Worker checks',()=>{
  const paths={
   'src/index.js':'M',
   'server-game/src/40-battle-and-timeline.part':'M',
@@ -849,7 +849,7 @@ test('PR652 scope guard fails closed when later update-manager source differs fr
   const after=readFileSync(new URL('../'+path,import.meta.url),'utf8');
   return{path,status,before:status==='M'?after:null,after};
  });
- assert.equal(classifyBrowserScope(changes),'full','Later changes must never reuse the historical PR652 focused-exemption signature');
+ assert.equal(classifyBrowserScope(changes),'online-hotfix-652');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full','Missing Worker source cannot be exempted');
  assert.equal(classifyBrowserScope([...changes,{path:'src/extra-worker.js',status:'A',before:null,after:'new logic'}]),'full','New Worker logic must be audited');
  const unsafe=changes.map(c=>c.path==='src/index.js'?{...c,after:'// unrelated code change\n'+c.after}:c);
