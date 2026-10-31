@@ -1,5 +1,5 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
-import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,chatBlockedByEffects,chatFrozenForDay} from "./gmww-online-chat-policy.js";
+import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -3298,9 +3298,9 @@ export class RoomDurableObject extends DurableObject {
     // Server-only authenticated DM channel. Never deliver through public room chat or room state.
     if(requestedChannel==="gm"){
       const allowed=meta?.enabled!==false&&["running","role_delivery","lobby","waiting"].includes(String(meta?.phase||""))&&!!players["member:"+id];
-      const effects=chatBlockedByEffects(rows,meta?.matchId,id),frozen=effects.frozen||chatFrozenForDay(rows,meta,id);
-      const reason=effects.dead?"CHAT_DEAD":effects.expelled?"CHAT_EXPELLED":frozen?"CHAT_FROZEN":effects.mute?"CHAT_MUTED_ARTIFACT":bans[id]===true?"CHAT_MUTED_GM":null;
-      const permission=allowed?{canRead:true,canSend:!reason,channel:"gm:"+id,scope:"gm",reason}
+      // GM private chat remains available to every authenticated room member,
+      // including dead, expelled, frozen and muted players.
+      const permission=allowed?{canRead:true,canSend:true,channel:"gm:"+id,scope:"gm",reason:null}
         :{canRead:false,canSend:false,channel:null,scope:null,reason:"CHAT_NOT_IN_ROOM"};
       return{meta,players,rows,permission};
     }
