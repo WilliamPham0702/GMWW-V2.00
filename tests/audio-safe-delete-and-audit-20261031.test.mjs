@@ -68,11 +68,44 @@ test('Confirmed deletion puts row into reversible trash without deleting either 
   assert.match(source,/list\.unshift\(clone\(item\)\)/);
 });
 
-test('A missing-file count is an audit, not a claim that a user deleted that many files',()=>{
+
+test('Role Audio audit is by role link, not missing physical files',()=>{
   const render=library.slice(library.indexOf('async function renderAudio(){'),
     library.indexOf('async function playAudioItem(',library.indexOf('async function renderAudio(){')));
-  assert.match(render,/sourceStatus\(item.id\)==='missing'/);
-  assert.match(render,/audioBindingStatus\(a,kind\)/);
-  assert.match(render,/File thực còn thiếu/);
-  assert.match(render,/Sao chép danh sách thiếu/);
+  assert.match(render,/noFullLink=roles.filter/);
+  assert.match(render,/noNameLink=roles.filter/);
+  assert.match(render,/gmwwRoleAudioIsLinked\(role,resolved,'full'\)/);
+  assert.match(render,/gmwwRoleAudioIsLinked\(role,resolved,'name'\)/);
+  assert.match(render,/data-role-link-id/);
+  assert.match(render,/data-role-link-slot/);
+  assert.match(render,/gmwwOpenRoleAudioReplace\(a\)/);
+  assert.match(render,/Sao chép danh sách Vai Trò chưa gắn Audio/);
+  assert.match(render,/KHÔNG kiểm tra tệp thực có tồn tại/);
+});
+
+test('Name and Full links count independently, even if saved file bytes are missing',()=>{
+  const source=library.slice(library.indexOf('function gmwwRoleAudioIsLinked('),
+    library.indexOf('async function renderAudio(){'));
+  assert.ok(source.startsWith('function gmwwRoleAudioIsLinked('));
+  const ctx={};
+  vm.runInNewContext(source+';globalThis.isLinked=gmwwRoleAudioIsLinked;',ctx);
+  const role={id:'role_guard',name:'Bảo Vệ'};
+  const unrelated={id:'role_wolf',name:'Sói Thường'};
+  const savedFile=[{a:{targetId:role.id,fileName:'guard.mp3'},
+    status:'missing',nameStatus:'missing'}];
+  assert.equal(ctx.isLinked(role,savedFile,'full'),true);
+  assert.equal(ctx.isLinked(role,savedFile,'name'),false);
+  assert.equal(ctx.isLinked(unrelated,savedFile,'full'),false);
+  const empty=[{a:{targetId:role.id,fileName:'',nameFileName:'',url:'',nameUrl:''},
+    status:'missing',nameStatus:'missing'}];
+  assert.equal(ctx.isLinked(role,empty,'full'),false);
+  assert.equal(ctx.isLinked(role,empty,'name'),false);
+  const remote=[{a:{targetId:role.id,url:'https://example.test/full.mp3',
+    nameUrl:'https://example.test/name.mp3'},status:'remote',nameStatus:'remote'}];
+  assert.equal(ctx.isLinked(role,remote,'full'),true);
+  assert.equal(ctx.isLinked(role,remote,'name'),true);
+  const bundled=[{a:{targetId:role.id,sourceKey:'ROLE:source-18'},
+    status:'missing',nameStatus:'missing'}];
+  assert.equal(ctx.isLinked(role,bundled,'full'),true);
+  assert.equal(ctx.isLinked(role,bundled,'name'),false);
 });
