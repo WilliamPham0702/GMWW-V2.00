@@ -10,6 +10,7 @@ const paths=[
  '.github/scripts/runtime-server-drift-scope.mjs',
  '.github/scripts/ci-browser-scope.mjs',
  '.github/workflows/check-player-web.yml',
+ '.github/workflows/check-runtime-server-version-drift.yml',
  'tests/runtime-server-drift-scope.test.mjs',
  'docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md'
 ];
@@ -22,7 +23,7 @@ function fixture(){
   const ids=indices[path];
   return{path,status:ids?'M':path.endsWith('.part')?'M':path==='server-game/current/app.js'?'M':
     path==='tests/runtime-server-version-drift.test.mjs'||path==='tests/runtime-server-drift-scope.test.mjs'||
-    path==='.github/scripts/runtime-server-drift-scope.mjs'||path.startsWith('docs/')?'A':'M',
+    path==='.github/scripts/runtime-server-drift-scope.mjs'||path==='.github/workflows/check-runtime-server-version-drift.yml'||path.startsWith('docs/')?'A':'M',
    before:ids?restoreRuntimeDrift(after,ids):null,after};
  });
 }
