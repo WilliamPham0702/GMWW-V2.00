@@ -1023,6 +1023,16 @@ jobs:
             tests/online-chat-authority.test.mjs
           node --test --test-name-pattern='PR652 online hotfix' tests/ci-browser-scope.test.mjs
           test -s docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md
+      - name: PR659 — Runtime mới hơn Server, không báo đồng bộ giả hoặc hạ cấp
+        if: steps.scope.outputs.mode == 'runtime-server-drift'
+        run: |
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/runtime-server-drift-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/runtime-server-version-drift.test.mjs tests/runtime-server-drift-scope.test.mjs tests/gmww-gm-app-source-modules.test.mjs tests/update-manager.test.mjs tests/gmww-version-guard.test.mjs
+          test -s docs/releases/GMWW-RUNTIME-SERVER-DRIFT-20261031.md
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
         if: steps.scope.outputs.mode == 'full' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
