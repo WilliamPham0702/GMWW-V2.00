@@ -39,14 +39,14 @@ function buildRoom(){
   }};
 }
 
-test('A generic empty room may switch Offline -> Online -> Demo -> Offline without changing identity',async()=>{
+test('An empty room switches Offline -> Online -> Demo (online transport) -> Offline without changing identity',async()=>{
   const h=buildRoom();
   let r=await h.run({demo:false,roomMode:'offline'});
   assert.equal(r.status,200);assert.equal(r.room.code,'ABCDEF');
   r=await h.run({demo:false,roomMode:'online'});
   assert.equal(r.room.roomMode,'online');assert.equal(r.room.demo,false);
   r=await h.run({demo:true,roomMode:'offline'});
-  assert.equal(r.room.demo,true);assert.equal(r.room.autoGM,false);
+  assert.equal(r.room.demo,true);assert.equal(r.room.roomMode,'online');assert.equal(r.room.autoGM,false);
   assert.equal(h.state.get('demoLease'),undefined);assert.equal(h.state.get('demoClock'),undefined);
   r=await h.run({demo:false,roomMode:'offline'});
   assert.equal(r.room.demo,false);assert.equal(r.room.roomMode,'offline');
@@ -66,7 +66,8 @@ test('GM Demo and speed are within the same action grid, not a separate visible 
   const menu=html.indexOf('id="battleWolfMenu"'),actions=html.indexOf('class="battle-wolf-actions"'),
     demo=html.indexOf('id="battleDemoToggle"'),speed=html.indexOf('id="battleDemoSpeedWrap"'),
     artifact=html.indexOf('id="battleLabelArtifact"'),panel=html.indexOf('id="battleDemoPanel"');
-  assert.ok(menu>=0&&menu<actions&&actions<demo&&demo<speed&&speed<artifact&&artifact<panel);
+  // The legacy panel is intentionally hidden and can appear earlier in the HTML.
+  assert.ok(menu>=0&&menu<actions&&actions<demo&&demo<speed&&speed<artifact&&panel>=0);
   assert.match(css,/#battleWolfMenu \.battle-wolf-actions #battleDemoToggle/);
   assert.match(css,/#battleWolfMenu #battleDemoPanel\{display:none!important\}/);
 });
@@ -78,4 +79,13 @@ test('The template selector waits for the saved template to be rehydrated before
   assert.ok(block.indexOf('await loadPlayGameTemplates()')<block.lastIndexOf("sheet.classList.remove('hidden')"));
   assert.match(block,/openSeq!==playGameSheetOpenSeq/);
   assert.match(battle,/function closePlayGameSheet\(\)\{\+\+playGameSheetOpenSeq/);
+});
+
+test('DEMO chooses online room transport without losing bot isolation or enabling ordinary online actions',()=>{
+  const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  assert.match(setup,/const patch=\{demo:target==='demo',roomMode:\(target==='online'\|\|target==='demo'\)\?'online':'offline'\}/);
+  assert.match(worker,/roomMode=b\?\.demo===true\?"online":normalizeRoomMode\(b\?\.roomMode\)/);
+  assert.match(worker,/const roomMode=desiredDemo\?"online":/);
+  assert.match(worker,/const onlineActions=meta\.demo!==true&&String\(meta\.roomMode\|\|""\)\.toLowerCase\(\)==="online"/);
+  assert.match(worker,/const demoActions=meta\.demo===true\?/);
 });
