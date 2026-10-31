@@ -20,6 +20,10 @@ test('dead chat uses blue notice and frozen day chat uses explicit reason',()=>{
  assert.match(chat,/Bạn đã chết nên không chat được\./);
  assert.match(chat,/gmww-chat-dead-notice\{display:block!important;color:#69d8ff/);
  assert.match(chat,/result\.reason==='CHAT_FROZEN'/);
+ assert.match(chat,/result\.reason==='CHAT_EXPELLED'/);
+ assert.match(chat,/Bạn đã bị đuổi khỏi làng nên không chat được\./);
+ assert.match(chat,/result\.reason==='CHAT_MUTED_GM'/);
+ assert.match(chat,/result\.reason==='CHAT_MUTED_ARTIFACT'/);
  assert.match(chat,/Bạn đang bị đóng băng nên không chat được\./);
 });
 test('Player packaged script remains exact source and keeps GM menu',()=>{
