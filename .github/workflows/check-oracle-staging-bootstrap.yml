@@ -29,6 +29,7 @@ jobs:
       - run: bash -n infra/oracle-staging/start-local.sh
       - run: node --test infra/oracle-staging/bootstrap.test.mjs
       - run: node --test infra/oracle-staging/probe-local.test.mjs
+      - run: node --test infra/oracle-staging/verify-two-backends.test.mjs
       - name: Oracle STAGING real Worker login, room, WS and persisted reconnect (LOCAL only)
         shell: bash
         run: |

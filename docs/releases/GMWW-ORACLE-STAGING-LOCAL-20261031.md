@@ -34,3 +34,11 @@
 - Bắt buộc từ chối token giả, truy vấn private room state không đăng nhập, chat không đăng nhập; room_state WebSocket không được rò rỉ GM token/hash mật khẩu hoặc quyền riêng.
 - Bài test sử dụng Worker engine chung, **không thay đổi quy tắc login Production**. Chưa xác minh Oracle VM thật, TLS, domain, backup, hay đối soát dữ liệu bí mật của hai backend. Node bootstrap vẫn `/readyz=503`, không bật failover.
 - Rollback: revert thay đổi chỉ trong STAGING/CI, không tác động Room/Production, IPA, Pages, Runtime.
+
+
+## Cổng đối soát từ xa Cloudflare ↔ Oracle STAGING (read-only, chưa nghiệm thu VM)
+- `infra/oracle-staging/verify-two-backends.mjs` là preflight **chỉ GET** trên hai URL HTTPS khác nhau. Kiểm tra /api/health (project, engine/server version), từ chối /api/members/me chưa đăng nhập; Oracle phải trả /healthz nhận diện STAGING và /readyz=503, không nhận game traffic thật.
+- Mặc định khóa; chỉ chạy khi đã có endpoint Oracle được triển khai/kiểm soát hợp lệ và `GMWW_ORACLE_REMOTE_READONLY=1`, `GMWW_ORACLE_STAGING_URL`, `GMWW_CLOUDFLARE_PROD_URL`. Không dùng token, tài khoản, phòng hay dữ liệu Production cho kiểm thử này.
+- **Không đồng nghĩa với đồng bộ dữ liệu:** thành công chỉ chứng minh hợp đồng HTTP đọc được và một phần bảo vệ phiên. Chưa xác minh cùng commit nguồn trên VM, sao chép Durable Objects/SQLite có checksum, login/session và WebSocket trên VM thực, quyền truy cập và TLS, đối soát dữ liệu private từng phòng. `productionSwitchAllowed=false` luôn luôn.
+- Mọi mismatch hoặc redirect/HTML hay thiếu endpoint phải FAIL; CI chỉ kiểm tra unit bằng mock, không giả vờ đã kết nối Oracle VM. Cần staging host và quyền truy cập trước khi chạy nghiệm thu remote.
+- Rollback: revert PR chỉ chứa STAGING/tests/CI/release notes. Không triển khai Worker/Pages, không tạo Runtime/IPA, không sửa Oracle Production hoặc dữ liệu.
