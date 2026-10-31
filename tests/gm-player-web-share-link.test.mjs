@@ -193,3 +193,9 @@ test('WebKit mobile viewport: actual UI layout, selection, copy and share', {ski
     await browser.close();
   }
 });
+
+test('PR682 CI remains exact-scope and fails closed for extra Worker/gameplay files',async()=>{
+  const {classifyBrowserScope}=await import('../.github/scripts/ci-browser-scope.mjs');
+  assert.equal(classifyBrowserScope([{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope([{path:'server-game/current/GMWW.html',status:'M'}]),'full');
+});
