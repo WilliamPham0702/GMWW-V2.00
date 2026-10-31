@@ -80,12 +80,12 @@ jobs:
               'tests/gm-player-web-share-link.test.mjs' | sort)
             # Pure release-storage consolidation: never build or publish an
             # unchanged game version just because we centralized its download URL.
-            ARCHIVE_ONLY=$(printf '%s\\n' "$CHANGED" | sort)
-            ARCHIVE_EXPECTED=$(printf '%s\\n' \\
-              '.github/workflows/deploy-production.yml' \\
-              '.github/workflows/github-runtime-ota.yml' \\
-              'README.md' \\
-              'docs/releases/GMWW-RUNTIME-CENTRAL-ARCHIVE-20261031.md' \\
+            ARCHIVE_ONLY=$(printf '%s\n' "$CHANGED" | sort)
+            ARCHIVE_EXPECTED=$(printf '%s\n' \
+              '.github/workflows/deploy-production.yml' \
+              '.github/workflows/github-runtime-ota.yml' \
+              'README.md' \
+              'docs/releases/GMWW-RUNTIME-CENTRAL-ARCHIVE-20261031.md' \
               'tests/runtime-single-archive-release.test.mjs' | sort)
             if [ "$ARCHIVE_ONLY" = "$ARCHIVE_EXPECTED" ]; then
               SKIP_AUTO_RELEASE=true
