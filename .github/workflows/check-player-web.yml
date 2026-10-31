@@ -44,6 +44,13 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: Cloudflare Pages alias only — HTTPS 302 and Worker/Runtime isolation
+        if: steps.scope.outputs.mode == 'pages-alias'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test tests/gamemasoi-pages-link.test.mjs tests/production-deploy-architecture-docs.test.mjs
+          node -e "import('./.github/scripts/ci-browser-scope.mjs').then(m => { if(!m.classifyBrowserScope) process.exit(1) })"
+          test -s docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md
       - name: GM Chrome iOS viewport only (no gameplay, Player cards, Native IPA)
         if: steps.scope.outputs.mode == 'gm-chrome-ios-viewport'
         run: |
@@ -967,6 +974,20 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node --check .github/scripts/ci-browser-scope.mjs
       # END GMWW_PLAYER_LINK_SHARE_CHECK_637
+      # PR652 V3.280: reviewed gameplay already merged and accepted on real
+      # iPhone. This exact postmerge CI repair retains Online, GM, Worker,
+      # version, source assembly and fail-closed CI policy verification.
+      - name: PR652 V3.280 — postmerge Online release checks, no gameplay changes
+        if: steps.scope.outputs.mode == 'pr652-postmerge-release'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/ci-browser-scope.test.mjs tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs tests/gmww-action-icons-in-battle.test.mjs tests/v399-group-actions-undo.test.mjs tests/gm-admin-top-chat-20261028.test.mjs
+          test -s docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md
       # PR645 has an audited and separately exercised Online/GM/Player scope.
       # Do not regress against obsolete V3.223/3D or unrelated legacy card assertions.
       # Every unrelated PR and every main push still executes the full suite.

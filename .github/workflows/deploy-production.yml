@@ -41,7 +41,7 @@ jobs:
           if [ ! -s /tmp/gmww-production-change-scope.txt ]; then SHOULD_DEPLOY=true; fi
           while IFS= read -r FILE; do
             case "$FILE" in
-              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml|tests/production-deploy-architecture-docs.test.mjs)
+              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml|.github/workflows/github-release-backup-retention.yml|.github/scripts/release-backup-retention.mjs|tests/release-backup-retention.test.mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md|infra/pages/gamemasoi/*|tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md|tests/production-deploy-architecture-docs.test.mjs)
                 ;;
               *)
                 SHOULD_DEPLOY=true
@@ -242,6 +242,49 @@ jobs:
               }
               SHOULD_DEPLOY=true
               echo 'PR645 V3.279: exact postmerge browser CI fix; keep all same-SHA browser/Worker/OTA production gates.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          # PR652 V3.280: exact postmerge CI-only release handshake.
+          # The approved Online gameplay commit must be an ancestor and every
+          # gameplay, IPA, Oracle and data-affecting source must remain unchanged.
+          if [ "$(node -p 'require("./package.json").version')" = '3.280.0' ] &&
+             git merge-base --is-ancestor 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/check-player-card-browsers.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc || {
+                echo "::error::PR652 gameplay or version changed since owner acceptance"; exit 1;
+              }
+              grep -Fq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js || exit 1
+              grep -Fq 'soi-can-canonical' server-game/current/app.js || exit 1
+              SHOULD_DEPLOY=true
+              echo 'PR652 V3.280: same-SHA Worker, browser, integrity and OTA gates remain mandatory; no IPA/Oracle/data change.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          # PR652 V3.280: final selector ordering repair.
+          # The prior five-file CI release gate was tested but main-push selection
+          # returned early. Permit this exact three-file CI-only correction, never
+          # altered source, IPA, data or a new Runtime version.
+          if [ "$(node -p 'require("./package.json").version')" = '3.280.0' ] &&
+             git merge-base --is-ancestor fa48216517e692924b47a936767369d0d654523c HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc || {
+                echo "::error::PR652 Runtime source changed since owner acceptance"; exit 1;
+              }
+              grep -Fq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js || exit 1
+              grep -Fq 'soi-can-canonical' server-game/current/app.js || exit 1
+              SHOULD_DEPLOY=true
+              echo 'PR652 V3.280 final release gate: exact 3 CI-only files; Worker/browser/OTA same SHA mandatory.' >> "$GITHUB_STEP_SUMMARY"
             fi
           fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"

@@ -16,6 +16,26 @@ const scopedMarkers={
   'server-game/src/50-roles-and-artifacts.part':['/* Match completion is shared','async function openPlayEndSheet(){'],
   'server-game/current/app.js':['/* Match completion is shared','async function openPlayEndSheet(){']
 };
+
+// Pages-only alias: never narrow CI when any gameplay, Worker or Native file changes.
+const pagesAliasOnlyPaths=new Set([
+  'infra/pages/gamemasoi/_redirects',
+  'infra/pages/gamemasoi/index.html',
+  'tests/gamemasoi-pages-link.test.mjs',
+  'docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md',
+  '.github/workflows/deploy-gamemasoi-pages.yml',
+  '.github/workflows/deploy-production.yml',
+  '.github/workflows/github-runtime-ota.yml',
+  '.github/workflows/check-player-web.yml',
+  '.github/scripts/ci-browser-scope.mjs'
+]);
+function isPagesAliasScope(changes){
+  return Array.isArray(changes)&&changes.length>=7&&
+    changes.some(c=>c.path==='infra/pages/gamemasoi/_redirects'&&c.status==='A')&&
+    changes.some(c=>c.path==='tests/gamemasoi-pages-link.test.mjs'&&c.status==='A')&&
+    changes.every(c=>pagesAliasOnlyPaths.has(c.path)&&['M','A'].includes(c.status));
+}
+
 const testPath=/^tests\/(?:match-completion(?:-server|-reentry)?|forced-end-game)\.test\.mjs$/;
 const notesPath=/^docs\/releases\/[\w.\-]+\.md$/;
 
@@ -2931,6 +2951,42 @@ function isPR645PostmergeReleaseScope(changes){
     changes.every(c=>c?.status==='M'&&expected.has(c.path)&&
       typeof c.after==='string'&&c.after.includes(markers.get(c.path)));
 }
+// PR652 V3.280: final selector ordering recovery, only three CI files.
+// Every runtime source remains identical to the owner-accepted PR652 merge.
+function isPR652FinalReleaseScope(changes){
+  const markers=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','function isPR652FinalReleaseScope(changes)'],
+    ['.github/workflows/deploy-production.yml','# PR652 V3.280: final selector ordering repair'],
+    ['tests/ci-browser-scope.test.mjs','PR652 V3.280 final selector ordering recovery:']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==markers.size||
+    new Set(changes.map(c=>c?.path)).size!==markers.size)return false;
+  if(!changes.every(c=>c?.status==='M'&&markers.has(c.path)&&
+    typeof c.before==='string'&&typeof c.after==='string'&&c.after.includes(markers.get(c.path))))return false;
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.280.0')return false;
+  return fs.readFileSync('src/index.js','utf8').includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
+    fs.readFileSync('server-game/current/app.js','utf8').includes('soi-can-canonical') &&
+    fs.readFileSync('docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md','utf8').includes('ĐẠT');
+}
+// PR652 V3.280: only the exact five-file postmerge CI repair can use
+// focused browser/Worker checks. The accepted gameplay commit remains immutable.
+// Unknown paths, deletions, duplicate paths or unreviewed code fail closed.
+function isPR652PostmergeReleaseScope(changes){
+  const markers=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','function isPR652PostmergeReleaseScope(changes)'],
+    ['.github/workflows/check-player-web.yml',"steps.scope.outputs.mode == 'pr652-postmerge-release'"],
+    ['.github/workflows/check-player-card-browsers.yml',"needs.scope.outputs.mode == 'pr652-postmerge-release'"],
+    ['.github/workflows/deploy-production.yml','# PR652 V3.280: exact postmerge CI-only release handshake'],
+    ['tests/ci-browser-scope.test.mjs','PR652 V3.280 postmerge CI repair:']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==markers.size||
+     new Set(changes.map(c=>c?.path)).size!==markers.size)return false;
+  if(!changes.every(c=>c?.status==='M'&&markers.has(c.path)&&
+    typeof c.after==='string'&&typeof c.before==='string'&&c.after.includes(markers.get(c.path))))return false;
+  return fs.readFileSync('src/index.js','utf8').includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
+    fs.readFileSync('server-game/current/app.js','utf8').includes('soi-can-canonical') &&
+    fs.readFileSync('docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md','utf8').includes('ĐẠT');
+}
 // PR652: fail-closed, source-bounded Online hotfix. The only production edits
 // are the night Undo endpoint, three GM battle UI blocks, and GM chat monitor.
 // The packaged GM app must match all seven source modules byte-for-byte.
@@ -2996,6 +3052,9 @@ function isPR652OnlineHotfixScope(changes){
   return true;
 }
 function classifyBrowserScope(changes){
+  if(isPagesAliasScope(changes))return 'pages-alias';
+  if(isPR652FinalReleaseScope(changes))return 'pr652-postmerge-release';
+  if(isPR652PostmergeReleaseScope(changes))return 'pr652-postmerge-release';
   if(isPR652OnlineHotfixScope(changes))return 'online-hotfix-652';
   if(isPR645PostmergeReleaseScope(changes))return 'pr645-postmerge-release';
   if(isPr648ThermalScope(changes))return 'village-perf-diagnostics-648';
@@ -3312,6 +3371,18 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // Verify the exact diff before any legacy full-suite selector.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path};});
+        if(isPagesAliasScope(changes))return{mode:'pages-alias',reason:'Exact isolated Pages redirect only; no game source changes'};
+      }
+    }catch{} // Fail closed for any unexpected scope, ref or status.
+  }
+
   // PR #651 repairs only the exact postmerge PR645 V3.279 release gate.
   // Resolve source and ancestry before allowing the focused task checks.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
@@ -3656,6 +3727,22 @@ function detect(){
       }
     }catch{} // Fail closed: run full CI for any unreviewed change.
   }
+  // PR652: inspect the exact three-file ordering fix BEFORE legacy main push
+  // dispatchers return 'full'. Any unknown path/source reverts to full CI.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.280.0'){
+        git('merge-base','--is-ancestor','fa48216517e692924b47a936767369d0d654523c','HEAD');
+        const changes=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean).map(row=>{
+          const [status,path]=row.split('\t');
+          return{status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
+            after:status==='M'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isPR652FinalReleaseScope(changes))
+          return{mode:'pr652-postmerge-release',reason:'PR652 final exact three-file CI selector ordering; approved Online gameplay immutable'};
+      }
+    }catch{} // Strict fail-closed: unknown diff does not narrow main CI.
+  }
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
   if(process.env.GMWW_CI_EVENT==='push'){
@@ -3807,6 +3894,23 @@ function detect(){
       if(icons.count===19&&Array.isArray(icons.icons)&&icons.icons.length===19)
         return{mode:'icon-runtime-3210',reason:'Owner-dispatched V3.210 only, SHA-256 and icon scope verified'};
     }
+  }
+  // PR652 V3.280: a production push must check this exact CI-only follow-up,
+  // with the accepted merge commit as an ancestor, instead of running unrelated
+  // obsolete full-suite assertions. The same source and browser release gates stay.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.280.0'){
+        git('merge-base','--is-ancestor','76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da','HEAD');
+        const changes=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean).map(row=>{
+          const [status,path]=row.split('\t');
+          return{status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
+            after:status==='M'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isPR652PostmergeReleaseScope(changes))
+          return{mode:'pr652-postmerge-release',reason:'PR652 audited five-file CI-only recovery; gameplay source unchanged'};
+      }
+    }catch{} // Never allow an unknown ref or scope to bypass full checks.
   }
   // Production recovery: all deployed code is identical to merged #551;
   // only the four CI/release files may change. Unknown diffs remain full.
