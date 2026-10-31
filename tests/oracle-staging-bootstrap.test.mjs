@@ -104,3 +104,17 @@ test('Oracle YAML release gate repair has one valid guarded block',async()=>{
  assert.match(runtime,/Oracle release-guard repair only: NO automatic Runtime release[.]/);
  assert.match(runtime,/ORACLE_UNRELATED=\$\(printf.*mjs\)\$' \|\| true\)/);
 });
+
+// Regression: PR #678 merged a duplicate publish job that invalidated the entire push workflow.
+test('Oracle local Runtime release gate has exactly one package and publish job',()=>{
+ const runtime=readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+ const count=(token)=>runtime.split(token).length-1;
+ assert.equal(count('\n  package:\n'),1,'only one package job');
+ assert.equal(count('\n  publish:\n'),1,'only one publish job');
+ assert.equal(count('echo "skip_auto_release=$SKIP_AUTO_RELEASE"'),1,'only one release selector');
+ assert.equal(count('ORACLE_LOCAL_UNRELATED='),1,'one Oracle local gate');
+ assert.equal(count('Oracle LOCAL STAGING only: NO automatic Runtime release.'),1);
+ assert.match(runtime,/infra\/oracle-staging\/start-local[.]sh/);
+ assert.match(runtime,/infra\/oracle-staging\/bootstrap[.]test[.]mjs/);
+ assert.match(runtime,/tests\/pages-online-chat-reconnect-e2e[.]mjs/);
+});
