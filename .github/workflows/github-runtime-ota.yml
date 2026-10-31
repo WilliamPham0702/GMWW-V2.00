@@ -108,6 +108,13 @@ jobs:
               SKIP_AUTO_RELEASE=true
               echo 'Oracle STAGING local probe only: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
             fi
+            # Isolated Oracle STAGING session/WS probe never modifies game Runtime.
+            ORACLE_AUTH_PROBE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(infra/oracle-staging/(probe-local[.]mjs|probe-local[.]test[.]mjs)|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031[.]md|[.]github/workflows/github-runtime-ota[.]yml)$' || true)
+            if [ -n "$CHANGED" ] && [ -z "$ORACLE_AUTH_PROBE_UNRELATED" ] &&
+               printf '%s\n' "$CHANGED" | grep -Fxq 'infra/oracle-staging/probe-local.mjs'; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Oracle STAGING auth probe only: NO automatic Runtime release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
             # CI-only Runtime workflow and Oracle gate maintenance never auto-publish a duplicate Runtime.
             RUNTIME_CI_RECOVERY_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(github-runtime-ota|check-oracle-staging-bootstrap)[.]yml)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$RUNTIME_CI_RECOVERY_UNRELATED" ] &&
