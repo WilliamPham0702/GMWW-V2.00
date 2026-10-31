@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 const DEFAULT_REPO = 'WilliamPham0702/GMWW-V2.00';
 
 export function buildCatalog(releases, repo = DEFAULT_REPO) {
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) throw new Error('Invalid repository');
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo) || repo.split('/').some(x => x === '.' || x === '..')) throw new Error('Invalid repository');
   if (!Array.isArray(releases)) throw new Error('Releases must be an array');
   const origin = 'https://github.com/' + repo + '/releases/download/';
   const byVersion = new Map();
