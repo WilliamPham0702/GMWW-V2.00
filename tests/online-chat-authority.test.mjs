@@ -14,6 +14,7 @@ test('Online chat day: living players can message, dead, expelled, GM-banned and
   for(const [effect,rows] of [
     ['dead',[{type:'dead',loginId:'wolf_a',effectActive:true}]],
     ['expelled',[{type:'expelled',loginId:'wolf_a',effectActive:true}]],
+    ['frozen',[{type:'frozen',loginId:'wolf_a',effectActive:true}]],
     ['mute',[{type:'status',statusId:'mute',loginId:'wolf_a',effectActive:true}]]
   ]){const p=chatPolicy({...base,rows});assert.equal(p.canRead,true,effect);assert.equal(p.canSend,false,effect)}
   assert.equal(chatPolicy({...base,bans:{wolf_a:true}}).canSend,false);
