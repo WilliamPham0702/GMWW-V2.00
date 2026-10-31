@@ -906,12 +906,18 @@ test('PR672 exact DEMO Online transport uses focused CI and rejects any extra ga
   const app=readFileSync('server-game/current/app.js','utf8');
   const modeOld="const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};";
   const modeNew="const patch={demo:target==='demo',roomMode:(target==='online'||target==='demo')?'online':'offline'};";
-  const afterWorker=worker.replace('roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=','roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode=')
+  const workerBefore=worker.replace('roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode=','roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=')
+    .replace('const roomMode=desiredDemo?"online":body&&','const roomMode=desiredDemo?"offline":body&&');
+  const afterWorker=workerBefore.replace('roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=','roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode=')
     .replace('const roomMode=desiredDemo?"offline":body&&','const roomMode=desiredDemo?"online":body&&');
+  const setupBefore=setup.replace(modeNew,modeOld);
+  const appBefore=app.replace(modeNew,modeOld);
+  assert.notEqual(workerBefore,afterWorker,'fixture must exercise Worker delta');
+  assert.notEqual(setupBefore,setupBefore.replace(modeOld,modeNew),'fixture must exercise GM delta');
   const changes=[
-    modified('src/index.js',worker,afterWorker),
-    modified('server-game/src/30-village-and-setup.part',setup,setup.replace(modeOld,modeNew)),
-    modified('server-game/current/app.js',app,app.replace(modeOld,modeNew)),
+    modified('src/index.js',workerBefore,afterWorker),
+    modified('server-game/src/30-village-and-setup.part',setupBefore,setupBefore.replace(modeOld,modeNew)),
+    modified('server-game/current/app.js',appBefore,appBefore.replace(modeOld,modeNew)),
     modified('tests/v3175-post-create-room-mode.test.mjs','old test',"assert.equal(r.room.roomMode,'online'); DEMO chooses online room transport"),
     {path:'docs/releases/GMWW-DEMO-ONLINE-TRANSPORT-20261031.md',status:'A',before:null,after:'DEMO dùng kết nối Online - Rollback'}
   ];
