@@ -44,6 +44,33 @@ function chooseCanonical(releases, repo, kind) {
   return [...byVersion.values()].sort((a,b) =>
     numericVersion(b.version) - numericVersion(a.version));
 }
+// Only index GitHub-verified, non-expired Actions artifacts as QA; never call these Production.
+function chooseQaArtifacts(artifacts, repo, publishedVersions) {
+  const selected = new Map();
+  for (const artifact of artifacts) {
+    const match = /^GMWW-Runtime-V(3\.\d+)-GitHub-verified$/.exec(String(artifact?.name || ''));
+    if (!match || artifact.expired || publishedVersions.has(match[1])) continue;
+    if (!Number.isSafeInteger(artifact.id) || artifact.id <= 0 ||
+        !Number.isSafeInteger(artifact.workflow_run?.id) ||
+        artifact.workflow_run.id <= 0) continue;
+    const item = { version: match[1], artifact };
+    const current = selected.get(item.version);
+    if (!current || String(artifact.created_at || '') > String(current.artifact.created_at || '')) {
+      selected.set(item.version, item);
+    }
+  }
+  return [...selected.values()].sort((a,b) => numericVersion(b.version) - numericVersion(a.version));
+}
+function qaRow({ version, artifact }, repo) {
+  const link = DOWNLOAD_BASE + repo + '/actions/runs/' +
+    artifact.workflow_run.id + '/artifacts/' + artifact.id;
+  const checksum = /^sha256:([a-f0-9]{64})$/.exec(String(artifact.digest || ''));
+  const expiry = /^\d{4}-\d{2}-\d{2}T/.test(String(artifact.expires_at || '')) ?
+    String(artifact.expires_at).slice(0,10) : 'không rõ';
+  return '| **V' + version + ' — QA** | [⬇️ Tải gói gốc ZIP](' + link +
+    ') (chứa .gmwwupdate) | ' + (checksum ? '\`' + checksum[1] + '\` (ZIP)' : '—') +
+    ' | Hết hạn: ' + expiry + '; **chưa phát hành Production** |';
+}
 function row(entry, detailed = true) {
   const { version, asset, sha, release } = entry;
   const cells = [
@@ -54,12 +81,15 @@ function row(entry, detailed = true) {
   if (detailed) cells.push('[Chi tiết](' + release.html_url + ')');
   return '| ' + cells.join(' | ') + ' |';
 }
-export function buildCatalogs(releases, repo = DEFAULT_REPO) {
+export function buildCatalogs(releases, repo = DEFAULT_REPO, artifacts = []) {
   if (!validRepo(repo)) throw new Error('Invalid repository');
   if (!Array.isArray(releases)) throw new Error('Releases must be an array');
+  if (!Array.isArray(artifacts)) throw new Error('Artifacts must be an array');
 
   const runtimes = chooseCanonical(releases, repo, 'runtime');
   const ipas = chooseCanonical(releases, repo, 'ipa');
+  const qa = chooseQaArtifacts(artifacts, repo, new Set(runtimes.map(x => x.version)));
+
   const backups = releases.filter(r => r && !r.draft && !r.prerelease &&
     /^gmww-backup-\d{4}-\d{2}$/.test(String(r.tag_name))).flatMap(r =>
     (r.assets || []).filter(a =>
@@ -72,13 +102,22 @@ export function buildCatalogs(releases, repo = DEFAULT_REPO) {
   const lines = [
     '# GMWW — KHO TẢI FILE',
     '',
-    '> **Một địa chỉ tải chung.** Chỉ dẫn tới file gốc trên GitHub Releases, không lưu bản sao.',
+    '> **Một địa chỉ tải chung.** Link bản Production trỏ tới GitHub Releases; link QA trỏ tới GitHub Actions. Không lưu bản sao.',
     '',
     '## 1. RUNTIME — CẬP NHẬT THỦ CÔNG',
     '',
-    '**Bản mới nhất đã xác minh trên GitHub: ' +
+    ...(qa.length ? [
+      '**Gói mới nhất trên GitHub: V' + qa[0].version +
+        ' — QA chưa phát hành.** Đây là ZIP từ Actions, không phải bản cài Production; giải nén mới có .gmwwupdate.',
+      '',
+      '| QA | File gốc | SHA-256 ZIP | Trạng thái |',
+      '|:--|:--|:--|:--|',
+      ...qa.slice(0,5).map(x => qaRow(x, repo)),
+      ''
+    ] : []),
+    '**Runtime Production đã xác minh mới nhất: ' +
       (runtimes[0] ? 'V' + runtimes[0].version : 'chưa có') +
-      '.** Bản gửi riêng qua ChatGPT chỉ xuất hiện tại đây sau khi được phát hành trên GitHub.',
+      '.** Các bản QA không thay thế bản chính thức.',
     '',
     '| Phiên bản | Tải .gmwwupdate | Xác minh | Ghi chú |',
     '|:--|:--|:--|:--|',
@@ -134,8 +173,8 @@ export function buildCatalogs(releases, repo = DEFAULT_REPO) {
     ipaHistory: historical('IPA', ipas.slice(3))
   };
 }
-export function buildCatalog(releases, repo = DEFAULT_REPO) {
-  return buildCatalogs(releases, repo).index;
+export function buildCatalog(releases, repo = DEFAULT_REPO, artifacts = []) {
+  return buildCatalogs(releases, repo, artifacts).index;
 }
 
 export async function fetchAllReleases(repo = DEFAULT_REPO, token = process.env.GH_TOKEN) {
@@ -158,17 +197,42 @@ export async function fetchAllReleases(repo = DEFAULT_REPO, token = process.env.
   }
   throw new Error('Too many release pages; refusing incomplete catalog');
 }
+// Read metadata only (never download, upload or copy the binary ZIP).
+export async function fetchRecentQaArtifacts(repo = DEFAULT_REPO, token = process.env.GH_TOKEN) {
+  if (!validRepo(repo)) throw new Error('Invalid repository');
+  if (!token) throw new Error('GH_TOKEN required to list Actions artifacts');
+  const artifacts = [];
+  for (let page = 1; page <= 6; page++) {
+    const response = await fetch('https://api.github.com/repos/' + repo +
+      '/actions/artifacts?per_page=100&page=' + page, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'gmww-download-index',
+        Authorization: 'Bearer ' + token
+      }
+    });
+    if (!response.ok) throw new Error('GitHub Actions artifacts API: HTTP ' + response.status);
+    const result = await response.json();
+    if (!Array.isArray(result.artifacts)) throw new Error('Invalid GitHub Actions artifact response');
+    artifacts.push(...result.artifacts);
+    if (result.artifacts.length < 100) break;
+  }
+  return artifacts;
+}
 async function main() {
   const output = process.argv[2];
   if (!output || !output.endsWith('.md')) throw new Error('Markdown output path required');
   const repo = process.env.GITHUB_REPOSITORY || DEFAULT_REPO;
-  const docs = buildCatalogs(await fetchAllReleases(repo), repo);
+  const [releases, artifacts] = await Promise.all([
+    fetchAllReleases(repo), fetchRecentQaArtifacts(repo)
+  ]);
+  const docs = buildCatalogs(releases, repo, artifacts);
   await Promise.all([
     writeFile(output, docs.index),
     writeFile(join(dirname(output), 'RUNTIME-HISTORY.md'), docs.runtimeHistory),
     writeFile(join(dirname(output), 'IPA-HISTORY.md'), docs.ipaHistory)
   ]);
-  console.log('Refreshed Runtime + IPA + backup links without copying binaries.');
+  console.log('Refreshed QA + Production Runtime, IPA and backup links without copying binaries.');
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(error => { console.error(error); process.exitCode = 1; });
