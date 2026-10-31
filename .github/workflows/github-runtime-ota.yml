@@ -85,7 +85,7 @@ jobs:
               echo "Storage-only workflow maintenance: NO automatic Runtime release." >> "$GITHUB_STEP_SUMMARY"
             fi
             # Pages-only alias must never trigger a GMWW Runtime package.
-            PAGES_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(deploy-production|github-runtime-ota|deploy-gamemasoi-pages)[.]yml|infra/pages/gamemasoi/(_redirects|index[.]html)|tests/gamemasoi-pages-link[.]test[.]mjs|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031[.]md)$' || true)
+            PAGES_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/(deploy-production|github-runtime-ota|deploy-gamemasoi-pages|check-player-web)[.]yml|[.]github/scripts/ci-browser-scope[.]mjs|infra/pages/gamemasoi/(_redirects|index[.]html)|tests/gamemasoi-pages-link[.]test[.]mjs|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031[.]md)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$PAGES_UNRELATED" ]; then
               SKIP_AUTO_RELEASE=true
               echo "Pages-only alias: no Runtime release." >> "$GITHUB_STEP_SUMMARY"
