@@ -117,5 +117,5 @@ test('Oracle local Runtime release gate has exactly one package and publish job'
  assert.equal(count('Oracle LOCAL STAGING only: NO automatic Runtime release.'),1);
  assert.match(runtime,/infra\/oracle-staging\/start-local[.]sh/);
  assert.match(runtime,/infra\/oracle-staging\/bootstrap[.]test[.]mjs/);
- assert.match(runtime,/tests\/pages-online-chat-reconnect-e2e[.]mjs/);
+ assert.ok(runtime.includes('tests/pages-online-chat-reconnect-e2e[.]mjs'));
 });
