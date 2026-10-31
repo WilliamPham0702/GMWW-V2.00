@@ -82,6 +82,8 @@ jobs:
             # unchanged game version just because we centralized its download URL.
             ARCHIVE_ONLY=$(printf '%s\n' "$CHANGED" | sort)
             ARCHIVE_EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
               '.github/workflows/deploy-production.yml' \
               '.github/workflows/github-runtime-ota.yml' \
               'README.md' \
