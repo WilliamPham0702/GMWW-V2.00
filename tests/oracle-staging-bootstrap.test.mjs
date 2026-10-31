@@ -106,7 +106,8 @@ test('Oracle YAML release gate repair has one valid guarded block',async()=>{
 });
 
 // Regression: PR #678 merged a duplicate publish job that invalidated the entire push workflow.
-test('Oracle local Runtime release gate has exactly one package and publish job',()=>{
+test('Oracle local Runtime release gate has exactly one package and publish job',async()=>{
+ const {readFileSync}=await import('node:fs');
  const runtime=readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
  const count=(token)=>runtime.split(token).length-1;
  assert.equal(count('\n  package:\n'),1,'only one package job');
