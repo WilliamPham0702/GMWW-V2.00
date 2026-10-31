@@ -44,6 +44,17 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR690 — focused Worker release gate recovery
+        if: steps.scope.outputs.mode == 'pr677-worker-recovery'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/demo-transport-677-release.test.mjs tests/v3175-post-create-room-mode.test.mjs tests/v3173-room-mode-cycle.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-hybrid-real-players.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-player-live-join-v3271.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-PR690-DEMO-ONLINE-DEPLOY-RECOVERY-20261031.md
       - name: PR677 — verify source isolation, DEMO tests and Worker dry-run
         if: steps.scope.outputs.mode == 'pr677-worker-only-release'
         run: |
