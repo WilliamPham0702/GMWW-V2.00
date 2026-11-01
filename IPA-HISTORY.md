@@ -12,7 +12,6 @@
 | **V3.179** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.179/GMWW-V3.179.ipa) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.179/GMWW-V3.179.ipa.sha256) |
 | **V3.161** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.161/GMWW-V3.161.ipa) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.161/GMWW-V3.161.ipa.sha256) |
 | **V3.110** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.110/GMWW-V3.110.ipa) | — |
-| **V3.109** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.109/GMWW-V3.109.ipa) | — |
 | **V3.17** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.17/GMWW-V3.17.ipa) | — |
 
 [Quay về kho tải chính](RUNTIME-DOWNLOADS.md)
