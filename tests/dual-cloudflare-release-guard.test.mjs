@@ -25,7 +25,7 @@ function check(paths,kind) {
     return r.stdout.trim();
   }finally{rmSync(dir,{recursive:true,force:true})}
 }
-const fixture=['infra/cloudflare-standby/fixture-contract.mjs','infra/cloudflare-standby/fixture-contract.test.mjs','docs/architecture/dual-cloudflare-standby-20261101.md','.github/workflows/check-cloudflare-standby.yml','.github/workflows/deploy-production.yml','.github/workflows/github-runtime-ota.yml','tests/dual-cloudflare-release-guard.test.mjs'];
+const fixture=['infra/cloudflare-standby/fixture-contract.mjs','infra/cloudflare-standby/fixture-contract.test.mjs','docs/architecture/dual-cloudflare-standby-20261101.md','.github/workflows/check-cloudflare-standby.yml','.github/workflows/deploy-production.yml','.github/workflows/github-runtime-ota.yml','.github/workflows/check-pr-preview-github.yml','tests/dual-cloudflare-release-guard.test.mjs','tests/github-actions-pr-preview-ci.test.mjs'];
 test('scoped synthetic standby change skips Production and Runtime auto release',()=>{
   assert.equal(check(fixture,'production'),'false');
   assert.equal(check(fixture,'runtime'),'true');
