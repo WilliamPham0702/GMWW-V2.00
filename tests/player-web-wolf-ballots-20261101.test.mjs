@@ -68,6 +68,13 @@ test('Player and GM share campfire icons; each wolf can act independently, never
  const offer2=await playerOfferedActions(room,meta,'wolf2');
  assert.equal(offer1[0]?.actionId,'action_wolf_bite');
  assert.equal(offer2[0]?.actionId,'action_wolf_bite');
+ // A custom role-card onceGame setting must never block the shared PACK-01 bite.
+ store.set('roleCatalog:role_wolf',{roleCard:{functions:[{actionId:'action_wolf_bite',phase:'night',usageMode:'onceGame',usageCount:1}]}});
+ const nextNight={...meta,cycleNight:2};
+ const olderUse=[{matchId:'M1',night:1,actorId:'wolf2',roleId:'role_wolf',actionId:'action_wolf_bite'}];
+ store.set('battleRoleUsage:M1',olderUse);
+ assert.equal((await playerOfferedActions(room,nextNight,'wolf2')).length,1);
+ store.set('battleRoleUsage:M1',usage);
  store.set('battleRoleUsage:M1',[{matchId:'M1',night:1,actorId:'wolf1',roleId:'role_wolf',actionId:'action_wolf_bite'}]);
  assert.equal((await playerOfferedActions(room,meta,'wolf1')).length,0);
  assert.equal((await playerOfferedActions(room,meta,'wolf2')).length,1);
