@@ -26,22 +26,11 @@ struct GameWebView: UIViewRepresentable {
 
         let shellVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0"
         let escapedVersion = shellVersion.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
-        // A newly installed SideStore/native IPA must show its bundled runtime even when
-        // an older OTA cache uses the *same* runtime version. Keep newer OTA installs.
-        // Do not delete stored OTA files or any player / GM data; only reset the pointer.
-        let nativeBuild = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? "0"
-        let nativeStamp = shellVersion + "-" + nativeBuild
-        let nativeStampKey = "GMWWLastLaunchedNativeBuild"
-        let isNewNativeBuild = UserDefaults.standard.string(forKey: nativeStampKey) != nativeStamp
-        if let active = UserDefaults.standard.string(forKey: "GMWWActiveRuntimeVersion") {
-            let activeVersion = String(active.split(separator: "-").first ?? "")
-            let comparison = activeVersion.compare(shellVersion, options: .numeric)
-            if comparison == .orderedAscending || (isNewNativeBuild && comparison == .orderedSame) {
-                UserDefaults.standard.removeObject(forKey: "GMWWActiveRuntimeVersion")
-            }
-        }
-        if isNewNativeBuild {
-            UserDefaults.standard.set(nativeStamp, forKey: nativeStampKey)
+        // A freshly installed IPA contains a complete runtime with the same version.
+        // Do not let a stale Application Support runtime from an older install override it.
+        if let active = UserDefaults.standard.string(forKey: "GMWWActiveRuntimeVersion"),
+           String(active.split(separator: "-").first ?? "").compare(shellVersion, options: .numeric) == .orderedAscending {
+            UserDefaults.standard.removeObject(forKey: "GMWWActiveRuntimeVersion")
         }
         let bridgeScript = "window.GMWW_NATIVE_SHELL_VERSION='\(escapedVersion)';window.GMWW_NATIVE_UPDATER=true;window.GMWW_NATIVE_MANUAL_RUNTIME=true;window.GMWW_NATIVE_GITHUB_OTA=true;"
         config.userContentController.addUserScript(WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
