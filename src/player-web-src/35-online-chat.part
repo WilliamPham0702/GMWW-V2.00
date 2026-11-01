@@ -491,7 +491,7 @@ function gmwwOnlinePlaceAtFire(dock){
     const fx=r.left+(f.left+f.width/2)*sx,fy=r.top+(f.top+f.height/2)*sy;
     const margin=Math.min(24,r.width*.1,r.height*.1);
     if(f.width>0&&f.height>0&&Number.isFinite(fx)&&Number.isFinite(fy)&&
-       fx>=r.left+margin&&fx<=r.right-margin&&fy>=r.top+margin&&fy<=r.bottom-margin){x=fx;y=fy}
+       fx>=r.left+margin&&fx<=r.left+r.width-margin&&fy>=r.top+margin&&fy<=r.top+r.height-margin){x=fx;y=fy}
   }
  }catch{}
  // Fixed-position buttons must be fully inside the iPhone visual scene.
