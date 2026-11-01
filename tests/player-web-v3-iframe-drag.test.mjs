@@ -92,3 +92,32 @@ test('render signature invalidates when a Server-blocked action changes without 
  assert.match(source,/document\.addEventListener\('pointerup',end,true\)/);
  assert.match(source,/node\.setPointerCapture\?\.\(event\.pointerId\)/);
 });
+
+test('missed iPhone drop returns the original icon to the campfire instead of leaving it in a corner',()=>{
+ const listeners=new Map(),winListeners=new Map(),targets=[],positions=new Map([['wolf-bite',{x:-280,y:510}]]);
+ const doc={
+  addEventListener:(type,fn)=>listeners.set(type,fn),
+  removeEventListener:(type)=>listeners.delete(type),
+  createElement:()=>({style:{},remove(){}}),body:{appendChild(){}}
+ };
+ const win={innerWidth:390,innerHeight:780,
+  addEventListener:(type,fn)=>winListeners.set(type,fn),
+  removeEventListener:(type)=>winListeners.delete(type)};
+ const node={style:{transform:'translate(-280px,510px)'},
+  getBoundingClientRect:()=>({left:0,top:630,width:48,height:48}),
+  setPointerCapture(){},releasePointerCapture(){}};
+ const context={document:doc,window:win,Math,String,Number,state:{member:{loginId:'wolf1'}},
+  gmwwOnlinePick:null,gmwwOnlineIconPositions:positions,
+  gmwwPlayerTopMenuTimer:null,clearTimeout(){},gmwwChatClosePanel(){},revealPlayerTopMenu(){},
+  gmwwOnlineTargetAt:()=>'',gmwwOnlineTarget:id=>targets.push(id),
+  gmwwOnlinePickAction:()=>targets.push('picker'),toast(){}};
+ const down=vm.runInNewContext('('+dragSource+')',context);
+ down({button:0,pointerId:2,clientX:23,clientY:654,currentTarget:node,preventDefault(){},stopPropagation(){}},{key:'wolf-bite',iconUrl:'/action-icons/v3/05_soi_can.webp'});
+ listeners.get('pointermove')({pointerId:2,clientX:10,clientY:700,preventDefault(){}});
+ listeners.get('pointerup')({pointerId:2,clientX:10,clientY:700,type:'pointerup'});
+ assert.deepEqual(targets,[],'invalid release cannot submit an action');
+ assert.equal(node.style.transform,'','source icon must snap home to the campfire');
+ assert.equal(positions.size,0,'never persist offsets that can hide the icon on another turn');
+ assert.equal(listeners.size,0);
+ assert.equal(winListeners.size,0);
+});

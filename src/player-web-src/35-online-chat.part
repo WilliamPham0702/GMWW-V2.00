@@ -375,13 +375,10 @@ function gmwwOnlineIconDown(event,action){
    const target=targetAt(e.clientX,e.clientY);
    if(target){if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlinePick={action,targets:[]};gmwwOnlineTarget(target)}
    else{
-     const prev=gmwwOnlineIconPositions.get(action.key)||{x:0,y:0};
-     const bounds=node.getBoundingClientRect();
-     const originX=bounds.left+bounds.width/2-prev.x,originY=bounds.top+bounds.height/2-prev.y;
-     const x=Math.max(40,Math.min(window.innerWidth-40,e.clientX))-originX;
-     const y=Math.max(80,Math.min(window.innerHeight-85,e.clientY))-originY;
-     gmwwOnlineIconPositions.set(action.key,{x,y});
-     node.style.transform='translate('+x+'px,'+y+'px)';
+     // A missed drop never relocates the action icon: return it to the campfire.
+     // Previously the icon stayed at the finger's last position (often off-screen on iPhone).
+     gmwwOnlineIconPositions.delete(action.key);
+     node.style.transform='';
    }
  };
  // Capture on the source AND listen on the parent document: iOS may move over the iframe.
@@ -462,6 +459,9 @@ function renderOnlineActionDock(){
  dock.style.setProperty('--online-action-scale',String(scale/100));
  const scope=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join('|');
   if(gmwwOnlineIconScope!==scope){gmwwOnlineIconScope=scope;gmwwOnlineIconPositions.clear();gmwwOnlineCanRestore=false;gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0}
+  // Fail closed for any stale offsets from earlier drag logic, even if offers did not change.
+  if(gmwwOnlineIconPositions.size)gmwwOnlineIconPositions.clear();
+  for(const button of dock.querySelectorAll('button'))button.style.transform='';
   const sig=[scope,...offers.map(a=>[a.key,a.iconUrl,a.blocked,a.blockedReason,a.targetCount,a.noSelf].join(':'))].join('|');
  gmwwOnlineWitchNotice();gmwwOnlinePlaceAtFire(dock);
  if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();dock.classList.remove('is-idle-hidden');
@@ -470,7 +470,7 @@ function renderOnlineActionDock(){
    if(action.blocked){btn.dataset.blocked='true';btn.dataset.effectIcon=action.blockedType==='frozen'?'❄️':action.blockedType==='expelled'?'🚪':'⛔';}
    btn.setAttribute('aria-label',btn.title);
    const img=document.createElement('img');img.src=String(action.iconUrl||'/action-icons/v3/49_sang_tao_artifact.webp');img.alt='';img.draggable=false;btn.appendChild(img);
-   const pos=gmwwOnlineIconPositions.get(action.key);if(pos)btn.style.transform='translate('+pos.x+'px,'+pos.y+'px)';
+   // The campfire is the only home of each action icon; never restore old drag offsets.
     btn.onpointerdown=e=>gmwwOnlineIconDown(e,action);
    btn.onclick=e=>{if(action.blocked){toast(String(action.blockedReason||'Bạn không thể thực hiện hành động ở lượt này.'));return}if(e.detail===0)gmwwOnlinePickAction(action)};
    dock.appendChild(btn);
@@ -481,15 +481,21 @@ function gmwwOnlinePlaceAtFire(dock){
  if(!dock)return;
  const frame=document.getElementById('gmwwVillageFrame');if(!frame)return;
  const r=frame.getBoundingClientRect();if(!r.width||!r.height)return;
+ // Village uses an iframe with its own CSS viewport. The visible fire is centered
+ // in its scene; never anchor actions to an invisible/off-screen camera hotspot.
  let x=r.left+r.width*.5,y=r.top+r.height*.55;
  try{
   const fire=frame.contentDocument?.querySelector('.fire');
   if(fire){const f=fire.getBoundingClientRect(),inner=frame.contentWindow;
     const sx=r.width/Math.max(1,Number(inner?.innerWidth)||frame.clientWidth||r.width),sy=r.height/Math.max(1,Number(inner?.innerHeight)||frame.clientHeight||r.height);
-    if(f.width&&f.height){x=r.left+(f.left+f.width/2)*sx;y=r.top+(f.top+f.height/2)*sy;}}
+    const fx=r.left+(f.left+f.width/2)*sx,fy=r.top+(f.top+f.height/2)*sy;
+    const margin=Math.min(24,r.width*.1,r.height*.1);
+    if(f.width>0&&f.height>0&&Number.isFinite(fx)&&Number.isFinite(fy)&&
+       fx>=r.left+margin&&fx<=r.right-margin&&fy>=r.top+margin&&fy<=r.bottom-margin){x=fx;y=fy}
+  }
  }catch{}
- // Position at the actual campfire, even before the iframe finishes rendering.
- dock.style.left=Math.max(12,Math.min(window.innerWidth-12,x))+'px';
+ // Fixed-position buttons must be fully inside the iPhone visual scene.
+ dock.style.left=Math.max(32,Math.min(window.innerWidth-32,x))+'px';
  dock.style.top=Math.max(75,Math.min(window.innerHeight-90,y))+'px';
  const intel=document.getElementById('gmwwOnlineWitchIntel');if(intel?.style){intel.style.left=dock.style.left;intel.style.top=Math.max(105,Math.min(window.innerHeight-160,y-70))+'px'}
 }
