@@ -3637,7 +3637,7 @@ function isPR743ChatPostmergeScope(changes){
       deploy=fs.readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
     return worker.includes('async chatVoiceStore(')&&worker.includes('async chatVoiceRead(')&&
       worker.includes('async chatVoiceClear(')&&deploy.includes('7b981859d4f9171e47f4a7c0d7164b50f27d7bda')&&
-      deploy.includes('Rollback')&&
+      deploy.includes('Automatic rollback')&&
       fs.readFileSync('.github/workflows/check-player-web.yml','utf8').includes('gmww-chat-pr743-postmerge');
   }catch{return false}
 }
