@@ -26,3 +26,25 @@ test('PR743: original native identity and shell version remain unchanged',()=>{
   assert.match(project,/CURRENT_PROJECT_VERSION = 3264/);
   assert.match(plist,/<key>CFBundleShortVersionString<\/key>/);
 });
+
+test('PR743 SideStore hotfix: a newly installed native build prefers bundled UI over a same-version cached OTA',()=>{
+ assert.match(native,/GMWWLastLaunchedNativeBuild/);
+ assert.match(native,/let nativeBuild = \(Bundle\.main\.infoDictionary\?\["CFBundleVersion"\]/);
+ assert.match(native,/let isNewNativeBuild = UserDefaults\.standard\.string\(forKey: nativeStampKey\) != nativeStamp/);
+ assert.match(native,/comparison == \.orderedAscending \|\| \(isNewNativeBuild && comparison == \.orderedSame\)/);
+ assert.match(native,/removeObject\(forKey: "GMWWActiveRuntimeVersion"\)/);
+ assert.match(native,/UserDefaults\.standard\.set\(nativeStamp, forKey: nativeStampKey\)/);
+ assert.match(native,/if let runtime = activeRuntimeHTML\(\)/);
+ assert.match(native,/Bundle\.main\.url\(forResource: "GMWW", withExtension: "html", subdirectory: "Web"\)/);
+});
+
+test('PR743 SideStore hotfix: never clear a newer OTA or delete its bytes',()=>{
+ const startup=native.slice(native.indexOf('let nativeBuild ='),native.indexOf('let bridgeScript ='));
+ assert.match(startup,/comparison == \.orderedAscending/);
+ assert.match(startup,/comparison == \.orderedSame/);
+ assert.doesNotMatch(startup,/\.orderedDescending/);
+ assert.doesNotMatch(startup,/removeItem|removePersistentDomain|removeAll/);
+ const workflow=readFileSync('.github/workflows/build-server-game-ipa.yml','utf8');
+ assert.match(workflow,/const build=pr743SideStore\?'3289001':runtime\.replace/);
+ assert.match(workflow,/Print :CFBundleVersion/);
+});
