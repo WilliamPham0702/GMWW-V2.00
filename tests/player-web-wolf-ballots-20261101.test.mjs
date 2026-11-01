@@ -34,12 +34,12 @@ test('Each wolf gets one final ballot even if a historical retry carried two not
  const result=resolve([vote('wolf1','a'),vote('wolf1','b'),vote('wolf2','b')]);
  assert.deepEqual(result.victims,['b']);assert.equal(result.biteCount,2);
 });
-test('Ignore fake non-wolf ballot and inactive/undone bite notices',()=>{
+test('Ignore fake/non-wolf and undone notices; inactive legacy intent remains counted',()=>{
  const result=resolve([
   vote('stranger','a'),{...vote('wolf1','a'),undone:true},
-  {...vote('wolf2','a'),effectActive:false},vote('wolf3','b')
+  {...vote('wolf2','b'),effectActive:false},vote('wolf3','b')
  ]);
- assert.deepEqual(result.victims,['b']);assert.equal(result.biteCount,1);
+ assert.deepEqual(result.victims,['b']);assert.equal(result.biteCount,2);
 });
 test('Alpha special blocked-pack rule remains in force when frozen',()=>{
  const result=resolve([vote('wolf1','a'),{matchId:'M1',night:1,type:'frozen',loginId:'alpha',effectActive:true}]);
