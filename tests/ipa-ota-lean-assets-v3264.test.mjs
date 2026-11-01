@@ -29,17 +29,22 @@ test('all 51 V3 WebP images are identical to Worker copies; V1/V2 remain in repo
  }
  for(const old of ['sea-v1','v2'])assert.equal(fs.readdirSync(base+old).filter(x=>x.endsWith('.png')).length,49);
 });
-test('V3.264 synchronized native shell and runtime retain OTA rollback',()=>{
- assert.equal(JSON.parse(read('package.json')).version,'3.264.0');
- const lock=JSON.parse(read('package-lock.json'));
- assert.equal(lock.version,'3.264.0');assert.equal(lock.packages[''].version,'3.264.0');
- assert.ok(worker.includes('VERSION="V3.264",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="native-3264-lean-assets"'));
- assert.ok(gm.includes("const VERSION='3.264'"));
- assert.ok(source.includes("const VERSION='3.264'"));
- assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V3.264</title>'));
- assert.equal([...project.matchAll(/MARKETING_VERSION = 3\.264;/g)].length,2);
+test('independent IPA shell and current OTA Runtime retain version integrity and rollback',()=>{
+ const pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.json'));
+ const runtime=worker.match(/\\bVERSION="V([0-9.]+)"/)?.[1];
+ const shell=worker.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
+ assert.ok(runtime&&shell,'Worker must advertise both versions');
+ const parts=value=>value.split('.').map(Number);
+ const lessOrEqual=(a,b)=>{const aa=parts(a),bb=parts(b);for(let i=0;i<Math.max(aa.length,bb.length);i++){const diff=(aa[i]||0)-(bb[i]||0);if(diff)return diff<0}return true};
+ assert.ok(lessOrEqual(shell,runtime),'A deployed OTA Runtime must not precede its native shell');
+ assert.equal(pkg.version,runtime+'.0');
+ assert.equal(lock.version,pkg.version);
+ assert.equal(lock.packages[''].version,pkg.version);
+ assert.ok(gm.includes("const VERSION='"+runtime+"'"));
+ assert.ok(source.includes("const VERSION='"+runtime+"'"));
+ assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+runtime+'</title>'));
+ assert.deepEqual([...project.matchAll(/MARKETING_VERSION = ([0-9.]+);/g)].map(m=>m[1]),[shell,shell]);
  assert.ok(ota.includes('delete:[]'));
- assert.ok(ota.includes('V3.264: Tối ưu IPA/Runtime OTA'));
  assert.ok(read('server-game/GMWW-Server/GameView.swift').includes('case "rollbackRuntime":'));
 });
 test('audio list uses multiple-element selectors for every list row',()=>{
