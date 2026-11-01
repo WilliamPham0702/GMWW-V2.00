@@ -11,6 +11,11 @@ test('V3: Runtime/game changes receive high risk checks',()=>{
  assert.equal(p.target,'runtime');assert.equal(p.risk,'high');
  assert.ok(p.tests.includes('tests/gmww-play-interaction-rules.test.mjs'));
 });
+test('V3: safe version bump allowed only with Runtime source changes',()=>{
+ const p=v3DeliveryPlan(['server-game/current/app.js','src/index.js','package.json','package-lock.json','docs/releases/GMWW-RUNTIME.md']);
+ assert.equal(p.target,'runtime');assert.equal(p.hold,false);
+ assert.equal(v3DeliveryPlan(['package.json','docs/releases/GMWW-RUNTIME.md']).target,'blocked');
+});
 test('V3: Pages stays independent of Worker',()=>{
  const p=v3DeliveryPlan(['infra/pages/gamemasoi/_worker.js','tests/gamemasoi-pages-link.test.mjs']);
  assert.equal(p.target,'pages');assert.equal(p.hold,false);
