@@ -3455,6 +3455,18 @@ function isRuntimeMergedV3286Scope(changes){
 // Dual Cloudflare B PR: exact synthetic code/CI scope only. Any gameplay,
 // runtime, asset, hidden or unknown path returns FULL Worker CI.
 function isDualCloudflareStandbyScope(changes){
+  // Follow-up STAGING contract only: exact six changed files, no gameplay or deployment.
+  const followup=new Set([
+    'infra/cloudflare-standby/fixture-contract.mjs',
+    'infra/cloudflare-standby/fixture-contract.test.mjs',
+    '.github/scripts/ci-browser-scope.mjs',
+    'tests/ci-browser-scope.test.mjs',
+    '.github/workflows/check-pr-preview-github.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs'
+  ]);
+  if(Array.isArray(changes)&&changes.length===followup.size&&
+    new Set(changes.map(x=>x.path)).size===followup.size&&
+    changes.every(x=>followup.has(x.path)&&x.status==='M'))return true;
   const permitted=new Set([
     "infra/cloudflare-standby/fixture-contract.mjs",
     "infra/cloudflare-standby/fixture-contract.test.mjs",
