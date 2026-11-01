@@ -24,8 +24,10 @@ export function v3DeliveryPlan(paths){
  if(types.has('blocked')||types.has('frozen')||types.has('native'))
    return {target:'blocked',risk:'critical',hold:true,files,tests:sharedTests,reason:types.has('frozen')?'frozen-3d':types.has('native')?'native-requires-separate-release':'unrecognized-or-sensitive-scope'};
  const deployTypes=[...types].filter(t=>t!=='ci');
- if(deployTypes.length>1)return {target:'blocked',risk:'critical',hold:true,files,tests:sharedTests,reason:'mixed-deployment-targets'};
- const target=deployTypes[0]||'none';
+ // A Runtime release necessarily includes the shared Worker/Server; Pages remains isolated.
+ if(deployTypes.length>1&&!(deployTypes.length===2&&deployTypes.includes('runtime')&&deployTypes.includes('worker')))
+   return {target:'blocked',risk:'critical',hold:true,files,tests:sharedTests,reason:'mixed-deployment-targets'};
+ const target=deployTypes.includes('runtime')?'runtime':deployTypes[0]||'none';
  const core=files.some(p=>/^src\/(index\.js|gmww-demo-runner\.js|gmww-wolf-night-resolution\.js|gmww-online-action)/.test(p))||files.some(p=>/^server-game\/(current|shared|src)\//.test(p));
  const risk=target==='runtime'||core?'high':target==='worker'||target==='pages'?'medium':files.some(p=>p.startsWith('.github/'))?'high':'low';
  const tests=target==='worker'?playerTests:target==='runtime'?[...playerTests,...sharedTests]:
