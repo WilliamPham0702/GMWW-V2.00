@@ -75,6 +75,13 @@ export class RoomDurableObject extends DurableObject {
   async fetch(request){
     const path=new URL(request.url).pathname;
     if(path==="/gm/announcement"&&request.method==="PUT")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    // Read a bounded voice upload BEFORE the room mutation lock: slow mobile networks
+    // must never block gameplay, clocks or role actions while bytes are being received.
+    if(request.method==='POST'&&(path==='/player/chat/voice'||path==='/gm/chat/voice')){
+      const body=await gmwwVoiceReadJson(request);
+      return this.ctx.blockConcurrencyWhile(()=>path==='/player/chat/voice'
+        ?this.playerChatVoiceSend(body):this.gmChatVoiceSend(request,body));
+    }
     // GR01 recovery marker: internal DO stub requests only, read-only.
     // No Production restore route exists here; unconfigured credentials fail closed.
     if(path==="/__gr01/pitr/bookmark"){
@@ -89,7 +96,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST")||(path==="/global-settings/village-scene/reset"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/player/action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/player/chat/voice','/gm/chat/voice','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/player/action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
       const response=await this.handleFetch(request),meta=await this.ctx.storage.get("meta");
       if(meta?.demo&&response.ok){
         if(path==="/gm/gallows")await this.ctx.storage.delete("demoPlan");
@@ -188,9 +195,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
     if(url.pathname==="/player/chat"&&request.method==="POST")return this.playerChatRead(await safeJson(request));
     if(url.pathname==="/player/chat/send"&&request.method==="POST")return this.playerChatSend(await safeJson(request));
-    if(url.pathname==="/player/chat/voice"&&request.method==="POST")return this.playerChatVoiceSend(await gmwwVoiceReadJson(request));
     if(url.pathname==="/player/chat/voice/read"&&request.method==="POST")return this.playerChatVoiceRead(await safeJson(request));
-    if(url.pathname==="/gm/chat/voice"&&request.method==="POST")return this.gmChatVoiceSend(request);
     const gmVoiceRead=url.pathname.match(/^\/gm\/chat\/voice\/([0-9a-f-]{36})$/);
     if(gmVoiceRead&&request.method==="GET")return this.gmChatVoiceRead(request,gmVoiceRead[1]);
     if(url.pathname==="/gm/chat"&&request.method==="GET")return this.gmChatRead(request);
@@ -3428,9 +3433,9 @@ export class RoomDurableObject extends DurableObject {
        record.expiresAt<=Date.now())return j({ok:false,error:'CHAT_VOICE_NOT_FOUND'},404);
     return this.chatVoiceResponse(record);
   }
-  async gmChatVoiceSend(request){
+  async gmChatVoiceSend(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const body=await gmwwVoiceReadJson(request),record=gmwwVoiceDecode(body);
+    const record=gmwwVoiceDecode(body);
     if(!record)return j({ok:false,error:'CHAT_VOICE_INVALID'},400);
     const meta=auth.meta,id=normalizeLoginId(body?.loginId),players=(await this.ctx.storage.get('players'))||{};
     const publicDay=body?.channel==='room';
