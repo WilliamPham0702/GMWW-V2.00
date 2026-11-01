@@ -1,0 +1,36 @@
+name: Check Dual Cloudflare STAGING (no deployment)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/cloudflare-standby/**'
+      - 'tests/dual-cloudflare-release-guard.test.mjs'
+      - 'docs/architecture/dual-cloudflare-standby-20261101.md'
+      - '.github/workflows/check-cloudflare-standby.yml'
+      - '.github/workflows/deploy-production.yml'
+      - '.github/workflows/github-runtime-ota.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    name: Cloudflare B synthetic snapshot and fail-closed gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate standby fixture contracts
+        run: |
+          node --check infra/cloudflare-standby/fixture-contract.mjs
+          node --test infra/cloudflare-standby/*.test.mjs
+      - name: Verify Production and OTA only skip isolated standby changes
+        run: node --test tests/dual-cloudflare-release-guard.test.mjs
+      - name: Refuse production mutations or credentials
+        run: |
+          test ! -e infra/cloudflare-standby/.env
+          ! grep -Eq 'wrangler deploy|cloudflare\.request\(|productionSwitchAllowed: *true' infra/cloudflare-standby/*.mjs
