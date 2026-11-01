@@ -3428,6 +3428,27 @@ function isOnlineP0CiRoutingScope(changes){
     by.get('docs/releases/GMWW-ONLINE-P0-CI-20261031.md').includes('Rollback');
 }
 
+// V3.288: exact release-only version bump after PR726 merged; all unexpected source changes use full CI.
+function isRuntimeMergedV3288Scope(changes){
+ const wanted=new Map([['package.json','M'],['package-lock.json','M'],['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],['server-game/src/00-core-and-library.part','M'],['src/index.js','M'],['.github/scripts/prepare-update-channel.mjs','M'],['tests/demo-runtime-v3285-release.test.mjs','M'],['.github/scripts/ci-browser-scope.mjs','M'],['.github/workflows/check-player-web.yml','M'],['docs/releases/GMWW-RUNTIME-V3.288-PLAYER-WOLF-726-20261101.md','A']]);
+ if(!Array.isArray(changes)||changes.length!==wanted.size||new Set(changes.map(x=>x.path)).size!==wanted.size||changes.some(x=>wanted.get(x.path)!==x.status))return false;
+ const by=new Map(changes.map(x=>[x.path,x])),eq=(p,a,b)=>{const x=by.get(p);return typeof x.before==='string'&&x.after===x.before.replace(a,b)&&x.before.includes(a)};
+ if(!eq('package.json','"version": "3.287.0"','"version": "3.288.0"')||
+ !eq('server-game/current/GMWW.html','<title>GMWW V3.287</title>','<title>GMWW V3.288</title>')||
+ !eq('server-game/current/app.js',"const VERSION='3.287';","const VERSION='3.288';")||
+ !eq('server-game/src/00-core-and-library.part',"const VERSION='3.287';","const VERSION='3.288';")||
+ !eq('src/index.js','VERSION="V3.287",NATIVE_SHELL_VERSION','VERSION="V3.288",NATIVE_SHELL_VERSION'))return false;
+ const lock=by.get('package-lock.json');if(lock.after!==lock.before.replaceAll('"version": "3.287.0"','"version": "3.288.0"'))return false;
+ const n=by.get('.github/scripts/prepare-update-channel.mjs');
+ if(n.after!==n.before.replace('releaseNotes:["V3.287','releaseNotes:["V3.288 PR726: Player Web hiện icon Vai Trò/Artifact ngay trên đống lửa đúng lượt, kéo thả chọn mục tiêu và Khôi phục theo quyền. Mỗi Sói cắn riêng; Sói Trùm chốt nếu cắn, nếu không thì theo đa số Sói thường, hòa không tự chọn mục tiêu. Giữ luật Sói Tuyết/Đóng Băng, Yêu Tinh, Bảo Vệ, Phù Thủy; không đổi IPA V3.264, URL, dữ liệu, DO hoặc 3D. Kiểm thử Worker/Preview đúng SHA, gói .gmwwupdate kèm SHA-256; rollback Runtime V3.287 và Worker trước khi cập nhật.","V3.287'))return false;
+ const test=by.get('tests/demo-runtime-v3285-release.test.mjs').after;
+ const ci=by.get('.github/scripts/ci-browser-scope.mjs').after;
+ const wf=by.get('.github/workflows/check-player-web.yml').after;
+ const doc=by.get('docs/releases/GMWW-RUNTIME-V3.288-PLAYER-WOLF-726-20261101.md').after;
+ return test.includes("pkg.version,'3.288.0'")&&test.includes('V3.288 PR726:')&&ci.includes('function isRuntimeMergedV3288Scope(changes)')&&
+ wf.includes("steps.scope.outputs.mode == 'runtime-merged-v3288'")&&doc.includes('Rollback')&&doc.includes('SHA-256');
+}
+
 // Fail-closed V3.287 release selector. No new gameplay edits.
 function isRuntimeMergedV3287Scope(changes){
  const wanted=new Map([['package.json','M'],['package-lock.json','M'],['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],['server-game/src/00-core-and-library.part','M'],['src/index.js','M'],['.github/scripts/prepare-update-channel.mjs','M'],['tests/demo-runtime-v3285-release.test.mjs','M'],['.github/scripts/ci-browser-scope.mjs','M'],['.github/workflows/check-player-web.yml','M'],['docs/releases/GMWW-RUNTIME-V3.287-CHAT-720-721-20261101.md','A']]);
@@ -3549,6 +3570,7 @@ export function isPlayerFireWolf726Scope(changes, blobHash = file => git('hash-o
 function classifyBrowserScope(changes){
   if(isPlayerFireWolf726Scope(changes))return 'player-fire-wolf-726';
   if(isDualCloudflareStandbyScope(changes))return 'dual-cloudflare-standby';
+  if(isRuntimeMergedV3288Scope(changes))return 'runtime-merged-v3288';
   if(isRuntimeMergedV3287Scope(changes))return 'runtime-merged-v3287';
   if(isRuntimeMergedV3286Scope(changes))return 'runtime-merged-v3286';
   if(isOnlineP0CiRoutingScope(changes))return 'online-p0-ci-routing';
