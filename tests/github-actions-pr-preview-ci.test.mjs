@@ -319,3 +319,36 @@ test('PR732 SHA isolated Worker main CI concurrency preserves exact fail-closed 
   assert.match(readFileSync(paths[2],'utf8'),/PR732_SHA_ISOLATED_MAIN/);
   assert.match(readFileSync(paths[3],'utf8'),/PR727_CI_ONLY_GUARD/);
 });
+
+test('GMWW V3 exact CI/policy PR keeps local checks but does not create a new Cloudflare DO namespace',()=>{
+ const match=workflow.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/);
+ assert.ok(match,'inline scope must remain visible');
+ const statement=match[1].split('\n').find(l=>l.trim().startsWith('const v3PolicyOnly = '));
+ assert.ok(statement,'V3 scope classifier missing');
+ const expression=statement.trim().slice('const v3PolicyOnly = '.length).replace(/;$/,'');
+ // The V3 expression spans multiple lines; evaluate from its declaration up to the semicolon.
+ const start=match[1].indexOf('const v3PolicyOnly = ');
+ const end=match[1].indexOf(';',start);
+ const expr=match[1].slice(start+'const v3PolicyOnly = '.length,end);
+ const changes=[
+  {status:'M',path:'AGENTS.md'},
+  {status:'A',path:'.github/scripts/v3-delivery-plan.mjs'},
+  {status:'A',path:'tests/v3-delivery-plan.test.mjs'},
+  {status:'A',path:'docs/architecture/GMWW-AUTO-DELIVERY-V3.0.md'},
+  {status:'A',path:'.github/workflows/gmww-auto-delivery-v3.yml'},
+  {status:'M',path:'.github/workflows/ci-policy-gate.yml'},
+  {status:'M',path:'.github/workflows/deploy-production.yml'},
+  {status:'M',path:'.github/workflows/github-runtime-ota.yml'},
+  {status:'M',path:'.github/workflows/check-pr-preview-github.yml'},
+  {status:'M',path:'tests/github-actions-pr-preview-ci.test.mjs'}
+ ];
+ const evaluate=items=>vm.runInNewContext(expr,{changed:items});
+ assert.equal(evaluate(changes),true);
+ assert.equal(evaluate(changes.slice(1)),false);
+ assert.equal(evaluate([...changes,changes[0]]),false);
+ assert.equal(evaluate([...changes,{status:'M',path:'src/index.js'}]),false);
+ assert.equal(evaluate(changes.map((x,i)=>i===0?{...x,status:'D'}:x)),false);
+ assert.match(workflow,/needs.oracle-scope.outputs.v3_policy_only != 'true'/);
+ assert.match(workflow,/appendFileSync\(process.env.GITHUB_OUTPUT,'v3_policy_only='/);
+ assert.match(workflow,/Build Worker locally, without publishing or Cloudflare build minutes/);
+});
