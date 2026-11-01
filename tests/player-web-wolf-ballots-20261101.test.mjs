@@ -49,7 +49,7 @@ test('Player and GM share campfire icons; each wolf can act independently, never
  const server=readFileSync('src/index.js','utf8');
  const demo=readFileSync('src/gmww-demo-runner.js','utf8');
  const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
- assert.match(server,/x\\?\.actionId==="action_wolf_bite"&&normalizeLoginId\\(x\\?\.actorId\\)===actorId/);
+ assert.match(server,/x\?\.actionId==="action_wolf_bite"&&normalizeLoginId\(x\?\.actorId\)===actorId/);
  assert.match(demo,/x\.actorId===actorId/);
  assert.match(demo,/\['role-group','wolf-pack-bite'\]\.includes\(turn\.kind\)/);
  assert.match(player,/gmwwOnlinePlaceAtFire\(dock\)/);
