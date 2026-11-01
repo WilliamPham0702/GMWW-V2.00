@@ -36,11 +36,11 @@ function nightActions(ctx,meta,turn,usage,showBlocked=false){
  return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId)).map(action=>({...action,targetCount:action.noTarget?0:demoDivinationTargetCount(action),actorIds:action.actorIds.filter(actorId=>{
   if(!showBlocked&&(status(ctx.rows,meta,actorId,'expelled')||isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS})))return false;
   if(action.artifactId)return !ctx.cycle.accepted.some(x=>x.artifactId===action.artifactId&&x.playerId==='member:'+actorId)&&ctx.cycle.accepted.length<Number(ctx.cfg.artifactLimitPerCycle??3);
-  const role=turn.kind==='role-group'?turn.roles.find(r=>r.loginIds.includes(actorId)&&(!action.roleIds?.length||action.roleIds.includes(r.roleId))):turn;
+  const role=['role-group','wolf-pack-bite'].includes(turn.kind)?(turn.roles||[]).find(r=>r.loginIds.includes(actorId)&&(!action.roleIds?.length||action.roleIds.includes(r.roleId))):turn;
   const roleId=role?.roleId,card=ctx.cards.find(c=>c.id===roleId);
   if(roleId==='role_snow_wolf'&&action.actionId==='action_wolf_bite'&&!canSnowWolfBite({assignments:ctx.assignments,interactions:ctx.rows,matchId:meta.matchId,statusDefs:STATUS_DEFS}))return false;
   // One shared group action is enough; an already-confirmed manual action counts.
-  if(usage.some(x=>x.matchId===meta.matchId&&Number(x.night)===Number(meta.cycleNight)&&x.actionId===action.actionId&&action.actorIds.includes(x.actorId)&&(!action.roleIds?.length||action.roleIds.includes(x.roleId))))return false;
+  if(usage.some(x=>x.matchId===meta.matchId&&Number(x.night)===Number(meta.cycleNight)&&x.actionId===action.actionId&&x.actorId===actorId&&(!action.roleIds?.length||action.roleIds.includes(x.roleId))))return false;
   return checkBattleRoleActionUsage(usage,{matchId:meta.matchId,night:meta.cycleNight,actorId,roleId,actionId:action.actionId,card}).ok;
  })})).filter(a=>!a.unavailable&&a.actorIds.length);
 }
