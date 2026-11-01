@@ -254,3 +254,24 @@ test('PR727 CI-only five-file merge suppresses Runtime release while preserving 
   const prod=readFileSync('.github/workflows/deploy-production.yml','utf8');
   for(const path of paths)assert.ok(prod.includes(path),'Production no-deploy allowlist missing '+path);
 });
+
+test('PR726 SHA trailing newline regression accepts Git hash-object output, never modified source',()=>{
+  const entries=PR726_WOLF_BLOB_CONTRACT.map(([path,status])=>({path,status}));
+  const hashes=new Map(PR726_WOLF_BLOB_CONTRACT.map(([path,,sha])=>[path,sha]));
+  assert.equal(isPlayerFireWolf726Scope(entries,path=>hashes.get(path)+'\\n'),true);
+  assert.equal(isPlayerFireWolf726Scope(entries,path=>path===entries[0].path?'broken\\n':hashes.get(path)+'\\n'),false);
+  assert.equal(isPlayerFireWolf726Scope([...entries,{path:'src/new-feature.js',status:'M'}],path=>hashes.get(path)+'\\n'),false);
+  const files=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/github-runtime-ota.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs'
+  ];
+  const changes=files.map(path=>({path,status:'M',after:readFileSync(path,'utf8')}));
+  assert.equal(classifyBrowserScope(changes),'ci-lite-preview-workflow');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'other'}]),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path===files[1]?{...x,status:'D'}:x)),'full');
+  const runtime=readFileSync(files[1],'utf8');
+  const guard=runtime.match(/# PR728_CI_ONLY_GUARD:[\\s\\S]*?if \\[ "\\$CHANGED" = "\\$PR728_ONLY" \\]; then\\s*SKIP_AUTO_RELEASE=true/);
+  assert.ok(guard,'Missing exact PR728 runtime release protection');
+  for(const path of files)assert.ok(guard[0].includes("'"+path+"'"),'Guard missing '+path);
+});
