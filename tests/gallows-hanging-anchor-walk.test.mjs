@@ -49,7 +49,7 @@ test('Chỉ Character treo dùng Walk sẵn có, không dựng dây/cây/nhãn t
   assert.match(gmBattle,/hanging:active/);
   assert.match(village,/state=hanging\?"walking"/);
   assert.match(village,/motion=dead\?"dead":state==="sitting"\?"sit":hanging\?"walk"/);
-  assert.match(village,/paused:hanging\?false:base.paused/);
+  assert.match(village,/paused:battleStatic&&!hanging\?true:hanging\?false:base.paused/);
   assert.match(villageCss,/player:not\(\.gmww-gallows-hanging\)/);
   assert.doesNotMatch(css,/content\s*:|@keyframes|struggle/);
   assert.doesNotMatch(villageCss,/gmww-gallows-struggle|\.player\.gmww-gallows-hanging::before|\.player\.gmww-gallows-hanging::after/);
