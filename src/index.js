@@ -2533,7 +2533,7 @@ export class RoomDurableObject extends DurableObject {
       if(packBite&&(!isWolfRole(row)||actionId!=="action_wolf_bite"))
         return j({ok:false,error:"INVALID_PACK_ACTOR"},403);
       if(packBite&&currentUsage.some(x=>String(x?.matchId)===matchId&&Number(x?.night)===Number(meta.cycleNight||1)&&
-        x?.actionId==="action_wolf_bite"))
+        x?.actionId==="action_wolf_bite"&&normalizeLoginId(x?.actorId)===actorId))
         return j({ok:false,error:"PACK_BITE_ALREADY_USED"},409);
       const policy=packBite?{roleId,actionId,singleActionPerNight:false,usageMode:"eachNight",usageCount:1,knownAction:true}:
         resolveRoleActionPolicy(roleCard,roleId,actionId);
