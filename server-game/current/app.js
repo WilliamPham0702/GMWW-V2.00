@@ -8992,7 +8992,8 @@ function gmwwGMChatMount(){
   }
 }
 async function gmwwGMChatRefresh(){
-  if(!gmwwGMChatOpen||!gmwwGMChatAvailable()||gmwwGmVoiceRecorder||gmwwGmVoiceDraft)return;
+  if(!gmwwGMChatOpen||!gmwwGMChatAvailable())return;
+   if(gmwwGmVoiceRecorder||gmwwGmVoiceDraft)return;
   try{
     const res=await playRoomApi('/chat',{method:'GET'}),content=document.getElementById('gmwwGMChatContent');
     if(!content)return;for(const url of gmwwGmVoiceUrls)URL.revokeObjectURL(url);gmwwGmVoiceUrls.clear();content.replaceChildren();
