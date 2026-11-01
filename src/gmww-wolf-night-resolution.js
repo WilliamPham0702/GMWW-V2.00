@@ -27,7 +27,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
   if(!match||!Number.isInteger(cycle)||cycle<1)
     return {ok:false,error:'INVALID_RESOLUTION_CONTEXT',victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
   const rows=Array.isArray(interactions)?interactions:[],
-    actions=rows.filter(row=>isFrom(row,match,cycle)&&row?.type==='effect_notice'&&row.undone!==true&&row.effectActive!==false),
+    actions=rows.filter(row=>isFrom(row,match,cycle)&&row?.type==='effect_notice'&&row.undone!==true),
     guards=new Set(actions.filter(row=>['action_protect','action_witch_save'].includes(row.actionId)).map(row=>login(row.loginId)).filter(Boolean)),
     direction=actions.filter(row=>row.actionId==='action_transfer_bite'&&['left','right'].includes(row.direction)).at(-1)?.direction||'';
   // One authorized, final bite ballot per wolf. Legacy GM notices have no wolf
