@@ -46,7 +46,7 @@ jobs:
             .github/workflows/deploy-pr743-chat-worker.yml \
             tests/ci-browser-scope.test.mjs | sort) \
             <(git diff --name-only HEAD^1 HEAD | sort)
-          node .github/scripts/ci-browser-scope.mjs | grep -F 'gmww-chat-pr743-postmerge'
+          GMWW_CI_EVENT=push GITHUB_REF=refs/heads/main node .github/scripts/ci-browser-scope.mjs | grep -F 'gmww-chat-pr743-postmerge'
           # Required main checks, not just a PR green badge.
           for trial in $(seq 1 30); do
             runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
