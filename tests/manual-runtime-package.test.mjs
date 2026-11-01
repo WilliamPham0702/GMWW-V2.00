@@ -58,16 +58,11 @@ test('native asset validator skips the special about:blank document without hidi
  assert.match(validator,/requireFile\(ref\)/);
 });
 
-test('manual updater keeps native shell tied to Xcode while OTA Runtime may advance independently',()=>{
+test('the manual update native shell version matches the release and Xcode baseline',()=>{
  const worker=fs.readFileSync('src/index.js','utf8');
  const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
  const shell=worker.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
  const runtime=worker.match(/VERSION="V([0-9.]+)"/)?.[1];
- assert.ok(shell&&runtime,'Both native and Runtime versions must be declared');
- const split=s=>s.split('.').map(Number);
- const a=split(shell),b=split(runtime);
- const cmp=()=>{for(let i=0;i<Math.max(a.length,b.length);i++){const delta=(a[i]||0)-(b[i]||0);if(delta)return delta}return 0};
- assert.ok(cmp()<=0,'OTA Runtime cannot be older than the installed native shell');
+ assert.equal(shell,runtime,'manual picker changes require a new IPA shell');
  assert.deepEqual([...project.matchAll(/MARKETING_VERSION = ([0-9.]+);/g)].map(m=>m[1]),[shell,shell]);
- assert.match(fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8'),/case "rollbackRuntime":/);
 });
