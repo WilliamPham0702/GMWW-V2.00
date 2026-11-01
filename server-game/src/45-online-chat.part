@@ -161,7 +161,7 @@ function gmwwGMChatMount(){
   }
   // During Seat setup there is no Battle footer. Offer the same authenticated
   // GM Chat monitor as a movable flamingo without creating a second chat.
-  trigger.hidden=!(active&&playSceneState.step!=='battle');const villageForm=document.getElementById('gmwwGMChatVillage');if(villageForm)villageForm.hidden=!active;
+  trigger.hidden=!(active&&(playSceneState.step!=='battle'||playSceneState.phase!=='day'));const villageForm=document.getElementById('gmwwGMChatVillage');if(villageForm)villageForm.hidden=!active;
   const dayToggle=document.getElementById('battleGMChatToggle');
   if(dayToggle&&!dayToggle.dataset.gmwwChatBound){dayToggle.dataset.gmwwChatBound='1';dayToggle.onclick=()=>{
     gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);
