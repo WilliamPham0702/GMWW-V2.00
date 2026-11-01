@@ -62,6 +62,16 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             MESSAGE=$(git log -1 --format=%B)
             CHANGED=$(git diff --name-only HEAD^1 HEAD | sort)
+            # V3 policy: do not rebuild/publish an unchanged Runtime for Worker, Pages, or CI-only tasks.
+            # Unknown, frozen and Native scopes remain blocked from automatic OTA.
+            if test -f .github/scripts/v3-delivery-plan.mjs; then
+              printf '%s\n' "$CHANGED" > "$RUNNER_TEMP/gmww-v3-changed.txt"
+              V3_TARGET=$(node .github/scripts/v3-delivery-plan.mjs "$RUNNER_TEMP/gmww-v3-changed.txt" --field=target)
+              if [ "$V3_TARGET" != runtime ]; then
+                SKIP_AUTO_RELEASE=true
+                echo "V3 scope $V3_TARGET: SKIP duplicate/unsafe Runtime OTA publication." >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
             # PR730: CI-only recovery of PR729 V3.288; existing PR728 exact 3-file guard prevents duplicate auto-release.
             # PR731_CI_ONLY_GUARD: exact 3 CI-only paths; preserve previous PR728 skip and V3.288 release source.
             # PR732_SHA_ISOLATED_MAIN: PR727 exact five CI files block automatic OTA; dispatch requires same-SHA successful main Worker.
