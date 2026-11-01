@@ -39,6 +39,7 @@ function roomHarness(){
   crypto:webcrypto,Response,Date,Uint8Array,Number,String,Math,chatStorageScope,
   gmwwVoiceStorageKey,gmwwVoicePublicMeta,gmwwVoiceReadJson,gmwwVoiceDecode,
   VOICE_TTL_MS,VOICE_ROOM_MAX,
+  corsHeaders:()=>({'access-control-allow-origin':'*','x-content-type-options':'nosniff'}),
   normalizeLoginId:x=>String(x||'').toLowerCase(),
   j:(x,status=200)=>Response.json(x,{status}),
  });
