@@ -1,4 +1,5 @@
 name: Check GMWW PR Preview (GitHub Actions)
+# PR732_SHA_ISOLATED_MAIN: no Preview bypass; retain required isolated Cloudflare Preview.
 
 on:
   pull_request:

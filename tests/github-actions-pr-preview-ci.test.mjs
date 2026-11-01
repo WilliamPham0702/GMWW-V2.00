@@ -305,3 +305,17 @@ test('PR731 V3.288 early Worker push CI routing remains isolated to exact three 
   assert.match(selector,/return \{mode:'player-fire-wolf-726'/);
   assert.match(readFileSync(paths[1],'utf8'),/PR731_CI_ONLY_GUARD/);
 });
+
+test('PR732 SHA isolated Worker main CI concurrency preserves exact fail-closed gates',()=>{
+  const paths=['.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml','.github/workflows/check-pr-preview-github.yml','.github/workflows/github-runtime-ota.yml','tests/github-actions-pr-preview-ci.test.mjs'];
+  const entries=paths.map(path=>({path,status:'M',after:readFileSync(path,'utf8')}));
+  assert.equal(classifyBrowserScope(entries),'ci-lite-preview-workflow');
+  assert.equal(classifyBrowserScope([...entries,{path:'src/index.js',status:'M',after:'unsafe'}]),'full');
+  const selector=readFileSync(paths[0],'utf8'), worker=readFileSync(paths[1],'utf8');
+  assert.ok(selector.indexOf('PR732_SHA_ISOLATED_MAIN')<selector.indexOf('Main contains changes outside the verified scoped lists'));
+  assert.match(selector,/git\('diff','--quiet','083fd3d3896596e8a1d5d95a9a89fadfe988f41c'/);
+  assert.match(worker,/group: player-web-check-v2-\$\{\{ github\.ref \}\}-\$\{\{ github\.sha \}\}/);
+  assert.match(worker,/cancel-in-progress: true/);
+  assert.match(readFileSync(paths[2],'utf8'),/PR732_SHA_ISOLATED_MAIN/);
+  assert.match(readFileSync(paths[3],'utf8'),/PR727_CI_ONLY_GUARD/);
+});
