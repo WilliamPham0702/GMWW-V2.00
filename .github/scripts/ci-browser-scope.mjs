@@ -3293,6 +3293,21 @@ function isPlayerToastCiRoutingScope(changes){
 // CI-LITE A: original four-file Preview repair or the exact five-file PR727
 // CI-only Runtime guard. Extra source, runtime payload or permission edits fail closed.
 function isCiLitePreviewWorkflowScope(changes){
+  // PR728: fixed exact three-file CI-only regression; no game, Runtime payload,
+  // Worker bindings or Production changes. Anything else falls back to full CI.
+  const shaFix=new Set([
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/github-runtime-ota.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs'
+  ]);
+  if(Array.isArray(changes)&&changes.length===shaFix.size&&
+     new Set(changes.map(c=>c.path)).size===shaFix.size&&
+     changes.every(c=>c.status==='M'&&shaFix.has(c.path))){
+    const get=p=>changes.find(c=>c.path===p)?.after||'';
+    return get('.github/scripts/ci-browser-scope.mjs').includes('String(blobHash(c.path)).trim()')&&
+      get('tests/github-actions-pr-preview-ci.test.mjs').includes('PR726 SHA trailing newline regression')&&
+      get('.github/workflows/github-runtime-ota.yml').includes('PR728_CI_ONLY_GUARD');
+  }
   const required=new Set([
     '.github/workflows/check-pr-preview-github.yml',
     'tests/github-actions-pr-preview-ci.test.mjs',
@@ -3527,7 +3542,7 @@ export function isPlayerFireWolf726Scope(changes, blobHash = file => git('hash-o
      new Set(changes.map(c=>c.path)).size!==expected.size) return false;
   try {
     return changes.every(c=>expected.has(c.path)&&c.status===expected.get(c.path).status&&
-      blobHash(c.path)===expected.get(c.path).blob);
+      String(blobHash(c.path)).trim()===expected.get(c.path).blob);
   } catch {return false;}
 }
 
