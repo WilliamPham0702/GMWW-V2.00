@@ -1,7 +1,7 @@
 name: Deploy GameMaSoi Pages Same-Origin Gateway Only
 on:
   workflow_run:
-    workflows: ["Check Player Web Worker"]
+    workflows: ["GMWW AUTO-DELIVERY V3.0"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
