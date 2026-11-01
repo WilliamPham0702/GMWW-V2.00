@@ -3405,6 +3405,26 @@ function isOnlineP0CiRoutingScope(changes){
     by.get('docs/releases/GMWW-ONLINE-P0-CI-20261031.md').includes('Rollback');
 }
 
+// Fail-closed V3.287 release selector. No new gameplay edits.
+function isRuntimeMergedV3287Scope(changes){
+ const wanted=new Map([['package.json','M'],['package-lock.json','M'],['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],['server-game/src/00-core-and-library.part','M'],['src/index.js','M'],['.github/scripts/prepare-update-channel.mjs','M'],['tests/demo-runtime-v3285-release.test.mjs','M'],['.github/scripts/ci-browser-scope.mjs','M'],['.github/workflows/check-player-web.yml','M'],['docs/releases/GMWW-RUNTIME-V3.287-CHAT-720-721-20261101.md','A']]);
+ if(changes.length!==wanted.size||new Set(changes.map(x=>x.path)).size!==wanted.size||changes.some(x=>wanted.get(x.path)!==x.status))return false;
+ const by=new Map(changes.map(x=>[x.path,x])),eq=(p,a,b)=>{const x=by.get(p);return typeof x.before==='string'&&x.before.includes(a)&&x.after===x.before.replace(a,b)};
+ if(!eq('package.json','"version": "3.286.0"','"version": "3.287.0"')||
+ !eq('server-game/current/GMWW.html','<title>GMWW V3.286</title>','<title>GMWW V3.287</title>')||
+ !eq('server-game/current/app.js',"const VERSION='3.286';","const VERSION='3.287';")||
+ !eq('server-game/src/00-core-and-library.part',"const VERSION='3.286';","const VERSION='3.287';")||
+ !eq('src/index.js','VERSION="V3.286",NATIVE_SHELL_VERSION','VERSION="V3.287",NATIVE_SHELL_VERSION'))return false;
+ const lock=by.get('package-lock.json');if(lock.after!==lock.before.replaceAll('"version": "3.286.0"','"version": "3.287.0"'))return false;
+ const n=by.get('.github/scripts/prepare-update-channel.mjs');
+ if(n.after!==n.before.replace('releaseNotes:["V3.286','releaseNotes:["V3.287 PR720 (thay PR710) và PR721 (thay PR700): Phân cách ô nhập và nội dung Chat Player Web; icon 💬 sau Khôi phục trên GM, không còn chữ Chat. Chỉ hai thay đổi đã merge; không gồm #656, tin nhắn thoại hay 3D. Bảo toàn IPA, dữ liệu, quyền Chat và Server dự phòng. Gói Runtime SHA-256; rollback Runtime V3.286 và Worker trước khi cập nhật.","V3.286'))return false;
+ const test=by.get('tests/demo-runtime-v3285-release.test.mjs').after;
+ const ci=by.get('.github/scripts/ci-browser-scope.mjs').after;
+ const wf=by.get('.github/workflows/check-player-web.yml').after;
+ return test.includes("pkg.version,'3.287.0'")&&test.includes('V3.287 PR720 (thay PR710)')&&ci.includes('function isRuntimeMergedV3287Scope(changes)')&&
+ wf.includes("steps.scope.outputs.mode == 'runtime-merged-v3287'")&&by.get('docs/releases/GMWW-RUNTIME-V3.287-CHAT-720-721-20261101.md').after.includes('Rollback');
+}
+
 // Exact V3.286 release-only scope: all gameplay source is already merged on main.
 // Any unreviewed bytes, extra file or unexpected status falls back to FULL testing.
 function isRuntimeMergedV3286Scope(changes){
@@ -3492,6 +3512,7 @@ function isDualCloudflareStandbyScope(changes){
 
 function classifyBrowserScope(changes){
   if(isDualCloudflareStandbyScope(changes))return 'dual-cloudflare-standby';
+  if(isRuntimeMergedV3287Scope(changes))return 'runtime-merged-v3287';
   if(isRuntimeMergedV3286Scope(changes))return 'runtime-merged-v3286';
   if(isOnlineP0CiRoutingScope(changes))return 'online-p0-ci-routing';
   if(isOnlineP0Player699Scope(changes))return 'online-p0-player-699';
