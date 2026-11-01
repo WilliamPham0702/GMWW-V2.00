@@ -3907,6 +3907,33 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // PR732_SHA_ISOLATED_MAIN: fix blocked main CI runner queue without removing checks.
+  // Only exactly five CI files and no V3.288 source, IPA or Runtime bytes may change.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.288.0'){
+        const paths=new Set(['.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml','.github/workflows/check-pr-preview-github.yml','.github/workflows/github-runtime-ota.yml','tests/github-actions-pr-preview-ci.test.mjs']);
+        const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+        if(rows.length===paths.size&&rows.every(row=>{
+          const [status,path]=row.split('\t');
+          return status==='M'&&paths.has(path);
+        })){
+          git('merge-base','--is-ancestor','083fd3d3896596e8a1d5d95a9a89fadfe988f41c','HEAD');
+          git('diff','--quiet','083fd3d3896596e8a1d5d95a9a89fadfe988f41c','HEAD','--','src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc','.github/scripts/prepare-update-channel.mjs');
+          const wf=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+          const prev=fs.readFileSync('.github/workflows/check-pr-preview-github.yml','utf8');
+          const ota=fs.readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+          const tst=fs.readFileSync('tests/github-actions-pr-preview-ci.test.mjs','utf8');
+          if(wf.includes('PR732_SHA_ISOLATED_MAIN')&&prev.includes('PR732_SHA_ISOLATED_MAIN')&&
+             ota.includes('PR727_CI_ONLY_GUARD')&&
+             tst.includes('PR732 SHA isolated Worker main CI concurrency')){
+            return{mode:'player-fire-wolf-726',reason:'V3.288 unchanged gameplay with 5 CI-only files; run exact wolf, undo, Worker gates'};
+          }
+        }
+      }
+    }catch{} // Fail closed to full CI if any proof fails.
+  }
+
   // PR731_V3288_PUSH_RECOVERY: must run BEFORE legacy main full-suite fallback.
   // Only the exact three CI files of this fix may vary; all V3.288 gameplay/OTA bytes stay identical.
   if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){

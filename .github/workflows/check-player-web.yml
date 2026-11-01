@@ -21,7 +21,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: player-web-check-v2-${{ github.ref }}
+  # PR732_SHA_ISOLATED_MAIN: separate commits so a cancelled obsolete run never blocks a verified new HEAD.
+  group: player-web-check-v2-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
