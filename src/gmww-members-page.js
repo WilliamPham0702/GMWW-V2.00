@@ -579,7 +579,7 @@ html[data-gmww-boot="pending"] body::before{content:"Đang tải GMWW…";positi
 
   <div class="profile-actions-row">
     <button class="profile-exit-btn" onclick="go('login')">THOÁT</button>
-    <button class="primary gold profile-enter-room" onclick="openRooms()">VÀO PHÒNG ›</button>
+    <button class="primary gold profile-enter-room" onclick="openRooms()">VỀ LÀNG ›</button>
   </div>
 
   <details class="history-fold">
@@ -591,16 +591,6 @@ html[data-gmww-boot="pending"] body::before{content:"Đang tải GMWW…";positi
     </div>
   </details>
 
-</section>
-
-<!-- 4. CHỌN PHÒNG -->
-<section id="rooms" class="screen">
-  <div class="topbar"><button class="back" onclick="go('profile')">← QUAY VỀ</button><div class="game-state">● ONLINE</div></div>
-  <div class="kicker">PHÒNG ĐANG HOẠT ĐỘNG</div>
-  <h1 class="page-title">Chọn Phòng</h1>
-  <p class="page-sub">Chỉ hiển thị các phòng GM đang mở tại thời điểm hiện tại.</p>
-
-  <div class="room-list" aria-live="polite"></div>
 </section>
 
 <!-- 5. VÀO GAME -->
