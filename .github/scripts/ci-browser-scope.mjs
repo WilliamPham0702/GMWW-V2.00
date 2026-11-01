@@ -3290,8 +3290,8 @@ function isPlayerToastCiRoutingScope(changes){
   }catch{return false}
 }
 
-// CI-LITE A: only the exact four-file Preview routing repair may use focused CI.
-// Any gameplay/runtime/permission file or unexpected deletion falls back to full tests.
+// CI-LITE A: original four-file Preview repair or the exact five-file PR727
+// CI-only Runtime guard. Extra source, runtime payload or permission edits fail closed.
 function isCiLitePreviewWorkflowScope(changes){
   const required=new Set([
     '.github/workflows/check-pr-preview-github.yml',
@@ -3299,14 +3299,22 @@ function isCiLitePreviewWorkflowScope(changes){
     '.github/scripts/ci-browser-scope.mjs',
     '.github/workflows/check-player-web.yml'
   ]);
-  if(!Array.isArray(changes)||changes.length!==required.size||
-     new Set(changes.map(c=>c.path)).size!==required.size||
-     changes.some(c=>!required.has(c.path)||c.status!=='M'))return false;
+  const runtimeGuard='.github/workflows/github-runtime-ota.yml';
+  const hasRuntimeGuard=Array.isArray(changes)&&changes.some(c=>c.path===runtimeGuard);
+  const allowed=new Set([...required,...(hasRuntimeGuard?[runtimeGuard]:[])]);
+  if(!Array.isArray(changes)||changes.length!==allowed.size||
+     new Set(changes.map(c=>c.path)).size!==allowed.size||
+     changes.some(c=>!allowed.has(c.path)||c.status!=='M')||
+     [...required].some(p=>!changes.some(c=>c.path===p)))return false;
   const get=path=>changes.find(c=>c.path===path)?.after||'';
   return get('.github/workflows/check-pr-preview-github.yml').includes('needs.oracle-scope.outputs.preview_ci_only')&&
     get('tests/github-actions-pr-preview-ci.test.mjs').includes('CI-LITE docs-only and Preview-CI-only selectors fail closed')&&
     get('.github/scripts/ci-browser-scope.mjs').includes('function isCiLitePreviewWorkflowScope(changes)')&&
-    get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'ci-lite-preview-workflow'");
+    get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'ci-lite-preview-workflow'")&&
+    (!hasRuntimeGuard||(
+      get(runtimeGuard).includes('PR727_CI_ONLY_GUARD')&&
+      get(runtimeGuard).includes('SKIP_AUTO_RELEASE=true')
+    ));
 }
 
 // PR702 after-merge CI recovery. Only the exact CI/test/docs repair is scoped;
@@ -3510,7 +3518,21 @@ function isDualCloudflareStandbyScope(changes){
     needed.every(p=>changes.some(c=>c.path===p));
 }
 
+// PR726 isolated source-blob contract: do not scope future gameplay edits by filename alone.
+// Any changed, added, deleted, or unexpected file falls back to full CI.
+export const PR726_WOLF_BLOB_CONTRACT = Object.freeze([[".github/workflows/check-player-web-online-village.yml","M","f074a7f51537e5a248e750be51ac2019b8ac4f46"],["docs/PLAYER_WEB_FIRE_WOLF_VOTE_20261101.md","A","0563e22f5747f3e250dc4cb3e278fae2f6640431"],["src/gmww-demo-runner.js","M","ec2dbd3b792c73c9244a5ed23bbdaa685281d924"],["src/gmww-members-live.js","M","5df38999e26a68b116cacfe0e0fabd888ce46850"],["src/gmww-wolf-night-resolution.js","M","397c4dd3884c9016494dc94d0d9caf4076831ef5"],["src/index.js","M","11af1ff45c8970261ec708e38bf12d6566b89c98"],["src/player-web-src/35-online-chat.part","M","a7b06f8f0c1a6366e11502f8907458d3140c477d"],["tests/gmww-wolf-night-resolution.test.mjs","M","1f731db3fe2e4a052328d23b94add69d57944a9a"],["tests/player-web-wolf-ballots-20261101.test.mjs","A","660cff59e54b1cc2df90f78cca02a3d113e1d8f7"]]);
+export function isPlayerFireWolf726Scope(changes, blobHash = file => git('hash-object', file)) {
+  const expected = new Map(PR726_WOLF_BLOB_CONTRACT.map(([file,status,blob])=>[file,{status,blob}]));
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     new Set(changes.map(c=>c.path)).size!==expected.size) return false;
+  try {
+    return changes.every(c=>expected.has(c.path)&&c.status===expected.get(c.path).status&&
+      blobHash(c.path)===expected.get(c.path).blob);
+  } catch {return false;}
+}
+
 function classifyBrowserScope(changes){
+  if(isPlayerFireWolf726Scope(changes))return 'player-fire-wolf-726';
   if(isDualCloudflareStandbyScope(changes))return 'dual-cloudflare-standby';
   if(isRuntimeMergedV3287Scope(changes))return 'runtime-merged-v3287';
   if(isRuntimeMergedV3286Scope(changes))return 'runtime-merged-v3286';
