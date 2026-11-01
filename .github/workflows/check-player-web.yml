@@ -1408,8 +1408,52 @@ jobs:
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'V3 parity: exact 10 files and 12 focused regression suites SUCCESS, Worker dry run SUCCESS.' >> "$GITHUB_STEP_SUMMARY"
 
+      # GMWW V3.0 CI-LITE: exact, reviewed Player Web campfire UI change. Retain
+      # Worker integration and relevant browser/privacy tests; never mask unknown changes.
+      - name: V3 iPhone campfire icon positioning — exact scope and safety tests
+        id: v3_fire_anchor
+        if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || github.event_name == 'push')
+        shell: bash
+        env:
+          V3_FIRE_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            [[ "$V3_FIRE_BASE" =~ ^[0-9a-f]{40}$ ]] || exit 0
+            BASE="$V3_FIRE_BASE"
+          else
+            [ "$GITHUB_REF" = 'refs/heads/main' ] || exit 0
+            BASE='HEAD^1'
+          fi
+          ACTUAL=$(git diff --name-only --no-renames "$BASE" HEAD | sort)
+          EXPECTED=$(printf '%s\n' \
+            .github/workflows/check-player-web.yml \
+            docs/releases/GMWW-PLAYER-FIRE-ACTION-ANCHOR-20261102.md \
+            src/gmww-members-live.js \
+            src/player-web-src/35-online-chat.part \
+            tests/player-online-realtime-freeze-day-20261030.test.mjs \
+            tests/player-web-v3-iframe-drag.test.mjs | sort)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo 'Unexpected scope: retain full Worker CI.'
+            exit 0
+          fi
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node --test \
+            tests/player-web-v3-iframe-drag.test.mjs \
+            tests/player-online-realtime-freeze-day-20261030.test.mjs \
+            tests/player-web-online-village-20261028.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/player-web-receipt-patch-hotfix.test.mjs \
+            tests/online-chat-authority.test.mjs
+          npm run check
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'PASS: exact campfire UI diff, drag/iPhone/role/privacy tests, compiled Worker; unrelated full gameplay suite excluded.' >> "$GITHUB_STEP_SUMMARY"
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -1511,7 +1555,7 @@ jobs:
           # modern Server does not auto-group arbitrary test-* roles. V3 exact-scope
           # verifies actual Night/Wolf/Witch targeting and authentication separately.
           # Keep real Worker night-rules E2E, portrait, delivery and WebSocket checks.
-          if [ "${{ steps.v3_parity.outputs.scoped }}" != 'true' ] && {
+          if [ "${{ steps.v3_parity.outputs.scoped }}" != 'true' ] && [ "${{ steps.v3_fire_anchor.outputs.scoped }}" != 'true' ] && {
                [ "${{ github.event_name }}" != 'pull_request' ] || [ "${{ github.event.pull_request.number }}" != '645' ]; }; then
             node tests/worker-engine-multinight-e2e.mjs
           else

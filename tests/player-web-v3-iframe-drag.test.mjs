@@ -121,3 +121,14 @@ test('missed iPhone drop returns the original icon to the campfire instead of le
  assert.equal(listeners.size,0);
  assert.equal(winListeners.size,0);
 });
+
+test('exact V3 campfire scope retains targeted online, privacy and Worker tests while excluding unrelated legacy suite',()=>{
+ const yml=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ assert.match(yml,/id: v3_fire_anchor/);
+ assert.match(yml,/tests\/player-web-v3-iframe-drag\.test\.mjs/);
+ assert.match(yml,/tests\/player-online-realtime-freeze-day-20261030\.test\.mjs/);
+ assert.match(yml,/tests\/player-web-server-visual-parity-20261101\.test\.mjs/);
+ assert.match(yml,/npm run check/);
+ assert.match(yml,/steps\.v3_fire_anchor\.outputs\.scoped != 'true'/);
+ assert.match(yml,/\[ "\$\{\{ steps\.v3_fire_anchor\.outputs\.scoped \}\}" != 'true' \]/);
+});
