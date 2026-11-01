@@ -3346,10 +3346,11 @@ export class RoomDurableObject extends DurableObject {
   async playerChatRead(body){
     const loginId=normalizeLoginId(body?.loginId),{meta,players,rows,permission}=await this.chatAccess(loginId,body?.channel);
     const notices=players["member:"+loginId]?publicChatNotices(meta,players,rows):[];
-    if(!permission.canRead)return j({ok:true,channel:null,messages:[],notices,canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
+    const broadcasts=players["member:"+loginId]?(await this.ctx.storage.get("onlineChat:"+chatStorageScope(meta)+":gm:all"))||[]:[];
+    if(!permission.canRead)return j({ok:true,channel:null,messages:[],broadcasts,notices,canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
     const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel;
     return j({ok:true,channel:permission.channel,scope:permission.scope,
-      messages:(await this.ctx.storage.get(key))||[],notices,canSend:permission.canSend,
+      messages:(await this.ctx.storage.get(key))||[],broadcasts,notices,canSend:permission.canSend,
       reason:permission.reason,phase:meta.cyclePhase,cycleKey:meta.cycleKey});
   }
   async playerChatSend(body){
@@ -3377,23 +3378,26 @@ export class RoomDurableObject extends DurableObject {
         channel:key.slice(("onlineChat:"+match+":").length),
         messages:Array.isArray(messages)?messages.slice(-80):[]
       }));
-    return j({ok:true,matchId:match,phase:meta.cyclePhase||null,
+    const participants=Object.values((await this.ctx.storage.get("players"))||{})
+      .filter(p=>p?.loginId).map(p=>({loginId:normalizeLoginId(p.loginId),displayName:String(p.displayName||p.loginId).slice(0,42)}));
+    return j({ok:true,matchId:match,phase:meta.cyclePhase||null,participants,
       bans:(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{},channels});
   }
   async gmChatSend(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
       players=(await this.ctx.storage.get("players"))||{};
-    const publicDay=String(body?.channel||'')==='room';
+    const toVillage=String(body?.channel||'')==='room';
     if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!content||String(body?.text||"").length>400||
-      (publicDay?(String(meta.phase)!=='running'||String(meta.cyclePhase)!=='morning'):(!id||!players["member:"+id])))
+      (!toVillage&&(!id||!players["member:"+id])))
       return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
-    const channel=publicDay?"day":"gm:"+id;
+    // GM broadcast is visible to all authenticated members, even when their group chat is closed.
+    const channel=toVillage?"gm:all":"gm:"+id;
     const key="onlineChat:"+chatStorageScope(meta)+":"+channel,now=Date.now(),
       rateKey="gmChatRate:"+chatStorageScope(meta)+":"+channel;
     if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
     const messages=(await this.ctx.storage.get(key))||[],
-      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:publicDay?"day":"gm"};
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:toVillage?"gm-broadcast":"gm"};
     await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
     this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel});
   }
