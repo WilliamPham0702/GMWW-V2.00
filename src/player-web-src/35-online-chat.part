@@ -491,5 +491,5 @@ function gmwwOnlinePlaceAtFire(dock){
  // Position at the actual campfire, even before the iframe finishes rendering.
  dock.style.left=Math.max(12,Math.min(window.innerWidth-12,x))+'px';
  dock.style.top=Math.max(75,Math.min(window.innerHeight-90,y))+'px';
- const intel=document.getElementById('gmwwOnlineWitchIntel');if(intel){intel.style.left=dock.style.left;intel.style.top=Math.max(105,Math.min(window.innerHeight-160,y-70))+'px'}
+ const intel=document.getElementById('gmwwOnlineWitchIntel');if(intel?.style){intel.style.left=dock.style.left;intel.style.top=Math.max(105,Math.min(window.innerHeight-160,y-70))+'px'}
 }
