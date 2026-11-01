@@ -92,7 +92,7 @@ jobs:
           set -euo pipefail
           if [ -n "$TEST_PATHS" ]; then
             read -ra TESTS <<< "$TEST_PATHS"
-            node --test "${ TESTS[@] }"
+            node --test "${TESTS[@]}"
           else
             echo 'No feature tests needed for metadata-only change'
           fi
