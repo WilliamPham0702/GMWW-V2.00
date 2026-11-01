@@ -3404,7 +3404,7 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,id,channel});
   }
   chatVoiceResponse(record){
-    return new Response(record.bytes,{headers:{'content-type':record.mime,
+    return new Response(record.bytes,{headers:{...corsHeaders(),'content-type':record.mime,
       'content-length':String(record.bytes.byteLength),'cache-control':'private, no-store',
       'x-content-type-options':'nosniff','content-security-policy':"default-src 'none'",
       'accept-ranges':'none'}});
