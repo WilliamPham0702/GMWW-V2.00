@@ -9,6 +9,8 @@ on:
       - 'tests/player-web-online-village-20261028.test.mjs'
       - 'tests/player-web-top-account-avatar-20261029.test.mjs'
       - 'tests/player-web-online-actions-20261028.test.mjs'
+      - 'tests/player-web-wolf-ballots-20261101.test.mjs'
+      - 'src/gmww-wolf-night-resolution.js'
       - 'src/gmww-online-action-icons.js'
       - 'src/gmww-demo-runner.js'
       - 'src/gmww-online-chat-policy.js'
@@ -26,6 +28,8 @@ jobs:
           node-version: '22'
       - name: Validate scoped role-group privacy and Player Web UI
         run: node --test tests/player-online-realtime-freeze-day-20261030.test.mjs tests/player-web-top-account-avatar-20261029.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-chat-authority.test.mjs
+      - name: Check Alpha Wolf priority, individual ballots, restore ownership and night resolution
+        run: node --test tests/player-web-wolf-ballots-20261101.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs
       - name: Verify exact packaged Player Web
         run: node .github/scripts/assemble-player-web.mjs --verify
       - name: Check source syntax

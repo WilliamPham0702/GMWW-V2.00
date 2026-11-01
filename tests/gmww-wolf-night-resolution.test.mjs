@@ -57,9 +57,10 @@ test('missing or duplicated seated positions must fail closed for transfers',()=
   const duplicated={...players,'member:alice':{loginId:'alice',seatId:2}};
   assert.equal(resolve([bite('bob'),fairy('right')],{players:duplicated}).ok,false);
 });
-test('multiple wolf bites never create duplicate victims',()=>{
+test('multiple wolf bites choose the plurality victim only once',()=>{
   const result=resolve([bite('bob'),bite('bob'),bite('carol')]);
-  assert.deepEqual(result.victims,['bob','carol']);
+  assert.deepEqual(result.victims,['bob']);
+  assert.equal(result.biteCount,3);
 });
 test('non-notice events cannot masquerade as a wolf action',()=>{
   const result=resolve([{...bite('bob'),type:'thumb_vote'},{...guard('bob'),type:'dead'}]);
