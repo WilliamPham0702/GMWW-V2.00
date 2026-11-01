@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import vm from 'node:vm';
-import {classifyBrowserScope} from '../.github/scripts/ci-browser-scope.mjs';
+import {classifyBrowserScope, isPlayerFireWolf726Scope, PR726_WOLF_BLOB_CONTRACT} from '../.github/scripts/ci-browser-scope.mjs';
 
 const workflow = readFileSync('.github/workflows/check-pr-preview-github.yml','utf8');
 
@@ -209,4 +209,24 @@ test('exact synthetic session+WebSocket follow-up never allocates a Preview DO n
   assert.equal(evaluate(modified.map((x,i)=>i===0?{...x,status:'D'}:x)),false);
   assert.equal(evaluate([...modified,modified[0]]),false);
   assert.ok(workflow.includes("needs.oracle-scope.outputs.standby_only != 'true'"));
+});
+
+// Recovery PR: test the exact nine PR726 blobs without deploying to Production or creating namespaces.
+test('PR726 Worker CI-LITE accepts only unchanged 9 audited game files and keeps Preview required',()=>{
+  const entries=PR726_WOLF_BLOB_CONTRACT.map(([path,status])=>({path,status}));
+  const hashes=new Map(PR726_WOLF_BLOB_CONTRACT.map(([path,,sha])=>[path,sha]));
+  const resolve=path=>hashes.get(path);
+  assert.equal(isPlayerFireWolf726Scope(entries,resolve),true);
+  assert.equal(isPlayerFireWolf726Scope(entries.slice(1),resolve),false);
+  assert.equal(isPlayerFireWolf726Scope([...entries,entries[0]],resolve),false);
+  assert.equal(isPlayerFireWolf726Scope([...entries,{path:'src/extra.js',status:'A'}],resolve),false);
+  assert.equal(isPlayerFireWolf726Scope(entries.map((row,i)=>i===0?{...row,status:'D'}:row),resolve),false);
+  assert.equal(isPlayerFireWolf726Scope(entries,path=>path===entries[0].path?'unexpected':resolve(path)),false);
+  const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  assert.match(worker,/steps\\.scope\\.outputs\\.mode == 'player-fire-wolf-726'/);
+  assert.match(worker,/tests\\/player-web-wolf-ballots-20261101\\.test\\.mjs/);
+  assert.match(worker,/tests\\/night02-pack-snow-guard-fairy\\.test\\.mjs/);
+  assert.match(worker,/npm run check/);
+  assert.match(workflow,/code 10067/);
+  assert.match(workflow,/wrangler preview --config wrangler\\.jsonc/);
 });
