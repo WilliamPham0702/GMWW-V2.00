@@ -7,7 +7,8 @@ function category(path){
   if(!path||path.startsWith('/')||path.includes('\\')||path.split('/').includes('..'))return 'blocked';
   if(/(^|\/)(arena-3d|3d)(\/|$)/i.test(path))return 'frozen';
   if(/^server-game\/(GMWW-Server\/|GMWW-Server\.xcodeproj\/)/.test(path)||/\.swift$|\.entitlements$|Info\.plist$/.test(path))return 'native';
-  if(['wrangler.jsonc','package.json','package-lock.json'].includes(path))return 'blocked';
+  if(path==='wrangler.jsonc')return 'blocked';
+  if(path==='package.json'||path==='package-lock.json')return 'version';
   if(/^infra\/pages\/gamemasoi\//.test(path))return 'pages';
   if(/^server-game\/(current|shared|src)\//.test(path)||/^update-system\//.test(path)||
      /^assets\/(village|backgrounds|characters|role-artwork|gm)\//.test(path)||
@@ -21,9 +22,10 @@ export function v3DeliveryPlan(paths){
  const files=[...new Set((paths||[]).map(x=>String(x||'').trim()).filter(Boolean))];
  if(!files.length)return {target:'none',risk:'low',hold:false,files,tests:[],reason:'empty-change'};
  const types=new Set(files.map(category));
+ if(types.has('version')&&!types.has('runtime'))return {target:'blocked',risk:'critical',hold:true,files,tests:sharedTests,reason:'version-without-runtime-source'};
  if(types.has('blocked')||types.has('frozen')||types.has('native'))
    return {target:'blocked',risk:'critical',hold:true,files,tests:sharedTests,reason:types.has('frozen')?'frozen-3d':types.has('native')?'native-requires-separate-release':'unrecognized-or-sensitive-scope'};
- const deployTypes=[...types].filter(t=>t!=='ci');
+ const deployTypes=[...types].filter(t=>t!=='ci'&&t!=='version');
  // A Runtime release necessarily includes the shared Worker/Server; Pages remains isolated.
  if(deployTypes.length>1&&!(deployTypes.length===2&&deployTypes.includes('runtime')&&deployTypes.includes('worker')))
    return {target:'blocked',risk:'critical',hold:true,files,tests:sharedTests,reason:'mixed-deployment-targets'};
