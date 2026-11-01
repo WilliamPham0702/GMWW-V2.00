@@ -3405,6 +3405,53 @@ function isOnlineP0CiRoutingScope(changes){
     by.get('docs/releases/GMWW-ONLINE-P0-CI-20261031.md').includes('Rollback');
 }
 
+// Exact V3.286 release-only scope: all gameplay source is already merged on main.
+// Any unreviewed bytes, extra file or unexpected status falls back to FULL testing.
+function isRuntimeMergedV3286Scope(changes){
+  const expected=new Map([
+    ['package.json','M'],['package-lock.json','M'],
+    ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+    ['server-game/src/00-core-and-library.part','M'],['src/index.js','M'],
+    ['.github/scripts/prepare-update-channel.mjs','M'],
+    ['tests/demo-runtime-v3285-release.test.mjs','M'],
+    ['docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     new Set(changes.map(c=>c.path)).size!==expected.size||
+     changes.some(c=>expected.get(c.path)!==c.status))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  const exactly=(p,a,b)=>{const c=by.get(p);return typeof c.before==='string'&&c.before.includes(a)&&c.after===c.before.replace(a,b);};
+  if(!exactly('package.json','"version": "3.285.0"','"version": "3.286.0"')||
+     !exactly('server-game/current/GMWW.html','<title>GMWW V3.285</title>','<title>GMWW V3.286</title>')||
+     !exactly('server-game/current/app.js',"const VERSION='3.285';","const VERSION='3.286';")||
+     !exactly('server-game/src/00-core-and-library.part',"const VERSION='3.285';","const VERSION='3.286';")||
+     !exactly('src/index.js','VERSION="V3.285",NATIVE_SHELL_VERSION','VERSION="V3.286",NATIVE_SHELL_VERSION'))return false;
+  const lock=by.get('package-lock.json');
+  if(typeof lock.before!=='string'||!lock.before.includes('"version": "3.285.0"')||
+     lock.after!==lock.before.replaceAll('"version": "3.285.0"','"version": "3.286.0"'))return false;
+  const notes=by.get('.github/scripts/prepare-update-channel.mjs');
+  if(typeof notes.before!=='string'||typeof notes.after!=='string'||
+     !notes.after.includes('releaseNotes:["V3.286 PR698/PR699/PR702:')||
+     !notes.after.includes('rollback Runtime V3.285')||
+     notes.after.replace(/releaseNotes:\["V3\.286 PR698\/PR699\/PR702:[^"]+","/,'releaseNotes:["')!==notes.before)return false;
+  let expectedTest=by.get('tests/demo-runtime-v3285-release.test.mjs').before;
+  if(typeof expectedTest!=='string')return false;
+  for(const [a,b] of [
+    ["test('V3.285 Runtime","test('V3.286 Runtime"],
+    ["assert.equal(pkg.version,'3.285.0')","assert.equal(pkg.version,'3.286.0')"],
+    ['VERSION="V3.285",NATIVE_SHELL','VERSION="V3.286",NATIVE_SHELL'],
+    ["const VERSION='3.285';","const VERSION='3.286';"],
+    ['<title>GMWW V3.285</title>','<title>GMWW V3.286</title>'],
+    ["test('V3.285 package","test('V3.286 package"],
+    ["  assert.ok(notes.includes('V3.285 PR677/PR694: Chuyển chế độ DEMO'));",
+     "  assert.ok(notes.includes('V3.286 PR698/PR699/PR702: Phát hành độc lập ba thay đổi đã merge'));\\n  assert.ok(notes.includes('V3.285 PR677/PR694: Chuyển chế độ DEMO'));".replace('\\n','\n')]
+  ]){if(!expectedTest.includes(a))return false;expectedTest=expectedTest.replace(a,b);}
+  if(by.get('tests/demo-runtime-v3285-release.test.mjs').after!==expectedTest)return false;
+  const doc=by.get('docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md').after;
+  return typeof doc==='string'&&doc.includes('PR #698')&&doc.includes('PR #699')&&
+    doc.includes('PR #702')&&doc.includes('Rollback')&&!doc.includes('ĐÃ PHÁT HÀNH');
+}
+
 // PR712: bounded audio messaging touches Worker auth, so run *focused security*
 // and real Worker validation rather than brittle, unrelated historic GM Runtime tests.
 // Fail closed for any additional files or wrong status.
@@ -3447,6 +3494,7 @@ function isVoiceNotes712Scope(changes){
 }
 function classifyBrowserScope(changes){
   if(isVoiceNotes712Scope(changes))return 'player-voice-notes-712';
+  if(isRuntimeMergedV3286Scope(changes))return 'runtime-merged-v3286';
   if(isOnlineP0CiRoutingScope(changes))return 'online-p0-ci-routing';
   if(isOnlineP0Player699Scope(changes))return 'online-p0-player-699';
   if(isOnlineP0GmChat700Scope(changes))return 'online-p0-gm-chat-700';
@@ -3781,6 +3829,29 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // After merging into main, the same exact version-only commit still uses scoped CI.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{
+        const [status,path]=row.split('\t');
+        return{status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
+          after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
+      });
+      if(isRuntimeMergedV3286Scope(changes))
+        return{mode:'runtime-merged-v3286',reason:'Exact same-SHA V3.286 merged-only runtime release'};
+      // Exact CI-only main recovery: same validated V3.286 app bytes from #714.
+      // The four-file Preview CI scope has no gameplay/Worker/OTA edits.
+      if(isCiLitePreviewWorkflowScope(changes) &&
+         JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.286.0'){
+        git('merge-base','--is-ancestor','0c2c6ccf7cf9c90d2369ee269be2c89bb6996851','HEAD');
+        git('diff','--quiet','0c2c6ccf7cf9c90d2369ee269be2c89bb6996851','HEAD','--',
+          'src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc');
+        return{mode:'ci-lite-preview-workflow',reason:'Exact CI-only V3.286 postmerge recovery; unchanged deployed source'};
+      }
+    }catch{} // Fail closed to full CI.
+  }
+
   // V3.285 DEMO Online OTA: verify exact version-only release; otherwise use full CI.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
     try{

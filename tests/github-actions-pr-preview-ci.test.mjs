@@ -74,6 +74,20 @@ test('CI-LITE docs-only and Preview-CI-only selectors fail closed without droppi
     M('.github/workflows/check-player-web.yml')
   ];
   assert.equal(evaluate('ciOnly',ciOnly),true);
+  const releaseOnly=[
+    M('package.json'),M('package-lock.json'),M('src/index.js'),
+    M('server-game/current/GMWW.html'),M('server-game/current/app.js'),
+    M('server-game/src/00-core-and-library.part'),
+    M('.github/scripts/prepare-update-channel.mjs'),
+    M('tests/demo-runtime-v3285-release.test.mjs'),
+    A('docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md')
+  ];
+  assert.equal(evaluate('runtimeReleaseOnly',releaseOnly),true);
+  assert.equal(evaluate('runtimeReleaseOnly',[...releaseOnly,M('src/player-web-src/30-rooms-and-realtime.part')]),false);
+  assert.equal(evaluate('runtimeReleaseOnly',releaseOnly.map((x,i)=>i===0?D(x.path):x)),false);
+  assert.equal(evaluate('runtimeReleaseOnly',releaseOnly.slice(0,8)),false);
+  assert.ok(workflow.includes("needs.oracle-scope.outputs.runtime_release_only != 'true'"));
+  assert.ok(workflow.includes('Verify no gameplay edits are hidden by V3.286 version bump'));
   assert.equal(evaluate('ciOnly',[...ciOnly,M('src/index.js')]),false);
   assert.equal(evaluate('ciOnly',[D(ciOnly[0].path),ciOnly[1]]),false);
   assert.equal(evaluate('ciOnly',[ciOnly[0],ciOnly[0]]),false);
@@ -103,4 +117,40 @@ test('CI-LITE Preview selector uses focused checks only for exact four-file repa
   assert.match(worker,/steps\.scope\.outputs\.mode == 'ci-lite-preview-workflow'/);
   assert.match(worker,/node --test tests\/github-actions-pr-preview-ci\.test\.mjs/);
   assert.match(worker,/npm run check/);
+});
+
+test('V3.286 release selector rejects surprise gameplay changes and extra paths',()=>{
+ const src=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ assert.ok(src.includes('function isRuntimeMergedV3286Scope(changes)'));
+ assert.ok(worker.includes("steps.scope.outputs.mode == 'runtime-merged-v3286'"));
+ const expected=[
+   'package.json','package-lock.json','src/index.js','server-game/current/GMWW.html',
+   'server-game/current/app.js','server-game/src/00-core-and-library.part',
+   '.github/scripts/prepare-update-channel.mjs','tests/demo-runtime-v3285-release.test.mjs'
+ ];
+ const changes=expected.map(path=>({path,status:'M',before:'SOURCE',after:'DIFFERENT'}));
+ changes.push({path:'docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md',status:'A',after:'Rollback'});
+ assert.equal(classifyBrowserScope(changes),'full','Release must be rejected without exact source bytes');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/private.js',status:'M'}]),'full');
+});
+
+test('V3.286 main push CI parses real git newline and tab boundaries',()=>{
+ const src=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ const begin=src.indexOf("if(process.env.GMWW_CI_EVENT==='push')");
+ assert.ok(begin>0,'main-push release selector must exist');
+ const body=src.slice(begin,begin+700);
+ assert.ok(body.includes(String.raw`trim().split('\n').filter(Boolean)`),'Must split actual LF');
+ assert.ok(body.includes(String.raw`row.split('\t')`),'Must split actual TAB');
+ assert.ok(!body.includes(String.raw`trim().split('\\n').filter(Boolean)`),'Escaped slash-n is invalid');
+});
+
+test('V3.286 main CI-only postmerge release routes to focused Worker gates with source integrity',()=>{
+  const source=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+  const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  assert.ok(source.includes("if(isCiLitePreviewWorkflowScope(changes) &&"));
+  assert.ok(source.includes("'0c2c6ccf7cf9c90d2369ee269be2c89bb6996851','HEAD'"));
+  assert.ok(source.includes("'src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc'"));
+  assert.ok(worker.includes("steps.scope.outputs.mode == 'ci-lite-preview-workflow' && github.event_name == 'push' && github.ref == 'refs/heads/main'"));
+  assert.ok(workflow.includes('Postmerge CI-LITE V3.286 release recovery'));
 });

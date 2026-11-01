@@ -133,6 +133,20 @@ jobs:
           node --check src/index.js
           node --check server-game/current/app.js
           node .github/scripts/verify-gmww-versions.mjs
+      # Required same-SHA Worker CI on main verifies exact version-only bundle.
+      - name: V3.286 — 3 merged PRs only, same-source runtime checks
+        if: steps.scope.outputs.mode == 'runtime-merged-v3286' || (steps.scope.outputs.mode == 'ci-lite-preview-workflow' && github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check .github/scripts/prepare-update-channel.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/demo-runtime-v3285-release.test.mjs tests/online-chat-authority.test.mjs tests/online-frozen-chat-day-20261031.test.mjs tests/online-player-fire-turn-dead-ui-20261031.test.mjs tests/player-toast-above-chat-20261031.test.mjs tests/gmww-player-web-source-modules.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md
       - name: V3.285 — exact DEMO Online source, Runtime version and focused tests
         if: steps.scope.outputs.mode == 'demo-runtime-v3285'
         run: |
