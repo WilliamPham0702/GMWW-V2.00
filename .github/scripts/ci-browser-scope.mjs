@@ -3428,6 +3428,27 @@ function isOnlineP0CiRoutingScope(changes){
     by.get('docs/releases/GMWW-ONLINE-P0-CI-20261031.md').includes('Rollback');
 }
 
+// V3.288: exact release-only version bump after PR726 merged; all unexpected source changes use full CI.
+function isRuntimeMergedV3288Scope(changes){
+ const wanted=new Map([['package.json','M'],['package-lock.json','M'],['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],['server-game/src/00-core-and-library.part','M'],['src/index.js','M'],['.github/scripts/prepare-update-channel.mjs','M'],['tests/demo-runtime-v3285-release.test.mjs','M'],['.github/scripts/ci-browser-scope.mjs','M'],['.github/workflows/check-player-web.yml','M'],['docs/releases/GMWW-RUNTIME-V3.288-PLAYER-WOLF-726-20261101.md','A']]);
+ if(!Array.isArray(changes)||changes.length!==wanted.size||new Set(changes.map(x=>x.path)).size!==wanted.size||changes.some(x=>wanted.get(x.path)!==x.status))return false;
+ const by=new Map(changes.map(x=>[x.path,x])),eq=(p,a,b)=>{const x=by.get(p);return typeof x.before==='string'&&x.after===x.before.replace(a,b)&&x.before.includes(a)};
+ if(!eq('package.json','"version": "3.287.0"','"version": "3.288.0"')||
+ !eq('server-game/current/GMWW.html','<title>GMWW V3.287</title>','<title>GMWW V3.288</title>')||
+ !eq('server-game/current/app.js',"const VERSION='3.287';","const VERSION='3.288';")||
+ !eq('server-game/src/00-core-and-library.part',"const VERSION='3.287';","const VERSION='3.288';")||
+ !eq('src/index.js','VERSION="V3.287",NATIVE_SHELL_VERSION','VERSION="V3.288",NATIVE_SHELL_VERSION'))return false;
+ const lock=by.get('package-lock.json');if(lock.after!==lock.before.replaceAll('"version": "3.287.0"','"version": "3.288.0"'))return false;
+ const n=by.get('.github/scripts/prepare-update-channel.mjs');
+ if(n.after!==n.before.replace('releaseNotes:["V3.287','releaseNotes:["V3.288 PR726: Player Web hiện icon Vai Trò/Artifact ngay trên đống lửa đúng lượt, kéo thả chọn mục tiêu và Khôi phục theo quyền. Mỗi Sói cắn riêng; Sói Trùm chốt nếu cắn, nếu không thì theo đa số Sói thường, hòa không tự chọn mục tiêu. Giữ luật Sói Tuyết/Đóng Băng, Yêu Tinh, Bảo Vệ, Phù Thủy; không đổi IPA V3.264, URL, dữ liệu, DO hoặc 3D. Kiểm thử Worker/Preview đúng SHA, gói .gmwwupdate kèm SHA-256; rollback Runtime V3.287 và Worker trước khi cập nhật.","V3.287'))return false;
+ const test=by.get('tests/demo-runtime-v3285-release.test.mjs').after;
+ const ci=by.get('.github/scripts/ci-browser-scope.mjs').after;
+ const wf=by.get('.github/workflows/check-player-web.yml').after;
+ const doc=by.get('docs/releases/GMWW-RUNTIME-V3.288-PLAYER-WOLF-726-20261101.md').after;
+ return test.includes("pkg.version,'3.288.0'")&&test.includes('V3.288 PR726:')&&ci.includes('function isRuntimeMergedV3288Scope(changes)')&&
+ wf.includes("steps.scope.outputs.mode == 'runtime-merged-v3288'")&&doc.includes('Rollback')&&doc.includes('SHA-256');
+}
+
 // Fail-closed V3.287 release selector. No new gameplay edits.
 function isRuntimeMergedV3287Scope(changes){
  const wanted=new Map([['package.json','M'],['package-lock.json','M'],['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],['server-game/src/00-core-and-library.part','M'],['src/index.js','M'],['.github/scripts/prepare-update-channel.mjs','M'],['tests/demo-runtime-v3285-release.test.mjs','M'],['.github/scripts/ci-browser-scope.mjs','M'],['.github/workflows/check-player-web.yml','M'],['docs/releases/GMWW-RUNTIME-V3.287-CHAT-720-721-20261101.md','A']]);
@@ -3546,26 +3567,10 @@ export function isPlayerFireWolf726Scope(changes, blobHash = file => git('hash-o
   } catch {return false;}
 }
 
-
-const PR726_V3288_NOTE="V3.288 PR726: Player Web hiển thị icon Vai trò/Artifact ngay trên đống lửa đúng lượt và kéo thả vào mục tiêu, Khôi phục đúng tài khoản; mỗi Sói cắn riêng, Sói Trùm chốt cuối, không có Sói Trùm thì đa số quyết định, hòa không tự chọn. Bảo toàn IPA, URL và dữ liệu. .gmwwupdate SHA-256; rollback V3.287 nếu kiểm tra tương thích và phòng không đang chơi.";
-export function isPR726RuntimeV3288Scope(changes){
-  const allowed=new Set(['package.json','package-lock.json','src/index.js','server-game/src/00-core-and-library.part','server-game/current/app.js','server-game/current/GMWW.html','.github/scripts/prepare-update-channel.mjs']);
-  if(!Array.isArray(changes)||changes.length!==allowed.size||new Set(changes.map(c=>c.path)).size!==allowed.size||changes.some(c=>c.status!=='M'||!allowed.has(c.path)||typeof c.before!=='string'||typeof c.after!=='string'))return false;
-  const transform=(path,before)=>{
-    if(path==='package.json'||path==='package-lock.json')return before.replaceAll('"version": "3.287.0"','"version": "3.288.0"');
-    if(path==='src/index.js')return before.replace('VERSION="V3.287"','VERSION="V3.288"');
-    if(path==='server-game/src/00-core-and-library.part'||path==='server-game/current/app.js')return before.replace("const VERSION='3.287';","const VERSION='3.288';");
-    if(path==='server-game/current/GMWW.html')return before.replace('<title>GMWW V3.287</title>','<title>GMWW V3.288</title>');
-    if(path==='.github/scripts/prepare-update-channel.mjs')return before.replace('releaseNotes:[','releaseNotes:['+JSON.stringify(PR726_V3288_NOTE)+',');
-    return before;
-  };
-  return changes.every(c=>{const next=transform(c.path,c.before);return next!==c.before&&next===c.after;});
-}
-
 function classifyBrowserScope(changes){
   if(isPlayerFireWolf726Scope(changes))return 'player-fire-wolf-726';
-  if(isPR726RuntimeV3288Scope(changes))return 'player-fire-wolf-726';
   if(isDualCloudflareStandbyScope(changes))return 'dual-cloudflare-standby';
+  if(isRuntimeMergedV3288Scope(changes))return 'runtime-merged-v3288';
   if(isRuntimeMergedV3287Scope(changes))return 'runtime-merged-v3287';
   if(isRuntimeMergedV3286Scope(changes))return 'runtime-merged-v3286';
   if(isOnlineP0CiRoutingScope(changes))return 'online-p0-ci-routing';
@@ -4657,22 +4662,20 @@ function detect(){
     }catch{} // Unknown source or CI edits must run full checks.
   }
 
-  // PR726 POSTMERGE: exact CI-only recovery and exact V3.288 version change.
-  // No gameplay/IPA/data changes may be admitted by the CI-only branch.
-  if(process.env.GMWW_CI_EVENT==='push'){
-    try {
+  // PR726_V3288_MAIN_RECOVERY: exact CI-only postmerge commit runs the reviewed wolf/undo suite.
+  // The V3.288 gameplay, GM, IPA, Runtime version and data must remain byte-identical to PR729.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
       const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
       const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path,
         before:status==='M'?git('show','HEAD^1:'+path):null,
         after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};});
-      if(isPR726RuntimeV3288Scope(changes))
-        return{mode:'player-fire-wolf-726',reason:'PR726 exact V3.288 version and Vietnamese notes only; Worker+wolf+undo+OTA gates remain'};
-      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.287.0'&&isCiLitePreviewWorkflowScope(changes)){
-        git('merge-base','--is-ancestor','0bfb4673037124d62e313b244aaab185a2d79202','HEAD');
-        git('diff','--quiet','0bfb4673037124d62e313b244aaab185a2d79202','HEAD','--','src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc');
-        return{mode:'ci-lite-preview-workflow',reason:'PR726 postmerge 3-file CI-only recovery; merged gameplay SHA unchanged'};
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.288.0'&&isCiLitePreviewWorkflowScope(changes)){
+        git('merge-base','--is-ancestor','4c7f1b5b6db8969e51410399fd094d568d8419ae','HEAD');
+        git('diff','--quiet','4c7f1b5b6db8969e51410399fd094d568d8419ae','HEAD','--','src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc','.github/scripts/prepare-update-channel.mjs');
+        return{mode:'player-fire-wolf-726',reason:'V3.288 CI-only recovery: exact 3 files, previously reviewed PR726 wolf and undo source unchanged'};
       }
-    }catch{} // Unexpected diff or ancestry remains full; never bypass required checks.
+    }catch{} // Failed proof reverts to full tests; never skip Worker or Preview required checks.
   }
 
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};

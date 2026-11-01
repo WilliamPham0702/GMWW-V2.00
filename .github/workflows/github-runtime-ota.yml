@@ -62,7 +62,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
             MESSAGE=$(git log -1 --format=%B)
             CHANGED=$(git diff --name-only HEAD^1 HEAD | sort)
-            # PR726_POSTMERGE_CI_RECOVERY: same exact 3 CI files; do not auto-release V3.287 after gameplay merge.
+            # PR730: CI-only recovery of PR729 V3.288; existing PR728 exact 3-file guard prevents duplicate auto-release.
             # PR728_CI_ONLY_GUARD: strict 3-file SHA-newline CI fix is never a Runtime release.
             PR728_ONLY=$(printf '%s\n' \
               '.github/scripts/ci-browser-scope.mjs' \

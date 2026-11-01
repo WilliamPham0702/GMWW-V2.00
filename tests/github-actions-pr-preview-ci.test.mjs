@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import vm from 'node:vm';
-import {classifyBrowserScope, isPlayerFireWolf726Scope, PR726_WOLF_BLOB_CONTRACT, isPR726RuntimeV3288Scope} from '../.github/scripts/ci-browser-scope.mjs';
+import {classifyBrowserScope, isPlayerFireWolf726Scope, PR726_WOLF_BLOB_CONTRACT} from '../.github/scripts/ci-browser-scope.mjs';
 
 const workflow = readFileSync('.github/workflows/check-pr-preview-github.yml','utf8');
 
@@ -277,39 +277,17 @@ test('PR726 SHA trailing newline regression accepts Git hash-object output, neve
 });
 
 
-test('PR726 postmerge scoped push and exact V3.288 version-only source, no unsafe bypass',()=>{
-  const paths=['package.json','package-lock.json','src/index.js','server-game/src/00-core-and-library.part','server-game/current/app.js','server-game/current/GMWW.html','.github/scripts/prepare-update-channel.mjs'];
-  const note="V3.288 PR726: Player Web hiển thị icon Vai trò/Artifact ngay trên đống lửa đúng lượt và kéo thả vào mục tiêu, Khôi phục đúng tài khoản; mỗi Sói cắn riêng, Sói Trùm chốt cuối, không có Sói Trùm thì đa số quyết định, hòa không tự chọn. Bảo toàn IPA, URL và dữ liệu. .gmwwupdate SHA-256; rollback V3.287 nếu kiểm tra tương thích và phòng không đang chơi.";
-  const replacements={
-    'package.json':s=>s.replaceAll('"version": "3.287.0"','"version": "3.288.0"'),
-    'package-lock.json':s=>s.replaceAll('"version": "3.287.0"','"version": "3.288.0"'),
-    'src/index.js':s=>s.replace('VERSION="V3.287"','VERSION="V3.288"'),
-    'server-game/src/00-core-and-library.part':s=>s.replace("const VERSION='3.287';","const VERSION='3.288';"),
-    'server-game/current/app.js':s=>s.replace("const VERSION='3.287';","const VERSION='3.288';"),
-    'server-game/current/GMWW.html':s=>s.replace('<title>GMWW V3.287</title>','<title>GMWW V3.288</title>'),
-    '.github/scripts/prepare-update-channel.mjs':s=>s.replace('releaseNotes:[','releaseNotes:['+JSON.stringify(note)+',')
-  };
-  const reverse={
-    'package.json':s=>s.replaceAll('"version": "3.288.0"','"version": "3.287.0"'),
-    'package-lock.json':s=>s.replaceAll('"version": "3.288.0"','"version": "3.287.0"'),
-    'src/index.js':s=>s.replace('VERSION="V3.288"','VERSION="V3.287"'),
-    'server-game/src/00-core-and-library.part':s=>s.replace("const VERSION='3.288';","const VERSION='3.287';"),
-    'server-game/current/app.js':s=>s.replace("const VERSION='3.288';","const VERSION='3.287';"),
-    'server-game/current/GMWW.html':s=>s.replace('<title>GMWW V3.288</title>','<title>GMWW V3.287</title>'),
-    '.github/scripts/prepare-update-channel.mjs':s=>s.replace('releaseNotes:['+JSON.stringify(note)+',','releaseNotes:[')
-  };
-  const changes=paths.map(path=>{
-    const current=readFileSync(path,'utf8');
-    const before=current.includes(path==='src/index.js'?'VERSION="V3.288"':path==='server-game/current/GMWW.html'?'<title>GMWW V3.288</title>':path==='.github/scripts/prepare-update-channel.mjs'?'releaseNotes:['+JSON.stringify(note):path==='server-game/current/app.js'||path==='server-game/src/00-core-and-library.part'?"const VERSION='3.288';":'"version": "3.288.0"')?reverse[path](current):current;
-    return{path,status:'M',before,after:replacements[path](before)};
-  });
-  assert.equal(isPR726RuntimeV3288Scope(changes),true);
-  assert.equal(classifyBrowserScope(changes),'player-fire-wolf-726');
-  assert.equal(isPR726RuntimeV3288Scope(changes.slice(1)),false);
-  assert.equal(isPR726RuntimeV3288Scope([...changes,{path:'src/other.js',status:'M',before:'x',after:'y'}]),false);
-  assert.equal(isPR726RuntimeV3288Scope(changes.map((c,i)=>i===0?{...c,after:c.after+'unexpected'}:c)),false);
-  const selector=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
-  assert.match(selector,/PR726 POSTMERGE: exact CI-only recovery/);
-  assert.match(selector,/isPR726RuntimeV3288Scope\(changes\)/);
-  assert.match(readFileSync('.github/workflows/github-runtime-ota.yml','utf8'),/PR728_CI_ONLY_GUARD/);
+test('PR726 V3.288 postmerge CI recovery keeps exact source and release gates',()=>{
+  const paths=['.github/scripts/ci-browser-scope.mjs','.github/workflows/github-runtime-ota.yml','tests/github-actions-pr-preview-ci.test.mjs'];
+  const entries=paths.map(path=>({path,status:'M',after:readFileSync(path,'utf8')}));
+  assert.equal(classifyBrowserScope(entries),'ci-lite-preview-workflow');
+  assert.equal(classifyBrowserScope([...entries,{path:'src/index.js',status:'M',after:'unsafe'}]),'full');
+  const selector=readFileSync(paths[0],'utf8');
+  assert.match(selector,/PR726_V3288_MAIN_RECOVERY/);
+  assert.match(selector,/isCiLitePreviewWorkflowScope\(changes\)/);
+  assert.match(selector,/mode:'player-fire-wolf-726'/);
+  assert.match(selector,/git\('diff','--quiet','4c7f1b5b6db8969e51410399fd094d568d8419ae'/);
+  const runtime=readFileSync(paths[1],'utf8');
+  assert.match(runtime,/PR728_CI_ONLY_GUARD/);
+  assert.match(runtime,/SKIP_AUTO_RELEASE=true/);
 });
