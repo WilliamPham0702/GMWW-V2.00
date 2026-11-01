@@ -33,7 +33,7 @@ async function context(room,meta){
 }
 function nightActions(ctx,meta,turn,usage,showBlocked=false){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
- return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId)).map(action=>({...action,targetCount:action.noTarget?0:demoDivinationTargetCount(action),actorIds:action.actorIds.filter(actorId=>{
+ return actions.map(action=>({...action,targetCount:action.noTarget?0:demoDivinationTargetCount(action),actorIds:action.actorIds.filter(actorId=>{
   if(!showBlocked&&(status(ctx.rows,meta,actorId,'expelled')||isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS})))return false;
   if(action.artifactId)return !ctx.cycle.accepted.some(x=>x.artifactId===action.artifactId&&x.playerId==='member:'+actorId)&&ctx.cycle.accepted.length<Number(ctx.cfg.artifactLimitPerCycle??3);
   const role=['role-group','wolf-pack-bite'].includes(turn.kind)?(turn.roles||[]).find(r=>r.loginIds.includes(actorId)&&(!action.roleIds?.length||action.roleIds.includes(r.roleId))):turn;
@@ -88,12 +88,22 @@ export async function playerOfferedActions(room,meta,loginId){
   const ballot=(await room.gallowsState(meta)).ballot;
   actions=dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot,meta.demo!==true);
  }
+ // The GM's resolved bite is private to the authenticated Witch, never broadcast.
+ const witchCanSave=actions.some(a=>a.actionId==='action_witch_save'&&!a.artifactId&&a.actorIds.includes(loginId));
+ let wolfBiteNotice='';
+ if(witchCanSave){
+  const resolved=resolveWolfNight({assignments:ctx.assignments,interactions:ctx.rows,players:ctx.players,matchId:meta.matchId,night:meta.cycleNight});
+  const victims=resolved?.ok===true?(resolved.victims||[]):[];
+  const names=victims.map(id=>ctx.players['member:'+id]?.displayName||id);
+  wolfBiteNotice=names.length?'Sói đã cắn: '+names.join(', '):'Chưa có nạn nhân Sói Cắn hợp lệ.';
+ }
  const blocking=(ctx.rows||[]).find(row=>String(row?.loginId||'').replace(/^member:/,'')===String(loginId)&&row?.effectActive!==false&&(!row?.matchId||String(row.matchId)===String(meta.matchId))&&(!row?.expiresAt||Date.parse(row.expiresAt)>Date.now())&&(row.type==='expelled'||row.type==='dead'||(row.type==='frozen'&&meta.cyclePhase==='night')));
  return actions.filter(a=>a.actorIds.includes(loginId)).map(a=>({
   key:a.id,actionId:a.actionId,name:a.name,type:a.type,roleId:a.roleId||'',
   artifactId:a.artifactId||'',targetCount:a.noTarget||a.actionId==='action_transfer_bite'?0:a.targetCount,
   noSelf:a.noSelf,allowDead:a.allowDead,noTarget:a.noTarget,phase:meta.cyclePhase,
   iconUrl:onlineGmActionIcon(a.actionId),
+  ...(a.actionId==='action_witch_save'&&wolfBiteNotice?{wolfBiteNotice}:{}),
   blocked:!!blocking,blockedType:blocking?.type||'',blockedReason:blocking?.type==='frozen'?'❄️ Bị Đóng Băng: vẫn thấy icon nhưng không thể hành động đêm nay.':blocking?.type==='expelled'?'🚪 Bị Đuổi Khỏi Làng: không thể hành động lượt này.':blocking?.type==='dead'?'💀 Đã chết: không thể hành động.':''
  }));
 }

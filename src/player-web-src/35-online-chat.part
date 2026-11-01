@@ -298,9 +298,13 @@ async function gmwwOnlineSubmit(){
  try{
    const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
    gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';toast('Đã thực hiện: '+String(action.name||'Hành động'));
-   if(d.revelation)toast('Kết quả: '+JSON.stringify(d.revelation).slice(0,180));
+   if(d.revelation)toast('Kết quả: '+gmwwOnlineRevelationText(d.revelation));
  }catch(e){toast('Hành động chưa được chấp nhận: '+String(e.message||e))}
  finally{state.onlineBusy=false;await refreshPrivateRole(true)}
+}
+function gmwwOnlineRevelationText(revelation){
+ if(!revelation||typeof revelation!=='object')return String(revelation||'Không có kết quả');
+ return String(revelation.message||'Không có kết quả');
 }
 function gmwwOnlineIconDown(event,action){
  if(event.button!==undefined&&event.button!==0)return;
@@ -388,10 +392,10 @@ function renderOnlineActionDock(){
    css.textContent='#gmwwOnlineDock{position:fixed;z-index:100010;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px;max-width:94vw;overflow:visible;touch-action:none;user-select:none;scrollbar-width:none}'+
      '#gmwwOnlineDock.is-idle-hidden{opacity:1;pointer-events:auto}'+
      '#gmwwOnlineDock button[data-blocked="true"]{position:relative;opacity:.7;filter:grayscale(.55)}#gmwwOnlineDock button[data-blocked="true"]:after{content:attr(data-effect-icon);position:absolute;right:-3px;top:-5px;font-size:18px;text-shadow:0 1px 5px #000}'+
-     '#gmwwOnlineDock button{flex:0 0 auto;position:relative;will-change:transform;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none}'+
+     '#gmwwOnlineDock button{flex:0 0 auto;position:relative;will-change:transform;width:clamp(28px,calc(48px * var(--online-action-scale,1)),72px);height:clamp(28px,calc(48px * var(--online-action-scale,1)),72px);border:0;padding:0;background:transparent;touch-action:none}'+
      '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
      '#game:not(.active)~#gmwwOnlineDock{display:none!important}'+
-     '.gmww-online-ghost{position:fixed;z-index:100060;width:80px;height:80px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 9px #f7d58a)}'+
+     '.gmww-online-ghost{position:fixed;z-index:100060;width:48px;height:48px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 9px #f7d58a)}'+
      '#gmwwOnlinePick{position:fixed;z-index:100050;left:50%;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 140px);transform:translateX(-50%);width:min(92vw,380px);max-height:48dvh;overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid #deb56d;border-radius:15px;background:#092b40f2;color:white;box-shadow:0 12px 35px #000d}'+
      '#gmwwOnlinePick strong{font-size:14px}#gmwwOnlinePick .gmww-online-people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:26dvh;overflow:auto;gap:6px}'+
      '#gmwwOnlinePick button{min-height:36px;background:#16506c;color:white;border:1px solid #7196a9;border-radius:9px;font-weight:700}';
@@ -404,6 +408,7 @@ function renderOnlineActionDock(){
   if(gmwwOnlineIconScope!==scope){gmwwOnlineIconScope=scope;gmwwOnlineIconPositions.clear();gmwwOnlineCanRestore=false}
   const sig=[scope,...offers.map(a=>[a.key,a.iconUrl,a.blocked,a.blockedReason,a.targetCount,a.noSelf].join(':'))].join('|');
  gmwwOnlinePlaceAtFire(dock);
+  gmwwOnlinePrivateTurnNotice(offers);
  if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();dock.classList.remove('is-idle-hidden');
  for(const action of offers){
    const btn=document.createElement('button');btn.type='button';btn.title=String(action.name||'Hành động')+(action.blocked?' • '+String(action.blockedReason||'Bị hiệu ứng chặn'):'');
@@ -431,4 +436,18 @@ function gmwwOnlinePlaceAtFire(dock){
  // Position at the actual campfire, even before the iframe finishes rendering.
  dock.style.left=Math.max(12,Math.min(window.innerWidth-12,x))+'px';
  dock.style.top=Math.max(75,Math.min(window.innerHeight-90,y))+'px';
+}
+
+let gmwwOnlineNoticeSig='';
+function gmwwOnlinePrivateTurnNotice(offers){
+ const old=document.getElementById('gmwwOnlinePrivateTurnNotice');
+ const saves=(offers||[]).filter(a=>a.actionId==='action_witch_save'&&a.wolfBiteNotice);
+ const notice=saves.map(a=>String(a.wolfBiteNotice||'')).filter(Boolean).join(' • ');
+ const key=[state.roomCode,state.room?.cycleKey,notice].join('|');
+ if(!notice){old?.remove();gmwwOnlineNoticeSig='';return}
+ if(key===gmwwOnlineNoticeSig&&old)return;
+ gmwwOnlineNoticeSig=key;
+ const el=old||document.createElement('div');el.id='gmwwOnlinePrivateTurnNotice';el.setAttribute('role','status');
+ el.style.cssText='position:fixed;z-index:100040;left:50%;top:calc(max(76px,env(safe-area-inset-top)) + 74px);transform:translateX(-50%);max-width:min(90vw,420px);padding:9px 12px;border:1px solid #cda763;border-radius:12px;background:#092b40ee;color:#fff;text-align:center;font-size:13px;font-weight:700;pointer-events:none;box-shadow:0 3px 14px #0008';
+ el.textContent=notice;document.body.appendChild(el);
 }
