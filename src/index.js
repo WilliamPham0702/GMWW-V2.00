@@ -3086,7 +3086,22 @@ export class RoomDurableObject extends DurableObject {
       drunkDeckView(drawn,false):null;
     const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
     const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    // GM battleMarkPlayers uses this same resolver to illuminate the confirmed
+    // Wolf-bite target at the Witch turn. Deliver it privately ONLY to the
+    // authenticated Witch actor in this active turn, never over public WS.
+    const witchActor=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"&&
+      String(meta.cyclePhase||"")==="night"&&turn&&!wolfRuntime?.completed&&
+      privateAssignments.some(a=>normalizeLoginId(a.loginId)===loginId&&a.roleId==="role_witch")&&
+      ((turn.roleId==="role_witch"&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId))||
+       (turn.roles||[]).some(r=>r.roleId==="role_witch"&&(r.loginIds||[]).map(normalizeLoginId).includes(loginId)));
+    const witchNightIntel=witchActor?resolveWolfNight({
+      interactions:rows,players,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),
+      matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
+    const witchBite=witchActor&&witchNightIntel?.ok?{
+      targetIds:witchNightIntel.packDisabled?[]:(witchNightIntel.attacked||[]).map(x=>normalizeLoginId(x.to)).filter(Boolean),
+      packDisabled:!!witchNightIntel.packDisabled
+    }:null;
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,witchBite,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
