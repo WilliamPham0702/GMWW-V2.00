@@ -27,6 +27,7 @@ jobs:
       - name: Validate standby fixture contracts
         run: |
           node --check infra/cloudflare-standby/fixture-contract.mjs
+          node --check infra/cloudflare-standby/storage-adapter.mjs
           node --test infra/cloudflare-standby/*.test.mjs
       - name: Verify Production and OTA only skip isolated standby changes
         run: node --test tests/dual-cloudflare-release-guard.test.mjs

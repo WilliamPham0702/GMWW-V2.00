@@ -381,3 +381,29 @@ test('V3 release handoff CI-only PR has exact nine-file no-DO scope',()=>{
  assert.ok(workflow.includes("needs.oracle-scope.outputs.v3_cutover_only != 'true'"));
  assert.ok(workflow.includes("appendFileSync(process.env.GITHUB_OUTPUT,'v3_cutover_only='"));
 });
+
+
+test('dual Cloudflare synthetic SQLite restore PR skips Preview only for source + test allowlist',()=>{
+  const match=workflow.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/);
+  assert.ok(match,'Preview scope contract must remain parseable');
+  const statement=match[1].split('\n').find(l=>l.trim().startsWith('const standbyOnly = '));
+  assert.ok(statement,'standby scope must exist');
+  const expression=statement.trim().slice('const standbyOnly = '.length).replace(/;$/,'');
+  const classify=changed=>vm.runInNewContext(expression,{changed});
+  const files=[
+    {status:'A',path:'infra/cloudflare-standby/storage-adapter.mjs'},
+    {status:'A',path:'infra/cloudflare-standby/storage-adapter.test.mjs'},
+    {status:'M',path:'.github/workflows/check-pr-preview-github.yml'},
+    {status:'M',path:'tests/github-actions-pr-preview-ci.test.mjs'},
+    {status:'M',path:'docs/architecture/dual-cloudflare-standby-20261101.md'},
+    {status:'M',path:'.github/workflows/check-cloudflare-standby.yml'}
+  ];
+  assert.equal(classify(files),true,'exact storage and tests are local CI-only');
+  assert.equal(classify(files.slice(1)),false,'no unchecked storage adapter');
+  assert.equal(classify(files.filter(x=>!x.path.endsWith('storage-adapter.test.mjs'))),false);
+  assert.equal(classify([...files,{status:'M',path:'src/index.js'}]),false,'gameplay must require normal Preview');
+  assert.equal(classify([...files,{status:'M',path:'wrangler.jsonc'}]),false,'DO configuration must require normal Preview');
+  assert.equal(classify(files.map((x,i)=>i===0?{...x,status:'D'}:x)),false);
+  assert.equal(classify([...files,files[0]]),false);
+  assert.match(workflow,/needs\.oracle-scope\.outputs\.standby_only != 'true'/);
+});

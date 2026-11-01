@@ -22,3 +22,12 @@
 - Link `gamemasoi.pages.dev` không tự di chuyển sang account khác; chỉ thí điểm link STAGING riêng khi được phê duyệt.
 - Miễn phí phụ thuộc hạn mức hiện hành, không dùng account B để né hạn mức hợp đồng.
 - Giai đoạn 2, tạo account B, cấu hình credentials, đóng/mở lưu lượng, xuất dữ liệu thật đều cần phê duyệt riêng.
+
+
+## Giai đoạn 1 — Storage adapter và khôi phục **dữ liệu giả** (01/11/2026)
+- \`infra/cloudflare-standby/storage-adapter.mjs\`: SQLite *local test* độc lập \`synthetic-A.sqlite\`/\`synthetic-B.sqlite\`; không kết nối tài khoản Cloudflare và không phải Durable Object adapter Production. Node 22 \`node:sqlite\`, WAL + synchronous FULL, transaction rollback, CAS revision và chống bản snapshot cũ/khác SHA/version.
+- Điều kiện mở kho: \`GMWW_CF_STANDBY_FIXTURE_ONLY=1\`, lựa chọn fixtureOnly rõ ràng, thư mục private có marker \`.gmww-cloudflare-standby-only\`; chặn symlink, account sai, đường dẫn nguy hiểm. Chỉ lưu schema public synthetic của \`fixture-contract.mjs\`; không cho nhập token, session, role hoặc Artifact.
+- Checkpoint A→B có chữ ký HMAC/sha256, ràng buộc source A/target B. Export chỉ từ A; B chỉ khôi phục nếu đã ký và mọi ván đã kết thúc/chưa bắt đầu, WebSocket=0. **Dry-run mặc định**, cần cờ xác nhận fixture riêng mới ghi. Kiểm tra cả khi đóng/mở SQLite; xung đột/trùng/stale revision bị chặn.
+- \`reconcileSyntheticStores\` chỉ xác minh fixture checksum và báo \`productionSwitchAllowed=false\`, không phải xác nhận khôi phục đủ state thật.
+- CI: \`node --test infra/cloudflare-standby/*.test.mjs\` cùng test chống tự phát hành; không tạo Cloudflare B, không xuất/nhập dữ liệu Production, không đổi URL/IPA/Runtime.
+- Sau CI, vẫn thiếu **real two-account DO-compatible adapter**, private rooms/history/undo migration, login/session, WSS replay thật, rollback và xác nhận GM. Các mục này cần quyền triển khai tài khoản B ở giai đoạn 2 được phê duyệt riêng.
