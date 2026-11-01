@@ -96,7 +96,19 @@ jobs:
             node --check src/index.js
             node --check .github/scripts/prepare-update-channel.mjs
           else
-            npm test
+            # Preserve the full test gate while keeping CI logs inspectable.
+            # Previous run printed >64 MiB, hiding which assertion failed.
+            set +e
+            npm test > "$RUNNER_TEMP/gmww-native-full-tests.log" 2>&1
+            test_exit=$?
+            set -e
+            grep -E '^# (tests|pass|fail|cancelled|duration_ms)' "$RUNNER_TEMP/gmww-native-full-tests.log" | tail -n 8 || true
+            if [ "$test_exit" -ne 0 ]; then
+              echo "::error::Full native prerequisite test suite failed (exit $test_exit)."
+              grep -n -E 'not ok [0-9]+|failureType:|error:|ERR_ASSERTION|SyntaxError' "$RUNNER_TEMP/gmww-native-full-tests.log" | tail -n 90 || true
+              tail -n 70 "$RUNNER_TEMP/gmww-native-full-tests.log"
+              exit "$test_exit"
+            fi
           fi
 
       - name: Resolve and stage clean native release metadata
