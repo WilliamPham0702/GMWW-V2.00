@@ -122,6 +122,7 @@ jobs:
           node --check src/index.js
           node --check server-game/current/app.js
           node .github/scripts/verify-gmww-versions.mjs
+      # Required same-SHA Worker CI on main verifies exact version-only bundle.
       - name: V3.286 — 3 merged PRs only, same-source runtime checks
         if: steps.scope.outputs.mode == 'runtime-merged-v3286'
         run: |
