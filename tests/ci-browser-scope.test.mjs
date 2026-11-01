@@ -956,3 +956,21 @@ test('Cloudflare B synthetic PR runs CI-LITE only for approved files; mixed game
   assert.equal(classifyBrowserScope([...files,files[0]]),'full');
   assert.equal(classifyBrowserScope(files.filter(x=>x.path!=='infra/cloudflare-standby/fixture-contract.test.mjs')),'full');
 });
+
+
+test('Dual Cloudflare synthetic follow-up uses focused CI only on exact six modified paths',()=>{
+  const scope=[
+    'infra/cloudflare-standby/fixture-contract.mjs',
+    'infra/cloudflare-standby/fixture-contract.test.mjs',
+    '.github/scripts/ci-browser-scope.mjs',
+    'tests/ci-browser-scope.test.mjs',
+    '.github/workflows/check-pr-preview-github.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs'
+  ].map(path=>({path,status:'M'}));
+  assert.equal(classifyBrowserScope(scope),'dual-cloudflare-standby');
+  for(const p of ['src/index.js','wrangler.jsonc','assets/index.html','docs/another.md'])
+    assert.equal(classifyBrowserScope([...scope,{path:p,status:'M'}]),'full',p);
+  assert.equal(classifyBrowserScope(scope.slice(1)),'full');
+  assert.equal(classifyBrowserScope(scope.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+  assert.equal(classifyBrowserScope([...scope,scope[0]]),'full');
+});
