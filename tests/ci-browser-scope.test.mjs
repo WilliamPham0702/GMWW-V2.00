@@ -974,3 +974,33 @@ test('Dual Cloudflare synthetic follow-up uses focused CI only on exact six modi
   assert.equal(classifyBrowserScope(scope.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
   assert.equal(classifyBrowserScope([...scope,scope[0]]),'full');
 });
+
+
+test('PR743 Chat voice uses focused privacy and Worker CI only for exact reviewed scope',()=>{
+  const expected=[
+    ['server-game/current/app.js','M'],
+    ['server-game/src/45-online-chat.part','M'],
+    ['src/gmww-members-live.js','M'],
+    ['src/index.js','M'],
+    ['src/player-web-src/35-online-chat.part','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['tests/drunk-card-overlay-match-cleanup-20261028.test.mjs','M'],
+    ['tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs','A'],
+    ['tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs','M'],
+    ['tests/player-online-realtime-freeze-day-20261030.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['docs/releases/GMWW-CHAT-VOICE-PR743-20261102.md','A']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(expected),'gmww-chat-voice-pr743');
+  assert.equal(classifyBrowserScope(expected.slice(1)),'full','missing source must not get narrower tests');
+  assert.equal(classifyBrowserScope([...expected,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full','native changes remain isolated');
+  assert.equal(classifyBrowserScope([...expected,{path:'wrangler.jsonc',status:'M'}]),'full','binding changes require full release guard');
+  assert.equal(classifyBrowserScope([...expected,{path:'src/index.js',status:'M'}]),'full','duplicate file must fail closed');
+  assert.equal(classifyBrowserScope(expected.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted runtime must fail closed');
+  const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  assert.match(workflow,/steps\.scope\.outputs\.mode == 'gmww-chat-voice-pr743'/);
+  assert.match(workflow,/tests\/gmww-chat-voice-gm-broadcast-20261102\.test\.mjs/);
+  assert.match(workflow,/tests\/online-chat-authority\.test\.mjs/);
+  assert.match(workflow,/npm run check/);
+});
