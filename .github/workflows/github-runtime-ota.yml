@@ -63,6 +63,7 @@ jobs:
             MESSAGE=$(git log -1 --format=%B)
             CHANGED=$(git diff --name-only HEAD^1 HEAD | sort)
             # PR730: CI-only recovery of PR729 V3.288; existing PR728 exact 3-file guard prevents duplicate auto-release.
+            # PR731_CI_ONLY_GUARD: exact 3 CI-only paths; preserve previous PR728 skip and V3.288 release source.
             # PR728_CI_ONLY_GUARD: strict 3-file SHA-newline CI fix is never a Runtime release.
             PR728_ONLY=$(printf '%s\n' \
               '.github/scripts/ci-browser-scope.mjs' \
