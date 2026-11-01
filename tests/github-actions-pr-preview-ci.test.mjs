@@ -223,10 +223,10 @@ test('PR726 Worker CI-LITE accepts only unchanged 9 audited game files and keeps
   assert.equal(isPlayerFireWolf726Scope(entries.map((row,i)=>i===0?{...row,status:'D'}:row),resolve),false);
   assert.equal(isPlayerFireWolf726Scope(entries,path=>path===entries[0].path?'unexpected':resolve(path)),false);
   const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
-  assert.match(worker,/steps\\.scope\\.outputs\\.mode == 'player-fire-wolf-726'/);
-  assert.match(worker,/tests\\/player-web-wolf-ballots-20261101\\.test\\.mjs/);
-  assert.match(worker,/tests\\/night02-pack-snow-guard-fairy\\.test\\.mjs/);
+  assert.match(worker,/steps\.scope\.outputs\.mode == 'player-fire-wolf-726'/);
+  assert.match(worker,/tests\/player-web-wolf-ballots-20261101\.test\.mjs/);
+  assert.match(worker,/tests\/night02-pack-snow-guard-fairy\.test\.mjs/);
   assert.match(worker,/npm run check/);
   assert.match(workflow,/code 10067/);
-  assert.match(workflow,/wrangler preview --config wrangler\\.jsonc/);
+  assert.match(workflow,/wrangler preview --config wrangler\.jsonc/);
 });
