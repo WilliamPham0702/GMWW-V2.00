@@ -41,6 +41,45 @@ jobs:
             tests/player-web-wolf-ballots-20261101.test.mjs
       - name: Worker build without publishing
         run: npm run check
-      - name: Record sandbox-only completion
+      - name: Verify independent STAGING resource bindings and dry-run build
         run: |
-          echo 'Sandbox CI completed. No Production, Pages, IPA, or Runtime deployment.' >> "$GITHUB_STEP_SUMMARY"
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const stage=JSON.parse(fs.readFileSync('wrangler.v3-sandbox.jsonc','utf8'));
+          const production=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+          if(stage.name!=='gmww-v3-sandbox'||stage.name===production.name||
+            stage.durable_objects?.bindings?.length!==1||
+            stage.durable_objects.bindings[0].name!=='ROOMS'||
+            stage.durable_objects.bindings[0].class_name!=='RoomDurableObject'||
+            stage.durable_objects.bindings[0].script_name||
+            stage.services||stage.kv_namespaces||stage.d1_databases||
+            stage.r2_buckets||stage.routes||stage.route)throw Error('Unsafe STAGING binding or Production resource');
+          console.log('V3 sandbox Worker has its own DO binding, no external Production references.');
+          NODE
+          npx --no-install wrangler deploy --config wrangler.v3-sandbox.jsonc --dry-run
+      - name: Record sandbox validation
+        run: |
+          echo 'Sandbox CI passed; no changes to Production, Pages, IPA, or Runtime.' >> "$GITHUB_STEP_SUMMARY"
+
+  publish-staging:
+    name: Deploy independent V3 STAGING only
+    needs: sandbox-ci
+    if: ${{ needs.sandbox-ci.result == 'success' && github.ref == 'refs/heads/experiment/gmww-auto-delivery-v3' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Deploy ONLY gmww-v3-sandbox (separate DO storage)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --no-install wrangler deploy --config wrangler.v3-sandbox.jsonc
+          echo 'Only gmww-v3-sandbox deployed. No Production, Pages, IPA or Runtime release.' >> "$GITHUB_STEP_SUMMARY"
