@@ -46,6 +46,29 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # V3.289 PR738: byte-identical gameplay/Worker other than synchronized VERSION.
+      # The selector above checks every changed file and validates original source bytes.
+      - name: V3.289 PR738 — phiên bản Runtime đồng bộ, Player/Worker, OTA và rollback
+        if: steps.scope.outputs.mode == 'v3289-pr738-runtime-release'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --test \
+            tests/demo-runtime-v3285-release.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/player-web-v3-iframe-drag.test.mjs \
+            tests/gmww-wolf-night-resolution.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/gmww-play-interaction-rules.test.mjs \
+            tests/ota-version-advance-guard.test.mjs \
+            tests/update-release-readiness.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.289-PR738-20261101.md
       - name: Cloudflare B STAGING CI-LITE — synthetic tests and release guard
         if: steps.scope.outputs.mode == 'dual-cloudflare-standby'
         run: |
