@@ -208,9 +208,34 @@ async function gmwwChatSend(){
 
 
 /* Online action offers are delivered privately and validated again on Server. */
-let gmwwOnlinePick=null;
+let gmwwOnlinePick=null,gmwwOnlineLastUndo=null;
 function gmwwOnlinePeople(){return (state.players||[]).filter(p=>p?.loginId).map(p=>({id:String(p.loginId),name:String(p.displayName||p.loginId)}))}
 function gmwwOnlineStop(){gmwwOnlinePick=null;document.getElementById('gmwwOnlinePick')?.remove()}
+function gmwwOnlineResetPlacement(){
+ for(const button of document.querySelectorAll('#gmwwOnlineDock button')){
+   button.style.position='';button.style.left='';button.style.top='';
+ }
+ gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock'));
+}
+async function gmwwOnlineRestore(){
+ gmwwOnlineStop();gmwwOnlineResetPlacement();
+ const pending=gmwwOnlineLastUndo;
+ if(!pending||!state.roomCode||pending.roomCode!==state.roomCode||
+    pending.matchId!==String(state.room?.matchId||'')||
+    pending.cycleKey!==String(state.room?.cycleKey||'')){
+   toast('Đã khôi phục vị trí icon và lựa chọn chưa gửi.');return;
+ }
+ if(state.onlineBusy){toast('Hành động đang được gửi, chưa thể Khôi phục.');return}
+ state.onlineBusy=true;
+ try{
+   await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{
+     method:'POST',headers:auth(),body:JSON.stringify({command:'undo',undoToken:pending.token,
+       matchId:pending.matchId,cycleKey:pending.cycleKey})});
+   gmwwOnlineLastUndo=null;toast('Đã khôi phục hành động gần nhất.');
+ }catch(e){
+   toast('Không thể khôi phục hành động đã chốt: '+String(e.message||e));
+ }finally{state.onlineBusy=false;await refreshPrivateRole(true)}
+}
 function gmwwOnlineTargetAt(x,y){
  const frame=document.getElementById('gmwwVillageFrame');if(!frame)return '';
  try{
@@ -263,6 +288,8 @@ async function gmwwOnlineSubmit(){
  state.onlineBusy=true;
  try{
    const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
+   gmwwOnlineLastUndo=d?.undoToken?{token:String(d.undoToken),roomCode:state.roomCode,
+     matchId:String(state.room?.matchId||''),cycleKey:String(state.room?.cycleKey||'')}:null;
    gmwwOnlineStop();toast('Đã thực hiện: '+String(action.name||'Hành động'));
    if(d.revelation)toast('Kết quả: '+JSON.stringify(d.revelation).slice(0,180));
  }catch(e){toast('Hành động chưa được chấp nhận: '+String(e.message||e))}
@@ -288,7 +315,14 @@ function gmwwOnlineIconDown(event,action){
    if(!moved){gmwwOnlinePickAction(action);return}
    const target=gmwwOnlineTargetAt(e.clientX,e.clientY);
    if(target){if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlinePick={action,targets:[]};gmwwOnlineTarget(target)}
-   else gmwwOnlinePickAction(action);
+   else{
+     // A free drop moves this icon rather than forcing the target picker.
+     // Restore in the bottom menu moves every icon back to the campfire.
+     node.style.position='fixed';
+     node.style.left=Math.max(12,Math.min(window.innerWidth-12,e.clientX))+'px';
+     node.style.top=Math.max(72,Math.min(window.innerHeight-72,e.clientY))+'px';
+     gmwwOnlineStop();toast('Đã di chuyển icon. Kéo vào nhân vật để chọn mục tiêu.');
+   }
  };
  try{node.setPointerCapture?.(event.pointerId)}catch{}
  node.addEventListener('pointermove',move);node.addEventListener('pointerup',end);node.addEventListener('pointercancel',end);
@@ -330,7 +364,7 @@ function renderOnlineActionDock(){
    css.textContent='#gmwwOnlineDock{position:fixed;z-index:100010;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px;max-width:94vw;overflow:visible;touch-action:none;user-select:none;scrollbar-width:none}'+
      '#gmwwOnlineDock.is-idle-hidden{opacity:1;pointer-events:auto}'+
      '#gmwwOnlineDock button[data-blocked="true"]{position:relative;opacity:.7;filter:grayscale(.55)}#gmwwOnlineDock button[data-blocked="true"]:after{content:attr(data-effect-icon);position:absolute;right:-3px;top:-5px;font-size:18px;text-shadow:0 1px 5px #000}'+
-     '#gmwwOnlineDock button{flex:0 0 auto;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none}'+
+     '#gmwwOnlineDock button{flex:0 0 auto;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none;cursor:grab}'+
      '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
      '#game:not(.active)~#gmwwOnlineDock{display:none!important}'+
      '.gmww-online-ghost{position:fixed;z-index:100060;width:80px;height:80px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 9px #f7d58a)}'+
