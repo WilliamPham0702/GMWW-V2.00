@@ -1053,3 +1053,27 @@ test('PR743 postmerge CI-only recovery is safe on exact four files and keeps Pro
  assert.match(workerCheck,/steps\.scope\.outputs\.mode == 'gmww-chat-pr743-postmerge'/);
  assert.match(workerCheck,/tests\/online-chat-authority\.test\.mjs/);
 });
+
+test('PR748 Chat main-push selector recovery requires exact 3 changed CI files and immutable Worker source',()=>{
+ const fixed=[
+   {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+   {path:'.github/workflows/deploy-pr743-chat-worker.yml',status:'M'},
+   {path:'tests/ci-browser-scope.test.mjs',status:'M'}
+ ];
+ assert.equal(classifyBrowserScope(fixed),'gmww-chat-pr743-postmerge');
+ for(const missing of fixed)assert.equal(classifyBrowserScope(fixed.filter(x=>x!==missing)),'full','missing '+missing.path);
+ for(const extra of ['src/index.js','wrangler.jsonc','server-game/GMWW-Server/GameView.swift','.github/workflows/check-player-web.yml'])
+   assert.equal(classifyBrowserScope([...fixed,{path:extra,status:'M'}]),'full',extra);
+ assert.equal(classifyBrowserScope([...fixed,fixed[0]]),'full','duplicate CI changes fail closed');
+ assert.equal(classifyBrowserScope(fixed.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+ const selector=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ assert.ok(selector.indexOf('// PR743 CI-only push recovery must run before') <
+           selector.indexOf('// Push of CI-policy-only main merges needs selector unit tests'));
+ const deploy=readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
+ assert.match(deploy,/git merge-base --is-ancestor cc430dd97af48aba6afb1d415582d9e5818457dd HEAD/);
+ assert.match(deploy,/GMWW_CI_EVENT=push GITHUB_REF=refs\/heads\/main/);
+ assert.match(deploy,/git diff --quiet 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD/);
+ assert.match(deploy,/tests\/ci-browser-scope\.test\.mjs \| sort\)/);
+ assert.doesNotMatch(deploy,/This workflow is only permitted from a four-file postmerge CI fix/);
+ assert.match(deploy,/Automatic rollback to previous Cloudflare A Worker/);
+});
