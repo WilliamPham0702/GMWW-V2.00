@@ -22,8 +22,9 @@ test('Server action URL requires the authenticated member session and checks the
 });
 test('Player receives current actions privately and never adds them to public broadcast',()=>{
  assert.match(server,/onlineActions=meta\.demo!==true/);
- assert.match(server,/wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,artifact/);
+ assert.match(server,/wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,witchBite,artifact/);
  assert.doesNotMatch(server,/this\.broadcast\(\{[^}]*onlineActions/);
+ assert.doesNotMatch(server,/this\.broadcast\(\{[^}]*witchBite/);
  assert.match(server,/publicTimeline=String\(meta\.phase\)/);
  assert.match(timeline,/function renderPlayerTimeline\(/);
  assert.match(refresh,/renderPlayerTimeline\(d\?\.publicTimeline\)/);
