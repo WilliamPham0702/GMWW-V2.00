@@ -144,3 +144,13 @@ test('V3.286 main push CI parses real git newline and tab boundaries',()=>{
  assert.ok(body.includes(String.raw`row.split('\t')`),'Must split actual TAB');
  assert.ok(!body.includes(String.raw`trim().split('\\n').filter(Boolean)`),'Escaped slash-n is invalid');
 });
+
+test('V3.286 main CI-only postmerge release routes to focused Worker gates with source integrity',()=>{
+  const source=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+  const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  assert.ok(source.includes("if(isCiLitePreviewWorkflowScope(changes) &&"));
+  assert.ok(source.includes("'0c2c6ccf7cf9c90d2369ee269be2c89bb6996851','HEAD'"));
+  assert.ok(source.includes("'src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc'"));
+  assert.ok(worker.includes("steps.scope.outputs.mode == 'ci-lite-preview-workflow' && github.event_name == 'push' && github.ref == 'refs/heads/main'"));
+  assert.ok(workflow.includes('Postmerge CI-LITE V3.286 release recovery'));
+});

@@ -124,7 +124,7 @@ jobs:
           node .github/scripts/verify-gmww-versions.mjs
       # Required same-SHA Worker CI on main verifies exact version-only bundle.
       - name: V3.286 — 3 merged PRs only, same-source runtime checks
-        if: steps.scope.outputs.mode == 'runtime-merged-v3286'
+        if: steps.scope.outputs.mode == 'runtime-merged-v3286' || (steps.scope.outputs.mode == 'ci-lite-preview-workflow' && github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
           node --check .github/scripts/ci-browser-scope.mjs
           node --check .github/scripts/prepare-update-channel.mjs

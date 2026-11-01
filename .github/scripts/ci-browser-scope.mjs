@@ -3799,6 +3799,15 @@ function detect(){
       });
       if(isRuntimeMergedV3286Scope(changes))
         return{mode:'runtime-merged-v3286',reason:'Exact same-SHA V3.286 merged-only runtime release'};
+      // Exact CI-only main recovery: same validated V3.286 app bytes from #714.
+      // The four-file Preview CI scope has no gameplay/Worker/OTA edits.
+      if(isCiLitePreviewWorkflowScope(changes) &&
+         JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.286.0'){
+        git('merge-base','--is-ancestor','0c2c6ccf7cf9c90d2369ee269be2c89bb6996851','HEAD');
+        git('diff','--quiet','0c2c6ccf7cf9c90d2369ee269be2c89bb6996851','HEAD','--',
+          'src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc');
+        return{mode:'ci-lite-preview-workflow',reason:'Exact CI-only V3.286 postmerge recovery; unchanged deployed source'};
+      }
     }catch{} // Fail closed to full CI.
   }
 
