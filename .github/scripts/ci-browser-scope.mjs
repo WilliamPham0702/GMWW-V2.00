@@ -3848,6 +3848,33 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // BEGIN GMWW_V3287_POSTMERGE_CI_ONLY
+  // Exact CI-only recovery for merged #724: no gameplay, Runtime binary or OTA edits.
+  // Used on both PR and main push; a different diff falls back to full tests.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const version=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(version==='3.287.0' && (base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)) &&
+         git('diff','--name-status','--no-renames',base,'HEAD').trim()==='M\t.github/scripts/ci-browser-scope.mjs'){
+        git('merge-base','--is-ancestor','c16cd5e3d269750c1978d1cdea8d215511e284bd','HEAD');
+        git('diff','--quiet','c16cd5e3d269750c1978d1cdea8d215511e284bd','HEAD','--',
+            'src/','server-game/','assets/','package.json','package-lock.json',
+            '.github/scripts/prepare-update-channel.mjs','.github/workflows/check-player-web.yml',
+            'tests/','docs/releases/');
+        const old=git('show',base+':.github/scripts/ci-browser-scope.mjs');
+        const now=fs.readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+        const start=now.indexOf('  // BEGIN GMWW_V3287_POSTMERGE_CI_ONLY\n');
+        const stop=now.indexOf('  // END GMWW_V3287_POSTMERGE_CI_ONLY\n',start);
+        if(start>=0&&stop>start&&now.indexOf('  // BEGIN GMWW_V3287_POSTMERGE_CI_ONLY\n',start+1)<0&&
+           now.slice(0,start)+now.slice(stop+'  // END GMWW_V3287_POSTMERGE_CI_ONLY\n'.length)===old){
+          return{mode:'runtime-merged-v3287',
+            reason:'V3.287 exact CI-only postmerge recovery; original #724 package and Worker source unchanged'};
+        }
+      }
+    }catch{} // Fail closed: always run full checks if proof fails.
+  }
+  // END GMWW_V3287_POSTMERGE_CI_ONLY
   // After merging into main, the same exact version-only commit still uses scoped CI.
   if(process.env.GMWW_CI_EVENT==='push'){
     try{
