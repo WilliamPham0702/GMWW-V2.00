@@ -72,3 +72,37 @@ test('Player and GM share campfire icons; each wolf can act independently, never
  assert.equal((await playerOfferedActions(room,meta,'wolf1')).length,0);
  assert.equal((await playerOfferedActions(room,meta,'wolf2')).length,1);
 });
+
+test('Restore only permits the authenticated owner of latest Online night action',async()=>{
+ const src=readFileSync('src/index.js','utf8');
+ const start=src.indexOf('  async playerPhaseUndo(body){');
+ const end=src.indexOf('  async playerGallows(',start);
+ assert.ok(start>0&&end>start);
+ const {default:vm}=await import('node:vm');
+ const C=vm.runInNewContext('(class Room {'+src.slice(start,end)+'})',{
+  normalizeLoginId:v=>String(v||'').trim().toLowerCase().replace(/^member:/,''),
+  j:(data,status=200)=>({...data,status})
+ });
+ const last={token:'undo-secret',actorId:'wolf1',source:'online-human',undone:false};
+ const state=new Map([
+  ['meta',{matchId:'M1',cycleKey:'night:1',phase:'running',cyclePhase:'night',roomMode:'online',demo:false}],
+  ['players',players],['battleLastAction:M1',last]
+ ]);
+ let calls=0;const room=new C();
+ room.ctx={storage:{get:async key=>state.get(key)}};
+ room.demoInternalRequest=()=>({internal:true});
+ room.gmBattleUndo=async(_request,data)=>{calls++;assert.equal(data.undoToken,last.token);return {ok:true}};
+ const args={loginId:'wolf1',matchId:'M1',cycleKey:'night:1'};
+ assert.equal((await room.playerPhaseUndo({...args,loginId:'wolf2'})).error,'ONLINE_UNDO_NOT_OWNER');
+ assert.equal((await room.playerPhaseUndo({...args,cycleKey:'night:2'})).error,'ONLINE_UNDO_STALE');
+ state.set('battleLastAction:M1',{...last,source:'gm'});
+ assert.equal((await room.playerPhaseUndo(args)).error,'ONLINE_UNDO_NOT_OWNER');
+ assert.equal(calls,0);
+ state.set('battleLastAction:M1',last);
+ assert.equal((await room.playerPhaseUndo(args)).undone,true);
+ assert.equal(calls,1);
+ const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ assert.match(player,/\/undo-action/);
+ assert.match(player,/gmwwOnlineClearPositions\(\)/);
+ assert.match(player,/gmwwOnlineCanRestore/);
+});
