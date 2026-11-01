@@ -83,3 +83,22 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           npx --no-install wrangler deploy --config wrangler.v3-sandbox.jsonc
           echo 'Only gmww-v3-sandbox deployed. No Production, Pages, IPA or Runtime release.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify public STAGING health and deployed Player Web gesture code
+        run: |
+          set -euo pipefail
+          BASE='https://gmww-v3-sandbox.williampham0702.workers.dev'
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 --max-time 25 "$BASE/api/health" -o "$RUNNER_TEMP/gmww-v3-health.json"
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const health=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/gmww-v3-health.json','utf8'));
+          if(health.ok!==true||health.status!=='online')throw Error('STAGING health is not online: '+JSON.stringify(health));
+          console.log('STAGING health: '+JSON.stringify({ok:health.ok,status:health.status,version:health.version}));
+          NODE
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 --max-time 25 "$BASE/gmww-members-live.js" -o "$RUNNER_TEMP/gmww-v3-player.js"
+          grep -q 'function gmwwOnlineTargetAt(x,y)' "$RUNNER_TEMP/gmww-v3-player.js"
+          grep -q 'document.addEventListener('"'pointerup'"',end,true)' "$RUNNER_TEMP/gmww-v3-player.js"
+          curl --fail --silent --show-error --location --retry 3 --retry-delay 2 --max-time 25 "$BASE/village/" -o "$RUNNER_TEMP/gmww-v3-village.html"
+          test -s "$RUNNER_TEMP/gmww-v3-village.html"
+          echo "Live STAGING health, Player Web drag code and village HTML: PASS." >> "$GITHUB_STEP_SUMMARY"
+          echo "STAGING: $BASE/" >> "$GITHUB_STEP_SUMMARY"
