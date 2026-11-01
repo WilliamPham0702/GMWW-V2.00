@@ -1,0 +1,144 @@
+name: GMWW V3 Worker and Player Web Delivery
+
+on:
+  workflow_run:
+    workflows: ["GMWW AUTO-DELIVERY V3.0"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: gmww-production
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    name: V3 Worker-only Production with rollback
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event == 'workflow_run' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact V3 approved SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Determine Worker-only scope and confirm main identity
+        id: gate
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$TESTED_SHA" || { echo "::error::Main moved; stale deployment blocked"; exit 1; }
+          git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/v3-diff.txt"
+          TARGET=$(node .github/scripts/v3-delivery-plan.mjs "$RUNNER_TEMP/v3-diff.txt" --field=target)
+          if [ "$TARGET" != worker ]; then
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+            echo "V3 scope $TARGET: no Worker-only publish." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+          PASS=$(printf '%s' "$RUNS" | jq -r --arg sha "$TESTED_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .event == "push" and .head_branch == "main" and .name == "Check Player Web Worker")] | sort_by(.run_number) | last | .conclusion // "missing"')
+          test "$PASS" = success || { echo "::error::Missing same-SHA Worker CI SUCCESS ($PASS)"; exit 1; }
+          echo 'deploy=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.deploy == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Revalidate Worker-only Player Web and authorization, no OTA/IPA
+        if: steps.gate.outputs.deploy == 'true'
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/player-web-v3-iframe-drag.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-player-fire-turn-dead-ui-20261031.test.mjs tests/online-chat-authority.test.mjs
+          npm run check
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const config=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+          if(config.name!=='gmww-v2-00'||config.durable_objects?.bindings?.[0]?.name!=='ROOMS')throw Error('Unexpected Production Worker/DO config');
+          NODE
+      - name: Snapshot previous Production Worker before change
+        id: before
+        if: steps.gate.outputs.deploy == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          curl --fail --silent --show-error --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > "$RUNNER_TEMP/v3-before.json"
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const r=require(process.env.RUNNER_TEMP+'/v3-before.json'),d=r.result?.deployments?.[0],v=d?.versions?.[0];
+          if(!r.success||!d?.id||d.versions?.length!==1||!v?.version_id||v.percentage!==100)throw Error('Previous Production Worker cannot be verified');
+          console.log('version='+v.version_id);console.log('deployment='+d.id);
+          NODE
+      - name: Publish Worker + Player Web (same origin, no OTA)
+        id: publish
+        if: steps.gate.outputs.deploy == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --no-install wrangler deploy --config wrangler.jsonc
+      - name: Verify live Worker, JavaScript and preserved identity
+        if: steps.publish.outcome == 'success'
+        env:
+          PREVIOUS_VERSION: ${{ steps.before.outputs.version }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://gmww-v2-00.williampham0702.workers.dev'
+          PASS=0
+          for i in $(seq 1 12); do
+            KEY="v3-$(date +%s)-$i"
+            if curl -fsS --max-time 20 "$BASE/api/health?$KEY" -o "$RUNNER_TEMP/v3-health.json" &&
+               node -e "const d=require(process.env.RUNNER_TEMP+'/v3-health.json');if(d.ok!==true||d.project!=='GMWW-V2.00'||d.status!=='online')process.exit(1)" &&
+               curl -fsS --max-time 25 "$BASE/gmww-members-live.js?$KEY" -o "$RUNNER_TEMP/v3-player.js" &&
+               node --check "$RUNNER_TEMP/v3-player.js" &&
+               curl -fsS --max-time 20 "$BASE/village/?$KEY" -o "$RUNNER_TEMP/v3-village.html" &&
+               test -s "$RUNNER_TEMP/v3-village.html"; then PASS=1; break; fi
+            sleep 5
+          done
+          test "$PASS" = 1 || { echo "::error::V3 Production smoke failed"; exit 1; }
+          curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > "$RUNNER_TEMP/v3-after.json"
+          node - <<'NODE'
+          const r=require(process.env.RUNNER_TEMP+'/v3-after.json'),v=r.result?.deployments?.[0]?.versions?.[0];
+          if(!r.success||!v?.version_id||v.percentage!==100||v.version_id===process.env.PREVIOUS_VERSION)
+            throw Error('Production Worker did not transition to a new verified version');
+          console.log('V3 verified Worker version: '+v.version_id);
+          NODE
+          echo "V3 Worker-only published and verified; no duplicate Runtime/IPA, stable URL and DO namespace." >> "$GITHUB_STEP_SUMMARY"
+      - name: Rollback Worker to last verified version if smoke failed
+        if: failure() && steps.publish.outcome == 'success' && steps.before.outputs.version != ''
+        env:
+          PREVIOUS_VERSION: ${{ steps.before.outputs.version }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > "$RUNNER_TEMP/v3-rollback.json"
+          console.log(JSON.stringify({strategy:'percentage',versions:[{version_id:process.env.PREVIOUS_VERSION,percentage:100}],annotations:{'workers/message':'AUTO-DELIVERY V3 Worker smoke rollback'}}));
+          NODE
+          curl -fsS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+            --data-binary @"$RUNNER_TEMP/v3-rollback.json" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments" > "$RUNNER_TEMP/v3-rollback-result.json"
+          node -e "if(!require(process.env.RUNNER_TEMP+'/v3-rollback-result.json').success)process.exit(1)"
+          echo "ROLLBACK V3: Production Worker previous version at 100%; DO/data/IPA unchanged." >> "$GITHUB_STEP_SUMMARY"

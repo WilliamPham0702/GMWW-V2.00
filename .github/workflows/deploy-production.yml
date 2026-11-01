@@ -2,7 +2,7 @@ name: Deploy Production
 
 on:
   workflow_run:
-    workflows: ["Check Player Web Worker"]
+    workflows: ["GMWW AUTO-DELIVERY V3.0"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
           if [ -s /tmp/gmww-production-change-scope.txt ] && test -f .github/scripts/v3-delivery-plan.mjs; then
             V3_TARGET=$(node .github/scripts/v3-delivery-plan.mjs /tmp/gmww-production-change-scope.txt --field=target)
             case "$V3_TARGET" in
-              none|blocked|pages)
+              none|blocked|pages|worker)
                 SHOULD_DEPLOY=false
                 echo "V3 scope $V3_TARGET: NO Production Worker/OTA deployment." >> "$GITHUB_STEP_SUMMARY"
                 ;;

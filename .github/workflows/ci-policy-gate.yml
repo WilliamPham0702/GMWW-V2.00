@@ -30,6 +30,7 @@ jobs:
         run: |
           node --check .github/scripts/v3-delivery-plan.mjs
           node --test tests/v3-delivery-plan.test.mjs
+          node --test tests/v3-release-cutover.test.mjs
           grep -Fq 'name: GMWW AUTO-DELIVERY V3.0' .github/workflows/gmww-auto-delivery-v3.yml
           grep -Fq 'name: V3 Release Gate' .github/workflows/gmww-auto-delivery-v3.yml
       - name: Verify safe scope selection and fail-closed behavior
