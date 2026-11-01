@@ -463,7 +463,7 @@ function renderOnlineActionDock(){
  const scope=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join('|');
   if(gmwwOnlineIconScope!==scope){gmwwOnlineIconScope=scope;gmwwOnlineIconPositions.clear();gmwwOnlineCanRestore=false;gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0}
   const sig=[scope,...offers.map(a=>[a.key,a.iconUrl,a.blocked,a.blockedReason,a.targetCount,a.noSelf].join(':'))].join('|');
- gmwwOnlinePlaceAtFire(dock);gmwwOnlineWitchNotice();
+ gmwwOnlineWitchNotice();gmwwOnlinePlaceAtFire(dock);
  if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();dock.classList.remove('is-idle-hidden');
  for(const action of offers){
    const btn=document.createElement('button');btn.type='button';btn.title=String(action.name||'Hành động')+(action.blocked?' • '+String(action.blockedReason||'Bị hiệu ứng chặn'):'');
