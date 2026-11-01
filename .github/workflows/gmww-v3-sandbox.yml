@@ -1,0 +1,46 @@
+name: GMWW V3 Sandbox — Player Web iPhone Drag
+
+on:
+  push:
+    branches:
+      - experiment/gmww-auto-delivery-v3
+    paths:
+      - src/player-web-src/**
+      - src/gmww-members-live.js
+      - tests/player-web-v3-iframe-drag.test.mjs
+      - .github/workflows/gmww-v3-sandbox.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-v3-sandbox-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sandbox-ci:
+    name: V3 Sandbox CI (no production deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Ensure deployed Player Web module matches source
+        run: node .github/scripts/assemble-player-web.mjs --verify
+      - name: Execute drag, online interaction and wolf decision regression
+        run: |
+          node --test \
+            tests/player-web-v3-iframe-drag.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/player-web-wolf-ballots-20261101.test.mjs
+      - name: Worker build without publishing
+        run: npm run check
+      - name: Record sandbox-only completion
+        run: |
+          echo 'Sandbox CI completed. No Production, Pages, IPA, or Runtime deployment.' >> "$GITHUB_STEP_SUMMARY"
