@@ -89,7 +89,7 @@ export function publicChatNotices(meta,players,rows){
       if(row.status==='responded'&&['👍','👎'].includes(String(row.response))&&
          ['👍','👎'].includes(String(row.gmChoice))){
         const attacker=nameOf(row.actorId),assassin=attacker&&members['member:'+normalize(row.actorId)]?
-          'Sát Thủ '+attacker:'Sát Thủ',survived=row.response===row.gmChoice;
+          (/^Sát Thủ\b/i.test(attacker)?attacker:'Sát Thủ '+attacker):'Sát Thủ',survived=row.response===row.gmChoice;
         add(row,row.loginId,survived?
           'Chúc mừng '+name+' đã chọn cùng dấu với '+assassin+', tiếp tục sống.':
           'Chia buồn '+name+' đã chọn sai dấu với '+assassin+', đã chết.',row.respondedAt);
