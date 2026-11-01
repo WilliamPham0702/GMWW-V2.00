@@ -92,6 +92,17 @@ jobs:
               '.github/workflows/prepare-runtime-v3202-candidate.yml' \
               'server-game/current/GMWW.html' \
               'tests/gm-player-web-share-link.test.mjs' | sort)
+            # BEGIN GMWW_DUAL_CLOUDFLARE_RUNTIME_GUARD
+            # Dual Cloudflare B synthetic STAGING-only scope may never publish OTA.
+            # Mixed changes, untested fixtures and runtime/game source keep original release gates.
+            STANDBY_RELEASE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^(infra/cloudflare-standby/[^/]+|tests/dual-cloudflare-release-guard[.]test[.]mjs|tests/github-actions-pr-preview-ci[.]test[.]mjs|tests/ci-browser-scope[.]test[.]mjs|[.]github/scripts/ci-browser-scope[.]mjs|docs/architecture/dual-cloudflare-standby-20261101[.]md|[.]github/workflows/(check-cloudflare-standby|deploy-production|github-runtime-ota|check-pr-preview-github|check-player-web)[.]yml)$' || true)
+            if [ -n "$CHANGED" ] && [ -z "$STANDBY_RELEASE_UNRELATED" ] &&
+               printf '%s\n' "$CHANGED" | grep -Eq '^infra/cloudflare-standby/[^/]+[.]mjs$' &&
+               printf '%s\n' "$CHANGED" | grep -Eq '^infra/cloudflare-standby/[^/]+[.]test[.]mjs$'; then
+              SKIP_AUTO_RELEASE=true
+              echo 'Cloudflare B synthetic STAGING only: NO automatic Runtime OTA release.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+            # END GMWW_DUAL_CLOUDFLARE_RUNTIME_GUARD
             # Infrastructure-only backup retention must never publish a Runtime.
             STORAGE_UNRELATED=$(printf '%s\n' "$CHANGED" | grep -Ev '^([.]github/workflows/github-release-backup-retention[.]yml|[.]github/scripts/release-backup-retention[.]mjs|tests/release-backup-retention[.]test[.]mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031[.]md|[.]github/workflows/deploy-production[.]yml|[.]github/workflows/github-runtime-ota[.]yml)$' || true)
             if [ -n "$CHANGED" ] && [ -z "$STORAGE_UNRELATED" ]; then

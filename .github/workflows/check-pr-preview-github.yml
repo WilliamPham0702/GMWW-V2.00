@@ -22,6 +22,7 @@ jobs:
       docs_only: ${{ steps.scope.outputs.docs_only }}
       preview_ci_only: ${{ steps.scope.outputs.preview_ci_only }}
       runtime_release_only: ${{ steps.scope.outputs.runtime_release_only }}
+      standby_only: ${{ steps.scope.outputs.standby_only }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,10 +58,13 @@ jobs:
           // This exact two-file CI-contract change cannot affect gameplay/Worker assets.
           const ciOnly = changed.length === 4 && changed.every(c => ['A','M'].includes(c.status) && ['.github/workflows/check-pr-preview-github.yml','tests/github-actions-pr-preview-ci.test.mjs','.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'].includes(c.path)) && new Set(changed.map(c => c.path)).size === 4;
           const runtimeReleaseOnly = changed.length === 9 && new Set(changed.map(c=>c.path)).size === 9 && changed.every(c => ({'package.json':'M','package-lock.json':'M','server-game/current/GMWW.html':'M','server-game/current/app.js':'M','server-game/src/00-core-and-library.part':'M','src/index.js':'M','.github/scripts/prepare-update-channel.mjs':'M','tests/demo-runtime-v3285-release.test.mjs':'M','docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md':'A'})[c.path] === c.status);
+          const standbyOnly = changed.length>=7 && new Set(changed.map(c=>c.path)).size===changed.length && changed.some(c=>c.path==='infra/cloudflare-standby/fixture-contract.mjs') && changed.some(c=>c.path==='infra/cloudflare-standby/fixture-contract.test.mjs') && changed.every(c=>['A','M'].includes(c.status)&&(['infra/cloudflare-standby/fixture-contract.mjs','infra/cloudflare-standby/fixture-contract.test.mjs','docs/architecture/dual-cloudflare-standby-20261101.md','tests/dual-cloudflare-release-guard.test.mjs','tests/github-actions-pr-preview-ci.test.mjs','tests/ci-browser-scope.test.mjs','.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml','.github/workflows/check-cloudflare-standby.yml','.github/workflows/deploy-production.yml','.github/workflows/github-runtime-ota.yml','.github/workflows/check-pr-preview-github.yml'].includes(c.path)));
           appendFileSync(process.env.GITHUB_OUTPUT,'oracle_only='+String(only)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'docs_only='+String(docsOnly)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'preview_ci_only='+String(ciOnly)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'runtime_release_only='+String(runtimeReleaseOnly)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'standby_only='+String(standbyOnly)+'\n');
+          if(standbyOnly)console.log('Synthetic Cloudflare B STAGING only: local CI passes, no Preview namespace created.');
           console.log(runtimeReleaseOnly?'Exact V3.286 release candidate: verify immutable source bytes locally, no new Durable Object namespace.':only?'Oracle SQLite-only: no Preview deploy.':docsOnly?'Docs-only: skip Worker build and Cloudflare Preview.':ciOnly?'Preview CI-only: local safety validation, no Cloudflare Preview.':'Gameplay or unknown scope: retain isolated Preview publication gate.');
           NODE
   # V3.286 main-push parser repair affects CI only; Preview stays isolated.
@@ -121,7 +125,7 @@ jobs:
     needs: [validate-preview, oracle-scope]
     # Token use is limited to owner-authored PRs from this same repo.
     # Forks and other authors still receive token-free validation.
-    if: ${{ needs.validate-preview.result == 'success' && needs.oracle-scope.result == 'success' && needs.oracle-scope.outputs.oracle_only != 'true' && needs.oracle-scope.outputs.docs_only != 'true' && needs.oracle-scope.outputs.preview_ci_only != 'true' && needs.oracle-scope.outputs.runtime_release_only != 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
+    if: ${{ needs.validate-preview.result == 'success' && needs.oracle-scope.result == 'success' && needs.oracle-scope.outputs.oracle_only != 'true' && needs.oracle-scope.outputs.docs_only != 'true' && needs.oracle-scope.outputs.preview_ci_only != 'true' && needs.oracle-scope.outputs.runtime_release_only != 'true' && needs.oracle-scope.outputs.standby_only != 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

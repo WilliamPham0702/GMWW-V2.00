@@ -930,3 +930,29 @@ test('PR672 exact DEMO Online transport uses focused CI and rejects any extra ga
   const gmUnsafe=changes.map(c=>c.path==='server-game/current/app.js'?{...c,after:c.after+'\\n// other GM edit'}:c);
   assert.equal(classifyBrowserScope(gmUnsafe),'full');
 });
+
+
+test('Cloudflare B synthetic PR runs CI-LITE only for approved files; mixed gameplay stays FULL',()=>{
+  const A=path=>({path,status:'A'}),M=path=>({path,status:'M'});
+  const files=[
+    A('infra/cloudflare-standby/fixture-contract.mjs'),
+    A('infra/cloudflare-standby/fixture-contract.test.mjs'),
+    A('docs/architecture/dual-cloudflare-standby-20261101.md'),
+    A('tests/dual-cloudflare-release-guard.test.mjs'),
+    M('tests/github-actions-pr-preview-ci.test.mjs'),
+    M('tests/ci-browser-scope.test.mjs'),
+    M('.github/scripts/ci-browser-scope.mjs'),
+    M('.github/workflows/check-player-web.yml'),
+    A('.github/workflows/check-cloudflare-standby.yml'),
+    M('.github/workflows/deploy-production.yml'),
+    M('.github/workflows/github-runtime-ota.yml'),
+    M('.github/workflows/check-pr-preview-github.yml')
+  ];
+  assert.equal(classifyBrowserScope(files),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope([...files,M('src/index.js')]),'full');
+  assert.equal(classifyBrowserScope([...files,M('wrangler.jsonc')]),'full');
+  assert.equal(classifyBrowserScope([...files,A('assets/index.html')]),'full');
+  assert.equal(classifyBrowserScope([...files,A('docs/other.md')]),'full');
+  assert.equal(classifyBrowserScope([...files,files[0]]),'full');
+  assert.equal(classifyBrowserScope(files.filter(x=>x.path!=='infra/cloudflare-standby/fixture-contract.test.mjs')),'full');
+});
