@@ -157,6 +157,7 @@ function gmwwChatUnmount(){
   gmwwStopAnnouncement();gmwwAnnouncementPending=null;
   gmwwChatClear();gmwwChatLatestByChannel.clear();gmwwChatUnread(false);document.getElementById('gmwwOnlineFooter')?.remove();if(gmwwOnlineFooterTimer)clearInterval(gmwwOnlineFooterTimer);gmwwOnlineFooterTimer=null;gmwwChatOpen=false;gmwwChatTarget='room';gmwwPlayerCueKey='';state.audioCue=null;document.getElementById('gmwwPlayerMiniCards')?.remove();
   document.getElementById('gmwwChatLaunch')?.remove();document.getElementById('gmwwChatPanel')?.remove();
+  document.getElementById('gmwwOnlineWitchIntel')?.remove();document.getElementById('gmwwOnlineRevelation')?.remove();gmwwOnlineWitchBite=null;gmwwOnlineConfirmedTargets=[];
   try{speechSynthesis.cancel()}catch{}
 }
 async function gmwwChatRefresh(){
@@ -209,10 +210,12 @@ async function gmwwChatSend(){
 
 /* Online action offers are delivered privately and validated again on Server. */
 let gmwwOnlinePick=null,gmwwOnlineCanRestore=false,gmwwOnlineIconScope='';
+let gmwwOnlineWitchBite=null,gmwwOnlineConfirmedTargets=[],gmwwOnlineConfirmedUntil=0,gmwwOnlineRevealTimer=null;
 const gmwwOnlineIconPositions=new Map();
 function gmwwOnlineClearPositions(){
- gmwwOnlineIconPositions.clear();
+ gmwwOnlineIconPositions.clear();gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0;
  for(const node of document.querySelectorAll('#gmwwOnlineDock button'))node.style.transform='';
+ gmwwOnlineTurnEffects(state.onlineActions||[]);
 }
 async function gmwwOnlineRestore(){
  if(!gmwwOnlineCanRestore||state.room?.phase!=='running'||state.room?.cyclePhase!=='night'){
@@ -224,14 +227,14 @@ async function gmwwOnlineRestore(){
   await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/undo-action',{
    method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey})
   });
-  gmwwOnlineCanRestore=false;toast('Đã khôi phục hành động gần nhất.');await refreshPrivateRole(true);
+  gmwwOnlineCanRestore=false;gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0;gmwwOnlineTurnEffects(state.onlineActions||[]);toast('Đã khôi phục hành động gần nhất.');await refreshPrivateRole(true);
  }catch(e){
   if(e?.status===409)gmwwOnlineCanRestore=false;
   toast('Không thể khôi phục: '+String(e.message||'Lượt hoặc dữ liệu đã thay đổi.'));
  }finally{state.onlineBusy=false}
 }
 function gmwwOnlinePeople(){return (state.players||[]).filter(p=>p?.loginId).map(p=>({id:String(p.loginId),name:String(p.displayName||p.loginId)}))}
-function gmwwOnlineStop(){gmwwOnlinePick=null;document.getElementById('gmwwOnlinePick')?.remove()}
+function gmwwOnlineStop(){gmwwOnlinePick=null;document.getElementById('gmwwOnlinePick')?.remove();gmwwOnlineTurnEffects(state.onlineActions||[])}
 function gmwwOnlineTargetAt(x,y){
  const frame=document.getElementById('gmwwVillageFrame');if(!frame)return '';
  try{
@@ -274,7 +277,7 @@ function gmwwOnlinePickAction(action){
 function gmwwOnlineTarget(id){
  const pick=gmwwOnlinePick;if(!pick)return;id=String(id||'').replace(/^member:/,'');
  if(!gmwwOnlinePeople().some(p=>p.id===id)||pick.targets.includes(id)||(pick.action.noSelf&&id===state.member?.loginId))return;
- pick.targets.push(id);
+ pick.targets.push(id);gmwwOnlineTurnEffects(state.onlineActions||[]);
  if(pick.targets.length>=Math.max(0,Number(pick.action.targetCount)||0))void gmwwOnlineSubmit();else toast('Đã chọn '+pick.targets.length+'/'+pick.action.targetCount+'; kéo icon tới người tiếp theo.');
 }
 async function gmwwOnlineSubmit(){
@@ -297,10 +300,47 @@ async function gmwwOnlineSubmit(){
  state.onlineBusy=true;
  try{
    const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
+   gmwwOnlineConfirmedTargets=pick.targets.slice();gmwwOnlineConfirmedUntil=Date.now()+5500;
    gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';toast('Đã thực hiện: '+String(action.name||'Hành động'));
-   if(d.revelation)toast('Kết quả: '+JSON.stringify(d.revelation).slice(0,180));
+   if(d.revelation?.message)gmwwOnlineShowRevelation(d.revelation);
  }catch(e){toast('Hành động chưa được chấp nhận: '+String(e.message||e))}
  finally{state.onlineBusy=false;await refreshPrivateRole(true)}
+}
+function gmwwOnlineShowRevelation(revelation){
+ // GM uses revelation.message in battlePresentRevelation; never expose its raw JSON.
+ const message=String(revelation?.message||'').trim();
+ if(!message)return;
+ let note=document.getElementById('gmwwOnlineRevelation');
+ if(!note){note=document.createElement('section');note.id='gmwwOnlineRevelation';note.setAttribute('role','status');
+   const style=document.createElement('style');style.id='gmwwOnlineRevelationCss';
+   style.textContent='#gmwwOnlineRevelation{position:fixed;z-index:100065;top:calc(env(safe-area-inset-top) + 115px);left:50%;transform:translateX(-50%);width:min(90vw,420px);padding:14px 12px;text-align:center;background:#091a30f2;color:#fff6d3;border:1px solid #eac071;border-radius:15px;box-shadow:0 7px 25px #000b;font:800 15px/1.5 system-ui;pointer-events:auto}#gmwwOnlineRevelation button{display:block;margin:8px auto 0;background:#195a6d;color:#fff;border:1px solid #a9d3d1;border-radius:7px;padding:5px 12px}';
+   if(!document.getElementById(style.id))document.head.appendChild(style);
+   document.body.appendChild(note);
+ }
+ note.replaceChildren();
+ const title=document.createElement('strong');title.textContent='Kết quả';note.appendChild(title);
+ const value=document.createElement('div');value.textContent=message;note.appendChild(value);
+ const close=document.createElement('button');close.type='button';close.textContent='Đóng';close.onclick=()=>note.remove();note.appendChild(close);
+ clearTimeout(gmwwOnlineRevealTimer);gmwwOnlineRevealTimer=setTimeout(()=>note.remove(),8000);
+}
+function gmwwOnlineWitchNotice(){
+ // Bite information is provided by the authenticated /me response ONLY for active Witch.
+ const intel=gmwwOnlineWitchBite;
+ let panel=document.getElementById('gmwwOnlineWitchIntel');
+ if(!intel||state.room?.phase!=='running'||String(state.room?.cyclePhase||'')!=='night'){
+   panel?.remove();return;
+ }
+ if(!panel){
+   panel=document.createElement('div');panel.id='gmwwOnlineWitchIntel';panel.setAttribute('role','status');
+   const css=document.createElement('style');css.id='gmwwOnlineWitchCss';
+   css.textContent='#gmwwOnlineWitchIntel{position:fixed;z-index:100012;left:50%;top:43%;transform:translate(-50%,-50%);max-width:86vw;padding:6px 11px;border:1px solid #f7ce88;border-radius:10px;background:#092439ed;color:#fff5c9;font:850 12px/1.3 system-ui;text-align:center;box-shadow:0 4px 16px #001522b8;pointer-events:none}';
+   if(!document.getElementById(css.id))document.head.appendChild(css);
+   document.body.appendChild(panel);
+ }
+ const ids=Array.isArray(intel.targetIds)?intel.targetIds:[],
+       names=ids.map(id=>gmwwOnlinePeople().find(p=>p.id===String(id))?.name||String(id)).filter(Boolean);
+ panel.textContent=intel.packDisabled?'🐺 Bầy Sói không thể cắn đêm nay.':names.length?
+   '🐺 Người bị Sói cắn: '+names.join(', '):'🐺 Chưa có người bị Sói cắn.';
 }
 function gmwwOnlineIconDown(event,action){
  if(event.button!==undefined&&event.button!==0)return;
@@ -352,29 +392,49 @@ function gmwwOnlineIconDown(event,action){
  window.addEventListener('blur',cancel);
 }
 // Only authenticated action offers trigger this local effect; no private role is broadcast.
+// Use the exact GM labels and green/yellow target highlights; only the authenticated
+// player's own active role and privately confirmed choices are visible here.
 function gmwwOnlineTurnEffects(offers){
  const active=Array.isArray(offers)&&offers.length>0&&state.room?.phase==='running';
  const me=String(state.member?.loginId||'').replace(/^member:/,'');
+ const privateBites=Array.isArray(gmwwOnlineWitchBite?.targetIds)?gmwwOnlineWitchBite.targetIds:[];
+ const chosen=[...(gmwwOnlinePick?.targets||[]),...(Date.now()<gmwwOnlineConfirmedUntil?gmwwOnlineConfirmedTargets:[]),...privateBites];
+ const targets=new Set(chosen.map(id=>String(id||'').replace(/^member:/,'')));
  document.getElementById('gmwwPlayerTopMenu')?.classList.toggle('gmww-my-action-turn',active);
- if(!document.getElementById('gmwwMyActionTurnStyle')){
-  const style=document.createElement('style');style.id='gmwwMyActionTurnStyle';
-  style.textContent='#gmwwPlayerTopMenu.gmww-my-action-turn .gmww-player-menu-account{filter:drop-shadow(0 0 11px #ffe27a)!important;animation:gmww-my-action-pulse 1.2s ease-in-out infinite}'+
-  '@keyframes gmww-my-action-pulse{50%{filter:drop-shadow(0 0 22px #81ffec) brightness(1.25)}}'+
-  '@media(prefers-reduced-motion:reduce){#gmwwPlayerTopMenu.gmww-my-action-turn .gmww-player-menu-account{animation:none}}';
-  document.head.appendChild(style);
- }
  try{
   const doc=document.getElementById('gmwwVillageFrame')?.contentDocument;
   if(!doc)return;
   if(!doc.getElementById('gmwwMyActionGlowStyle')){
    const css=doc.createElement('style');css.id='gmwwMyActionGlowStyle';
-   css.textContent='#players .player.gmww-my-action-turn{filter:drop-shadow(0 0 16px #ffe27a) brightness(1.2)!important;animation:gmww-turn-glow 1.2s ease-in-out infinite}'+
-   '@keyframes gmww-turn-glow{50%{filter:drop-shadow(0 0 22px #80ffdf) brightness(1.3)}}'+
-   '@media(prefers-reduced-motion:reduce){#players .player.gmww-my-action-turn{animation:none}}';
+   // Match the Server's battle-turn-mark/battle-target-mark placement and colors.
+   css.textContent='#players .player.is-battle-actor .portrait{filter:drop-shadow(0 0 3px #fff1b8) drop-shadow(0 0 9px #ffe39a)!important}'+
+    '#players .player.is-battle-target .portrait{filter:drop-shadow(0 0 5px #75efc9)!important}'+
+    '#players .player .player-over>.battle-turn-mark,#players .player .player-over>.battle-target-mark{display:block!important;position:static!important;transform:none!important;margin:0 auto 2px!important;width:max-content;max-width:100%;white-space:nowrap;line-height:1.1!important;padding:3px 7px!important;font-size:9px!important;font-weight:900;border-radius:6px;pointer-events:none;box-sizing:border-box;text-shadow:none;box-shadow:0 2px 6px #0007}'+
+    '#players .player .player-over>.battle-turn-mark{color:#0c3317;background:#7ee08a;order:-2}'+
+    '#players .player .player-over>.battle-target-mark{color:#3d0b05;background:#ff6b5b;order:-1}'+
+    '#players .player.is-battle-actor .portrait{animation:gmww-player-turn-pulse 1.2s ease-in-out infinite}'+
+    '#players .player.is-battle-target .portrait{animation:gmww-player-target-pulse 1.4s ease-in-out infinite}'+
+    '@keyframes gmww-player-turn-pulse{50%{filter:drop-shadow(0 0 15px #f5cf66) brightness(1.14)}}'+
+    '@keyframes gmww-player-target-pulse{50%{filter:drop-shadow(0 0 15px #67e9ca) brightness(1.16)}}'+
+    '@media(prefers-reduced-motion:reduce){#players .player.is-battle-actor .portrait,#players .player.is-battle-target .portrait{animation:none}}';
    doc.head.appendChild(css);
   }
   for(const node of doc.querySelectorAll('#players .player[data-player-id]')){
-   node.classList.toggle('gmww-my-action-turn',active&&String(node.dataset.playerId||'').replace(/^member:/,'')===me);
+   const id=String(node.dataset.playerId||'').replace(/^member:/,'');
+   const actor=active&&id===me,target=targets.has(id);
+   node.classList.toggle('is-battle-actor',actor);
+   node.classList.toggle('is-battle-target',target);
+   const labels=node.querySelector('.player-over');
+   if(!labels)continue;
+   let mark=labels.querySelector(':scope>.battle-turn-mark');
+   if(actor){if(!mark){mark=doc.createElement('span');mark.className='battle-turn-mark';mark.textContent='★ ĐẾN LƯỢT';mark.setAttribute('aria-hidden','true')}
+     if(labels.firstElementChild!==mark)labels.prepend(mark);
+   }else mark?.remove();
+   let targetMark=labels.querySelector(':scope>.battle-target-mark');
+   if(target){if(!targetMark){targetMark=doc.createElement('span');targetMark.className='battle-target-mark';targetMark.textContent='MỤC TIÊU';targetMark.setAttribute('aria-hidden','true')}
+     if(actor&&mark?.parentElement===labels)mark.after(targetMark);
+     else if(labels.firstElementChild!==targetMark)labels.prepend(targetMark);
+   }else targetMark?.remove();
   }
  }catch{}
 }
@@ -382,16 +442,16 @@ function renderOnlineActionDock(){
  let dock=document.getElementById('gmwwOnlineDock');
  const offers=state.room?.demo!==true&&String(state.room?.roomMode||'').toLowerCase()==='online'&&state.room?.phase==='running'?state.onlineActions||[]:[];
  gmwwOnlineTurnEffects(offers);
- if(!offers.length){dock?.remove();gmwwOnlineStop();return}
+ if(!offers.length){dock?.remove();gmwwOnlineStop();gmwwOnlineWitchNotice();return}
  if(!document.getElementById('gmwwOnlineDockStyle')){
    const css=document.createElement('style');css.id='gmwwOnlineDockStyle';
-   css.textContent='#gmwwOnlineDock{position:fixed;z-index:100010;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px;max-width:94vw;overflow:visible;touch-action:none;user-select:none;scrollbar-width:none}'+
+   css.textContent='#gmwwOnlineDock{position:fixed;z-index:100010;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;max-width:min(90vw,270px);overflow:visible;touch-action:none;user-select:none;scrollbar-width:none}'+
      '#gmwwOnlineDock.is-idle-hidden{opacity:1;pointer-events:auto}'+
      '#gmwwOnlineDock button[data-blocked="true"]{position:relative;opacity:.7;filter:grayscale(.55)}#gmwwOnlineDock button[data-blocked="true"]:after{content:attr(data-effect-icon);position:absolute;right:-3px;top:-5px;font-size:18px;text-shadow:0 1px 5px #000}'+
-     '#gmwwOnlineDock button{flex:0 0 auto;position:relative;will-change:transform;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none}'+
+     '#gmwwOnlineDock button{flex:0 0 auto;position:relative;will-change:transform;width:clamp(28px,calc(48px * var(--online-action-scale,1)),72px);height:clamp(28px,calc(48px * var(--online-action-scale,1)),72px);border:0;padding:0;background:transparent;touch-action:none}'+
      '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
      '#game:not(.active)~#gmwwOnlineDock{display:none!important}'+
-     '.gmww-online-ghost{position:fixed;z-index:100060;width:80px;height:80px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 9px #f7d58a)}'+
+     '.gmww-online-ghost{position:fixed;z-index:100060;width:56px;height:56px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 9px #f7d58a)}'+
      '#gmwwOnlinePick{position:fixed;z-index:100050;left:50%;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 140px);transform:translateX(-50%);width:min(92vw,380px);max-height:48dvh;overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid #deb56d;border-radius:15px;background:#092b40f2;color:white;box-shadow:0 12px 35px #000d}'+
      '#gmwwOnlinePick strong{font-size:14px}#gmwwOnlinePick .gmww-online-people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:26dvh;overflow:auto;gap:6px}'+
      '#gmwwOnlinePick button{min-height:36px;background:#16506c;color:white;border:1px solid #7196a9;border-radius:9px;font-weight:700}';
@@ -401,9 +461,9 @@ function renderOnlineActionDock(){
  const scale=[25,50,75,100,125,150].includes(Number(state.actionIconScale))?Number(state.actionIconScale):100;
  dock.style.setProperty('--online-action-scale',String(scale/100));
  const scope=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join('|');
-  if(gmwwOnlineIconScope!==scope){gmwwOnlineIconScope=scope;gmwwOnlineIconPositions.clear();gmwwOnlineCanRestore=false}
+  if(gmwwOnlineIconScope!==scope){gmwwOnlineIconScope=scope;gmwwOnlineIconPositions.clear();gmwwOnlineCanRestore=false;gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0}
   const sig=[scope,...offers.map(a=>[a.key,a.iconUrl,a.blocked,a.blockedReason,a.targetCount,a.noSelf].join(':'))].join('|');
- gmwwOnlinePlaceAtFire(dock);
+ gmwwOnlineWitchNotice();gmwwOnlinePlaceAtFire(dock);
  if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();dock.classList.remove('is-idle-hidden');
  for(const action of offers){
    const btn=document.createElement('button');btn.type='button';btn.title=String(action.name||'Hành động')+(action.blocked?' • '+String(action.blockedReason||'Bị hiệu ứng chặn'):'');
@@ -431,4 +491,5 @@ function gmwwOnlinePlaceAtFire(dock){
  // Position at the actual campfire, even before the iframe finishes rendering.
  dock.style.left=Math.max(12,Math.min(window.innerWidth-12,x))+'px';
  dock.style.top=Math.max(75,Math.min(window.innerHeight-90,y))+'px';
+ const intel=document.getElementById('gmwwOnlineWitchIntel');if(intel?.style){intel.style.left=dock.style.left;intel.style.top=Math.max(105,Math.min(window.innerHeight-160,y-70))+'px'}
 }

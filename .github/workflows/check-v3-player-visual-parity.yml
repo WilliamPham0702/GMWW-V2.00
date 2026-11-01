@@ -1,0 +1,56 @@
+name: Check V3 Player Web visual parity (scoped)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/gmww-demo-runner.js'
+      - 'src/index.js'
+      - 'src/gmww-members-live.js'
+      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'src/player-web-src/35-online-chat.part'
+      - 'tests/player-web-server-visual-parity-20261101.test.mjs'
+      - '.github/workflows/check-v3-player-visual-parity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/gmww-demo-runner.js'
+      - 'src/index.js'
+      - 'src/gmww-members-live.js'
+      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'src/player-web-src/35-online-chat.part'
+      - 'tests/player-web-server-visual-parity-20261101.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-v3-player-parity-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: V3 Player parity tests (no deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify assembled Player Web
+        run: node .github/scripts/assemble-player-web.mjs --verify
+      - name: Test GM visual parity, Witch, Aura and approved drag regression
+        run: |
+          node --test \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/player-web-v3-iframe-drag.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/demo-witch-save-no-bite.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs
+      - name: Compile Worker without publishing
+        run: npm run check

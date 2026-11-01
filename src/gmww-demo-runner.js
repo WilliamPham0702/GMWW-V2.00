@@ -33,7 +33,7 @@ async function context(room,meta){
 }
 function nightActions(ctx,meta,turn,usage,showBlocked=false){
  const actions=rules.actionsForTurn(turn,meta.cycleNight,{cards:ctx.cards,artifacts:ctx.artifacts},ctx.cycle.accepted);
- return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId)).map(action=>({...action,targetCount:action.noTarget?0:demoDivinationTargetCount(action),actorIds:action.actorIds.filter(actorId=>{
+ return actions.filter(action=>!(Number(meta.cycleNight)===1&&action.actionId==='action_witch_kill'&&!action.artifactId&&!showBlocked)).map(action=>({...action,targetCount:action.noTarget?0:demoDivinationTargetCount(action),actorIds:action.actorIds.filter(actorId=>{
   if(!showBlocked&&(status(ctx.rows,meta,actorId,'expelled')||isBattleActorBlocked(ctx.rows,{actorId,matchId:meta.matchId,statusDefs:STATUS_DEFS})))return false;
   if(action.artifactId)return !ctx.cycle.accepted.some(x=>x.artifactId===action.artifactId&&x.playerId==='member:'+actorId)&&ctx.cycle.accepted.length<Number(ctx.cfg.artifactLimitPerCycle??3);
   const role=['role-group','wolf-pack-bite'].includes(turn.kind)?(turn.roles||[]).find(r=>r.loginIds.includes(actorId)&&(!action.roleIds?.length||action.roleIds.includes(r.roleId))):turn;
