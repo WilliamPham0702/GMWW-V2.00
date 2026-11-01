@@ -1,3 +1,15 @@
+# GMWW AUTO-DELIVERY V3.0 — QUY TRÌNH CHÍNH THỨC (01/11/2026)
+
+Chủ dự án đã nghiệm thu task mẫu PR #733 ĐẠT và phê duyệt **GMWW AUTO-DELIVERY V3.0** thay thế quy trình xử lý task cũ cho mọi tính năng. Xem [thiết kế, điều kiện an toàn và lộ trình chuyển đổi](docs/architecture/GMWW-AUTO-DELIVERY-V3.0.md).
+
+- Mỗi task → nhánh riêng từ main mới nhất → tái hiện và sửa → CI theo phạm vi và rủi ro → STAGING khi cần → required checks SUCCESS → merge → deploy an toàn → kiểm tra live → báo kết quả.
+- GitHub-first; tự động hóa khi có công cụ thực thi, không tuyên bố kết quả chưa kiểm chứng. Recovery 5 phút, bảo toàn mã nguồn/commit/nhánh.
+- Không bỏ required checks; không đổi IPA, URL, dữ liệu/DO, Production, Releases ngoài phạm vi được phê duyệt. Phát hành OTA khi cần phải có .gmwwupdate, SHA-256, release notes tiếng Việt, rollback.
+- Quy trình task V3.0 có hiệu lực ngay; **các workflow cũ chỉ vô hiệu hóa sau khi từng workflow thay thế đã PASS**. PR #581 (3D) tiếp tục đóng băng.
+- Các quy tắc kiểm thử theo phạm vi bên dưới tiếp tục được giữ như tiêu chuẩn kỹ thuật của V3.0, không còn là cơ chế task riêng biệt.
+
+---
+
 # GMWW — Quy tắc bắt buộc khi xử lý task và kiểm thử
 
 ## Nguyên tắc số 1: CHỈ KIỂM THỬ ĐÚNG PHẠM VI
