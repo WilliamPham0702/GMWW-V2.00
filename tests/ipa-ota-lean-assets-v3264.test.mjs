@@ -31,7 +31,7 @@ test('all 51 V3 WebP images are identical to Worker copies; V1/V2 remain in repo
 });
 test('independent IPA shell and current OTA Runtime retain version integrity and rollback',()=>{
  const pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.json'));
- const runtime=worker.match(/\\bVERSION="V([0-9.]+)"/)?.[1];
+ const runtime=worker.match(/VERSION="V([0-9.]+)"/)?.[1];
  const shell=worker.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
  assert.ok(runtime&&shell,'Worker must advertise both versions');
  const parts=value=>value.split('.').map(Number);
