@@ -136,8 +136,8 @@ function gmwwChatDockSync(){
   if(!footer){
     footer=document.createElement('div');footer.id='gmwwOnlineFooter';footer.setAttribute('aria-label','Menu dưới Player Web');
     const clock=document.createElement('button');clock.type='button';clock.className='gmww-foot-button';clock.id='gmwwPlayerClock';clock.title='Đồng hồ đồng bộ GM';clock.disabled=true;clock.textContent='--:--';
-    const undo=document.createElement('button');undo.type='button';undo.className='gmww-foot-button';undo.id='gmwwPlayerRestore';undo.textContent='↶';undo.title='Khôi phục thao tác đang chọn (chưa gửi)';undo.setAttribute('aria-label','Khôi phục thao tác chưa gửi');
-    undo.onclick=()=>{gmwwOnlineStop();state.gallowsSelectedId='';setGameViewPane('village',{persist:false});renderGallowsWidget();toast('Đã khôi phục thao tác chưa gửi.')};
+    const undo=document.createElement('button');undo.type='button';undo.className='gmww-foot-button';undo.id='gmwwPlayerRestore';undo.textContent='↶';undo.title='Khôi phục lựa chọn hoặc hành động gần nhất của bạn';undo.setAttribute('aria-label','Khôi phục hành động');
+    undo.onclick=()=>{const pending=!!gmwwOnlinePick;gmwwOnlineStop();gmwwOnlineClearPositions();state.gallowsSelectedId='';setGameViewPane('village',{persist:false});renderGallowsWidget();if(pending){toast('Đã khôi phục lựa chọn chưa gửi.');return}void gmwwOnlineRestore()};
     footer.append(clock,panel,undo);document.body.appendChild(footer);
   }
   footer.hidden=!document.getElementById('game')?.classList.contains('active');
@@ -208,7 +208,28 @@ async function gmwwChatSend(){
 
 
 /* Online action offers are delivered privately and validated again on Server. */
-let gmwwOnlinePick=null;
+let gmwwOnlinePick=null,gmwwOnlineCanRestore=false,gmwwOnlineIconScope='';
+const gmwwOnlineIconPositions=new Map();
+function gmwwOnlineClearPositions(){
+ gmwwOnlineIconPositions.clear();
+ for(const node of document.querySelectorAll('#gmwwOnlineDock button'))node.style.transform='';
+}
+async function gmwwOnlineRestore(){
+ if(!gmwwOnlineCanRestore||state.room?.phase!=='running'||state.room?.cyclePhase!=='night'){
+  toast('Không có hành động đã gửi hợp lệ để khôi phục.');return;
+ }
+ if(state.onlineBusy)return;
+ state.onlineBusy=true;
+ try{
+  await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/undo-action',{
+   method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey})
+  });
+  gmwwOnlineCanRestore=false;toast('Đã khôi phục hành động gần nhất.');await refreshPrivateRole(true);
+ }catch(e){
+  if(e?.status===409)gmwwOnlineCanRestore=false;
+  toast('Không thể khôi phục: '+String(e.message||'Lượt hoặc dữ liệu đã thay đổi.'));
+ }finally{state.onlineBusy=false}
+}
 function gmwwOnlinePeople(){return (state.players||[]).filter(p=>p?.loginId).map(p=>({id:String(p.loginId),name:String(p.displayName||p.loginId)}))}
 function gmwwOnlineStop(){gmwwOnlinePick=null;document.getElementById('gmwwOnlinePick')?.remove()}
 function gmwwOnlineTargetAt(x,y){
@@ -263,7 +284,7 @@ async function gmwwOnlineSubmit(){
  state.onlineBusy=true;
  try{
    const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
-   gmwwOnlineStop();toast('Đã thực hiện: '+String(action.name||'Hành động'));
+   gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';toast('Đã thực hiện: '+String(action.name||'Hành động'));
    if(d.revelation)toast('Kết quả: '+JSON.stringify(d.revelation).slice(0,180));
  }catch(e){toast('Hành động chưa được chấp nhận: '+String(e.message||e))}
  finally{state.onlineBusy=false;await refreshPrivateRole(true)}
@@ -288,7 +309,15 @@ function gmwwOnlineIconDown(event,action){
    if(!moved){gmwwOnlinePickAction(action);return}
    const target=gmwwOnlineTargetAt(e.clientX,e.clientY);
    if(target){if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlinePick={action,targets:[]};gmwwOnlineTarget(target)}
-   else gmwwOnlinePickAction(action);
+   else{
+      const prev=gmwwOnlineIconPositions.get(action.key)||{x:0,y:0};
+      const bounds=node.getBoundingClientRect();
+      const originX=bounds.left+bounds.width/2-prev.x,originY=bounds.top+bounds.height/2-prev.y;
+      const x=Math.max(40,Math.min(window.innerWidth-40,e.clientX))-originX;
+      const y=Math.max(80,Math.min(window.innerHeight-85,e.clientY))-originY;
+      gmwwOnlineIconPositions.set(action.key,{x,y});
+      node.style.transform='translate('+x+'px,'+y+'px)';
+    }
  };
  try{node.setPointerCapture?.(event.pointerId)}catch{}
  node.addEventListener('pointermove',move);node.addEventListener('pointerup',end);node.addEventListener('pointercancel',end);
@@ -330,7 +359,7 @@ function renderOnlineActionDock(){
    css.textContent='#gmwwOnlineDock{position:fixed;z-index:100010;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:6px;max-width:94vw;overflow:visible;touch-action:none;user-select:none;scrollbar-width:none}'+
      '#gmwwOnlineDock.is-idle-hidden{opacity:1;pointer-events:auto}'+
      '#gmwwOnlineDock button[data-blocked="true"]{position:relative;opacity:.7;filter:grayscale(.55)}#gmwwOnlineDock button[data-blocked="true"]:after{content:attr(data-effect-icon);position:absolute;right:-3px;top:-5px;font-size:18px;text-shadow:0 1px 5px #000}'+
-     '#gmwwOnlineDock button{flex:0 0 auto;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none}'+
+     '#gmwwOnlineDock button{flex:0 0 auto;position:relative;will-change:transform;width:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);height:clamp(48px,calc(80px * var(--online-action-scale,1)),120px);border:0;padding:0;background:transparent;touch-action:none}'+
      '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
      '#game:not(.active)~#gmwwOnlineDock{display:none!important}'+
      '.gmww-online-ghost{position:fixed;z-index:100060;width:80px;height:80px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 9px #f7d58a)}'+
@@ -342,7 +371,9 @@ function renderOnlineActionDock(){
  if(!dock){dock=document.createElement('div');dock.id='gmwwOnlineDock';document.body.appendChild(dock)}
  const scale=[25,50,75,100,125,150].includes(Number(state.actionIconScale))?Number(state.actionIconScale):100;
  dock.style.setProperty('--online-action-scale',String(scale/100));
- const sig=[state.roomCode,state.room?.matchId,state.room?.cycleKey,...offers.map(a=>a.key+':'+a.iconUrl)].join('|');
+ const scope=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join('|');
+  if(gmwwOnlineIconScope!==scope){gmwwOnlineIconScope=scope;gmwwOnlineIconPositions.clear();gmwwOnlineCanRestore=false}
+  const sig=[scope,...offers.map(a=>a.key+':'+a.iconUrl)].join('|');
  gmwwOnlinePlaceAtFire(dock);
  if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();dock.classList.remove('is-idle-hidden');
  for(const action of offers){
@@ -350,7 +381,8 @@ function renderOnlineActionDock(){
    if(action.blocked){btn.dataset.blocked='true';btn.dataset.effectIcon=action.blockedType==='frozen'?'❄️':action.blockedType==='expelled'?'🚪':'⛔';}
    btn.setAttribute('aria-label',btn.title);
    const img=document.createElement('img');img.src=String(action.iconUrl||'/action-icons/v3/49_sang_tao_artifact.webp');img.alt='';img.draggable=false;btn.appendChild(img);
-   btn.onpointerdown=e=>gmwwOnlineIconDown(e,action);
+   const pos=gmwwOnlineIconPositions.get(action.key);if(pos)btn.style.transform='translate('+pos.x+'px,'+pos.y+'px)';
+    btn.onpointerdown=e=>gmwwOnlineIconDown(e,action);
    btn.onclick=e=>{if(action.blocked){toast(String(action.blockedReason||'Bạn không thể thực hiện hành động ở lượt này.'));return}if(e.detail===0)gmwwOnlinePickAction(action)};
    dock.appendChild(btn);
  }
