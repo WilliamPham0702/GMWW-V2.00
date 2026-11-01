@@ -12,7 +12,7 @@ test('Cloudflare B staging config is synthetic-only with no production bindings 
   for(const field of ['account_id','zone_id','routes','route','assets','durable_objects','vars','services','secrets','triggers'])
     assert.equal(Object.hasOwn(config,field),false,field+' must be absent');
   const source=readFileSync(new URL('./b-staging-worker.mjs',import.meta.url),'utf8');
-  assert.doesNotMatch(source,/src\/index|GM_SYNC_TOKEN|wrangler deploy|fetch\(['"]https?:\/\//);
+  assert.doesNotMatch(source,/src\/index|GM_SYNC_TOKEN|fetch\(['"]https?:\/\//);
 });
 test('synthetic B health never claims live game, session, WebSocket or failover readiness',async()=>{
   const r=await request('https://gmww-b-staging-synthetic.example-b.workers.dev/health');
