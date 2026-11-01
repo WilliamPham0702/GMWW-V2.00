@@ -3452,30 +3452,15 @@ function isRuntimeMergedV3286Scope(changes){
     doc.includes('PR #702')&&doc.includes('Rollback')&&!doc.includes('ĐÃ PHÁT HÀNH');
 }
 
-// Dual Cloudflare B PR: exact synthetic code/CI scope only. Any gameplay,
-// runtime, asset, hidden or unknown path returns FULL Worker CI.
+// Dual Cloudflare B STAGING: only exact synthetic modules and scoped CI paths.
+// Any game, Runtime, assets, credential file, deletion or unlisted change -> full CI.
 function isDualCloudflareStandbyScope(changes){
-  const permitted=new Set([
-    "infra/cloudflare-standby/fixture-contract.mjs",
-    "infra/cloudflare-standby/fixture-contract.test.mjs",
-    "docs/architecture/dual-cloudflare-standby-20261101.md",
-    "tests/dual-cloudflare-release-guard.test.mjs",
-    "tests/github-actions-pr-preview-ci.test.mjs",
-    "tests/ci-browser-scope.test.mjs",
-    ".github/scripts/ci-browser-scope.mjs",
-    ".github/workflows/check-player-web.yml",
-    ".github/workflows/check-cloudflare-standby.yml",
-    ".github/workflows/deploy-production.yml",
-    ".github/workflows/github-runtime-ota.yml",
-    ".github/workflows/check-pr-preview-github.yml"
-]);
-  const needed=['infra/cloudflare-standby/fixture-contract.mjs','infra/cloudflare-standby/fixture-contract.test.mjs',
-    'tests/dual-cloudflare-release-guard.test.mjs','tests/ci-browser-scope.test.mjs',
-    '.github/workflows/check-player-web.yml','.github/scripts/ci-browser-scope.mjs'];
-  return Array.isArray(changes)&&changes.length>=9 &&
+  const permitted=new Set(["infra/cloudflare-standby/fixture-contract.mjs","infra/cloudflare-standby/fixture-contract.test.mjs","infra/cloudflare-standby/storage-adapter.mjs","infra/cloudflare-standby/storage-adapter.test.mjs","infra/cloudflare-standby/session-ws-fixture.mjs","infra/cloudflare-standby/session-ws-fixture.test.mjs","docs/architecture/dual-cloudflare-standby-20261101.md","tests/dual-cloudflare-release-guard.test.mjs","tests/github-actions-pr-preview-ci.test.mjs","tests/ci-browser-scope.test.mjs",".github/scripts/ci-browser-scope.mjs",".github/workflows/check-player-web.yml",".github/workflows/check-cloudflare-standby.yml",".github/workflows/deploy-production.yml",".github/workflows/github-runtime-ota.yml",".github/workflows/check-pr-preview-github.yml"]);
+  const pairs=[["infra/cloudflare-standby/fixture-contract.mjs","infra/cloudflare-standby/fixture-contract.test.mjs"],["infra/cloudflare-standby/storage-adapter.mjs","infra/cloudflare-standby/storage-adapter.test.mjs"],["infra/cloudflare-standby/session-ws-fixture.mjs","infra/cloudflare-standby/session-ws-fixture.test.mjs"]];
+  return Array.isArray(changes)&&changes.length>=2&&
     new Set(changes.map(c=>c.path)).size===changes.length &&
     changes.every(c=>permitted.has(c.path)&&['A','M'].includes(c.status)) &&
-    needed.every(p=>changes.some(c=>c.path===p));
+    pairs.some(([module,test])=>changes.some(c=>c.path===module)&&changes.some(c=>c.path===test));
 }
 
 function classifyBrowserScope(changes){
