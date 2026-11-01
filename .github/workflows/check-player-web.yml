@@ -1280,8 +1280,50 @@ jobs:
             tests/gmww-player-web-source-modules.test.mjs
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'V3 Player Web: immutable STAGING-tested bytes, full focused action and session tests PASS.' >> "$GITHUB_STEP_SUMMARY"
+      # Exact V3 policy-only CI: no gameplay or deployable source changes.
+      - name: V3 policy-only — focused CI without unrelated full gameplay suite
+        id: v3_policy
+        if: steps.scope.outputs.mode == 'full' && github.event_name == 'pull_request'
+        env:
+          V3_BASE: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --name-status --no-renames "$V3_BASE" HEAD > "$RUNNER_TEMP/v3-status.txt"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const changed=fs.readFileSync(process.env.RUNNER_TEMP+'/v3-status.txt','utf8').trim().split('\n').filter(Boolean).map(row=>{
+            const n=row.indexOf('\t');return {status:row.slice(0,n),path:row.slice(n+1)};
+          });
+          const expected=new Map([
+            ['AGENTS.md','M'],
+            ['docs/architecture/GMWW-AUTO-DELIVERY-V3.0.md','A'],
+            ['.github/scripts/v3-delivery-plan.mjs','A'],
+            ['tests/v3-delivery-plan.test.mjs','A'],
+            ['.github/workflows/gmww-auto-delivery-v3.yml','A'],
+            ['.github/workflows/ci-policy-gate.yml','M'],
+            ['.github/workflows/check-player-web.yml','M'],
+            ['.github/workflows/deploy-production.yml','M'],
+            ['.github/workflows/github-runtime-ota.yml','M'],
+            ['.github/workflows/check-pr-preview-github.yml','M'],
+            ['tests/github-actions-pr-preview-ci.test.mjs','M']
+          ]);
+          if(changed.length!==expected.size||new Set(changed.map(x=>x.path)).size!==expected.size||
+            changed.some(x=>expected.get(x.path)!==x.status)){
+            console.log('Not exact V3 CI-only scope: fallback to full Worker suite.');process.exit(0);
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'scoped=true\n');
+          NODE
+          if ! grep -Fxq 'scoped=true' "$GITHUB_OUTPUT"; then exit 0; fi
+          node --check .github/scripts/v3-delivery-plan.mjs
+          node --test tests/v3-delivery-plan.test.mjs tests/github-actions-pr-preview-ci.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+          npm run check
+          echo "PASS: V3 exact policy-only; required checks retained." >> "$GITHUB_STEP_SUMMARY"
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -1304,14 +1346,14 @@ jobs:
         if: steps.scope.outputs.mode == 'dual-renderer'
         run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true'
         shell: bash
         run: |
           python3 -m venv /tmp/gmww-avatar-venv
           /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
           /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Kiểm tra nhanh Player Web trên máy thử nghiệm
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true'
         shell: bash
         run: |
           set -euo pipefail

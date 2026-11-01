@@ -26,6 +26,12 @@ jobs:
           node-version: '22'
       - name: Verify CI selector syntax
         run: node --check .github/scripts/ci-browser-scope.mjs
+      - name: V3 default delivery contract and fail-closed classification
+        run: |
+          node --check .github/scripts/v3-delivery-plan.mjs
+          node --test tests/v3-delivery-plan.test.mjs
+          grep -Fq 'name: GMWW AUTO-DELIVERY V3.0' .github/workflows/gmww-auto-delivery-v3.yml
+          grep -Fq 'name: V3 Release Gate' .github/workflows/gmww-auto-delivery-v3.yml
       - name: Verify safe scope selection and fail-closed behavior
         run: node --test --test-name-pattern='Unknown Worker|Any other public-room|UI changes outside|Browser, seat, workflow|A deletion, unexpected status|CI-only merge|PR603 account avatar' tests/ci-browser-scope.test.mjs
       - name: Verify CI-only changes cannot auto-deploy Production
