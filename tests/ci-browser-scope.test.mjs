@@ -1027,3 +1027,29 @@ test('PR743 Chat voice uses focused privacy and Worker CI only for exact reviewe
   assert.match(workflow,/tests\/online-chat-authority\.test\.mjs/);
   assert.match(workflow,/npm run check/);
 });
+
+
+test('PR743 postmerge CI-only recovery is safe on exact four files and keeps Production release guards',()=>{
+ const exact=[
+   {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+   {path:'.github/workflows/check-player-web.yml',status:'M'},
+   {path:'.github/workflows/deploy-pr743-chat-worker.yml',status:'A'},
+   {path:'tests/ci-browser-scope.test.mjs',status:'M'}
+ ];
+ assert.equal(classifyBrowserScope(exact),'gmww-chat-pr743-postmerge');
+ assert.equal(classifyBrowserScope(exact.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...exact,{path:'src/index.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...exact,{path:'wrangler.jsonc',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...exact,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...exact,exact[0]]),'full');
+ const wf=readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
+ assert.match(wf,/git merge-base --is-ancestor 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD/);
+ assert.match(wf,/git diff --quiet 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD/);
+ assert.match(wf,/GMWW AUTO-DELIVERY V3.0/);
+ assert.match(wf,/Previous Cloudflare A Worker/);
+ assert.match(wf,/Automatic rollback to previous Cloudflare A Worker/);
+ assert.doesNotMatch(wf,/wrangler deploy --name/);
+ const workerCheck=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ assert.match(workerCheck,/steps\.scope\.outputs\.mode == 'gmww-chat-pr743-postmerge'/);
+ assert.match(workerCheck,/tests\/online-chat-authority\.test\.mjs/);
+});

@@ -3620,7 +3620,30 @@ function isPR743ChatVoiceScope(changes){
   }catch{return false}
 }
 
+// Postmerge PR743 CI-only recovery. A different source/Native/DNS/Runtime diff is FULL.
+function isPR743ChatPostmergeScope(changes){
+  const expected=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['.github/workflows/deploy-pr743-chat-worker.yml','A'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     new Set(changes.map(c=>c.path)).size!==expected.size||
+     changes.some(c=>expected.get(c.path)!==c.status))return false;
+  try{
+    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.289.0')return false;
+    const worker=fs.readFileSync('src/index.js','utf8'),
+      deploy=fs.readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
+    return worker.includes('async chatVoiceStore(')&&worker.includes('async chatVoiceRead(')&&
+      worker.includes('async chatVoiceClear(')&&deploy.includes('7b981859d4f9171e47f4a7c0d7164b50f27d7bda')&&
+      deploy.includes('Automatic rollback')&&
+      fs.readFileSync('.github/workflows/check-player-web.yml','utf8').includes('gmww-chat-pr743-postmerge');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isPR743ChatPostmergeScope(changes))return 'gmww-chat-pr743-postmerge';
   if(isPR743ChatVoiceScope(changes))return 'gmww-chat-voice-pr743';
   if(isPlayerFireWolf726Scope(changes))return 'player-fire-wolf-726';
   if(isDualCloudflareStandbyScope(changes))return 'dual-cloudflare-standby';
@@ -4840,6 +4863,18 @@ function detect(){
     }catch{} // Failed proof reverts to full tests; never skip Worker or Preview required checks.
   }
 
+  // Only the immutable PR743 merge + exact CI-only recovery can use Chat postmerge Worker tests.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      git('merge-base','--is-ancestor','7b981859d4f9171e47f4a7c0d7164b50f27d7bda','HEAD');
+      git('diff','--quiet','7b981859d4f9171e47f4a7c0d7164b50f27d7bda','HEAD','--',
+          'src','server-game','assets','package.json','package-lock.json','wrangler.jsonc');
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(r=>{const [status,path]=r.split('\t');return {status,path}});
+      if(isPR743ChatPostmergeScope(changes))
+        return {mode:'gmww-chat-pr743-postmerge',reason:'Reviewed PR743 merged Worker source unchanged; exact CI-only release recovery'};
+    }catch{} // no ancestry or changed Worker/native/config => run full tests
+  }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
   if(!/^[0-9a-f]{40}$/i.test(base))return {mode:'full',reason:'No verified PR base SHA'};
