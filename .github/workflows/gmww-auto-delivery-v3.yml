@@ -1,0 +1,146 @@
+name: GMWW AUTO-DELIVERY V3.0
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_run:
+    workflows: ["Check Player Web Worker"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: gmww-v3-${{ github.event.pull_request.number || github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  scope:
+    name: V3 Scope Gate
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    outputs:
+      target: ${{ steps.plan.outputs.target }}
+      risk: ${{ steps.plan.outputs.risk }}
+      hold: ${{ steps.plan.outputs.hold }}
+      test_paths: ${{ steps.plan.outputs.test_paths }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify tested SHA and build deterministic scope
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          SOURCE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          if [ "$EVENT_NAME" = "workflow_run" ]; then
+            git fetch --no-tags origin main
+            test "$(git rev-parse origin/main)" = "$SOURCE_SHA" || {
+              echo "::error::Main moved after Worker CI; fail closed."; exit 1;
+            }
+            git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/v3-changed.txt"
+          else
+            git diff --name-only "$BASE_SHA" HEAD > "$RUNNER_TEMP/v3-changed.txt"
+          fi
+          node .github/scripts/v3-delivery-plan.mjs "$RUNNER_TEMP/v3-changed.txt"
+
+  fast-tests:
+    name: V3 Focused CI + Worker Dry Run
+    needs: scope
+    if: needs.scope.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install pinned packages
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Enforce V3 classification and source packaging
+        run: |
+          node --check .github/scripts/v3-delivery-plan.mjs
+          node --test tests/v3-delivery-plan.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node --check src/index.js
+      - name: Execute scope-specific interaction tests
+        env:
+          TEST_PATHS: ${{ needs.scope.outputs.test_paths }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$TEST_PATHS" ]; then
+            read -ra TESTS <<< "$TEST_PATHS"
+            node --test "${ TESTS[@] }"
+          else
+            echo 'No feature tests needed for metadata-only change'
+          fi
+      - name: Compile Worker without Production deployment
+        run: npm run check
+
+  integration:
+    name: V3 Cross-role, Privacy and Runtime Safety
+    needs: [scope, fast-tests]
+    if: needs.scope.outputs.risk == 'high' || needs.scope.outputs.risk == 'critical'
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Focused engine and authorization regression
+        run: |
+          node --test tests/gmww-play-interaction-rules.test.mjs tests/online-chat-authority.test.mjs tests/player-web-wolf-ballots-20261101.test.mjs
+          node .github/scripts/verify-gmww-versions.mjs
+
+  delivery-gate:
+    name: V3 Release Gate
+    if: always()
+    needs: [scope, fast-tests, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail closed for missing CI, invalid scope or held deployments
+        env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          FAST_RESULT: ${{ needs.fast-tests.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
+          TARGET: ${{ needs.scope.outputs.target }}
+          HOLD: ${{ needs.scope.outputs.hold }}
+          TESTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$SCOPE_RESULT" = success || { echo "::error::V3 scope not SUCCESS"; exit 1; }
+          test "$FAST_RESULT" = success || { echo "::error::V3 focused CI not SUCCESS"; exit 1; }
+          case "$INTEGRATION_RESULT" in success|skipped) ;; *) echo "::error::V3 integration not SUCCESS"; exit 1;; esac
+          test "$HOLD" = false && test "$TARGET" != blocked || { echo "::error::High-risk or unknown change must be reviewed separately"; exit 1; }
+          test -n "$TESTED_SHA"
+          echo "V3 RELEASE GATE SUCCESS — SHA $TESTED_SHA; target $TARGET; risk-tier checks passed." >> "$GITHUB_STEP_SUMMARY"
+          echo "No deploy in V3 gate; downstream release path still must verify same-SHA main Worker CI, version, data isolation, health and rollback." >> "$GITHUB_STEP_SUMMARY"
