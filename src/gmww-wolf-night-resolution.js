@@ -27,11 +27,32 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
   if(!match||!Number.isInteger(cycle)||cycle<1)
     return {ok:false,error:'INVALID_RESOLUTION_CONTEXT',victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
   const rows=Array.isArray(interactions)?interactions:[],
-    actions=rows.filter(row=>isFrom(row,match,cycle)&&row?.type==='effect_notice'),
-    bites=distinct(actions.filter(row=>row.actionId==='action_wolf_bite').map(row=>login(row.loginId)).filter(Boolean)),
+    actions=rows.filter(row=>isFrom(row,match,cycle)&&row?.type==='effect_notice'&&row.undone!==true&&row.effectActive!==false),
     guards=new Set(actions.filter(row=>['action_protect','action_witch_save'].includes(row.actionId)).map(row=>login(row.loginId)).filter(Boolean)),
     direction=actions.filter(row=>row.actionId==='action_transfer_bite'&&['left','right'].includes(row.direction)).at(-1)?.direction||'';
-  if(!bites.length)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
+  // One authorized, final bite ballot per wolf. Legacy GM notices have no wolf
+  // actor; keep them readable without rewriting existing match history.
+  const wolves=new Map((Array.isArray(assignments)?assignments:[])
+    .filter(isWolfRole).map(row=>[login(row.loginId),row]));
+  const votes=new Map();
+  for(const [index,row] of actions.filter(x=>x.actionId==='action_wolf_bite').entries()){
+    const actor=login(row.actorId),target=login(row.loginId);
+    if(!target||(wolves.size&&actor&&actor!=='gm'&&!wolves.has(actor)))continue;
+    const voter=wolves.has(actor)?actor:'legacy:'+index;
+    votes.set(voter,{target,alpha:wolves.get(actor)?.roleId==='role_alpha_wolf'});
+  }
+  const biteCount=votes.size;
+  if(!biteCount)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
+  const ballots=[...votes.values()],alphaVote=ballots.findLast(v=>v.alpha);
+  const tally=new Map();
+  for(const vote of ballots)tally.set(vote.target,(tally.get(vote.target)||0)+1);
+  const maximum=Math.max(...tally.values());
+  const leaders=[...tally].filter(([,count])=>count===maximum).map(([target])=>target);
+  // The Alpha's own bite is decisive. Without it, a tied plurality never
+  // creates an arbitrary victim.
+  const selected=alphaVote?.target||(leaders.length===1?leaders[0]:'');
+  const bites=selected?[selected]:[];
+  if(!selected)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount,tied:true};
   // NIGHT-02: an Alpha Wolf frozen by Snow Wolf or expelled from the village
   // disables the lethal pack bite. Frozen Alpha does not reveal bitten targets
   // to the Witch; the submitted intent may still be recorded for history.
@@ -41,7 +62,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
   const disabledAlpha=rows.some(x=>String(x?.matchId||'')===match&&alphaIds.has(login(x.loginId))&&
     (x.effectActive!==false||(x.type==='frozen'&&x.expiredReason==='MORNING_START'&&Number(x.night)===cycle))&&
     ((x.type==='frozen'&&Number(x.night)===cycle)||x.type==='expelled'));
-  if(disabledAlpha)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:bites.length,
+  if(disabledAlpha)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount,
     packDisabled:true,reason:'ALPHA_FROZEN_OR_EXPELLED'};
 
   const targets=Object.values(players&&typeof players==='object'?players:{}),
@@ -53,7 +74,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
   if(direction&&(seated.length<2||
     new Set(seated.map(x=>x.seatId)).size!==seated.length||
     bites.some(id=>!seated.some(x=>x.loginId===id))))
-    return {ok:false,error:'SEAT_ORDER_UNAVAILABLE',victims:[],blocked:[],transfers:[],attacked:[],biteCount:bites.length};
+    return {ok:false,error:'SEAT_ORDER_UNAVAILABLE',victims:[],blocked:[],transfers:[],attacked:[],biteCount};
   // A Maiden who confirmed a house visit is physically away from her own
   // house when wolves bite. The visited house is resolved separately at dawn.
   // Ignore undone, cross-match, cross-night and forged non-Maiden visit rows.
@@ -87,7 +108,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       ['dead','expelled'].includes(String(row?.type||''))&&row?.effectActive!==false))continue;
     victims.push(target);
   }
-  return {ok:true,victims:distinct(victims),blocked:distinct(protectedTargets),transfers,attacked,biteCount:bites.length};
+  return {ok:true,victims:distinct(victims),blocked:distinct(protectedTargets),transfers,attacked,biteCount};
 }
 
 // All real scan actions in the V2 card catalog. Keep this GM-only:
