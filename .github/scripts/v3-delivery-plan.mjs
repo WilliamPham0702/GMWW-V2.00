@@ -32,9 +32,13 @@ export function v3DeliveryPlan(paths){
  const target=deployTypes.includes('runtime')?'runtime':deployTypes[0]||'none';
  const core=files.some(p=>/^src\/(index\.js|gmww-demo-runner\.js|gmww-wolf-night-resolution\.js|gmww-online-action)/.test(p))||files.some(p=>/^server-game\/(current|shared|src)\//.test(p));
  const risk=target==='runtime'||core?'high':target==='worker'||target==='pages'?'medium':files.some(p=>p.startsWith('.github/'))?'high':'low';
- const tests=target==='worker'?playerTests:target==='runtime'?[...playerTests,...sharedTests]:
+ const tests=target==='worker'?[...playerTests]:target==='runtime'?[...playerTests,...sharedTests]:
     target==='pages'?['tests/gamemasoi-pages-link.test.mjs']:
     files.some(p=>p.startsWith('.github/'))?['tests/ci-browser-scope.test.mjs']:[];
+ // Voice attachments share the existing DO and Chat ACL; always run their focused
+ // privacy and 512-KiB regression when the voice feature files are changed.
+ if(files.some(p=>['src/gmww-chat-voice.js','server-game/src/45-online-chat.part','src/player-web-src/35-online-chat.part'].includes(p)))
+   tests.push('tests/voice-chat-do-20261102.test.mjs');
  return {target,risk,hold:false,files,tests,reason:'scoped'};
 }
 if(process.argv[1]&&import.meta.url===new URL('file://'+process.argv[1]).href){
