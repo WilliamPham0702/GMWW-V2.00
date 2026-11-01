@@ -337,6 +337,7 @@ test('GMWW V3 exact CI/policy PR keeps local checks but does not create a new Cl
   {status:'A',path:'docs/architecture/GMWW-AUTO-DELIVERY-V3.0.md'},
   {status:'A',path:'.github/workflows/gmww-auto-delivery-v3.yml'},
   {status:'M',path:'.github/workflows/ci-policy-gate.yml'},
+  {status:'M',path:'.github/workflows/check-player-web.yml'},
   {status:'M',path:'.github/workflows/deploy-production.yml'},
   {status:'M',path:'.github/workflows/github-runtime-ota.yml'},
   {status:'M',path:'.github/workflows/check-pr-preview-github.yml'},
