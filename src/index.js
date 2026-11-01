@@ -233,6 +233,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/player/gallows"&&request.method==="POST")return this.playerGallows(await safeJson(request));
     if(url.pathname==="/player/demo-action"&&request.method==="POST")return this.playerDemoAction(await safeJson(request));
     if(url.pathname==="/player/action"&&request.method==="POST")return this.playerPhaseAction(await safeJson(request),true);
+    if(url.pathname==="/player/undo-action"&&request.method==="POST")return this.playerPhaseUndo(await safeJson(request));
     if(url.pathname==="/player/setup"&&request.method==="POST")return this.playerSetup(await safeJson(request));
     if(url.pathname==="/player/move"&&request.method==="POST")return this.playerMove(await safeJson(request));
     if(url.pathname==="/player/move-complete"&&request.method==="POST")return this.playerMoveComplete(await safeJson(request));
@@ -1093,6 +1094,25 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,actionId:action.actionId,actorId:loginId,
       ...(result.revelation?{revelation:result.revelation}:{}),
       ...(meta.cyclePhase==="morning"&&result.result?{result:result.result}: {})});
+  }
+  // Authenticated member may undo ONLY their latest Online night action.
+  // The existing GM snapshot guard refuses all intervening changes.
+  async playerPhaseUndo(body){
+    const meta=await this.ctx.storage.get("meta"),actorId=normalizeLoginId(body?.loginId);
+    if(!actorId||meta?.phase!=="running"||meta?.demo===true||
+      String(meta?.roomMode||"").toLowerCase()!=="online"||meta?.cyclePhase!=="night"||
+      String(body?.matchId||"")!==String(meta.matchId||"")||
+      String(body?.cycleKey||"")!==String(meta.cycleKey||""))
+      return j({ok:false,error:"ONLINE_UNDO_STALE"},409);
+    const players=await this.ctx.storage.get("players")||{};
+    if(!players["member:"+actorId])return j({ok:false,error:"ONLINE_PLAYER_NOT_JOINED"},403);
+    const record=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
+    if(!record||record.undone||normalizeLoginId(record.actorId)!==actorId||
+      record.source!=="online-human")
+      return j({ok:false,error:"ONLINE_UNDO_NOT_OWNER",message:"Chỉ khôi phục được hành động gần nhất của chính bạn."},409);
+    const result=await this.gmBattleUndo(this.demoInternalRequest(),{undoToken:record.token});
+    if(!result.ok)return result;
+    return j({ok:true,undone:true});
   }
   async playerGallows(body,authorizedDemo=false){
     const meta=await this.ctx.storage.get("meta"),loginId=normalizeLoginId(body?.loginId);
@@ -2445,7 +2465,7 @@ export class RoomDurableObject extends DurableObject {
         return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN"},403);
     }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
     if(step.kind==="wolf-pack-bite"&&
-      (String(body.actionId)!=="action_wolf_bite"||
+      (targets.length!==1||String(body.actionId)!=="action_wolf_bite"||
         !(step.biteActorIds||[]).map(normalizeLoginId).includes(actorId)))
       return j({ok:false,error:"INVALID_PACK_ACTION"},403);
     const players=await this.ctx.storage.get("players")||{};
@@ -2622,7 +2642,7 @@ export class RoomDurableObject extends DurableObject {
     const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
       record={token:undoToken,matchId,cycleKey,night:Number(meta.cycleNight||1),turnId,
         label:String(body?.effectName||body?.actionId||"Hành động").slice(0,120),targetIds:targets,
-        before,after,undone:false,createdAt:new Date().toISOString()};
+        actorId,source:String(body?.source||"gm"),before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
     const revealActionId=String(body?.actionId||'');
@@ -3695,6 +3715,7 @@ export default {async fetch(request,env){
   const playerInteraction=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/interaction\/respond$/);if(playerInteraction&&request.method==="POST")return playerInteractionRespondApi(env,playerInteraction[1],request);
   const playerGallowsRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(playerGallowsRoute&&request.method==="POST")return playerGallowsApi(env,playerGallowsRoute[1],request);
   const playerDemoRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/demo-action$/);if(playerDemoRoute&&request.method==="POST")return playerDemoActionApi(env,playerDemoRoute[1],request);
+  const playerUndoRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/undo-action$/);if(playerUndoRoute&&request.method==="POST")return playerOnlineUndoApi(env,playerUndoRoute[1],request);
   const playerOnlineRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/action$/);if(playerOnlineRoute&&request.method==="POST")return playerOnlineActionApi(env,playerOnlineRoute[1],request);
   const playerSetup=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/setup$/);if(playerSetup&&request.method==="POST")return playerRoomSetupApi(env,playerSetup[1],request);
   const playerMove=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/move$/);if(playerMove&&request.method==="POST")return playerRoomMoveApi(env,playerMove[1],request);
@@ -3839,6 +3860,15 @@ async function playerOnlineActionApi(env,raw,request){
   if(!session.ok)return session;
   const data=await session.json(),body=await safeJson(request)||{};
   return roomStub(env,code).fetch("https://room.internal/player/action",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({...body,loginId:data.member.loginId})});
+}
+async function playerOnlineUndoApi(env,raw,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch("https://room.internal/player/undo-action",{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({...body,loginId:data.member.loginId})});
 }
