@@ -50,7 +50,7 @@ jobs:
         run: |
           node --check .github/scripts/ci-browser-scope.mjs
           node --check infra/cloudflare-standby/fixture-contract.mjs
-          node --test infra/cloudflare-standby/fixture-contract.test.mjs tests/dual-cloudflare-release-guard.test.mjs tests/github-actions-pr-preview-ci.test.mjs tests/ci-browser-scope.test.mjs
+          node --test infra/cloudflare-standby/*.test.mjs tests/dual-cloudflare-release-guard.test.mjs tests/github-actions-pr-preview-ci.test.mjs tests/ci-browser-scope.test.mjs
           node .github/scripts/assemble-player-web.mjs --verify
           node .github/scripts/assemble-gm-app.mjs --verify
           node --check src/index.js
