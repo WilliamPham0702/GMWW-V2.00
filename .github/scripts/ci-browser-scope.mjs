@@ -3519,6 +3519,22 @@ function isRuntimeMergedV3286Scope(changes){
 // Dual Cloudflare B PR: exact synthetic code/CI scope only. Any gameplay,
 // runtime, asset, hidden or unknown path returns FULL Worker CI.
 function isDualCloudflareStandbyScope(changes){
+  // Stage 3 B health-only Worker: exact CI/fixture files, never gameplay or A release.
+  const stage3=new Map([
+    ['infra/cloudflare-standby/b-staging-worker.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-worker.test.mjs','A'],
+    ['infra/cloudflare-standby/wrangler-b-staging.jsonc','A'],
+    ['infra/cloudflare-standby/STAGE3-README.md','A'],
+    ['.github/workflows/check-cloudflare-standby.yml','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['tests/github-actions-pr-preview-ci.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ]);
+  if(Array.isArray(changes)&&changes.length===stage3.size&&
+    new Set(changes.map(x=>x.path)).size===stage3.size&&
+    changes.every(x=>stage3.get(x.path)===x.status))return true;
   // Follow-up STAGING contract only: exact six changed files, no gameplay or deployment.
   const followup=new Set([
     'infra/cloudflare-standby/fixture-contract.mjs',

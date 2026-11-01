@@ -29,6 +29,10 @@ jobs:
           node --check infra/cloudflare-standby/fixture-contract.mjs
           node --check infra/cloudflare-standby/storage-adapter.mjs
           node --test infra/cloudflare-standby/*.test.mjs
+      - name: Compile Cloudflare B synthetic Worker WITHOUT deployment
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx wrangler deploy --dry-run --config infra/cloudflare-standby/wrangler-b-staging.jsonc
       - name: Verify Production and OTA only skip isolated standby changes
         run: node --test tests/dual-cloudflare-release-guard.test.mjs
       - name: Refuse production mutations or credentials

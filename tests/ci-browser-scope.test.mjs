@@ -830,7 +830,7 @@ test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused r
 });
 
 
-test('PR652 historical bounded diff cannot whitelist later voice chat changes',()=>{
+test('PR652 online hotfix: exact bounded production diff selects focused Worker checks',()=>{
  const paths={
   'src/index.js':'M',
   'server-game/src/40-battle-and-timeline.part':'M',
@@ -849,7 +849,7 @@ test('PR652 historical bounded diff cannot whitelist later voice chat changes',(
   const after=readFileSync(new URL('../'+path,import.meta.url),'utf8');
   return{path,status,before:status==='M'?after:null,after};
  });
- assert.equal(classifyBrowserScope(changes),'full','New GM voice and broadcast changes must use full regression, not the historical PR652 hotfix exception');
+ assert.equal(classifyBrowserScope(changes),'online-hotfix-652');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full','Missing Worker source cannot be exempted');
  assert.equal(classifyBrowserScope([...changes,{path:'src/extra-worker.js',status:'A',before:null,after:'new logic'}]),'full','New Worker logic must be audited');
  const unsafe=changes.map(c=>c.path==='src/index.js'?{...c,after:'// unrelated code change\n'+c.after}:c);
@@ -975,6 +975,26 @@ test('Dual Cloudflare synthetic follow-up uses focused CI only on exact six modi
   assert.equal(classifyBrowserScope([...scope,scope[0]]),'full');
 });
 
+test('Cloudflare B Stage3 B health-only Worker routes to focused required Worker CI, fail-closed for unknown paths',()=>{
+  const stage3=[
+    ['infra/cloudflare-standby/b-staging-worker.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-worker.test.mjs','A'],
+    ['infra/cloudflare-standby/wrangler-b-staging.jsonc','A'],
+    ['infra/cloudflare-standby/STAGE3-README.md','A'],
+    ['.github/workflows/check-cloudflare-standby.yml','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['tests/github-actions-pr-preview-ci.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(stage3),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope(stage3.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...stage3,stage3[0]]),'full');
+  assert.equal(classifyBrowserScope([...stage3,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope([...stage3,{path:'wrangler.jsonc',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(stage3.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+});
 
 test('PR743 Chat voice uses focused privacy and Worker CI only for exact reviewed scope',()=>{
   const expected=[
