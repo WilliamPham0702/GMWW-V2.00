@@ -109,7 +109,7 @@ test('GM Chat monitor remains authorized and accessible from Seat setup',()=>{
  assert.match(chat,/function gmwwGMChatAvailable\(\)/);
  for(const step of ["'seats'","'game'","'roles'","'deal'","'battle'"])
    assert.ok(chat.includes(step));
- assert.match(chat,/trigger\.hidden=!\(active&&playSceneState\.step!=='battle'\)/);
+ assert.match(chat,/trigger\.hidden=!\(active&&\(playSceneState\.step!=='battle'\|\|playSceneState\.phase!=='day'\)\)/);
  assert.match(chat,/if\(!gmwwGMChatOpen\|\|!gmwwGMChatAvailable\(\)\)return/);
  assert.match(server,/async gmChatRead\(request\)\{\s*const auth=await this\.gmAuthorized\(request\)/);
  assert.match(chat,/playRoomApi\('\/chat',\{method:'GET'\}\)/);

@@ -43,7 +43,9 @@ test('GM overlay stays inside game shell, not on unrelated homepage',()=>{
 function roomHarness(){
   const snippet=worker.slice(worker.indexOf('  async gmReset('),worker.indexOf('  async alarm(){'));
   assert.ok(snippet.startsWith('  async gmReset('));
-  const Room=vm.runInNewContext('(class Room{'+snippet+'})',{
+  const voice=worker.slice(worker.indexOf('  async chatVoiceClear(){'),worker.indexOf('  async playerChatRead('));
+  assert.ok(voice.startsWith('  async chatVoiceClear(){'));
+  const Room=vm.runInNewContext('(class Room{'+snippet+voice+'})',{
     ROOM_IDLE_TTL:72*60*60*1000,
     j:result=>result,
     normalizeWinnerFaction:v=>v||'',

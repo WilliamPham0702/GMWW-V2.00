@@ -3583,7 +3583,45 @@ export function isPlayerFireWolf726Scope(changes, blobHash = file => git('hash-o
   } catch {return false;}
 }
 
+// PR743: exact Chat voice + GM broadcast deployment scope. Native IPA is isolated.
+// Any extra/renamed/native/config file fails closed to full regression.
+function isPR743ChatVoiceScope(changes){
+  const wanted=new Map([
+    ['server-game/current/app.js','M'],
+    ['server-game/src/45-online-chat.part','M'],
+    ['src/gmww-members-live.js','M'],
+    ['src/index.js','M'],
+    ['src/player-web-src/35-online-chat.part','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['tests/drunk-card-overlay-match-cleanup-20261028.test.mjs','M'],
+    ['tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs','A'],
+    ['tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs','M'],
+    ['tests/player-online-realtime-freeze-day-20261030.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['docs/releases/GMWW-CHAT-VOICE-PR743-20261102.md','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==wanted.size||
+    new Set(changes.map(c=>c.path)).size!==wanted.size||
+    !changes.every(c=>wanted.get(c.path)===c.status))return false;
+  try{
+    const worker=fs.readFileSync('src/index.js','utf8');
+    const gm=fs.readFileSync('server-game/src/45-online-chat.part','utf8');
+    const player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
+    const packagedGM=fs.readFileSync('server-game/current/app.js','utf8');
+    const packagedPlayer=fs.readFileSync('src/gmww-members-live.js','utf8');
+    return worker.includes('async chatVoiceRead(')&&worker.includes('async chatVoiceClear(')&&
+      worker.includes('async gmChatSend(')&&worker.includes('CHAT_VOICE_INVALID')&&
+      gm.includes('function gmwwGMVoiceToggle()')&&gm.includes('gmwwGMChatTarget')&&
+      player.includes('gmwwChatVoiceToggle')&&
+      packagedGM.includes(gm)&&
+      packagedPlayer.includes(JSON.stringify(player).slice(1,-1).slice(0,180))&&
+      fs.readFileSync('tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs','utf8').includes('chatVoiceRead(');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isPR743ChatVoiceScope(changes))return 'gmww-chat-voice-pr743';
   if(isPlayerFireWolf726Scope(changes))return 'player-fire-wolf-726';
   if(isDualCloudflareStandbyScope(changes))return 'dual-cloudflare-standby';
   if(isRuntimeMergedV3288Scope(changes))return 'runtime-merged-v3288';

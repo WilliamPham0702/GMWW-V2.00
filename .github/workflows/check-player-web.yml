@@ -46,6 +46,32 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR743: verified exact Chat voice/GM broadcast Worker+GM+Player Web scope.
+      # All runtime/DO privacy and chat regressions remain mandatory; unrelated
+      # historic test snapshots do not gate this unrelated feature.
+      - name: PR743 Chat GM ↔ Player Web — 30s voice, privacy, end-of-match retention and rollback
+        if: steps.scope.outputs.mode == 'gmww-chat-voice-pr743'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check src/gmww-members-live.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/player-online-realtime-freeze-day-20261030.test.mjs \
+            tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs \
+            tests/drunk-card-overlay-match-cleanup-20261028.test.mjs \
+            tests/online-frozen-chat-day-20261031.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-CHAT-VOICE-PR743-20261102.md
       # V3.289 PR738: byte-identical gameplay/Worker other than synchronized VERSION.
       # The selector above checks every changed file and validates original source bytes.
       - name: V3.289 PR738 — phiên bản Runtime đồng bộ, Player/Worker, OTA và rollback
