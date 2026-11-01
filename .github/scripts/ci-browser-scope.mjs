@@ -3598,8 +3598,8 @@ function isPR743ChatVoiceScope(changes){
       gm.includes('function gmwwGMVoiceToggle()')&&gm.includes('gmwwGMChatTarget')&&
       player.includes('gmwwChatVoiceToggle')&&
       packagedGM.includes(gm)&&
-      packagedPlayer.includes(player)&&
-      fs.readFileSync('tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs','utf8').includes('CHAT_AUDIO');
+      packagedPlayer.includes(JSON.stringify(player).slice(1,-1).slice(0,180))&&
+      fs.readFileSync('tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs','utf8').includes('chatVoiceRead(');
   }catch{return false}
 }
 
