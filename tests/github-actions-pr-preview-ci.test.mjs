@@ -230,3 +230,27 @@ test('PR726 Worker CI-LITE accepts only unchanged 9 audited game files and keeps
   assert.match(workflow,/code 10067/);
   assert.match(workflow,/wrangler preview --config wrangler\.jsonc/);
 });
+
+test('PR727 CI-only five-file merge suppresses Runtime release while preserving full CI fallback',()=>{
+  const paths=[
+    '.github/scripts/ci-browser-scope.mjs',
+    '.github/workflows/check-player-web.yml',
+    '.github/workflows/check-pr-preview-github.yml',
+    '.github/workflows/github-runtime-ota.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs'
+  ];
+  const entries=paths.map(path=>({path,status:'M',after:readFileSync(path,'utf8')}));
+  assert.equal(classifyBrowserScope(entries),'ci-lite-preview-workflow');
+  assert.equal(classifyBrowserScope(entries.filter(x=>x.path!=='.github/workflows/github-runtime-ota.yml')),'ci-lite-preview-workflow');
+  assert.equal(classifyBrowserScope([...entries,{path:'src/index.js',status:'M',after:'unsafe'}]),'full');
+  assert.equal(classifyBrowserScope(entries.slice(1)),'full');
+  assert.equal(classifyBrowserScope(entries.map(x=>x.path==='.github/workflows/github-runtime-ota.yml'?{...x,status:'D'}:x)),'full');
+  assert.equal(classifyBrowserScope(entries.map(x=>x.path==='.github/workflows/github-runtime-ota.yml'?{...x,after:'unguarded'}:x)),'full');
+  const runtime=readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+  const guard=runtime.match(/# PR727_CI_ONLY_GUARD:[\s\S]*?if \[ "\$CHANGED" = "\$PR727_ONLY" \]; then\s*SKIP_AUTO_RELEASE=true/);
+  assert.ok(guard,'CI-only merge must have an exact-path Runtime auto-publish suppression');
+  for(const path of paths)assert.ok(guard[0].includes("'"+path+"'"),'Runtime guard missing '+path);
+  assert.match(runtime,/if: github\.event_name != 'pull_request' && needs\.package\.result == 'success' && needs\.package\.outputs\.skip_auto_release != 'true'/);
+  const prod=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  for(const path of paths)assert.ok(prod.includes(path),'Production no-deploy allowlist missing '+path);
+});
