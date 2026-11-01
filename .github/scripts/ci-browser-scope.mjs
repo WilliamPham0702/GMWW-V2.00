@@ -3907,6 +3907,32 @@ function isGMPlayerLinkShare637Scope(){
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
 function detect(){
+  // PR731_V3288_PUSH_RECOVERY: must run BEFORE legacy main full-suite fallback.
+  // Only the exact three CI files of this fix may vary; all V3.288 gameplay/OTA bytes stay identical.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.288.0'){
+        const expected=new Set(['.github/scripts/ci-browser-scope.mjs','.github/workflows/github-runtime-ota.yml','tests/github-actions-pr-preview-ci.test.mjs']);
+        const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+        if(rows.length===expected.size&&rows.every(row=>{
+          const [status,file]=row.split('\t');
+          return status==='M'&&expected.has(file);
+        })){
+          git('merge-base','--is-ancestor','e82ee014ed4929118b44294e9bfde5288a5cca44','HEAD');
+          git('diff','--quiet','e82ee014ed4929118b44294e9bfde5288a5cca44','HEAD','--','src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc','.github/scripts/prepare-update-channel.mjs');
+          const runtime=fs.readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+          const tests=fs.readFileSync('tests/github-actions-pr-preview-ci.test.mjs','utf8');
+          const selector=fs.readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+          if(runtime.includes('PR728_CI_ONLY_GUARD')&&runtime.includes('PR731_CI_ONLY_GUARD')&&
+             tests.includes('PR731 V3.288 early Worker push CI routing')&&
+             selector.includes('PR731_V3288_PUSH_RECOVERY')){
+            return {mode:'player-fire-wolf-726',reason:'V3.288 source-immutable CI-only repair; strict wolf/undo Worker regression'};
+          }
+        }
+      }
+    }catch{} // Fail closed to full CI if any ancestry, file, or release proof fails.
+  }
+
   // BEGIN GMWW_V3287_POSTMERGE_CI_ONLY
   // Exact CI-only recovery for merged #724: no gameplay, Runtime binary or OTA edits.
   // Used on both PR and main push; a different diff falls back to full tests.

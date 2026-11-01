@@ -291,3 +291,17 @@ test('PR726 V3.288 postmerge CI recovery keeps exact source and release gates',(
   assert.match(runtime,/PR728_CI_ONLY_GUARD/);
   assert.match(runtime,/SKIP_AUTO_RELEASE=true/);
 });
+
+test('PR731 V3.288 early Worker push CI routing remains isolated to exact three files',()=>{
+  const paths=['.github/scripts/ci-browser-scope.mjs','.github/workflows/github-runtime-ota.yml','tests/github-actions-pr-preview-ci.test.mjs'];
+  const entries=paths.map(path=>({path,status:'M',after:readFileSync(path,'utf8')}));
+  assert.equal(classifyBrowserScope(entries),'ci-lite-preview-workflow');
+  assert.equal(classifyBrowserScope([...entries,{path:'src/index.js',status:'M',after:'unreviewed'}]),'full');
+  const selector=readFileSync(paths[0],'utf8');
+  const position=selector.indexOf('PR731_V3288_PUSH_RECOVERY');
+  const earlyLegacy=selector.indexOf('Main contains changes outside the verified scoped lists');
+  assert.ok(position>=0&&position<earlyLegacy,'PR731 push check must run before legacy full fallback');
+  assert.match(selector,/git\('diff','--quiet','e82ee014ed4929118b44294e9bfde5288a5cca44'/);
+  assert.match(selector,/return \{mode:'player-fire-wolf-726'/);
+  assert.match(readFileSync(paths[1],'utf8'),/PR731_CI_ONLY_GUARD/);
+});
