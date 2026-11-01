@@ -170,12 +170,12 @@ async function gmwwChatRefresh(){
     if(!panel||!lines)return;
     panel.classList.toggle('secret',result.scope==='secret');
     document.getElementById('gmwwChatHeading').textContent=result.scope==='gm'?'🔒 Chat riêng GM':result.scope==='secret'?'🌙 Chat nhóm':'☀️ Chat Làng';
-    const items=[...(Array.isArray(result.notices)?result.notices:[]),...(Array.isArray(result.messages)?result.messages:[])];
+    const items=[...(Array.isArray(result.notices)?result.notices:[]),...(Array.isArray(result.broadcasts)?result.broadcasts:[]),...(Array.isArray(result.messages)?result.messages:[])].sort((a,b)=>Number(a.at||0)-Number(b.at||0));
     const signature=JSON.stringify([gmwwChatTarget,items]);
     // Never expose message contents through room_state or the WebSocket.
     // The authenticated chat GET is the source of truth for a new-message cue.
     const key=room+'|'+gmwwChatTarget+'|'+String(result.channel||'');
-    const last=Array.isArray(result.messages)?result.messages.at(-1):null;
+    const last=items.filter(x=>!x.system).at(-1)||null;
     const lastId=String(last?.id||'');const previous=gmwwChatLatestByChannel.get(key);
     if(lastId){
       if(previous!==undefined&&previous!==lastId&&!gmwwChatOpen&&String(last?.senderId||'')!==String(state.member?.loginId||''))gmwwChatUnread(true);
