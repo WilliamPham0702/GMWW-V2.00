@@ -137,7 +137,7 @@ function gmwwChatDockSync(){
     footer=document.createElement('div');footer.id='gmwwOnlineFooter';footer.setAttribute('aria-label','Menu dưới Player Web');
     const clock=document.createElement('button');clock.type='button';clock.className='gmww-foot-button';clock.id='gmwwPlayerClock';clock.title='Đồng hồ đồng bộ GM';clock.disabled=true;clock.textContent='--:--';
     const undo=document.createElement('button');undo.type='button';undo.className='gmww-foot-button';undo.id='gmwwPlayerRestore';undo.textContent='↶';undo.title='Khôi phục thao tác đang chọn (chưa gửi)';undo.setAttribute('aria-label','Khôi phục thao tác chưa gửi');
-    undo.onclick=()=>{gmwwOnlineStop();state.gallowsSelectedId='';setGameViewPane('village',{persist:false});renderGallowsWidget();toast('Đã khôi phục thao tác chưa gửi.')};
+    undo.onclick=()=>{state.gallowsSelectedId='';setGameViewPane('village',{persist:false});renderGallowsWidget();void gmwwOnlineRestore()};
     footer.append(clock,panel,undo);document.body.appendChild(footer);
   }
   footer.hidden=!document.getElementById('game')?.classList.contains('active');
