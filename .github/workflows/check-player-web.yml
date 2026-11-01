@@ -1335,8 +1335,58 @@ jobs:
           node --check src/index.js
           npm run check
           echo "PASS: V3 exact policy-only; required checks retained." >> "$GITHUB_STEP_SUMMARY"
+      - name: V3 Server/Player parity — exact scope, deep safety regression
+        id: v3_parity
+        if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || github.event_name == 'push')
+        env:
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            [[ "$GMWW_CI_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 0
+            BASE="$GMWW_CI_BASE_SHA"
+          else
+            [ "$GITHUB_REF" = 'refs/heads/main' ] || exit 0
+            BASE='HEAD^1'
+          fi
+          ACTUAL=$(git diff --name-only --no-renames "$BASE" HEAD | sort)
+          EXPECTED=$(printf '%s\n' \
+            .github/workflows/check-v3-player-visual-parity.yml \
+            .github/workflows/check-player-web.yml \
+            docs/releases/GMWW-V3-PLAYER-SERVER-VISUAL-PARITY-20261101.md \
+            src/gmww-demo-runner.js \
+            src/gmww-members-live.js \
+            src/index.js \
+            src/player-web-src/30-rooms-and-realtime.part \
+            src/player-web-src/35-online-chat.part \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs | sort)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo 'V3 parity files differ from approved scope: retain full Worker checks.'
+            exit 0
+          fi
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/index.js
+          node --test \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/player-web-v3-iframe-drag.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/player-web-online-village-20261028.test.mjs \
+            tests/player-online-realtime-freeze-day-20261030.test.mjs \
+            tests/player-web-receipt-patch-hotfix.test.mjs \
+            tests/demo-witch-save-no-bite.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs \
+            tests/gmww-wolf-night-resolution.test.mjs \
+            tests/player-web-wolf-ballots-20261101.test.mjs \
+            tests/online-chat-authority.test.mjs
+          npm run check
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'V3 parity: exact 10 files and 12 focused regression suites SUCCESS, Worker dry run SUCCESS.' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
