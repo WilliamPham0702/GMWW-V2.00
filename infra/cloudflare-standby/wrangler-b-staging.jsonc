@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "gmww-b-staging-synthetic",
+  "main": "./b-staging-worker.mjs",
+  "compatibility_date": "2026-09-30",
+  "workers_dev": true,
+  "preview_urls": false
+}
