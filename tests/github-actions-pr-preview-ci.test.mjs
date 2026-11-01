@@ -407,3 +407,30 @@ test('dual Cloudflare synthetic SQLite restore PR skips Preview only for source 
   assert.equal(classify([...files,files[0]]),false);
   assert.match(workflow,/needs\.oracle-scope\.outputs\.standby_only != 'true'/);
 });
+
+test('Cloudflare B Stage 3 isolated health-only Worker does not consume A Preview namespaces',()=>{
+  const match=workflow.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/);
+  assert.ok(match,'Preview scope classifier must be present');
+  const statement=match[1].split('\n').find(l=>l.trim().startsWith('const standbyOnly = '));
+  assert.ok(statement,'Standby classifier must stay present');
+  const expr=statement.trim().slice('const standbyOnly = '.length).replace(/;$/,'');
+  const classify=changed=>vm.runInNewContext(expr,{changed});
+  const A=path=>({status:'A',path}),M=path=>({status:'M',path});
+  const files=[
+    A('infra/cloudflare-standby/b-staging-worker.mjs'),
+    A('infra/cloudflare-standby/b-staging-worker.test.mjs'),
+    A('infra/cloudflare-standby/wrangler-b-staging.jsonc'),
+    A('infra/cloudflare-standby/STAGE3-README.md'),
+    M('.github/workflows/check-cloudflare-standby.yml'),
+    M('.github/workflows/check-pr-preview-github.yml'),
+    M('tests/github-actions-pr-preview-ci.test.mjs')
+  ];
+  assert.equal(classify(files),true,'isolated B health staging has separate dry-run CI');
+  for(const name of ['infra/cloudflare-standby/b-staging-worker.mjs','infra/cloudflare-standby/b-staging-worker.test.mjs','infra/cloudflare-standby/wrangler-b-staging.jsonc']){
+    assert.equal(classify(files.filter(x=>x.path!==name)),false,'missing '+name+' must fail closed');
+  }
+  assert.equal(classify([...files,M('src/index.js')]),false,'real gameplay edit must retain Preview');
+  assert.equal(classify([...files,A('assets/other.js')]),false,'unexpected assets must retain Preview');
+  assert.equal(classify([...files,files[0]]),false,'duplicate path must fail closed');
+  assert.equal(classify(files.map((x,i)=>i===0?{...x,status:'D'}:x)),false,'deletions must fail closed');
+});
