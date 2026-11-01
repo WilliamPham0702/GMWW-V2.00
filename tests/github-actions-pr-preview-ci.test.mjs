@@ -70,6 +70,9 @@ test('CI-LITE docs-only and Preview-CI-only selectors fail closed without droppi
   const ciOnly=[
     M('.github/workflows/check-pr-preview-github.yml'),
     M('tests/github-actions-pr-preview-ci.test.mjs'),
+    M('tests/ci-browser-scope.test.mjs'),
+    M('.github/scripts/ci-browser-scope.mjs'),
+    M('.github/workflows/check-player-web.yml'),
     M('.github/scripts/ci-browser-scope.mjs'),
     M('.github/workflows/check-player-web.yml')
   ];
