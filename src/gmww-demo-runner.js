@@ -40,7 +40,9 @@ function nightActions(ctx,meta,turn,usage,showBlocked=false){
   const roleId=role?.roleId,card=ctx.cards.find(c=>c.id===roleId);
   if(roleId==='role_snow_wolf'&&action.actionId==='action_wolf_bite'&&!canSnowWolfBite({assignments:ctx.assignments,interactions:ctx.rows,matchId:meta.matchId,statusDefs:STATUS_DEFS}))return false;
   // One shared group action is enough; an already-confirmed manual action counts.
-  if(usage.some(x=>x.matchId===meta.matchId&&Number(x.night)===Number(meta.cycleNight)&&x.actionId===action.actionId&&action.actorIds.includes(x.actorId)&&(!action.roleIds?.length||action.roleIds.includes(x.roleId))))return false;
+  if(usage.some(x=>x.matchId===meta.matchId&&Number(x.night)===Number(meta.cycleNight)&&x.actionId===action.actionId&&
+    (turn.kind==='wolf-pack-bite'?x.actorId===actorId:action.actorIds.includes(x.actorId))&&
+    (!action.roleIds?.length||action.roleIds.includes(x.roleId))))return false;
   return checkBattleRoleActionUsage(usage,{matchId:meta.matchId,night:meta.cycleNight,actorId,roleId,actionId:action.actionId,card}).ok;
  })})).filter(a=>!a.unavailable&&a.actorIds.length);
 }
