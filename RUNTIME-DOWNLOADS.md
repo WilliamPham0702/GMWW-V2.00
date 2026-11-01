@@ -37,7 +37,7 @@
 
 | QA — KHÔNG CÀI | Tệp kiểm thử gốc | SHA-256 ZIP | Trạng thái |
 |:--|:--|:--|:--|
-| **V3.288 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41295055337/artifacts/13078249772) (chứa .gmwwupdate) | `6a61450df2bc4160c1d08f49b6c1aa9db5dec589ccbe679ffa134091dcbd661c` (ZIP) | Hết hạn: 2027-01-30; **chưa phát hành Production** |
+| **V3.288 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41295369101/artifacts/13079245426) (chứa .gmwwupdate) | `7055aed1da93454cf73dacdfe7ad82983906ad91c3e4ffd88a1e2b6fdf2917b0` (ZIP) | Hết hạn: 2027-01-30; **chưa phát hành Production** |
 | **V3.284 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41169326543/artifacts/13030496723) (chứa .gmwwupdate) | `547f59a7f90f78d753db7d8ce3401330c7fee19ffebc4068d6b7fc737407d36a` (ZIP) | Hết hạn: 2027-01-29; **chưa phát hành Production** |
 
 ## 5. LỊCH SỬ VÀ CHÍNH SÁCH
