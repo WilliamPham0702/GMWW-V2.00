@@ -3405,6 +3405,52 @@ function isOnlineP0CiRoutingScope(changes){
     by.get('docs/releases/GMWW-ONLINE-P0-CI-20261031.md').includes('Rollback');
 }
 
+
+// BEGIN GMWW_RUNTIME_3287_AUDIT
+// Focused CI is permitted ONLY for the exact audited release delta.
+// Every unexpected file, source edit, or status falls back to FULL Worker CI.
+function isRuntimeChatV3287Scope(changes){
+  const expected=new Map([
+    ['package.json','M'],['package-lock.json','M'],
+    ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+    ['server-game/src/00-core-and-library.part','M'],['src/index.js','M'],
+    ['.github/scripts/prepare-update-channel.mjs','M'],
+    ['tests/demo-runtime-v3285-release.test.mjs','M'],
+    ['docs/releases/GMWW-RUNTIME-V3.287-CHAT-UI-20261101.md','A'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(c=>c.path)).size!==expected.size||
+    changes.some(c=>expected.get(c.path)!==c.status))return false;
+  const by=new Map(changes.map(c=>[c.path,c]));
+  const exactly=(p,a,b)=>{const c=by.get(p);return typeof c.before==='string'&&
+    c.before.includes(a)&&c.after===c.before.replace(a,b);};
+  if(!exactly('package.json','"version": "3.286.0"','"version": "3.287.0"')||
+     !exactly('server-game/current/GMWW.html','<title>GMWW V3.286</title>','<title>GMWW V3.287</title>')||
+     !exactly('server-game/current/app.js',"const VERSION='3.286';","const VERSION='3.287';")||
+     !exactly('server-game/src/00-core-and-library.part',"const VERSION='3.286';","const VERSION='3.287';")||
+     !exactly('src/index.js','VERSION="V3.286",NATIVE_SHELL_VERSION','VERSION="V3.287",NATIVE_SHELL_VERSION'))return false;
+  const lock=by.get('package-lock.json');
+  if(typeof lock.before!=='string'||lock.after!==lock.before.replaceAll('"version": "3.286.0"','"version": "3.287.0"'))return false;
+  const note=by.get('.github/scripts/prepare-update-channel.mjs');
+  if(typeof note.before!=='string'||typeof note.after!=='string'||
+     !note.after.includes('releaseNotes:["V3.287: PR #720 thay thế PR #710')||
+     note.after.replace(/releaseNotes:\["V3\.287:[^"]+","V3\.286/,'releaseNotes:["V3.286')!==note.before)return false;
+  const tst=by.get('tests/demo-runtime-v3285-release.test.mjs');
+  if(typeof tst.after!=='string'||!tst.after.includes("assert.equal(pkg.version,'3.287.0')")||
+     !tst.after.includes('V3.287: PR #720 thay thế PR #710')||
+     !tst.after.includes('GMWW-RUNTIME-V3.287-CHAT-UI-20261101.md'))return false;
+  const doc=by.get('docs/releases/GMWW-RUNTIME-V3.287-CHAT-UI-20261101.md').after;
+  if(typeof doc!=='string'||!doc.includes('PR #720')||!doc.includes('PR #721')||
+     !doc.includes('V3.286')||!doc.includes('Rollback'))return false;
+  return by.get('.github/scripts/ci-browser-scope.mjs').after.includes('GMWW_RUNTIME_3287_AUDIT')&&
+    by.get('.github/workflows/check-player-web.yml').after.includes("steps.scope.outputs.mode == 'runtime-chat-v3287'")&&
+    by.get('.github/workflows/check-pr-preview-github.yml').after.includes('runtimeReleaseV3287Only');
+}
+// END GMWW_RUNTIME_3287_AUDIT
+
 // Exact V3.286 release-only scope: all gameplay source is already merged on main.
 // Any unreviewed bytes, extra file or unexpected status falls back to FULL testing.
 function isRuntimeMergedV3286Scope(changes){
@@ -3492,6 +3538,7 @@ function isDualCloudflareStandbyScope(changes){
 
 function classifyBrowserScope(changes){
   if(isDualCloudflareStandbyScope(changes))return 'dual-cloudflare-standby';
+  if(isRuntimeChatV3287Scope(changes))return 'runtime-chat-v3287';
   if(isRuntimeMergedV3286Scope(changes))return 'runtime-merged-v3286';
   if(isOnlineP0CiRoutingScope(changes))return 'online-p0-ci-routing';
   if(isOnlineP0Player699Scope(changes))return 'online-p0-player-699';
@@ -3836,6 +3883,8 @@ function detect(){
         return{status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
           after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
       });
+      if(isRuntimeChatV3287Scope(changes))
+        return{mode:'runtime-chat-v3287',reason:'Exact V3.287 Chat UI version-only release with source bytes audited'};
       if(isRuntimeMergedV3286Scope(changes))
         return{mode:'runtime-merged-v3286',reason:'Exact same-SHA V3.286 merged-only runtime release'};
       // Exact CI-only main recovery: same validated V3.286 app bytes from #714.
