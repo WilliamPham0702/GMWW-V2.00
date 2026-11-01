@@ -3642,7 +3642,28 @@ function isPR743ChatPostmergeScope(changes){
   }catch{return false}
 }
 
+// Stage 2: exact CI-only correction after PR747. No Worker, Runtime or IPA changes.
+function isPR743ChatPostmergeScopeV2(changes){
+  const expected=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/deploy-pr743-chat-worker.yml','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(c=>c.path)).size!==expected.size||
+    changes.some(c=>expected.get(c.path)!==c.status))return false;
+  try{
+    const deploy=fs.readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
+    const worker=fs.readFileSync('src/index.js','utf8');
+    return deploy.includes('cc430dd97af48aba6afb1d415582d9e5818457dd')&&
+      deploy.includes('Automatic rollback')&&worker.includes('async chatVoiceStore(')&&
+      worker.includes('async chatVoiceRead(')&&
+      JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.289.0';
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isPR743ChatPostmergeScopeV2(changes))return 'gmww-chat-pr743-postmerge';
   if(isPR743ChatPostmergeScope(changes))return 'gmww-chat-pr743-postmerge';
   if(isPR743ChatVoiceScope(changes))return 'gmww-chat-voice-pr743';
   if(isPlayerFireWolf726Scope(changes))return 'player-fire-wolf-726';
@@ -4655,6 +4676,18 @@ function detect(){
       if(isPlayerToastPostmergeScope(changes))
         return{mode:'player-toast-postmerge',reason:'Exact CI-only postmerge #702; Player Web source immutable'};
     }catch{} // Unknown diff runs full checks.
+  }
+  // PR743 CI-only push recovery must run before the legacy catch-all main-push FULL return.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      git('merge-base','--is-ancestor','cc430dd97af48aba6afb1d415582d9e5818457dd','HEAD');
+      git('diff','--quiet','7b981859d4f9171e47f4a7c0d7164b50f27d7bda','HEAD','--',
+          'src','server-game','assets','package.json','package-lock.json','wrangler.jsonc');
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path}});
+      if(isPR743ChatPostmergeScopeV2(changes))
+        return{mode:'gmww-chat-pr743-postmerge',reason:'Exact PR743 CI-only selector recovery with immutable merged Chat code'};
+    }catch{} // Unapproved or stale changes fall back to full CI.
   }
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
