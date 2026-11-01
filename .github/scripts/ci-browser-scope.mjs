@@ -3290,8 +3290,8 @@ function isPlayerToastCiRoutingScope(changes){
   }catch{return false}
 }
 
-// CI-LITE A: only the exact four-file Preview routing repair may use focused CI.
-// Any gameplay/runtime/permission file or unexpected deletion falls back to full tests.
+// CI-LITE A: original four-file Preview repair or the exact five-file PR727
+// CI-only Runtime guard. Extra source, runtime payload or permission edits fail closed.
 function isCiLitePreviewWorkflowScope(changes){
   const required=new Set([
     '.github/workflows/check-pr-preview-github.yml',
@@ -3299,14 +3299,22 @@ function isCiLitePreviewWorkflowScope(changes){
     '.github/scripts/ci-browser-scope.mjs',
     '.github/workflows/check-player-web.yml'
   ]);
-  if(!Array.isArray(changes)||changes.length!==required.size||
-     new Set(changes.map(c=>c.path)).size!==required.size||
-     changes.some(c=>!required.has(c.path)||c.status!=='M'))return false;
+  const runtimeGuard='.github/workflows/github-runtime-ota.yml';
+  const hasRuntimeGuard=Array.isArray(changes)&&changes.some(c=>c.path===runtimeGuard);
+  const allowed=new Set([...required,...(hasRuntimeGuard?[runtimeGuard]:[])]);
+  if(!Array.isArray(changes)||changes.length!==allowed.size||
+     new Set(changes.map(c=>c.path)).size!==allowed.size||
+     changes.some(c=>!allowed.has(c.path)||c.status!=='M')||
+     [...required].some(p=>!changes.some(c=>c.path===p)))return false;
   const get=path=>changes.find(c=>c.path===path)?.after||'';
   return get('.github/workflows/check-pr-preview-github.yml').includes('needs.oracle-scope.outputs.preview_ci_only')&&
     get('tests/github-actions-pr-preview-ci.test.mjs').includes('CI-LITE docs-only and Preview-CI-only selectors fail closed')&&
     get('.github/scripts/ci-browser-scope.mjs').includes('function isCiLitePreviewWorkflowScope(changes)')&&
-    get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'ci-lite-preview-workflow'");
+    get('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'ci-lite-preview-workflow'")&&
+    (!hasRuntimeGuard||(
+      get(runtimeGuard).includes('PR727_CI_ONLY_GUARD')&&
+      get(runtimeGuard).includes('SKIP_AUTO_RELEASE=true')
+    ));
 }
 
 // PR702 after-merge CI recovery. Only the exact CI/test/docs repair is scoped;
