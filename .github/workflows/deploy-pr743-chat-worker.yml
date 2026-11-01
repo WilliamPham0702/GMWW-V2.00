@@ -35,14 +35,14 @@ jobs:
           test "$(git rev-parse HEAD)" = "$TESTED_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TESTED_SHA" || { echo "::error::Main moved; no deployment"; exit 1; }
           git merge-base --is-ancestor 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD
+          git merge-base --is-ancestor cc430dd97af48aba6afb1d415582d9e5818457dd HEAD
           test "$(node -p 'require("./package.json").version')" = '3.289.0'
           git diff --quiet 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc .github/scripts/prepare-update-channel.mjs || {
             echo "::error::Runtime/assets/config changed since PR743 merge"; exit 1;
           }
-          # This workflow is only permitted from a four-file postmerge CI fix.
+          # This workflow is only permitted from an exact three-file postmerge CI fix.
           diff -u <(printf '%s\n' \
             .github/scripts/ci-browser-scope.mjs \
-            .github/workflows/check-player-web.yml \
             .github/workflows/deploy-pr743-chat-worker.yml \
             tests/ci-browser-scope.test.mjs | sort) \
             <(git diff --name-only HEAD^1 HEAD | sort)
