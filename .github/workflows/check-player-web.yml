@@ -1240,8 +1240,48 @@ jobs:
             tests/online-chat-authority.test.mjs
           node --test --test-name-pattern='PR652 online hotfix' tests/ci-browser-scope.test.mjs
           test -s docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md
+      - name: V3 drag hotfix — verify immutable sandbox-tested source and focused regressions
+        id: v3_drag
+        if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || github.event_name == 'push')
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GMWW_CI_EVENT" = 'pull_request' ]; then
+            [[ "$GMWW_CI_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 0
+            BASE="$GMWW_CI_BASE_SHA"
+          else
+            [ "$GITHUB_REF" = 'refs/heads/main' ] || exit 0
+            BASE='HEAD^1'
+          fi
+          ACTUAL=$(git diff --name-only --no-renames "$BASE" HEAD | sort)
+          EXPECTED=$(printf '%s\n' \
+            .github/workflows/check-player-web.yml \
+            src/gmww-members-live.js \
+            src/player-web-src/35-online-chat.part \
+            tests/player-web-v3-iframe-drag.test.mjs | sort)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then exit 0; fi
+          # Any unexpected source/test byte reverts to the ordinary full suite.
+          test "$(git hash-object src/gmww-members-live.js)" = '44949a5f3e7ab012be216a3dc77badb169444c1d' || exit 0
+          test "$(git hash-object src/player-web-src/35-online-chat.part)" = 'e06aeb9844ca52716340c2ec2c79303cf6fdf068' || exit 0
+          test "$(git hash-object tests/player-web-v3-iframe-drag.test.mjs)" = '7f825cb26fdc44829ebc4b16ecd874bd8c666843' || exit 0
+          test "$(node -p "require('./package.json').version")" = '3.288.0' || exit 0
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/index.js
+          node --test \
+            tests/player-web-v3-iframe-drag.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/player-web-wolf-ballots-20261101.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/player-web-online-village-20261028.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'V3 Player Web: immutable STAGING-tested bytes, full focused action and session tests PASS.' >> "$GITHUB_STEP_SUMMARY"
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -1264,14 +1304,14 @@ jobs:
         if: steps.scope.outputs.mode == 'dual-renderer'
         run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
-        if: steps.scope.outputs.mode == 'full'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true'
         shell: bash
         run: |
           python3 -m venv /tmp/gmww-avatar-venv
           /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
           /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Kiểm tra nhanh Player Web trên máy thử nghiệm
-        if: steps.scope.outputs.mode == 'full'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true'
         shell: bash
         run: |
           set -euo pipefail
