@@ -128,7 +128,7 @@
 
   <div class="profile-actions-row">
     <button class="profile-exit-btn" onclick="go('login')">THOÁT</button>
-    <button class="primary gold profile-enter-room" onclick="openRooms()">VÀO PHÒNG ›</button>
+    <button class="primary gold profile-enter-room" onclick="openRooms()">VỀ LÀNG ›</button>
   </div>
 
   <details class="history-fold">
@@ -140,42 +140,6 @@
     </div>
   </details>
 
-</section>
-
-<!-- 4. CHỌN PHÒNG -->
-<section id="rooms" class="screen">
-  <div class="topbar"><button class="back" onclick="go('profile')">← QUAY VỀ</button><div class="game-state">● ONLINE</div></div>
-  <div class="kicker">PHÒNG ĐANG HOẠT ĐỘNG</div>
-  <h1 class="page-title">Chọn Phòng</h1>
-  <p class="page-sub">Chỉ hiển thị các phòng GM đang mở tại thời điểm hiện tại.</p>
-
-  <div class="room-list">
-    <article id="roomA" class="room-card">
-      <div class="room-head"><div><h3>Làng Trăng Máu</h3><small>Quản Trò: William • Mã Z3ZAPP</small></div><span class="live">● LIVE</span></div>
-      <div class="room-metrics">
-        <div class="metric"><b>12 Vai Trò</b><span>Đã cấu hình cho ván</span></div>
-        <div class="metric"><b id="countA">3 / 12</b><span>Người đã tham gia</span></div>
-      </div>
-      <button class="primary join-btn" onclick="joinRoom('roomA')">THAM GIA</button>
-      <div class="room-detail">
-        <div class="section-title" style="margin-top:0">Thành viên</div>
-        <div class="member-row"><img src="__GMWW_EMBED_IMAGE_3__"><div><b>William0702</b><small class="ready-yes">Đã sẵn sàng</small></div><span class="badge win">READY</span></div>
-        <div class="member-row"><img src="__GMWW_EMBED_IMAGE_4__"><div><b>William Phạm</b><small class="ready-yes">Đã sẵn sàng</small></div><span class="badge win">READY</span></div>
-        <div class="member-row"><img src="__GMWW_EMBED_IMAGE_5__"><div><b id="meRoomName">Bạn</b><small id="myReadyText" class="ready-no">Chưa sẵn sàng</small></div><span id="myReadyBadge" class="badge lose">WAIT</span></div>
-        <div id="waitNote" class="wait-note">Nhấn Sẵn Sàng khi bạn đã chuẩn bị xong.</div>
-        <div class="room-actions">
-          <button id="readyBtn" class="primary gold" onclick="toggleReady()">SẴN SÀNG</button>
-          <button class="secondary" onclick="leaveRoom()">RỜI ĐI</button>
-        </div>
-      </div>
-    </article>
-
-    <article class="room-card">
-      <div class="room-head"><div><h3>Thành Phố Sói</h3><small>Quản Trò: Minh • Mã WOLF88</small></div><span class="live">● LIVE</span></div>
-      <div class="room-metrics"><div class="metric"><b>10 Vai Trò</b><span>Đã cấu hình</span></div><div class="metric"><b>7 / 10</b><span>Người đã tham gia</span></div></div>
-      <button class="primary join-btn" onclick="toast('Bản demo: chọn phòng Làng Trăng Máu để xem luồng đầy đủ')">THAM GIA</button>
-    </article>
-  </div>
 </section>
 
 <!-- 5. VÀO GAME -->
