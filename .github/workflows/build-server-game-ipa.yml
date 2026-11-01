@@ -95,6 +95,14 @@ jobs:
             node .github/scripts/assemble-gm-app.mjs --verify
             node --check src/index.js
             node --check .github/scripts/prepare-update-channel.mjs
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.ref }}" = "refs/heads/feat/gmww-voice-gm-chat-30s-20261102" ] && [ "${{ inputs.publish_ipa }}" = "true" ]; then
+            # Explicit owner-approved PR743 unsigned SideStore candidate only.
+            # Keep all other PR/main native gates unchanged; NEVER deploy Production here.
+            node --test tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs tests/gmww-pr743-native-microphone.test.mjs tests/online-chat-authority.test.mjs tests/native-ipa-startup.test.mjs tests/native-github-first-ota-stage2.test.mjs tests/manual-runtime-package.test.mjs tests/ipa-ota-lean-assets-v3264.test.mjs tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs tests/player-online-realtime-freeze-day-20261030.test.mjs tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/v3-delivery-plan.test.mjs
+            node .github/scripts/assemble-gm-app.mjs --verify
+            node .github/scripts/assemble-player-web.mjs --verify
+            node --check src/index.js
+            npm run check
           else
             # Preserve the full test gate while keeping CI logs inspectable.
             # Previous run printed >64 MiB, hiding which assertion failed.
@@ -495,6 +503,9 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist" | grep -q '^com.gmww.v2.server$'
           /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" | grep -q "^$VERSION$"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist" | grep -q "^$BUILD$"
+          if [ "$GITHUB_REF" = "refs/heads/feat/gmww-voice-gm-chat-30s-20261102" ]; then
+            /usr/libexec/PlistBuddy -c 'Print :NSMicrophoneUsageDescription' "$APP/Info.plist" | grep -qi 'microphone'
+          fi
 
           cmp -s server-game/GMWW-Server/Web/GMWW.html "$APP/Web/GMWW.html"
           cmp -s assets/village/village-layout.js "$APP/Web/village-layout.js"
@@ -596,3 +607,40 @@ jobs:
             echo "::error::IPA tag $TAG already exists. Do not overwrite a published IPA.";
             exit 1
           fi
+
+      - name: Publish PR743 unsigned IPA for user-managed SideStore signing
+        if: >-
+          github.event_name == 'workflow_dispatch' &&
+          github.ref == 'refs/heads/feat/gmww-voice-gm-chat-30s-20261102' &&
+          inputs.publish_ipa == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "feat/gmww-voice-gm-chat-30s-20261102"
+          test "$(git rev-parse "refs/remotes/origin/feat/gmww-voice-gm-chat-30s-20261102")" = "$GITHUB_SHA" || {
+            echo "::error::PR743 branch moved during build, cancel stale unsigned IPA release."; exit 1;
+          }
+          IPA="GMWW-V$VERSION.ipa"
+          test -s "$IPA" && test -s "$IPA.sha256"
+          shasum -a 256 -c "$IPA.sha256"
+          TAG="gmww-pr743-unsigned-v$VERSION-${GITHUB_SHA:0:12}"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Unsigned PR743 release already exists; no overwrite."; exit 1;
+          fi
+          cat > "$RUNNER_TEMP/pr743-unsigned-notes.md" <<EOF
+          # GMWW PR #743 — IPA unsigned dùng SideStore
+          
+          Đây là bản thử nghiệm IPA chưa ký số để người dùng **tự ký/cài bằng SideStore**.
+          
+          - Nguồn mã: PR #743; commit: \`$GITHUB_SHA\`.
+          - Runtime đóng gói: V$VERSION; đã bao gồm chat chữ/thoại GM ↔ người chơi và toàn làng, tin thoại tối đa 30 giây, dọn bản ghi khi kết thúc ván.
+          - Native: thêm quyền microphone có lời nhắc iOS, không tự cấp quyền; không xin camera.
+          - Có SHA-256 độc lập: \`$IPA.sha256\`; workflow đối chiếu checksum trước khi công bố.
+          - **Chưa phải bản phát hành Production/IPA được nghiệm thu trên iPhone**; PR vẫn phải hoàn tất required CI và nghiệm thu thực tế trước khi merge.
+          - Không thay đổi bản IPA đã phát hành, URL, Worker Production hoặc dữ liệu thật.
+          - Nếu cài thử không đạt, dừng dùng bản thử; quay lại IPA trước đó đã lưu trong GitHub Releases. Không thực hiện xóa dữ liệu ứng dụng khi rollback.
+          EOF
+          gh release create "$TAG" "$IPA" "$IPA.sha256" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "GMWW V$VERSION — PR743 unsigned IPA (SideStore)" --notes-file "$RUNNER_TEMP/pr743-unsigned-notes.md" --prerelease --latest=false
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets,tagName --jq '.tagName, (.assets[].name)'
