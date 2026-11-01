@@ -63,6 +63,18 @@ jobs:
           node .github/scripts/assemble-player-web.mjs --verify
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs
+      - name: PR726 — verify exact Player Web fire icons, wolf ballots and owner-only undo
+        if: steps.scope.outputs.mode == 'player-fire-wolf-726'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check src/gmww-wolf-night-resolution.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/player-web-wolf-ballots-20261101.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/night02-pack-snow-guard-fairy.test.mjs tests/player-web-online-actions-20261028.test.mjs tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs tests/online-chat-authority.test.mjs tests/ci-browser-scope.test.mjs
       - name: Online P0 #699 — icon at campfire, own-turn effects, chat status
         if: steps.scope.outputs.mode == 'online-p0-player-699'
         run: |

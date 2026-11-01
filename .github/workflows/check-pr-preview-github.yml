@@ -155,6 +155,7 @@ jobs:
             echo "::error::Missing existing GitHub Cloudflare credentials. Never bypass Preview required check."
             exit 1
           fi
+          # Cloudflare code 10067 (Free DO namespace cap) is a real failure; never bypass or auto-delete Preview/data.
           # Cloudflare Preview uses a separate DO namespace; this is NOT wrangler deploy.
           npx --no-install wrangler preview --config wrangler.jsonc \
             --worker-name gmww-v2-00 --name "pr-${PR_NUMBER}"
