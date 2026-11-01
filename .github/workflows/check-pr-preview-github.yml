@@ -56,15 +56,7 @@ jobs:
           const docsOnly = changed.length > 0 && changed.every(c => ['A','M'].includes(c.status) && /^docs\/[A-Za-z0-9/_-]+\.md$/.test(c.path));
           // This exact two-file CI-contract change cannot affect gameplay/Worker assets.
           const ciOnly = changed.length === 4 && changed.every(c => ['A','M'].includes(c.status) && ['.github/workflows/check-pr-preview-github.yml','tests/github-actions-pr-preview-ci.test.mjs','.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'].includes(c.path)) && new Set(changed.map(c => c.path)).size === 4;
-          const runtimeReleaseOnly = changed.length === 9 && new Set(changed.map(c=>c.path)).size === 9 &&
-            changed.every(c => ({
-              'package.json':'M','package-lock.json':'M',
-              'server-game/current/GMWW.html':'M','server-game/current/app.js':'M',
-              'server-game/src/00-core-and-library.part':'M','src/index.js':'M',
-              '.github/scripts/prepare-update-channel.mjs':'M',
-              'tests/demo-runtime-v3285-release.test.mjs':'M',
-              'docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md':'A'
-            })[c.path] === c.status);
+          const runtimeReleaseOnly = changed.length === 9 && new Set(changed.map(c=>c.path)).size === 9 && changed.every(c => ({'package.json':'M','package-lock.json':'M','server-game/current/GMWW.html':'M','server-game/current/app.js':'M','server-game/src/00-core-and-library.part':'M','src/index.js':'M','.github/scripts/prepare-update-channel.mjs':'M','tests/demo-runtime-v3285-release.test.mjs':'M','docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md':'A'})[c.path] === c.status);
           appendFileSync(process.env.GITHUB_OUTPUT,'oracle_only='+String(only)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'docs_only='+String(docsOnly)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'preview_ci_only='+String(ciOnly)+'\n');
