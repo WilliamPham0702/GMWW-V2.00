@@ -3922,7 +3922,62 @@ function isGMPlayerLinkShare637Scope(){
   return true;
 }
 // END GMWW_PLAYER_LINK_SHARE_SCOPE_637
+// V3.289 PR738: scope only an immutable, strictly proven Runtime version synchronization.
+// Other game/Worker/Native edits, missing source bytes, or any unexpected files -> full CI.
+function isV3289PR738VersionOnlyScope(base){
+  const expected=new Map([
+    ['package.json','M'],['package-lock.json','M'],
+    ['src/index.js','M'],['server-game/src/00-core-and-library.part','M'],
+    ['server-game/current/app.js','M'],['server-game/current/GMWW.html','M'],
+    ['.github/scripts/prepare-update-channel.mjs','M'],
+    ['tests/demo-runtime-v3285-release.test.mjs','M'],
+    ['docs/releases/GMWW-RUNTIME-V3.289-PR738-20261101.md','A'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ]);
+  const lines=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+  if(lines.length!==expected.size||lines.some(line=>{
+    const [status,file]=line.split('\t');
+    return expected.get(file)!==status;
+  }))return false;
+  const changed=(file,from,to,all=false)=>{
+    const before=git('show',base+':'+file);
+    const after=fs.readFileSync(file,'utf8');
+    if(!after.includes(to))return false;
+    return (all?after.replaceAll(to,from):after.replace(to,from))===before;
+  };
+  if(!changed('package.json','"version": "3.288.0"','"version": "3.289.0"'))return false;
+  if(!changed('package-lock.json','"version": "3.288.0"','"version": "3.289.0"',true))return false;
+  if(!changed('src/index.js','VERSION="V3.288",NATIVE_SHELL_VERSION="3.264"','VERSION="V3.289",NATIVE_SHELL_VERSION="3.264"'))return false;
+  if(!changed('server-game/src/00-core-and-library.part',"const VERSION='3.288';","const VERSION='3.289';"))return false;
+  if(!changed('server-game/current/app.js',"const VERSION='3.288';","const VERSION='3.289';"))return false;
+  if(!changed('server-game/current/GMWW.html','<title>GMWW V3.288</title>','<title>GMWW V3.289</title>'))return false;
+  const beforeNotes=git('show',base+':.github/scripts/prepare-update-channel.mjs');
+  const notes=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
+  const restoredNotes=notes.replace(/releaseNotes:\["V3\.289 sau PR738:[^"]+","V3\.288 PR726:/,'releaseNotes:["V3.288 PR726:');
+  if(restoredNotes===notes||restoredNotes!==beforeNotes)return false;
+  const tests=fs.readFileSync('tests/demo-runtime-v3285-release.test.mjs','utf8');
+  const doc=fs.readFileSync('docs/releases/GMWW-RUNTIME-V3.289-PR738-20261101.md','utf8');
+  const workflow=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  if(!tests.includes("assert.equal(pkg.version,'3.289.0')")||
+     !doc.includes('PR #738')||!doc.includes('Rollback')||
+     !workflow.includes("steps.scope.outputs.mode == 'v3289-pr738-runtime-release'"))return false;
+  return true;
+}
 function detect(){
+  // This guard only narrows CI for the exact V3.289 PR738 version + notes change.
+  // The main push uses first-parent diff; every unproven difference uses original full suite.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if((base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base))&&
+         JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.289.0'&&
+         isV3289PR738VersionOnlyScope(base)){
+        return{mode:'v3289-pr738-runtime-release',reason:'V3.289 exact immutable 11-file version synchronization after PR738; focused Runtime, Player, Worker and OTA guards'};
+      }
+    }catch{} // Always fail closed to original checks on any mismatch.
+  }
+
   // PR732_SHA_ISOLATED_MAIN: fix blocked main CI runner queue without removing checks.
   // Only exactly five CI files and no V3.288 source, IPA or Runtime bytes may change.
   if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){

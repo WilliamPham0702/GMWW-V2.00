@@ -33,6 +33,12 @@ test('Online action dock follows the rendered campfire with a scaled iframe',()=
   env.place(dock);
   assert.equal(dock.style.left,'120px');
   assert.equal(dock.style.top,'260px');
+  // iPhone screenshot regression: invisible/scaled fire hotspots outside the scene
+  // previously clamped the action to the bottom-left corner instead of the fire.
+  frame.contentDocument.querySelector=()=>({getBoundingClientRect:()=>({left:-780,top:880,width:60,height:60})});
+  env.place(dock);
+  assert.equal(dock.style.left,'120px','invalid fire hotspot falls back to the visible courtyard center');
+  assert.equal(dock.style.top,'260px');
   assert.match(player,/gmww:village-ready'\)\{syncVillageFrame\(true\);gmwwOnlinePlaceAtFire/);
 });
 
