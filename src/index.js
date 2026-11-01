@@ -88,7 +88,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST")||(path==="/global-settings/village-scene/reset"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/player/action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/player/action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/gm/chat','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
       const response=await this.handleFetch(request),meta=await this.ctx.storage.get("meta");
       if(meta?.demo&&response.ok){
         if(path==="/gm/gallows")await this.ctx.storage.delete("demoPlan");
@@ -187,6 +187,10 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
     if(url.pathname==="/player/chat"&&request.method==="POST")return this.playerChatRead(await safeJson(request));
     if(url.pathname==="/player/chat/send"&&request.method==="POST")return this.playerChatSend(await safeJson(request));
+    const playerVoice=url.pathname.match(/^\/player\/chat\/audio\/([a-f0-9-]{36})$/);
+    if(playerVoice&&request.method==="POST")return this.chatVoiceRead({loginId:(await safeJson(request))?.loginId},playerVoice[1]);
+    const gmVoice=url.pathname.match(/^\/gm\/chat\/audio\/([a-f0-9-]{36})$/);
+    if(gmVoice&&request.method==="GET")return this.chatVoiceRead({gm:true,request},gmVoice[1]);
     if(url.pathname==="/gm/chat"&&request.method==="GET")return this.gmChatRead(request);
     if(url.pathname==="/gm/chat"&&request.method==="POST")return this.gmChatSend(request,await safeJson(request));
     if(url.pathname==="/gm/chat/moderate"&&request.method==="POST")return this.gmChatModerate(request,await safeJson(request));
@@ -2955,6 +2959,7 @@ export class RoomDurableObject extends DurableObject {
     if(softPostGame&&hasExpected&&Number(expected)!==currentVersion&&meta.lastResetTransactionId!==transactionId)return j({ok:false,error:"RESET_VERSION_CONFLICT"},409);
     if(softPostGame&&transactionId&&meta.lastResetTransactionId===transactionId){const players=await this.ctx.storage.get("players")||{};return j({ok:true,reset:true,hardReset:false,idempotent:true,preserveParticipants:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer)})}
     if(softPostGame){
+      await this.chatVoiceClear();
       const players=(await this.ctx.storage.get("players"))||{},nextVersion=currentVersion+1;
       for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.lastSeenAt=now}
       await this.ctx.storage.put("players",players);await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);
@@ -2975,6 +2980,7 @@ export class RoomDurableObject extends DurableObject {
     if(hasExpected&&Number.isFinite(expected)&&expected!==currentVersion){
       return j({ok:false,error:"RESET_VERSION_CONFLICT",message:"Phòng đã thay đổi trước khi RESET. Hãy cập nhật Phòng rồi thử lại.",expectedResetVersion:expected,currentResetVersion:currentVersion,room:publicRoom(meta)},409)
     }
+    await this.chatVoiceClear();
     const oldPlayers=(await this.ctx.storage.get("players"))||{},removedPlayers=Object.values(oldPlayers).map(publicPlayer),nextVersion=currentVersion+1;
     await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);await this.ctx.storage.put("seatSwaps",[]);
     await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");
@@ -2989,8 +2995,8 @@ export class RoomDurableObject extends DurableObject {
     return j(ack)
   }
   async gmEnd(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,incomingMatchId=String(body?.matchId||""),now=new Date().toISOString();if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Không thể kết thúc vì đây không phải ván đang chạy trong Phòng."},409);const completionKey="matchCompletion:"+String(incomingMatchId||meta.matchId||""),completed=await this.ctx.storage.get(completionKey);
-    if(completed){for(const key of (await this.ctx.storage.list({prefix:"drunkDeck:"+String(incomingMatchId||meta.matchId||"")+":"})).keys())await this.ctx.storage.delete(key);const requested=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||"");if(requested&&requested!==completed.winnerFaction)return j({ok:false,error:"WINNER_ALREADY_CONFIRMED"},409);return j({...completed,idempotent:true})}
-    if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};for(const key of (await this.ctx.storage.list({prefix:"drunkDeck:"+endedMatchId+":"})).keys())await this.ctx.storage.delete(key);const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});const ack={ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true};if(endedMatchId)await this.ctx.storage.put(completionKey,ack);return j(ack)}
+    if(completed){await this.chatVoiceClear();for(const key of (await this.ctx.storage.list({prefix:"drunkDeck:"+String(incomingMatchId||meta.matchId||"")+":"})).keys())await this.ctx.storage.delete(key);const requested=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||"");if(requested&&requested!==completed.winnerFaction)return j({ok:false,error:"WINNER_ALREADY_CONFIRMED"},409);return j({...completed,idempotent:true})}
+    if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);await this.chatVoiceClear();try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};for(const key of (await this.ctx.storage.list({prefix:"drunkDeck:"+endedMatchId+":"})).keys())await this.ctx.storage.delete(key);const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});const ack={ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true};if(endedMatchId)await this.ctx.storage.put(completionKey,ack);return j(ack)}
   async alarm(){return this.ctx.blockConcurrencyWhile(()=>this.roomAlarm())}
   async roomAlarm(){
     try{
@@ -3343,6 +3349,51 @@ export class RoomDurableObject extends DurableObject {
     const permission=chatPolicy({meta,players,rows,runtime,loginId,bans});
     return{meta,players,rows,permission};
   }
+
+  // Voice metadata is scoped to the current match. Internal chunks avoid any arbitrary UI KB limit.
+  async chatVoiceStore(scope,channel,voice){
+    const mime=String(voice?.mime||'').toLowerCase().split(';')[0].trim(),
+      durationMs=Number(voice?.durationMs),base64=voice?.base64;
+    if(!['audio/mp4','audio/webm','audio/ogg','audio/aac','audio/mpeg','audio/wav'].includes(mime)||
+       !Number.isFinite(durationMs)||durationMs<=0||durationMs>30000||
+       typeof base64!=='string'||!base64.length||base64.length%4!==0||
+       !/^[A-Za-z0-9+/]+={0,2}$/.test(base64))throw new Error('CHAT_VOICE_INVALID');
+    const id=crypto.randomUUID(),prefix='onlineChatVoice:'+scope+':'+id+':',unit=65536,parts=Math.ceil(base64.length/unit);
+    for(let i=0;i<parts;i++)await this.ctx.storage.put(prefix+i,base64.slice(i*unit,(i+1)*unit));
+    await this.ctx.storage.put(prefix+'meta',{channel,mime,durationMs,parts});
+    return {kind:'voice',voiceId:id,durationMs};
+  }
+  async chatVoiceRead({loginId,gm=false,request},id){
+    if(!/^[a-f0-9-]{36}$/.test(String(id||'')))return j({ok:false,error:'CHAT_AUDIO_NOT_FOUND'},404);
+    const meta=await this.ctx.storage.get('meta'),scope=chatStorageScope(meta),
+      prefix='onlineChatVoice:'+scope+':'+id+':',record=await this.ctx.storage.get(prefix+'meta');
+    if(!record)return j({ok:false,error:'CHAT_AUDIO_NOT_FOUND'},404);
+    if(gm){
+      const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    }else{
+      const who=normalizeLoginId(loginId),access=await this.chatAccess(who,record.channel.startsWith('gm:')?'gm':'room');
+      if(!access.players['member:'+who])return j({ok:false,error:'CHAT_AUDIO_FORBIDDEN'},403);
+      const allowed=record.channel==='gm:all'?access.permission.canRead:
+        record.channel==='gm:'+who?access.permission.canRead&&access.permission.channel==='gm:'+who:
+        access.permission.canRead&&access.permission.channel===record.channel;
+      if(!allowed)return j({ok:false,error:'CHAT_AUDIO_FORBIDDEN'},403);
+    }
+    const blocks=[];
+    for(let i=0;i<record.parts;i++){
+      const chunk=await this.ctx.storage.get(prefix+i);
+      if(typeof chunk!=='string')return j({ok:false,error:'CHAT_AUDIO_UNAVAILABLE'},404);
+      blocks.push(chunk);
+    }
+    return j({ok:true,mime:record.mime,base64:blocks.join(''),durationMs:record.durationMs});
+  }
+  async chatVoiceClear(){
+    // End/reset deletes voice audio and voice references, but retains text and other game data.
+    for(const key of (await this.ctx.storage.list({prefix:'onlineChatVoice:'})).keys())await this.ctx.storage.delete(key);
+    for(const [key,messages] of await this.ctx.storage.list({prefix:'onlineChat:'})){
+      if(Array.isArray(messages)&&messages.some(m=>m?.kind==='voice'))
+        await this.ctx.storage.put(key,messages.filter(m=>m?.kind!=='voice'));
+    }
+  }
   async playerChatRead(body){
     const loginId=normalizeLoginId(body?.loginId),{meta,players,rows,permission}=await this.chatAccess(loginId,body?.channel);
     const notices=players["member:"+loginId]?publicChatNotices(meta,players,rows):[];
@@ -3354,17 +3405,20 @@ export class RoomDurableObject extends DurableObject {
       reason:permission.reason,phase:meta.cyclePhase,cycleKey:meta.cycleKey});
   }
   async playerChatSend(body){
-    const loginId=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text);
-    if(!content||String(body?.text||'').length>400)return j({ok:false,error:"CHAT_INVALID_TEXT"},400);
+    const loginId=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),hasVoice=body?.voice!==undefined;
+    if((!content&&!hasVoice)||String(body?.text||'').length>400||!!content&&hasVoice)return j({ok:false,error:"CHAT_INVALID_TEXT"},400);
     const {meta,players,permission}=await this.chatAccess(loginId,body?.channel);
     if(!permission.canSend)return j({ok:false,error:permission.reason||"CHAT_FORBIDDEN"},403);
     const rateKey="onlineChatRate:"+chatStorageScope(meta)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
     if(Date.now()-prev<850)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
+    let media=null;
+    if(hasVoice)try{media=await this.chatVoiceStore(chatStorageScope(meta),permission.channel,body.voice)}
+    catch{return j({ok:false,error:"CHAT_VOICE_INVALID_OR_UNAVAILABLE"},400)}
     const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel,
       messages=(await this.ctx.storage.get(key))||[],now=Date.now(),
       message={id:crypto.randomUUID(),senderId:loginId,
         senderName:String(players["member:"+loginId]?.displayName||loginId).slice(0,42),
-        text:content,at:now,scope:permission.scope};
+        text:content,at:now,scope:permission.scope,...(media||{})};
     await this.ctx.storage.put(key,[...messages.slice(-79),message]);
     await this.ctx.storage.put(rateKey,now);
     this.broadcast({type:"chat_tick",serverTime:now});
@@ -3386,9 +3440,9 @@ export class RoomDurableObject extends DurableObject {
   async gmChatSend(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
-      players=(await this.ctx.storage.get("players"))||{};
+      hasVoice=body?.voice!==undefined,players=(await this.ctx.storage.get("players"))||{};
     const toVillage=String(body?.channel||'')==='room';
-    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||!content||String(body?.text||"").length>400||
+    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||(!content&&!hasVoice)||!!content&&hasVoice||String(body?.text||"").length>400||
       (!toVillage&&(!id||!players["member:"+id])))
       return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
     // GM broadcast is visible to all authenticated members, even when their group chat is closed.
@@ -3396,8 +3450,11 @@ export class RoomDurableObject extends DurableObject {
     const key="onlineChat:"+chatStorageScope(meta)+":"+channel,now=Date.now(),
       rateKey="gmChatRate:"+chatStorageScope(meta)+":"+channel;
     if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
+    let media=null;
+    if(hasVoice)try{media=await this.chatVoiceStore(chatStorageScope(meta),channel,body.voice)}
+    catch{return j({ok:false,error:"CHAT_VOICE_INVALID_OR_UNAVAILABLE"},400)}
     const messages=(await this.ctx.storage.get(key))||[],
-      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:toVillage?"gm-broadcast":"gm"};
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:toVillage?"gm-broadcast":"gm",...(media||{})};
     await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
     this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel});
   }
@@ -3720,6 +3777,10 @@ export default {async fetch(request,env){
     const data=await session.json();
     return roomStub(env,code).fetch('https://room.internal/player/announcement',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({loginId:data.member.loginId,key:url.searchParams.get('key')})});
   }
+  const playerAudio=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat\/audio\/([a-f0-9-]{36})$/);
+  if(playerAudio&&request.method==="GET")return playerRoomChatAudioApi(env,playerAudio[1],playerAudio[2],request);
+  const gmAudio=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/audio\/([a-f0-9-]{36})$/);
+  if(gmAudio&&request.method==="GET")return roomProxy(env,gmAudio[1],"/gm/chat/audio/"+gmAudio[2],request);
   const playerChat=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat$/);
   if(playerChat&&(request.method==="GET"||request.method==="POST"))return playerRoomChatApi(env,playerChat[1],request);
   const gmChat=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat$/);
@@ -3829,6 +3890,16 @@ async function playerDrunkDrawApi(env,raw,request){
     method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({loginId:me.member.loginId,cardId:body.cardId})});
 }
+async function playerRoomChatAudioApi(env,raw,id,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json();
+  return roomStub(env,code).fetch(new Request("https://room.internal/player/chat/audio/"+id,{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({loginId:data.member.loginId})
+  }));
+}
 async function playerRoomChatApi(env,raw,request){
   const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
   // The external client controls neither loginId nor channel membership.
@@ -3838,7 +3909,7 @@ async function playerRoomChatApi(env,raw,request){
   const route=request.method==="POST"?"/player/chat/send":"/player/chat";
   return roomStub(env,code).fetch(new Request("https://room.internal"+route,{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({loginId:data.member.loginId,text:body.text,channel:body.channel==="gm"?"gm":"room"})
+    body:JSON.stringify({loginId:data.member.loginId,text:body.text,voice:body.voice,channel:body.channel==="gm"?"gm":"room"})
   }));
 }
 async function playerPrivateState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),res=await roomStub(env,c).fetch("https://room.internal/player/state",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,member:data.member})});if(res.ok)await syncRoomDirectory(env,c);return res}
