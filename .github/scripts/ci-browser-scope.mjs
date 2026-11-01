@@ -3582,7 +3582,8 @@ function isPR743ChatVoiceScope(changes){
     ['tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs','M'],
     ['tests/player-online-realtime-freeze-day-20261030.test.mjs','M'],
     ['.github/scripts/ci-browser-scope.mjs','M'],
-    ['.github/workflows/check-player-web.yml','M']
+    ['.github/workflows/check-player-web.yml','M'],
+    ['docs/releases/GMWW-CHAT-VOICE-PR743-20261102.md','A']
   ]);
   if(!Array.isArray(changes)||changes.length!==wanted.size||
     new Set(changes.map(c=>c.path)).size!==wanted.size||
