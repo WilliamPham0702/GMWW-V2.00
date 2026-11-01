@@ -1057,6 +1057,19 @@ export class RoomDurableObject extends DurableObject {
         (x.type==='dead'||x.type==='expelled'||(x.type==='frozen'&&meta.cyclePhase==='night')));
       if(blocked)return j({ok:false,error:'ACTOR_CANNOT_ACT',message:'Đã thấy hành động, nhưng bạn đang chịu hiệu ứng và không được thực hiện lượt này.'},409);
     }
+    if(online&&body?.command==="undo"){
+      const record=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
+      if(!record||record.undone||record.source!=="online-human"||
+        normalizeLoginId(record.actorId)!==loginId||record.token!==String(body?.undoToken||""))
+        return j({ok:false,error:"PLAYER_UNDO_NOT_OWNED"},403);
+      const runtime=await this.getNightRuntime(meta,Number(meta.cycleNight||1),false);
+      if(meta.cyclePhase!=="night"||runtime?.completed||
+        String(runtime?.queue?.[runtime.cursor]?.id||"")!==String(record.turnId))
+        return j({ok:false,error:"PLAYER_UNDO_TURN_ENDED"},409);
+      // Reuse GM's atomic snapshot-compare undo. It refuses to overwrite any
+      // later action, and can never run before the ownership check above.
+      return this.gmBattleUndo(this.demoInternalRequest(),{undoToken:record.token});
+    }
     const actions=online?await playerOfferedActions(this,meta,loginId):await demoPlayerActions(this,meta,loginId),
       action=actions.find(a=>a.key===String(body?.actionKey||""));
     if(!action)return j({ok:false,error:"DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN"},409);
@@ -1091,6 +1104,7 @@ export class RoomDurableObject extends DurableObject {
     const result=await response.json();
     // Never forward the GM undo ledger, wolf pack internals or private assignments.
     return j({ok:true,actionId:action.actionId,actorId:loginId,
+      ...(online&&meta.cyclePhase==="night"&&result.undoToken?{undoToken:result.undoToken}:{}),
       ...(result.revelation?{revelation:result.revelation}:{}),
       ...(meta.cyclePhase==="morning"&&result.result?{result:result.result}: {})});
   }
@@ -2533,8 +2547,8 @@ export class RoomDurableObject extends DurableObject {
       if(packBite&&(!isWolfRole(row)||actionId!=="action_wolf_bite"))
         return j({ok:false,error:"INVALID_PACK_ACTOR"},403);
       if(packBite&&currentUsage.some(x=>String(x?.matchId)===matchId&&Number(x?.night)===Number(meta.cycleNight||1)&&
-        x?.actionId==="action_wolf_bite"))
-        return j({ok:false,error:"PACK_BITE_ALREADY_USED"},409);
+        x?.actionId==="action_wolf_bite"&&normalizeLoginId(x?.actorId)===actorId))
+        return j({ok:false,error:"PACK_BITE_ALREADY_USED_BY_ACTOR"},409);
       const policy=packBite?{roleId,actionId,singleActionPerNight:false,usageMode:"eachNight",usageCount:1,knownAction:true}:
         resolveRoleActionPolicy(roleCard,roleId,actionId);
       // Guard & Snow Wolf may not repeat the exact target two consecutive nights.
@@ -2622,7 +2636,7 @@ export class RoomDurableObject extends DurableObject {
     const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
       record={token:undoToken,matchId,cycleKey,night:Number(meta.cycleNight||1),turnId,
         label:String(body?.effectName||body?.actionId||"Hành động").slice(0,120),targetIds:targets,
-        before,after,undone:false,createdAt:new Date().toISOString()};
+        actorId,source:String(body?.source||"gm"),before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
     const revealActionId=String(body?.actionId||'');
