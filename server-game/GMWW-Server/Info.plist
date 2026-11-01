@@ -7,7 +7,6 @@
 <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
 <key>CFBundleName</key><string>Quản Trò Ma Sói</string>
-<key>NSMicrophoneUsageDescription</key><string>Cho phép Quản Trò Ma Sói sử dụng microphone khi bạn chủ động ghi và gửi tin nhắn thoại trong phòng chơi.</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
 <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
