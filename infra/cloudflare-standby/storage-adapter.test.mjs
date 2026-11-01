@@ -98,9 +98,9 @@ test('mismatched source SHA or game version rejected on existing restored room',
  const dir=await root(t),a=await open(dir,'A'),b=await open(dir,'B');
  t.after(()=>{a.close();b.close()});
  a.capture(signed());b.restoreCheckpoint(a.exportCheckpoint('ABC234'),{dryRun:false,confirmSyntheticRestore:true});
- a.capture(signed({revision:2,sourceSha:'b'.repeat(40)}),{expectedRevision:1});
- assert.throws(()=>b.restoreCheckpoint(a.exportCheckpoint('ABC234'),{expectedRevision:1,dryRun:false,confirmSyntheticRestore:true}),/ENGINE_IDENTITY_CHANGED/);
- assert.equal(b.read('ABC234').payload.revision,1);
+ assert.throws(()=>a.capture(signed({revision:2,sourceSha:'b'.repeat(40)}),{expectedRevision:1}),/ENGINE_IDENTITY_CHANGED/);
+ assert.equal(a.read('ABC234').payload.revision,1,'A must not mutate when commit SHA changes unexpectedly');
+ assert.equal(b.read('ABC234').payload.revision,1,'B must remain unchanged');
 });
 test('manual SQLite corruption detected before any restore and transaction rolled back',async t=>{
  const dir=await root(t),a=await open(dir,'A'),b=await open(dir,'B');
