@@ -46,6 +46,24 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR743 postmerge: same reviewed source, only CI release control files changed.
+      # The new Worker main SHA must still pass Chat privacy, packaging and dry-run.
+      - name: PR743 postmerge Worker/Chat required CI and release policy
+        if: steps.scope.outputs.mode == 'gmww-chat-pr743-postmerge'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs \
+            tests/online-frozen-chat-day-20261031.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-CHAT-VOICE-PR743-20261102.md
       # PR743: verified exact Chat voice/GM broadcast Worker+GM+Player Web scope.
       # All runtime/DO privacy and chat regressions remain mandatory; unrelated
       # historic test snapshots do not gate this unrelated feature.
