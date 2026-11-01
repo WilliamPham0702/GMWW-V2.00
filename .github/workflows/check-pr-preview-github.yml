@@ -21,6 +21,7 @@ jobs:
       oracle_only: ${{ steps.scope.outputs.oracle_only }}
       docs_only: ${{ steps.scope.outputs.docs_only }}
       preview_ci_only: ${{ steps.scope.outputs.preview_ci_only }}
+      runtime_release_only: ${{ steps.scope.outputs.runtime_release_only }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -55,10 +56,12 @@ jobs:
           const docsOnly = changed.length > 0 && changed.every(c => ['A','M'].includes(c.status) && /^docs\/[A-Za-z0-9/_-]+\.md$/.test(c.path));
           // This exact two-file CI-contract change cannot affect gameplay/Worker assets.
           const ciOnly = changed.length === 4 && changed.every(c => ['A','M'].includes(c.status) && ['.github/workflows/check-pr-preview-github.yml','tests/github-actions-pr-preview-ci.test.mjs','.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'].includes(c.path)) && new Set(changed.map(c => c.path)).size === 4;
+          const runtimeReleaseOnly = changed.length === 9 && new Set(changed.map(c=>c.path)).size === 9 && changed.every(c => ({'package.json':'M','package-lock.json':'M','server-game/current/GMWW.html':'M','server-game/current/app.js':'M','server-game/src/00-core-and-library.part':'M','src/index.js':'M','.github/scripts/prepare-update-channel.mjs':'M','tests/demo-runtime-v3285-release.test.mjs':'M','docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md':'A'})[c.path] === c.status);
           appendFileSync(process.env.GITHUB_OUTPUT,'oracle_only='+String(only)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'docs_only='+String(docsOnly)+'\n');
           appendFileSync(process.env.GITHUB_OUTPUT,'preview_ci_only='+String(ciOnly)+'\n');
-          console.log(only?'Oracle SQLite-only: no Preview deploy.':docsOnly?'Docs-only: skip Worker build and Cloudflare Preview.':ciOnly?'Preview CI-only: local safety validation, no Cloudflare Preview.':'Gameplay or unknown scope: retain isolated Preview publication gate.');
+          appendFileSync(process.env.GITHUB_OUTPUT,'runtime_release_only='+String(runtimeReleaseOnly)+'\n');
+          console.log(runtimeReleaseOnly?'Exact V3.286 release candidate: verify immutable source bytes locally, no new Durable Object namespace.':only?'Oracle SQLite-only: no Preview deploy.':docsOnly?'Docs-only: skip Worker build and Cloudflare Preview.':ciOnly?'Preview CI-only: local safety validation, no Cloudflare Preview.':'Gameplay or unknown scope: retain isolated Preview publication gate.');
           NODE
   validate-preview:
     name: Validate isolated Preview without Cloudflare Builds
@@ -95,6 +98,18 @@ jobs:
       - name: Verify GitHub Actions Preview security contract
         if: needs.oracle-scope.outputs.docs_only != 'true'
         run: node --test tests/github-actions-pr-preview-ci.test.mjs
+      - name: Verify no gameplay edits are hidden by V3.286 version bump
+        if: needs.oracle-scope.outputs.runtime_release_only == 'true'
+        env:
+          GMWW_CI_EVENT: pull_request
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          SCOPE="$(node .github/scripts/ci-browser-scope.mjs | head -1)"
+          case "$SCOPE" in
+            "GMWW browser CI scope: runtime-merged-v3286 |"*) echo "PASS: audited V3.286 scope" ;;
+            *) echo "::error::Release-only byte audit failed: $SCOPE"; exit 1 ;;
+          esac
+          node --test tests/online-chat-authority.test.mjs tests/online-frozen-chat-day-20261031.test.mjs tests/online-player-fire-turn-dead-ui-20261031.test.mjs tests/player-toast-above-chat-20261031.test.mjs
       - name: Build Worker locally, without publishing or Cloudflare build minutes
         if: needs.oracle-scope.outputs.docs_only != 'true'
         run: npm run check
@@ -104,7 +119,7 @@ jobs:
     needs: [validate-preview, oracle-scope]
     # Token use is limited to owner-authored PRs from this same repo.
     # Forks and other authors still receive token-free validation.
-    if: ${{ needs.validate-preview.result == 'success' && needs.oracle-scope.result == 'success' && needs.oracle-scope.outputs.oracle_only != 'true' && needs.oracle-scope.outputs.docs_only != 'true' && needs.oracle-scope.outputs.preview_ci_only != 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
+    if: ${{ needs.validate-preview.result == 'success' && needs.oracle-scope.result == 'success' && needs.oracle-scope.outputs.oracle_only != 'true' && needs.oracle-scope.outputs.docs_only != 'true' && needs.oracle-scope.outputs.preview_ci_only != 'true' && needs.oracle-scope.outputs.runtime_release_only != 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
