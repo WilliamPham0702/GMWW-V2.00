@@ -48,6 +48,17 @@ jobs:
                 ;;
             esac
           done < /tmp/gmww-production-change-scope.txt
+          # GMWW AUTO-DELIVERY V3.0: CI/docs/unknown/sensitive changes never touch Production.
+          # This is additive to the historical safety checks, not a bypass.
+          if [ -s /tmp/gmww-production-change-scope.txt ] && test -f .github/scripts/v3-delivery-plan.mjs; then
+            V3_TARGET=$(node .github/scripts/v3-delivery-plan.mjs /tmp/gmww-production-change-scope.txt --field=target)
+            case "$V3_TARGET" in
+              none|blocked|pages)
+                SHOULD_DEPLOY=false
+                echo "V3 scope $V3_TARGET: NO Production Worker/OTA deployment." >> "$GITHUB_STEP_SUMMARY"
+                ;;
+            esac
+          fi
           # PR612: dedicated Worker-only release. Never use this generic Runtime OTA pipeline.
           if grep -Fxq 'docs/releases/GMWW-VILLAGE-REMOVE-OLD-ONLINE-20261029.md' /tmp/gmww-production-change-scope.txt &&
              grep -Fxq 'assets/village/index.html' /tmp/gmww-production-change-scope.txt; then
