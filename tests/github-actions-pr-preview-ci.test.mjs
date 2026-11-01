@@ -70,9 +70,6 @@ test('CI-LITE docs-only and Preview-CI-only selectors fail closed without droppi
   const ciOnly=[
     M('.github/workflows/check-pr-preview-github.yml'),
     M('tests/github-actions-pr-preview-ci.test.mjs'),
-    M('tests/ci-browser-scope.test.mjs'),
-    M('.github/scripts/ci-browser-scope.mjs'),
-    M('.github/workflows/check-player-web.yml'),
     M('.github/scripts/ci-browser-scope.mjs'),
     M('.github/workflows/check-player-web.yml')
   ];
@@ -172,6 +169,9 @@ test('dual Cloudflare synthetic-only PR is validated locally without allocating 
     A('docs/architecture/dual-cloudflare-standby-20261101.md'),
     A('tests/dual-cloudflare-release-guard.test.mjs'),
     M('tests/github-actions-pr-preview-ci.test.mjs'),
+    M('tests/ci-browser-scope.test.mjs'),
+    M('.github/scripts/ci-browser-scope.mjs'),
+    M('.github/workflows/check-player-web.yml'),
     A('.github/workflows/check-cloudflare-standby.yml'),
     M('.github/workflows/deploy-production.yml'),
     M('.github/workflows/github-runtime-ota.yml'),
