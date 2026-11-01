@@ -974,3 +974,24 @@ test('Dual Cloudflare synthetic follow-up uses focused CI only on exact six modi
   assert.equal(classifyBrowserScope(scope.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
   assert.equal(classifyBrowserScope([...scope,scope[0]]),'full');
 });
+
+test('Cloudflare B Stage3 B health-only Worker routes to focused required Worker CI, fail-closed for unknown paths',()=>{
+  const stage3=[
+    ['infra/cloudflare-standby/b-staging-worker.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-worker.test.mjs','A'],
+    ['infra/cloudflare-standby/wrangler-b-staging.jsonc','A'],
+    ['infra/cloudflare-standby/STAGE3-README.md','A'],
+    ['.github/workflows/check-cloudflare-standby.yml','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['tests/github-actions-pr-preview-ci.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(stage3),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope(stage3.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...stage3,stage3[0]]),'full');
+  assert.equal(classifyBrowserScope([...stage3,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope([...stage3,{path:'wrangler.jsonc',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(stage3.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+});
