@@ -78,3 +78,64 @@ export function evaluateStandbyFixture({primary,standby,testKey,gmApproved=false
   return Object.freeze({fixtureParity:validA&&validB&&primary.sha256===standby.sha256,
     stage1SimulationOnly:true,productionSwitchAllowed:false,blockers});
 }
+
+/**
+ * Phase 1 synthetic authentication/WebSocket contract. Only structured test
+ * results, never credentials or real network calls; not a session migration.
+ */
+export const SYNTHETIC_E2E_SCHEMA='gmww-standby-session-ws-probe-v1';
+const E2E_FIELDS=['schema','account','challenge','fixtureId','sourceSha','engineVersion','issuedAtMs',
+  'loginStatus','anonymousStatus','wsUpgradeStatus','wsPingPong','reconnectStatus'];
+function validateSyntheticE2E(p) {
+  if(!plain(p)||Object.keys(p).length!==E2E_FIELDS.length||E2E_FIELDS.some(k=>!own(p,k)))
+    throw Error('INVALID_PROBE_FIELDS');
+  if(p.schema!==SYNTHETIC_E2E_SCHEMA||!['A','B'].includes(p.account))throw Error('INVALID_ACCOUNT_SCHEMA');
+  if(typeof p.challenge!=='string'||!/^[a-f0-9]{32}$/.test(p.challenge))throw Error('INVALID_CHALLENGE');
+  if(typeof p.fixtureId!=='string'||!/^[a-z0-9-]{6,48}$/.test(p.fixtureId))throw Error('INVALID_FIXTURE_ID');
+  if(!SHA.test(p.sourceSha||'')||typeof p.engineVersion!=='string'||
+     !/^[A-Za-z0-9._-]{1,32}$/.test(p.engineVersion))throw Error('INVALID_ENGINE_IDENTITY');
+  if(!Number.isSafeInteger(p.issuedAtMs)||p.issuedAtMs<0)throw Error('INVALID_ISSUED_AT');
+  if(![200,401].includes(p.loginStatus)||p.anonymousStatus!==401||
+     ![101,403].includes(p.wsUpgradeStatus)||typeof p.wsPingPong!=='boolean'||
+     ![200,401].includes(p.reconnectStatus))throw Error('INVALID_RESULT_FIELDS');
+  return p;
+}
+export function makeSyntheticE2EProof(result,{testKey,fixtureOnly=false}={}) {
+  if(fixtureOnly!==true)throw Error('FIXTURE_ONLY_OPT_IN_REQUIRED');
+  validateSyntheticE2E(result);
+  return Object.freeze({result,sha256:sha(result),authTag:mac(result,testKey)});
+}
+export function verifySyntheticE2EProof(proof,{testKey,nowMs}={}) {
+  try {
+    if(!plain(proof)||Object.keys(proof).length!==3||!own(proof,'result')||
+       !own(proof,'sha256')||!own(proof,'authTag'))return false;
+    validateSyntheticE2E(proof.result);
+    if(!HMAC.test(proof.sha256)||!HMAC.test(proof.authTag)||sha(proof.result)!==proof.sha256)return false;
+    if(!Number.isSafeInteger(nowMs)||Math.abs(nowMs-proof.result.issuedAtMs)>5*60_000)return false;
+    const expected=Buffer.from(mac(proof.result,testKey),'hex');
+    const actual=Buffer.from(proof.authTag,'hex');
+    return actual.length===expected.length&&timingSafeEqual(actual,expected);
+  }catch{return false}
+}
+export function assessSyntheticTwoAccountE2E({primary,standby,testKey,nowMs}={}) {
+  const blockers=[];
+  const validA=verifySyntheticE2EProof(primary,{testKey,nowMs}),
+    validB=verifySyntheticE2EProof(standby,{testKey,nowMs});
+  if(!validA||!validB)blockers.push('INVALID_EXPIRED_OR_UNSIGNED_E2E');
+  else {
+    if(primary.result.account!=='A'||standby.result.account!=='B')blockers.push('ACCOUNT_BINDING_MISMATCH');
+    for(const field of ['challenge','fixtureId','sourceSha','engineVersion'])
+      if(primary.result[field]!==standby.result[field])blockers.push('MISMATCH_'+field.toUpperCase());
+    for(const proof of [primary,standby]){
+      const p=proof.result;
+      if(p.loginStatus!==200||p.anonymousStatus!==401||p.reconnectStatus!==200)
+        blockers.push('SYNTHETIC_AUTH_SESSION_FAILED_'+p.account);
+      if(p.wsUpgradeStatus!==101||p.wsPingPong!==true)
+        blockers.push('SYNTHETIC_WEBSOCKET_FAILED_'+p.account);
+    }
+  }
+  // Never equate synthetic probe with actual two Cloudflare accounts.
+  blockers.push('LIVE_E2E_NOT_VERIFIED','SECOND_ACCOUNT_NOT_PROVISIONED','LIVE_SWITCH_DISABLED');
+  return Object.freeze({syntheticChecksPass:blockers.length===3,
+    liveLoginSessionWebSocketVerified:false,productionSwitchAllowed:false,blockers});
+}

@@ -186,3 +186,27 @@ test('dual Cloudflare synthetic-only PR is validated locally without allocating 
   assert.match(workflow,/needs\.oracle-scope\.outputs\.standby_only != 'true'/);
   assert.match(workflow,/appendFileSync\(process\.env\.GITHUB_OUTPUT,'standby_only='/);
 });
+
+
+test('exact synthetic session+WebSocket follow-up never allocates a Preview DO namespace',()=>{
+  const match=workflow.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/);
+  assert.ok(match,'scope classifier source is required');
+  const statement=match[1].split('\n').find(l=>l.trim().startsWith('const standbyOnly = '));
+  assert.ok(statement);
+  const expr=statement.trim().slice('const standbyOnly = '.length).replace(/;$/,'');
+  const modified=[
+    'infra/cloudflare-standby/fixture-contract.mjs',
+    'infra/cloudflare-standby/fixture-contract.test.mjs',
+    '.github/scripts/ci-browser-scope.mjs',
+    'tests/ci-browser-scope.test.mjs',
+    '.github/workflows/check-pr-preview-github.yml',
+    'tests/github-actions-pr-preview-ci.test.mjs'
+  ].map(path=>({status:'M',path}));
+  const evaluate=changed=>vm.runInNewContext(expr,{changed});
+  assert.equal(evaluate(modified),true);
+  assert.equal(evaluate([...modified,{status:'M',path:'src/index.js'}]),false);
+  assert.equal(evaluate(modified.slice(1)),false);
+  assert.equal(evaluate(modified.map((x,i)=>i===0?{...x,status:'D'}:x)),false);
+  assert.equal(evaluate([...modified,modified[0]]),false);
+  assert.ok(workflow.includes("needs.oracle-scope.outputs.standby_only != 'true'"));
+});

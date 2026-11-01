@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {STANDBY_SCHEMA,makeFixtureProof,verifyFixtureProof,evaluateStandbyFixture} from './fixture-contract.mjs';
+import {STANDBY_SCHEMA,makeFixtureProof,verifyFixtureProof,evaluateStandbyFixture,SYNTHETIC_E2E_SCHEMA,makeSyntheticE2EProof,verifySyntheticE2EProof,assessSyntheticTwoAccountE2E} from './fixture-contract.mjs';
 const testKey='gmww-staging-fixture-key-only-long-enough-for-tests';
 const base=()=>({schema:STANDBY_SCHEMA,roomCode:'ABC234',revision:3,phase:'lobby',activeMatch:false,
   connectedSockets:0,sourceSha:'f9f32750d484ef3d0b43ca03eafb2937ebaf0e49',engineVersion:'V3.286',
@@ -32,4 +32,52 @@ test('mismatched primary standby checksum/commit is rejected',()=>{
 test('missing login/session and websocket parity cannot be waived by GM',()=>{
   const p=proof();const r=evaluateStandbyFixture({primary:p,standby:proof(),testKey,gmApproved:true});
   assert.ok(r.blockers.includes('LIVE_LOGIN_SESSION_NOT_VERIFIED'));assert.ok(r.blockers.includes('LIVE_WEBSOCKET_NOT_VERIFIED'));
+});
+
+const nowMs=1761987600000;
+const synthetic=(account,rest={})=>({
+  schema:SYNTHETIC_E2E_SCHEMA,account,challenge:'a'.repeat(32),fixtureId:'test-room-abc234',
+  sourceSha:base().sourceSha,engineVersion:base().engineVersion,issuedAtMs:nowMs,
+  loginStatus:200,anonymousStatus:401,wsUpgradeStatus:101,wsPingPong:true,reconnectStatus:200,...rest
+});
+const signed=(account,rest={})=>makeSyntheticE2EProof(synthetic(account,rest),{testKey,fixtureOnly:true});
+test('synthetic login/session and WebSocket parity never activates live switch',()=>{
+  const p=signed('A'),b=signed('B');
+  const r=assessSyntheticTwoAccountE2E({primary:p,standby:b,testKey,nowMs});
+  assert.equal(r.syntheticChecksPass,true);assert.equal(r.productionSwitchAllowed,false);
+  assert.equal(r.liveLoginSessionWebSocketVerified,false);
+  assert.ok(r.blockers.includes('LIVE_SWITCH_DISABLED'));
+});
+test('synthetic session results require explicit fixture opt in',()=>{
+  assert.throws(()=>makeSyntheticE2EProof(synthetic('A'),{testKey}),/FIXTURE_ONLY_OPT_IN_REQUIRED/);
+});
+test('signed probe rejects tampering, expiry and incorrect signing secret',()=>{
+  const p=signed('A');
+  assert.equal(verifySyntheticE2EProof(p,{testKey,nowMs}),true);
+  assert.equal(verifySyntheticE2EProof(p,{testKey:'different-long-enough-staging-test-key',nowMs}),false);
+  assert.equal(verifySyntheticE2EProof(p,{testKey,nowMs:nowMs+5*60_000+1}),false);
+  p.result.reconnectStatus=401;
+  assert.equal(verifySyntheticE2EProof(p,{testKey,nowMs}),false);
+});
+test('mismatched source, challenge or swapped backend fails closed',()=>{
+  for(const changes of [{sourceSha:'b'.repeat(40)},{challenge:'c'.repeat(32)}]){
+    const r=assessSyntheticTwoAccountE2E({primary:signed('A'),standby:signed('B',changes),testKey,nowMs});
+    assert.equal(r.syntheticChecksPass,false);assert.ok(r.blockers.some(x=>x.startsWith('MISMATCH_')));
+  }
+  const swapped=assessSyntheticTwoAccountE2E({primary:signed('B'),standby:signed('A'),testKey,nowMs});
+  assert.ok(swapped.blockers.includes('ACCOUNT_BINDING_MISMATCH'));
+});
+test('anonymous access, login, WS ping and reconnect failures all block',()=>{
+  for(const changes of [{anonymousStatus:200},{loginStatus:401},{wsUpgradeStatus:403},{wsPingPong:false},{reconnectStatus:401}]){
+    if(changes.anonymousStatus===200)assert.throws(()=>signed('B',changes),/INVALID_RESULT_FIELDS/);
+    else {
+      const r=assessSyntheticTwoAccountE2E({primary:signed('A'),standby:signed('B',changes),testKey,nowMs});
+      assert.equal(r.syntheticChecksPass,false);
+    }
+  }
+});
+test('private credentials and unexpected fields are rejected even in signed result',()=>{
+  for(const changes of [{accessToken:'secret'},{sessionId:'secret'},{roles:['wolf']},{cookie:'x'}]){
+    assert.throws(()=>signed('A',changes),/INVALID_PROBE_FIELDS/);
+  }
 });
