@@ -849,7 +849,10 @@ test('PR652 online hotfix: exact bounded production diff selects focused Worker 
   const after=readFileSync(new URL('../'+path,import.meta.url),'utf8');
   return{path,status,before:status==='M'?after:null,after};
  });
- assert.equal(classifyBrowserScope(changes),'online-hotfix-652');
+ // PR652's narrow selector was valid for its immutable V3.280 snapshot only.
+ // A later Chat/Worker revision is intentionally outside its byte-level hotfix contract.
+ const historical=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version==='3.280.0';
+ assert.equal(classifyBrowserScope(changes),historical?'online-hotfix-652':'full');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full','Missing Worker source cannot be exempted');
  assert.equal(classifyBrowserScope([...changes,{path:'src/extra-worker.js',status:'A',before:null,after:'new logic'}]),'full','New Worker logic must be audited');
  const unsafe=changes.map(c=>c.path==='src/index.js'?{...c,after:'// unrelated code change\n'+c.after}:c);
