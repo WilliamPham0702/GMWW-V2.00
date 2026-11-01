@@ -3022,6 +3022,7 @@ export class RoomDurableObject extends DurableObject {
       if(await this.runAutoAdvanceIfDue(meta))return;
       meta=await this.ctx.storage.get("meta");const due=this.roomExpiryDue(meta);
       if(Date.now()<due){await this.scheduleRoomAlarm(meta);return}
+      await this.chatVoiceClear();
       const now=new Date().toISOString();meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=now;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_EXPIRED")}catch{}
     }catch(e){
       console.error("GMWW_ROOM_ALARM",e);
