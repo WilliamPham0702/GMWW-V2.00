@@ -30,7 +30,8 @@ function gmwwChatExpand(){
 function gmwwChatColor(id){
  const ids=[...new Set((state.players||[]).map(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')))].sort();
  const index=ids.indexOf(String(id));let hash=0;for(const c of String(id))hash=(hash*31+c.charCodeAt(0))>>>0;
- return 'hsl('+((index>=0?index*137.508:hash)%360)+' 85% 78%)';
+ // Reserve red exclusively for GM and public announcements.
+ return 'hsl('+(38+((index>=0?index*137.508:hash)%278))+' 85% 78%)';
 }
 const gmwwChatAudioOff=()=>{try{return localStorage.getItem('gmww_player_announcement_audio_off')==='1'}catch{return false}};
 let gmwwAnnouncementAudio=null,gmwwAnnouncementUrl='',gmwwAnnouncementRequest=null,gmwwAnnouncementPending=null,gmwwAnnouncementGeneration=0;
@@ -95,6 +96,8 @@ html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:aut
 #gmwwChatPanel.open header{display:flex;align-items:center;gap:6px;padding:3px 7px}#gmwwChatPanel header b{flex:1;font-size:10px}
 #gmwwChatPanel header button{padding:2px 4px;min-width:25px;min-height:25px;border:0;background:transparent;color:#fff;font-size:12px}
 #gmwwChatPanel.open #gmwwChatLines{display:block;height:90px;max-height:22dvh;overflow-y:auto;overscroll-behavior:contain;padding:3px 7px;touch-action:pan-y}
+html body #gmwwOnlineFooter.gmww-chat-day #gmwwChatPanel.open{max-height:min(68dvh,calc(var(--gmww-player-visible-height,100dvh) - 76px))!important}
+#gmwwOnlineFooter.gmww-chat-day #gmwwChatPanel.open #gmwwChatLines{height:min(270px,calc(var(--gmww-player-visible-height,100dvh) - 155px))!important;max-height:54dvh!important}
 #gmwwChatLines .msg{display:block;margin:0;padding:1px 0;font:600 12px/17px system-ui;white-space:pre-wrap;overflow-wrap:anywhere;text-shadow:0 1px 3px #000}
 #gmwwChatLines .msg b{display:inline;font:inherit}#gmwwChatLines .msg.gm,#gmwwChatLines .msg.system{color:#ff5353!important;font-weight:800}
 #gmwwChatPanel.open #gmwwChatForm{border-top:1px solid rgba(255,255,255,.48)}
@@ -141,6 +144,8 @@ function gmwwChatDockSync(){
     footer.append(clock,panel,undo);document.body.appendChild(footer);
   }
   footer.hidden=!document.getElementById('game')?.classList.contains('active');
+  footer.classList.toggle('gmww-chat-day',state.room?.phase==='running'&&
+    ['morning','day'].includes(String(state.room?.cyclePhase||'')));
   panel.classList.toggle('open',gmwwChatOpen);
   const tick=()=>{const el=document.getElementById('gmwwPlayerClock');if(!el)return;
     const deadline=(typeof state.room?.dayDeadlineAt==='number'?state.room.dayDeadlineAt:Date.parse(state.room?.dayDeadlineAt||''));let ms=0;
@@ -170,12 +175,13 @@ async function gmwwChatRefresh(){
     if(!panel||!lines)return;
     panel.classList.toggle('secret',result.scope==='secret');
     document.getElementById('gmwwChatHeading').textContent=result.scope==='gm'?'🔒 Chat riêng GM':result.scope==='secret'?'🌙 Chat nhóm':'☀️ Chat Làng';
-    const items=[...(Array.isArray(result.notices)?result.notices:[]),...(Array.isArray(result.messages)?result.messages:[])];
+    const items=[...(Array.isArray(result.notices)?result.notices:[]),...(Array.isArray(result.messages)?result.messages:[])]
+      .sort((a,b)=>(Number(a?.at)||0)-(Number(b?.at)||0)||String(a?.id||'').localeCompare(String(b?.id||'')));
     const signature=JSON.stringify([gmwwChatTarget,items]);
     // Never expose message contents through room_state or the WebSocket.
     // The authenticated chat GET is the source of truth for a new-message cue.
     const key=room+'|'+gmwwChatTarget+'|'+String(result.channel||'');
-    const last=Array.isArray(result.messages)?result.messages.at(-1):null;
+    const last=items.at(-1)||null;
     const lastId=String(last?.id||'');const previous=gmwwChatLatestByChannel.get(key);
     if(lastId){
       if(previous!==undefined&&previous!==lastId&&!gmwwChatOpen&&String(last?.senderId||'')!==String(state.member?.loginId||''))gmwwChatUnread(true);
@@ -186,7 +192,7 @@ async function gmwwChatRefresh(){
      const atBottom=lines.scrollHeight-lines.clientHeight-lines.scrollTop<30;lines.dataset.sig=signature;lines.replaceChildren();
      for(const item of items){
       const bubble=document.createElement('div');bubble.className='msg'+(item.isGM===true?' gm':item.system===true?' system':'');
-      bubble.style.color=gmwwChatColor(item.senderId);
+      bubble.style.color=item.isGM===true||item.system===true?'#ff5353':gmwwChatColor(item.senderId);
       const name=document.createElement('b');name.textContent=String(item.senderName||'Người chơi')+': ';
       const msg=document.createElement('span');msg.textContent=String(item.text||'');bubble.append(name,msg);lines.appendChild(bubble);
      }
