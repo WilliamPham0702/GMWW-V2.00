@@ -353,3 +353,31 @@ test('GMWW V3 exact CI/policy PR keeps local checks but does not create a new Cl
  assert.match(workflow,/appendFileSync\(process.env.GITHUB_OUTPUT,'v3_policy_only='/);
  assert.match(workflow,/Build Worker locally, without publishing or Cloudflare build minutes/);
 });
+
+test('V3 release handoff CI-only PR has exact nine-file no-DO scope',()=>{
+ const match=workflow.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/);
+ assert.ok(match);
+ const start=match[1].indexOf('const v3CutoverOnly = ');
+ assert.ok(start>=0);
+ const end=match[1].indexOf(';',start);
+ const expr=match[1].slice(start+'const v3CutoverOnly = '.length,end);
+ const changes=[
+  {status:'A',path:'.github/workflows/gmww-v3-worker-production.yml'},
+  {status:'M',path:'.github/workflows/deploy-production.yml'},
+  {status:'M',path:'.github/workflows/github-runtime-ota.yml'},
+  {status:'M',path:'.github/workflows/deploy-gamemasoi-pages.yml'},
+  {status:'M',path:'.github/workflows/check-player-web.yml'},
+  {status:'M',path:'.github/workflows/check-pr-preview-github.yml'},
+  {status:'M',path:'tests/github-actions-pr-preview-ci.test.mjs'},
+  {status:'A',path:'tests/v3-release-cutover.test.mjs'},
+  {status:'M',path:'.github/workflows/ci-policy-gate.yml'}
+ ];
+ const evaluate=changed=>vm.runInNewContext(expr,{changed});
+ assert.equal(evaluate(changes),true);
+ assert.equal(evaluate([...changes,changes[0]]),false);
+ assert.equal(evaluate(changes.slice(1)),false);
+ assert.equal(evaluate(changes.map((x,i)=>i===0?{...x,status:'D'}:x)),false);
+ assert.equal(evaluate([...changes,{status:'M',path:'src/index.js'}]),false);
+ assert.ok(workflow.includes("needs.oracle-scope.outputs.v3_cutover_only != 'true'"));
+ assert.ok(workflow.includes("appendFileSync(process.env.GITHUB_OUTPUT,'v3_cutover_only='"));
+});
