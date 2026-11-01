@@ -3546,8 +3546,25 @@ export function isPlayerFireWolf726Scope(changes, blobHash = file => git('hash-o
   } catch {return false;}
 }
 
+
+const PR726_V3288_NOTE="V3.288 PR726: Player Web hiển thị icon Vai trò/Artifact ngay trên đống lửa đúng lượt và kéo thả vào mục tiêu, Khôi phục đúng tài khoản; mỗi Sói cắn riêng, Sói Trùm chốt cuối, không có Sói Trùm thì đa số quyết định, hòa không tự chọn. Bảo toàn IPA, URL và dữ liệu. .gmwwupdate SHA-256; rollback V3.287 nếu kiểm tra tương thích và phòng không đang chơi.";
+export function isPR726RuntimeV3288Scope(changes){
+  const allowed=new Set(['package.json','package-lock.json','src/index.js','server-game/src/00-core-and-library.part','server-game/current/app.js','server-game/current/GMWW.html','.github/scripts/prepare-update-channel.mjs']);
+  if(!Array.isArray(changes)||changes.length!==allowed.size||new Set(changes.map(c=>c.path)).size!==allowed.size||changes.some(c=>c.status!=='M'||!allowed.has(c.path)||typeof c.before!=='string'||typeof c.after!=='string'))return false;
+  const transform=(path,before)=>{
+    if(path==='package.json'||path==='package-lock.json')return before.replaceAll('"version": "3.287.0"','"version": "3.288.0"');
+    if(path==='src/index.js')return before.replace('VERSION="V3.287"','VERSION="V3.288"');
+    if(path==='server-game/src/00-core-and-library.part'||path==='server-game/current/app.js')return before.replace("const VERSION='3.287';","const VERSION='3.288';");
+    if(path==='server-game/current/GMWW.html')return before.replace('<title>GMWW V3.287</title>','<title>GMWW V3.288</title>');
+    if(path==='.github/scripts/prepare-update-channel.mjs')return before.replace('releaseNotes:[','releaseNotes:['+JSON.stringify(PR726_V3288_NOTE)+',');
+    return before;
+  };
+  return changes.every(c=>{const next=transform(c.path,c.before);return next!==c.before&&next===c.after;});
+}
+
 function classifyBrowserScope(changes){
   if(isPlayerFireWolf726Scope(changes))return 'player-fire-wolf-726';
+  if(isPR726RuntimeV3288Scope(changes))return 'player-fire-wolf-726';
   if(isDualCloudflareStandbyScope(changes))return 'dual-cloudflare-standby';
   if(isRuntimeMergedV3287Scope(changes))return 'runtime-merged-v3287';
   if(isRuntimeMergedV3286Scope(changes))return 'runtime-merged-v3286';
@@ -4639,6 +4656,25 @@ function detect(){
       }
     }catch{} // Unknown source or CI edits must run full checks.
   }
+
+  // PR726 POSTMERGE: exact CI-only recovery and exact V3.288 version change.
+  // No gameplay/IPA/data changes may be admitted by the CI-only branch.
+  if(process.env.GMWW_CI_EVENT==='push'){
+    try {
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path,
+        before:status==='M'?git('show','HEAD^1:'+path):null,
+        after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};});
+      if(isPR726RuntimeV3288Scope(changes))
+        return{mode:'player-fire-wolf-726',reason:'PR726 exact V3.288 version and Vietnamese notes only; Worker+wolf+undo+OTA gates remain'};
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.287.0'&&isCiLitePreviewWorkflowScope(changes)){
+        git('merge-base','--is-ancestor','0bfb4673037124d62e313b244aaab185a2d79202','HEAD');
+        git('diff','--quiet','0bfb4673037124d62e313b244aaab185a2d79202','HEAD','--','src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc');
+        return{mode:'ci-lite-preview-workflow',reason:'PR726 postmerge 3-file CI-only recovery; merged gameplay SHA unchanged'};
+      }
+    }catch{} // Unexpected diff or ancestry remains full; never bypass required checks.
+  }
+
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
   if(!/^[0-9a-f]{40}$/i.test(base))return {mode:'full',reason:'No verified PR base SHA'};
