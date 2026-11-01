@@ -1,5 +1,6 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
 import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices} from "./gmww-online-chat-policy.js";
+import {gmwwVoiceDecode,gmwwVoiceReadJson,gmwwVoiceStorageKey,gmwwVoicePublicMeta,VOICE_TTL_MS,VOICE_ROOM_MAX} from "./gmww-chat-voice.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -88,7 +89,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST")||(path==="/global-settings/village-scene/reset"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/player/action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/player/action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/player/chat/voice','/gm/chat/voice','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
       const response=await this.handleFetch(request),meta=await this.ctx.storage.get("meta");
       if(meta?.demo&&response.ok){
         if(path==="/gm/gallows")await this.ctx.storage.delete("demoPlan");
@@ -187,6 +188,11 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
     if(url.pathname==="/player/chat"&&request.method==="POST")return this.playerChatRead(await safeJson(request));
     if(url.pathname==="/player/chat/send"&&request.method==="POST")return this.playerChatSend(await safeJson(request));
+    if(url.pathname==="/player/chat/voice"&&request.method==="POST")return this.playerChatVoiceSend(await gmwwVoiceReadJson(request));
+    if(url.pathname==="/player/chat/voice/read"&&request.method==="POST")return this.playerChatVoiceRead(await safeJson(request));
+    if(url.pathname==="/gm/chat/voice"&&request.method==="POST")return this.gmChatVoiceSend(request);
+    const gmVoiceRead=url.pathname.match(/^\/gm\/chat\/voice\/([0-9a-f-]{36})$/);
+    if(gmVoiceRead&&request.method==="GET")return this.gmChatVoiceRead(request,gmVoiceRead[1]);
     if(url.pathname==="/gm/chat"&&request.method==="GET")return this.gmChatRead(request);
     if(url.pathname==="/gm/chat"&&request.method==="POST")return this.gmChatSend(request,await safeJson(request));
     if(url.pathname==="/gm/chat/moderate"&&request.method==="POST")return this.gmChatModerate(request,await safeJson(request));
@@ -3369,6 +3375,80 @@ export class RoomDurableObject extends DurableObject {
     this.broadcast({type:"chat_tick",serverTime:now});
     return j({ok:true,id:message.id,channel:permission.channel});
   }
+  async chatVoicePersist({meta,channel,scope,senderId,senderName,isGM,record,rateKey,rateDelay}){
+    const now=Date.now(),prev=Number(await this.ctx.storage.get(rateKey)||0);
+    if(now-prev<rateDelay)return j({ok:false,error:'CHAT_RATE_LIMIT'},429);
+    const all=await this.ctx.storage.list({prefix:'onlineChatVoice:',limit:VOICE_ROOM_MAX+5});
+    let count=0;
+    for(const [key,entry] of all){
+      if(Number(entry?.expiresAt||0)<=now){await this.ctx.storage.delete(key);continue}
+      count++;
+    }
+    if(count>=VOICE_ROOM_MAX)return j({ok:false,error:'CHAT_VOICE_ROOM_LIMIT'},429);
+    const id=crypto.randomUUID(),key=gmwwVoiceStorageKey(id);
+    const message=gmwwVoicePublicMeta({id,senderId,senderName,isGM,at:now,scope,voice:record});
+    // Clip payload is stored separately from Chat history; the message has metadata only.
+    const attachment={bytes:record.bytes,mime:record.mime,durationMs:record.durationMs,
+      channel,scope:chatStorageScope(meta),expiresAt:now+VOICE_TTL_MS};
+    const historyKey='onlineChat:'+chatStorageScope(meta)+':'+channel;
+    const history=(await this.ctx.storage.get(historyKey))||[];
+    try{
+      await this.ctx.storage.put(key,attachment);
+      await this.ctx.storage.put(historyKey,[...history.slice(-79),message]);
+      await this.ctx.storage.put(rateKey,now);
+    }catch{
+      await this.ctx.storage.delete(key);
+      return j({ok:false,error:'CHAT_VOICE_STORAGE_FAILED'},503);
+    }
+    this.broadcast({type:'chat_tick',serverTime:now});
+    return j({ok:true,id,channel});
+  }
+  chatVoiceResponse(record){
+    return new Response(record.bytes,{headers:{'content-type':record.mime,
+      'content-length':String(record.bytes.byteLength),'cache-control':'private, no-store',
+      'x-content-type-options':'nosniff','content-security-policy':"default-src 'none'",
+      'accept-ranges':'none'}});
+  }
+  async playerChatVoiceSend(body){
+    const loginId=normalizeLoginId(body?.loginId),record=gmwwVoiceDecode(body);
+    if(!record)return j({ok:false,error:'CHAT_VOICE_INVALID'},400);
+    const {meta,players,permission}=await this.chatAccess(loginId,body?.channel);
+    if(!permission.canSend)return j({ok:false,error:permission.reason||'CHAT_FORBIDDEN'},403);
+    return this.chatVoicePersist({meta,channel:permission.channel,scope:permission.scope,
+      senderId:loginId,senderName:String(players['member:'+loginId]?.displayName||loginId).slice(0,42),
+      isGM:false,record,rateKey:'onlineChatRate:'+chatStorageScope(meta)+':'+loginId,rateDelay:850});
+  }
+  async playerChatVoiceRead(body){
+    const id=String(body?.id||'');
+    if(!/^[0-9a-f-]{36}$/.test(id))return j({ok:false,error:'CHAT_VOICE_NOT_FOUND'},404);
+    const {meta,permission}=await this.chatAccess(normalizeLoginId(body?.loginId),body?.channel);
+    if(!permission.canRead)return j({ok:false,error:'CHAT_VOICE_FORBIDDEN'},403);
+    const record=await this.ctx.storage.get(gmwwVoiceStorageKey(id));
+    if(!record||record.scope!==chatStorageScope(meta)||record.channel!==permission.channel||
+       record.expiresAt<=Date.now())return j({ok:false,error:'CHAT_VOICE_NOT_FOUND'},404);
+    return this.chatVoiceResponse(record);
+  }
+  async gmChatVoiceSend(request){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const body=await gmwwVoiceReadJson(request),record=gmwwVoiceDecode(body);
+    if(!record)return j({ok:false,error:'CHAT_VOICE_INVALID'},400);
+    const meta=auth.meta,id=normalizeLoginId(body?.loginId),players=(await this.ctx.storage.get('players'))||{};
+    const publicDay=body?.channel==='room';
+    if(!['lobby','waiting','role_delivery','running'].includes(String(meta?.phase))||
+       (publicDay?(meta.phase!=='running'||meta.cyclePhase!=='morning'):(!id||!players['member:'+id])))
+      return j({ok:false,error:'GM_CHAT_INVALID_MESSAGE'},400);
+    const channel=publicDay?'day':'gm:'+id;
+    return this.chatVoicePersist({meta,channel,scope:publicDay?'day':'gm',
+      senderId:'gm',senderName:'GM',isGM:true,record,
+      rateKey:'gmChatRate:'+chatStorageScope(meta)+':'+channel,rateDelay:450});
+  }
+  async gmChatVoiceRead(request,id){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const record=await this.ctx.storage.get(gmwwVoiceStorageKey(id));
+    if(!record||record.scope!==chatStorageScope(auth.meta)||record.expiresAt<=Date.now())
+      return j({ok:false,error:'CHAT_VOICE_NOT_FOUND'},404);
+    return this.chatVoiceResponse(record);
+  }
   async gmChatRead(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,match=chatStorageScope(meta);
@@ -3718,6 +3798,14 @@ export default {async fetch(request,env){
   }
   const playerChat=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat$/);
   if(playerChat&&(request.method==="GET"||request.method==="POST"))return playerRoomChatApi(env,playerChat[1],request);
+  const playerVoiceUpload=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat\/voice$/);
+  if(playerVoiceUpload&&request.method==='POST')return playerRoomVoiceUpload(env,playerVoiceUpload[1],request);
+  const playerVoiceGet=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat\/voice\/([0-9a-f-]{36})$/);
+  if(playerVoiceGet&&request.method==='GET')return playerRoomVoiceRead(env,playerVoiceGet[1],playerVoiceGet[2],request);
+  const gmVoiceUpload=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/voice$/);
+  if(gmVoiceUpload&&request.method==='POST')return roomProxy(env,gmVoiceUpload[1],'/gm/chat/voice',request);
+  const gmVoiceGet=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/voice\/([0-9a-f-]{36})$/);
+  if(gmVoiceGet&&request.method==='GET')return roomProxy(env,gmVoiceGet[1],'/gm/chat/voice/'+gmVoiceGet[2],request);
   const gmChat=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat$/);
   if(gmChat&&(request.method==="GET"||request.method==="POST"))return roomProxy(env,gmChat[1],"/gm/chat",request);
   const gmChatMute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/moderate$/);
@@ -3824,6 +3912,25 @@ async function playerDrunkDrawApi(env,raw,request){
   return roomStub(env,code).fetch('https://room.internal/player/drunk/draw',{
     method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({loginId:me.member.loginId,cardId:body.cardId})});
+}
+async function playerRoomVoiceUpload(env,raw,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
+  const session=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),body=await gmwwVoiceReadJson(request);
+  if(!body)return j({ok:false,error:'CHAT_VOICE_INVALID'},400);
+  return roomStub(env,code).fetch('https://room.internal/player/chat/voice',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({...body,loginId:data.member.loginId,channel:body.channel==='gm'?'gm':'room'})});
+}
+async function playerRoomVoiceRead(env,raw,id,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
+  const session=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),channel=new URL(request.url).searchParams.get('channel');
+  return roomStub(env,code).fetch('https://room.internal/player/chat/voice/read',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({loginId:data.member.loginId,id,channel:channel==='gm'?'gm':'room'})});
 }
 async function playerRoomChatApi(env,raw,request){
   const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
