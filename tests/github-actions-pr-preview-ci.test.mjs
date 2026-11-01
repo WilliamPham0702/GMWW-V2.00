@@ -157,9 +157,9 @@ test('V3.286 main CI-only postmerge release routes to focused Worker gates with 
 
 
 test('dual Cloudflare synthetic-only PR is validated locally without allocating a Preview DO namespace',()=>{
-  const match=workflow.match(/node --input-type=module <<'NODE'\\n([\\s\\S]*?)\\n\\s*NODE/);
+  const match=workflow.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/);
   assert.ok(match);
-  const statement=match[1].split('\\n').find(l=>l.trim().startsWith('const standbyOnly = '));
+  const statement=match[1].split('\n').find(l=>l.trim().startsWith('const standbyOnly = '));
   assert.ok(statement);
   const expr=statement.trim().slice('const standbyOnly = '.length).replace(/;$/,'');
   const A=path=>({status:'A',path}),M=path=>({status:'M',path});
@@ -180,6 +180,6 @@ test('dual Cloudflare synthetic-only PR is validated locally without allocating 
   assert.equal(evaluate([...scope,A('assets/new.png')]),false);
   assert.equal(evaluate(scope.slice(1)),false);
   assert.equal(evaluate([...scope,scope[0]]),false);
-  assert.match(workflow,/needs\\.oracle-scope\\.outputs\\.standby_only != 'true'/);
-  assert.match(workflow,/appendFileSync\\(process\\.env\\.GITHUB_OUTPUT,'standby_only='/);
+  assert.match(workflow,/needs\.oracle-scope\.outputs\.standby_only != 'true'/);
+  assert.match(workflow,/appendFileSync\(process\.env\.GITHUB_OUTPUT,'standby_only='/);
 });
