@@ -86,8 +86,8 @@ test('CI-LITE docs-only and Preview-CI-only selectors fail closed without droppi
   assert.equal(evaluate('runtimeReleaseOnly',[...releaseOnly,M('src/player-web-src/30-rooms-and-realtime.part')]),false);
   assert.equal(evaluate('runtimeReleaseOnly',releaseOnly.map((x,i)=>i===0?D(x.path):x)),false);
   assert.equal(evaluate('runtimeReleaseOnly',releaseOnly.slice(0,8)),false);
-  assert.match(workflow,/needs\\.oracle-scope\\.outputs\\.runtime_release_only != 'true'/);
-  assert.match(workflow,/Verify no gameplay edits are hidden by V3\\.286 version bump/);
+  assert.ok(workflow.includes("needs.oracle-scope.outputs.runtime_release_only != 'true'"));
+  assert.ok(workflow.includes('Verify no gameplay edits are hidden by V3.286 version bump'));
   assert.equal(evaluate('ciOnly',[...ciOnly,M('src/index.js')]),false);
   assert.equal(evaluate('ciOnly',[D(ciOnly[0].path),ciOnly[1]]),false);
   assert.equal(evaluate('ciOnly',[ciOnly[0],ciOnly[0]]),false);
@@ -122,8 +122,8 @@ test('CI-LITE Preview selector uses focused checks only for exact four-file repa
 test('V3.286 release selector rejects surprise gameplay changes and extra paths',()=>{
  const src=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
  const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
- assert.match(src,/function isRuntimeMergedV3286Scope\\(changes\\)/);
- assert.match(worker,/steps\\.scope\\.outputs\\.mode == 'runtime-merged-v3286'/);
+ assert.ok(src.includes('function isRuntimeMergedV3286Scope(changes)'));
+ assert.ok(worker.includes("steps.scope.outputs.mode == 'runtime-merged-v3286'"));
  const expected=[
    'package.json','package-lock.json','src/index.js','server-game/current/GMWW.html',
    'server-game/current/app.js','server-game/src/00-core-and-library.part',
