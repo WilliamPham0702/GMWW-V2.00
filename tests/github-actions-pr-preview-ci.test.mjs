@@ -140,7 +140,7 @@ test('V3.286 main push CI parses real git newline and tab boundaries',()=>{
  const begin=src.indexOf("if(process.env.GMWW_CI_EVENT==='push')");
  assert.ok(begin>0,'main-push release selector must exist');
  const body=src.slice(begin,begin+700);
- assert.ok(body.includes(String.raw`trim().split('\\n').filter(Boolean)`),'Must split actual LF');
- assert.ok(body.includes(String.raw`row.split('\\t')`),'Must split actual TAB');
- assert.ok(!body.includes(String.raw`trim().split('\\\\n').filter(Boolean)`),'Escaped slash-n is invalid');
+ assert.ok(body.includes(String.raw`trim().split('\n').filter(Boolean)`),'Must split actual LF');
+ assert.ok(body.includes(String.raw`row.split('\t')`),'Must split actual TAB');
+ assert.ok(!body.includes(String.raw`trim().split('\\n').filter(Boolean)`),'Escaped slash-n is invalid');
 });
