@@ -235,12 +235,25 @@ function gmwwOnlineStop(){gmwwOnlinePick=null;document.getElementById('gmwwOnlin
 function gmwwOnlineTargetAt(x,y){
  const frame=document.getElementById('gmwwVillageFrame');if(!frame)return '';
  try{
-   const rect=frame.getBoundingClientRect(),sx=rect.width/(frame.clientWidth||frame.contentWindow?.innerWidth||rect.width),sy=rect.height/(frame.clientHeight||frame.contentWindow?.innerHeight||rect.height);let best='',distance=Infinity;
+   const rect=frame.getBoundingClientRect(),inner=frame.contentWindow;
+   if(!rect.width||!rect.height)return '';
+   // Coordinates crossing the scaled village iframe must be mapped back into its viewport.
+   const sx=rect.width/Math.max(1,Number(inner?.innerWidth)||frame.clientWidth||rect.width);
+   const sy=rect.height/Math.max(1,Number(inner?.innerHeight)||frame.clientHeight||rect.height);
+   const localX=(x-rect.left)/sx,localY=(y-rect.top)/sy;
+   const valid=new Set(gmwwOnlinePeople().map(p=>p.id));
+   const idOf=node=>String(node?.dataset?.playerId||'').replace(/^member:/,'');
+   // Prefer the player directly under the finger, not an adjacent avatar.
+   const hit=frame.contentDocument?.elementFromPoint?.(localX,localY)?.closest?.('#players .player[data-player-id]');
+   if(hit&&valid.has(idOf(hit)))return idOf(hit);
+   let best='',distance=Infinity;
    for(const node of frame.contentDocument.querySelectorAll('#players .player[data-player-id]')){
-     const b=node.getBoundingClientRect(),d=Math.hypot(x-rect.left-(b.left+b.width/2)*sx,y-rect.top-(b.top+b.height/2)*sy);
-     const id=String(node.dataset.playerId||'').replace(/^member:/,'');
-     if(gmwwOnlinePeople().some(p=>p.id===id)&&d<Math.max(65,Math.min(110,Math.max(b.width*sx,b.height*sy)))&&d<distance){best=id;distance=d}
-   }return best;
+     const id=idOf(node);if(!valid.has(id))continue;
+     const b=node.getBoundingClientRect(),d=Math.hypot(localX-b.left-b.width/2,localY-b.top-b.height/2);
+     const radius=Math.max(55,Math.min(115,Math.max(b.width,b.height)*.85));
+     if(d<radius&&d<distance){best=id;distance=d}
+   }
+   return best;
  }catch{return ''}
 }
 function gmwwOnlinePickAction(action){
@@ -292,35 +305,51 @@ async function gmwwOnlineSubmit(){
 function gmwwOnlineIconDown(event,action){
  if(event.button!==undefined&&event.button!==0)return;
  event.preventDefault();event.stopPropagation();
- const node=event.currentTarget,startX=event.clientX,startY=event.clientY;
+ const node=event.currentTarget,startX=event.clientX,startY=event.clientY,pointerId=event.pointerId;
  if(action.blocked){toast(String(action.blockedReason||'Bạn đang bị hiệu ứng, không thể thực hiện hành động.'));return}
  clearTimeout(gmwwPlayerTopMenuTimer);gmwwChatClosePanel();
- let ghost=null;
+ let ghost=null,finished=false;
+ const targetAt=(x,y)=>{
+   const id=gmwwOnlineTargetAt(x,y);
+   return action.noSelf&&id===String(state.member?.loginId||'').replace(/^member:/,'')?'':id;
+ };
  const move=e=>{
+   if(e.pointerId!==pointerId||finished)return;
    if(!ghost&&Math.hypot(e.clientX-startX,e.clientY-startY)>10){
      ghost=document.createElement('img');ghost.className='gmww-online-ghost';ghost.src=action.iconUrl||'';document.body.appendChild(ghost);
    }
-   if(ghost){e.preventDefault();ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';const id=gmwwOnlineTargetAt(e.clientX,e.clientY);ghost.style.filter=id?'drop-shadow(0 0 12px #7effba)':'drop-shadow(0 4px 8px #000b)'}
+   if(ghost){e.preventDefault();ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';const id=targetAt(e.clientX,e.clientY);ghost.style.filter=id?'drop-shadow(0 0 12px #7effba)':'drop-shadow(0 4px 8px #000b)'}
  };
+ const cleanup=()=>{
+   document.removeEventListener('pointermove',move,true);document.removeEventListener('pointerup',end,true);document.removeEventListener('pointercancel',end,true);
+   window.removeEventListener('blur',cancel);try{node.releasePointerCapture?.(pointerId)}catch{}
+   ghost?.remove();revealPlayerTopMenu(true);
+ };
+ const cancel=()=>{if(finished)return;finished=true;cleanup()};
  const end=e=>{
-   node.removeEventListener('pointermove',move);node.removeEventListener('pointerup',end);node.removeEventListener('pointercancel',end);
-   if(e.type==='pointercancel'){ghost?.remove();revealPlayerTopMenu(true);return}
-   revealPlayerTopMenu(true);const moved=!!ghost;ghost?.remove();
+   if(e.pointerId!==pointerId||finished)return;
+   finished=true;const moved=!!ghost;
+   cleanup();
+   if(e.type==='pointercancel')return;
    if(!moved){gmwwOnlinePickAction(action);return}
-   const target=gmwwOnlineTargetAt(e.clientX,e.clientY);
+   const target=targetAt(e.clientX,e.clientY);
    if(target){if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlinePick={action,targets:[]};gmwwOnlineTarget(target)}
    else{
-      const prev=gmwwOnlineIconPositions.get(action.key)||{x:0,y:0};
-      const bounds=node.getBoundingClientRect();
-      const originX=bounds.left+bounds.width/2-prev.x,originY=bounds.top+bounds.height/2-prev.y;
-      const x=Math.max(40,Math.min(window.innerWidth-40,e.clientX))-originX;
-      const y=Math.max(80,Math.min(window.innerHeight-85,e.clientY))-originY;
-      gmwwOnlineIconPositions.set(action.key,{x,y});
-      node.style.transform='translate('+x+'px,'+y+'px)';
-    }
+     const prev=gmwwOnlineIconPositions.get(action.key)||{x:0,y:0};
+     const bounds=node.getBoundingClientRect();
+     const originX=bounds.left+bounds.width/2-prev.x,originY=bounds.top+bounds.height/2-prev.y;
+     const x=Math.max(40,Math.min(window.innerWidth-40,e.clientX))-originX;
+     const y=Math.max(80,Math.min(window.innerHeight-85,e.clientY))-originY;
+     gmwwOnlineIconPositions.set(action.key,{x,y});
+     node.style.transform='translate('+x+'px,'+y+'px)';
+   }
  };
+ // Capture on the source AND listen on the parent document: iOS may move over the iframe.
  try{node.setPointerCapture?.(event.pointerId)}catch{}
- node.addEventListener('pointermove',move);node.addEventListener('pointerup',end);node.addEventListener('pointercancel',end);
+ document.addEventListener('pointermove',move,true);
+ document.addEventListener('pointerup',end,true);
+ document.addEventListener('pointercancel',end,true);
+ window.addEventListener('blur',cancel);
 }
 // Only authenticated action offers trigger this local effect; no private role is broadcast.
 function gmwwOnlineTurnEffects(offers){
@@ -373,7 +402,7 @@ function renderOnlineActionDock(){
  dock.style.setProperty('--online-action-scale',String(scale/100));
  const scope=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join('|');
   if(gmwwOnlineIconScope!==scope){gmwwOnlineIconScope=scope;gmwwOnlineIconPositions.clear();gmwwOnlineCanRestore=false}
-  const sig=[scope,...offers.map(a=>a.key+':'+a.iconUrl)].join('|');
+  const sig=[scope,...offers.map(a=>[a.key,a.iconUrl,a.blocked,a.blockedReason,a.targetCount,a.noSelf].join(':'))].join('|');
  gmwwOnlinePlaceAtFire(dock);
  if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();dock.classList.remove('is-idle-hidden');
  for(const action of offers){
