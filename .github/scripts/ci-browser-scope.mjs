@@ -3791,9 +3791,9 @@ function detect(){
   // After merging into main, the same exact version-only commit still uses scoped CI.
   if(process.env.GMWW_CI_EVENT==='push'){
     try{
-      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\\n').filter(Boolean);
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
       const changes=rows.map(row=>{
-        const [status,path]=row.split('\\t');
+        const [status,path]=row.split('\t');
         return{status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
           after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
       });

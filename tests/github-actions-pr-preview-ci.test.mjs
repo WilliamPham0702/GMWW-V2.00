@@ -134,3 +134,13 @@ test('V3.286 release selector rejects surprise gameplay changes and extra paths'
  assert.equal(classifyBrowserScope(changes),'full','Release must be rejected without exact source bytes');
  assert.equal(classifyBrowserScope([...changes,{path:'src/private.js',status:'M'}]),'full');
 });
+
+test('V3.286 main push CI parses real git newline and tab boundaries',()=>{
+ const src=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ const begin=src.indexOf("if(process.env.GMWW_CI_EVENT==='push')");
+ assert.ok(begin>0,'main-push release selector must exist');
+ const body=src.slice(begin,begin+700);
+ assert.ok(body.includes(String.raw`trim().split('\n').filter(Boolean)`),'Must split actual LF');
+ assert.ok(body.includes(String.raw`row.split('\t')`),'Must split actual TAB');
+ assert.ok(!body.includes(String.raw`trim().split('\\n').filter(Boolean)`),'Escaped slash-n is invalid');
+});

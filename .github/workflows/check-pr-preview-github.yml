@@ -63,6 +63,7 @@ jobs:
           appendFileSync(process.env.GITHUB_OUTPUT,'runtime_release_only='+String(runtimeReleaseOnly)+'\n');
           console.log(runtimeReleaseOnly?'Exact V3.286 release candidate: verify immutable source bytes locally, no new Durable Object namespace.':only?'Oracle SQLite-only: no Preview deploy.':docsOnly?'Docs-only: skip Worker build and Cloudflare Preview.':ciOnly?'Preview CI-only: local safety validation, no Cloudflare Preview.':'Gameplay or unknown scope: retain isolated Preview publication gate.');
           NODE
+  # V3.286 main-push parser repair affects CI only; Preview stays isolated.
   validate-preview:
     name: Validate isolated Preview without Cloudflare Builds
     needs: oracle-scope
