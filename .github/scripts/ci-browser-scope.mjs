@@ -4661,6 +4661,23 @@ function detect(){
       }
     }catch{} // Unknown source or CI edits must run full checks.
   }
+
+  // PR726_V3288_MAIN_RECOVERY: exact CI-only postmerge commit runs the reviewed wolf/undo suite.
+  // The V3.288 gameplay, GM, IPA, Runtime version and data must remain byte-identical to PR729.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{const [status,path]=row.split('\t');return{status,path,
+        before:status==='M'?git('show','HEAD^1:'+path):null,
+        after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};});
+      if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.288.0'&&isCiLitePreviewWorkflowScope(changes)){
+        git('merge-base','--is-ancestor','4c7f1b5b6db8969e51410399fd094d568d8419ae','HEAD');
+        git('diff','--quiet','4c7f1b5b6db8969e51410399fd094d568d8419ae','HEAD','--','src/','server-game/','assets/','package.json','package-lock.json','wrangler.jsonc','.github/scripts/prepare-update-channel.mjs');
+        return{mode:'player-fire-wolf-726',reason:'V3.288 CI-only recovery: exact 3 files, previously reviewed PR726 wolf and undo source unchanged'};
+      }
+    }catch{} // Failed proof reverts to full tests; never skip Worker or Preview required checks.
+  }
+
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
   if(!/^[0-9a-f]{40}$/i.test(base))return {mode:'full',reason:'No verified PR base SHA'};

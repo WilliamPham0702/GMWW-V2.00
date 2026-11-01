@@ -275,3 +275,19 @@ test('PR726 SHA trailing newline regression accepts Git hash-object output, neve
   assert.ok(guard,'Missing exact PR728 runtime release protection');
   for(const path of files)assert.ok(guard[0].includes("'"+path+"'"),'Guard missing '+path);
 });
+
+
+test('PR726 V3.288 postmerge CI recovery keeps exact source and release gates',()=>{
+  const paths=['.github/scripts/ci-browser-scope.mjs','.github/workflows/github-runtime-ota.yml','tests/github-actions-pr-preview-ci.test.mjs'];
+  const entries=paths.map(path=>({path,status:'M',after:readFileSync(path,'utf8')}));
+  assert.equal(classifyBrowserScope(entries),'ci-lite-preview-workflow');
+  assert.equal(classifyBrowserScope([...entries,{path:'src/index.js',status:'M',after:'unsafe'}]),'full');
+  const selector=readFileSync(paths[0],'utf8');
+  assert.match(selector,/PR726_V3288_MAIN_RECOVERY/);
+  assert.match(selector,/isCiLitePreviewWorkflowScope\(changes\)/);
+  assert.match(selector,/mode:'player-fire-wolf-726'/);
+  assert.match(selector,/git\('diff','--quiet','4c7f1b5b6db8969e51410399fd094d568d8419ae'/);
+  const runtime=readFileSync(paths[1],'utf8');
+  assert.match(runtime,/PR728_CI_ONLY_GUARD/);
+  assert.match(runtime,/SKIP_AUTO_RELEASE=true/);
+});
