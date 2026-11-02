@@ -29,7 +29,7 @@ function gmwwChatExpand(){
 }
 function gmwwChatColor(id){
  const ids=[...new Set((state.players||[]).map(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')))].sort();
- const index=ids.indexOf(String(id));let hash=0;for(const c of String(id))hash=(hash*31+c.charCodeAt(0))>>>0;
+ const normalized=String(id||'').replace(/^member:/,'').toLowerCase();const index=ids.indexOf(normalized);let hash=0;for(const c of normalized)hash=(hash*31+c.charCodeAt(0))>>>0;
  // Reserve red exclusively for GM and public announcements.
  return 'hsl('+(38+((index>=0?index*137.508:hash)%278))+' 85% 78%)';
 }
@@ -162,6 +162,7 @@ html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:aut
 #gmwwChatPanel.open header{display:flex;align-items:center;gap:6px;padding:3px 7px}#gmwwChatPanel header b{flex:1;font-size:10px}
 #gmwwChatPanel header button{padding:2px 4px;min-width:25px;min-height:25px;border:0;background:transparent;color:#fff;font-size:12px}
 #gmwwChatPanel.open #gmwwChatLines{display:block;height:90px;max-height:22dvh;overflow-y:auto;overscroll-behavior:contain;padding:3px 7px;touch-action:pan-y}
+html body #gmwwOnlineFooter.gmww-chat-day{height:auto!important;max-height:min(74dvh,calc(var(--gmww-player-visible-height,100dvh) - 96px))!important}
 html body #gmwwOnlineFooter.gmww-chat-day #gmwwChatPanel.open{max-height:min(68dvh,calc(var(--gmww-player-visible-height,100dvh) - 76px))!important}
 #gmwwOnlineFooter.gmww-chat-day #gmwwChatPanel.open #gmwwChatLines{height:min(270px,calc(var(--gmww-player-visible-height,100dvh) - 155px))!important;max-height:54dvh!important}
 #gmwwChatLines .msg{display:block;margin:0;padding:1px 0;font:600 12px/17px system-ui;white-space:pre-wrap;overflow-wrap:anywhere;text-shadow:0 1px 3px #000}
@@ -277,6 +278,7 @@ async function gmwwChatRefresh(){
     if(!panel||!lines)return;
     panel.classList.toggle('secret',result.scope==='secret');
     document.getElementById('gmwwChatHeading').textContent=result.scope==='gm'?'🔒 Chat riêng GM':result.scope==='secret'?'🌙 Chat nhóm':'☀️ Chat Làng';
+    document.getElementById('gmwwOnlineFooter')?.classList.toggle('gmww-chat-day',['morning','day'].includes(String(result.phase||''))&&state.room?.phase==='running');
     const items=[...(Array.isArray(result.notices)?result.notices:[]),...(Array.isArray(result.broadcasts)?result.broadcasts:[]),...(Array.isArray(result.messages)?result.messages:[])].sort((a,b)=>Number(a.at||0)-Number(b.at||0));
     const signature=JSON.stringify([gmwwChatTarget,items]);
     // Never expose message contents through room_state or the WebSocket.

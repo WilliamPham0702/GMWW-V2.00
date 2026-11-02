@@ -1576,8 +1576,58 @@ jobs:
           done
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'PASS: Ván Mẫu AUTO 3, iOS, Worker GET, packaging, dry-run.' >> "$GITHUB_STEP_SUMMARY"
+      # PR751 exact-scope CI-LITE: any unexpected path falls back to full Worker tests.
+      # No Worker/DO, IPA, runtime, Production or PR749 changes qualify.
+      - name: PR751 — public status, static avatars and day chat focused required checks
+        id: pr751_status_chat
+        if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+        env:
+          PR751_BASE: ${{ github.event.pull_request.base.sha }}
+          PR751_HEAD: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            # Actions checks out the synthetic merge commit; compare only the PR
+            # branch changes with its event base, not unrelated newer main commits.
+            [[ "$PR751_BASE" =~ ^[0-9a-f]{40}$ && "$PR751_HEAD" =~ ^[0-9a-f]{40}$ ]] || exit 0
+            BASE="$PR751_BASE"
+            DIFF_HEAD="$PR751_HEAD"
+          else
+            BASE='HEAD^1'
+            DIFF_HEAD='HEAD'
+          fi
+          ACTUAL=$(git diff --name-status --no-renames "$BASE" "$DIFF_HEAD" | sort)
+          EXPECTED=$(printf '%s\n' \
+            $'M\t.github/workflows/check-player-web.yml' \
+            $'A\tdocs/releases/GMWW-PLAYER-STATUS-CHAT-20261102.md' \
+            $'M\tsrc/gmww-members-live.js' \
+            $'M\tsrc/player-web-src/20-village-and-profile.part' \
+            $'M\tsrc/player-web-src/30-rooms-and-realtime.part' \
+            $'M\tsrc/player-web-src/35-online-chat.part' \
+            $'A\ttests/player-public-status-chat-lowheat-20261102.test.mjs' | sort)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo 'PR751 exact-scope mismatch: full Worker CI required.'
+            exit 0
+          fi
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/player-public-status-chat-lowheat-20261102.test.mjs \
+            tests/player-v3-village-status-daychat-20261102.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/player-online-realtime-freeze-day-20261030.test.mjs \
+            tests/player-web-online-village-20261028.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-PLAYER-STATUS-CHAT-20261102.md
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'PR751 status/chat, privacy, version and Worker checks PASS.' >> "$GITHUB_STEP_SUMMARY"
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -1600,14 +1650,14 @@ jobs:
         if: steps.scope.outputs.mode == 'dual-renderer'
         run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true'
         shell: bash
         run: |
           python3 -m venv /tmp/gmww-avatar-venv
           /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
           /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Kiểm tra nhanh Player Web trên máy thử nghiệm
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true'
         shell: bash
         run: |
           set -euo pipefail
