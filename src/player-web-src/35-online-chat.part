@@ -254,9 +254,26 @@ function gmwwChatDockSync(){
     ['morning','day'].includes(String(state.room?.cyclePhase||'')));
   panel.classList.toggle('open',gmwwChatOpen);
   const tick=()=>{const el=document.getElementById('gmwwPlayerClock');if(!el)return;
-    const deadline=(typeof state.room?.dayDeadlineAt==='number'?state.room.dayDeadlineAt:Date.parse(state.room?.dayDeadlineAt||''));let ms=0;
-    if(Number.isFinite(deadline)&&deadline>0)ms=Math.max(0,deadline-(Date.now()+Number(state.serverClockOffsetMs||0)));
-    const sec=Math.ceil(ms/1000);el.textContent=deadline>0?String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'):'--:--';
+    const room=state.room||{},serverNow=Date.now()+Number(state.serverClockOffsetMs||0);
+    let ms=0,hasTime=false,paused=false;
+    if(room.phase==='running'&&room.cyclePhase==='night'){
+      const clock=state.gmwwTurnClock;
+      if(clock&&clock.matchId===room.matchId&&clock.cycleKey===room.cycleKey){
+        const deadline=Date.parse(clock.deadlineAt||''),started=Date.parse(clock.startedAt||'');
+        if(clock.pausedRemainingMs!=null&&Number.isFinite(Number(clock.pausedRemainingMs))){
+          ms=Math.max(0,Number(clock.pausedRemainingMs));paused=true;hasTime=true;
+        }else if(Number.isFinite(deadline)){ms=Math.max(0,deadline-serverNow);hasTime=true}
+        else if(Number.isFinite(started)&&Number(clock.durationSec)>0){ms=Math.max(0,Number(clock.durationSec)*1000-(serverNow-started));hasTime=true}
+      }
+    }else if(room.phase==='running'&&['morning','day'].includes(String(room.cyclePhase||''))){
+      const deadline=typeof room.dayDeadlineAt==='number'?room.dayDeadlineAt:Date.parse(room.dayDeadlineAt||'');
+      if(room.dayPausedRemainingMs!=null&&room.autoGM===false){
+        ms=Math.max(0,Number(room.dayPausedRemainingMs)||0);paused=true;hasTime=true;
+      }else if(Number.isFinite(deadline)){ms=Math.max(0,deadline-serverNow);hasTime=true}
+    }
+    const sec=Math.ceil(ms/1000);
+    el.textContent=hasTime?String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'):'--:--';
+    el.title=paused?'Đồng hồ tạm dừng (Auto GM tắt)':'Thời gian còn lại của lượt trên Server';
   };
   tick();if(!gmwwOnlineFooterTimer)gmwwOnlineFooterTimer=setInterval(tick,1000);
 }
