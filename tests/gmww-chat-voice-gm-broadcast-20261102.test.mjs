@@ -97,3 +97,29 @@ test('Both runtimes include their updated source components',()=>{
  assert.match(gm,/gmwwGMVoiceToggle/);
  assert.match(player,/gmwwChatVoiceToggle/);
 });
+
+test('Glass Chat redesign keeps Player and GM UI controls and recording states aligned',()=>{
+ for(const code of [gm,player]){
+  assert.match(code,/gmwwChatMicSvg/);
+  assert.match(code,/gmwwChatSendSvg/);
+  assert.match(code,/gmwwChatStopSvg/);
+  assert.match(code,/gmww-voice-card/);
+  assert.match(code,/gmww-voice-wave/);
+  assert.match(code,/gmww-chat-record-pulse/);
+  assert.match(code,/prefers-reduced-motion:reduce/);
+  assert.match(code,/backdrop-filter:blur\(13px\)/);
+  assert.match(code,/new MediaRecorder\(stream/);
+  assert.match(code,/Math\.min\(30000/);
+  assert.doesNotMatch(code,/https:\/\/[^\s'"]+\.(?:svg|png)\b/);
+ }
+ assert.match(gm,/id="gmwwGMRecording"/);
+ assert.match(gm,/querySelector\('\[type="submit"\]'\)/,'GM send must never disable microphone');
+ assert.match(gm,/gmwwGMVoiceRecording\(false\)/);
+ assert.match(gm,/gmwwGMVoiceCard\(msg\)/);
+ assert.match(player,/id="gmwwChatRecording"/);
+ assert.match(player,/gmwwChatRecordDisplay\(false\)/);
+ assert.match(player,/gmwwChatVoiceCard\(item\)/);
+ const built=JSON.parse(compiledPlayer.match(/^export const gmwwMembersLiveScript = (.*);\s*$/s)[1]);
+ assert.doesNotThrow(()=>new vm.Script(built),'Player deployed script must parse as JS');
+ assert.doesNotThrow(()=>new vm.Script(compiledGM),'GM packaged script must parse as JS');
+});

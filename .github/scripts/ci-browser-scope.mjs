@@ -3689,7 +3689,51 @@ function isPR743ChatPostmergeScopeV2(changes){
   }catch{return false}
 }
 
+// PR749: narrowly scoped Chat glass + Runtime version, with Worker/gameplay protected.
+ // Reject any unknown file, duplicate or native/DO/config edit; those run the full suite.
+function isPR749ChatGlassScope(changes){
+  const expected=new Map([
+    ['docs/releases/GMWW-RUNTIME-V3.291-CHAT-GLASS-20261102.md','A'],
+    ['package-lock.json','M'],['package.json','M'],
+    ['server-game/current/GMWW.html','M'],
+    ['server-game/current/app.js','M'],
+    ['server-game/src/00-core-and-library.part','M'],
+    ['server-game/src/45-online-chat.part','M'],
+    ['src/gmww-members-live.js','M'],['src/index.js','M'],
+    ['src/player-web-src/35-online-chat.part','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     new Set(changes.map(c=>c.path)).size!==expected.size||
+     changes.some(c=>expected.get(c.path)!==c.status))return false;
+  const byPath=new Map(changes.map(c=>[c.path,c]));
+  const onlyVersion=(path,oldText,newText)=>{
+    const row=byPath.get(path);
+    return typeof row?.before==='string'&&typeof row.after==='string'&&
+      row.before.includes(oldText)&&row.after===row.before.replaceAll(oldText,newText);
+  };
+  try {
+    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.291.0')return false;
+    if(!onlyVersion('package.json','"version": "3.290.0"','"version": "3.291.0"')||
+       !onlyVersion('package-lock.json','"version": "3.290.0"','"version": "3.291.0"')||
+       !onlyVersion('src/index.js','VERSION="V3.290"','VERSION="V3.291"')||
+       !onlyVersion('server-game/src/00-core-and-library.part',"const VERSION='3.290'","const VERSION='3.291'")||
+       !onlyVersion('server-game/current/GMWW.html','<title>GMWW V3.290</title>','<title>GMWW V3.291</title>'))return false;
+    const gm=fs.readFileSync('server-game/src/45-online-chat.part','utf8');
+    const player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
+    const workflow=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+    return gm.includes('gmwwGMVoiceCard(')&&gm.includes('gmwwChatMicSvg')&&
+      player.includes('gmwwChatVoiceCard(')&&player.includes('gmwwChatMicSvg')&&
+      workflow.includes("steps.scope.outputs.mode == 'gmww-chat-glass-749'")&&
+      fs.existsSync('docs/releases/GMWW-RUNTIME-V3.291-CHAT-GLASS-20261102.md');
+  }catch{return false;}
+}
+
 function classifyBrowserScope(changes){
+  if(isPR749ChatGlassScope(changes))return 'gmww-chat-glass-749';
   if(isPR743ChatPostmergeScopeV2(changes))return 'gmww-chat-pr743-postmerge';
   if(isPR743ChatPostmergeScope(changes))return 'gmww-chat-pr743-postmerge';
   if(isPR743ChatVoiceScope(changes))return 'gmww-chat-voice-pr743';
@@ -4715,6 +4759,21 @@ function detect(){
       if(isPR743ChatPostmergeScopeV2(changes))
         return{mode:'gmww-chat-pr743-postmerge',reason:'Exact PR743 CI-only selector recovery with immutable merged Chat code'};
     }catch{} // Unapproved or stale changes fall back to full CI.
+  }
+  // PR749 main-push scoped release after merged source: require EXACT same version-only
+  // Worker changes and Chat UI files; otherwise fail closed to full required tests.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(line=>{
+        const [status,path]=line.split('\t');
+        return {status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
+          after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
+      });
+      if(isPR749ChatGlassScope(changes))return{
+        mode:'gmww-chat-glass-749',reason:'Exact PR749 merged Chat glass V3.291; Worker code unchanged apart from VERSION'
+      };
+    }catch{} // Any new files, source changes or unknown merge → full CI.
   }
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
