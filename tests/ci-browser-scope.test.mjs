@@ -1036,7 +1036,9 @@ test('PR743 postmerge CI-only recovery is safe on exact four files and keeps Pro
    {path:'.github/workflows/deploy-pr743-chat-worker.yml',status:'A'},
    {path:'tests/ci-browser-scope.test.mjs',status:'M'}
  ];
- assert.equal(classifyBrowserScope(exact),'gmww-chat-pr743-postmerge');
+ // PR743's narrowly authorized one-time recovery is invalid after Runtime V3.289.
+ const legacyChatRelease=JSON.parse(readFileSync('package.json','utf8')).version==='3.289.0';
+ assert.equal(classifyBrowserScope(exact),legacyChatRelease?'gmww-chat-pr743-postmerge':'full');
  assert.equal(classifyBrowserScope(exact.slice(1)),'full');
  assert.equal(classifyBrowserScope([...exact,{path:'src/index.js',status:'M'}]),'full');
  assert.equal(classifyBrowserScope([...exact,{path:'wrangler.jsonc',status:'M'}]),'full');
@@ -1060,7 +1062,9 @@ test('PR748 Chat main-push selector recovery requires exact 3 changed CI files a
    {path:'.github/workflows/deploy-pr743-chat-worker.yml',status:'M'},
    {path:'tests/ci-browser-scope.test.mjs',status:'M'}
  ];
- assert.equal(classifyBrowserScope(fixed),'gmww-chat-pr743-postmerge');
+ // After V3.290, historical CI-only release paths must fail closed (mode=full).
+ const legacyChatRelease=JSON.parse(readFileSync('package.json','utf8')).version==='3.289.0';
+ assert.equal(classifyBrowserScope(fixed),legacyChatRelease?'gmww-chat-pr743-postmerge':'full');
  for(const missing of fixed)assert.equal(classifyBrowserScope(fixed.filter(x=>x!==missing)),'full','missing '+missing.path);
  for(const extra of ['src/index.js','wrangler.jsonc','server-game/GMWW-Server/GameView.swift','.github/workflows/check-player-web.yml'])
    assert.equal(classifyBrowserScope([...fixed,{path:extra,status:'M'}]),'full',extra);
