@@ -183,7 +183,7 @@ async function pollRoomState(){
     const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/me',{headers:auth()});
     if(d?.room){state.room=d.room;if(String(d.room.phase||'').toLowerCase()!=='ended')maybeOpenGame()}if(d?.cardBackImage){state.cardBackImage=d.cardBackImage;applyRoleCardBack()}
     if(d?.player){const me=d.player;state.ready=!!me.ready}
-    handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);renderDrunkDraw(d?.drunkDraw);gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.onlineActions=d?.onlineActions||[];gmwwOnlineWitchBite=d?.witchBite||null;renderOnlineActionDock();state.gallows=d?.gallows||null;renderGallowsWidget();state.demoActions=d?.demoActions||[];renderDemoActions();
+    handleSeatSwapRequests(d?.swapRequests);handlePendingInteractions(d?.interactions);syncRoleEffects(d?.effects);renderDrunkDraw(d?.drunkDraw);gmwwChatAnnounce(d?.audioCue);renderPlayerTimeline(d?.publicTimeline);state.gmwwTurnClock=d?.publicTimeline?.phase==='night'&&d?.publicTimeline?.clock?{...d.publicTimeline.clock,matchId:d?.room?.matchId,cycleKey:d?.room?.cycleKey}:null;state.onlineActions=d?.onlineActions||[];gmwwOnlineWitchBite=d?.witchBite||null;renderOnlineActionDock();state.gallows=d?.gallows||null;renderGallowsWidget();state.demoActions=d?.demoActions||[];renderDemoActions();
     if(wolfWakeEpoch===Number(state.wolfWakeEpoch||0))setPrivateWolfRecognition(d?.wolfRecognition,d.room||state.room);syncVillageFrame();
     if(d?.role){state.role=d.role;renderRole();maybeOpenGame()}
     if(hasCompletedRoomResult(d?.room))showResult(d.room.winnerFaction||d.room.winnerLabel||'',d.room.matchId||'');
