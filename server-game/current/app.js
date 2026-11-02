@@ -571,7 +571,7 @@ const DEFAULT_PREFS={
 }
 
 const $=(s,r=document)=>r.querySelector(s);
-const $=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const clone=v=>JSON.parse(JSON.stringify(v));
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function formatInformation(v){return String(v??'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>x?x.charAt(0).toLocaleUpperCase('vi-VN')+x.slice(1):x).join('\n')}
