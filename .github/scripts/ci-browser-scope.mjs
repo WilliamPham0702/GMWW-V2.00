@@ -3732,7 +3732,33 @@ function isPR749ChatGlassScope(changes){
   }catch{return false;}
 }
 
+// PR755: immutable V3.292 Runtime + Worker + Player voice/turn-clock patch.
+// Exact allowlist, pinned reviewed blobs; any unseen code, Native, DO, or 3D change => FULL CI.
+function isPR755TurnClockVoiceScope(changes){
+  const expected=new Map([[".github/scripts/prepare-update-channel.mjs","M"],["package-lock.json","M"],["package.json","M"],["server-game/current/GMWW.html","M"],["server-game/current/app.js","M"],["server-game/src/00-core-and-library.part","M"],["server-game/src/45-online-chat.part","M"],["src/gmww-members-live.js","M"],["src/index.js","M"],["src/player-web-src/30-rooms-and-realtime.part","M"],["src/player-web-src/35-online-chat.part","M"],["tests/online-turn-clock-voice-send-20261102.test.mjs","A"],["docs/releases/GMWW-RUNTIME-V3.292-TURN-CLOCK-VOICE-20261102.md","A"],["tests/ci-browser-scope.test.mjs","M"],[".github/scripts/ci-browser-scope.mjs","M"],[".github/workflows/check-player-web.yml","M"]]);
+  const pinned={".github/scripts/prepare-update-channel.mjs":"a5558654671630f9c49b96bb0589c134da6b1e33","package-lock.json":"620958faa2433b3bd35d5e385de07dcff67b4db6","package.json":"b8b08d32e01ca314e2a02a8c87d180dced99efb4","server-game/current/GMWW.html":"1c1311d8fe2f83701da9c6d3e27b9a7432991fda","server-game/current/app.js":"298e79e9f0c2b18651a81356bd86cd86c6424dac","server-game/src/00-core-and-library.part":"65f35f36a6fcd0419a6ab4fff3c293264b1a8f51","server-game/src/45-online-chat.part":"87c70d5972ee1633ea1e61235c8f1e1b0feb298a","src/gmww-members-live.js":"c3675a66476e73b3965ae65c8ad785d9e35e2ae8","src/index.js":"231ecad8cda7040798a56ed7fdca8ad17e121d83","src/player-web-src/30-rooms-and-realtime.part":"321263435323f93c4fb4cca9c59800b89686b823","src/player-web-src/35-online-chat.part":"137216be6b9738c0dcec8089f2531ce6052738b0","tests/online-turn-clock-voice-send-20261102.test.mjs":"392aa8f10559493c5a8a08fc0835c64185f261f1"};
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+     new Set(changes.map(x=>x.path)).size!==expected.size||
+     changes.some(x=>expected.get(x.path)!==x.status))return false;
+  try{
+    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.292.0')return false;
+    const by=new Map(changes.map(c=>[c.path,c]));
+    for(const [file,expectedBlob] of Object.entries(pinned)){
+      const after=by.get(file)?.after;
+      if(typeof after!=='string')return false;
+      const blob=createHash('sha1').update('blob '+Buffer.byteLength(after)+'\0').update(after).digest('hex');
+      if(blob!==expectedBlob)return false;
+    }
+    if(!by.get('src/index.js')?.before?.includes('VERSION="V3.291"'))return false;
+    if(!by.get('package.json')?.before?.includes('"version": "3.291.0"'))return false;
+    const workflow=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+    return workflow.includes("steps.scope.outputs.mode == 'gmww-v3292-turn-voice'")&&
+      workflow.includes('tests/online-turn-clock-voice-send-20261102.test.mjs')&&
+      fs.existsSync('docs/releases/GMWW-RUNTIME-V3.292-TURN-CLOCK-VOICE-20261102.md');
+  }catch{return false}
+}
 function classifyBrowserScope(changes){
+  if(isPR755TurnClockVoiceScope(changes))return 'gmww-v3292-turn-voice';
   if(isPR749ChatGlassScope(changes))return 'gmww-chat-glass-749';
   if(isPR743ChatPostmergeScopeV2(changes))return 'gmww-chat-pr743-postmerge';
   if(isPR743ChatPostmergeScope(changes))return 'gmww-chat-pr743-postmerge';
@@ -4993,6 +5019,16 @@ function detect(){
       if(isPR743ChatPostmergeScope(changes))
         return {mode:'gmww-chat-pr743-postmerge',reason:'Reviewed PR743 merged Worker source unchanged; exact CI-only release recovery'};
     }catch{} // no ancestry or changed Worker/native/config => run full tests
+  }
+  // PR755 main merge commit: exact unchanged reviewed V3.292 bytes, test before release.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{const [status,file]=row.split('\t');return {
+        status,path:file,before:status==='M'?git('show','HEAD^1:'+file):null,
+        after:status==='M'||status==='A'?fs.readFileSync(file,'utf8'):null};});
+      if(isPR755TurnClockVoiceScope(changes))return{mode:'gmww-v3292-turn-voice',reason:'PR755 strict same-source Runtime and Worker CI'};
+    }catch{}
   }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
