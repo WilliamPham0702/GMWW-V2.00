@@ -1,4 +1,5 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
+import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
 import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
@@ -3515,9 +3516,8 @@ export default {async fetch(request,env){
   const templateRoleArtwork=url.pathname.match(/^\/api\/gm\/template-role-artwork\/([A-Za-z0-9_-]{1,120})$/);
   if(templateRoleArtwork&&request.method==="GET"){
     if(!env.ASSETS)return j({ok:false,error:"RUNTIME_ARTWORK_UNAVAILABLE"},503);
-    const assetUrl=new URL("/updates/runtime/"+VERSION+"/assets/role-artwork-v251/original/"+templateRoleArtwork[1]+".webp",request.url);
     try{
-      const asset=await env.ASSETS.fetch(new Request(assetUrl.toString(),{method:"GET"}));
+      const asset=await fetchCanonicalRoleArtwork(env.ASSETS,request.url,templateRoleArtwork[1],VERSION);
       if(!asset.ok)return j({ok:false,error:"ROLE_ARTWORK_NOT_FOUND"},asset.status===404?404:503);
       return new Response(asset.body,{status:200,headers:{...corsHeaders(),"content-type":"image/webp","cache-control":"public, max-age=86400","x-content-type-options":"nosniff"}});
     }catch{return j({ok:false,error:"RUNTIME_ARTWORK_UNAVAILABLE"},503)}
@@ -4094,9 +4094,8 @@ async function gmPackageCanonicalTemplateRole(env,raw,request){
   const status=await statusResponse.json();
   if(!status?.assets?.includes(assetId))return j({ok:false,error:"ROLE_NOT_IN_TEMPLATE"},400);
   if(!status.missing?.includes(assetId))return j({ok:true,assetId,cached:true,hasImage:true});
-  const imageUrl=new URL("/updates/runtime/"+VERSION+"/assets/role-artwork-v251/original/"+roleId+".webp",request.url);
   try{
-    const asset=await env.ASSETS.fetch(new Request(imageUrl.toString(),{method:"GET"}));
+    const asset=await fetchCanonicalRoleArtwork(env.ASSETS,request.url,roleId,VERSION);
     if(!asset.ok)return j({ok:false,error:"CANONICAL_ROLE_ARTWORK_MISSING",assetId,message:"Server không tìm thấy artwork gốc của "+roleId},asset.status===404?404:503);
     const mime=String(asset.headers.get("content-type")||"").toLowerCase();
     if(mime&&!mime.includes("image/")&&!mime.includes("octet-stream"))return j({ok:false,error:"INVALID_ROLE_ARTWORK_MIME"},424);
