@@ -39,7 +39,7 @@ test('auth 401 reports safe classification without exposing the secret or its ha
   assert.ok(!JSON.stringify(details).includes(secret));
   assert.equal(diagnoseBLogin(response,'  '+secret+' ').keyHasEdgeWhitespace,true);
   assert.equal(diagnoseBLogin(response,'"'+secret+'"').keyHasMatchingOuterQuotes,true);
-  assert.equal(diagnoseBLogin(response,secret+'\\n').keyHasControlCharacter,true);
+  assert.equal(diagnoseBLogin(response,secret+'\n').keyHasControlCharacter,true);
   assert.equal(diagnoseBLogin({...response,data:{error:secret}},secret).responseCode,'UNCLASSIFIED');
   const printed=[];
   const originalError=console.error;
