@@ -46,6 +46,29 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR749: exact, fail-closed Chat glass + OTA version scope. Unreviewed changes use full CI.
+      # Keep Worker privacy, GM/Player source, status/chat regression and dry-run checks mandatory.
+      - name: PR749 — Chat glass GM/Player, voice/privacy, Runtime V3.291 and Worker dry-run
+        if: steps.scope.outputs.mode == 'gmww-chat-glass-749'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/online-frozen-chat-day-20261031.test.mjs \
+            tests/player-v3-village-status-daychat-20261102.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.291-CHAT-GLASS-20261102.md
       # PR743 postmerge: same reviewed source, only CI release control files changed.
       # The new Worker main SHA must still pass Chat privacy, packaging and dry-run.
       - name: PR743 postmerge Worker/Chat required CI and release policy
