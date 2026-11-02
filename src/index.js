@@ -3076,6 +3076,9 @@ export class RoomDurableObject extends DurableObject {
     const publicTimeline=String(meta.phase)==="running"?
       String(meta.cyclePhase)==="night"&&wolfRuntime?
         {phase:"night",activeIndex:Math.max(0,Number(wolfRuntime.cursor)||0),
+          clock:{deadlineAt:wolfRuntime.deadlineAt||null,startedAt:turn?.startedAt||wolfRuntime.startedAt||null,
+            durationSec:Math.max(0,Number(turn?.durationSec)||0),
+            pausedRemainingMs:wolfRuntime.autoAdvance===false?Math.max(0,Number(wolfRuntime.autoPausedRemainingMs)||0):null},
           steps:(wolfRuntime.queue||[]).slice(0,150).map((step,index)=>({
             label:String(step?.label||"Lượt Vai Trò").slice(0,110),
             status:index<Number(wolfRuntime.cursor)?"done":index===Number(wolfRuntime.cursor)?"active":"upcoming"
