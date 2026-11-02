@@ -1157,7 +1157,10 @@ test('PR749 Chat glass guard selects focused Worker gate only for strict V3.291 
     const before=pair?after.replaceAll(pair[0],pair[1]):status==='M'?'prior content':null;
     return {path,status,before,after};
   });
-  assert.equal(classifyBrowserScope(changes),'gmww-chat-glass-749');
+  // The strict one-time PR749 gate was valid only for V3.291. Any later Runtime
+  // must use the full CI scope rather than accidentally reusing that bypass.
+  assert.equal(classifyBrowserScope(changes),
+    JSON.parse(readFileSync('package.json','utf8')).version==='3.291.0'?'gmww-chat-glass-749':'full');
   assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing release notes');
   assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full','DO/Worker config cannot bypass full CI');
   assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full','IPA/native changes forbidden');
