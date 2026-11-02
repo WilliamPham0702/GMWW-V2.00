@@ -9,7 +9,7 @@ test('GitHub E2E is locked to isolated B HTTPS Worker; cannot query A',()=>{
   for(const path of ['https://gmww-v2-00.williampham0702.workers.dev/health','//elsewhere/health','/../health','/qa/..//health'])assert.throws(()=>assertBUrl(path));
   const source=readFileSync(new URL('./b-staging-live-e2e.mjs',import.meta.url),'utf8');
   assert.doesNotMatch(source,/cloudflare\.request|wrangler deploy|productionSwitchAllowed\s*:\s*true/);
-  const workflow=readFileSync(new URL('../../.github/workflows/live-cloudflare-b-e2e.yml',import.meta.url),'utf8');
+  const workflow=readFileSync(new URL('../../.github/workflows/check-cloudflare-standby.yml',import.meta.url),'utf8');
   assert.match(workflow,/permissions:\s*\n\s*contents:\s*read/);
   assert.doesNotMatch(workflow,/pull_request_target|CLOUDFLARE_API_TOKEN|deploy-production|workers\.dev\/api/);
   assert.match(workflow,/secrets\.GMWW_B_SYNTHETIC_ADMIN_KEY/);
