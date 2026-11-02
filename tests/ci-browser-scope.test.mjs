@@ -1099,3 +1099,28 @@ test('SERVER-3 B synthetic E2E only receives focused CI on the exact nine audite
     assert.equal(classifyBrowserScope([...fixture,{path:source,status:'M'}]),'full',source);
   }
 });
+
+test('B live GitHub Actions E2E exact six-file scope avoids Cloudflare A Preview, mixed diffs fail closed',()=>{
+  const scope=[
+    ['infra/cloudflare-standby/b-staging-live-e2e.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-live-e2e.test.mjs','A'],
+    ['.github/workflows/check-cloudflare-standby.yml','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(scope),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope(scope.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...scope,scope[0]]),'full');
+  for(const path of ['src/index.js','wrangler.jsonc','server-game/current/app.js','.github/workflows/deploy-production.yml']){
+    assert.equal(classifyBrowserScope([...scope,{path,status:'M'}]),'full');
+  }
+  assert.equal(classifyBrowserScope(scope.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+  const release=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  const ota=readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+  for(const src of [release,ota]){
+    assert.match(src,/BEGIN GMWW_DUAL_CLOUDFLARE_(STAGING|RUNTIME)_GUARD/);
+    assert.match(src,/check-cloudflare-standby/);
+    assert.match(src,/infra\/cloudflare-standby/);
+  }
+});
