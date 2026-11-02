@@ -16,12 +16,13 @@
   function remainingSeconds(runtime,serverNow=Date.now()){
     const current=currentTurn("night",runtime);
     if(!current)return null;
-    const seconds=Number(current.durationSec);
-    if(!Number.isFinite(seconds)||seconds<=0)return null;
+    // The server deadline takes precedence even for configured turns without a durationSec field.
+    const paused=runtime?.autoAdvance===false?Number(runtime?.autoPausedRemainingMs):NaN;
+    if(runtime?.autoAdvance===false&&runtime?.autoPausedRemainingMs!=null&&Number.isFinite(paused))return Math.max(0,Math.ceil(paused/1000));
     const deadline=Date.parse(runtime?.deadlineAt||"");
     if(Number.isFinite(deadline))return Math.max(0,Math.ceil((deadline-serverNow)/1000));
-    const paused=Number(runtime?.autoPausedRemainingMs);
-    if(Number.isFinite(paused)&&paused>0)return Math.max(0,Math.ceil(paused/1000));
+    const seconds=Number(current.durationSec);
+    if(!Number.isFinite(seconds)||seconds<=0)return null;
     const start=Date.parse(current.startedAt||runtime?.startedAt||"");
     return Number.isFinite(start)?Math.max(0,Math.ceil(seconds-(serverNow-start)/1000)):Math.ceil(seconds);
   }
