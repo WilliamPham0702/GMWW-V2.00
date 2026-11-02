@@ -1188,3 +1188,54 @@ test('B-only GM auth diagnostics stay CI-LITE and exclude Production/Preview onl
   assert.equal(classifyBrowserScope([...changed,changed[0]]),'full');
   assert.equal(classifyBrowserScope(changed.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
 });
+
+
+test('PR753 voice and clock V3.292 exact guarded scope keeps mandatory privacy and Worker checks',()=>{
+ const files=[
+  ['docs/releases/GMWW-RUNTIME-V3.292-VOICE-CLOCK-20261102.md','A'],
+  ['package-lock.json','M'],['package.json','M'],
+  ['server-game/current/GMWW.html','M'],
+  ['server-game/current/app.js','M'],
+  ['server-game/current/battle-controls.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/45-online-chat.part','M'],
+  ['src/gmww-members-live.js','M'],
+  ['src/gmww-public-turn-clock.js','A'],
+  ['src/index.js','M'],
+  ['src/player-web-src/20-village-and-profile.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/gmww-chat-voice-send-v3292.test.mjs','A'],
+  ['tests/gmww-public-turn-clock-v3292.test.mjs','A'],
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M']
+ ];
+ const versionPairs=new Map([
+  ['package.json',['"version": "3.292.0"','"version": "3.291.0"']],
+  ['package-lock.json',['"version": "3.292.0"','"version": "3.291.0"']],
+  ['server-game/current/GMWW.html',['<title>GMWW V3.292</title>','<title>GMWW V3.291</title>']],
+  ['server-game/src/00-core-and-library.part',["const VERSION='3.292'","const VERSION='3.291'"]]
+ ]);
+ const changes=files.map(([path,status])=>{
+  const after=readFileSync(path,'utf8'),pair=versionPairs.get(path);
+  let before=pair?after.replaceAll(pair[0],pair[1]):'Prior unrelated scope preserved';
+  if(path==='src/index.js'){
+   before=after.replace('VERSION="V3.292"','VERSION="V3.291"')
+     .replace('\nimport {projectPublicTurnClock} from "./gmww-public-turn-clock.js";','')
+     .replace('\n          clock:projectPublicTurnClock(wolfRuntime),','');
+  }
+  return {path,status,before:status==='A'?null:before,after};
+ });
+ assert.equal(classifyBrowserScope(changes),'gmww-voice-clock-v3292');
+ assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='src/gmww-public-turn-clock.js')),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,after:c.after+'\n// unsafe unrelated Worker mutation'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='package.json'?{...c,after:c.after.replace('3.292.0','3.293.0')}:c)),'full');
+ const worker=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ for(const required of ['tests/gmww-chat-voice-send-v3292.test.mjs','tests/gmww-public-turn-clock-v3292.test.mjs',
+ 'tests/online-chat-authority.test.mjs','tests/ci-browser-scope.test.mjs','npm run check',
+ "steps.scope.outputs.mode == 'gmww-voice-clock-v3292'"])assert.ok(worker.includes(required),required);
+});
