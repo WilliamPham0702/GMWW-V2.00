@@ -1128,3 +1128,46 @@ test('B live GitHub Actions E2E exact six-file scope avoids Cloudflare A Preview
     assert.match(src,/infra\/cloudflare-standby/);
   }
 });
+
+
+test('PR749 Chat glass guard selects focused Worker gate only for strict V3.291 release and exact source changes',()=>{
+  const paths=[
+    ['docs/releases/GMWW-RUNTIME-V3.291-CHAT-GLASS-20261102.md','A'],
+    ['package-lock.json','M'],['package.json','M'],
+    ['server-game/current/GMWW.html','M'],
+    ['server-game/current/app.js','M'],['server-game/src/00-core-and-library.part','M'],
+    ['server-game/src/45-online-chat.part','M'],
+    ['src/gmww-members-live.js','M'],['src/index.js','M'],
+    ['src/player-web-src/35-online-chat.part','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ];
+  const rewrites=new Map([
+    ['package.json',['"version": "3.291.0"','"version": "3.290.0"']],
+    ['package-lock.json',['"version": "3.291.0"','"version": "3.290.0"']],
+    ['src/index.js',['VERSION="V3.291"','VERSION="V3.290"']],
+    ['server-game/src/00-core-and-library.part',["const VERSION='3.291'","const VERSION='3.290'"]],
+    ['server-game/current/GMWW.html',['<title>GMWW V3.291</title>','<title>GMWW V3.290</title>']]
+  ]);
+  const changes=paths.map(([path,status])=>{
+    const after=readFileSync(path,'utf8');
+    const pair=rewrites.get(path);
+    const before=pair?after.replaceAll(pair[0],pair[1]):status==='M'?'prior content':null;
+    return {path,status,before,after};
+  });
+  assert.equal(classifyBrowserScope(changes),'gmww-chat-glass-749');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing release notes');
+  assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full','DO/Worker config cannot bypass full CI');
+  assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full','IPA/native changes forbidden');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full','duplicate path must fail closed');
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,after:c.after+'\\n// unrelated worker edit'}:c)),'full','unknown Worker edit must trigger full tests');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='server-game/src/00-core-and-library.part'?{...c,after:c.after+'\\n// core changed'}:c)),'full','core gameplay edit must trigger full tests');
+  const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  assert.match(workflow,/steps\\.scope\\.outputs\\.mode == 'gmww-chat-glass-749'/);
+  assert.match(workflow,/tests\\/online-chat-authority\\.test\\.mjs/);
+  assert.match(workflow,/tests\\/gmww-chat-voice-gm-broadcast-20261102\\.test\\.mjs/);
+  assert.match(workflow,/npm run check/);
+});
