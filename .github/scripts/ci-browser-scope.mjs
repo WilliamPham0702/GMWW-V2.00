@@ -3632,7 +3632,7 @@ function isPR743ChatPostmergeScope(changes){
      new Set(changes.map(c=>c.path)).size!==expected.size||
      changes.some(c=>expected.get(c.path)!==c.status))return false;
   try{
-    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.289.0')return false;
+    if(!['3.289.0','3.290.0'].includes(JSON.parse(fs.readFileSync('package.json','utf8')).version))return false;
     const worker=fs.readFileSync('src/index.js','utf8'),
       deploy=fs.readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
     return worker.includes('async chatVoiceStore(')&&worker.includes('async chatVoiceRead(')&&
@@ -3658,7 +3658,7 @@ function isPR743ChatPostmergeScopeV2(changes){
     return deploy.includes('cc430dd97af48aba6afb1d415582d9e5818457dd')&&
       deploy.includes('Automatic rollback')&&worker.includes('async chatVoiceStore(')&&
       worker.includes('async chatVoiceRead(')&&
-      JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.289.0';
+      ['3.289.0','3.290.0'].includes(JSON.parse(fs.readFileSync('package.json','utf8')).version);
   }catch{return false}
 }
 
