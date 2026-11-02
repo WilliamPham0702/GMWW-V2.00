@@ -1157,8 +1157,8 @@ test('PR749 Chat glass guard selects focused Worker gate only for strict V3.291 
     const before=pair?after.replaceAll(pair[0],pair[1]):status==='M'?'prior content':null;
     return {path,status,before,after};
   });
-  // The strict one-time PR749 gate was valid only for V3.291. Any later Runtime
-  // must use the full CI scope rather than accidentally reusing that bypass.
+  // PR749's one-time focused exemption applies only to V3.291.
+  // Any later Runtime release must run full CI, never reuse the old bypass.
   assert.equal(classifyBrowserScope(changes),
     JSON.parse(readFileSync('package.json','utf8')).version==='3.291.0'?'gmww-chat-glass-749':'full');
   assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing release notes');
@@ -1173,4 +1173,18 @@ test('PR749 Chat glass guard selects focused Worker gate only for strict V3.291 
   assert.match(workflow,/tests\/online-chat-authority\.test\.mjs/);
   assert.match(workflow,/tests\/gmww-chat-voice-gm-broadcast-20261102\.test\.mjs/);
   assert.match(workflow,/npm run check/);
+});
+
+test('B-only GM auth diagnostics stay CI-LITE and exclude Production/Preview only for exact six modifications',()=>{
+  const files=['infra/cloudflare-standby/b-staging-live-e2e.mjs',
+    'infra/cloudflare-standby/b-staging-live-e2e.test.mjs',
+    '.github/workflows/check-cloudflare-standby.yml',
+    '.github/workflows/check-pr-preview-github.yml',
+    '.github/scripts/ci-browser-scope.mjs','tests/ci-browser-scope.test.mjs'];
+  const changed=files.map(path=>({path,status:'M'}));
+  assert.equal(classifyBrowserScope(changed),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope(changed.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...changed,{path:'src/index.js',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope([...changed,changed[0]]),'full');
+  assert.equal(classifyBrowserScope(changed.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
 });

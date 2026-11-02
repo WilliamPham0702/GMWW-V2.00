@@ -3519,6 +3519,18 @@ function isRuntimeMergedV3286Scope(changes){
 // Dual Cloudflare B PR: exact synthetic code/CI scope only. Any gameplay,
 // runtime, asset, hidden or unknown path returns FULL Worker CI.
 function isDualCloudflareStandbyScope(changes){
+  // Synthetic-only B auth401 diagnostics. Exact existing six files, no Production changes.
+  const bAuthDiag=new Map([
+    ['infra/cloudflare-standby/b-staging-live-e2e.mjs','M'],
+    ['infra/cloudflare-standby/b-staging-live-e2e.test.mjs','M'],
+    ['.github/workflows/check-cloudflare-standby.yml','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(Array.isArray(changes)&&changes.length===bAuthDiag.size&&
+    new Set(changes.map(x=>x.path)).size===changes.length&&
+    changes.every(x=>bAuthDiag.get(x.path)===x.status))return true;
   // Exact B-only live E2E harness; no gameplay/Worker/Production changes.
   const bLive=new Map([
     ['infra/cloudflare-standby/b-staging-live-e2e.mjs','A'],
