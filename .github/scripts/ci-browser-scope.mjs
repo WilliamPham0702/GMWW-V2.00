@@ -4760,6 +4760,21 @@ function detect(){
         return{mode:'gmww-chat-pr743-postmerge',reason:'Exact PR743 CI-only selector recovery with immutable merged Chat code'};
     }catch{} // Unapproved or stale changes fall back to full CI.
   }
+  // PR749 main-push scoped release after merged source: require EXACT same version-only
+  // Worker changes and Chat UI files; otherwise fail closed to full required tests.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(line=>{
+        const [status,path]=line.split('\t');
+        return {status,path,before:status==='M'?git('show','HEAD^1:'+path):null,
+          after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
+      });
+      if(isPR749ChatGlassScope(changes))return{
+        mode:'gmww-chat-glass-749',reason:'Exact PR749 merged Chat glass V3.291; Worker code unchanged apart from VERSION'
+      };
+    }catch{} // Any new files, source changes or unknown merge → full CI.
+  }
   // Push of CI-policy-only main merges needs selector unit tests, not
   // unrelated Chrome/Edge Card tests. All other main pushes remain full.
   if(process.env.GMWW_CI_EVENT==='push'){
