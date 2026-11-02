@@ -9,8 +9,10 @@ test('Cloudflare B staging config is synthetic-only with no production bindings 
   assert.equal(config.main,'./b-staging-worker.mjs');
   assert.equal(config.workers_dev,true);
   assert.equal(config.preview_urls,false);
-  for(const field of ['account_id','zone_id','routes','route','assets','durable_objects','vars','services','secrets','triggers'])
+  for(const field of ['account_id','zone_id','routes','route','assets','vars','services','secrets','triggers'])
     assert.equal(Object.hasOwn(config,field),false,field+' must be absent');
+  assert.deepEqual(config.durable_objects?.bindings,[{name:'STAGE3_SYNTHETIC_ROOM',class_name:'Stage3SyntheticState'}]);
+  assert.deepEqual(config.migrations,[{tag:'b-stage3-e2e-v1',new_sqlite_classes:['Stage3SyntheticState']}]);
   const source=readFileSync(new URL('./b-staging-worker.mjs',import.meta.url),'utf8');
   assert.doesNotMatch(source,/src\/index|GM_SYNC_TOKEN|fetch\(['"]https?:\/\//);
 });
