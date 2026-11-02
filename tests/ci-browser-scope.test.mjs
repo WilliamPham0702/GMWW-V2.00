@@ -1174,3 +1174,34 @@ test('PR749 Chat glass guard selects focused Worker gate only for strict V3.291 
   assert.match(workflow,/tests\/gmww-chat-voice-gm-broadcast-20261102\.test\.mjs/);
   assert.match(workflow,/npm run check/);
 });
+
+
+test('PR755 V3.292 only uses focused checks for byte-pinned Chat/Timer/Worker/Runtime on PR and main',()=>{
+  const files=[
+    ['.github/scripts/prepare-update-channel.mjs','M'],
+    ['package-lock.json','M'],['package.json','M'],
+    ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+    ['server-game/src/00-core-and-library.part','M'],['server-game/src/45-online-chat.part','M'],
+    ['src/gmww-members-live.js','M'],['src/index.js','M'],
+    ['src/player-web-src/30-rooms-and-realtime.part','M'],['src/player-web-src/35-online-chat.part','M'],
+    ['tests/online-turn-clock-voice-send-20261102.test.mjs','A'],
+    ['docs/releases/GMWW-RUNTIME-V3.292-TURN-CLOCK-VOICE-20261102.md','A'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],['.github/workflows/check-player-web.yml','M']
+  ];
+  const changes=files.map(([path,status])=>({
+    path,status,after:readFileSync(path,'utf8'),
+    before:status==='A'?null:path==='src/index.js'?'VERSION="V3.291"':
+      path==='package.json'?'"version": "3.291.0"':'previous'
+  }));
+  assert.equal(classifyBrowserScope(changes),'gmww-v3292-turn-voice');
+  assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path==='src/index.js'?{...x,after:x.after+'// extra change'}:x)),'full');
+  assert.equal(classifyBrowserScope(changes.map(x=>x.path==='src/gmww-members-live.js'?{...x,after:x.after+'// drift'}:x)),'full');
+  const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  assert.match(workflow,/steps.scope.outputs.mode == 'gmww-v3292-turn-voice'/);
+  assert.match(workflow,/tests\/online-turn-clock-voice-send-20261102\.test\.mjs/);
+  assert.match(workflow,/npm run check/);
+});
