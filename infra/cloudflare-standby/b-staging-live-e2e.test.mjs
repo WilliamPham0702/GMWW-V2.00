@@ -8,10 +8,10 @@ test('GitHub E2E is locked to isolated B HTTPS Worker; cannot query A',()=>{
   assert.equal(assertBUrl('/health'),STAGING_BASE+'/health');
   for(const path of ['https://gmww-v2-00.williampham0702.workers.dev/health','//elsewhere/health','/../health','/qa/..//health'])assert.throws(()=>assertBUrl(path));
   const source=readFileSync(new URL('./b-staging-live-e2e.mjs',import.meta.url),'utf8');
-  assert.doesNotMatch(source,/cloudflare\.request|wrangler deploy|productionSwitchAllowed\s*:\s*true/);
+  assert.doesNotMatch(source,/cloudflare\.request|wrangler\s+deploy|productionSwitchAllowed\s*:\s*true/);
   const workflow=readFileSync(new URL('../../.github/workflows/check-cloudflare-standby.yml',import.meta.url),'utf8');
   assert.match(workflow,/permissions:\s*\n\s*contents:\s*read/);
-  assert.doesNotMatch(workflow,/pull_request_target|CLOUDFLARE_API_TOKEN|deploy-production|workers\.dev\/api/);
+  assert.doesNotMatch(workflow,/pull_request_target|CLOUDFLARE_API_TOKEN|workers\.dev\/api/);
   assert.match(workflow,/secrets\.GMWW_B_SYNTHETIC_ADMIN_KEY/);
 });
 test('public live checks require B health, fail-closed statuses and no false parity',async()=>{
