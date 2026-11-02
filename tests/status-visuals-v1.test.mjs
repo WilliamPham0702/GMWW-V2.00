@@ -53,7 +53,9 @@ test('B: server display settings are separate from game statuses',()=>{
   assert.match(statusPolicy,/STATUS_VISUAL_IDS=new Set/);
   assert.match(worker,/if\(!STATUS_VISUAL_IDS\.has\(statusId\)\)/);
   assert.match(statusPolicy,/STATUS_VISUAL_LEGACY/);
-  assert.match(worker,/statusTags:statusTagsFor\(interactions,meta,p\?\.loginId,players\)/);
+  assert.match(worker,/statusTags:publicVillageStatusTagsFor\(interactions,meta,p\?\.loginId,players\)/);
+  assert.match(statusPolicy,/export function publicVillageStatusTagsFor\(/);
+  assert.match(statusPolicy,/statusTagsFor\(rows,meta,loginId,players\)/);
   assert.match(statusPolicy,/display\[x\.statusId\]===true/);
   assert.match(statusPolicy,/const canSee=display\[statusId\]===true/);
   assert.equal(vis.byId.marked.playerWeb,false);

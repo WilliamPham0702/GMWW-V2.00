@@ -32,7 +32,12 @@ const roots=new Set(),images=new Map();let raf=0,last=0;
 const paintInterval=()=>roots.size>=16?1000/24:1000/30;
 function visualId(id){return id==='character-41'?'character-39':id==='character-42'?'character-40':id;}
 function supports(id){return !!CATALOG[visualId(id)];}
-function imageFor(url){if(!images.has(url)){const im=new Image();im.decoding='async';im.src=url;images.set(url,im);}return images.get(url);}
+function imageFor(url){if(!images.has(url)){const im=new Image();im.decoding='async';
+  // All characters may be paused in battle: redraw the first pose once its atlas
+  // finishes decoding, without restarting a perpetual animation loop.
+  im.addEventListener?.('load',()=>{for(const root of roots)if(root.isConnected&&
+    url===root._gmwwAssetBase+'/characters/gmww40/'+root._gmwwCharacter?.atlas)paint(root,0)});
+  im.src=url;images.set(url,im);}return images.get(url);}
 function actionFor(command){return command.state==='dead'?'idle':command.motion==='turn'?'turn':command.state==='running'?'run':command.state==='walking'?'walk':'idle';}
 function apply(root,command={}){
  const id=command.characterId||root.dataset.characterId,c=CATALOG[visualId(id)];if(!c)return false;
@@ -62,27 +67,39 @@ function paint(root,dt){
  root._gmwwDrawKey=drawKey;
  root.dataset.loaded='true';root.dataset.frame=String(index);root.dataset.action=s.action;
 }
+function hasActiveMotion(){
+ for(const root of roots){if(!root.isConnected){roots.delete(root);continue}
+   if(!root._gmwwPaused&&!root.closest?.('.frozen,.is-frozen,[data-frozen="true"]'))return true;
+ }
+ return false;
+}
+function syncMotionLoop(){
+ if(typeof document==='undefined'||document.hidden||!hasActiveMotion()){
+   if(raf)cancelAnimationFrame(raf);raf=0;last=0;return;
+ }
+ if(!raf){last=0;raf=requestAnimationFrame(loop)}
+}
 function loop(now){
  raf=0;
- if(document.hidden){last=0;return;} // visibilitychange resumes the loop.
- if(last&&now-last<paintInterval()-1){if(roots.size)raf=requestAnimationFrame(loop);return;}
+ if(document.hidden){last=0;return;}
+ if(!hasActiveMotion()){last=0;return;} // Every actor is stationary: no more RAF.
+ if(last&&now-last<paintInterval()-1){raf=requestAnimationFrame(loop);return;}
  const dt=Math.min(80,Math.max(0,now-(last||now)));last=now;
  for(const root of roots){if(!root.isConnected){roots.delete(root);continue;}paint(root,dt);}
- if(roots.size)raf=requestAnimationFrame(loop);else last=0;
+ if(hasActiveMotion())raf=requestAnimationFrame(loop);else last=0;
 }
-// Pausing matters more than FPS throttling when Safari is backgrounded.
-if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{
- if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;last=0;}
- else if(roots.size&&!raf){last=0;raf=requestAnimationFrame(loop);}
-});
+if(typeof document!=='undefined')document.addEventListener('visibilitychange',syncMotionLoop);
 function mount(host,{characterId='character-01',command={},assetBase=''}={}){
  const c=CATALOG[visualId(characterId)];if(!host||!c)return null;
  host.replaceChildren();const root=document.createElement('span');root.dataset.characterRenderer='gmww40-atlas';root.dataset.motionVersion='c40-1';root.dataset.characterId=characterId;
  root.className='gmww40-character';root.style.cssText='display:block;width:100%;height:100%;position:relative;transform:none;animation:none';
  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=320;canvas.setAttribute('aria-label',characterId);canvas.style.cssText='display:block;width:100%;height:100%;object-fit:contain;transform:scale(var(--gmww-character-scale,1));transform-origin:50% 100%;animation:none';root.append(canvas);
- root._gmwwMotion=createMotion(c);root._gmwwCharacter=c;root._gmwwAssetBase=String(assetBase).replace(/\/$/,'');host.append(root);apply(root,{...command,characterId});roots.add(root);paint(root,0);if(!raf)raf=requestAnimationFrame(loop);return root;
+ root._gmwwMotion=createMotion(c);root._gmwwCharacter=c;root._gmwwAssetBase=String(assetBase).replace(/\/$/,'');host.append(root);apply(root,{...command,characterId});roots.add(root);paint(root,0);syncMotionLoop();return root;
 }
-function update(host,command){const root=host?.querySelector?.('[data-character-renderer="gmww40-atlas"]');return root?apply(root,command):false;}
+function update(host,command){const root=host?.querySelector?.('[data-character-renderer="gmww40-atlas"]');
+ if(!root||!apply(root,command))return false;
+ paint(root,0);syncMotionLoop();return true;
+}
 g.GMWW_SHARED_MOTION=Object.freeze({version:'c40-1',supports,visualId,mount,update,actions:ACTIONS,source:SOURCE15});
 
 })(globalThis);
