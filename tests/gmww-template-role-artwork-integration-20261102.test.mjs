@@ -37,7 +37,11 @@ function makeHarness(role) {
     validImageDataUrl:value=>/^data:image\/webp;base64,/.test(value),
     j:(value,status=200)=>Response.json(value,{status})
   };
-  const fn=vm.runInNewContext(source.slice(from,to)+'\ngmPackageCanonicalTemplateRole',context);
+  // Preserve actual Worker function while surfacing caught errors in this synthetic test.
+  // Production still uses its normal fail-closed 503 response.
+  const diagnostic=source.slice(from,to).replace('}catch(err){return j({ok:false,error:"ROLE_ARTWORK_SOURCE_UNAVAILABLE",',
+    '}catch(err){throw err;return j({ok:false,error:"ROLE_ARTWORK_SOURCE_UNAVAILABLE",');
+  const fn=vm.runInNewContext(diagnostic+'\ngmPackageCanonicalTemplateRole',context);
   return {fn,env,bytes,assetReads,stored};
 }
 for(const role of ['role_wolf','role_villager','role_seer']){
