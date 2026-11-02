@@ -45,6 +45,13 @@ export class Stage3SyntheticState {
     }
     const state=await this.load(),session=sessionOf(state,request);
     if(!session)return deny('SESSION_REQUIRED',401);
+    if(path==='/qa/reset'&&request.method==='POST'){
+      if(session.persona!=='gm')return deny('GM_FIXTURE_ONLY');
+      let body;try{body=await parse(request)}catch{return deny('INVALID_SYNTHETIC_BODY',400);}
+      if(body.fixtureOnly!==true)return deny('SYNTHETIC_ONLY',400);
+      await this.save({sessions:{},rooms:{},tickets:{}});
+      return response({ok:true,syntheticStateCleared:true});
+    }
     if(path==='/qa/rooms'&&request.method==='POST'){
       if(session.persona!=='gm')return deny('GM_FIXTURE_ONLY');
       if(Object.keys(state.rooms).length>=24)return deny('ROOM_FIXTURE_CAP_REACHED',429);
