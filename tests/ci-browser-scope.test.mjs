@@ -1081,3 +1081,50 @@ test('PR748 Chat main-push selector recovery requires exact 3 changed CI files a
  assert.doesNotMatch(deploy,/This workflow is only permitted from a four-file postmerge CI fix/);
  assert.match(deploy,/Automatic rollback to previous Cloudflare A Worker/);
 });
+
+
+test('SERVER-3 B synthetic E2E only receives focused CI on the exact nine audited files',()=>{
+  const fixture=[
+    ['infra/cloudflare-standby/b-stage3-e2e.mjs','A'],
+    ['infra/cloudflare-standby/b-stage3-e2e.test.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-worker.mjs','M'],
+    ['infra/cloudflare-standby/b-staging-worker.test.mjs','M'],
+    ['infra/cloudflare-standby/wrangler-b-staging.jsonc','M'],
+    ['infra/cloudflare-standby/STAGE3-README.md','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(fixture),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope(fixture.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...fixture,fixture[0]]),'full');
+  assert.equal(classifyBrowserScope(fixture.map((f,i)=>i===1?{...f,status:'D'}:f)),'full');
+  for(const source of ['src/index.js','wrangler.jsonc','server-game/current/app.js','assets/index.html']){
+    assert.equal(classifyBrowserScope([...fixture,{path:source,status:'M'}]),'full',source);
+  }
+});
+
+test('B live GitHub Actions E2E exact six-file scope avoids Cloudflare A Preview, mixed diffs fail closed',()=>{
+  const scope=[
+    ['infra/cloudflare-standby/b-staging-live-e2e.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-live-e2e.test.mjs','A'],
+    ['.github/workflows/check-cloudflare-standby.yml','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(scope),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope(scope.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...scope,scope[0]]),'full');
+  for(const path of ['src/index.js','wrangler.jsonc','server-game/current/app.js','.github/workflows/deploy-production.yml']){
+    assert.equal(classifyBrowserScope([...scope,{path,status:'M'}]),'full');
+  }
+  assert.equal(classifyBrowserScope(scope.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+  const release=readFileSync('.github/workflows/deploy-production.yml','utf8');
+  const ota=readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+  for(const src of [release,ota]){
+    assert.match(src,/BEGIN GMWW_DUAL_CLOUDFLARE_(STAGING|RUNTIME)_GUARD/);
+    assert.match(src,/check-cloudflare-standby/);
+    assert.match(src,/infra\/cloudflare-standby/);
+  }
+});

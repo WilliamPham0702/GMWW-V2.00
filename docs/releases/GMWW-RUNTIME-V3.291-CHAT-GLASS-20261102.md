@@ -1,4 +1,4 @@
-# GMWW Runtime V3.290 — Chat giao diện kính mờ, đồng bộ GM / Player Web
+# GMWW Runtime V3.291 — Chat giao diện kính mờ, đồng bộ GM / Player Web
 
 Ngày: 02/11/2026. PR: #749.
 
@@ -14,8 +14,8 @@ Ngày: 02/11/2026. PR: #749.
 ## Kiểm tra trước khi phát hành
 - Bắt buộc required GitHub CI Policy Gate và các bài Browser/Worker relevant SUCCESS trên HEAD cuối cùng.
 - So sánh nguồn/bundle byte-exact GM & Player Web, syntax, version đồng bộ: Worker, app.js, GMWW.html, package/lock.
-- Worker/Player Web smoke Production: health V3.290, bundle giao diện mới, URL giữ nguyên.
-- Runtime OTA: chỉ công bố GitHub Releases khi .gmwwupdate + SHA-256 + manifest phù hợp và gói chạy kiểm định; không ghi đè V3.289.
+- Worker/Player Web smoke Production: health V3.291, bundle giao diện mới, URL giữ nguyên.
+- Runtime OTA: chỉ công bố GitHub Releases khi .gmwwupdate + SHA-256 + manifest phù hợp và gói chạy kiểm định; không ghi đè V3.290.
 
 ## Rollback
 - Worker: Cloudflare A triển khai lại phiên bản Worker 100% trước thay đổi bằng deploy version; không xóa Durable Objects/data.

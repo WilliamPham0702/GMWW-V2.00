@@ -1498,8 +1498,63 @@ jobs:
           npm run check
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'PASS: exact campfire UI diff, drag/iPhone/role/privacy tests, compiled Worker; unrelated full gameplay suite excluded.' >> "$GITHUB_STEP_SUMMARY"
+      # PR746: only seven exact files can use focused template-artwork CI.
+      - name: PR746 Ván Mẫu artwork — direct packaging and local Worker HTTP smoke
+        id: template_role_artwork
+        if: steps.scope.outputs.mode == 'full' && (${{ github.event_name }} == 'pull_request' || (${{ github.event_name }} == 'push' && github.ref == 'refs/heads/main'))
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 0
+            BASE="$BASE_SHA"
+          else
+            BASE="HEAD^1"
+          fi
+          ACTUAL=$(git diff --name-only --no-renames "$BASE" HEAD | sort)
+          EXPECTED=$(printf '%s\n' \
+            .github/workflows/check-player-web.yml \
+            docs/releases/GMWW-TEMPLATE-ROLE-ARTWORK-SOURCE-FIX-20261102.md \
+            src/gmww-template-artwork-source.js \
+            src/index.js \
+            tests/gmww-template-role-artwork-source-20261102.test.mjs \
+            tests/gmww-template-role-artwork-integration-20261102.test.mjs \
+            tests/ios-template-artwork-fetch-recovery.test.mjs | sort)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo 'Scope mismatch: full Worker CI is mandatory.'
+            exit 0
+          fi
+          node --check src/index.js
+          node --check src/gmww-template-artwork-source.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test \
+            tests/gmww-template-role-artwork-source-20261102.test.mjs \
+            tests/gmww-template-role-artwork-integration-20261102.test.mjs \
+            tests/ios-template-artwork-fetch-recovery.test.mjs
+          npm run check
+          npx --no-install wrangler dev --local --ip 127.0.0.1 --port 8792 > /tmp/gmww-role-artwork.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true' EXIT
+          READY=false
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8792/api/health >/dev/null 2>&1; then READY=true; break; fi
+            sleep 1
+          done
+          if [ "$READY" != true ]; then cat /tmp/gmww-role-artwork.log; exit 1; fi
+          for ROLE in role_wolf role_villager role_seer; do
+            curl --fail --silent --show-error \
+              "http://127.0.0.1:8792/api/gm/template-role-artwork/$ROLE" \
+              -o "/tmp/gmww-$ROLE.webp"
+            cmp "/tmp/gmww-$ROLE.webp" \
+              "assets/updates/runtime/V3.119/assets/role-artwork-v251/original/$ROLE.webp"
+          done
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'PASS: Ván Mẫu AUTO 3, iOS, Worker GET, packaging, dry-run.' >> "$GITHUB_STEP_SUMMARY"
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -1522,14 +1577,14 @@ jobs:
         if: steps.scope.outputs.mode == 'dual-renderer'
         run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true'
         shell: bash
         run: |
           python3 -m venv /tmp/gmww-avatar-venv
           /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
           /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Kiểm tra nhanh Player Web trên máy thử nghiệm
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true'
         shell: bash
         run: |
           set -euo pipefail

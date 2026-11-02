@@ -10,6 +10,7 @@ on:
       - 'src/player-web-src/30-rooms-and-realtime.part'
       - 'src/player-web-src/35-online-chat.part'
       - 'tests/player-web-server-visual-parity-20261101.test.mjs'
+      - 'tests/player-v3-village-status-daychat-20261102.test.mjs'
       - '.github/workflows/check-v3-player-visual-parity.yml'
   push:
     branches: [main]
@@ -20,6 +21,7 @@ on:
       - 'src/player-web-src/30-rooms-and-realtime.part'
       - 'src/player-web-src/35-online-chat.part'
       - 'tests/player-web-server-visual-parity-20261101.test.mjs'
+      - 'tests/player-v3-village-status-daychat-20261102.test.mjs'
   workflow_dispatch:
 
 permissions:
@@ -47,6 +49,7 @@ jobs:
       - name: Test GM visual parity, Witch, Aura and approved drag regression
         run: |
           node --test \
+            tests/player-v3-village-status-daychat-20261102.test.mjs \
             tests/player-web-server-visual-parity-20261101.test.mjs \
             tests/player-web-v3-iframe-drag.test.mjs \
             tests/player-web-online-actions-20261028.test.mjs \

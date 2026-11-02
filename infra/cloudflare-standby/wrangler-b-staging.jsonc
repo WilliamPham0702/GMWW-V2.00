@@ -4,5 +4,21 @@
   "main": "./b-staging-worker.mjs",
   "compatibility_date": "2026-09-30",
   "workers_dev": true,
-  "preview_urls": false
+  "preview_urls": false,
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "STAGE3_SYNTHETIC_ROOM",
+        "class_name": "Stage3SyntheticState"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "b-stage3-e2e-v1",
+      "new_sqlite_classes": [
+        "Stage3SyntheticState"
+      ]
+    }
+  ]
 }

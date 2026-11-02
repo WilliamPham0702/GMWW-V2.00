@@ -3519,6 +3519,33 @@ function isRuntimeMergedV3286Scope(changes){
 // Dual Cloudflare B PR: exact synthetic code/CI scope only. Any gameplay,
 // runtime, asset, hidden or unknown path returns FULL Worker CI.
 function isDualCloudflareStandbyScope(changes){
+  // Exact B-only live E2E harness; no gameplay/Worker/Production changes.
+  const bLive=new Map([
+    ['infra/cloudflare-standby/b-staging-live-e2e.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-live-e2e.test.mjs','A'],
+    ['.github/workflows/check-cloudflare-standby.yml','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(Array.isArray(changes)&&changes.length===bLive.size&&
+    new Set(changes.map(x=>x.path)).size===bLive.size&&
+    changes.every(x=>bLive.get(x.path)===x.status))return true;
+  // SERVER-3: exact B-only SQLite synthetic E2E+guard patch; no gameplay/IPA/Production.
+  const e2e=new Map([
+    ['infra/cloudflare-standby/b-stage3-e2e.mjs','A'],
+    ['infra/cloudflare-standby/b-stage3-e2e.test.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-worker.mjs','M'],
+    ['infra/cloudflare-standby/b-staging-worker.test.mjs','M'],
+    ['infra/cloudflare-standby/wrangler-b-staging.jsonc','M'],
+    ['infra/cloudflare-standby/STAGE3-README.md','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(Array.isArray(changes)&&changes.length===e2e.size&&
+      new Set(changes.map(x=>x.path)).size===e2e.size&&
+      changes.every(x=>e2e.get(x.path)===x.status))return true;
   // Stage 3 B health-only Worker: exact CI/fixture files, never gameplay or A release.
   const stage3=new Map([
     ['infra/cloudflare-standby/b-staging-worker.mjs','A'],
@@ -3632,7 +3659,7 @@ function isPR743ChatPostmergeScope(changes){
      new Set(changes.map(c=>c.path)).size!==expected.size||
      changes.some(c=>expected.get(c.path)!==c.status))return false;
   try{
-    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.289.0')return false;
+    if(!['3.289.0','3.290.0'].includes(JSON.parse(fs.readFileSync('package.json','utf8')).version))return false;
     const worker=fs.readFileSync('src/index.js','utf8'),
       deploy=fs.readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
     return worker.includes('async chatVoiceStore(')&&worker.includes('async chatVoiceRead(')&&
@@ -3658,7 +3685,7 @@ function isPR743ChatPostmergeScopeV2(changes){
     return deploy.includes('cc430dd97af48aba6afb1d415582d9e5818457dd')&&
       deploy.includes('Automatic rollback')&&worker.includes('async chatVoiceStore(')&&
       worker.includes('async chatVoiceRead(')&&
-      JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.289.0';
+      ['3.289.0','3.290.0'].includes(JSON.parse(fs.readFileSync('package.json','utf8')).version);
   }catch{return false}
 }
 
