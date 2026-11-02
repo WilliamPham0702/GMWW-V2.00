@@ -46,6 +46,30 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR755: exact verified 16 paths, immutable source blobs and postmerge main.
+      # High-risk Night/Chat/Worker tests remain mandatory; unrelated old 3D fixtures are excluded.
+      - name: PR755 — V3.292 Night clock, voice explicit Send and Worker/Runtime safety
+        if: steps.scope.outputs.mode == 'gmww-v3292-turn-voice'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/online-turn-clock-voice-send-20261102.test.mjs \
+            tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/online-frozen-chat-day-20261031.test.mjs \
+            tests/player-v3-village-status-daychat-20261102.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/gmww-play-interaction-rules.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.292-TURN-CLOCK-VOICE-20261102.md
       # PR749: exact, fail-closed Chat glass + OTA version scope. Unreviewed changes use full CI.
       # Keep Worker privacy, GM/Player source, status/chat regression and dry-run checks mandatory.
       - name: PR749 — Chat glass GM/Player, voice/privacy, Runtime V3.291 and Worker dry-run
