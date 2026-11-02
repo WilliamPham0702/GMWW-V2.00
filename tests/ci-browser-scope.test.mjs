@@ -849,7 +849,10 @@ test('PR652 online hotfix: exact bounded production diff selects focused Worker 
   const after=readFileSync(new URL('../'+path,import.meta.url),'utf8');
   return{path,status,before:status==='M'?after:null,after};
  });
- assert.equal(classifyBrowserScope(changes),'online-hotfix-652');
+ // PR652's narrow selector was valid for its immutable V3.280 snapshot only.
+ // A later Chat/Worker revision is intentionally outside its byte-level hotfix contract.
+ const historical=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8')).version==='3.280.0';
+ assert.equal(classifyBrowserScope(changes),historical?'online-hotfix-652':'full');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full','Missing Worker source cannot be exempted');
  assert.equal(classifyBrowserScope([...changes,{path:'src/extra-worker.js',status:'A',before:null,after:'new logic'}]),'full','New Worker logic must be audited');
  const unsafe=changes.map(c=>c.path==='src/index.js'?{...c,after:'// unrelated code change\n'+c.after}:c);
@@ -994,4 +997,83 @@ test('Cloudflare B Stage3 B health-only Worker routes to focused required Worker
   assert.equal(classifyBrowserScope([...stage3,{path:'src/index.js',status:'M'}]),'full');
   assert.equal(classifyBrowserScope([...stage3,{path:'wrangler.jsonc',status:'M'}]),'full');
   assert.equal(classifyBrowserScope(stage3.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+});
+
+test('PR743 Chat voice uses focused privacy and Worker CI only for exact reviewed scope',()=>{
+  const expected=[
+    ['server-game/current/app.js','M'],
+    ['server-game/src/45-online-chat.part','M'],
+    ['src/gmww-members-live.js','M'],
+    ['src/index.js','M'],
+    ['src/player-web-src/35-online-chat.part','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['tests/drunk-card-overlay-match-cleanup-20261028.test.mjs','M'],
+    ['tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs','A'],
+    ['tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs','M'],
+    ['tests/player-online-realtime-freeze-day-20261030.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['docs/releases/GMWW-CHAT-VOICE-PR743-20261102.md','A']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(expected),'gmww-chat-voice-pr743');
+  assert.equal(classifyBrowserScope(expected.slice(1)),'full','missing source must not get narrower tests');
+  assert.equal(classifyBrowserScope([...expected,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full','native changes remain isolated');
+  assert.equal(classifyBrowserScope([...expected,{path:'wrangler.jsonc',status:'M'}]),'full','binding changes require full release guard');
+  assert.equal(classifyBrowserScope([...expected,{path:'src/index.js',status:'M'}]),'full','duplicate file must fail closed');
+  assert.equal(classifyBrowserScope(expected.map((c,i)=>i===0?{...c,status:'D'}:c)),'full','deleted runtime must fail closed');
+  const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+  assert.match(workflow,/steps\.scope\.outputs\.mode == 'gmww-chat-voice-pr743'/);
+  assert.match(workflow,/tests\/gmww-chat-voice-gm-broadcast-20261102\.test\.mjs/);
+  assert.match(workflow,/tests\/online-chat-authority\.test\.mjs/);
+  assert.match(workflow,/npm run check/);
+});
+
+
+test('PR743 postmerge CI-only recovery is safe on exact four files and keeps Production release guards',()=>{
+ const exact=[
+   {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+   {path:'.github/workflows/check-player-web.yml',status:'M'},
+   {path:'.github/workflows/deploy-pr743-chat-worker.yml',status:'A'},
+   {path:'tests/ci-browser-scope.test.mjs',status:'M'}
+ ];
+ assert.equal(classifyBrowserScope(exact),'gmww-chat-pr743-postmerge');
+ assert.equal(classifyBrowserScope(exact.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...exact,{path:'src/index.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...exact,{path:'wrangler.jsonc',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...exact,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...exact,exact[0]]),'full');
+ const wf=readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
+ assert.match(wf,/git merge-base --is-ancestor 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD/);
+ assert.match(wf,/git diff --quiet 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD/);
+ assert.match(wf,/GMWW AUTO-DELIVERY V3.0/);
+ assert.match(wf,/Previous Cloudflare A Worker/);
+ assert.match(wf,/Automatic rollback to previous Cloudflare A Worker/);
+ assert.doesNotMatch(wf,/wrangler deploy --name/);
+ const workerCheck=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ assert.match(workerCheck,/steps\.scope\.outputs\.mode == 'gmww-chat-pr743-postmerge'/);
+ assert.match(workerCheck,/tests\/online-chat-authority\.test\.mjs/);
+});
+
+test('PR748 Chat main-push selector recovery requires exact 3 changed CI files and immutable Worker source',()=>{
+ const fixed=[
+   {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+   {path:'.github/workflows/deploy-pr743-chat-worker.yml',status:'M'},
+   {path:'tests/ci-browser-scope.test.mjs',status:'M'}
+ ];
+ assert.equal(classifyBrowserScope(fixed),'gmww-chat-pr743-postmerge');
+ for(const missing of fixed)assert.equal(classifyBrowserScope(fixed.filter(x=>x!==missing)),'full','missing '+missing.path);
+ for(const extra of ['src/index.js','wrangler.jsonc','server-game/GMWW-Server/GameView.swift','.github/workflows/check-player-web.yml'])
+   assert.equal(classifyBrowserScope([...fixed,{path:extra,status:'M'}]),'full',extra);
+ assert.equal(classifyBrowserScope([...fixed,fixed[0]]),'full','duplicate CI changes fail closed');
+ assert.equal(classifyBrowserScope(fixed.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+ const selector=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ assert.ok(selector.indexOf('// PR743 CI-only push recovery must run before') <
+           selector.indexOf('// Push of CI-policy-only main merges needs selector unit tests'));
+ const deploy=readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
+ assert.match(deploy,/git merge-base --is-ancestor cc430dd97af48aba6afb1d415582d9e5818457dd HEAD/);
+ assert.match(deploy,/GMWW_CI_EVENT=push GITHUB_REF=refs\/heads\/main/);
+ assert.match(deploy,/git diff --quiet 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD/);
+ assert.match(deploy,/tests\/ci-browser-scope\.test\.mjs \| sort\)/);
+ assert.doesNotMatch(deploy,/This workflow is only permitted from a four-file postmerge CI fix/);
+ assert.match(deploy,/Automatic rollback to previous Cloudflare A Worker/);
 });

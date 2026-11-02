@@ -55,6 +55,6 @@ test('Template save exposes a retry message and retains draft on network failure
 
 test('Only safe role identifiers are proxied, with CORS and exact immutable runtime path',()=>{
   assert.match(worker,/templateRoleArtwork=url\.pathname\.match\(\/\^\\\/api\\\/gm\\\/template-role-artwork\\\/\(\[A-Za-z0-9_-\]\{1,120\}\)\$\//);
-  assert.match(worker,/new URL\("\/updates\/runtime\/"\+VERSION\+"\/assets\/role-artwork-v251\/original\/"/);
+  assert.match(worker,/fetchCanonicalRoleArtwork\(env\.ASSETS,request\.url,templateRoleArtwork\[1\],VERSION\)/);
   assert.match(worker,/headers:\{\.\.\.corsHeaders\(\),"content-type":"image\/webp"/);
 });
