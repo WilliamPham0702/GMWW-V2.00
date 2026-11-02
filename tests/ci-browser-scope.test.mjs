@@ -1163,11 +1163,11 @@ test('PR749 Chat glass guard selects focused Worker gate only for strict V3.291 
   assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full','IPA/native changes forbidden');
   assert.equal(classifyBrowserScope([...changes,changes[0]]),'full','duplicate path must fail closed');
   assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
-  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,after:c.after+'\\n// unrelated worker edit'}:c)),'full','unknown Worker edit must trigger full tests');
-  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='server-game/src/00-core-and-library.part'?{...c,after:c.after+'\\n// core changed'}:c)),'full','core gameplay edit must trigger full tests');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,after:c.after+'\n// unrelated worker edit'}:c)),'full','unknown Worker edit must trigger full tests');
+  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='server-game/src/00-core-and-library.part'?{...c,after:c.after+'\n// core changed'}:c)),'full','core gameplay edit must trigger full tests');
   const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
-  assert.match(workflow,/steps\\.scope\\.outputs\\.mode == 'gmww-chat-glass-749'/);
-  assert.match(workflow,/tests\\/online-chat-authority\\.test\\.mjs/);
-  assert.match(workflow,/tests\\/gmww-chat-voice-gm-broadcast-20261102\\.test\\.mjs/);
+  assert.match(workflow,/steps\.scope\.outputs\.mode == 'gmww-chat-glass-749'/);
+  assert.match(workflow,/tests\/online-chat-authority\.test\.mjs/);
+  assert.match(workflow,/tests\/gmww-chat-voice-gm-broadcast-20261102\.test\.mjs/);
   assert.match(workflow,/npm run check/);
 });
