@@ -168,6 +168,37 @@ html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:aut
 #gmwwChatVoice{display:none;min-width:29px;height:30px;border:0;background:transparent;color:white;font-size:18px}#gmwwChatPanel.open #gmwwChatVoice{display:block}#gmwwChatSubmit{display:none;height:30px;min-height:30px;border:0;border-radius:7px;background:#0d59757a;color:#fff;padding:3px 7px}#gmwwChatPanel.open #gmwwChatSubmit{display:block}#gmwwChatHelp{font-size:10px;padding:3px 7px}#gmwwChatHelp.gmww-chat-dead-notice{display:block!important;color:#69d8ff!important;font-weight:800;text-shadow:0 1px 2px #001a2b}
 #gmwwChatPanel.open #gmwwChatHelp:not(:empty){display:block}#gmwwChatText:disabled,#gmwwChatSubmit:disabled{opacity:.55}
 `;
+  style.textContent+=`
+/* GMWW Chat V2 glass parity with GM, reduced-motion-safe waveform */
+#gmwwChatPanel{background:rgba(17,24,44,.43)!important;border:1px solid #ddcaff65!important;border-radius:18px!important;backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px);box-shadow:0 12px 38px #0006}
+html body #gmwwOnlineFooter #gmwwChatPanel{max-height:min(52dvh,440px)!important}
+#gmwwChatPanel.open header{padding:8px 11px;background:rgba(39,43,70,.38);border-bottom:1px solid #ffffff25}
+#gmwwChatPanel.open #gmwwChatLines{height:130px;max-height:27dvh;padding:7px 9px}
+#gmwwChatLines .msg{margin:5px 0;padding:6px 9px;border:1px solid #e1dcff26;border-radius:13px;background:rgba(132,143,188,.20);max-width:90%;width:fit-content;line-height:1.5}
+#gmwwChatLines .msg.is-self{margin-left:auto;background:rgba(124,98,188,.40)}
+#gmwwChatPanel.open #gmwwChatForm{border-top:1px solid #ffffff40;background:rgba(26,30,51,.24)}
+#gmwwChatPanel form{align-items:center;gap:6px;padding:7px}
+#gmwwChatText{border-radius:999px;background:rgba(180,184,213,.14);border:1px solid #ffffff42;padding:8px 12px;height:38px}
+#gmwwChatVoice,#gmwwChatSubmit{width:38px;height:38px;min-width:38px;flex:0 0 38px;border:1px solid #ffffff35!important;border-radius:50%!important;display:grid!important;place-items:center;background:rgba(172,174,214,.16)!important;color:#fff!important;padding:0!important}
+#gmwwChatPanel:not(.open) #gmwwChatVoice,#gmwwChatPanel:not(.open) #gmwwChatSubmit{display:none!important}
+#gmwwChatSubmit{background:linear-gradient(135deg,#8871dc,#5f54ae)!important}
+#gmwwChatForm button svg{width:21px;height:21px}
+#gmwwChatVoice[aria-pressed="true"]{background:rgba(241,91,116,.26)!important}
+#gmwwChatForm.is-recording #gmwwChatText{display:none}
+#gmwwChatRecording[hidden]{display:none!important}
+#gmwwChatRecording{display:flex;flex:1;min-width:0;align-items:center;gap:6px;border-radius:999px;padding:8px;background:rgba(215,69,89,.17);border:1px solid #ff7d8e99;font-size:10px;color:#ffe8ec}
+#gmwwChatRecording .gmww-record-dot{width:8px;height:8px;border-radius:50%;background:#ff627d;animation:gmww-chat-record-pulse 1s ease-in-out infinite}
+#gmwwChatRecording time{font-variant-numeric:tabular-nums;margin-left:auto}
+.gmww-voice-wave{display:flex;align-items:center;justify-content:center;gap:2px;height:23px;flex:1;min-width:42px}
+.gmww-voice-wave i{display:block;width:2px;min-width:2px;border-radius:3px;background:currentColor}
+.gmww-voice-card{display:inline-flex;gap:9px;align-items:center;min-width:146px;max-width:100%;border-radius:15px!important;border:1px solid #ddd0ff40!important;padding:6px 9px!important;background:rgba(124,98,188,.34)!important;color:#fff!important}
+.gmww-voice-play{border-radius:50%;width:29px;height:29px;min-width:29px;display:grid;place-items:center;background:rgba(233,224,255,.25)}
+.gmww-voice-duration{font-variant-numeric:tabular-nums;font-size:11px}
+.gmww-voice-card.is-playing .gmww-voice-wave i{animation:gmww-chat-wave 640ms ease-in-out infinite alternate}
+@keyframes gmww-chat-record-pulse{50%{opacity:.35;transform:scale(.78)}}
+@keyframes gmww-chat-wave{to{transform:scaleY(.45)}}
+@media(prefers-reduced-motion:reduce){#gmwwChatRecording .gmww-record-dot,.gmww-voice-card.is-playing .gmww-voice-wave i{animation:none}}
+`;
   document.head.appendChild(style);
  }
  if(document.getElementById('gmwwChatPanel')){gmwwChatDockSync();return}
