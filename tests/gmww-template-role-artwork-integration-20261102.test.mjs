@@ -31,17 +31,13 @@ function makeHarness(role) {
     return Response.json({ok:false},{status:404});
   }};
   const context={
-    bearer:()=> 'synthetic-auth',GM_SYNC_TOKEN:'synthetic-auth',
+    bearer:()=> 'synthetic-auth',GM_SYNC_TOKEN:'synthetic-auth',VERSION:'V3.289',
     safeJson:request=>request.json(),memberStore:()=>member,
     fetchCanonicalRoleArtwork,btoa,Uint8Array,Request,Response,URL,
     validImageDataUrl:value=>/^data:image\/webp;base64,/.test(value),
     j:(value,status=200)=>Response.json(value,{status})
   };
-  // Preserve actual Worker function while surfacing caught errors in this synthetic test.
-  // Production still uses its normal fail-closed 503 response.
-  const diagnostic=source.slice(from,to).replace('}catch(err){return j({ok:false,error:"ROLE_ARTWORK_SOURCE_UNAVAILABLE",',
-    '}catch(err){throw err;return j({ok:false,error:"ROLE_ARTWORK_SOURCE_UNAVAILABLE",');
-  const fn=vm.runInNewContext(diagnostic+'\ngmPackageCanonicalTemplateRole',context);
+  const fn=vm.runInNewContext(source.slice(from,to)+'\ngmPackageCanonicalTemplateRole',context);
   return {fn,env,bytes,assetReads,stored};
 }
 for(const role of ['role_wolf','role_villager','role_seer']){
