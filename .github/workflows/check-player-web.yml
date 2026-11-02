@@ -73,7 +73,7 @@ jobs:
             tests/ci-browser-scope.test.mjs
           npm run check
           test -s docs/releases/GMWW-RUNTIME-V3.292-VOICE-CLOCK-20261102.md
-      
+
       # PR749: exact, fail-closed Chat glass + OTA version scope. Unreviewed changes use full CI.
       # Keep Worker privacy, GM/Player source, status/chat regression and dry-run checks mandatory.
       - name: PR749 — Chat glass GM/Player, voice/privacy, Runtime V3.291 and Worker dry-run
@@ -1190,8 +1190,6 @@ jobs:
           node --check src/gmww-drunk-draw-rules.js
           node --check server-game/current/app.js
           test -s docs/releases/GMWW-V3.255-drunk-draw-spiritualist-20261027.md
-
-
 
       - name: PR565 V3.259 — sửa chốt xác minh IPA cũ, đúng phạm vi
         if: steps.scope.outputs.mode == 'gm-vote-postverify-3259'
