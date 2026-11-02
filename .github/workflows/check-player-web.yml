@@ -1560,16 +1560,21 @@ jobs:
         if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
         env:
           PR751_BASE: ${{ github.event.pull_request.base.sha }}
+          PR751_HEAD: ${{ github.event.pull_request.head.sha }}
         shell: bash
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" = 'pull_request' ]; then
-            [[ "$PR751_BASE" =~ ^[0-9a-f]{40}$ ]] || exit 0
+            # Actions checks out the synthetic merge commit; compare only the PR
+            # branch changes with its event base, not unrelated newer main commits.
+            [[ "$PR751_BASE" =~ ^[0-9a-f]{40}$ && "$PR751_HEAD" =~ ^[0-9a-f]{40}$ ]] || exit 0
             BASE="$PR751_BASE"
+            DIFF_HEAD="$PR751_HEAD"
           else
             BASE='HEAD^1'
+            DIFF_HEAD='HEAD'
           fi
-          ACTUAL=$(git diff --name-status --no-renames "$BASE" HEAD | sort)
+          ACTUAL=$(git diff --name-status --no-renames "$BASE" "$DIFF_HEAD" | sort)
           EXPECTED=$(printf '%s\n' \
             $'M\t.github/workflows/check-player-web.yml' \
             $'A\tdocs/releases/GMWW-PLAYER-STATUS-CHAT-20261102.md' \
