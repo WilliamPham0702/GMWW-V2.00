@@ -3519,6 +3519,21 @@ function isRuntimeMergedV3286Scope(changes){
 // Dual Cloudflare B PR: exact synthetic code/CI scope only. Any gameplay,
 // runtime, asset, hidden or unknown path returns FULL Worker CI.
 function isDualCloudflareStandbyScope(changes){
+  // SERVER-3: exact B-only SQLite synthetic E2E+guard patch; no gameplay/IPA/Production.
+  const e2e=new Map([
+    ['infra/cloudflare-standby/b-stage3-e2e.mjs','A'],
+    ['infra/cloudflare-standby/b-stage3-e2e.test.mjs','A'],
+    ['infra/cloudflare-standby/b-staging-worker.mjs','M'],
+    ['infra/cloudflare-standby/b-staging-worker.test.mjs','M'],
+    ['infra/cloudflare-standby/wrangler-b-staging.jsonc','M'],
+    ['infra/cloudflare-standby/STAGE3-README.md','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(Array.isArray(changes)&&changes.length===e2e.size&&
+      new Set(changes.map(x=>x.path)).size===e2e.size&&
+      changes.every(x=>e2e.get(x.path)===x.status))return true;
   // Stage 3 B health-only Worker: exact CI/fixture files, never gameplay or A release.
   const stage3=new Map([
     ['infra/cloudflare-standby/b-staging-worker.mjs','A'],
