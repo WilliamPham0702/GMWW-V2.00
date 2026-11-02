@@ -1157,7 +1157,10 @@ test('PR749 Chat glass guard selects focused Worker gate only for strict V3.291 
     const before=pair?after.replaceAll(pair[0],pair[1]):status==='M'?'prior content':null;
     return {path,status,before,after};
   });
-  assert.equal(classifyBrowserScope(changes),'gmww-chat-glass-749');
+  // PR749's fast-track allowlist is valid ONLY at V3.291. In newer releases,
+  // the historical fixture must route through FULL CI instead of bypassing checks.
+  const currentRelease=JSON.parse(readFileSync('package.json','utf8')).version;
+  assert.equal(classifyBrowserScope(changes),currentRelease==='3.291.0'?'gmww-chat-glass-749':'full');
   assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing release notes');
   assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full','DO/Worker config cannot bypass full CI');
   assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full','IPA/native changes forbidden');
