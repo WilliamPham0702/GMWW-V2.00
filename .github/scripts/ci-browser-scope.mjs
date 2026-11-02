@@ -3701,6 +3701,23 @@ function isPR743ChatPostmergeScopeV2(changes){
   }catch{return false}
 }
 
+// V3.292 postmerge recovery: CI-only correction, exact 3 files, reviewed Runtime source immutable.
+// No gameplay/Worker change is permitted; all new commits fail closed to full CI.
+function isV3292MainWorkerRecovery(changes){
+ const expected=new Set(['.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml','tests/ci-browser-scope.test.mjs']);
+ if(!Array.isArray(changes)||changes.length!==3||new Set(changes.map(x=>x.path)).size!==3||
+    changes.some(x=>x.status!=='M'||!expected.has(x.path)))return false;
+ try{
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.292.0')return false;
+  git('merge-base','--is-ancestor','c16645399d11b1a96ffe1a63ebbf090c3ff86274','HEAD');
+  git('diff','--quiet','c16645399d11b1a96ffe1a63ebbf090c3ff86274','HEAD','--',
+    'src','server-game','assets','package.json','package-lock.json','wrangler.jsonc','update-system');
+  const workflow=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  return workflow.includes("steps.scope.outputs.mode == 'v3292-main-ci-recovery'")&&
+    fs.existsSync('docs/releases/GMWW-RUNTIME-V3.292-VOICE-CLOCK-20261102.md');
+ }catch{return false}
+}
+
 // PR753 Runtime V3.292: exact high-risk Chat/clock scope with privacy, OTA and bundle checks.
 // Unlisted paths, native changes and unexpected Worker edits run the complete suite.
 function isGMWWVoiceClockV3292Scope(changes){
@@ -3810,6 +3827,7 @@ function isPR749ChatGlassScope(changes){
 }
 
 function classifyBrowserScope(changes){
+  if(isV3292MainWorkerRecovery(changes))return 'v3292-main-ci-recovery';
   if(isGMWWVoiceClockV3292Scope(changes))return 'gmww-voice-clock-v3292';
   if(isPR749ChatGlassScope(changes))return 'gmww-chat-glass-749';
   if(isPR743ChatPostmergeScopeV2(changes))return 'gmww-chat-pr743-postmerge';
@@ -4196,6 +4214,16 @@ function isV3289PR738VersionOnlyScope(base){
   return true;
 }
 function detect(){
+  // Must precede the historical main/full fallback; exact CI files only.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(line=>{const [status,path]=line.split('\t');return {status,path}});
+      if(isV3292MainWorkerRecovery(changes))
+        return{mode:'v3292-main-ci-recovery',reason:'Reviewed #753 V3.292 source unchanged; exact 3-file CI recovery'};
+    }catch{}
+  }
+
   // This guard only narrows CI for the exact V3.289 PR738 version + notes change.
   // The main push uses first-parent diff; every unproven difference uses original full suite.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){

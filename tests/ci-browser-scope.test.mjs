@@ -1239,3 +1239,20 @@ test('PR753 voice and clock V3.292 exact guarded scope keeps mandatory privacy a
  'tests/online-chat-authority.test.mjs','tests/ci-browser-scope.test.mjs','npm run check',
  "steps.scope.outputs.mode == 'gmww-voice-clock-v3292'"])assert.ok(worker.includes(required),required);
 });
+
+
+test('V3.292 postmerge CI-only recovery cannot mutate reviewed #753 Runtime, Worker, IPA or config',()=>{
+ const paths=['.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml','tests/ci-browser-scope.test.mjs'];
+ const exact=paths.map(path=>({path,status:'M',before:'old CI',after:readFileSync(path,'utf8')}));
+ assert.equal(classifyBrowserScope(exact),'v3292-main-ci-recovery');
+ assert.equal(classifyBrowserScope(exact.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...exact,exact[0]]),'full');
+ assert.equal(classifyBrowserScope([...exact,{path:'src/index.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...exact,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope(exact.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+ const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ assert.match(workflow,/v3292-main-ci-recovery/);
+ assert.match(workflow,/git diff --quiet c16645399d11b1a96ffe1a63ebbf090c3ff86274 HEAD/);
+ assert.match(workflow,/tests\/gmww-chat-voice-send-v3292.test.mjs/);
+ assert.match(workflow,/tests\/gmww-public-turn-clock-v3292.test.mjs/);
+});

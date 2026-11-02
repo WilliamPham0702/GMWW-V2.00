@@ -46,6 +46,31 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # Postmerge CI recovery: exact three CI files; Runtime/game source must remain
+      # byte-identical to the reviewed #753 merge c1664539. No policy bypass.
+      - name: V3.292 postmerge main Worker CI — unchanged reviewed Runtime
+        if: steps.scope.outputs.mode == 'v3292-main-ci-recovery'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          git merge-base --is-ancestor c16645399d11b1a96ffe1a63ebbf090c3ff86274 HEAD
+          git diff --quiet c16645399d11b1a96ffe1a63ebbf090c3ff86274 HEAD -- src server-game assets package.json package-lock.json wrangler.jsonc update-system
+          node --test \
+            tests/gmww-chat-voice-send-v3292.test.mjs \
+            tests/gmww-public-turn-clock-v3292.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/online-frozen-chat-day-20261031.test.mjs \
+            tests/player-v3-village-status-daychat-20261102.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.292-VOICE-CLOCK-20261102.md
+
       # V3.292: reviewed three-fix scope (voice explicit-send, mic session, night-turn clock).
       # Guard checks every changed path and exact Worker version/import/timing projection.
       # Native/DO/unknown edits run full CI; privacy, source integrity and Worker build remain required.
