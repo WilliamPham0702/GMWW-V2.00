@@ -42,7 +42,7 @@ export function diagnoseBLogin(res, key) {
     keyPresent:raw.length>0,
     keyMeetsMinimum:raw.length>=32,
     keyHasEdgeWhitespace:raw.trim()!==raw,
-    keyHasControlCharacter:/[\\u0000-\\u001f\\u007f]/.test(raw),
+    keyHasControlCharacter:/[\u0000-\u001f\u007f]/.test(raw),
     keyHasMatchingOuterQuotes:raw.length>=2&&((raw[0]==='"'&&raw.at(-1)==='"')||(raw[0]==="'"&&raw.at(-1)==="'"))
   };
 }
