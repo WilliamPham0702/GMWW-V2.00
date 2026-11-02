@@ -31,6 +31,22 @@ async function api(path, {method='GET', fixtureKey, sessionToken, body} = {}) {
   try { data = await res.json(); } catch { throw Error('B returned non-JSON (HTTP ' + res.status + ')'); }
   return {status:res.status, data};
 }
+/** Public diagnostic only. Never logs secret contents, length, prefixes or hashes. */
+export function diagnoseBLogin(res, key) {
+  const allowed=new Set(['STAGING_FIXTURE_KEY_REQUIRED','STAGING_HOST_REQUIRED','SESSION_REQUIRED','STAGING_TEST_KEY_NOT_CONFIGURED']);
+  const raw=typeof key==='string'?key:'';
+  return {
+    stage:'B_SYNTHETIC_GM_LOGIN',
+    httpStatus:res.status,
+    responseCode:allowed.has(res.data?.error)?res.data.error:'UNCLASSIFIED',
+    keyPresent:raw.length>0,
+    keyMeetsMinimum:raw.length>=32,
+    keyHasEdgeWhitespace:raw.trim()!==raw,
+    keyHasControlCharacter:/[\u0000-\u001f\u007f]/.test(raw),
+    keyHasMatchingOuterQuotes:raw.length>=2&&((raw[0]==='"'&&raw.at(-1)==='"')||(raw[0]==="'"&&raw.at(-1)==="'"))
+  };
+}
+
 function check(res, expected, tag) {
   assert.equal(res.status, expected, tag + ' HTTP status mismatch');
   assert.equal(res.data?.environment, 'cloudflare-b', tag + ' origin mismatch');
@@ -91,7 +107,11 @@ export async function fullChecks(key, request=api) {
   const get=(path,sessionToken)=>request(path,{fixtureKey:key,sessionToken});
   let gm, room, gmSocket,playerSocket;
   try {
-    gm=check(await post('/qa/login',{fixtureOnly:true,persona:'gm'}),200,'GM login').token;
+    const gmLogin=await post('/qa/login',{fixtureOnly:true,persona:'gm'});
+    if(gmLogin.status!==200){
+      console.error('B_ONLY_AUTH_DIAGNOSTIC',JSON.stringify(diagnoseBLogin(gmLogin,key)));
+    }
+    gm=check(gmLogin,200,'GM login').token;
     const player=check(await post('/qa/login',{fixtureOnly:true,persona:'player'}),200,'Player login').token;
     const outsider=check(await post('/qa/login',{fixtureOnly:true,persona:'player'}),200,'Outsider login').token;
     assert.match(gm,/^syn_[a-f0-9]{64}$/);

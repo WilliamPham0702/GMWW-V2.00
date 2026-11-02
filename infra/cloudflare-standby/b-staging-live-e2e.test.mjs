@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {STAGING_BASE,assertBUrl,publicChecks} from './b-staging-live-e2e.mjs';
+import {STAGING_BASE,assertBUrl,publicChecks,diagnoseBLogin,fullChecks} from './b-staging-live-e2e.mjs';
 
 test('GitHub E2E is locked to isolated B HTTPS Worker; cannot query A',()=>{
   assert.equal(STAGING_BASE,'https://gmww-b-staging-synthetic.gmww-stage-b-0702-2026.workers.dev');
@@ -26,4 +26,29 @@ test('public live checks require B health, fail-closed statuses and no false par
   assert.deepEqual(called.map(x=>x.path),['/health','/qa/login','/qa/login']);
   const bad=async()=>({status:200,data:{ok:true,environment:'cloudflare-b',mode:'synthetic-only',productionSwitchAllowed:Boolean(1)}});
   await assert.rejects(publicChecks(bad),/failover/);
+});
+
+test('auth 401 reports safe classification without exposing the secret or its hash',async()=>{
+  const secret='fixture-secret-test-that-is-long-and-private-123';
+  const response={status:401,data:{environment:'cloudflare-b',error:'STAGING_FIXTURE_KEY_REQUIRED',productionSwitchAllowed:false}};
+  const details=diagnoseBLogin(response,secret);
+  assert.deepEqual(details,{
+    stage:'B_SYNTHETIC_GM_LOGIN',httpStatus:401,responseCode:'STAGING_FIXTURE_KEY_REQUIRED',
+    keyPresent:true,keyMeetsMinimum:true,keyHasEdgeWhitespace:false,keyHasControlCharacter:false,keyHasMatchingOuterQuotes:false
+  });
+  assert.ok(!JSON.stringify(details).includes(secret));
+  assert.equal(diagnoseBLogin(response,'  '+secret+' ').keyHasEdgeWhitespace,true);
+  assert.equal(diagnoseBLogin(response,'"'+secret+'"').keyHasMatchingOuterQuotes,true);
+  assert.equal(diagnoseBLogin(response,secret+'\n').keyHasControlCharacter,true);
+  assert.equal(diagnoseBLogin({...response,data:{error:secret}},secret).responseCode,'UNCLASSIFIED');
+  const printed=[];
+  const originalError=console.error;
+  console.error=(...args)=>printed.push(args.join(' '));
+  try{
+    await assert.rejects(fullChecks(secret,async()=>response),/GM login HTTP status mismatch/);
+  }finally{console.error=originalError;}
+  assert.equal(printed.length,1);
+  assert.match(printed[0],/B_ONLY_AUTH_DIAGNOSTIC/);
+  assert.match(printed[0],/STAGING_FIXTURE_KEY_REQUIRED/);
+  assert.ok(!printed[0].includes(secret));
 });

@@ -35,6 +35,7 @@ jobs:
           node-version: '22'
       - name: Validate standby fixture contracts
         run: |
+          node --check infra/cloudflare-standby/b-staging-live-e2e.mjs
           node --check infra/cloudflare-standby/fixture-contract.mjs
           node --check infra/cloudflare-standby/storage-adapter.mjs
           node --test infra/cloudflare-standby/*.test.mjs
