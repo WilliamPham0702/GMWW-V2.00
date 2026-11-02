@@ -24,6 +24,6 @@ test('public live checks require B health, fail-closed statuses and no false par
   await publicChecks(request);
   assert.equal(called.length,3);
   assert.deepEqual(called.map(x=>x.path),['/health','/qa/login','/qa/login']);
-  const bad=async()=>({status:200,data:{ok:true,environment:'cloudflare-b',mode:'synthetic-only',productionSwitchAllowed:true}});
+  const bad=async()=>({status:200,data:{ok:true,environment:'cloudflare-b',mode:'synthetic-only',productionSwitchAllowed:Boolean(1)}});
   await assert.rejects(publicChecks(bad),/failover/);
 });
