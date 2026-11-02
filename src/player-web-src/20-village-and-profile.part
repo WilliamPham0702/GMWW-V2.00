@@ -93,11 +93,11 @@ function syncPlayerMiniCards(){
   if(state.artifact)setImage('[data-mini="artifact"] img',String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''));
 }
 
-let gmwwSharedTimeline=null,gmwwSharedTimelineKey='';
+let gmwwSharedTimeline=null,gmwwSharedTimelineKey='',gmwwSharedTimelineReceivedAt=0;
 function renderPlayerTimeline(timeline){
  const timelineKey=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join(':');
- if(timelineKey!==gmwwSharedTimelineKey){gmwwSharedTimeline=null;gmwwSharedTimelineKey=timelineKey}
- if(timeline!==undefined)gmwwSharedTimeline=timeline;
+ if(timelineKey!==gmwwSharedTimelineKey){gmwwSharedTimeline=null;gmwwSharedTimelineReceivedAt=0;gmwwSharedTimelineKey=timelineKey}
+ if(timeline!==undefined){gmwwSharedTimeline=timeline;gmwwSharedTimelineReceivedAt=performance.now()}
  const menu=document.getElementById('gmwwPlayerTopMenu');if(!menu)return;
  let strip=document.getElementById('gmwwPlayerTimeline');
  if(!strip){

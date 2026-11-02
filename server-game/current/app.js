@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.291';
+const VERSION='3.292';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -571,7 +571,7 @@ const DEFAULT_PREFS={
 }
 
 const $=(s,r=document)=>r.querySelector(s);
-const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const $=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const clone=v=>JSON.parse(JSON.stringify(v));
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function formatInformation(v){return String(v??'').replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean).map(x=>x?x.charAt(0).toLocaleUpperCase('vi-VN')+x.slice(1):x).join('\n')}
@@ -8873,41 +8873,91 @@ function gmwwGMVoiceCard(msg){
  card.append(play,wave,time);card.onclick=()=>void gmwwGMVoicePlay(msg.voiceId,card);return card;
 }
 
-let gmwwGMVoiceRecorder=null,gmwwGMVoiceTimeout=null;
+let gmwwGMVoiceRecorder=null,gmwwGMVoiceTimeout=null,gmwwGMVoiceDiscard=false;
+let gmwwGMVoiceDraft=null,gmwwGMVoicePendingSend=false,gmwwGMVoiceProcessing=false,gmwwGMVoiceStarting=false,gmwwGMVoiceBusy=false;
+let gmwwGMMicStream=null,gmwwGMMicIdleTimer=null;
+function gmwwGMMicRelease(){
+ clearTimeout(gmwwGMMicIdleTimer);gmwwGMMicIdleTimer=null;
+ gmwwGMMicStream?.getTracks().forEach(track=>track.stop());gmwwGMMicStream=null;
+}
+async function gmwwGMMicAcquire(){
+ clearTimeout(gmwwGMMicIdleTimer);gmwwGMMicIdleTimer=null;
+ if(!gmwwGMMicStream?.getAudioTracks().some(track=>track.readyState==='live')){
+  gmwwGMMicRelease();gmwwGMMicStream=await navigator.mediaDevices.getUserMedia({audio:true});
+ }
+ gmwwGMMicStream.getAudioTracks().forEach(track=>{track.enabled=true});
+ return gmwwGMMicStream;
+}
+function gmwwGMMicPark(){
+ gmwwGMMicStream?.getAudioTracks().forEach(track=>{track.enabled=false});
+ clearTimeout(gmwwGMMicIdleTimer);gmwwGMMicIdleTimer=setTimeout(gmwwGMMicRelease,120000);
+ if(document.visibilityState==='hidden')gmwwGMMicRelease();
+}
 function gmwwGMVoiceButtonReset(){
  const button=document.getElementById('gmwwGMChatVoice');
- if(button){button.innerHTML=gmwwChatMicSvg;button.title='Ghi và gửi thoại tối đa 30 giây';button.setAttribute('aria-pressed','false')}
+ if(button){button.innerHTML=gmwwChatMicSvg;button.title='Ghi âm tối đa 30 giây';button.setAttribute('aria-pressed','false')}
+}
+function gmwwGMVoicePreview(){
+ const form=document.getElementById('gmwwGMChatVillage'),display=document.getElementById('gmwwGMRecording');
+ if(!form||!display)return;
+ const ready=!!gmwwGMVoiceDraft;
+ form.classList.toggle('is-recording',ready);display.hidden=!ready;
+ if(ready){
+  const label=document.getElementById('gmwwGMRecordingStatus');if(label)label.textContent='Đã ghi • nhấn ↑ để gửi';
+  const time=display.querySelector('time');if(time)time.textContent='0:'+String(Math.min(30,Math.ceil(gmwwGMVoiceDraft.voice.durationMs/1000))).padStart(2,'0');
+ }
+}
+async function gmwwGMVoiceSend(){
+ if(gmwwGMVoiceRecorder?.state==='recording'){gmwwGMVoicePendingSend=true;gmwwGMVoiceRecorder.stop();return}
+ if(gmwwGMVoiceStarting||gmwwGMVoiceProcessing||gmwwGMVoiceBusy)return;
+ const draft=gmwwGMVoiceDraft;if(!draft)return;
+ const target=document.getElementById('gmwwGMChatTarget')?.value||'room';
+ if(String(playSceneState.roomCode||'')!==draft.room||target!==draft.target){playFlashError('Phòng hoặc người nhận đã thay đổi. Hãy chọn lại đúng nơi nhận trước khi gửi.');return}
+ gmwwGMVoiceBusy=true;
+ const button=document.querySelector('#gmwwGMChatVillage [type="submit"]');if(button)button.disabled=true;
+ try{
+  await playRoomApi('/chat',{method:'POST',body:JSON.stringify(draft.target==='room'?{channel:'room',voice:draft.voice}:{loginId:draft.target,voice:draft.voice})});
+  gmwwGMVoiceDraft=null;gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();await gmwwGMChatRefresh();
+ }catch(e){playFlashError('Không gửi được tin thoại: '+String(e?.message||e));gmwwGMVoicePreview()}
+ finally{gmwwGMVoiceBusy=false;if(button)button.disabled=false}
 }
 async function gmwwGMVoiceToggle(){
  if(gmwwGMVoiceRecorder?.state==='recording'){gmwwGMVoiceRecorder.stop();return}
+ if(gmwwGMVoiceBusy||gmwwGMVoiceStarting||gmwwGMVoiceProcessing)return;
  if(!window.MediaRecorder||!navigator.mediaDevices?.getUserMedia){playFlashError('Trình duyệt chưa hỗ trợ ghi âm.');return}
  const target=document.getElementById('gmwwGMChatTarget')?.value||'room',room=String(playSceneState.roomCode||'');
- let stream=null;
+ gmwwGMVoiceStarting=true;gmwwGMVoiceDraft=null;gmwwGMVoicePreview();
  try{
-  stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  const stream=await gmwwGMMicAcquire();
+  if(room!==String(playSceneState.roomCode||'')){gmwwGMMicPark();return}
   const mime=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t=>MediaRecorder.isTypeSupported(t));
   const recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined),chunks=[],start=Date.now();
-  gmwwGMVoiceRecorder=recorder;
+  gmwwGMVoiceDiscard=false;gmwwGMVoiceRecorder=recorder;gmwwGMVoicePendingSend=false;
   recorder.ondataavailable=event=>{if(event.data?.size)chunks.push(event.data)};
-  recorder.onerror=()=>playFlashError('Ghi âm bị gián đoạn.');
+  recorder.onerror=()=>{gmwwGMVoiceDiscard=true;playFlashError('Ghi âm bị gián đoạn.')};
   recorder.onstop=async()=>{
-   clearTimeout(gmwwGMVoiceTimeout);gmwwGMVoiceRecorder=null;gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();
-   stream.getTracks().forEach(t=>t.stop());
+   const sendRequested=gmwwGMVoicePendingSend;gmwwGMVoicePendingSend=false;
+   gmwwGMVoiceProcessing=true;
+   clearTimeout(gmwwGMVoiceTimeout);gmwwGMVoiceRecorder=null;gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();gmwwGMMicPark();
    try{
-    if(!chunks.length||String(playSceneState.roomCode)!==room)return;
+    if(gmwwGMVoiceDiscard||String(playSceneState.roomCode||'')!==room||!chunks.length)return;
     const blob=new Blob(chunks,{type:recorder.mimeType||chunks[0]?.type||'audio/mp4'});
     const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';
     for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
-    const voice={mime:blob.type.split(';')[0],durationMs:Math.min(30000,Math.max(1,Date.now()-start)),base64:btoa(binary)};
-    await playRoomApi('/chat',{method:'POST',body:JSON.stringify(target==='room'?{channel:'room',voice}:{loginId:target,voice})});
-    await gmwwGMChatRefresh();
-   }catch(e){playFlashError('Không gửi được tin thoại: '+String(e?.message||e))}
+    gmwwGMVoiceDraft={room,target,voice:{mime:blob.type.split(';')[0],durationMs:Math.min(30000,Math.max(1,Date.now()-start)),base64:btoa(binary)}};
+    gmwwGMVoicePreview();
+   }catch(e){playFlashError('Không lưu được bản ghi âm: '+String(e?.message||e))}
+   finally{gmwwGMVoiceProcessing=false;if(sendRequested&&gmwwGMVoiceDraft)void gmwwGMVoiceSend()}
   };
   recorder.start(500);gmwwGMVoiceRecording(true,start);
-  const button=document.getElementById('gmwwGMChatVoice');if(button){button.innerHTML=gmwwChatStopSvg;button.title='Dừng và gửi thoại';button.setAttribute('aria-pressed','true')}
+  const label=document.getElementById('gmwwGMRecordingStatus');if(label)label.textContent='Đang ghi âm';
+  const button=document.getElementById('gmwwGMChatVoice');if(button){button.innerHTML=gmwwChatStopSvg;button.title='Dừng ghi âm (chưa gửi)';button.setAttribute('aria-pressed','true')}
   gmwwGMVoiceTimeout=setTimeout(()=>{if(recorder.state==='recording')recorder.stop()},30000);
- }catch(e){stream?.getTracks().forEach(t=>t.stop());gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();playFlashError('Không truy cập được microphone: '+String(e?.message||e))}
+ }catch(e){gmwwGMMicRelease();gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();playFlashError('Không truy cập được microphone: '+String(e?.message||e))}
+ finally{gmwwGMVoiceStarting=false}
 }
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')gmwwGMMicRelease()});
+window.addEventListener('pagehide',gmwwGMMicRelease);
 async function gmwwGMVoicePlay(id,button){
  try{
   button.disabled=true;
@@ -8971,10 +9021,12 @@ function gmwwGMChatMount(){
   if(!trigger){
     trigger=document.createElement('button');trigger.id='gmwwGMChatLaunch';trigger.type='button';trigger.textContent='🦩';trigger.title='GM • Mở Chat';trigger.setAttribute('aria-label','GM • Mở Chat');trigger.onclick=()=>{if(trigger.dataset.dragged==='1'){trigger.dataset.dragged='';return}gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);if(gmwwGMChatOpen)void gmwwGMChatRefresh()};gmwwGMChatMakeMovable(trigger);document.body.appendChild(trigger);
     const panel=document.createElement('section');panel.id='gmwwGMChatPanel';panel.setAttribute('aria-label','GM quản lý Chat');
-    panel.innerHTML='<header><strong>Trò chuyện (GM)</strong><button id="gmwwGMChatReload" type="button" aria-label="Làm mới">↻</button><button id="gmwwGMChatClose" type="button" aria-label="Đóng">×</button></header><div id="gmwwGMChatContent" role="log"></div><form id="gmwwGMChatVillage"><select id="gmwwGMChatTarget" aria-label="Người nhận"><option value="room">🌍 Cả làng</option></select><input type="text" maxlength="280" required placeholder="Gửi tin nhắn…" aria-label="GM nhắn Chat Làng"><span id="gmwwGMRecording" hidden><span class="gmww-record-dot"></span><span aria-hidden="true">▂▄▆▃▇▅▂</span><span>Đang ghi âm</span><time>0:00</time></span><button type="button" id="gmwwGMChatVoice" aria-label="Ghi âm" title="Ghi và gửi thoại tối đa 30 giây"></button><button type="submit" aria-label="Gửi tin nhắn">'+gmwwChatSendSvg+'</button></form>';document.body.appendChild(panel);gmwwGMVoiceButtonReset();
+    panel.innerHTML='<header><strong>Trò chuyện (GM)</strong><button id="gmwwGMChatReload" type="button" aria-label="Làm mới">↻</button><button id="gmwwGMChatClose" type="button" aria-label="Đóng">×</button></header><div id="gmwwGMChatContent" role="log"></div><form id="gmwwGMChatVillage"><select id="gmwwGMChatTarget" aria-label="Người nhận"><option value="room">🌍 Cả làng</option></select><input type="text" maxlength="280" placeholder="Gửi tin nhắn…" aria-label="GM nhắn Chat Làng"><span id="gmwwGMRecording" hidden><span class="gmww-record-dot"></span><span aria-hidden="true">▂▄▆▃▇▅▂</span><span id="gmwwGMRecordingStatus">Đang ghi âm</span><time>0:00</time></span><button type="button" id="gmwwGMChatVoice" aria-label="Ghi âm" title="Ghi và gửi thoại tối đa 30 giây"></button><button type="submit" aria-label="Gửi tin nhắn">'+gmwwChatSendSvg+'</button></form>';document.body.appendChild(panel);gmwwGMVoiceButtonReset();
     document.getElementById('gmwwGMChatVillage').addEventListener('submit',async event=>{event.preventDefault();
       const input=event.currentTarget.querySelector('input'),button=event.currentTarget.querySelector('[type="submit"]'),text=input.value.trim(),
-        target=document.getElementById('gmwwGMChatTarget')?.value||'room';if(!text)return;button.disabled=true;
+        target=document.getElementById('gmwwGMChatTarget')?.value||'room';
+      if(gmwwGMVoiceRecorder?.state==='recording'||gmwwGMVoiceDraft||gmwwGMVoiceProcessing){void gmwwGMVoiceSend();return}
+      if(!text)return;button.disabled=true;
       try{await playRoomApi('/chat',{method:'POST',body:JSON.stringify(target==='room'?{channel:'room',text}:{loginId:target,text})});input.value='';await gmwwGMChatRefresh()}
       catch(e){input.setCustomValidity('Không gửi được: '+String(e.message||''));input.reportValidity();input.setCustomValidity('')}
       finally{button.disabled=false}
