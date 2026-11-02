@@ -1239,3 +1239,21 @@ test('PR753 voice and clock V3.292 exact guarded scope keeps mandatory privacy a
  'tests/online-chat-authority.test.mjs','tests/ci-browser-scope.test.mjs','npm run check',
  "steps.scope.outputs.mode == 'gmww-voice-clock-v3292'"])assert.ok(worker.includes(required),required);
 });
+
+test('Stage4 synthetic recovery exact six-file scope skips full Worker tests; any extra path fails closed',()=>{
+  const changes=[
+    ['infra/cloudflare-standby/stage4-readiness.mjs','A'],
+    ['infra/cloudflare-standby/stage4-readiness.test.mjs','A'],
+    ['docs/architecture/dual-cloudflare-standby-20261101.md','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(changes),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+  for(const path of ['src/index.js','wrangler.jsonc','package.json','server-game/current/app.js']){
+    assert.equal(classifyBrowserScope([...changes,{path,status:'M'}]),'full',path);
+  }
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+});
