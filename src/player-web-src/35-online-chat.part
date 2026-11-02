@@ -173,6 +173,8 @@ html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:aut
 #gmwwChatPanel{background:rgba(17,24,44,.43)!important;border:1px solid #ddcaff65!important;border-radius:18px!important;backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px);box-shadow:0 12px 38px #0006}
 html body #gmwwOnlineFooter #gmwwChatPanel{max-height:min(52dvh,440px)!important}
 #gmwwChatPanel.open header{padding:8px 11px;background:rgba(39,43,70,.38);border-bottom:1px solid #ffffff25}
+/* Votes take priority over the floating chat footer; never mask actionable ballots. */
+#gmwwGallowsDock:not([hidden]){z-index:100006!important}
 #gmwwChatPanel.open #gmwwChatLines{height:130px;max-height:27dvh;padding:7px 9px}
 #gmwwChatLines .msg{margin:5px 0;padding:6px 9px;border:1px solid #e1dcff26;border-radius:13px;background:rgba(132,143,188,.20);max-width:90%;width:fit-content;line-height:1.5}
 #gmwwChatLines .msg.is-self{margin-left:auto;background:rgba(124,98,188,.40)}
