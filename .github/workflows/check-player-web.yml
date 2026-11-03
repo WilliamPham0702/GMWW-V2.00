@@ -46,6 +46,24 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR768: exact scoped Worker timer P0, real DO E2E runs in independent required workflow.
+      - name: PR768 Auto GM DO deadline, Gallows safety, privacy, Worker build
+        if: steps.scope.outputs.mode == 'auto-gm-zero-day-p0'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test \
+            tests/gmww-auto-gm-alarm-recovery.test.mjs \
+            tests/v389-night-runtime-integration.test.mjs \
+            tests/gmww-online-four-fixes-v3293.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-AUTO-GM-ZERO-DAY-P0-20261103.md
       # PR766: reviewed immutable Worker delta, focused DO/online/security tests.
       # Classifier checks exactly five changed files and before/after Worker blob SHA1.
       - name: PR766 — Auto GM alarm recovery, Worker, Online and privacy
