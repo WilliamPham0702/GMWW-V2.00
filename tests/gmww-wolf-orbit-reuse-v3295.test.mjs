@@ -16,8 +16,9 @@ test('Do not change wolf bite orbit; same keyframe used for turn and target',()=
   assert.ok(keyframe?.includes('87.5%'),'Original 🐺 orbit missing');
   assert.ok(statusJs.includes("wolf_bitten:['🐺']"));
   assert.ok(statusJs.includes('gmww-sv-orbit-item'));
-  assert.ok(gmCss.includes('animation:gmwwSvVerticalOrbit 6s linear infinite!important'));
-  assert.ok(!gmCss.includes('gmwwCharacterBodyOrbit'),'Do not use PR765 alternative orbit');
+  assert.ok(statusCss.includes('animation:gmwwSvVerticalOrbit 6s linear infinite!important'));
+  assert.ok(gmCss.includes('gmwwCharacterBodyOrbit'),'Legacy CSS untouched; new DOM spans do not use it');
+  assert.ok(!gmPart.includes('gmwwCharacterBodyOrbit'),'New markup must not call legacy orbit');
 });
 test('GM uses six staggered 🫧 or 🐦‍🔥 nodes with wolf status classes',()=>{
   for(const source of [gmPart,gmCompiled]){

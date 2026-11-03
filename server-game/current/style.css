@@ -8845,30 +8845,35 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 
 #start #gmwwGMAdminDock button[data-gm-admin="open-chat"]{left:calc(100vw - 202px);font-size:32px!important}
 
-/* V3.295: 🫧 turn / 🐦‍🔥 target use the SAME 6s gmwwSvVerticalOrbit
-   and .gmww-sv-orbit-item markup as 🐺 wolf_bitten. No alternative keyframes. */
-#start .play-player-token .play-player-avatar>.battle-orbit.gmww-sv-orbit{
-  position:absolute;inset:0;left:0;top:0;width:100%;height:100%;
-  display:block;background:transparent;border:0;border-radius:0;padding:0;margin:0;
-  z-index:22;overflow:visible;pointer-events:none;
-  --orbit-radius:30px;--orbit-height:9px;--orbit-icon-size:12px;
-  animation:none!important
+/* PR follow-up: ⭐ and 🔥 orbit the CHARACTER, not the label/ground.
+   Individual emoji follow a horizontal ellipse with front/back scale, as the
+   existing 🐺 death visual does. Avoid animating typed CSS custom properties. */
+#start .play-player-token .play-player-avatar>.battle-orbit{
+  left:50%;top:50%;width:0;height:0;overflow:visible;pointer-events:none;
+  animation:none!important;z-index:22
 }
-#start .play-player-token .play-player-avatar>.battle-orbit.gmww-sv-orbit>.gmww-sv-orbit-item{
-  position:absolute;left:50%;top:50%;width:0;height:0;display:block;
-  background:transparent;border:0;border-radius:0;padding:0;margin:0;
-  animation:gmwwSvVerticalOrbit 6s linear infinite!important;
-  animation-delay:var(--orbit-delay,0s)!important
+#start .play-player-token .play-player-avatar>.battle-orbit i{
+  position:absolute;left:0;top:0;font-style:normal;line-height:1;
+  animation:gmwwCharacterBodyOrbit 3.2s linear infinite!important
 }
-#start .play-player-token .play-player-avatar>.battle-orbit.gmww-sv-orbit>.gmww-sv-orbit-item>span{
-  display:block;position:static;width:auto;height:auto;min-width:0;min-height:0;
-  padding:0;margin:0;border:0;border-radius:0;background:transparent;
-  color:inherit;font:normal var(--orbit-icon-size,12px)/1 system-ui;
-  white-space:nowrap;transform:translate(-50%,-50%);
-  text-shadow:0 0 5px rgba(120,220,255,.55)
+#start .play-player-token .play-player-avatar>.battle-orbit[data-kind="actor"] i::before{
+  content:"⭐";color:#f9df87;text-shadow:0 0 6px #ffe69f,0 0 12px #c8c45e
 }
+@keyframes gmwwCharacterBodyOrbit{
+  0%,100%{transform:translate(-50%,-50%) translate(-38px,0) scale(.78);opacity:.62}
+  25%{transform:translate(-50%,-50%) translate(0,-12px) scale(.65);opacity:.42}
+  50%{transform:translate(-50%,-50%) translate(38px,0) scale(.78);opacity:.62}
+  75%{transform:translate(-50%,-50%) translate(0,12px) scale(1.24);opacity:1}
+}
+#start .play-player-token .battle-orbit[data-kind="actor"] i:nth-child(2){animation-delay:-.533s!important}
+#start .play-player-token .battle-orbit[data-kind="actor"] i:nth-child(3){animation-delay:-1.067s!important}
+#start .play-player-token .battle-orbit[data-kind="actor"] i:nth-child(4){animation-delay:-1.6s!important}
+#start .play-player-token .battle-orbit[data-kind="actor"] i:nth-child(5){animation-delay:-2.133s!important}
+#start .play-player-token .battle-orbit[data-kind="actor"] i:nth-child(6){animation-delay:-2.667s!important}
+#start .play-player-token .battle-orbit[data-kind="target"] i:nth-child(2){animation-delay:-.64s!important}
+#start .play-player-token .battle-orbit[data-kind="target"] i:nth-child(3){animation-delay:-1.28s!important}
+#start .play-player-token .battle-orbit[data-kind="target"] i:nth-child(4){animation-delay:-1.92s!important}
+#start .play-player-token .battle-orbit[data-kind="target"] i:nth-child(5){animation-delay:-2.56s!important}
 @media(prefers-reduced-motion:reduce){
-  #start .play-player-token .play-player-avatar>.battle-orbit.gmww-sv-orbit>.gmww-sv-orbit-item{
-    animation-duration:24s!important
-  }
+  #start .play-player-token .play-player-avatar>.battle-orbit i{animation:none!important}
 }
