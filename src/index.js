@@ -2148,7 +2148,8 @@ export class RoomDurableObject extends DurableObject {
         sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),
         started=Date.parse(meta.cycleStartedAt||"");
       // A zero-second discussion is due at cycle start, never 'timer absent'.
-      const discussionDue=Number.isFinite(deadline)?deadline:Number.isFinite(started)?started+sec*1000:0;
+      const hasDiscussionDuration=cfg?.timing?.villageDiscussionSec!==undefined&&cfg?.timing?.villageDiscussionSec!==null;
+      const discussionDue=Number.isFinite(deadline)?deadline:hasDiscussionDuration&&Number.isFinite(started)?started+sec*1000:0;
       if(meta.demo)return discussionDue;
       if(!discussionDue)return 0;
       const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
