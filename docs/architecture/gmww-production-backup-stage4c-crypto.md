@@ -11,10 +11,15 @@
 ## Còn thiếu / chặn thực thi dữ liệu thật
 1. P0 khóa GM hardcoded nằm cả trong Server và GM Runtime (PR #774 Draft). Không rotate không làm hỏng Runtime hiện tại. PR này hoàn toàn độc lập với khóa GM cũ.
 2. Exporter chạy **bên trong DO trên A**, chỉ đọc sau xác thực backup riêng và kiểm tra snapshot nhất quán; hỗ trợ giá trị có kiểu (Uint8Array/Date/Map/Set), history, undo, chat, Artifact, session cần kiểm toán riêng. Không lấy plaintext DO qua SQL _cf_KV (bị SQLITE_AUTH).
-3. Archive Worker / Durable Object độc lập **trên B**, không dùng STAGING Synthetic; chỉ lưu ciphertext, quota/retention, manifest signed, đối soát từng chunk và toàn bộ, mã hóa khóa bằng Cloudflare Secrets/KMS. R2 B API báo 403/10042, chưa kích hoạt.
+3. Đã thêm mã nguồn **B-only** `b-backup-archive-worker.mjs` và cấu hình SQLite Durable Object `BackupArchiveDO` riêng, mặc định tắt nếu thiếu secret + cờ enable. Chỉ lưu ciphertext, có chống ghi đè, đếm chunk, xác thực AES-GCM trước khi lưu. **Chưa deploy/tạo namespace thật trên B**. Còn thiếu quota/retention và đối chiếu manifest toàn backup. R2 B API báo 403/10042; phương án SQLite DO có thể tránh R2, phụ thuộc dung lượng/quota thực tế.
 4. Danh sách A đã kiểm kê metadata: 57 DO, 56 hasStoredData. Chưa xuất bất kỳ giá trị private.
 5. E2E thực tế A-fixture → B-fixture bằng DO, replay/rollback và privacy tests, CI SUCCESS, backup version Worker A và B.
 6. Sau khi tất cả điều kiện PASS, mới cấp phép backup Production thật một lần. Không tự bật failover, không cập nhật DNS/Pages/IPA/Runtime.
+
+## Cấu hình B tách biệt
+- Worker `gmww-b-backup-archive`, chỉ chấp nhận hostname cố định của tài khoản B; không sử dụng namespace B synthetic hiện có.
+- Bắt buộc `GMWW_B_BACKUP_ENABLED=1`, `GMWW_B_BACKUP_INGEST_KEY`, `GMWW_A_B_ARCHIVE_KEY`, `GMWW_B_BACKUP_SOURCE_SHA` được cấp riêng và kiểm chứng; mặc định từ chối.
+- API chỉ lưu ciphertext đã xác thực AES-GCM; `/health` không thể tuyên bố đã có backup Production. Không có cutover route.
 
 ## Khóa
 - `GMWW_A_B_ARCHIVE_KEY` chỉ là **tên binding dự kiến**, giá trị phải là ngẫu nhiên 32-byte base64url và nằm trong Cloudflare Secrets, tuyệt đối không lưu Github/log/chat.
@@ -22,4 +27,4 @@
 - Đừng nhập khóa quản trị GM, khóa synthetic STAGING hoặc session token vào module này.
 
 ## Rollback
-Không có deploy và không có dữ liệu cần rollback. Nếu không tương thích sau merge, revert chỉ 3 file crypto/test/tài liệu; không tác động A/B, Production hoặc Runtime. Tuyệt đối không coi encryption unit-test PASS là backup thật đã được xác minh.
+Không có deploy và không có dữ liệu cần rollback. Nếu không tương thích sau merge, revert PR #776 (chỉ module crypto, Worker B-only, test, Wrangler dry-run và tài liệu), không tác động A/B, Production hoặc Runtime. Tuyệt đối không coi encryption unit-test PASS là backup thật đã được xác minh.
