@@ -1370,7 +1370,9 @@ test('V3.294 postmerge CI-only recovery preserves immutable Chat, Auto GM, Assas
    path,status,after:readFileSync(path,'utf8'),
    before:status==='M'?'previous CI policy':null
  }));
- assert.equal(classifyBrowserScope(changes),'gmww-chat-live-v3294');
+ // The immutable postmerge V3.294 source pin must reject a later, separately
+ // reviewed Worker-only security patch rather than pretending to be V3.294.
+ assert.equal(classifyBrowserScope(changes),'full');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'unsafe'}]),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M',after:'unsafe'}]),'full');
