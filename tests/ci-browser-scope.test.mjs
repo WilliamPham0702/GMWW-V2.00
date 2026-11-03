@@ -1385,3 +1385,29 @@ test('V3.294 postmerge CI-only recovery preserves immutable Chat, Auto GM, Assas
   assert.match(wf,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
 });
 
+test('PR765 stale visual-only pin falls back to full CI instead of bypassing required tests',()=>{
+ const paths=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['server-game/current/style.css','M'],
+  ['src/gmww-members-live.js','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','A'],
+  ['tests/ci-browser-scope.test.mjs','M']
+ ];
+ const css=readFileSync('server-game/current/style.css','utf8');
+ const previousCss=css.slice(0,css.indexOf('/* PR follow-up: ⭐'));
+ const changes=paths.map(([path,status])=>({
+   path,status,after:readFileSync(path,'utf8'),
+   before:path==='server-game/current/style.css'?previousCss:
+      path==='src/player-web-src/35-online-chat.part'?"'#players .player>.gmww-online-orbit{":'reviewed original file'
+ }));
+ // Subsequent reviewed Runtime/Worker changes invalidate the immutable visual-only SHA pin.
+ // Running FULL CI is the required fail-closed behavior, never a bypass.
+ assert.equal(classifyBrowserScope(changes),'full');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'unexpected Worker'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'IPA'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ assert.equal(classifyBrowserScope(changes.map((x,i)=>i===2?{...x,status:'D'}:x)),'full');
+});
