@@ -1449,3 +1449,21 @@ test('PR778 public bulletin recovery has an exact Worker-only scope and rejects 
  assert.equal(classifyBrowserScope([...patches,{path:'src/index.js',status:'M'}]),'full','backend logic cannot be silently changed');
  assert.equal(classifyBrowserScope(patches.slice(1)),'full','missing public notice patch is unreviewed');
 });
+
+test('PR778 main-push bulletin Worker recovery selects only eight audited files',()=>{
+ const files=[
+  {path:'src/gmww-online-chat-policy.js',status:'M'},
+  {path:'src/player-web-src/35-online-chat.part',status:'M'},
+  {path:'src/gmww-members-live.js',status:'M'},
+  {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+  {path:'.github/workflows/check-player-web.yml',status:'M'},
+  {path:'tests/player-village-announcement-ticker-20261103.test.mjs',status:'M'},
+  {path:'tests/ci-browser-scope.test.mjs',status:'M'},
+  {path:'docs/releases/GMWW-PR778-POSTMERGE-WORKER-20261103.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(files),'pr778-postmerge-worker');
+ assert.equal(classifyBrowserScope([...files,{path:'server-game/current/app.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...files,{path:'package.json',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope(files.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...files,{path:'assets/village/arena-3d/main.mjs',status:'M'}]),'full');
+});

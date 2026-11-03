@@ -146,7 +146,8 @@ export function publicChatNotices(meta,players,rows){
     if(type==='dead')add(row,row.loginId,'Đêm qua '+name+' đã chết.');
     else add(row,row.loginId,name+' '+negative[type]+'.');
   }
-  return messages.sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id)).slice(-100);
+  // Preserve all public events in the active cycle; retention is scoped by match/night.
+  return messages.sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id));
 }
 
 /**
@@ -163,5 +164,5 @@ export function mergePublicChatNotices(previous=[],incoming=[]){
     if(!byId.has(row.id))byId.set(row.id,{id:row.id,senderId:'system',senderName:'Thông cáo Làng',
       system:true,isGM:false,text:row.text,at:row.at});
   }
-  return [...byId.values()].sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id)).slice(-150);
+  return [...byId.values()].sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id));
 }
