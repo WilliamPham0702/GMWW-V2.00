@@ -1226,7 +1226,10 @@ test('PR753 voice and clock V3.292 exact guarded scope keeps mandatory privacy a
   }
   return {path,status,before:status==='A'?null:before,after};
  });
- assert.equal(classifyBrowserScope(changes),'gmww-voice-clock-v3292');
+ // The immutable V3.292-only scope must reject later Runtime revisions.
+ // A newer package may not masquerade as the old PR753 release to skip CI.
+ const oldVersion=JSON.parse(readFileSync('package.json','utf8')).version==='3.292.0';
+ assert.equal(classifyBrowserScope(changes),oldVersion?'gmww-voice-clock-v3292':'full');
  assert.equal(classifyBrowserScope(changes.filter(c=>c.path!=='src/gmww-public-turn-clock.js')),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
