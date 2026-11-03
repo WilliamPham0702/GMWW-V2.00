@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {playerSafeInteraction,publicChatNotices} from '../src/gmww-online-chat-policy.js';
+import {playerSafeInteraction,publicInteractionReceipt,publicChatNotices} from '../src/gmww-online-chat-policy.js';
 
 const meta={phase:'running',cyclePhase:'morning',matchId:'privacy-m1'};
 const players={
@@ -47,12 +47,24 @@ test('authenticated Player Web interaction hides actor, GM choice and secret met
   assert.doesNotMatch(JSON.stringify(fatal),/Quyền|Sát Thủ|quyen|actorId|action_assassin_mark|source/);
 });
 
+test('WebSocket broadcasts a generic response receipt without secret role or choice',()=>{
+  const publicEvent={type:'player_interaction_response',
+    interaction:publicInteractionReceipt(mark),serverTime:1700000000000};
+  assert.deepEqual(publicEvent.interaction,{
+    id:'mark-1',loginId:'adung',status:'responded',effectActive:false
+  });
+  assert.doesNotMatch(JSON.stringify(publicEvent),/assassin|Sát Thủ|Quyền|quyen|gmChoice|👍|👎|actionId|actorId|assassinOutcome/);
+  assert.equal(publicInteractionReceipt({id:'normal',type:'expelled',loginId:'adung'}).type,'expelled');
+});
+
 test('Worker strips Assassin actor details from /me, direct response and broadcast',()=>{
   const source=readFileSync('src/index.js','utf8');
   assert.match(source,/interactions=rows\.filter[\s\S]*?\.slice\(-10\)\.map\(playerSafeInteraction\)/);
   assert.match(source,/const effects=Object\.values\(latest\)\.map\(playerSafeInteraction\)/);
   assert.match(source,/if\(row\.status==="responded"\)return j\(\{ok:true,interaction:playerSafeInteraction\(row\)/);
-  assert.match(source,/const socketResponse=isAssassin\?[\s\S]*?\{id:row\.id,type:"assassin_mark",loginId,status:"responded",effectActive:false\}/);
+  assert.match(source,/const socketResponse=publicInteractionReceipt\(row\)/);
+  assert.match(source,/player_interaction_response",interaction:socketResponse,\s*serverTime:Date\.now\(\)/);
+  assert.doesNotMatch(source,/player_interaction_response",interaction:socketResponse,\s*assassinOutcome/);
   assert.match(source,/interaction:socketResponse/);
   assert.doesNotMatch(source,/player_interaction_response",interaction:\{\.\.\.row,gmChoice:undefined\}/);
 });

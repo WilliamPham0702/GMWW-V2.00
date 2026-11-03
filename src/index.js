@@ -1,6 +1,6 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
-import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,playerSafeInteraction} from "./gmww-online-chat-policy.js";
+import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -2979,12 +2979,11 @@ export class RoomDurableObject extends DurableObject {
     // Never send personal response details on a socket with a spoofable
     // participantId. Player Web retrieves them from the authenticated /me API.
     const safeResponse=playerSafeInteraction(row);
-    // WebSocket broadcasts disclose neither Assassin identity nor choice.
-    const socketResponse=isAssassin?
-      {id:row.id,type:"assassin_mark",loginId,status:"responded",effectActive:false}:
-      safeResponse;
+    // Socket rooms have unverified listeners: broadcast only the public receipt.
+    // In particular, never disclose the Assassin action type or its outcome on WS.
+    const socketResponse=publicInteractionReceipt(row);
     if(meta.demo!==true)this.broadcast({type:"player_interaction_response",interaction:socketResponse,
-      assassinOutcome,serverTime:Date.now()});
+      serverTime:Date.now()});
     if(assassinOutcome==="dead")this.broadcast({type:"player_status_changed",loginId,
       statusId:"dead",active:true,serverTime:Date.now()});
     return j({ok:true,interaction:safeResponse,assassinOutcome});

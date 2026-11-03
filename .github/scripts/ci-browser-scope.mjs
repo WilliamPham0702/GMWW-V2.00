@@ -4414,7 +4414,72 @@ function isV3289PR738VersionOnlyScope(base){
      !workflow.includes("steps.scope.outputs.mode == 'v3289-pr738-runtime-release'"))return false;
   return true;
 }
+function isAssassinPublicWorkerSecurityScope(changes,base){
+  const expected=new Map([
+    ['src/gmww-online-chat-policy.js','M'],
+    ['src/index.js','M'],
+    ['tests/assassin-player-public-privacy-20261103.test.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['docs/releases/GMWW-ASSASSIN-PUBLIC-PRIVACY-WORKER-20261103.md','A']
+  ]);
+  if(changes.length!==expected.size||changes.some(c=>expected.get(c.path)!==c.status)||
+    new Set(changes.map(c=>c.path)).size!==expected.size)return false;
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.294.0')return false;
+  const oldWorker=git('show',base+':src/index.js');
+  const worker=fs.readFileSync('src/index.js','utf8');
+  const oldImport='publicChatNotices,playerSafeInteraction} from "./gmww-online-chat-policy.js";';
+  const newImport='publicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";';
+  const oldBroadcast=`    // WebSocket broadcasts disclose neither Assassin identity nor choice.
+    const socketResponse=isAssassin?
+      {id:row.id,type:"assassin_mark",loginId,status:"responded",effectActive:false}:
+      safeResponse;
+    if(meta.demo!==true)this.broadcast({type:"player_interaction_response",interaction:socketResponse,
+      assassinOutcome,serverTime:Date.now()});`;
+  const newBroadcast=`    // Socket rooms have unverified listeners: broadcast only the public receipt.
+    // In particular, never disclose the Assassin action type or its outcome on WS.
+    const socketResponse=publicInteractionReceipt(row);
+    if(meta.demo!==true)this.broadcast({type:"player_interaction_response",interaction:socketResponse,
+      serverTime:Date.now()});`;
+  if(!oldWorker.includes(oldImport)||!oldWorker.includes(oldBroadcast))return false;
+  if(oldWorker.replace(oldImport,newImport).replace(oldBroadcast,newBroadcast)!==worker)return false;
+  const policy=fs.readFileSync('src/gmww-online-chat-policy.js','utf8');
+  const oldPolicy=git('show',base+':src/gmww-online-chat-policy.js');
+  const policyAnchor='export function chatBlockedByEffects(rows,match,loginId,now=Date.now()){';
+  const receipt=`// Broadcast events go to every socket, so even the targeted role's
+// action type must not be observable to other villagers.
+export function publicInteractionReceipt(row){
+  if(row?.type==='assassin_mark')
+    return{id:row.id,loginId:row.loginId,status:'responded',effectActive:false};
+  return playerSafeInteraction(row);
+}
+
+`;
+  if(!oldPolicy.includes(policyAnchor)||oldPolicy.replace(policyAnchor,receipt+policyAnchor)!==policy)return false;
+  const focused=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  const tests=fs.readFileSync('tests/assassin-player-public-privacy-20261103.test.mjs','utf8');
+  const notes=fs.readFileSync('docs/releases/GMWW-ASSASSIN-PUBLIC-PRIVACY-WORKER-20261103.md','utf8');
+  return focused.includes("steps.scope.outputs.mode == 'assassin-public-worker-privacy'")&&
+    focused.includes('tests/assassin-player-public-privacy-20261103.test.mjs')&&
+    focused.includes('npm run check')&&tests.includes('publicInteractionReceipt(mark)')&&
+    notes.includes('Rollback');
+}
 function detect(){
+  // Verify the Worker-only privacy patch byte-for-byte against its base.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return {status,path}});
+        if(isAssassinPublicWorkerSecurityScope(changes,base))
+          return {mode:'assassin-public-worker-privacy',reason:'Exact privacy Worker-only change; public socket redaction and focused API/chat tests'};
+      }
+    }catch{} // Fail closed: unverified code runs the full suite.
+  }
+
+
   // Evaluate the immutable V3.294 CI-only recovery before historical main FULL fallback.
   // This covers both PR review and the new main push; unknown diffs run full CI.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){

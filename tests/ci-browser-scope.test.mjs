@@ -1346,7 +1346,7 @@ test('PR767 immutable V3.294 live microphone+fast private Chat CI-LITE remains f
  const changes=paths.map(([path,status])=>({path,status,after:readFileSync(path,'utf8'),before:status==='A'?null:'prior production content'}));
  // The new SHA-1 pin is the reviewed V3.294 Worker plus already-merged PR766 Auto GM scheduler.
  // The 14-file exact-diff contract remains fail-closed for unreviewed edits.
- assert.equal(classifyBrowserScope(changes),'gmww-chat-live-v3294','reviewed merged Worker must pass focused mandatory CI');
+ assert.equal(classifyBrowserScope(changes),'full','PR767 immutable scope cannot claim a newer security Worker is the original blob');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
@@ -1370,7 +1370,9 @@ test('V3.294 postmerge CI-only recovery preserves immutable Chat, Auto GM, Assas
    path,status,after:readFileSync(path,'utf8'),
    before:status==='M'?'previous CI policy':null
  }));
- assert.equal(classifyBrowserScope(changes),'gmww-chat-live-v3294');
+ // The immutable postmerge V3.294 source pin must reject a later, separately
+ // reviewed Worker-only security patch rather than pretending to be V3.294.
+ assert.equal(classifyBrowserScope(changes),'full');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'unsafe'}]),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M',after:'unsafe'}]),'full');
