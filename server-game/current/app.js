@@ -3958,6 +3958,19 @@ function connectPlaySocket(){
       if(d.runtime)playSceneRuntime.nightRuntime=d.runtime;else if(d.nightRuntime)playSceneRuntime.nightRuntime=d.nightRuntime;
       if(Array.isArray(d.players))playSceneRuntime.players=d.players;
       playSceneRuntime.lastSyncAt=Date.now();savePlayScene();renderPlayScene();
+      // Socket Auto GM transitions may arrive while a busy GM panel temporarily
+      // suppresses the regular audio attempt. Retry only THIS confirmed turn.
+      if(d.type==='night_turn'&&d.source==='auto'&&d.runtime?.currentId){
+        const expected=String(d.runtime.currentId);
+        for(const delay of [180,900,1800])setTimeout(()=>{
+          if(playSceneState.step!=='battle'||playSceneState.phase!=='night'||
+             String(playSceneRuntime.nightRuntime?.currentId||'')!==expected)return;
+          if(battleState.lastAudioTurnKey===battleState.key||
+             battleState.audioPendingTurnKey===battleState.key)return;
+          if(!playAudioMuted()&&!playSceneRuntime.busy&&!battleState.busy)
+            battleAudioForTurn(battleTurn(),true);
+        },delay);
+      }
       if(playSceneRuntime.roomSyncTimer)clearTimeout(playSceneRuntime.roomSyncTimer);
       playSceneRuntime.roomSyncTimer=setTimeout(()=>{playSceneRuntime.roomSyncTimer=0;playSyncRoom(true)},180);return
     }
@@ -6427,8 +6440,10 @@ function battleShowResultPopup(title,message,scanOnly=false){
 let battleDayAudioQueue=null;
 function battleQueueDayAudio(cues){
   if(playSceneState.phase!=='day'||!Array.isArray(cues)||!cues.length)return;
+  // One sequential audio queue per DAY: changing Gallows stages must never
+  // discard unfinished morning, nomination or result narration.
   const key=[playSceneRuntime.room?.matchId||'',playSceneState.night||0,
-    playSceneRuntime.room?.cycleStartedAt||'',playSceneRuntime.gallows?.stage||'ready'].join(':');
+    playSceneRuntime.room?.cycleStartedAt||''].join(':');
   if(!battleDayAudioQueue||battleDayAudioQueue.key!==key)
     battleDayAudioQueue={key,items:[],active:false};
   const queue=battleDayAudioQueue;
@@ -7034,14 +7049,17 @@ function battleGallowsRender(phase){
   const key=[playSceneRuntime.room?.matchId,playSceneState.night,g.candidateId,stage].join(':');
   // Server DEMO advances ballots without invoking the GM button handlers.
   // Emit open/nomination/vote cues on the authoritative stage once, also in DEMO.
-  if(phase==='day'&&['nominating','voting'].includes(stage)){
+  if(phase==='day'&&['nominating','selecting','voting'].includes(stage)){
     const cueKey=[playSceneRuntime.room?.matchId,playSceneState.night,g.id,stage].join(':');
     if(battleState.gallowsStageAudioKey!==cueKey){
       battleState.gallowsStageAudioKey=cueKey;
-      battleQueueDayAudio(stage==='nominating'?
+      const cues=stage==='nominating'?
         [['audio_system_gallows_day_long','Ngày dài rồi'],
          ['audio_system_gallows_open_nomination','Mở đề cử']]:
-        [['audio_system_gallows_open_vote','Mở bỏ phiếu']]);
+        stage==='selecting'?
+          [['audio_system_gallows_nomination_result','Chốt kết quả đề cử']]:
+          [['audio_system_gallows_open_vote','Mở bỏ phiếu']];
+      battleQueueDayAudio(cues);
     }
   }
   if(phase==='day'&&['closed','resolved'].includes(stage)&&battleState.gallowsShowKey!==key){
