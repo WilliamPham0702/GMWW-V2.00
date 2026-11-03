@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.292';
+const VERSION='3.293';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3932,6 +3932,14 @@ function connectPlaySocket(){
       if(playSceneState.step==='battle'&&playSceneState.phase==='day')battleGallowsRender('day');
       return;
     }
+    // A verified Player action is signaled as a privacy-safe WebSocket tick.
+    // Only the GM-authenticated /gm/state may reveal committed targets.
+    if(['battle_action_confirmed','battle_action_undone','battle_action_reverted','day_action_confirmed',
+        'player_interaction_response','player_status_changed'].includes(d.type)&&String(playSceneState.roomCode)===code){
+      if(playSceneRuntime.roomSyncTimer)clearTimeout(playSceneRuntime.roomSyncTimer);
+      playSceneRuntime.roomSyncTimer=setTimeout(()=>{playSceneRuntime.roomSyncTimer=0;void playSyncRoom(true)},80);
+      return;
+    }
     const movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);
     if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm','role_progress','artifact_progress','delivery_progress'].includes(d.type)||String(playSceneState.roomCode)!==code)return;
     if(d.type==='role_progress'||d.type==='artifact_progress'||d.type==='delivery_progress'){
@@ -6880,7 +6888,11 @@ function battleMarkPlayers(){
   const intel=playSceneRuntime.nightIntel;
   const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled?
     (intel.attacked||[]).map(row=>String(row?.to||'').replace(/^member:/,'')).filter(Boolean):[];
-  const chosen=new Set([...(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),...biteTargets]);
+  // GM-only battleUndo is taken from /gm/state, never from a public socket.
+  // The confirmed target flame applies only during the current night turn.
+  const confirmed=playSceneState.phase==='night'&&playSceneRuntime.battleUndo?.turnId===t?.id?
+    (playSceneRuntime.battleUndo.targets||[]):[];
+  const chosen=new Set([...(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),...confirmed,...biteTargets]);
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
     const id=String(el.dataset.playPlayerId||'');
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
