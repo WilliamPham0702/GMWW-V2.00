@@ -1297,3 +1297,24 @@ test('Stage4 synthetic recovery exact six-file scope skips full Worker tests; an
   }
   assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
 });
+
+
+// V3.293 postmerge CI release guard: old 3D-version tests are unrelated to PR761.
+test('V3.293 postmerge CI release guard rejects any non-CI gameplay, native or version change',()=>{
+ const scope=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['docs/releases/GMWW-V3.293-POSTMERGE-CI-RECOVERY-20261103.md','A']
+ ];
+ const changes=scope.map(([path,status])=>({path,status,
+  before:status==='M'?'old reviewed CI source':null,
+  after:readFileSync(path,'utf8')
+ }));
+ assert.equal(classifyBrowserScope(changes),'online-v3293-postmerge-ci');
+ for(const ix of [0,1,2,3])assert.equal(classifyBrowserScope(changes.filter((_,i)=>i!==ix)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'changed Worker'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'native'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ assert.equal(classifyBrowserScope(changes.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+});

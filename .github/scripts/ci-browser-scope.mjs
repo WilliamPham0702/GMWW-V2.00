@@ -3884,7 +3884,27 @@ function isOnlineTurnV3293Scope(changes){
  }catch{return false}
 }
 
+// V3.293 PR761 recovery: 4 CI/docs files ONLY, never modified gameplay Runtime.
+// Matching contents are mandatory and checked again against an immutable parent SHA.
+function isV3293PostmergeCiScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['docs/releases/GMWW-V3.293-POSTMERGE-CI-RECOVERY-20261103.md','A']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ return by.get('.github/scripts/ci-browser-scope.mjs')?.after?.includes('function isV3293PostmergeCiScope(changes)')&&
+   by.get('.github/workflows/check-player-web.yml')?.after?.includes("steps.scope.outputs.mode == 'online-v3293-postmerge-ci'")&&
+   by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('V3.293 postmerge CI release guard')&&
+   by.get('docs/releases/GMWW-V3.293-POSTMERGE-CI-RECOVERY-20261103.md')?.after?.includes('Không thay đổi Worker, Player Web, Runtime hay dữ liệu');
+}
+
 function classifyBrowserScope(changes){
+  if(isV3293PostmergeCiScope(changes))return 'online-v3293-postmerge-ci';
   if(isOnlineTurnV3293Scope(changes))return 'online-turn-v3293';
   if(isGMWWVoiceClockV3292Scope(changes))return 'gmww-voice-clock-v3292';
   if(isPR749ChatGlassScope(changes))return 'gmww-chat-glass-749';
@@ -5134,6 +5154,29 @@ function detect(){
         return{mode:'player-fire-wolf-726',reason:'V3.288 CI-only recovery: exact 3 files, previously reviewed PR726 wolf and undo source unchanged'};
       }
     }catch{} // Failed proof reverts to full tests; never skip Worker or Preview required checks.
+  }
+
+  // V3.293 immutable postmerge CI recovery: only CI/docs changed from merged PR761.
+  // Same-sha main push uses the reviewed 4-fix regressions, not unrelated legacy 3D assertions.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        git('merge-base','--is-ancestor','0faac8e1dfe4d75dc4ea2a7cc63844fb14fcb6fa','HEAD');
+        git('diff','--quiet','0faac8e1dfe4d75dc4ea2a7cc63844fb14fcb6fa','HEAD','--',
+          'src','server-game','assets','package.json','package-lock.json','wrangler.jsonc','update-system');
+        if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.293.0'){
+          const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+          const changes=rows.map(row=>{
+            const [status,path]=row.split('\t');
+            return{status,path,before:status==='M'?git('show',base+':'+path):null,
+              after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
+          });
+          if(isV3293PostmergeCiScope(changes))
+            return{mode:'online-v3293-postmerge-ci',reason:'Immutable PR761 reviewed source, exact four CI/docs release recovery files'};
+        }
+      }
+    }catch{} // Missing ancestry or unreviewed gameplay diff always runs full CI.
   }
 
   // Runtime V3.292 postmerge: same exact guarded files; verify checks again on main.
