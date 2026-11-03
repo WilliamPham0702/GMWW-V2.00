@@ -3987,7 +3987,51 @@ function isChatLiveV3294Scope(changes){
  }catch{return false}
 }
 
+// V3.294 postmerge recovery: only this CI selector and its tests may change.
+// Verify the approved, merged PR767 Runtime/Worker bytes with the original 14-file
+// SHA-pinned contract. This narrow recovery cannot alter gameplay, IPA or data.
+function isChatLiveV3294PostmergeRecoveryScope(changes){
+  const expected=new Map([
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+  try{
+    const baseline='8bf95b9d53fb83e0be20e432a7ac27be68958399';
+    git('merge-base','--is-ancestor',baseline,'HEAD');
+    const delta=git('diff','--name-status','--no-renames',baseline,'HEAD').trim().split('\n').filter(Boolean);
+    if(delta.length!==expected.size||delta.some(row=>{
+      const [status,path]=row.split('\t');
+      return expected.get(path)!==status;
+    }))return false;
+    for(const changed of changes){
+      if(changed.after!==fs.readFileSync(changed.path,'utf8'))return false;
+    }
+    if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.294.0')return false;
+    const reviewed=new Map([
+      ['.github/scripts/ci-browser-scope.mjs','M'],
+      ['.github/workflows/check-player-web.yml','M'],
+      ['tests/ci-browser-scope.test.mjs','M'],
+      ['docs/releases/GMWW-RUNTIME-V3.294-LIVE-VOICE-FAST-20261103.md','A'],
+      ['tests/gmww-chat-live-meter-fast-send-v3294.test.mjs','A'],
+      ['package.json','M'],['package-lock.json','M'],
+      ['server-game/src/00-core-and-library.part','M'],
+      ['server-game/src/45-online-chat.part','M'],
+      ['server-game/current/GMWW.html','M'],
+      ['server-game/current/app.js','M'],['src/index.js','M'],
+      ['src/player-web-src/35-online-chat.part','M'],
+      ['src/gmww-members-live.js','M']
+    ]);
+    return isChatLiveV3294Scope([...reviewed].map(([path,status])=>({
+      path,status,after:fs.readFileSync(path,'utf8')
+    })));
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isChatLiveV3294PostmergeRecoveryScope(changes))return 'gmww-chat-live-v3294';
   if(isAutoGmAlarmV3293Scope(changes))return 'auto-gm-alarm-v3293';
   if(isChatLiveV3294Scope(changes))return 'gmww-chat-live-v3294';
   if(isV3293EarlyGateCiFixScope(changes))return 'online-v3293-postmerge-ci';
@@ -4379,6 +4423,23 @@ function isV3289PR738VersionOnlyScope(base){
   return true;
 }
 function detect(){
+  // Verify the exact CI-only recovery on the PR and the first-parent main push,
+  // before the historical all-tests main fallback. Unknown diffs still run full CI.
+  if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{
+          const [status,path]=row.split('\t');
+          return {status,path,before:status==='M'?git('show',base+':'+path):null,
+            after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isChatLiveV3294PostmergeRecoveryScope(changes))
+          return {mode:'gmww-chat-live-v3294',reason:'PR767 merged source SHA-pinned; only verified CI-selector recovery'};
+      }
+    }catch{} // On unverified history or files, fail closed to full CI.
+  }
   // PR766 Worker-only hotfix: exact source SHA-1 blobs + 5 allowed files.
   // Works for both PR validation and the first-parent main postmerge diff.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
