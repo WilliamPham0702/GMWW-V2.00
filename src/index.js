@@ -1,6 +1,6 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
-import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
+import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,mergePublicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -3442,12 +3442,35 @@ export class RoomDurableObject extends DurableObject {
   }
   async playerChatRead(body){
     const loginId=normalizeLoginId(body?.loginId),{meta,players,rows,permission}=await this.chatAccess(loginId,body?.channel);
-    const notices=players["member:"+loginId]&&body?.channel!=="gm"?publicChatNotices(meta,players,rows):[];
+    let notices=[],noticeCycleNight=0;
+    if(players["member:"+loginId]&&meta?.phase==="running"&&meta?.matchId){
+      const phase=String(meta.cyclePhase||"");
+      const currentNight=Math.max(0,Number(meta.cycleNight||0));
+      // A new night must never disclose its pending secret actions. Keep only
+      // the already-public bulletin from the preceding day until next dawn.
+      const resolved=["morning","day"].includes(phase);
+      noticeCycleNight=resolved?currentNight:phase==="night"?currentNight-1:0;
+      if(noticeCycleNight>0){
+        const noticeKey="villagePublicBulletin:"+String(meta.matchId)+":"+noticeCycleNight;
+        const stored=await this.ctx.storage.get(noticeKey);
+        notices=Array.isArray(stored?.items)?stored.items:[];
+        if(resolved){
+          // First public read backfills from durable room history, so even
+          // pruned interaction rows can produce a stable, replayable bulletin.
+          const source=stored?rows:await this.villageHistoryForMatch(meta,rows);
+          const latest=publicChatNotices(meta,players,source);
+          const merged=mergePublicChatNotices(notices,latest);
+          if(!stored||JSON.stringify(merged)!==JSON.stringify(notices))
+            await this.ctx.storage.put(noticeKey,{items:merged});
+          notices=merged;
+        }
+      }
+    }
     const broadcasts=players["member:"+loginId]?(await this.ctx.storage.get("onlineChat:"+chatStorageScope(meta)+":gm:all"))||[]:[];
-    if(!permission.canRead)return j({ok:true,channel:null,messages:[],broadcasts,notices,canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
+    if(!permission.canRead)return j({ok:true,channel:null,messages:[],broadcasts,notices,noticeCycleNight,canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
     const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel;
     return j({ok:true,channel:permission.channel,scope:permission.scope,
-      messages:(await this.ctx.storage.get(key))||[],broadcasts,notices,canSend:permission.canSend,
+      messages:(await this.ctx.storage.get(key))||[],broadcasts,notices,noticeCycleNight,canSend:permission.canSend,
       reason:permission.reason,phase:meta.cyclePhase,cycleKey:meta.cycleKey});
   }
   async playerChatSend(body){
