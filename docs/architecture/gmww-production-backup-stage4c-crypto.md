@@ -3,7 +3,7 @@
 **Trạng thái:** chỉ mã nguồn + kiểm thử dữ liệu giả. Không có export, upload, restore hoặc dữ liệu Production thật. Không bật failover. Không sửa Worker, DNS, IPA, Runtime.
 
 ## Kết quả
-- Module `infra/cloudflare-standby/production-backup-envelope.mjs`: AES-256-GCM WebCrypto, nonce ngẫu nhiên cho từng chunk, AAD khóa chặt metadata nguồn A → đích B, SHA-256 plaintext sau giải mã; mỗi chunk tối đa 64 KiB.
+- Module `infra/cloudflare-standby/production-backup-envelope.mjs`: AES-256-GCM WebCrypto, nonce ngẫu nhiên cho từng chunk, AAD khóa chặt metadata nguồn A → đích B, SHA-256 của ciphertext để đối soát lưu trữ; không xuất hash plaintext có thể làm lộ dữ liệu ít entropy; mỗi chunk tối đa 64 KiB.
 - Schema metadata chỉ cho phép backupId, objectDigest không chứa ID thô, sourceSha, revision, index/count, và điều kiện quiescent/sockets=0. Mọi schema hoặc metadata không khớp đều fail-closed.
 - Không chứa secret, token, dữ liệu thật, URL quyền riêng, import game source hoặc Cloudflare API; không đủ điều kiện sao lưu Production khi đứng riêng.
 - Test fixture tổng hợp: roundtrip, tamper, sai khóa, nonce, digest, sai metadata, ván đang chạy/WS còn kết nối.
