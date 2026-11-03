@@ -1272,7 +1272,10 @@ test('PR761 V3.293 exact Online action, realtime, privacy and Runtime scope fail
   const before=status==='M'?(markers?after.replaceAll(...markers):'unchanged baseline source') :null;
   return {path,status,after,before};
  });
- assert.equal(classifyBrowserScope(changes),'online-turn-v3293');
+ // This narrow gate was only approved for the one-time V3.293 release.
+ // Later versions must run the full suite (never silently reuse its shortcut).
+ assert.equal(classifyBrowserScope(changes),
+  JSON.parse(readFileSync('package.json','utf8')).version==='3.293.0'?'online-turn-v3293':'full');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
