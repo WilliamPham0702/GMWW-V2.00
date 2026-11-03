@@ -49,7 +49,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.292",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.293",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -2103,7 +2103,20 @@ export class RoomDurableObject extends DurableObject {
   async autoAdvanceDue(meta){
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return 0;
     const cyclePhase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
-    if(cyclePhase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(!runtime)return 0;if(runtime.completed)return Date.now();if(runtime.queue?.[runtime.cursor]?.kind==="village-wakeup")return Date.now();const due=Date.parse(runtime.deadlineAt||"");return Number.isFinite(due)?due:0}
+    if(cyclePhase==="night"){
+      const runtime=await this.getNightRuntime(meta,night,true);
+      if(!runtime)return 0;
+      if(runtime.completed)return Date.now();
+      const active=runtime.queue?.[runtime.cursor];
+      if(!active||active.kind==="village-wakeup")return Date.now();
+      const deadline=Date.parse(runtime.deadlineAt||"");
+      if(Number.isFinite(deadline))return deadline;
+      // Reconstruct a missing deadline from the original Server turn start.
+      // Zero-duration turns advance immediately only while Auto GM is enabled.
+      const started=Date.parse(active.startedAt||runtime.startedAt||"");
+      const seconds=Math.max(0,Number(active.durationSec)||0);
+      return Number.isFinite(started)?started+seconds*1000:Date.now();
+    }
     if(cyclePhase==="morning"||cyclePhase==="day"){
       const deadline=Date.parse(meta.dayDeadlineAt||'');
       const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),
@@ -2428,8 +2441,8 @@ export class RoomDurableObject extends DurableObject {
     const payload={ok:true,kind,actionId,actorId,roleId,artifactId,targetIds:targets,
       day,result,serverTime:Date.now()};
     await this.ctx.storage.put(receiptKey,{fingerprint,result:payload});
-    this.broadcast({type:"day_action_confirmed",actionId,actorId,targetIds:targets,
-      day,serverTime:Date.now()});
+    // A shared socket only signals a committed action; GM reads targets privately.
+    this.broadcast({type:"day_action_confirmed",matchId,day,serverTime:Date.now()});
     return j(payload);
   }
   /* V3.99: a single GM confirmation is one reversible server operation, including
@@ -2665,8 +2678,8 @@ export class RoomDurableObject extends DurableObject {
     const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt,
       ...(revelation?{revelation}:{}),...(wolfOutcome?{wolfOutcome}: {})};
     await this.ctx.storage.put(receiptKey,{fingerprint,result});
-    this.broadcast(meta.demo===true?{type:"battle_action_confirmed",matchId,serverTime:Date.now()}:
-      {type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()});
+    // Never broadcast a private actor, targets or the undo ledger to member sockets.
+    this.broadcast({type:"battle_action_confirmed",matchId,serverTime:Date.now()});
     return j(result);
   }
   async gmBattleUndo(request,body){
@@ -2699,8 +2712,7 @@ export class RoomDurableObject extends DurableObject {
       await this.advanceNightRuntime(meta,"jump","gm-undo",undoIndex);
     record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
     const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(record.undoneAt)).padStart(13,"0")+":"+logId,{id:logId,type:"battle_undo",loginId:String(record.targetIds||""),matchId,actionId:record.label,message:"GM hoàn tác: "+record.label,createdAt:record.undoneAt,source:"gm"});
-    this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
-      serverTime:Date.now()});
+    this.broadcast({type:"battle_action_undone",matchId,serverTime:Date.now()});
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
     return j({ok:true,undone:true,turnId:record.turnId,targets:record.targetIds});
   }

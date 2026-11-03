@@ -459,7 +459,21 @@ function gmwwOnlineTarget(id){
  pick.targets.push(id);gmwwOnlineTurnEffects(state.onlineActions||[]);
  if(pick.targets.length>=Math.max(0,Number(pick.action.targetCount)||0))void gmwwOnlineSubmit();else toast('Đã chọn '+pick.targets.length+'/'+pick.action.targetCount+'; kéo icon tới người tiếp theo.');
 }
-async function gmwwOnlineSubmit(){
+function gmwwOnlineAssassinChoice(){
+ const pick=gmwwOnlinePick;if(!pick||pick.action.actionId!=='action_assassin_mark')return;
+ let box=document.getElementById('gmwwOnlinePick');
+ if(!box){box=document.createElement('section');box.id='gmwwOnlinePick';document.body.appendChild(box)}
+ box.replaceChildren();
+ const title=document.createElement('strong');title.textContent='Sát Thủ · chọn dấu hiệu cho mục tiêu';box.appendChild(title);
+ const choices=document.createElement('div');choices.className='gmww-online-people';box.appendChild(choices);
+ for(const choice of ['👍','👎']){
+  const b=document.createElement('button');b.type='button';b.textContent=choice;
+  b.setAttribute('aria-label',choice==='👍'?'Sát Thủ chọn thích':'Sát Thủ chọn không thích');
+  b.onclick=()=>{void gmwwOnlineSubmit(choice)};choices.appendChild(b);
+ }
+ const cancel=document.createElement('button');cancel.type='button';cancel.textContent='✕ Hủy';cancel.onclick=gmwwOnlineStop;box.appendChild(cancel);
+}
+async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
  const pick=gmwwOnlinePick;if(!pick||state.onlineBusy)return;
  const action=(state.onlineActions||[]).find(a=>a.key===pick.action.key);
  if(!action||action.blocked||state.room?.phase!=='running'){gmwwOnlineStop();return}
@@ -473,13 +487,14 @@ async function gmwwOnlineSubmit(){
    if(!['left','none','right'].includes(direction)){toast('Hướng không hợp lệ');return}
  }
  if(action.actionId==='action_assassin_mark'){
-   assassinChoice=prompt('Chọn 👍 hoặc 👎','👍');
-   if(assassinChoice===null)return;if(!['👍','👎'].includes(assassinChoice)){toast('Chọn 👍 hoặc 👎');return}
+   if(!['👍','👎'].includes(confirmedAssassinChoice)){gmwwOnlineAssassinChoice();return}
+   assassinChoice=confirmedAssassinChoice;
  }
  state.onlineBusy=true;
  try{
    const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
    gmwwOnlineConfirmedTargets=pick.targets.slice();gmwwOnlineConfirmedUntil=Date.now()+5500;
+   setTimeout(()=>gmwwOnlineTurnEffects(state.onlineActions||[]),5600);
    gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';toast('Đã thực hiện: '+String(action.name||'Hành động'));
    if(d.revelation?.message)gmwwOnlineShowRevelation(d.revelation);
  }catch(e){toast('Hành động chưa được chấp nhận: '+String(e.message||e))}
@@ -592,7 +607,10 @@ function gmwwOnlineTurnEffects(offers){
     '#players .player.is-battle-target .portrait{animation:gmww-player-target-pulse 1.4s ease-in-out infinite}'+
     '@keyframes gmww-player-turn-pulse{50%{filter:drop-shadow(0 0 15px #f5cf66) brightness(1.14)}}'+
     '@keyframes gmww-player-target-pulse{50%{filter:drop-shadow(0 0 15px #67e9ca) brightness(1.16)}}'+
-    '@media(prefers-reduced-motion:reduce){#players .player.is-battle-actor .portrait,#players .player.is-battle-target .portrait{animation:none}}';
+    '#players .player>.gmww-online-orbit{position:absolute;left:50%;top:35%;width:90px;height:90px;transform:translate(-50%,-50%);pointer-events:none;z-index:20;animation:gmww-orbit-spin 4s linear infinite}'+
+    '#players .player>.gmww-online-orbit i{position:absolute;top:50%;left:50%;width:22px;height:22px;line-height:22px;font:18px/22px system-ui;text-align:center;transform:rotate(var(--b)) translateY(-43px) rotate(calc(-1 * var(--b)));filter:drop-shadow(0 2px 4px #000a)}'+
+    '@keyframes gmww-orbit-spin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}'+
+    '@media(prefers-reduced-motion:reduce){#players .player.is-battle-actor .portrait,#players .player.is-battle-target .portrait,#players .player>.gmww-online-orbit{animation:none}}';
    doc.head.appendChild(css);
   }
   for(const node of doc.querySelectorAll('#players .player[data-player-id]')){
@@ -600,6 +618,18 @@ function gmwwOnlineTurnEffects(offers){
    const actor=active&&id===me,target=targets.has(id);
    node.classList.toggle('is-battle-actor',actor);
    node.classList.toggle('is-battle-target',target);
+   let orbit=node.querySelector(':scope>.gmww-online-orbit');
+   if(actor||target){
+     const kind=actor?'actor':'target',count=kind==='actor'?6:5;
+     if(!orbit){orbit=doc.createElement('span');orbit.className='gmww-online-orbit';orbit.setAttribute('aria-hidden','true');node.appendChild(orbit)}
+     if(orbit.dataset.kind!==kind||orbit.childElementCount!==count){
+       orbit.dataset.kind=kind;orbit.replaceChildren();
+       for(let k=0;k<count;k++){
+         const star=doc.createElement('i');star.textContent=kind==='actor'?'⭐':'🔥';
+         star.style.setProperty('--b',(k*360/count)+'deg');orbit.appendChild(star);
+       }
+     }
+   }else orbit?.remove();
    const labels=node.querySelector('.player-over');
    if(!labels)continue;
    let mark=labels.querySelector(':scope>.battle-turn-mark');

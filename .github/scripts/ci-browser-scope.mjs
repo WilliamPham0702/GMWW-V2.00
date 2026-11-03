@@ -3822,7 +3822,70 @@ function isPR749ChatGlassScope(changes){
   }catch{return false;}
 }
 
+// PR761 V3.293: high-risk Online timer/actions/privacy Runtime changes.
+// Fail closed for every extra/deleted/renamed file, native or unrelated scope.
+// Every scoped run still checks Worker, bundles, GM/Player and private actions.
+function isOnlineTurnV3293Scope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md','A'],
+  ['package-lock.json','M'],['package.json','M'],
+  ['server-game/current/GMWW.html','M'],
+  ['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/30-village-and-setup.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/gmww-members-live.js','M'],
+  ['src/index.js','M'],
+  ['src/player-web-src/30-rooms-and-realtime.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/demo-hybrid-real-players.test.mjs','M'],
+  ['tests/gmww-online-four-fixes-v3293.test.mjs','A']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+ try{
+  const by=new Map(changes.map(x=>[x.path,x]));
+  const versionOnly=(path,from,to)=>{
+   const x=by.get(path);
+   return typeof x?.before==='string'&&typeof x.after==='string'&&
+    x.before.includes(from)&&x.after===x.before.replaceAll(from,to);
+  };
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.293.0'||
+     !versionOnly('package.json','"version": "3.292.0"','"version": "3.293.0"')||
+     !versionOnly('package-lock.json','"version": "3.292.0"','"version": "3.293.0"')||
+     !versionOnly('server-game/current/GMWW.html','<title>GMWW V3.292</title>','<title>GMWW V3.293</title>')||
+     !versionOnly('server-game/src/00-core-and-library.part',"const VERSION='3.292'","const VERSION='3.293'"))return false;
+  const index=by.get('src/index.js');
+  const player=by.get('src/player-web-src/35-online-chat.part');
+  const gm=by.get('server-game/src/30-village-and-setup.part');
+  const fx=by.get('server-game/src/40-battle-and-timeline.part');
+  const source=fs.readFileSync('src/gmww-members-live.js','utf8');
+  const compiled=fs.readFileSync('server-game/current/app.js','utf8');
+  const workflow=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  return index.before.includes('VERSION="V3.292"')&&
+    index.after.includes('VERSION="V3.293"')&&
+    index.after.includes('const started=Date.parse(active.startedAt||runtime.startedAt||"")')&&
+    index.after.includes('this.broadcast({type:"battle_action_confirmed",matchId,serverTime:Date.now()})')&&
+    !index.after.includes('this.broadcast({type:"battle_action_confirmed",matchId,turnId,targets')&&
+    player.after.includes('function gmwwOnlineAssassinChoice()')&&
+    !player.after.includes("assassinChoice=prompt(")&&
+    player.after.includes("star.textContent=kind==='actor'?'⭐':'🔥'")&&
+    source.includes('gmwwOnlineAssassinChoice')&&
+    gm.after.includes("'battle_action_confirmed','battle_action_undone'")&&
+    fx.after.includes('playSceneRuntime.battleUndo?.turnId===t?.id')&&
+    compiled.includes('playSceneRuntime.battleUndo?.turnId===t?.id')&&
+    workflow.includes("steps.scope.outputs.mode == 'online-turn-v3293'")&&
+    fs.existsSync('tests/gmww-online-four-fixes-v3293.test.mjs')&&
+    fs.existsSync('docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md');
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isOnlineTurnV3293Scope(changes))return 'online-turn-v3293';
   if(isGMWWVoiceClockV3292Scope(changes))return 'gmww-voice-clock-v3292';
   if(isPR749ChatGlassScope(changes))return 'gmww-chat-glass-749';
   if(isPR743ChatPostmergeScopeV2(changes))return 'gmww-chat-pr743-postmerge';

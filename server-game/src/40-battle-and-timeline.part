@@ -1511,7 +1511,11 @@ function battleMarkPlayers(){
   const intel=playSceneRuntime.nightIntel;
   const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled?
     (intel.attacked||[]).map(row=>String(row?.to||'').replace(/^member:/,'')).filter(Boolean):[];
-  const chosen=new Set([...(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),...biteTargets]);
+  // GM-only battleUndo is taken from /gm/state, never from a public socket.
+  // The confirmed target flame applies only during the current night turn.
+  const confirmed=playSceneState.phase==='night'&&playSceneRuntime.battleUndo?.turnId===t?.id?
+    (playSceneRuntime.battleUndo.targets||[]):[];
+  const chosen=new Set([...(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),...confirmed,...biteTargets]);
   ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
     const id=String(el.dataset.playPlayerId||'');
     el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));

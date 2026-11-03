@@ -680,6 +680,14 @@ function connectPlaySocket(){
       if(playSceneState.step==='battle'&&playSceneState.phase==='day')battleGallowsRender('day');
       return;
     }
+    // A verified Player action is signaled as a privacy-safe WebSocket tick.
+    // Only the GM-authenticated /gm/state may reveal committed targets.
+    if(['battle_action_confirmed','battle_action_undone','battle_action_reverted','day_action_confirmed',
+        'player_interaction_response','player_status_changed'].includes(d.type)&&String(playSceneState.roomCode)===code){
+      if(playSceneRuntime.roomSyncTimer)clearTimeout(playSceneRuntime.roomSyncTimer);
+      playSceneRuntime.roomSyncTimer=setTimeout(()=>{playSceneRuntime.roomSyncTimer=0;void playSyncRoom(true)},80);
+      return;
+    }
     const movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);
     if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm','role_progress','artifact_progress','delivery_progress'].includes(d.type)||String(playSceneState.roomCode)!==code)return;
     if(d.type==='role_progress'||d.type==='artifact_progress'||d.type==='delivery_progress'){
