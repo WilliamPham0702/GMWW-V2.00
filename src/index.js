@@ -23,6 +23,7 @@ import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-cat
 import "../assets/village/village-layout.js";
 const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
+import {configuredAdminToken,matchesAdminToken} from "./gmww-admin-sync-auth.js";
 import { shouldSkipMemberHeartbeat, shouldSkipMemberSessionTouch, shouldSkipGmHeartbeat, shouldSkipDirectoryHeartbeat, GMWW_WRITE_OPTIMIZER_VERSION } from "./gmww-do-write-optimizer.js";
 import { authorizedPitr } from "./gr01-pitr-auth.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
@@ -51,7 +52,7 @@ import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVer
 
 const PROJECT="GMWW-V2.00",VERSION="V3.294",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
-const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
+// Admin credential is resolved exclusively from env.GMWW_ADMIN_SYNC_TOKEN (Cloudflare Secret).
 const GM_PRESENCE_TTL=75000;
 function publicGmPresence(rec,online=true){
   if(!online)return{online:false,sessionId:"",sessionStartedAt:0,lastSeenAt:0,roomCode:""};
@@ -323,7 +324,7 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,message:"RESET_REQUEST_ACCEPTED"});
   }
   async memberAdminCreate(request,body){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),this.env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),gameCharacterId=normalizeGameCharacterId(body?.gameCharacterId||body?.avatarId),avatarId=gameCharacterId||String(body?.avatarId||"avatar-cut-001");
     if(!LOGIN_RE.test(loginId))return j({ok:false,error:"INVALID_LOGIN_ID",message:"Tên đăng nhập phải có 4–20 ký tự, không dấu/không khoảng trắng và chỉ gồm chữ, số, dấu chấm hoặc gạch dưới."},400);
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
@@ -336,7 +337,7 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,member:publicMember(member)},201)
   }
   async memberAdminEdit(request,body){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),this.env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const loginId=normalizeLoginId(body?.loginId),displayName=normalizeDisplayName(body?.displayName),requestedCharacter=normalizeGameCharacterId(body?.gameCharacterId||body?.avatarId),member=await this.ctx.storage.get("member:"+loginId),avatarId=requestedCharacter||String(body?.avatarId||member?.avatarId||"");
     if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Không tìm thấy Thành Viên."},404);
     if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_DISPLAY_NAME",message:"Tên Hiển Thị phải có từ 2 đến 24 ký tự."},400);
@@ -349,7 +350,7 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,member:publicMember(member)})
   }
   async memberAdminResetPassword(request,body){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),this.env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const loginId=normalizeLoginId(body?.loginId),newPassword="0000",member=await this.ctx.storage.get("member:"+loginId);
     if(!member)return j({ok:false,error:"MEMBER_NOT_FOUND",message:"Không tìm thấy tài khoản."},404);
     if(newPassword.length<4||newPassword.length>128)return j({ok:false,error:"INVALID_PASSWORD",message:"Mật khẩu tạm thời không hợp lệ."},400);
@@ -571,7 +572,7 @@ export class RoomDurableObject extends DurableObject {
     return gmwwStoredArtworkResponse(saved.imageDataUrl);
   }
   async memberDelete(request,body){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),this.env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const loginId=normalizeLoginId(body?.loginId);if(!loginId)return j({ok:false,error:"INVALID_LOGIN_ID"},400);
     const key="member:"+loginId,member=await this.ctx.storage.get(key),historyDeleted=Array.isArray(member?.history)?member.history.length:0;if(member)await this.ctx.storage.delete(key);
     const sessions=await this.ctx.storage.list({prefix:"session:"});let sessionCount=0;
@@ -579,19 +580,19 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,deleted:!!member,loginId,sessionsDeleted:sessionCount,historyDeleted});
   }
   async memberResetRanking(request){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),this.env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const members=await this.ctx.storage.list({prefix:"member:"});let count=0,historyDeleted=0;
     for(const [k,m] of members){historyDeleted+=Array.isArray(m?.history)?m.history.length:0;m.stats={wins:0,losses:0};m.history=[];m.updatedAt=new Date().toISOString();await this.ctx.storage.put(k,m);count++}
     return j({ok:true,reset:true,membersUpdated:count,historyDeleted});
   }
   async memberClearHistory(request){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),this.env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const members=await this.ctx.storage.list({prefix:"member:"});let count=0,historyDeleted=0;
     for(const [k,m] of members){historyDeleted+=Array.isArray(m?.history)?m.history.length:0;m.history=[];m.updatedAt=new Date().toISOString();await this.ctx.storage.put(k,m);count++}
     return j({ok:true,cleared:true,membersUpdated:count,historyDeleted});
   }
-  async adminReset939Status(request){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record=await this.ctx.storage.get("admin:reset:939");return j({ok:true,done:!!record,record:record||null})}
-  async adminReset939Mark(request,body){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const record={done:true,at:new Date().toISOString(),...(body&&typeof body==="object"?body:{})};await this.ctx.storage.put("admin:reset:939",record);return j({ok:true,done:true,record})}
+  async adminReset939Status(request){if(!matchesAdminToken(bearer(request),this.env))return j({ok:false,error:"UNAUTHORIZED"},401);const record=await this.ctx.storage.get("admin:reset:939");return j({ok:true,done:!!record,record:record||null})}
+  async adminReset939Mark(request,body){if(!matchesAdminToken(bearer(request),this.env))return j({ok:false,error:"UNAUTHORIZED"},401);const record={done:true,at:new Date().toISOString(),...(body&&typeof body==="object"?body:{})};await this.ctx.storage.put("admin:reset:939",record);return j({ok:true,done:true,record})}
   async sceneNormalizeRecord(raw){
     const record=raw&&typeof raw==="object"?raw:{revision:0};
     const revision=Math.max(0,Math.trunc(Number(record.revision)||0));
@@ -813,13 +814,13 @@ export class RoomDurableObject extends DurableObject {
     return{players:players||{},removed:[]};
   }
   async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],frozenLogins=activeFrozenLoginIds(interactions,meta,Date.now());return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(p=>({...publicPlayer(p),frozen:meta?.statusDisplay?.frozen===true&&frozenLogins.has(normalizeLoginId(p?.loginId)),statusTags:publicVillageStatusTagsFor(interactions,meta,p?.loginId,players)})),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
-  async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};
+  async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(!matchesAdminToken(token,this.env)&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};
     if(meta.demo&&request.method==="POST"&&/^\/gm\/(?:battle-action|day-action|day-clock|gallows|turn|cycle|end)$/.test(new URL(request.url).pathname)){
       const lease=await this.ctx.storage.get("demoLease");
       if(lease?.engine!=="server"&&lease?.running&&Number(lease.until)>Date.now()&&request.headers.get("x-gmww-demo-owner")!==lease.owner)
         return{ok:false,response:j({ok:false,error:"DEMO_LEASE_OWNED",message:"Phòng Demo đang được điều khiển ở một phiên GM khác."},409)};
     }
-    return{ok:true,meta,admin:token===GM_SYNC_TOKEN}}
+    return{ok:true,meta,admin:matchesAdminToken(token,this.env)}}
   computeWinProposal(meta,assignments,interactions){
     if(String(meta?.phase||"").toLowerCase()!=="running")return null;
     const dead=new Set((Array.isArray(interactions)?interactions:[]).filter(x=>String(x?.type||"")==="dead"&&x?.effectActive!==false&&(!x?.matchId||!meta?.matchId||String(x.matchId)===String(meta.matchId))).map(x=>normalizeLoginId(x?.loginId)).filter(Boolean)),byPlayer=new Map();
@@ -1450,7 +1451,7 @@ export class RoomDurableObject extends DurableObject {
     }
     return clock;
   }
-  demoInternalRequest(){return new Request("https://room.internal/gm/demo-server",{method:"POST",headers:{authorization:"Bearer "+GM_SYNC_TOKEN}})}
+  demoInternalRequest(){return new Request("https://room.internal/gm/demo-server",{method:"POST",headers:{authorization:"Bearer "+configuredAdminToken(this.env)}})}
   async gmDemo(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta;
     if(meta.demo!==true)return j({ok:false,error:"NOT_DEMO_ROOM"},403);
@@ -3671,27 +3672,27 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/web-sync"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/web-sync");
   if(url.pathname==="/api/gm-presence"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/gm-presence");
   if(url.pathname==="/api/gm/web-sync"&&request.method==="POST"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const body=await safeJson(request)||{};
     const rr=await memberStore(env).fetch(new Request("https://member.internal/global-settings/web-sync",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:VERSION,source:body?.source||"GM_APP"})}));
     if(!rr.ok)return rr;
     const data=await rr.json();return j({ok:true,...data,version:VERSION,serverVersion:VERSION,webVersion:VERSION});
   }
   if(url.pathname==="/api/gm/storage-optimizer"&&request.method==="GET"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     return memberStore(env).fetch("https://member.internal/storage-optimizer/stats");
   }
   if(url.pathname==="/api/gm/presence"&&request.method==="POST"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const body=await safeJson(request)||{};
     const payload={online:body?.online!==false};if(Object.prototype.hasOwnProperty.call(body,"roomCode"))payload.roomCode=body.roomCode;return memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)}));
   }
   if(url.pathname==="/api/gm/move"&&request.method==="POST"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const body=await safeJson(request)||{};
     return memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-move",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));
   }
-  if(url.pathname.startsWith("/api/gm/")&&url.pathname!=="/api/gm/presence"&&bearer(request)===GM_SYNC_TOKEN){
+  if(url.pathname.startsWith("/api/gm/")&&url.pathname!=="/api/gm/presence"&&matchesAdminToken(bearer(request),env)){
     try{await memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:'{"online":true}'}))}catch(_){}
   }
   if(url.pathname==="/api/village-scene"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/global-settings/village-scene");
@@ -3705,20 +3706,20 @@ export default {async fetch(request,env){
     return response;
   }
   if(url.pathname==="/api/gm/village-scene"&&request.method==="PUT"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene",{method:"PUT",headers:{"content-type":"application/json"},body:request.body}));
   }
   if(url.pathname==="/api/gm/village-scene/reset"&&request.method==="POST"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene/reset",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}));
   }
   if(url.pathname==="/api/gm/village-scene/rollback"&&request.method==="POST"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     return memberStore(env).fetch(new Request("https://member.internal/global-settings/village-scene/rollback",{method:"POST",headers:{"content-type":"application/json"},body:"{}"}));
   }
-  if(url.pathname==="/api/gm/ui-settings"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON"},400);return memberStore(env).fetch(new Request("https://member.internal/global-settings/ui",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));}
-  if(url.pathname==="/api/gm/assets/victory-audio"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/global-assets/victory",{method:"PUT",headers:{"content-type":"audio/mpeg"},body:request.body}));}
-  if(url.pathname==="/api/gm/assets/role-card-back"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/global-assets/card-back",{method:"PUT",headers:{"content-type":"image/webp"},body:request.body}));}
+  if(url.pathname==="/api/gm/ui-settings"&&request.method==="PUT"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON"},400);return memberStore(env).fetch(new Request("https://member.internal/global-settings/ui",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));}
+  if(url.pathname==="/api/gm/assets/victory-audio"&&request.method==="PUT"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/global-assets/victory",{method:"PUT",headers:{"content-type":"audio/mpeg"},body:request.body}));}
+  if(url.pathname==="/api/gm/assets/role-card-back"&&request.method==="PUT"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/global-assets/card-back",{method:"PUT",headers:{"content-type":"image/webp"},body:request.body}));}
   if(url.pathname==="/api/avatars"&&request.method==="GET"){
     let custom=[];try{const rr=await memberStore(env).fetch("https://member.internal/avatars/catalog");if(rr.ok){const d=await rr.json();custom=Array.isArray(d?.avatars)?d.avatars:[]}}catch(e){console.warn("GMWW_CUSTOM_AVATAR_CATALOG",e)}
     const seen=new Set(custom.map(x=>String(x?.id||"")).filter(Boolean)),builtins=GMWW_MEMBER_AVATARS.filter(x=>!seen.has(String(x.id))).map(({id,name})=>({id,name,imageUrl:`/api/avatars/${encodeURIComponent(id)}/image`,priority:0,source:"builtin"}));
@@ -3726,7 +3727,7 @@ export default {async fetch(request,env){
     const avatars=[...dynamic,...builtins];return j({ok:true,source:"GMWW-9.95-card-avatar",count:avatars.length,avatars});
   }
   if(url.pathname==="/api/gm/avatars/upsert"&&request.method==="POST"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON"},400);
     return memberStore(env).fetch(new Request("https://member.internal/avatars/upsert",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));
   }
@@ -3738,9 +3739,9 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/members/login"&&request.method==="POST"){const body=await safeJson(request);if(!body)return j({ok:false,error:"INVALID_JSON",message:"Dữ liệu đăng nhập không hợp lệ."},400);return memberStore(env).fetch("https://member.internal/members/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});}
   if(url.pathname==="/api/members/password"&&request.method==="POST"){const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/password",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
   if(url.pathname==="/api/members/reset-request"&&request.method==="POST"){const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/reset-request",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
-  if(url.pathname==="/api/gm/members/create"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/admin-create",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
-  if(url.pathname==="/api/gm/members/edit"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/admin-edit",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
-  if(url.pathname==="/api/gm/members/reset-password"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/admin-reset",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
+  if(url.pathname==="/api/gm/members/create"&&request.method==="POST"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/admin-create",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
+  if(url.pathname==="/api/gm/members/edit"&&request.method==="POST"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/admin-edit",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
+  if(url.pathname==="/api/gm/members/reset-password"&&request.method==="POST"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/admin-reset",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
   if(url.pathname==="/api/members/profile"&&request.method==="POST"){const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/profile",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
   if(url.pathname==="/api/members/me"&&request.method==="GET")return memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
   if(url.pathname==="/api/members/logout"&&request.method==="POST")return memberStore(env).fetch(new Request("https://member.internal/members/logout",{method:"POST",headers:request.headers}));
@@ -3764,38 +3765,38 @@ export default {async fetch(request,env){
     if(revoked&&res.ok){const data=await res.json().catch(()=>({ok:true}));return j({...data,roomRevoked:true})}
     return res
   }
-  if(url.pathname==="/api/gm/reset/939"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return gmReset939(env,request);}
-  if(url.pathname==="/api/gm/members"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/members/directory");}
-  if(url.pathname==="/api/gm/members/reset-ranking"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-reset-ranking",{method:"POST",headers:request.headers}));}
-  if(url.pathname==="/api/gm/members/history"&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-clear-history",{method:"DELETE",headers:request.headers}));}
-  const gmMemberDelete=url.pathname.match(/^\/api\/gm\/members\/([A-Za-z0-9._]+)$/);if(gmMemberDelete&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/delete",{method:"DELETE",headers:request.headers,body:JSON.stringify({loginId:decodeURIComponent(gmMemberDelete[1])})}));}
+  if(url.pathname==="/api/gm/reset/939"&&request.method==="POST"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return gmReset939(env,request);}
+  if(url.pathname==="/api/gm/members"&&request.method==="GET"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/members/directory");}
+  if(url.pathname==="/api/gm/members/reset-ranking"&&request.method==="POST"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-reset-ranking",{method:"POST",headers:request.headers}));}
+  if(url.pathname==="/api/gm/members/history"&&request.method==="DELETE"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/admin-clear-history",{method:"DELETE",headers:request.headers}));}
+  const gmMemberDelete=url.pathname.match(/^\/api\/gm\/members\/([A-Za-z0-9._]+)$/);if(gmMemberDelete&&request.method==="DELETE"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch(new Request("https://member.internal/members/delete",{method:"DELETE",headers:request.headers,body:JSON.stringify({loginId:decodeURIComponent(gmMemberDelete[1])})}));}
   if(url.pathname==="/api/gm/artifacts/shared"&&request.method==="GET"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     return memberStore(env).fetch("https://member.internal/artifacts/shared/status");
   }
   if(url.pathname==="/api/gm/artifacts/shared"&&request.method==="PUT"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     const body=await safeJson(request);
     return memberStore(env).fetch(new Request("https://member.internal/artifacts/shared",{method:"PUT",
       headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));
   }
-  if(url.pathname==="/api/gm/game-templates"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/list");}
-  if(url.pathname==="/api/gm/game-templates"&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/upsert",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
+  if(url.pathname==="/api/gm/game-templates"&&request.method==="GET"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/list");}
+  if(url.pathname==="/api/gm/game-templates"&&request.method==="PUT"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/upsert",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})}));}
   const gmTemplateAssetsStatus=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets\/status$/);
-  if(gmTemplateAssetsStatus&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/assets/status?id="+encodeURIComponent(decodeURIComponent(gmTemplateAssetsStatus[1])))}
+  if(gmTemplateAssetsStatus&&request.method==="GET"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/game-templates/assets/status?id="+encodeURIComponent(decodeURIComponent(gmTemplateAssetsStatus[1])))}
   const gmCanonicalTemplateRole=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets\/canonical$/);
   if(gmCanonicalTemplateRole&&request.method==="POST")
     return gmPackageCanonicalTemplateRole(env,decodeURIComponent(gmCanonicalTemplateRole[1]),request);
   const gmTemplateAssetPut=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)\/assets$/);
-  if(gmTemplateAssetPut&&request.method==="PUT"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateAssetPut[1]),body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/assets",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({...body,id})}))}
-  const gmTemplateGet=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)$/);if(gmTemplateGet&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));}
-  if(gmTemplateGet&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch(new Request("https://member.internal/game-templates/delete?id="+encodeURIComponent(id),{method:"DELETE"}));}
+  if(gmTemplateAssetPut&&request.method==="PUT"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateAssetPut[1]),body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/game-templates/assets",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({...body,id})}))}
+  const gmTemplateGet=url.pathname.match(/^\/api\/gm\/game-templates\/([^/]+)$/);if(gmTemplateGet&&request.method==="GET"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));}
+  if(gmTemplateGet&&request.method==="DELETE"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);const id=decodeURIComponent(gmTemplateGet[1]);return memberStore(env).fetch(new Request("https://member.internal/game-templates/delete?id="+encodeURIComponent(id),{method:"DELETE"}));}
   if(url.pathname==="/api/gm/lobby/reset"&&request.method==="POST"){
-    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
     return gmLobbyResetAll(env,request);
   }
-  if(url.pathname==="/api/gm/rooms"&&request.method==="GET"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/directory/rooms/list?includeEnded=1&includeDisabled=1");}
-  if(url.pathname==="/api/gm/rooms"&&request.method==="DELETE"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);return gmRoomsPurge(env,request);}
+  if(url.pathname==="/api/gm/rooms"&&request.method==="GET"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return memberStore(env).fetch("https://member.internal/directory/rooms/list?includeEnded=1&includeDisabled=1");}
+  if(url.pathname==="/api/gm/rooms"&&request.method==="DELETE"){if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);return gmRoomsPurge(env,request);}
   if(url.pathname==="/api/village"&&request.method==="GET")return memberStore(env).fetch('https://member.internal/village/state');
   if(url.pathname==="/api/village/move"&&request.method==="POST")return memberStore(env).fetch(new Request('https://member.internal/village/move',{method:'POST',headers:request.headers,body:JSON.stringify(await safeJson(request)||{})}));
   const seatSwapRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/seat-swap$/);if(seatSwapRoute&&request.method==='POST')return playerSeatSwapApi(env,seatSwapRoute[1],request);
@@ -3920,7 +3921,7 @@ async function applyPublicEntryRateLimit(env,request,policy){
   return j({ok:false,error:"ADMISSION_UNAVAILABLE",message:"Tạm thời không thể xác nhận yêu cầu. Vui lòng thử lại."},503);
 }
 
-async function createRoom(env,url,request){const body=await safeJson(request)||{};if(body.demo===true&&bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"DEMO_GM_ONLY"},403);for(let i=0;i<8;i++){const code=generateRoomCode(),r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code,roomName:body.roomName||"",roomMode:body.roomMode||"online",demo:body.demo===true,enabled:Object.prototype.hasOwnProperty.call(body,"enabled")?body.enabled!==false:true,seatMoveMode:body.seatMoveMode||"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:body.cardBackImage||null})});if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);return j({ok:true,roomCode:code,roomName:data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code),gmToken:data.gmToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)}return j({ok:false,error:"ROOM_CODE_EXHAUSTED"},503)}
+async function createRoom(env,url,request){const body=await safeJson(request)||{};if(body.demo===true&&!matchesAdminToken(bearer(request),env))return j({ok:false,error:"DEMO_GM_ONLY"},403);for(let i=0;i<8;i++){const code=generateRoomCode(),r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code,roomName:body.roomName||"",roomMode:body.roomMode||"online",demo:body.demo===true,enabled:Object.prototype.hasOwnProperty.call(body,"enabled")?body.enabled!==false:true,seatMoveMode:body.seatMoveMode||"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:body.cardBackImage||null})});if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);return j({ok:true,roomCode:code,roomName:data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code),gmToken:data.gmToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)}return j({ok:false,error:"ROOM_CODE_EXHAUSTED"},503)}
 async function joinRoom(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const body=await safeJson(request);if(body?.token){const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:{Authorization:"Bearer "+body.token}}));if(!me.ok)return me;const data=await me.json();const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({member:data.member})});if(joined.ok){await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,roomCode:code,ready:false})});await syncRoomDirectory(env,code)}return joined}const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({guest:body?.guest})});if(joined.ok)await syncRoomDirectory(env,code);return joined}
 async function readyRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/ready",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function heartbeatRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/heartbeat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
@@ -4101,10 +4102,10 @@ async function gmRoomKick(env,raw,request){const c=normalizeRoomCode(raw),body=a
 async function gmRoomRename(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/rename",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok)await syncRoomDirectory(env,c);return res}
 async function gmRoomReset(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/reset",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({}));if(data?.room?.demo===true){await syncRoomDirectory(env,c);return res}if(data?.hardReset===false&&data?.preserveParticipants===true){for(const p of (Array.isArray(data?.players)?data.players:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:c,ready:true})})}catch{}}}else{for(const p of (Array.isArray(data?.removedPlayers)?data.removedPlayers:[])){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:true})})}catch{}}}await syncRoomDirectory(env,c)}return res}
 async function gmRoomEnd(env,raw,request){const c=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,c).fetch("https://room.internal/gm/end",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})});if(res.ok){const data=await res.clone().json().catch(()=>({})),room=data?.room||{};for(const r of (room.demo===true?[]:Array.isArray(data?.memberResults)?data.memberResults:[])){try{await memberStore(env).fetch("https://member.internal/members/record-result",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,matchId:data.matchId||room.matchId,roomCode:c,roomName:room.roomName,gameName:room.gameName,roleName:r.roleName,faction:r.faction,winnerFaction:data.winnerFaction||room.winnerFaction,result:r.result,playedAt:room.endedAt})})}catch(e){console.warn("GMWW_RESULT_RECORD",r?.loginId,e)}try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:r.loginId,roomCode:c,ready:true})})}catch(e){console.warn("GMWW_END_LOBBY_PRESENCE",r?.loginId,e)}}await syncRoomDirectory(env,c)}return res}
-async function gmRoomDelete(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);if(bearer(request)!==GM_SYNC_TOKEN){const probe=await roomStub(env,c).fetch(new Request("https://room.internal/gm/state",{method:"GET",headers:request.headers}));if(!probe.ok&&probe.status!==404)return probe}let res;try{res=await roomStub(env,c).fetch("https://room.internal/gm/delete",{method:"POST",headers:request.headers})}catch(e){res=null}let data={};if(res)try{data=await res.clone().json()}catch(_){}if(res&&res.status!==404&&!res.ok)return res;const players=data?.room?.demo===true?[]:Array.isArray(data?.players)?data.players:[];for(const p of players){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}}await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:c})});return j({ok:true,deleted:true,alreadyGone:!!(res&&res.status===404),code:c,room:data?.room||null})}
+async function gmRoomDelete(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);if(!matchesAdminToken(bearer(request),env)){const probe=await roomStub(env,c).fetch(new Request("https://room.internal/gm/state",{method:"GET",headers:request.headers}));if(!probe.ok&&probe.status!==404)return probe}let res;try{res=await roomStub(env,c).fetch("https://room.internal/gm/delete",{method:"POST",headers:request.headers})}catch(e){res=null}let data={};if(res)try{data=await res.clone().json()}catch(_){}if(res&&res.status!==404&&!res.ok)return res;const players=data?.room?.demo===true?[]:Array.isArray(data?.players)?data.players:[];for(const p of players){if(p?.loginId)try{await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:p.loginId,roomCode:null,ready:false})})}catch{}}await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:c})});return j({ok:true,deleted:true,alreadyGone:!!(res&&res.status===404),code:c,room:data?.room||null})}
 
 async function gmPreloadSharedArtifacts(env,raw,request){
-  if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+  if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
   const roomCode=normalizeRoomCode(raw);if(!isValidRoomCode(roomCode))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
   const body=await safeJson(request),assetIds=[...new Set(Array.isArray(body?.assetIds)?body.assetIds.map(String):[])];
   if(!assetIds.length||assetIds.length>100||!assetIds.every(id=>/^artifact:[A-Za-z0-9._:-]{1,120}$/.test(id)))
@@ -4127,7 +4128,7 @@ async function gmPreloadSharedArtifacts(env,raw,request){
 // Package the exact clean role artwork within the Worker, without fetching a local
 // file:// URL or decoding/canvas-encoding high-resolution images in iOS WKWebView.
 async function gmPackageCanonicalTemplateRole(env,raw,request){
-  if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+  if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
   if(!env.ASSETS)return j({ok:false,error:"ROLE_ARTWORK_SOURCE_NOT_READY"},503);
   const id=String(raw||"").slice(0,120),body=await safeJson(request);
   const assetId=String(body?.assetId||"").slice(0,180);
@@ -4162,7 +4163,7 @@ async function gmPackageCanonicalTemplateRole(env,raw,request){
   }catch(err){return j({ok:false,error:"ROLE_ARTWORK_SOURCE_UNAVAILABLE",message:"Server không đọc được artwork "+roleId+". Vui lòng thử lại."},503)}
 }
 async function gmPreloadTemplateAssets(env,raw,request){
-  if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+  if(!matchesAdminToken(bearer(request),env))return j({ok:false,error:"UNAUTHORIZED"},401);
   const roomCode=normalizeRoomCode(raw);if(!isValidRoomCode(roomCode))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
   const body=await safeJson(request),id=String(body?.templateId||"").slice(0,120);
   const statusResponse=await memberStore(env).fetch("https://member.internal/game-templates/assets/status?id="+encodeURIComponent(id));
