@@ -46,6 +46,31 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR766: reviewed immutable Worker delta, focused DO/online/security tests.
+      # Classifier checks exactly five changed files and before/after Worker blob SHA1.
+      - name: PR766 — Auto GM alarm recovery, Worker, Online and privacy
+        if: steps.scope.outputs.mode == 'auto-gm-alarm-v3293'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test \
+            tests/gmww-auto-gm-alarm-recovery.test.mjs \
+            tests/gmww-online-four-fixes-v3293.test.mjs \
+            tests/gmww-public-turn-clock-v3292.test.mjs \
+            tests/drunk-card-overlay-match-cleanup-20261028.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-V3293-AUTO-GM-HOTFIX-20261103.md
+          echo 'PASS PR766: authoritative Auto GM, Worker, Online and privacy checks.' >> "$GITHUB_STEP_SUMMARY"
+
       # PR767: exact V3.294 voice recording/meter and storage scoped CI-LITE.
       # Still verifies packaging, private audio access, replay, Worker dry-run and rollback notes.
       - name: PR767 — live microphone waveform and fast private Chat voice V3.294
