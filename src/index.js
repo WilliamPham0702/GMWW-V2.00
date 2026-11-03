@@ -3463,6 +3463,13 @@ export class RoomDurableObject extends DurableObject {
           if(!stored||JSON.stringify(merged)!==JSON.stringify(notices))
             await this.ctx.storage.put(noticeKey,{items:merged});
           notices=merged;
+        }else if(!stored&&phase==="night"){
+          // Reconnect late at night: recover ONLY previous day's public notices.
+          // Never project actions of the still-running secret night.
+          const previousMeta={...meta,cyclePhase:"morning",cycleNight:noticeCycleNight};
+          const history=await this.villageHistoryForMatch(previousMeta,rows);
+          notices=mergePublicChatNotices([],publicChatNotices(previousMeta,players,history));
+          await this.ctx.storage.put(noticeKey,{items:notices});
         }
       }
     }
