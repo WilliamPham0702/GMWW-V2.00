@@ -159,7 +159,8 @@ export function mergePublicChatNotices(previous=[],incoming=[]){
   for(const row of [...(Array.isArray(previous)?previous:[]),...(Array.isArray(incoming)?incoming:[])]){
     if(!row||row.system!==true||row.senderName!=='Thông cáo Làng'||
        typeof row.id!=='string'||typeof row.text!=='string'||!Number.isFinite(row.at))continue;
-    byId.set(row.id,{id:row.id,senderId:'system',senderName:'Thông cáo Làng',
+    // First public announcement wins: a later rehydration must not rewrite history.
+    if(!byId.has(row.id))byId.set(row.id,{id:row.id,senderId:'system',senderName:'Thông cáo Làng',
       system:true,isGM:false,text:row.text,at:row.at});
   }
   return [...byId.values()].sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id)).slice(-150);

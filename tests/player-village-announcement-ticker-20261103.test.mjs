@@ -31,6 +31,14 @@ test('public bulletin retains selected notification and result in chronological 
  assert.doesNotMatch(payload,/Quyền|quyen|actorId|gmChoice|role_assassin|action_assassin_mark/);
 });
 
+test('first public announcement remains immutable after a replay changes display text',()=>{
+ const first=publicChatNotices(meta,players,[selected]);
+ const tampered=[{...first[0],text:'Quyền là Sát Thủ',at:first[0].at+4000}];
+ const merged=mergePublicChatNotices(first,tampered);
+ assert.deepEqual(merged,first,'replays must not rewrite an already-public message');
+ assert.equal(mergePublicChatNotices(merged,first).length,1,'same ID must remain deduplicated');
+});
+
 test('durable public ledger does not lose an already announced event when state expires',()=>{
  const before=publicChatNotices(meta,players,[selected]);
  const dead={id:'death',type:'dead',loginId:'other',night:1,matchId:meta.matchId,

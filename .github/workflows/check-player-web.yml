@@ -114,6 +114,26 @@ jobs:
             tests/ci-browser-scope.test.mjs
           npm run check
           echo 'PASS: hidden Assassin identity/role never appears in public bulletin or public WebSocket' >> "$GITHUB_STEP_SUMMARY"
+      # PR778 recovery: only the public bulletin ledger + CI and release notes.
+      # Never run obsolete frozen 3D or unrelated IPA tests for this Worker change.
+      - name: PR778 — immutable public bulletin, ticker, secrecy and Worker dry-run
+        if: steps.scope.outputs.mode == 'pr778-bulletin-worker-recovery'
+        run: |
+          set -euo pipefail
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/gmww-online-chat-policy.js
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test \
+            tests/player-village-announcement-ticker-20261103.test.mjs \
+            tests/assassin-player-public-privacy-20261103.test.mjs \
+            tests/player-v3-village-status-daychat-20261102.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/player-online-realtime-freeze-day-20261030.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          echo 'PASS: PR778 Worker/Player Web public notifications, no actor-role leak; no Runtime or IPA changes' >> "$GITHUB_STEP_SUMMARY"
       # PR766: reviewed immutable Worker delta, focused DO/online/security tests.
       # Classifier checks exactly five changed files and before/after Worker blob SHA1.
       - name: PR766 — Auto GM alarm recovery, Worker, Online and privacy
