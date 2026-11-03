@@ -101,13 +101,13 @@ export function publicChatNotices(meta,players,rows){
     wolf_bitten:'đã bị Sói cắn',marked:'đã bị đánh dấu',infected:'đã bị nhiễm bệnh',
     mute:'đã bị câm',disabled_permanent:'đã mất năng lực',disabled_2n:'đã mất năng lực 2 đêm'};
   const messages=[],seen=new Set();
-  const add=(row,id,text,stamp)=>{
+  const add=(row,id,text,stamp,sortOrder=0)=>{
     const player=normalize(id);if(!members['member:'+player])return;
     const key='notice:'+match+':'+String(row.id||row.clientEventId||row.createdAt||'')+':'+player+':'+text;
     if(seen.has(key))return;seen.add(key);
     const parsed=Date.parse(String(stamp||row.respondedAt||row.resolvedAt||row.createdAt||''));
     messages.push({id:key,senderId:'system',senderName:'Thông cáo Làng',system:true,isGM:false,
-      text,at:Number.isFinite(parsed)?parsed:0});
+      text,at:Number.isFinite(parsed)?parsed:0,sortOrder});
   };
   const all=Array.isArray(rows)?rows:[];
   for(const row of all){
@@ -121,12 +121,12 @@ export function publicChatNotices(meta,players,rows){
       // Preserve it after the response clears effectActive; never disclose who
       // placed the mark, which role they have, or their secret sign.
       if(verifiedResult||(row.effectActive!==false&&row.status!=='responded'))
-        add(row,row.loginId,name+' đã bị đánh dấu.',row.createdAt);
+        add(row,row.loginId,name+' đã bị đánh dấu.',row.createdAt,-1);
       if(verifiedResult){
         const survived=row.response===row.gmChoice;
         add(row,row.loginId,survived?
           'Chúc mừng '+name+' đã lựa chọn đúng và tiếp tục sống.':
-          'Chia buồn '+name+' đã lựa chọn sai và đã chết.',row.respondedAt);
+          'Chia buồn '+name+' đã lựa chọn sai và đã chết.',row.respondedAt,1);
       }
       continue;
     }
@@ -139,5 +139,6 @@ export function publicChatNotices(meta,players,rows){
     if(type==='dead')add(row,row.loginId,'Đêm qua '+name+' đã chết.');
     else add(row,row.loginId,name+' '+negative[type]+'.');
   }
-  return messages.sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id)).slice(-100);
+  return messages.sort((a,b)=>a.at-b.at||a.sortOrder-b.sortOrder||a.id.localeCompare(b.id))
+    .slice(-100).map(({sortOrder,...notice})=>notice);
 }
