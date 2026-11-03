@@ -1402,7 +1402,8 @@ test('PR765 visual-only body orbit scope rejects unrelated files',()=>{
    before:path==='server-game/current/style.css'?previousCss:
       path==='src/player-web-src/35-online-chat.part'?"'#players .player>.gmww-online-orbit{":'reviewed original file'
  }));
- assert.equal(classifyBrowserScope(changes),'character-body-orbit');
+ // Historical PR765 exception is narrowly scoped to V3.294; never apply it to the V3.295 Runtime update.
+ assert.equal(classifyBrowserScope(changes),JSON.parse(readFileSync('package.json','utf8')).version==='3.294.0'?'character-body-orbit':'full');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'unexpected Worker'}]),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'IPA'}]),'full');
