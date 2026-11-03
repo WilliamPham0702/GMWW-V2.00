@@ -114,16 +114,19 @@ export function publicChatNotices(meta,players,rows){
     if(!eligible(row)||!normalize(row.loginId))continue;
     const name=nameOf(row.loginId);
     if(row.type==='assassin_mark'){
-      if(row.status==='responded'&&['👍','👎'].includes(String(row.response))&&
-         ['👍','👎'].includes(String(row.gmChoice))){
-        // Public chat reports the verified outcome only. Never expose the actor's
-        // name, role or choice to other players (including notice IDs).
+      const verifiedResult=row.status==='responded'&&
+        ['👍','👎'].includes(String(row.response))&&
+        ['👍','👎'].includes(String(row.gmChoice));
+      // The first public notice is a historical event, not a live status.
+      // Preserve it after the response clears effectActive; never disclose who
+      // placed the mark, which role they have, or their secret sign.
+      if(verifiedResult||(row.effectActive!==false&&row.status!=='responded'))
+        add(row,row.loginId,name+' đã bị đánh dấu.',row.createdAt);
+      if(verifiedResult){
         const survived=row.response===row.gmChoice;
         add(row,row.loginId,survived?
           'Chúc mừng '+name+' đã lựa chọn đúng và tiếp tục sống.':
           'Chia buồn '+name+' đã lựa chọn sai và đã chết.',row.respondedAt);
-      }else if(row.effectActive!==false&&row.status!=='responded'){
-        add(row,row.loginId,name+' đã bị đánh dấu.');
       }
       continue;
     }
