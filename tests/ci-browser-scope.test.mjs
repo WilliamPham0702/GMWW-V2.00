@@ -1409,3 +1409,26 @@ test('PR765 visual-only body orbit scope rejects unrelated files',()=>{
  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
  assert.equal(classifyBrowserScope(changes.map((x,i)=>i===2?{...x,status:'D'}:x)),'full');
 });
+
+test('Stage4C encrypted B-only backup ten-file CI scope is exact and fail closed',()=>{
+ const paths=[
+  'infra/cloudflare-standby/production-backup-envelope.mjs',
+  'infra/cloudflare-standby/production-backup-envelope.test.mjs',
+  'infra/cloudflare-standby/b-backup-archive-policy.mjs',
+  'infra/cloudflare-standby/b-backup-archive-policy.test.mjs',
+  'infra/cloudflare-standby/b-backup-archive-worker.mjs',
+  'infra/cloudflare-standby/wrangler-b-backup-archive.jsonc',
+  'docs/architecture/gmww-production-backup-stage4c-crypto.md',
+  '.github/workflows/check-cloudflare-standby.yml',
+  '.github/scripts/ci-browser-scope.mjs',
+  'tests/ci-browser-scope.test.mjs'
+ ];
+ const changes=paths.map((path,i)=>({path,status:i<7?'A':'M'}));
+ assert.equal(classifyBrowserScope(changes),'dual-cloudflare-standby');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ assert.equal(classifyBrowserScope(changes.map((v,i)=>i===0?{...v,status:'D'}:v)),'full');
+ for(const path of ['src/index.js','wrangler.jsonc','server-game/current/app.js',
+    '.github/workflows/deploy-production.yml','package.json','assets/fake.webp'])
+   assert.equal(classifyBrowserScope([...changes,{path,status:'M'}]),'full',path);
+});
