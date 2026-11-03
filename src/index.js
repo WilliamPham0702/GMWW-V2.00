@@ -4262,3 +4262,5 @@ async function readAnnouncement(storage,key,currentKey){
   });
 }
 // END RECORDED PUBLIC ANNOUNCEMENTS
+
+// PR762 postmerge V3.293 delivery recovery: source logic unchanged.

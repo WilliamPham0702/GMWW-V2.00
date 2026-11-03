@@ -3884,7 +3884,45 @@ function isOnlineTurnV3293Scope(changes){
  }catch{return false}
 }
 
+// PR762: post-merge Online V3.293 CI release recovery, exact six file comments and selectors.
+// The HEAD is evaluated against its first parent on both PR and main pushes.
+// All changes outside this audited CI+source-marker set run full CI.
+function isOnlineTurnV3293RecoveryScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['src/index.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/current/app.js','M'],
+  ['docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md','M']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+ try{
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.293.0')return false;
+  const map=new Map(changes.map(x=>[x.path,x]));
+  const mark='\n// PR762 postmerge V3.293 delivery recovery: source logic unchanged.\n';
+  const index=map.get('src/index.js'),source=map.get('server-game/src/00-core-and-library.part'),
+        app=map.get('server-game/current/app.js'),notes=map.get('docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md');
+  if(![index,source,app,notes].every(x=>typeof x.before==='string'&&typeof x.after==='string'))return false;
+  if(index.after!==index.before+mark||source.after!==source.before+mark||
+     app.before.split(source.before).length!==2||app.after!==app.before.replace(source.before,source.after)||
+     !notes.after.startsWith(notes.before)||
+     !notes.after.slice(notes.before.length).includes('Khôi phục phát hành sau merge (#762)'))return false;
+  const selector=fs.readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+  const test=fs.readFileSync('tests/ci-browser-scope.test.mjs','utf8');
+  const workflow=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  return selector.includes('function isOnlineTurnV3293RecoveryScope(changes)')&&
+    selector.includes("mode:'online-turn-v3293'")&&
+    test.includes("test('PR762 exact postmerge Online V3.293 CI recovery scope")&&
+    workflow.includes("steps.scope.outputs.mode == 'online-turn-v3293'")&&
+    fs.existsSync('tests/gmww-online-four-fixes-v3293.test.mjs');
+ }catch{return false;}
+}
+
 function classifyBrowserScope(changes){
+  if(isOnlineTurnV3293RecoveryScope(changes))return 'online-turn-v3293';
   if(isOnlineTurnV3293Scope(changes))return 'online-turn-v3293';
   if(isGMWWVoiceClockV3292Scope(changes))return 'gmww-voice-clock-v3292';
   if(isPR749ChatGlassScope(changes))return 'gmww-chat-glass-749';
@@ -5160,6 +5198,20 @@ function detect(){
       if(isPR743ChatPostmergeScope(changes))
         return {mode:'gmww-chat-pr743-postmerge',reason:'Reviewed PR743 merged Worker source unchanged; exact CI-only release recovery'};
     }catch{} // no ancestry or changed Worker/native/config => run full tests
+  }
+  // Main push after PR762: prove the exact non-executable recovery diff and
+  // retain all focused Worker/GM/Player/privacy/OTA gates before release.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{
+        const [status,file]=row.split('\t');
+        return {status,path:file,before:status==='M'?git('show','HEAD^1:'+file):null,
+          after:['M','A'].includes(status)?fs.readFileSync(file,'utf8'):null};
+      });
+      if(isOnlineTurnV3293RecoveryScope(changes))
+        return {mode:'online-turn-v3293',reason:'V3.293 verified Online postmerge release recovery'};
+    }catch{} // Any mismatch deliberately routes to full CI.
   }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();

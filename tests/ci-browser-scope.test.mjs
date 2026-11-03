@@ -1297,3 +1297,32 @@ test('Stage4 synthetic recovery exact six-file scope skips full Worker tests; an
   }
   assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
 });
+
+test('PR762 exact postmerge Online V3.293 CI recovery scope rejects unrelated changes',()=>{
+ const marker='\n// PR762 postmerge V3.293 delivery recovery: source logic unchanged.\n';
+ const paths=[
+  '.github/scripts/ci-browser-scope.mjs',
+  'tests/ci-browser-scope.test.mjs',
+  'src/index.js',
+  'server-game/src/00-core-and-library.part',
+  'server-game/current/app.js',
+  'docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md'
+ ];
+ const after=Object.fromEntries(paths.map(path=>[path,readFileSync(path,'utf8')]));
+ const sourcePrior=after['server-game/src/00-core-and-library.part'].slice(0,-marker.length);
+ const originals=new Map([
+  ['src/index.js',after['src/index.js'].slice(0,-marker.length)],
+  ['server-game/src/00-core-and-library.part',sourcePrior],
+  ['server-game/current/app.js',after['server-game/current/app.js'].replace(after['server-game/src/00-core-and-library.part'],sourcePrior)],
+  ['docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md',
+     after['docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md'].split('\n### Khôi phục phát hành sau merge (#762)')[0]]
+ ]);
+ const changes=paths.map(path=>({path,status:'M',after:after[path],before:originals.get(path)||'prior reviewed policy'}));
+ // The full source-marker patch is inert and still requires the focused Worker/privacy CI.
+ assert.equal(classifyBrowserScope(changes),'online-turn-v3293');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ assert.equal(classifyBrowserScope(changes.map((c,i)=>i===2?{...c,status:'D'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,after:c.after+'\nfunction unsafeChange(){}'}:c)),'full');
+});

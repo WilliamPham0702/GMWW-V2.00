@@ -7,3 +7,7 @@
 - An toàn: WS chung chỉ có tick, không lộ người thực hiện, mục tiêu, lá bài bí mật hay ledger khôi phục. Không đổi DO schema, IPA, URL https://gamemasoi.pages.dev/, dữ liệu hay Cloudflare A/B.
 - Nghiệm thu: kiểm thử hồi quy đúng 4 lỗi và các required CI trên HEAD cuối; chỉ phát hành khi CI SUCCESS, smoke Worker/Player Web và checksum OTA đã xác minh.
 - Rollback: Worker + Player Web và Runtime OTA về V3.292, giữ nguyên dữ liệu và lịch sử phòng.
+
+### Khôi phục phát hành sau merge (#762)
+- Commit khôi phục chỉ thêm marker không thực thi vào Worker/Runtime để pipeline Delivery V3 có thể kiểm tra và phát hành lại đúng V3.293.
+- CI-LITE sau merge dùng phạm vi chính xác, nhưng vẫn chạy kiểm tra Worker, Player, GM, bảo mật WebSocket, gói Runtime, SHA-256. Không sửa gameplay, IPA, dữ liệu hoặc Cloudflare B.
