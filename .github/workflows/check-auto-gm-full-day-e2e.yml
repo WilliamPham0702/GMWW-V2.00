@@ -1,0 +1,45 @@
+name: Check Auto GM Full Day → Gallows → Night E2E (P0)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/index.js"
+      - "server-game/src/**"
+      - "tests/worker-auto-gm-full-day-e2e.mjs"
+      - ".github/workflows/check-auto-gm-full-day-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-day:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install pinned tools
+        run: npm ci
+      - name: Verify assembled GM client and Worker syntax
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Real DO / WebSocket: every Auto GM day stage, result hold, then night
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/p0-auto-day.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true; tail -100 /tmp/p0-auto-day.log || true' EXIT
+          for attempt in $(seq 1 50); do
+            if curl --fail --silent http://127.0.0.1:8787/api/health >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          curl --fail --silent --show-error http://127.0.0.1:8787/api/health
+          node tests/worker-auto-gm-full-day-e2e.mjs
