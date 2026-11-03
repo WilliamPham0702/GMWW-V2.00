@@ -23,6 +23,14 @@ export function playerSafeInteraction(row){
   return safe;
 }
 
+// Broadcast events go to every socket, so even the targeted role's
+// action type must not be observable to other villagers.
+export function publicInteractionReceipt(row){
+  if(row?.type==='assassin_mark')
+    return{id:row.id,loginId:row.loginId,status:'responded',effectActive:false};
+  return playerSafeInteraction(row);
+}
+
 export function chatBlockedByEffects(rows,match,loginId,now=Date.now()){
   const id=normalize(loginId);
   let dead=false,expelled=false,frozen=false,mute=false;
