@@ -1359,3 +1359,21 @@ test('PR767 immutable V3.294 live microphone+fast private Chat CI-LITE remains f
  for(const required of ['tests/gmww-chat-live-meter-fast-send-v3294.test.mjs','tests/online-chat-authority.test.mjs','npm run check', "steps.scope.outputs.mode == 'gmww-chat-live-v3294'"])
   assert.ok(workflow.includes(required),required);
 });
+
+
+test('V3.294 postmerge recovery accepts only CI-selector and test updates, with reviewed Runtime SHA pins',()=>{
+  const paths=[
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M']
+  ];
+  const changes=paths.map(([path,status])=>({path,status,after:readFileSync(path,'utf8'),before:'reviewed previous CI'}));
+  assert.equal(classifyBrowserScope(changes),'gmww-chat-live-v3294');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'unreviewed Worker'}]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'package.json',status:'M',after:'3.295.0'}]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M',after:'changed DO config'}]),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'native changes'}]),'full');
+  assert.equal(classifyBrowserScope(changes.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
+  assert.equal(classifyBrowserScope(changes.map((x,i)=>i===1?{...x,after:x.after+'\\n// unreviewed test edit'}:x)),'full');
+});
