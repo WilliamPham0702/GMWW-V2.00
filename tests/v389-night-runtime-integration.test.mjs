@@ -362,12 +362,10 @@ test('Auto GM completes zero-duration wakeup instead of stalling forever',async(
   assert.equal((await h.runtime()).deadlineAt,null);
   assert.equal(await h.room.runAutoAdvanceIfDue(await h.meta()),true);
   assert.equal((await h.meta()).cyclePhase,'morning');
-  // The fixture's day discussion defaults to zero seconds. Auto GM must
-  // advance it immediately, not keep the room at 00:00 until a GM clicks.
-  assert.equal(await h.room.runAutoAdvanceIfDue(await h.meta()),true);
-  assert.equal((await h.meta()).cyclePhase,'night');
-  assert.equal((await h.meta()).cycleNight,2);
-  assert.equal(h.events.filter(e=>e.type==='room_cycle').length,2);
+  // A room without an explicit villageDiscussionSec remains a manual day.
+  // This protects nomination and voting from disappearing on room start.
+  assert.equal(await h.room.runAutoAdvanceIfDue(await h.meta()),false);
+  assert.equal(h.events.filter(e=>e.type==='room_cycle').length,1);
 });
 test('timeline navigation rejects stale expected turn; backward navigation never consumes Artifact',async()=>{
   const h=harness();await h.jump('role');
