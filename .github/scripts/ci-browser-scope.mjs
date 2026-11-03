@@ -4434,8 +4434,8 @@ function detect(){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
       if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
-        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\\n').filter(Boolean);
-        const changes=rows.map(row=>{const [status,path]=row.split('\\t');return {status,path}});
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return {status,path}});
         if(isAssassinPublicWorkerSecurityScope(changes,base))
           return {mode:'assassin-public-worker-privacy',reason:'Exact privacy Worker-only change; public socket redaction and focused API/chat tests'};
       }
