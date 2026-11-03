@@ -59,10 +59,10 @@ test('DEMO first tap unlocks iPhone audio before asynchronous server call',()=>{
  assert.ok(fn.indexOf('battleUnlockAudioFromGesture();')<fn.indexOf("await playRoomApi('/auto'"));
  assert.match(battle,/sameCycle/);
 });
-test('DEMO stage cues and Audio queue are tied to authoritative ballot stage',()=>{
+test('DEMO stage cues are authoritative and Day audio queue persists across stages',()=>{
  const queue=between(battle,'function battleQueueDayAudio(', 'function battleMorningPlayAudio(');
  const stage=between(battle,'function battleGallowsRender(', 'async function battleGallowsCommand(');
- assert.match(queue,/playSceneRuntime\.gallows\?\.stage/);
+ assert.doesNotMatch(queue,/playSceneRuntime\.gallows\?\.stage/);
  assert.match(queue,/15000\/speed/);
  assert.doesNotMatch(queue,/45000/);
  assert.match(stage,/gallowsStageAudioKey/);
