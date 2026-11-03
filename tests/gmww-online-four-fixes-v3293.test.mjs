@@ -25,9 +25,9 @@ test('GM refreshes private targets on sanitized WebSocket commit ticks',()=>{
  assert.doesNotMatch(backend,/this\.broadcast\(\{type:"battle_action_confirmed",matchId,turnId,targets/);
  assert.match(gmFx,/playSceneRuntime\.battleUndo\?\.turnId===t\?\.id/);
 });
-test('Private 🫧/🐦‍🔥 rings follow own role and selected targets, not public secrets',()=>{
+test('Private ☄️/🐦‍🔥 rings follow own role and selected targets, not public secrets',()=>{
  assert.match(player,/const actor=active&&id===me,target=targets\.has\(id\)/);
  assert.match(player,/orbit\.className='gmww-online-orbit gmww-sv-orbit'/);
- assert.match(player,/kind==='actor'\?'🫧':'🐦‍🔥'/);
+ assert.match(player,/kind==='actor'\?'☄️':'🐦‍🔥'/);
  assert.match(player,/@media\(prefers-reduced-motion:reduce\)/);
 });

@@ -156,7 +156,7 @@
 /* Consistent red status labels on both GM and Player Web. */
 .gmww-sv-badges>span{background:#9e2330!important;color:#fff7ed!important;border:1px solid #ffca87!important;box-shadow:0 2px 9px rgba(108,8,19,.62)!important;border-radius:7px!important;font-weight:850!important}
 
-/* V3.295: 🫧 turn / 🐦‍🔥 target use the SAME 6s gmwwSvVerticalOrbit
+/* V3.296: ☄️ turn / 🐦‍🔥 target use the SAME 6s gmwwSvVerticalOrbit
    and .gmww-sv-orbit-item markup as 🐺 wolf_bitten. No alternative keyframes. */
 #start .play-player-token .play-player-avatar>.battle-orbit.gmww-sv-orbit{
   position:absolute;inset:0;left:0;top:0;width:100%;height:100%;
