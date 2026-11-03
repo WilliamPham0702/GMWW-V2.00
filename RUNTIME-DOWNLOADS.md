@@ -6,15 +6,15 @@
 
 > **CHỈ CÀI RUNTIME PRODUCTION.** Bản QA từ GitHub Actions chưa được đồng bộ với Server Production; không dùng để cập nhật iPhone đang chơi. Không hạ cấp Runtime đã cài.
 
-**Runtime Production đã xác minh mới nhất: V3.294.** Các bản QA không thay thế bản chính thức.
+**Runtime Production đã xác minh mới nhất: V3.295.** Các bản QA không thay thế bản chính thức.
 
 | Phiên bản | Tải .gmwwupdate | Xác minh | Ghi chú |
 |:--|:--|:--|:--|
+| **V3.295** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.295/GMWW-Runtime-V3.295.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.295/GMWW-Runtime-V3.295.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-runtime-v3.295) |
 | **V3.294** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.294/GMWW-Runtime-V3.294.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.294/GMWW-Runtime-V3.294.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.294) |
 | **V3.293** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.293/GMWW-Runtime-V3.293.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.293/GMWW-Runtime-V3.293.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.293) |
 | **V3.291** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.291/GMWW-Runtime-V3.291.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.291/GMWW-Runtime-V3.291.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.291) |
 | **V3.289** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.289/GMWW-Runtime-V3.289.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.289/GMWW-Runtime-V3.289.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.289) |
-| **V3.288** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.288/GMWW-Runtime-V3.288.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.288/GMWW-Runtime-V3.288.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.288) |
 
 ## 2. IPA — CÀI ỨNG DỤNG
 
@@ -47,4 +47,4 @@
 
 **5 Runtime mới nhất, 3 IPA mới nhất** được đưa lên đầu để dễ tải. Các file cũ vẫn có thể tồn tại vì chính sách bảo vệ 14 ngày, rollback và tag tham chiếu. Việc ẩn khỏi kho tải nhanh **không xóa file trên GitHub**.
 
-**30 phiên bản Runtime duy nhất** đã được tìm thấy trên Releases.
+**31 phiên bản Runtime duy nhất** đã được tìm thấy trên Releases.
