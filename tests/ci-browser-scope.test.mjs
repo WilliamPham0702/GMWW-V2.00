@@ -1467,3 +1467,24 @@ test('PR778 main-push bulletin Worker recovery selects only eight audited files'
  assert.equal(classifyBrowserScope(files.slice(1)),'full');
  assert.equal(classifyBrowserScope([...files,{path:'assets/village/arena-3d/main.mjs',status:'M'}]),'full');
 });
+
+test('main-push classifier executes before historical full-suite fallback for exact PR778 Worker release',()=>{
+ const files=[
+  {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+  {path:'src/player-web-src/35-online-chat.part',status:'M'},
+  {path:'src/gmww-members-live.js',status:'M'},
+  {path:'tests/ci-browser-scope.test.mjs',status:'M'},
+  {path:'tests/player-village-announcement-ticker-20261103.test.mjs',status:'M'},
+  {path:'docs/releases/GMWW-PR778-FINAL-WORKER-20261103.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(files),'pr778-postmerge-worker');
+ assert.equal(classifyBrowserScope(files.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...files,{path:'server-game/current/app.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...files,{path:'package.json',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...files,{path:'assets/village/arena-3d/main.mjs',status:'M'}]),'full');
+ const selector=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ const d=selector.indexOf('function detect(){');
+ const first=selector.indexOf('if(isPR778FinalMainScope(changes))',d);
+ const full=selector.indexOf('Main contains changes outside the verified scoped lists',d);
+ assert.ok(d>=0&&first>d&&full>first,'exact Worker check must run BEFORE legacy main push full return');
+});
