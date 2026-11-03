@@ -363,6 +363,8 @@ test('Auto GM completes zero-duration wakeup instead of stalling forever',async(
   assert.equal(await h.room.runAutoAdvanceIfDue(await h.meta()),true);
   assert.equal((await h.meta()).cyclePhase,'morning');
   // Day with zero discussion seconds must OPEN nominations, not skip to night.
+  // This explicit zero-second day must open nomination; an unconfigured day remains manual.
+  h.data.get('gameConfig').timing.villageDiscussionSec=0;
   assert.equal(await h.room.runAutoAdvanceIfDue(await h.meta()),true);
   assert.equal((await h.meta()).cyclePhase,'morning');
   assert.equal(h.events.filter(e=>e.type==='gallows_updated').at(-1)?.gallows?.stage,'nominating');
