@@ -23,7 +23,8 @@ test('wrong keys, tampered ciphertext, metadata, nonce and checksums fail closed
  await assert.rejects(openBackupChunk(a,wrong));
  await assert.rejects(openBackupChunk({...a,plainSha256:'0'.repeat(64)},key),/BACKUP_CHECKSUM_MISMATCH/);
  await assert.rejects(openBackupChunk({...a,metadata:{...meta,revision:8}},key),/BACKUP_AUTHENTICATION_FAILED/);
- await assert.rejects(openBackupChunk({...a,ciphertext:a.ciphertext.slice(0,-1)+'A'},key));
+ const tampered=(a.ciphertext[0]==='A'?'B':'A')+a.ciphertext.slice(1);
+ await assert.rejects(openBackupChunk({...a,ciphertext:tampered},key));
  await assert.rejects(openBackupChunk({...a,nonce:'a'.repeat(16)},key));
 });
 test('active matches, connected sockets, malformed or private metadata never seal',async()=>{
