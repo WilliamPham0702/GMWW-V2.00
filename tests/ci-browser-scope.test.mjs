@@ -1279,3 +1279,21 @@ test('PR761 V3.293 exact Online action, realtime, privacy and Runtime scope fail
  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,after:c.after.replace('this.broadcast({type:"battle_action_confirmed",matchId,serverTime:Date.now()})','this.broadcast({type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()})')}:c)),'full');
 });
+
+test('Stage4 synthetic recovery exact six-file scope skips full Worker tests; any extra path fails closed',()=>{
+  const changes=[
+    ['infra/cloudflare-standby/stage4-readiness.mjs','A'],
+    ['infra/cloudflare-standby/stage4-readiness.test.mjs','A'],
+    ['docs/architecture/dual-cloudflare-standby-20261101.md','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(changes),'dual-cloudflare-standby');
+  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+  for(const path of ['src/index.js','wrangler.jsonc','package.json','server-game/current/app.js']){
+    assert.equal(classifyBrowserScope([...changes,{path,status:'M'}]),'full',path);
+  }
+  assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+});

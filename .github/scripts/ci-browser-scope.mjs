@@ -3519,6 +3519,19 @@ function isRuntimeMergedV3286Scope(changes){
 // Dual Cloudflare B PR: exact synthetic code/CI scope only. Any gameplay,
 // runtime, asset, hidden or unknown path returns FULL Worker CI.
 function isDualCloudflareStandbyScope(changes){
+  // Stage4A/4B synthetic readiness: exact six-file docs/fixture/CI-only patch.
+  // Any game, Worker, Runtime, Native or unrelated change MUST use full CI.
+  const stage4=new Map([
+    ['infra/cloudflare-standby/stage4-readiness.mjs','A'],
+    ['infra/cloudflare-standby/stage4-readiness.test.mjs','A'],
+    ['docs/architecture/dual-cloudflare-standby-20261101.md','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/workflows/check-pr-preview-github.yml','M']
+  ]);
+  if(Array.isArray(changes)&&changes.length===stage4.size&&
+    new Set(changes.map(x=>x.path)).size===stage4.size&&
+    changes.every(x=>stage4.get(x.path)===x.status))return true;
   // Synthetic-only B auth401 diagnostics. Exact existing six files, no Production changes.
   const bAuthDiag=new Map([
     ['infra/cloudflare-standby/b-staging-live-e2e.mjs','M'],
