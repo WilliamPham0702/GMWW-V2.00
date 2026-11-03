@@ -1364,7 +1364,8 @@ test('PR767 immutable V3.294 live microphone+fast private Chat CI-LITE remains f
 test('V3.294 postmerge recovery accepts only CI-selector and test updates, with reviewed Runtime SHA pins',()=>{
   const paths=[
     ['.github/scripts/ci-browser-scope.mjs','M'],
-    ['tests/ci-browser-scope.test.mjs','M']
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/workflows/gmww-auto-delivery-v3.yml','M']
   ];
   const changes=paths.map(([path,status])=>({path,status,after:readFileSync(path,'utf8'),before:'reviewed previous CI'}));
   assert.equal(classifyBrowserScope(changes),'gmww-chat-live-v3294');
