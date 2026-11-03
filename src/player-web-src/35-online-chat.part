@@ -607,10 +607,11 @@ function gmwwOnlineTurnEffects(offers){
     '#players .player.is-battle-target .portrait{animation:gmww-player-target-pulse 1.4s ease-in-out infinite}'+
     '@keyframes gmww-player-turn-pulse{50%{filter:drop-shadow(0 0 15px #f5cf66) brightness(1.14)}}'+
     '@keyframes gmww-player-target-pulse{50%{filter:drop-shadow(0 0 15px #67e9ca) brightness(1.16)}}'+
-    '#players .player>.gmww-online-orbit{position:absolute;left:50%;top:35%;width:90px;height:90px;transform:translate(-50%,-50%);pointer-events:none;z-index:20;animation:gmww-orbit-spin 4s linear infinite}'+
-    '#players .player>.gmww-online-orbit i{position:absolute;top:50%;left:50%;width:22px;height:22px;line-height:22px;font:18px/22px system-ui;text-align:center;transform:rotate(var(--b)) translateY(-43px) rotate(calc(-1 * var(--b)));filter:drop-shadow(0 2px 4px #000a)}'+
-    '@keyframes gmww-orbit-spin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}'+
-    '@media(prefers-reduced-motion:reduce){#players .player.is-battle-actor .portrait,#players .player.is-battle-target .portrait,#players .player>.gmww-online-orbit{animation:none}}';
+    "#players .player .portrait{position:relative!important;overflow:visible!important}"+
+    "#players .player .portrait>.gmww-online-orbit,#players .player>.gmww-online-orbit{position:absolute;left:50%;top:50%;width:0;height:0;overflow:visible;pointer-events:none;z-index:20}"+
+    "#players .player .portrait>.gmww-online-orbit i,#players .player>.gmww-online-orbit i{position:absolute;top:0;left:0;width:22px;height:22px;font:18px/22px system-ui;text-align:center;font-style:normal;filter:drop-shadow(0 2px 4px #000a);animation:gmww-player-character-orbit 3.2s linear infinite;animation-delay:var(--orbit-delay,0s)}"+
+    "@keyframes gmww-player-character-orbit{0%,100%{transform:translate(-50%,-50%) translate(-38px,0) scale(.78);opacity:.62}25%{transform:translate(-50%,-50%) translate(0,-12px) scale(.65);opacity:.42}50%{transform:translate(-50%,-50%) translate(38px,0) scale(.78);opacity:.62}75%{transform:translate(-50%,-50%) translate(0,12px) scale(1.24);opacity:1}}"+
+    "@media(prefers-reduced-motion:reduce){#players .player.is-battle-actor .portrait,#players .player.is-battle-target .portrait,#players .player .gmww-online-orbit i{animation:none!important}}";
    doc.head.appendChild(css);
   }
   for(const node of doc.querySelectorAll('#players .player[data-player-id]')){
@@ -618,15 +619,18 @@ function gmwwOnlineTurnEffects(offers){
    const actor=active&&id===me,target=targets.has(id);
    node.classList.toggle('is-battle-actor',actor);
    node.classList.toggle('is-battle-target',target);
-   let orbit=node.querySelector(':scope>.gmww-online-orbit');
+   const portrait=node.querySelector(':scope>.portrait.game-character')||node.querySelector(':scope>.portrait')||node;
+   let orbit=node.querySelector('.gmww-online-orbit');
    if(actor||target){
      const kind=actor?'actor':'target',count=kind==='actor'?6:5;
-     if(!orbit){orbit=doc.createElement('span');orbit.className='gmww-online-orbit';orbit.setAttribute('aria-hidden','true');node.appendChild(orbit)}
+     if(!orbit){orbit=doc.createElement('span');orbit.className='gmww-online-orbit';orbit.setAttribute('aria-hidden','true');portrait.appendChild(orbit)}
+     else if(orbit.parentElement!==portrait)portrait.appendChild(orbit);
      if(orbit.dataset.kind!==kind||orbit.childElementCount!==count){
        orbit.dataset.kind=kind;orbit.replaceChildren();
        for(let k=0;k<count;k++){
          const star=doc.createElement('i');star.textContent=kind==='actor'?'⭐':'🔥';
-         star.style.setProperty('--b',(k*360/count)+'deg');orbit.appendChild(star);
+         star.style.setProperty('--b',(k*360/count)+'deg');
+         star.style.setProperty('--orbit-delay',(-3.2*k/count).toFixed(3)+'s');orbit.appendChild(star);
        }
      }
    }else orbit?.remove();
