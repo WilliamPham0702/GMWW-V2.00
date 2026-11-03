@@ -58,6 +58,9 @@ test('Worker stores public-only per-day archive and serves it even when chatting
  assert.match(source,/noticeCycleNight=resolved\?currentNight:phase==="night"\?currentNight-1:0/);
  assert.match(source,/if\(!permission\.canRead\)return j\(\{ok:true,channel:null,messages:\[\],broadcasts,notices,noticeCycleNight/);
  assert.match(source,/publicChatNotices\(meta,players,source\)/);
+ assert.match(source,/else if\(!stored&&phase==="night"\)/);
+ assert.match(source,/previousMeta=\{\.\.\.meta,cyclePhase:"morning",cycleNight:noticeCycleNight\}/);
+ assert.match(source,/publicChatNotices\(previousMeta,players,history\)/);
 });
 
 test('Player Web ticker loops slowly and messages/voice remain borderless',()=>{
