@@ -18,9 +18,13 @@ test('public bulletin still announces verified Assassin death but not actor or r
   const fatal={id:'fatal',type:'dead',matchId:mark.matchId,loginId:mark.loginId,
     actorId:mark.actorId,source:'assassin',actionId:mark.actionId,effectActive:true};
   const notices=publicChatNotices(meta,players,[mark,fatal]);
-  assert.equal(notices.length,1,'do not duplicate assassin death notice');
-  assert.equal(notices[0].text,'Chia buồn A Dũng đã lựa chọn sai và đã chết.');
-  assert.equal(notices[0].senderName,'Thông cáo Làng');
+  assert.equal(notices.length,2,'mark history then one death outcome; never duplicate death');
+  assert.deepEqual(notices.map(n=>n.text),[
+    'A Dũng đã bị đánh dấu.',
+    'Chia buồn A Dũng đã lựa chọn sai và đã chết.'
+  ]);
+  assert.ok(notices[0].at<notices[1].at,'the mark must precede the answer');
+  assert.ok(notices.every(n=>n.senderName==='Thông cáo Làng'));
   assert.doesNotMatch(JSON.stringify(notices),/Quyền|Sát Thủ|quyen|actorId|gmChoice|👍/);
   assert.deepEqual(publicChatNotices({...meta,cyclePhase:'night'},players,[mark,fatal]),[]);
 });
@@ -29,8 +33,16 @@ test('pending mark and successful response disclose only public outcome',()=>{
   const waiting=publicChatNotices(meta,players,[{...mark,status:'pending',effectActive:true}]);
   assert.equal(waiting[0].text,'A Dũng đã bị đánh dấu.');
   const success=publicChatNotices(meta,players,[{...mark,response:'👍'}]);
-  assert.equal(success[0].text,'Chúc mừng A Dũng đã lựa chọn đúng và tiếp tục sống.');
-  assert.doesNotMatch(JSON.stringify([...waiting,...success]),/Quyền|Sát Thủ|quyen/);
+  assert.deepEqual(success.map(n=>n.text),[
+    'A Dũng đã bị đánh dấu.',
+    'Chúc mừng A Dũng đã lựa chọn đúng và tiếp tục sống.'
+  ]);
+  assert.equal(success[0].id,waiting[0].id,'mark notice identity remains stable after response');
+  assert.deepEqual(publicChatNotices({...meta,cyclePhase:'day'},players,[mark]).map(n=>n.id),
+    publicChatNotices(meta,players,[mark]).map(n=>n.id),'daytime keeps both notices');
+  assert.deepEqual(publicChatNotices(meta,players,[{...mark,status:'pending',effectActive:false}]),[],
+    'cancelled or undone pending marks must not publish');
+  assert.doesNotMatch(JSON.stringify([...waiting,...success]),/Quyền|Sát Thủ|quyen|actorId|gmChoice/);
 });
 
 test('authenticated Player Web interaction hides actor, GM choice and secret metadata',()=>{
