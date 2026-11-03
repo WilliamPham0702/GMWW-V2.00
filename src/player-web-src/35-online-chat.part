@@ -310,11 +310,28 @@ html body #gmwwOnlineFooter #gmwwChatPanel{max-height:min(52dvh,440px)!important
 @keyframes gmww-chat-wave{to{transform:scaleY(.45)}}
 @media(prefers-reduced-motion:reduce){#gmwwChatRecording .gmww-record-dot,.gmww-voice-card.is-playing .gmww-voice-wave i{animation:none}}
 `;
+  style.textContent+=`
+/* Full public bulletin in one slowly looping line. */
+#gmwwVillageTicker{display:none;align-items:center;gap:7px;min-height:27px;max-height:27px;padding:2px 10px;background:rgba(31,30,44,.30);border-bottom:1px solid #ffffff1c;overflow:hidden}
+#gmwwChatPanel.open #gmwwVillageTicker{display:flex}
+#gmwwVillageTicker .gmww-ticker-symbol{flex:0 0 auto;color:#ffd18b;font:800 13px/22px system-ui}
+#gmwwVillageTicker .gmww-ticker-clip{flex:1;min-width:0;overflow:hidden;white-space:nowrap}
+#gmwwVillageTicker .gmww-ticker-track{display:inline-block;width:max-content;white-space:nowrap;color:#ffb1b1;font:700 12px/22px system-ui;will-change:transform;animation:gmww-village-marquee var(--gmww-ticker-duration,48s) linear infinite}
+#gmwwVillageTicker:not(.has-notices) .gmww-ticker-track{animation:none;transform:none;color:#f6f0e9b0}
+@keyframes gmww-village-marquee{from{transform:translateX(var(--gmww-ticker-start,320px))}to{transform:translateX(-100%)}}
+@media(prefers-reduced-motion:reduce){#gmwwVillageTicker .gmww-ticker-track{animation:none!important;transform:none!important;will-change:auto}#gmwwVillageTicker .gmww-ticker-clip{overflow-x:auto;touch-action:pan-x}}
+/* Messages and voice are natural colored conversation lines, not separate glass bubbles. */
+#gmwwChatLines .msg{max-width:100%!important;width:auto!important;margin:4px 0!important;padding:2px 0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;line-height:1.55!important}
+#gmwwChatLines .msg.is-self{margin-left:0!important;background:transparent!important}
+#gmwwChatLines .msg b{font-weight:800!important}
+.gmww-voice-card{border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:1px 3px!important;gap:6px!important;color:inherit!important;vertical-align:middle}
+.gmww-voice-play{width:27px;height:27px;min-width:27px;background:rgba(245,239,255,.18)}
+`;
   document.head.appendChild(style);
  }
  if(document.getElementById('gmwwChatPanel')){gmwwChatDockSync();return}
  const panel=document.createElement('section');panel.id='gmwwChatPanel';panel.setAttribute('aria-label','Chat Làng');
- panel.innerHTML='<header><b id="gmwwChatHeading">Chat Làng</b><button type="button" id="gmwwChatToGM" title="Chat riêng GM">GM</button><button type="button" id="gmwwChatAudio" aria-label="Audio thông báo"></button></header><div id="gmwwChatLines" role="log"></div><div id="gmwwChatHelp"></div><form id="gmwwChatForm"><input id="gmwwChatText" maxlength="280" autocomplete="off" aria-label="Tin nhắn" placeholder="Gửi tin nhắn…"><span id="gmwwChatRecording" hidden><span class="gmww-record-dot"></span><span class="gmww-live-meter" aria-label="Mức âm thanh từ micro"><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></span><span id="gmwwChatRecordingStatus">Đang ghi âm</span><time>0:00</time></span><button type="button" id="gmwwChatVoice" aria-label="Ghi âm" title="Ghi âm tối đa 30 giây"></button><button type="submit" id="gmwwChatSubmit" aria-label="Gửi tin nhắn">'+gmwwChatSendSvg+'</button></form>';
+ panel.innerHTML='<header><b id="gmwwChatHeading">Chat Làng</b><button type="button" id="gmwwChatToGM" title="Chat riêng GM">GM</button><button type="button" id="gmwwChatAudio" aria-label="Audio thông báo"></button></header><div id="gmwwVillageTicker" role="status" aria-live="off" title="Thông cáo Làng"><span class="gmww-ticker-symbol" aria-hidden="true">🎬:</span><div class="gmww-ticker-clip" id="gmwwVillageTickerClip"><span class="gmww-ticker-track" id="gmwwVillageTickerTrack">Chưa có thông cáo công khai.</span></div></div><div id="gmwwChatLines" role="log"></div><div id="gmwwChatHelp"></div><form id="gmwwChatForm"><input id="gmwwChatText" maxlength="280" autocomplete="off" aria-label="Tin nhắn" placeholder="Gửi tin nhắn…"><span id="gmwwChatRecording" hidden><span class="gmww-record-dot"></span><span class="gmww-live-meter" aria-label="Mức âm thanh từ micro"><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></span><span id="gmwwChatRecordingStatus">Đang ghi âm</span><time>0:00</time></span><button type="button" id="gmwwChatVoice" aria-label="Ghi âm" title="Ghi âm tối đa 30 giây"></button><button type="submit" id="gmwwChatSubmit" aria-label="Gửi tin nhắn">'+gmwwChatSendSvg+'</button></form>';
  document.body.appendChild(panel);gmwwChatDockSync();gmwwChatTouch();
  panel.addEventListener('pointerdown',()=>{if(!gmwwChatOpen)gmwwChatExpand();else gmwwChatTouch()});
  document.getElementById('gmwwChatText').addEventListener('focus',gmwwChatExpand);
@@ -368,6 +385,21 @@ function gmwwChatDockSync(){
   };
   tick();if(!gmwwOnlineFooterTimer)gmwwOnlineFooterTimer=setInterval(tick,1000);
 }
+function gmwwVillageTickerUpdate(notices,cycleNight){
+ const ticker=document.getElementById('gmwwVillageTicker'),track=document.getElementById('gmwwVillageTickerTrack'),clip=document.getElementById('gmwwVillageTickerClip');
+ if(!ticker||!track||!clip)return;
+ const safe=(Array.isArray(notices)?notices:[]).filter(n=>n?.system===true&&typeof n.text==='string').slice(-150);
+ const sig=JSON.stringify([state.roomCode,state.room?.matchId,cycleNight,safe.map(n=>[n.id,n.text])]);
+ if(ticker.dataset.sig===sig)return;
+ ticker.dataset.sig=sig;
+ const content=safe.length?safe.map(n=>n.text).join('     •     '):'Chưa có thông cáo công khai.';
+ track.textContent=content;ticker.classList.toggle('has-notices',safe.length>0);
+ ticker.title=content;ticker.setAttribute('aria-label','Thông cáo Làng: '+content);
+ if(!safe.length)return;
+ const width=Math.max(1,clip.clientWidth),distance=width+Math.max(1,track.scrollWidth);
+ track.style.setProperty('--gmww-ticker-start',width+'px');
+ track.style.setProperty('--gmww-ticker-duration',Math.max(20,Math.ceil(distance/28))+'s');
+}
 function gmwwChatClear(){
   gmwwChatSeq++;const lines=document.getElementById('gmwwChatLines');lines?.replaceChildren();if(lines)delete lines.dataset.sig;
   const note=document.getElementById('gmwwChatHelp');if(note)note.textContent='Đang kiểm tra quyền Chat cho lượt mới…';
@@ -392,7 +424,9 @@ async function gmwwChatRefresh(){
     panel.classList.toggle('secret',result.scope==='secret');
     document.getElementById('gmwwChatHeading').textContent=result.scope==='gm'?'🔒 Chat riêng GM':result.scope==='secret'?'🌙 Chat nhóm':'☀️ Chat Làng';
     document.getElementById('gmwwOnlineFooter')?.classList.toggle('gmww-chat-day',['morning','day'].includes(String(result.phase||''))&&state.room?.phase==='running');
-    const items=[...(Array.isArray(result.notices)?result.notices:[]),...(Array.isArray(result.broadcasts)?result.broadcasts:[]),...(Array.isArray(result.messages)?result.messages:[])].sort((a,b)=>Number(a.at||0)-Number(b.at||0));
+    gmwwVillageTickerUpdate(result.notices,result.noticeCycleNight);
+    // Public notices appear only in the ticker; these are conversation messages.
+    const items=[...(Array.isArray(result.broadcasts)?result.broadcasts:[]),...(Array.isArray(result.messages)?result.messages:[])].sort((a,b)=>Number(a.at||0)-Number(b.at||0));
     const signature=JSON.stringify([gmwwChatTarget,items]);
     // Never expose message contents through room_state or the WebSocket.
     // The authenticated chat GET is the source of truth for a new-message cue.
