@@ -94,6 +94,8 @@ export function publicChatNotices(meta,players,rows){
   if(meta?.enabled===false||meta?.phase!=='running'||
      !['morning','day'].includes(String(meta.cyclePhase||'')))return [];
   const match=String(meta.matchId||''),now=Date.now(),members=players||{};
+  // The ticker shows the current resolved night/day only, not previous games.
+  const currentNight=Math.max(0,Number(meta.cycleNight||0));
   const nameOf=id=>{const key=normalize(id);return String(members['member:'+key]?.displayName||key||'Người chơi').slice(0,80)};
   const eligible=row=>!!row&&(!row.matchId||String(row.matchId)===match)&&
     (!row.expiresAt||Date.parse(row.expiresAt)>now);
@@ -112,6 +114,8 @@ export function publicChatNotices(meta,players,rows){
   const all=Array.isArray(rows)?rows:[];
   for(const row of all){
     if(!eligible(row)||!normalize(row.loginId))continue;
+    // Older nights remain in the durable archive but do not flood this round.
+    if(currentNight>0&&Number(row.night||currentNight)!==currentNight)continue;
     const name=nameOf(row.loginId);
     if(row.type==='assassin_mark'){
       // A mark is a distinct public event. Keep it visible after the response
@@ -139,4 +143,20 @@ export function publicChatNotices(meta,players,rows){
     else add(row,row.loginId,name+' '+negative[type]+'.');
   }
   return messages.sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id)).slice(-100);
+}
+
+/**
+ * One immutable, public-only bulletin history per match/night.
+ * Updates to rules interactions (responded/cleared/expired) must not erase a
+ * notice players already saw; this merge never accepts raw private rows.
+ */
+export function mergePublicChatNotices(previous=[],incoming=[]){
+  const byId=new Map();
+  for(const row of [...(Array.isArray(previous)?previous:[]),...(Array.isArray(incoming)?incoming:[])]){
+    if(!row||row.system!==true||row.senderName!=='Thông cáo Làng'||
+       typeof row.id!=='string'||typeof row.text!=='string'||!Number.isFinite(row.at))continue;
+    byId.set(row.id,{id:row.id,senderId:'system',senderName:'Thông cáo Làng',
+      system:true,isGM:false,text:row.text,at:row.at});
+  }
+  return [...byId.values()].sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id)).slice(-150);
 }
