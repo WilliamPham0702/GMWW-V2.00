@@ -3519,6 +3519,54 @@ function isRuntimeMergedV3286Scope(changes){
 // Dual Cloudflare B PR: exact synthetic code/CI scope only. Any gameplay,
 // runtime, asset, hidden or unknown path returns FULL Worker CI.
 function isDualCloudflareStandbyScope(changes){
+  // Issue #773, exact ten-file B-only encrypted archive: no A Worker/Runtime/native edits.
+  // Any unrecognized, removed or duplicated path retains FULL Worker CI.
+  const backupArchive=new Map([
+    [
+        "infra/cloudflare-standby/production-backup-envelope.mjs",
+        "A"
+    ],
+    [
+        "infra/cloudflare-standby/production-backup-envelope.test.mjs",
+        "A"
+    ],
+    [
+        "infra/cloudflare-standby/b-backup-archive-policy.mjs",
+        "A"
+    ],
+    [
+        "infra/cloudflare-standby/b-backup-archive-policy.test.mjs",
+        "A"
+    ],
+    [
+        "infra/cloudflare-standby/b-backup-archive-worker.mjs",
+        "A"
+    ],
+    [
+        "infra/cloudflare-standby/wrangler-b-backup-archive.jsonc",
+        "A"
+    ],
+    [
+        "docs/architecture/gmww-production-backup-stage4c-crypto.md",
+        "A"
+    ],
+    [
+        ".github/workflows/check-cloudflare-standby.yml",
+        "M"
+    ],
+    [
+        ".github/scripts/ci-browser-scope.mjs",
+        "M"
+    ],
+    [
+        "tests/ci-browser-scope.test.mjs",
+        "M"
+    ]
+]);
+  if(Array.isArray(changes)&&changes.length===backupArchive.size&&
+     new Set(changes.map(c=>c.path)).size===backupArchive.size&&
+     changes.every(c=>backupArchive.get(c.path)===c.status))return true;
+
   // Stage4A/4B synthetic readiness: exact six-file docs/fixture/CI-only patch.
   // Any game, Worker, Runtime, Native or unrelated change MUST use full CI.
   const stage4=new Map([
