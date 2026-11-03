@@ -3993,7 +3993,8 @@ function isChatLiveV3294Scope(changes){
 function isChatLiveV3294PostmergeRecoveryScope(changes){
   const expected=new Map([
     ['.github/scripts/ci-browser-scope.mjs','M'],
-    ['tests/ci-browser-scope.test.mjs','M']
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['.github/workflows/gmww-auto-delivery-v3.yml','M']
   ]);
   if(!Array.isArray(changes)||changes.length!==expected.size||
     new Set(changes.map(x=>x.path)).size!==expected.size||
