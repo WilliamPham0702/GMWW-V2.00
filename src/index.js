@@ -2140,9 +2140,10 @@ export class RoomDurableObject extends DurableObject {
       const deadline=Date.parse(meta.dayDeadlineAt||'');
       const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),
         started=Date.parse(meta.cycleStartedAt||"");
-      // Zero-second discussion is an expired turn, NOT an absent deadline.
-      // A null dayDeadlineAt must not strand an Auto GM match at 00:00.
-      const due=Number.isFinite(deadline)?deadline:Number.isFinite(started)?started+sec*1000:0;
+      // A configured zero-second discussion is due immediately. A room with
+      // NO gameConfig/timing is different: it remains in manual day/gallows.
+      const hasDuration=cfg?.timing?.villageDiscussionSec!==undefined&&cfg?.timing?.villageDiscussionSec!==null;
+      const due=Number.isFinite(deadline)?deadline:hasDuration&&Number.isFinite(started)?started+sec*1000:0;
       if(meta.demo)return due;
       const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
       const at=Number(ballot?.resolvedAt||0);
