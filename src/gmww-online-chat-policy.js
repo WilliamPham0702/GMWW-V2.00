@@ -3,6 +3,26 @@ import {statusTagsFor} from './gmww-public-room-contract.js';
 // The room's night queue is the single source of truth; never infer access from faction alone.
 const normalize=id=>String(id||'').trim().toLowerCase().replace(/^member:/,'');
 const active=(row,match,now)=>row&&row.effectActive!==false&&(!row.matchId||String(row.matchId)===String(match||''))&&(!row.expiresAt||Date.parse(row.expiresAt)>now);
+// Only the target's own public-safe interaction fields cross the Player API.
+// Assassin actor identity and GM choice stay exclusively in Durable Object / GM data.
+export function playerSafeInteraction(row){
+  if(!row||typeof row!=='object')return row;
+  const {gmChoice,...safe}=row;
+  if(row.type==='assassin_mark')
+    return{id:safe.id,type:'assassin_mark',loginId:safe.loginId,matchId:safe.matchId,
+      night:safe.night,cycleKey:safe.cycleKey,status:safe.status,
+      effectActive:safe.effectActive,createdAt:safe.createdAt,
+      respondedAt:safe.respondedAt,response:safe.response,
+      requireAck:safe.requireAck,requireResponse:safe.requireResponse,
+      options:['👍','👎'],
+      message:'Bạn đã bị đánh dấu. Hãy chọn 👍 hoặc 👎 để xác định kết quả.'};
+  if(row.type==='dead'&&row.source==='assassin'){
+    const {actorId,actionId,source,message,effectName,roleId,roleName,...visible}=safe;
+    return{...visible,message:'Bạn đã chết.'};
+  }
+  return safe;
+}
+
 export function chatBlockedByEffects(rows,match,loginId,now=Date.now()){
   const id=normalize(loginId);
   let dead=false,expelled=false,frozen=false,mute=false;
