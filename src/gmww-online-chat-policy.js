@@ -114,6 +114,10 @@ export function publicChatNotices(meta,players,rows){
     if(!eligible(row)||!normalize(row.loginId))continue;
     const name=nameOf(row.loginId);
     if(row.type==='assassin_mark'){
+      // A mark is a distinct public event. Keep it visible after the response
+      // changes the interaction to "responded" and clears effectActive.
+      // Publish the generic role type only, never the actor's identity.
+      add(row,row.loginId,name+' đã bị Sát Thủ chọn.',row.createdAt);
       if(row.status==='responded'&&['👍','👎'].includes(String(row.response))&&
          ['👍','👎'].includes(String(row.gmChoice))){
         // Public chat reports the verified outcome only. Never expose the actor's
@@ -122,8 +126,6 @@ export function publicChatNotices(meta,players,rows){
         add(row,row.loginId,survived?
           'Chúc mừng '+name+' đã lựa chọn đúng và tiếp tục sống.':
           'Chia buồn '+name+' đã lựa chọn sai và đã chết.',row.respondedAt);
-      }else if(row.effectActive!==false&&row.status!=='responded'){
-        add(row,row.loginId,name+' đã bị đánh dấu.');
       }
       continue;
     }
