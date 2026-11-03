@@ -1318,3 +1318,22 @@ test('V3.293 postmerge CI release guard rejects any non-CI gameplay, native or v
  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
  assert.equal(classifyBrowserScope(changes.map((x,i)=>i===0?{...x,status:'D'}:x)),'full');
 });
+
+
+// V3.293 early-main CI gate strict source safeguard: exact 3-file recovery only.
+test('V3.293 early-main CI gate strict source safeguard rejects unknown or native modifications',()=>{
+ const rows=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['docs/releases/GMWW-V3.293-CI-EARLY-GATE-20261103.md','A']
+ ];
+ const changes=rows.map(([path,status])=>({
+  path,status,before:status==='M'?'reviewed CI':null,after:readFileSync(path,'utf8')
+ }));
+ assert.equal(classifyBrowserScope(changes),'online-v3293-postmerge-ci');
+ assert.equal(classifyBrowserScope(changes.slice(0,2)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'unreviewed Worker code'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'native IPA'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ assert.equal(classifyBrowserScope(changes.map((x,i)=>i===2?{...x,status:'D'}:x)),'full');
+});
