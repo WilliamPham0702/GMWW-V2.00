@@ -1432,3 +1432,19 @@ test('Stage4C encrypted B-only backup ten-file CI scope is exact and fail closed
     '.github/workflows/deploy-production.yml','package.json','assets/fake.webp'])
    assert.equal(classifyBrowserScope([...changes,{path,status:'M'}]),'full',path);
 });
+
+test('PR778 public bulletin recovery has an exact Worker-only scope and rejects unsafe extras',()=>{
+ const patches=[
+  {path:'src/gmww-online-chat-policy.js',status:'M'},
+  {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+  {path:'.github/workflows/check-player-web.yml',status:'M'},
+  {path:'tests/ci-browser-scope.test.mjs',status:'M'},
+  {path:'tests/player-village-announcement-ticker-20261103.test.mjs',status:'M'},
+  {path:'docs/releases/GMWW-PR778-BULLETIN-WORKER-20261103.md',status:'A'}
+ ];
+ assert.equal(classifyBrowserScope(patches),'pr778-bulletin-worker-recovery');
+ assert.equal(classifyBrowserScope([...patches,{path:'server-game/current/app.js',status:'M'}]),'full','Runtime changes fail closed');
+ assert.equal(classifyBrowserScope([...patches,{path:'assets/village/arena-3d/main.mjs',status:'M'}]),'full','frozen 3D is excluded');
+ assert.equal(classifyBrowserScope([...patches,{path:'src/index.js',status:'M'}]),'full','backend logic cannot be silently changed');
+ assert.equal(classifyBrowserScope(patches.slice(1)),'full','missing public notice patch is unreviewed');
+});
