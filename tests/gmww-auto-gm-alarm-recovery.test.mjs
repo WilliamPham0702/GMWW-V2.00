@@ -54,7 +54,9 @@ test('Auto GM OFF disables the turn scheduler',async()=>{
 
 test('live-room alarm is not replaced by an idle-room TTL',()=>{
   assert.match(source,/const meta=await this\.ctx\.storage\.get\("meta"\);\s*if\(meta&&String\(meta\.phase/);
-  assert.doesNotMatch(source,/setAlarm\(Date\.now\(\)\+ROOM_IDLE_TTL\)/);
+  // Room reset/end still use their original idle expiry; only LIVE writes must protect the turn alarm.
+  assert.match(source,/async heartbeat\(body\)\{[^\n]*scheduleRoomAlarm\(meta\)/);
+  assert.match(source,/async gmRename\(request,body\)\{[^\n]*scheduleRoomAlarm\(meta\)/);
 });
 
 test('only authenticated GM state catches up and repairs missing alarms',()=>{
