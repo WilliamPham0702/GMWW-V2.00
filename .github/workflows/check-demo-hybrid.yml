@@ -45,7 +45,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-hybrid-worker.log 2>&1 &
+          export GMWW_ADMIN_SYNC_TOKEN="$(openssl rand -hex 32)"
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 --var "GMWW_ADMIN_SYNC_TOKEN:${GMWW_ADMIN_SYNC_TOKEN}" > /tmp/gmww-hybrid-worker.log 2>&1 &
           WPID=$!
           trap 'kill "$WPID" 2>/dev/null || true' EXIT
           READY=0
