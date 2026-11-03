@@ -3903,7 +3903,25 @@ function isV3293PostmergeCiScope(changes){
    by.get('docs/releases/GMWW-V3.293-POSTMERGE-CI-RECOVERY-20261103.md')?.after?.includes('Không thay đổi Worker, Player Web, Runtime hay dữ liệu');
 }
 
+// V3.293 second postmerge CI fix: three exact CI/docs files; never alter Runtime.
+// The early detect gate is necessary because generic main full fallback returns first.
+function isV3293EarlyGateCiFixScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['docs/releases/GMWW-V3.293-CI-EARLY-GATE-20261103.md','A']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+ const by=new Map(changes.map(x=>[x.path,x]));
+ return by.get('.github/scripts/ci-browser-scope.mjs')?.after?.includes('function isV3293EarlyGateCiFixScope(changes)')&&
+   by.get('tests/ci-browser-scope.test.mjs')?.after?.includes('V3.293 early-main CI gate strict source safeguard')&&
+   by.get('docs/releases/GMWW-V3.293-CI-EARLY-GATE-20261103.md')?.after?.includes('Không thay đổi mã game, Worker, Player Web hoặc Runtime');
+}
+
 function classifyBrowserScope(changes){
+  if(isV3293EarlyGateCiFixScope(changes))return 'online-v3293-postmerge-ci';
   if(isV3293PostmergeCiScope(changes))return 'online-v3293-postmerge-ci';
   if(isOnlineTurnV3293Scope(changes))return 'online-turn-v3293';
   if(isGMWWVoiceClockV3292Scope(changes))return 'gmww-voice-clock-v3292';
@@ -4292,6 +4310,29 @@ function isV3289PR738VersionOnlyScope(base){
   return true;
 }
 function detect(){
+  // V3.293 verified recovery gets priority over the historical main full-suite
+  // short circuit. Every candidate proves immutability of all runtime/game paths.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        git('merge-base','--is-ancestor','0faac8e1dfe4d75dc4ea2a7cc63844fb14fcb6fa','HEAD');
+        git('diff','--quiet','0faac8e1dfe4d75dc4ea2a7cc63844fb14fcb6fa','HEAD','--',
+          'src','server-game','assets','package.json','package-lock.json','wrangler.jsonc','update-system');
+        if(JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.293.0'){
+          const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+          const changes=rows.map(row=>{
+            const [status,path]=row.split('\t');
+            return{status,path,before:status==='M'?git('show',base+':'+path):null,
+              after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
+          });
+          if(isV3293PostmergeCiScope(changes)||isV3293EarlyGateCiFixScope(changes))
+            return{mode:'online-v3293-postmerge-ci',reason:'Exact V3.293 CI-only recovery with unchanged PR761 gameplay and required Worker/privacy checks'};
+        }
+      }
+    }catch{} // No ancestry, changed Worker, unexpected scope => full checks.
+  }
+
   // This guard only narrows CI for the exact V3.289 PR738 version + notes change.
   // The main push uses first-parent diff; every unproven difference uses original full suite.
   if(['pull_request','push'].includes(process.env.GMWW_CI_EVENT||'')){
