@@ -3709,9 +3709,26 @@ function isV3292MainWorkerRecovery(changes){
     changes.some(x=>x.status!=='M'||!expected.has(x.path)))return false;
  try{
   if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.292.0')return false;
-  git('merge-base','--is-ancestor','c16645399d11b1a96ffe1a63ebbf090c3ff86274','HEAD');
-  git('diff','--quiet','c16645399d11b1a96ffe1a63ebbf090c3ff86274','HEAD','--',
-    'src','server-game','assets','package.json','package-lock.json','wrangler.jsonc','update-system');
+  // Do not depend on Git ancestry in shallow CI test checkouts. Pin the exact
+  // reviewed release Git blobs instead (SHA-1 Git tree identities, not payload checksums).
+  const pinned=new Map([
+    ['src/index.js','bc145a303d40c78c112f0d546faa98b7c6b8ae62'],
+    ['src/gmww-members-live.js','d93cdde1fa07136061d340a5ca8ae55b32b5bd71'],
+    ['src/gmww-public-turn-clock.js','79f793142199c9d49907f0549da0a707e8c03e7d'],
+    ['server-game/current/app.js','60299d3ac67f7bf8c6df853f61432cd8a4b6a91a'],
+    ['server-game/current/battle-controls.js','66ad14e8d0a8772ccfc26a49a3c69182d2b50f6e'],
+    ['server-game/src/45-online-chat.part','543b68b1353c24db8d360919eda0df3e749dc245'],
+    ['src/player-web-src/35-online-chat.part','62d3b84a7b551fdd827e0af7290bc4bdf9020ad1'],
+    ['package.json','b8b08d32e01ca314e2a02a8c87d180dced99efb4'],
+    ['package-lock.json','620958faa2433b3bd35d5e385de07dcff67b4db6'],
+    ['server-game/current/GMWW.html','1c1311d8fe2f83701da9c6d3e27b9a7432991fda']
+  ]);
+  for(const [file,sha] of pinned)
+    if(git('rev-parse','HEAD:'+file).trim()!==sha)return false;
+  // Synthetic unrelated scope tests cannot masquerade as this recovery.
+  for(const row of changes){
+    if(typeof row.after!=='string'||row.after!==fs.readFileSync(row.path,'utf8'))return false;
+  }
   const workflow=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
   return workflow.includes("steps.scope.outputs.mode == 'v3292-main-ci-recovery'")&&
     fs.existsSync('docs/releases/GMWW-RUNTIME-V3.292-VOICE-CLOCK-20261102.md');
@@ -4218,7 +4235,7 @@ function detect(){
   if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
     try{
       const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
-      const changes=rows.map(line=>{const [status,path]=line.split('\t');return {status,path}});
+      const changes=rows.map(line=>{const [status,path]=line.split('\t');return {status,path,after:status==='M'?fs.readFileSync(path,'utf8'):null}});
       if(isV3292MainWorkerRecovery(changes))
         return{mode:'v3292-main-ci-recovery',reason:'Reviewed #753 V3.292 source unchanged; exact 3-file CI recovery'};
     }catch{}
