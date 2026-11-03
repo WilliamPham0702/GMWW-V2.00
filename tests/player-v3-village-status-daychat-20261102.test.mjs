@@ -41,13 +41,19 @@ test('Village announcements are authorized, named and not revealed during night'
 test('Assassin mark publishes a single verified survival/death notice after a response',()=>{
  const done={...rows[2],status:'responded',effectActive:false,respondedAt:when,response:'👍'};
  const success=publicChatNotices(meta,players,[done]);
- assert.equal(success.length,1);
- assert.equal(success[0].text,'Chúc mừng Nô đã lựa chọn đúng và tiếp tục sống.');
+ assert.equal(success.length,2);
+ assert.deepEqual(success.map(n=>n.text),[
+  'Nô đã bị đánh dấu.',
+  'Chúc mừng Nô đã lựa chọn đúng và tiếp tục sống.'
+ ]);
  const death={id:'dead-assassin',type:'dead',loginId:'c',matchId:'M',source:'assassin',
    effectActive:true,createdAt:when};
  const failed=publicChatNotices(meta,players,[{...done,response:'👎'},death]);
- assert.equal(failed.length,1);
- assert.equal(failed[0].text,'Chia buồn Nô đã lựa chọn sai và đã chết.');
+ assert.equal(failed.length,2);
+ assert.deepEqual(failed.map(n=>n.text),[
+  'Nô đã bị đánh dấu.',
+  'Chia buồn Nô đã lựa chọn sai và đã chết.'
+ ]);
  // Secret actor identity, role and GM's selected sign must never appear in
  // Player Web notices, their IDs or the public API payload.
  for(const notices of [success,failed]){
