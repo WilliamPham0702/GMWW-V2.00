@@ -4112,7 +4112,45 @@ function isCharacterBodyOrbitScope(changes){
  }catch{return false}
 }
 
+// PR778 — exact Worker/Player bulletin release recovery. Only the immutable
+// public-notice ledger, its focused CI contract, tests and release notes may
+// change. Native/Runtime, role rules, main game assets and 3D remain untouched.
+function isPR778BulletinRecoveryScope(changes){
+  const expected=new Map([
+    ['src/gmww-online-chat-policy.js','M'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['tests/player-village-announcement-ticker-20261103.test.mjs','M'],
+    ['docs/releases/GMWW-PR778-BULLETIN-WORKER-20261103.md','A']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size)return false;
+  const seen=new Set();
+  for(const {path,status} of changes){
+    if(seen.has(path)||expected.get(path)!==status)return false;
+    seen.add(path);
+  }
+  try{
+    const policy=fs.readFileSync('src/gmww-online-chat-policy.js','utf8');
+    const checks=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+    const ticker=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
+    const worker=fs.readFileSync('src/index.js','utf8');
+    const tests=fs.readFileSync('tests/player-village-announcement-ticker-20261103.test.mjs','utf8');
+    return policy.includes('if(!byId.has(row.id))byId.set(row.id,')&&
+      policy.includes("name+' đã bị Sát Thủ chọn.")&&
+      policy.includes("mergePublicChatNotices")&&
+      worker.includes('villagePublicBulletin:')&&
+      ticker.includes('gmwwVillageTickerUpdate(result.notices,result.noticeCycleNight)')&&
+      ticker.includes('🎬:')&&
+      checks.includes("steps.scope.outputs.mode == 'pr778-bulletin-worker-recovery'")&&
+      checks.includes('tests/assassin-player-public-privacy-20261103.test.mjs')&&
+      tests.includes('first public announcement remains immutable')&&
+      fs.existsSync('docs/releases/GMWW-PR778-BULLETIN-WORKER-20261103.md');
+  }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isPR778BulletinRecoveryScope(changes))return 'pr778-bulletin-worker-recovery';
   if(isCharacterBodyOrbitScope(changes))return 'character-body-orbit';
   if(isV3294PostmergeCiScope(changes))return 'gmww-chat-live-v3294';
   if(isAutoGmAlarmV3293Scope(changes))return 'auto-gm-alarm-v3293';
