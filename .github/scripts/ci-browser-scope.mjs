@@ -3920,7 +3920,44 @@ function isV3293EarlyGateCiFixScope(changes){
    by.get('docs/releases/GMWW-V3.293-CI-EARLY-GATE-20261103.md')?.after?.includes('Không thay đổi mã game, Worker, Player Web hoặc Runtime');
 }
 
+
+// PR766 Auto GM alarm: exact 5-file Server-only hotfix. Lock the full Worker
+// blob on both sides; an unreviewed change to ANY executable code falls back
+// to the complete CI suite.
+function isAutoGmAlarmV3293Scope(changes){
+  const expected=new Map([
+    ['src/index.js','M'],
+    ['tests/gmww-auto-gm-alarm-recovery.test.mjs','A'],
+    ['docs/releases/GMWW-V3293-AUTO-GM-HOTFIX-20261103.md','A'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+  try{
+    const by=new Map(changes.map(x=>[x.path,x]));
+    const row=by.get('src/index.js');
+    const blob=source=>createHash('sha1').update('blob '+Buffer.byteLength(source)+'\x00').update(source).digest('hex');
+    if(typeof row.before!=='string'||typeof row.after!=='string'||
+      blob(row.before)!=='d713b4f06dd84111ee6b22027fd9231afbd01a5c'||
+      blob(row.after)!=='4973de258199ae445eaa37dd9a7504d3ab16deff')return false;
+    const test=by.get('tests/gmww-auto-gm-alarm-recovery.test.mjs')?.after||'';
+    const notes=by.get('docs/releases/GMWW-V3293-AUTO-GM-HOTFIX-20261103.md')?.after||'';
+    const policy=by.get('.github/scripts/ci-browser-scope.mjs')?.after||'';
+    const wf=by.get('.github/workflows/check-player-web.yml')?.after||'';
+    return test.includes('advances an expired role even when the stored deadline is missing')&&
+      test.includes('Auto GM OFF disables the turn scheduler')&&
+      notes.includes('Rollback')&&
+      policy.includes('function isAutoGmAlarmV3293Scope(changes)')&&
+      wf.includes("steps.scope.outputs.mode == 'auto-gm-alarm-v3293'")&&
+      wf.includes('node --test')&&
+      wf.includes('tests/gmww-auto-gm-alarm-recovery.test.mjs')&&
+      wf.includes('npm run check');
+  }catch{return false}
+}
 function classifyBrowserScope(changes){
+  if(isAutoGmAlarmV3293Scope(changes))return 'auto-gm-alarm-v3293';
   if(isV3293EarlyGateCiFixScope(changes))return 'online-v3293-postmerge-ci';
   if(isV3293PostmergeCiScope(changes))return 'online-v3293-postmerge-ci';
   if(isOnlineTurnV3293Scope(changes))return 'online-turn-v3293';
@@ -4310,6 +4347,23 @@ function isV3289PR738VersionOnlyScope(base){
   return true;
 }
 function detect(){
+  // PR766 Worker-only hotfix: exact source SHA-1 blobs + 5 allowed files.
+  // Works for both PR validation and the first-parent main postmerge diff.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{
+          const [status,path]=row.split('\t');
+          return{status,path,before:status==='M'?git('show',base+':'+path):null,
+            after:status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isAutoGmAlarmV3293Scope(changes))
+          return{mode:'auto-gm-alarm-v3293',reason:'PR766 exact Worker alarm source blobs; 5 paths, focused security and DO regressions'};
+      }
+    }catch{} // Unknown or unverified diff -> full CI.
+  }
   // V3.293 verified recovery gets priority over the historical main full-suite
   // short circuit. Every candidate proves immutability of all runtime/game paths.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
