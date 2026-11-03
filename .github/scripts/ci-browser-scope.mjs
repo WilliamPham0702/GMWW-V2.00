@@ -4063,7 +4063,57 @@ function isCharacterBodyOrbitScope(changes){
  }catch{return false}
 }
 
+// PR765_WORKER_POSTMERGE: exact Worker-only visual refinement with full origin checks.
+function isPR765OrbitWorkerReleaseScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['src/gmww-members-live.js','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','M'],
+  ['docs/releases/GMWW-PR765-WORKER-20261103.md','A']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(c=>c.path)).size!==expected.size||
+    changes.some(c=>expected.get(c.path)!==c.status))return false;
+ try{
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.294.0')return false;
+  const rows=new Map(changes.map(c=>[c.path,c]));
+  const p=rows.get('src/player-web-src/35-online-chat.part');
+  const b=rows.get('src/gmww-members-live.js');
+  const test=rows.get('tests/gmww-character-orbit-visuals-20261103.test.mjs');
+  const policy=rows.get('.github/scripts/ci-browser-scope.mjs');
+  const doc=rows.get('docs/releases/GMWW-PR765-WORKER-20261103.md');
+  const mark='@keyframes gmww-player-character-orbit{';
+  const pos=p.before?.indexOf(mark);
+  if(!(pos>=0))return false;
+  const finish=p.before.indexOf('}}',pos)+2;
+  if(finish<=pos)return false;
+  let orbit=p.before.slice(pos,finish);
+  for(const [oldFrame,newFrame] of [
+   ['translate(-38px,0)','translate3d(-38px,0,0)'],
+   ['translate(0,-12px)','translate3d(0,-12px,0)'],
+   ['translate(38px,0)','translate3d(38px,0,0)'],
+   ['translate(0,12px)','translate3d(0,12px,0)']]){
+     if(orbit.split(oldFrame).length!==2)return false;
+     orbit=orbit.replace(oldFrame,newFrame);
+  }
+  const expectedPlayer=p.before.slice(0,pos)+orbit+p.before.slice(finish);
+  if(p.after!==expectedPlayer||!p.after.includes('portrait.appendChild(orbit)'))return false;
+  const prefix='export const gmwwMembersLiveScript = ';
+  if(!b.before?.startsWith(prefix)||!b.after?.startsWith(prefix))return false;
+  const body=src=>JSON.parse(src.slice(prefix.length).trim().replace(/;$/,''));
+  const prev=body(b.before),next=body(b.after);
+  if(prev.split(p.before).length!==2||next!==prev.replace(p.before,p.after))return false;
+  return test?.after?.includes('PR765 Safari character orbit uses compositor-safe transforms')&&
+    policy?.after?.includes('PR765_WORKER_POSTMERGE')&&
+    doc?.after?.includes('Rollback')&&
+    doc.after.includes('Không thay đổi IPA');
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isPR765OrbitWorkerReleaseScope(changes))return 'character-body-orbit';
   if(isCharacterBodyOrbitScope(changes))return 'character-body-orbit';
   if(isV3294PostmergeCiScope(changes))return 'gmww-chat-live-v3294';
   if(isAutoGmAlarmV3293Scope(changes))return 'auto-gm-alarm-v3293';
@@ -4508,6 +4558,23 @@ export function publicInteractionReceipt(row){
     notes.includes('Rollback');
 }
 function detect(){
+  // PR765_WORKER_POSTMERGE: validate same six files on PR and first-parent main.
+  // This runs BEFORE the historical main-only full-suite fallback.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[0-9a-f]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{
+          const [status,path]=row.split('\t');
+          return{status,path,before:status==='M'?git('show',base+':'+path):null,
+            after:status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isPR765OrbitWorkerReleaseScope(changes))
+          return {mode:'character-body-orbit',reason:'PR765 verified Worker-only Safari refinement, unchanged GM Runtime and privacy'};
+      }
+    }catch{} // Unknown commit/diff fails closed to full required tests.
+  }
   // Verify the Worker-only privacy patch byte-for-byte against its base.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{

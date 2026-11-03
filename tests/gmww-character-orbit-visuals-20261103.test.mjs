@@ -29,3 +29,12 @@ test('Compiled Player Web contains the exact updated visual source',()=>{
   const body=JSON.parse(bundled.slice(prefix.length).trim().replace(/;$/,''));
   assert.ok(body.includes(player),'compiled Player Web must include unmodified authored source');
 });
+
+test('PR765 Safari character orbit uses compositor-safe transforms',()=>{
+ const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ const css=player.slice(player.indexOf('@keyframes gmww-player-character-orbit{'));
+ for(const value of ['translate3d(-38px,0,0)','translate3d(0,-12px,0)',
+                     'translate3d(38px,0,0)','translate3d(0,12px,0)'])
+  assert.ok(css.includes(value),value);
+ assert.match(player,/portrait\.appendChild\(orbit\)/);
+});

@@ -1409,3 +1409,37 @@ test('PR765 visual-only body orbit scope rejects unrelated files',()=>{
  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
  assert.equal(classifyBrowserScope(changes.map((x,i)=>i===2?{...x,status:'D'}:x)),'full');
 });
+
+test('PR765 Worker-only postmerge scope validates six files and rejects extras',()=>{
+ const rows=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['src/gmww-members-live.js','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','M'],
+  ['docs/releases/GMWW-PR765-WORKER-20261103.md','A']
+ ];
+ const pAfter=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ let pBefore=pAfter;
+ for(const [now,old] of [
+  ['translate3d(-38px,0,0)','translate(-38px,0)'],
+  ['translate3d(0,-12px,0)','translate(0,-12px)'],
+  ['translate3d(38px,0,0)','translate(38px,0)'],
+  ['translate3d(0,12px,0)','translate(0,12px)']
+ ])pBefore=pBefore.replace(now,old);
+ const compiledAfter=readFileSync('src/gmww-members-live.js','utf8');
+ const prefix='export const gmwwMembersLiveScript = ';
+ const body=JSON.parse(compiledAfter.slice(prefix.length).trim().replace(/;$/,''));
+ const compiledBefore=prefix+JSON.stringify(body.replace(pAfter,pBefore))+';\n';
+ const changes=rows.map(([path,status])=>({
+   path,status,
+   after:readFileSync(path,'utf8'),
+   before:path==='src/player-web-src/35-online-chat.part'?pBefore:
+     path==='src/gmww-members-live.js'?compiledBefore:'previous reviewed content'
+ }));
+ assert.equal(classifyBrowserScope(changes),'character-body-orbit');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'unsafe'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'server-game/current/style.css',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope(changes.map((v,i)=>i===1?{...v,status:'D'}:v)),'full');
+});
