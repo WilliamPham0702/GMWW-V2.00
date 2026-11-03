@@ -4247,7 +4247,43 @@ function isPR778PostmergeWorkerScope(changes){
  }catch{return false}
 }
 
+// PR778 main-push execution order fix. Exact six-file Worker-only release
+// candidate: any out-of-scope/native/Runtime path forces the historical full CI.
+function isPR778FinalMainScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['src/gmww-members-live.js','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/player-village-announcement-ticker-20261103.test.mjs','M'],
+  ['docs/releases/GMWW-PR778-FINAL-WORKER-20261103.md','A']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size)return false;
+ const seen=new Set();
+ for(const {path,status} of changes){
+  if(seen.has(path)||expected.get(path)!==status)return false;
+  seen.add(path);
+ }
+ try{
+  const player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
+  const bundle=fs.readFileSync('src/gmww-members-live.js','utf8');
+  const policy=fs.readFileSync('src/gmww-online-chat-policy.js','utf8');
+  const ci=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  const checks=fs.readFileSync('tests/ci-browser-scope.test.mjs','utf8');
+  return player.includes("n.text.trim().length>0")&&
+   player.includes('gmwwVillageTickerUpdate(result.notices,result.noticeCycleNight)')&&
+   player.includes('🎬:')&&
+   bundle.includes('n.text.trim().length>0')&&
+   policy.includes('if(!byId.has(row.id))byId.set(row.id,')&&
+   !policy.includes('localeCompare(b.id)).slice(-150)')&&
+   ci.includes("steps.scope.outputs.mode == 'pr778-postmerge-worker'")&&
+   checks.includes('main-push classifier executes before historical full-suite fallback')&&
+   fs.existsSync('docs/releases/GMWW-PR778-FINAL-WORKER-20261103.md');
+ }catch{return false;}
+}
+
 function classifyBrowserScope(changes){
+  if(isPR778FinalMainScope(changes))return 'pr778-postmerge-worker';
   if(isPR778PostmergeWorkerScope(changes))return 'pr778-postmerge-worker';
   if(isPR778BulletinRecoveryScope(changes))return 'pr778-bulletin-worker-recovery';
   if(isV3295WolfOrbitScope(changes))return 'wolf-orbit-v3295';
@@ -4695,6 +4731,25 @@ export function publicInteractionReceipt(row){
     notes.includes('Rollback');
 }
 function detect(){
+  // FIRST: verify PR778 main/PR Worker-only release, before historic push FULL
+  // short circuit. This is an exact-files check, not a general CI bypass.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const push=process.env.GMWW_CI_EVENT==='push';
+      const base=push?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        if(push){
+          if(process.env.GITHUB_REF!=='refs/heads/main')throw Error('not main');
+          git('merge-base','--is-ancestor','e19c864b6c3726ea31c09e4776ebdd21732a92f9','HEAD');
+        }
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{const [status,path]=row.split('\t');return {status,path}});
+        if(isPR778FinalMainScope(changes))
+          return{mode:'pr778-postmerge-worker',reason:'Exact PR778 six-file postmerge Worker/Player Web release, prior to historical FULL branch'};
+      }
+    }catch{} // Any failure must continue to full required CI.
+  }
+
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
