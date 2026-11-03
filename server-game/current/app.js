@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.294';
+const VERSION='3.295';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -6941,9 +6941,22 @@ function battleMarkPlayers(){
       countMark.title='Được đề cử '+count+' phiếu';
       if(labels.firstElementChild!==countMark)labels.prepend(countMark);
     }else countMark?.remove();
+    // Reuse the exact 🐺 status orbit DOM + 6s gmwwSvVerticalOrbit animation (only icon changes).
     let orb=avatar?.querySelector(':scope>.battle-orbit');
-    if(avatar&&(actorOn||targetOn)){const kind=actorOn?'actor':'target',count=kind==='actor'?6:5;if(!orb){orb=document.createElement('span');orb.className='battle-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}if(orb.dataset.kind!==kind){orb.dataset.kind=kind;orb.replaceChildren(...Array.from({length:count},(_,k)=>{const i=document.createElement('i');i.style.setProperty('--b',(k*360/count).toFixed(1)+'deg');return i}))}}
-    else orb?.remove();
+    if(avatar&&(actorOn||targetOn)){
+      const kind=actorOn?'actor':'target',count=6;
+      if(!orb){orb=document.createElement('span');orb.className='battle-orbit gmww-sv-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}
+      else if(!orb.classList.contains('gmww-sv-orbit'))orb.classList.add('gmww-sv-orbit');
+      if(orb.dataset.kind!==kind||orb.childElementCount!==count){
+        orb.dataset.kind=kind;
+        orb.replaceChildren(...Array.from({length:count},(_,k)=>{
+          const item=document.createElement('span');item.className='gmww-sv-orbit-item';
+          item.style.setProperty('--orbit-delay',(-6*k/count).toFixed(4)+'s');
+          const icon=document.createElement('span');icon.textContent=kind==='actor'?'🫧':'🐦‍🔥';
+          item.appendChild(icon);return item;
+        }));
+      }
+    }else orb?.remove();
     for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.remove('battle-impact-'+type);
   });
   gmwwFireWalkSync(ring,actors,motionOn&&!battleState.gmwwWalkExpired);

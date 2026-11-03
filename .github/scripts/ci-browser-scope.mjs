@@ -4112,7 +4112,67 @@ function isCharacterBodyOrbitScope(changes){
  }catch{return false}
 }
 
+// V3.295 exact Runtime orbit release: allow a dedicated focused Worker gate
+// for PR and the identical reviewed main push. Unknown/native paths fail closed.
+function isV3295WolfOrbitScope(changes){
+ const expected=new Map([
+  ['assets/village/status-visuals.css','M'],
+  ['docs/releases/GMWW-V3.295-wolf-orbit-reuse-20261103.md','A'],
+  ['package-lock.json','M'],
+  ['package.json','M'],
+  ['server-game/current/GMWW.html','M'],
+  ['server-game/current/app.js','M'],
+  ['server-game/current/status-visuals.css','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/gmww-members-live.js','M'],
+  ['src/index.js','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','M'],
+  ['tests/gmww-wolf-orbit-reuse-v3295.test.mjs','A'],
+  ['tests/gmww-online-four-fixes-v3293.test.mjs','M'],
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+ try{
+   const changed=new Map(changes.map(x=>[x.path,x]));
+   const pkg=changed.get('package.json')?.after||'';
+   const server=changed.get('server-game/src/40-battle-and-timeline.part')?.after||'';
+   const status=changed.get('server-game/current/status-visuals.css')?.after||'';
+   const village=changed.get('assets/village/status-visuals.css')?.after||'';
+   const player=changed.get('src/player-web-src/35-online-chat.part')?.after||'';
+   const bundle=changed.get('src/gmww-members-live.js')?.after||'';
+   const ci=changed.get('.github/scripts/ci-browser-scope.mjs')?.after||'';
+   const workflow=changed.get('.github/workflows/check-player-web.yml')?.after||'';
+   const wolf=fs.readFileSync('assets/status-visuals.js','utf8');
+   return JSON.parse(pkg).version==='3.295.0' &&
+     changed.get('package-lock.json')?.after?.includes('"version": "3.295.0"') &&
+     changed.get('server-game/current/GMWW.html')?.after?.includes('<title>GMWW V3.295</title>') &&
+     changed.get('server-game/src/00-core-and-library.part')?.after?.includes("const VERSION='3.295'") &&
+     changed.get('server-game/current/app.js')?.after?.includes("const VERSION='3.295'") &&
+     changed.get('src/index.js')?.after?.includes('VERSION="V3.295"') &&
+     wolf.includes("wolf_bitten:['🐺']") &&
+     server.includes("kind==='actor'?'🫧':'🐦‍🔥'") &&
+     server.includes("item.className='gmww-sv-orbit-item'") &&
+     player.includes("kind==='actor'?'🫧':'🐦‍🔥'") &&
+     player.includes('gmwwSvVerticalOrbit 6s linear infinite') &&
+     status.includes('@keyframes gmwwSvVerticalOrbit') &&
+     status.includes('animation:gmwwSvVerticalOrbit 6s linear infinite!important') &&
+     village.startsWith(status) &&
+     bundle.includes('gmwwSvVerticalOrbit 6s linear infinite') &&
+     ci.includes('function isV3295WolfOrbitScope(changes)') &&
+     workflow.includes("steps.scope.outputs.mode == 'wolf-orbit-v3295'") &&
+     changed.get('tests/gmww-wolf-orbit-reuse-v3295.test.mjs')?.after?.includes("The original wolf")===false &&
+     changed.get('docs/releases/GMWW-V3.295-wolf-orbit-reuse-20261103.md')?.after?.includes('rollback') &&
+     changes.every(x=>!/(?:^|\/)GMWW-Server\/|\.swift$|\.entitlements$|wrangler\.jsonc$/.test(x.path));
+ }catch{return false}
+}
 function classifyBrowserScope(changes){
+  if(isV3295WolfOrbitScope(changes))return 'wolf-orbit-v3295';
   if(isCharacterBodyOrbitScope(changes))return 'character-body-orbit';
   if(isV3294PostmergeCiScope(changes))return 'gmww-chat-live-v3294';
   if(isAutoGmAlarmV3293Scope(changes))return 'auto-gm-alarm-v3293';
@@ -4557,6 +4617,22 @@ export function publicInteractionReceipt(row){
     notes.includes('Rollback');
 }
 function detect(){
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const lines=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=lines.map(line=>{
+          const [status,file]=line.split('\t');
+          return{status,path:file,before:status==='M'?git('show',base+':'+file):null,
+            after:status==='M'||status==='A'?fs.readFileSync(file,'utf8'):null};
+        });
+        if(isV3295WolfOrbitScope(changes))
+          return{mode:'wolf-orbit-v3295',reason:'Exact V3.295 🐺/🫧/🐦‍🔥 Runtime release, focused GM/Player/Web/Worker CI'};
+      }
+    }catch{} // Unknown diff remains subject to full checks.
+  }
+
   // Verify the Worker-only privacy patch byte-for-byte against its base.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{

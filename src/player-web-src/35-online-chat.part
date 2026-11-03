@@ -691,10 +691,11 @@ function gmwwOnlineTurnEffects(offers){
     '@keyframes gmww-player-turn-pulse{50%{filter:drop-shadow(0 0 15px #f5cf66) brightness(1.14)}}'+
     '@keyframes gmww-player-target-pulse{50%{filter:drop-shadow(0 0 15px #67e9ca) brightness(1.16)}}'+
     "#players .player .portrait{position:relative!important;overflow:visible!important}"+
-    "#players .player .portrait>.gmww-online-orbit,#players .player>.gmww-online-orbit{position:absolute;left:50%;top:50%;width:0;height:0;overflow:visible;pointer-events:none;z-index:20}"+
-    "#players .player .portrait>.gmww-online-orbit i,#players .player>.gmww-online-orbit i{position:absolute;top:0;left:0;width:22px;height:22px;font:18px/22px system-ui;text-align:center;font-style:normal;filter:drop-shadow(0 2px 4px #000a);animation:gmww-player-character-orbit 3.2s linear infinite;animation-delay:var(--orbit-delay,0s)}"+
-    "@keyframes gmww-player-character-orbit{0%,100%{transform:translate(-50%,-50%) translate(-38px,0) scale(.78);opacity:.62}25%{transform:translate(-50%,-50%) translate(0,-12px) scale(.65);opacity:.42}50%{transform:translate(-50%,-50%) translate(38px,0) scale(.78);opacity:.62}75%{transform:translate(-50%,-50%) translate(0,12px) scale(1.24);opacity:1}}"+
-    "@media(prefers-reduced-motion:reduce){#players .player.is-battle-actor .portrait,#players .player.is-battle-target .portrait,#players .player .gmww-online-orbit i{animation:none!important}}";
+    "#players .player .portrait>.gmww-online-orbit.gmww-sv-orbit{position:absolute;inset:0;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:20;display:block;background:transparent;border:0;border-radius:0;padding:0;margin:0;--orbit-radius:30px;--orbit-height:9px;--orbit-icon-size:12px}"+
+    "#players .player .portrait>.gmww-online-orbit.gmww-sv-orbit>.gmww-sv-orbit-item{position:absolute;left:50%;top:50%;width:0;height:0;display:block;padding:0;margin:0;border:0;background:transparent;animation:gmwwSvVerticalOrbit 6s linear infinite;animation-delay:var(--orbit-delay,0s)}"+
+    "#players .player .portrait>.gmww-online-orbit.gmww-sv-orbit>.gmww-sv-orbit-item>span{display:block;position:static;width:auto;height:auto;padding:0;margin:0;border:0;border-radius:0;background:transparent;color:inherit;font:normal var(--orbit-icon-size,12px)/1 system-ui;white-space:nowrap;transform:translate(-50%,-50%);text-shadow:0 0 5px rgba(120,220,255,.55)}"+
+    "@keyframes gmwwSvVerticalOrbit{0%,100%{transform:translate(var(--orbit-radius),0)}12.5%{transform:translate(calc(var(--orbit-radius)*.707),calc(var(--orbit-height)*-.707))}25%{transform:translate(0,calc(-1*var(--orbit-height)))}37.5%{transform:translate(calc(var(--orbit-radius)*-.707),calc(var(--orbit-height)*-.707))}50%{transform:translate(calc(-1*var(--orbit-radius)),0)}62.5%{transform:translate(calc(var(--orbit-radius)*-.707),calc(var(--orbit-height)*.707))}75%{transform:translate(0,var(--orbit-height))}87.5%{transform:translate(calc(var(--orbit-radius)*.707),calc(var(--orbit-height)*.707))}}"+
+    "@media(prefers-reduced-motion:reduce){#players .player.is-battle-actor .portrait,#players .player.is-battle-target .portrait{animation:none!important}#players .player .portrait>.gmww-online-orbit.gmww-sv-orbit>.gmww-sv-orbit-item{animation-duration:24s!important}}";
    doc.head.appendChild(css);
   }
   for(const node of doc.querySelectorAll('#players .player[data-player-id]')){
@@ -705,15 +706,21 @@ function gmwwOnlineTurnEffects(offers){
    const portrait=node.querySelector(':scope>.portrait.game-character')||node.querySelector(':scope>.portrait')||node;
    let orbit=node.querySelector('.gmww-online-orbit');
    if(actor||target){
-     const kind=actor?'actor':'target',count=kind==='actor'?6:5;
-     if(!orbit){orbit=doc.createElement('span');orbit.className='gmww-online-orbit';orbit.setAttribute('aria-hidden','true');portrait.appendChild(orbit)}
-     else if(orbit.parentElement!==portrait)portrait.appendChild(orbit);
+     const kind=actor?'actor':'target',count=6;
+     if(!orbit){
+       orbit=doc.createElement('span');orbit.className='gmww-online-orbit gmww-sv-orbit';
+       orbit.setAttribute('aria-hidden','true');portrait.appendChild(orbit);
+     }else{
+       if(orbit.parentElement!==portrait)portrait.appendChild(orbit);
+       if(!orbit.classList.contains('gmww-sv-orbit'))orbit.classList.add('gmww-sv-orbit');
+     }
      if(orbit.dataset.kind!==kind||orbit.childElementCount!==count){
        orbit.dataset.kind=kind;orbit.replaceChildren();
        for(let k=0;k<count;k++){
-         const star=doc.createElement('i');star.textContent=kind==='actor'?'⭐':'🔥';
-         star.style.setProperty('--b',(k*360/count)+'deg');
-         star.style.setProperty('--orbit-delay',(-3.2*k/count).toFixed(3)+'s');orbit.appendChild(star);
+         const item=doc.createElement('span');item.className='gmww-sv-orbit-item';
+         item.style.setProperty('--orbit-delay',(-6*k/count).toFixed(4)+'s');
+         const icon=doc.createElement('span');icon.textContent=kind==='actor'?'🫧':'🐦‍🔥';
+         item.appendChild(icon);orbit.appendChild(item);
        }
      }
    }else orbit?.remove();
