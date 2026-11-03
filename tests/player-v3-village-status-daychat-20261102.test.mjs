@@ -31,7 +31,7 @@ test('Village announcements are authorized, named and not revealed during night'
  const notices=publicChatNotices(meta,players,rows);
  assert.equal(notices.length,3);
  for(const value of ['Đêm qua A Dũng đã chết.','Quyên đã bị đuổi khỏi làng.',
-   'Nô đã bị Sát Thủ đánh dấu.'])assert.ok(notices.some(n=>n.text===value),value);
+   'Nô đã bị đánh dấu.'])assert.ok(notices.some(n=>n.text===value),value);
  assert.ok(notices.every(n=>n.system&&n.senderName==='Thông cáo Làng'));
  assert.equal(publicChatNotices({...meta,cyclePhase:'night'},players,rows).length,0);
  assert.equal(publicChatNotices({...meta,phase:'lobby'},players,rows).length,0);
@@ -42,12 +42,22 @@ test('Assassin mark publishes a single verified survival/death notice after a re
  const done={...rows[2],status:'responded',effectActive:false,respondedAt:when,response:'👍'};
  const success=publicChatNotices(meta,players,[done]);
  assert.equal(success.length,1);
- assert.equal(success[0].text,'Chúc mừng Nô đã chọn cùng dấu với Sát Thủ An, tiếp tục sống.');
+ assert.equal(success[0].text,'Chúc mừng Nô đã lựa chọn đúng và tiếp tục sống.');
  const death={id:'dead-assassin',type:'dead',loginId:'c',matchId:'M',source:'assassin',
    effectActive:true,createdAt:when};
  const failed=publicChatNotices(meta,players,[{...done,response:'👎'},death]);
  assert.equal(failed.length,1);
- assert.equal(failed[0].text,'Chia buồn Nô đã chọn sai dấu với Sát Thủ An, đã chết.');
+ assert.equal(failed[0].text,'Chia buồn Nô đã lựa chọn sai và đã chết.');
+ // Secret actor identity, role and GM's selected sign must never appear in
+ // Player Web notices, their IDs or the public API payload.
+ for(const notices of [success,failed]){
+  const publicPayload=JSON.stringify(notices);
+  assert.doesNotMatch(publicPayload,/Sát Thủ|role_assassin|actorId|gmChoice|Sát Thủ An/);
+  assert.ok(!publicPayload.includes('An'),'The actor name is secret');
+  assert.ok(notices.every(n=>n.system&&n.senderName==='Thông cáo Làng'));
+ }
+ assert.equal(publicChatNotices(meta,players,[{...done,status:'pending',effectActive:true}])[0].text,
+   'Nô đã bị đánh dấu.');
  assert.deepEqual(publicChatNotices(meta,players,[{...done,gmChoice:''}]),[]);
 });
 test('Player Web honors confirmed public labels and red authoritative notices',()=>{
