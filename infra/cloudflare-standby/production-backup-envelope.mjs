@@ -10,7 +10,7 @@ const SHA40 = /^[a-f0-9]{40}$/;
 const SHA64 = /^[a-f0-9]{64}$/;
 const IDENT = /^[a-f0-9]{32}$/;
 const META_FIELDS = ['backupId','objectDigest','sourceSha','revision','index','count','quiescent','connectedSockets'];
-const KEYS = ['schema','metadata','nonce','ciphertext','plainSha256'];
+const KEYS = ['schema','metadata','nonce','ciphertext','cipherSha256'];
 const MAX_PLAINTEXT = 65536;
 
 function exactKeys(obj, keys) {
@@ -70,18 +70,20 @@ export async function sealBackupChunk(plaintext, metadata, archiveKey) {
   return {
     schema:SCHEMA,metadata:meta,nonce:toBase64url(nonce),
     ciphertext:toBase64url(ciphertext),
-    plainSha256:toHex(await crypto.subtle.digest('SHA-256',plaintext))
+    cipherSha256:toHex(await crypto.subtle.digest('SHA-256',ciphertext))
   };
 }
 export async function openBackupChunk(envelope, archiveKey) {
   if(!exactKeys(envelope,KEYS)||envelope.schema!==SCHEMA||
-     !SHA64.test(envelope.plainSha256))throw Error('BACKUP_ENVELOPE_INVALID');
+     !SHA64.test(envelope.cipherSha256))throw Error('BACKUP_ENVELOPE_INVALID');
   const meta=normalizeBackupMeta(envelope.metadata);
   const nonce=fromBase64url(envelope.nonce,16);
   if(nonce.length!==12)throw Error('BACKUP_NONCE_INVALID');
   const ciphertext=fromBase64url(envelope.ciphertext,88000);
   if(ciphertext.length<17||ciphertext.length>MAX_PLAINTEXT+16)
     throw Error('BACKUP_CIPHERTEXT_SIZE_INVALID');
+  if(toHex(await crypto.subtle.digest('SHA-256',ciphertext))!==envelope.cipherSha256)
+    throw Error('BACKUP_CHECKSUM_MISMATCH');
   const key=await importArchiveKey(archiveKey,'decrypt');
   let plaintext;
   try {
@@ -91,8 +93,6 @@ export async function openBackupChunk(envelope, archiveKey) {
   } catch {
     throw Error('BACKUP_AUTHENTICATION_FAILED');
   }
-  if(toHex(await crypto.subtle.digest('SHA-256',plaintext))!==envelope.plainSha256)
-    throw Error('BACKUP_CHECKSUM_MISMATCH');
   return {metadata:meta,plaintext};
 }
 export const BACKUP_ENVELOPE_SCHEMA=SCHEMA;
