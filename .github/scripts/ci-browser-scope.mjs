@@ -3920,7 +3920,49 @@ function isV3293EarlyGateCiFixScope(changes){
    by.get('docs/releases/GMWW-V3.293-CI-EARLY-GATE-20261103.md')?.after?.includes('Không thay đổi mã game, Worker, Player Web hoặc Runtime');
 }
 
+// PR765: exact seven-file character-orbit visual fix; no gameplay or schema edits.
+// Unexpected/native changes fail closed to the full suite.
+function isCharacterBodyOrbitScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['server-game/current/style.css','M'],
+  ['src/gmww-members-live.js','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','A'],
+  ['tests/ci-browser-scope.test.mjs','M']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+ try{
+  const by=new Map(changes.map(x=>[x.path,x]));
+  const css=by.get('server-game/current/style.css');
+  const player=by.get('src/player-web-src/35-online-chat.part');
+  const bundle=by.get('src/gmww-members-live.js');
+  const workflow=by.get('.github/workflows/check-player-web.yml');
+  const ci=by.get('.github/scripts/ci-browser-scope.mjs');
+  const tst=by.get('tests/gmww-character-orbit-visuals-20261103.test.mjs');
+  return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.293.0'&&
+    typeof css?.before==='string'&&css.before.length>100000&&
+    css.after?.startsWith(css.before)&&
+    css.after.slice(css.before.length).includes('@keyframes gmwwCharacterBodyOrbit')&&
+    css.after.includes('content:"⭐"')&&
+    css.after.includes('content:"🔥"')&&
+    player.before?.includes("'#players .player>.gmww-online-orbit{")&&
+    player.after?.includes('portrait.appendChild(orbit)')&&
+    player.after.includes('@keyframes gmww-player-character-orbit')&&
+    player.after.includes("star.textContent=kind==='actor'?'⭐':'🔥'")&&
+    bundle.after?.includes('gmww-player-character-orbit')&&
+    bundle.after.includes('portrait.appendChild(orbit)')&&
+    workflow.after?.includes("steps.scope.outputs.mode == 'character-body-orbit'")&&
+    ci.after?.includes('function isCharacterBodyOrbitScope(changes)')&&
+    tst.after?.includes('GM ⭐/🔥 orbit is centered on the character avatar');
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isCharacterBodyOrbitScope(changes))return 'character-body-orbit';
   if(isV3293EarlyGateCiFixScope(changes))return 'online-v3293-postmerge-ci';
   if(isV3293PostmergeCiScope(changes))return 'online-v3293-postmerge-ci';
   if(isOnlineTurnV3293Scope(changes))return 'online-turn-v3293';
