@@ -15,13 +15,14 @@ test('AES-256-GCM synthetic fixture roundtrip preserves bytes and metadata',asyn
  const archive=await sealBackupChunk(fixture,meta,key);
  assert.equal(archive.schema,BACKUP_ENVELOPE_SCHEMA);
  assert.equal(archive.ciphertext.includes('Synthetic'),false);
+ assert.equal(Object.hasOwn(archive,'plainSha256'),false,'Never expose low-entropy plaintext hashes');
  assert.deepEqual((await openBackupChunk(archive,key)).plaintext,fixture);
  assert.deepEqual((await openBackupChunk(archive,key)).metadata,meta);
 });
 test('wrong keys, tampered ciphertext, metadata, nonce and checksums fail closed',async()=>{
  const a=await sealBackupChunk(fixture,meta,key);
  await assert.rejects(openBackupChunk(a,wrong));
- await assert.rejects(openBackupChunk({...a,plainSha256:'0'.repeat(64)},key),/BACKUP_CHECKSUM_MISMATCH/);
+ await assert.rejects(openBackupChunk({...a,cipherSha256:'0'.repeat(64)},key),/BACKUP_CHECKSUM_MISMATCH/);
  await assert.rejects(openBackupChunk({...a,metadata:{...meta,revision:8}},key),/BACKUP_AUTHENTICATION_FAILED/);
  const tampered=(a.ciphertext[0]==='A'?'B':'A')+a.ciphertext.slice(1);
  await assert.rejects(openBackupChunk({...a,ciphertext:tampered},key));
