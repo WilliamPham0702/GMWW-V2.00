@@ -14,23 +14,30 @@ const mark={id:'mark-1',type:'assassin_mark',matchId:'privacy-m1',loginId:'adung
   response:'👎',effectActive:false,night:1,cycleKey:'night-1',
   createdAt:'2026-11-03T08:00:00.000Z',respondedAt:'2026-11-03T09:00:00.000Z'};
 
-test('public bulletin still announces verified Assassin death but not actor or role',()=>{
+test('public bulletin keeps a mark and verified death without revealing the actor',()=>{
   const fatal={id:'fatal',type:'dead',matchId:mark.matchId,loginId:mark.loginId,
     actorId:mark.actorId,source:'assassin',actionId:mark.actionId,effectActive:true};
   const notices=publicChatNotices(meta,players,[mark,fatal]);
-  assert.equal(notices.length,1,'do not duplicate assassin death notice');
-  assert.equal(notices[0].text,'Chia buồn A Dũng đã lựa chọn sai và đã chết.');
+  assert.deepEqual(notices.map(x=>x.text),[
+    'A Dũng đã bị Sát Thủ chọn.',
+    'Chia buồn A Dũng đã lựa chọn sai và đã chết.'
+  ]);
+  assert.ok(notices[0].at<notices[1].at);
   assert.equal(notices[0].senderName,'Thông cáo Làng');
-  assert.doesNotMatch(JSON.stringify(notices),/Quyền|Sát Thủ|quyen|actorId|gmChoice|👍/);
+  assert.doesNotMatch(JSON.stringify(notices),/Quyền|quyen|actorId|gmChoice|👍|action_assassin_mark/);
   assert.deepEqual(publicChatNotices({...meta,cyclePhase:'night'},players,[mark,fatal]),[]);
 });
 
-test('pending mark and successful response disclose only public outcome',()=>{
+test('pending mark remains visible with subsequent successful response',()=>{
   const waiting=publicChatNotices(meta,players,[{...mark,status:'pending',effectActive:true}]);
-  assert.equal(waiting[0].text,'A Dũng đã bị đánh dấu.');
+  assert.deepEqual(waiting.map(x=>x.text),['A Dũng đã bị Sát Thủ chọn.']);
   const success=publicChatNotices(meta,players,[{...mark,response:'👍'}]);
-  assert.equal(success[0].text,'Chúc mừng A Dũng đã lựa chọn đúng và tiếp tục sống.');
-  assert.doesNotMatch(JSON.stringify([...waiting,...success]),/Quyền|Sát Thủ|quyen/);
+  assert.deepEqual(success.map(x=>x.text),[
+    'A Dũng đã bị Sát Thủ chọn.',
+    'Chúc mừng A Dũng đã lựa chọn đúng và tiếp tục sống.'
+  ]);
+  assert.equal(waiting[0].id,success[0].id,'first event is stable after status changes');
+  assert.doesNotMatch(JSON.stringify([...waiting,...success]),/Quyền|quyen|actorId|gmChoice/);
 });
 
 test('authenticated Player Web interaction hides actor, GM choice and secret metadata',()=>{

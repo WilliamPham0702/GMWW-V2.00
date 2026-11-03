@@ -31,34 +31,45 @@ test('Village announcements are authorized, named and not revealed during night'
  const notices=publicChatNotices(meta,players,rows);
  assert.equal(notices.length,3);
  for(const value of ['Đêm qua A Dũng đã chết.','Quyên đã bị đuổi khỏi làng.',
-   'Nô đã bị đánh dấu.'])assert.ok(notices.some(n=>n.text===value),value);
+   'Nô đã bị Sát Thủ chọn.'])assert.ok(notices.some(n=>n.text===value),value);
  assert.ok(notices.every(n=>n.system&&n.senderName==='Thông cáo Làng'));
  assert.equal(publicChatNotices({...meta,cyclePhase:'night'},players,rows).length,0);
  assert.equal(publicChatNotices({...meta,phase:'lobby'},players,rows).length,0);
  assert.ok(!JSON.stringify(notices).includes('hidden wolf target'));
  assert.ok(!JSON.stringify(notices).includes('gmChoice'));
 });
-test('Assassin mark publishes a single verified survival/death notice after a response',()=>{
- const done={...rows[2],status:'responded',effectActive:false,respondedAt:when,response:'👍'};
+test('Assassin mark remains in public village history before the verified outcome',()=>{
+ const done={...rows[2],status:'responded',effectActive:false,respondedAt:'2026-11-02T01:00:00.000Z',response:'👍'};
  const success=publicChatNotices(meta,players,[done]);
- assert.equal(success.length,1);
- assert.equal(success[0].text,'Chúc mừng Nô đã lựa chọn đúng và tiếp tục sống.');
+ assert.equal(success.length,2);
+ assert.deepEqual(success.map(n=>n.text),[
+   'Nô đã bị Sát Thủ chọn.',
+   'Chúc mừng Nô đã lựa chọn đúng và tiếp tục sống.'
+ ]);
  const death={id:'dead-assassin',type:'dead',loginId:'c',matchId:'M',source:'assassin',
-   effectActive:true,createdAt:when};
+   effectActive:true,createdAt:'2026-11-02T01:00:01.000Z'};
  const failed=publicChatNotices(meta,players,[{...done,response:'👎'},death]);
- assert.equal(failed.length,1);
- assert.equal(failed[0].text,'Chia buồn Nô đã lựa chọn sai và đã chết.');
- // Secret actor identity, role and GM's selected sign must never appear in
- // Player Web notices, their IDs or the public API payload.
+ assert.equal(failed.length,2,'the fatal interaction must not duplicate the outcome');
+ assert.deepEqual(failed.map(n=>n.text),[
+   'Nô đã bị Sát Thủ chọn.',
+   'Chia buồn Nô đã lựa chọn sai và đã chết.'
+ ]);
+ assert.ok(failed[0].at<failed[1].at,'mark precedes the answered outcome');
+ assert.notEqual(failed[0].id,failed[1].id,'both messages have stable unique IDs');
+ const repeated=publicChatNotices(meta,players,[{...done,response:'👎'},death]);
+ assert.deepEqual(repeated,failed,'refreshing the chat keeps both events stable');
+ // The generic role may be named, but its owner/actor and secret GM sign must not leak.
  for(const notices of [success,failed]){
-  const publicPayload=JSON.stringify(notices);
-  assert.doesNotMatch(publicPayload,/Sát Thủ|role_assassin|actorId|gmChoice|Sát Thủ An/);
-  assert.ok(!publicPayload.includes('An'),'The actor name is secret');
+  const payload=JSON.stringify(notices);
+  assert.doesNotMatch(payload,/Sát Thủ An|role_assassin|actorId|gmChoice|member:d/);
+  assert.ok(!payload.includes('An'),'The actor name is secret');
   assert.ok(notices.every(n=>n.system&&n.senderName==='Thông cáo Làng'));
  }
- assert.equal(publicChatNotices(meta,players,[{...done,status:'pending',effectActive:true}])[0].text,
-   'Nô đã bị đánh dấu.');
- assert.deepEqual(publicChatNotices(meta,players,[{...done,gmChoice:''}]),[]);
+ const pending=publicChatNotices(meta,players,[{...done,status:'pending',effectActive:true}]);
+ assert.deepEqual(pending.map(n=>n.text),['Nô đã bị Sát Thủ chọn.']);
+ const incomplete=publicChatNotices(meta,players,[{...done,gmChoice:''}]);
+ assert.deepEqual(incomplete.map(n=>n.text),['Nô đã bị Sát Thủ chọn.']);
+ assert.deepEqual(publicChatNotices({...meta,cyclePhase:'night'},players,[done]),[]);
 });
 test('Player Web honors confirmed public labels and red authoritative notices',()=>{
  const web=readFileSync('src/player-web-src/35-online-chat.part','utf8');

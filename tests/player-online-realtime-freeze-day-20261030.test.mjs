@@ -59,7 +59,8 @@ test('Chat displays a new-message cue on first remote message in an initially em
   const env={state:{roomCode:'ABCDE',participantId:'member:alice',member:{loginId:'alice'}},
     gmwwChatTarget:'room',gmwwChatSeq:0,gmwwChatLatestByChannel:new Map(),gmwwChatOpen:false,
     document:{getElementById:id=>nodes[id],createElement:()=>({style:{},append(){}})},
-    gmwwChatColor:()=>'#fff',gmwwChatUnread:value=>{cue=value},auth:()=>({}),
+    gmwwChatColor:()=>'#fff',gmwwChatUnread:value=>{cue=value},
+    gmwwVillageTickerUpdate:()=>{},auth:()=>({}),
     api:async()=>messages.shift()};
   vm.runInNewContext(chat.slice(start,end)+';globalThis.refresh=gmwwChatRefresh;',env);
   await env.refresh();assert.equal(cue,null);
