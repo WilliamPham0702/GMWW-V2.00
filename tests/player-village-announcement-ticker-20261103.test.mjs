@@ -81,3 +81,14 @@ test('Player Web ticker loops slowly and messages/voice remain borderless',()=>{
  assert.doesNotMatch(source,/const items=\[\.\.\.\(Array\.isArray\(result\.notices\)/);
  assert.match(source,/@media\(prefers-reduced-motion:reduce\)\{#gmwwVillageTicker/);
 });
+
+test('entire public night/day history remains preserved above earlier 100/150 caps',()=>{
+ const events=Array.from({length:170},(_,i)=>({...selected,id:'mark-'+i,createdAt:new Date(Date.UTC(2026,10,3,8,0,i)).toISOString()}));
+ const current=publicChatNotices(meta,players,events);
+ assert.equal(current.length,170,'do not truncate at 100 events');
+ const historical=mergePublicChatNotices([],current);
+ assert.equal(historical.length,170,'do not truncate at 150 events');
+ assert.deepEqual(historical.map(x=>x.id),current.map(x=>x.id));
+ const ticker=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ assert.doesNotMatch(ticker,/filter\(n=>n\?\.system===true&&typeof n\.text==='string'\)\.slice\(-150\)/);
+});
