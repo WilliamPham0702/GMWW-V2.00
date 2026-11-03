@@ -43,6 +43,8 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npx wrangler deploy --dry-run --config infra/cloudflare-standby/wrangler-b-staging.jsonc
+          # Isolated B archive Worker; never deploy or connect to Production
+          npx wrangler deploy --dry-run --config infra/cloudflare-standby/wrangler-b-backup-archive.jsonc
       - name: Verify Production and OTA only skip isolated standby changes
         run: node --test tests/dual-cloudflare-release-guard.test.mjs
       - name: Refuse production mutations or credentials
