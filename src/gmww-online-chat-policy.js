@@ -88,13 +88,14 @@ export function publicChatNotices(meta,players,rows){
     if(row.type==='assassin_mark'){
       if(row.status==='responded'&&['👍','👎'].includes(String(row.response))&&
          ['👍','👎'].includes(String(row.gmChoice))){
-        const attacker=nameOf(row.actorId),assassin=attacker&&members['member:'+normalize(row.actorId)]?
-          (/^Sát Thủ\b/i.test(attacker)?attacker:'Sát Thủ '+attacker):'Sát Thủ',survived=row.response===row.gmChoice;
+        // Public chat reports the verified outcome only. Never expose the actor's
+        // name, role or choice to other players (including notice IDs).
+        const survived=row.response===row.gmChoice;
         add(row,row.loginId,survived?
-          'Chúc mừng '+name+' đã chọn cùng dấu với '+assassin+', tiếp tục sống.':
-          'Chia buồn '+name+' đã chọn sai dấu với '+assassin+', đã chết.',row.respondedAt);
+          'Chúc mừng '+name+' đã lựa chọn đúng và tiếp tục sống.':
+          'Chia buồn '+name+' đã lựa chọn sai và đã chết.',row.respondedAt);
       }else if(row.effectActive!==false&&row.status!=='responded'){
-        add(row,row.loginId,name+' đã bị Sát Thủ đánh dấu.');
+        add(row,row.loginId,name+' đã bị đánh dấu.');
       }
       continue;
     }
