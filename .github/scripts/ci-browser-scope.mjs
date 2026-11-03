@@ -3987,7 +3987,43 @@ function isChatLiveV3294Scope(changes){
  }catch{return false}
 }
 
+// V3.294 CI-only postmerge recovery: protect the exact reviewed Runtime payload.
+// No game, Worker, Player Web, native, DNS, or data changes are allowed.
+function isV3294PostmergeCiScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['docs/releases/GMWW-V3.294-POSTMERGE-CI-20261103.md','A']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+ try{
+  const pins=new Map([
+   ['src/index.js','dcb3cacb63b7a140058034a5676fc84e55e6c2f3'],
+   ['server-game/current/app.js','8c954449d688545614bb2e59418b9e1348b3c51a'],
+   ['src/gmww-members-live.js','eb00c88647952711f06eb0441cd023834325322f'],
+   ['src/gmww-online-chat-policy.js','266536b8c083a33e340997546e31b6ee6852c660'],
+   ['package.json','e313cb2bbba5431d675515a6701f7fb614600043']
+  ]);
+  for(const [file,sha] of pins){
+   const data=fs.readFileSync(file);
+   if(createHash('sha1').update('blob '+data.length+'\0').update(data).digest('hex')!==sha)return false;
+  }
+  const after=changes.find(x=>x.path==='docs/releases/GMWW-V3.294-POSTMERGE-CI-20261103.md')?.after||'';
+  if(typeof after!=='string'||!after.includes('Không thay đổi Worker, Player Web, Runtime hoặc IPA'))return false;
+  const selector=fs.readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+  const workerCI=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  return selector.includes('function isV3294PostmergeCiScope(changes)')&&
+    workerCI.includes("steps.scope.outputs.mode == 'gmww-chat-live-v3294'")&&
+    workerCI.includes('tests/assassin-player-public-privacy-20261103.test.mjs')&&
+    workerCI.includes('tests/gmww-chat-live-meter-fast-send-v3294.test.mjs')&&
+    fs.existsSync('docs/releases/GMWW-RUNTIME-V3.294-LIVE-VOICE-FAST-20261103.md');
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isV3294PostmergeCiScope(changes))return 'gmww-chat-live-v3294';
   if(isAutoGmAlarmV3293Scope(changes))return 'auto-gm-alarm-v3293';
   if(isChatLiveV3294Scope(changes))return 'gmww-chat-live-v3294';
   if(isV3293EarlyGateCiFixScope(changes))return 'online-v3293-postmerge-ci';
@@ -4379,6 +4415,24 @@ function isV3289PR738VersionOnlyScope(base){
   return true;
 }
 function detect(){
+  // Evaluate the immutable V3.294 CI-only recovery before historical main FULL fallback.
+  // This covers both PR review and the new main push; unknown diffs run full CI.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(line=>{
+          const [status,path]=line.split('\t');
+          return {status,path,before:status==='M'?git('show',base+':'+path):null,
+            after:['M','A'].includes(status)?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isV3294PostmergeCiScope(changes))
+          return {mode:'gmww-chat-live-v3294',reason:'V3.294 immutable Runtime and Assassin privacy; CI-only postmerge repair'};
+      }
+    }catch{} // On unknown ancestry or contents, preserve FULL required checks.
+  }
+
   // PR766 Worker-only hotfix: exact source SHA-1 blobs + 5 allowed files.
   // Works for both PR validation and the first-parent main postmerge diff.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){

@@ -1359,3 +1359,27 @@ test('PR767 immutable V3.294 live microphone+fast private Chat CI-LITE remains f
  for(const required of ['tests/gmww-chat-live-meter-fast-send-v3294.test.mjs','tests/online-chat-authority.test.mjs','npm run check', "steps.scope.outputs.mode == 'gmww-chat-live-v3294'"])
   assert.ok(workflow.includes(required),required);
 });
+
+test('V3.294 postmerge CI-only recovery preserves immutable Chat, Auto GM, Assassin privacy and Runtime',()=>{
+ const paths=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['docs/releases/GMWW-V3.294-POSTMERGE-CI-20261103.md','A']
+ ];
+ const changes=paths.map(([path,status])=>({
+   path,status,after:readFileSync(path,'utf8'),
+   before:status==='M'?'previous CI policy':null
+ }));
+ assert.equal(classifyBrowserScope(changes),'gmww-chat-live-v3294');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M',after:'unsafe'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M',after:'unsafe'}]),'full');
+ assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ const wf=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ for(const marker of ['tests/gmww-chat-live-meter-fast-send-v3294.test.mjs',
+   'tests/gmww-auto-gm-alarm-recovery.test.mjs',
+   'tests/assassin-player-public-privacy-20261103.test.mjs','npm run check'])
+  assert.match(wf,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+});
+
