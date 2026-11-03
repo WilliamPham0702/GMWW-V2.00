@@ -46,6 +46,31 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR765: strictly scoped character-centered ⭐🔥 visual animation only.
+      # Run Worker/privacy/source integrity + focused visual tests, not obsolete 3D legacy snapshots.
+      - name: PR765 — ⭐🔥 orbit follows Character, GM and Player Web
+        if: steps.scope.outputs.mode == 'character-body-orbit'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-character-orbit-visuals-20261103.test.mjs \
+            tests/ci-browser-scope.test.mjs \
+            tests/gmww-online-four-fixes-v3293.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/online-chat-authority.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md
+
       # PR761: strict 17-file CI-LITE gate, never skip Worker or private-action tests.
       - name: PR761 — V3.293 Online turn, Assassin, GM realtime, ⭐🔥 and privacy
         if: steps.scope.outputs.mode == 'online-turn-v3293'
