@@ -75,3 +75,40 @@ try{
  if(ws)ws.close();
  await gm('/end',{force:true}).catch(()=>{});
 }
+
+
+async function zeroSecondDayMustEndWithoutGmRead(){
+  const dayTag=Date.now().toString(36),id='autoday'+dayTag;
+  const room=await call('/api/rooms',{roomName:'ZERO DAY AUTO '+dayTag,roomMode:'online',seatCount:8,
+    gameConfig:{name:'ZERO DAY AUTO',artifactsEnabled:false,roles:[
+      {roleId:'role_seer',roleName:'Tiên Tri',order:1,actionDurationSec:90}],
+      timing:{villageDiscussionSec:0,defaultActionSec:90}}});
+  const gm=(path,body)=>call('/api/gm/rooms/'+room.roomCode+path,body,room.gmToken);
+  try{
+    await call('/api/members/register',{loginId:id,displayName:'Day'+dayTag,gameCharacterId:'character-01'});
+    const member=await call('/api/members/login',{loginId:id});
+    await call('/api/rooms/'+room.roomCode+'/join',{token:member.token});
+    await gm('/seat',{loginId:id,seatId:1});
+    await gm('/assignments',{matchId:'day-'+dayTag,deliveryVersion:1,
+      assignments:[{loginId:id,roleId:'role_seer',roleName:'Tiên Tri',
+        roleCard:{name:'Tiên Tri',faction:'Phe Dân',functions:[{actionId:'action_seer',usageMode:'eachNight',usageCount:1}]}}]});
+    await gm('/start',{matchId:'day-'+dayTag});
+    await gm('/cycle',{phase:'morning',night:1,cycleKey:'morning-1'});
+    await gm('/auto',{enabled:true});
+    const before=(await call('/api/rooms/'+room.roomCode)).room;
+    assert.equal(before.cyclePhase,'morning');
+    assert.equal(before.autoGM,true);
+    for(let n=0;n<12;n++){
+      await sleep(250);
+      const publicRoom=(await call('/api/rooms/'+room.roomCode)).room;
+      if(publicRoom.cyclePhase==='night'&&publicRoom.cycleNight===2){
+        console.log('PASS: zero-second day advances to Night 2 without GM read');
+        return;
+      }
+    }
+    const stuck=(await call('/api/rooms/'+room.roomCode)).room;
+    console.error('ZERO-SECOND DAY STUCK',JSON.stringify({before,stuck}));
+    assert.fail('Auto GM stuck at 00:00: day with configured 0 seconds never advances');
+  }finally{await gm('/end',{force:true}).catch(()=>{})}
+}
+await zeroSecondDayMustEndWithoutGmRead();
