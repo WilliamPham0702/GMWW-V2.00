@@ -1344,9 +1344,9 @@ test('V3.293 early-main CI gate strict source safeguard rejects unknown or nativ
 test('PR767 immutable V3.294 live microphone+fast private Chat CI-LITE remains fail-closed',()=>{
  const paths=[[".github/scripts/ci-browser-scope.mjs","M"],[".github/workflows/check-player-web.yml","M"],["tests/ci-browser-scope.test.mjs","M"],["docs/releases/GMWW-RUNTIME-V3.294-LIVE-VOICE-FAST-20261103.md","A"],["tests/gmww-chat-live-meter-fast-send-v3294.test.mjs","A"],["package.json","M"],["package-lock.json","M"],["server-game/src/00-core-and-library.part","M"],["server-game/src/45-online-chat.part","M"],["server-game/current/GMWW.html","M"],["server-game/current/app.js","M"],["src/index.js","M"],["src/player-web-src/35-online-chat.part","M"],["src/gmww-members-live.js","M"]];
  const changes=paths.map(([path,status])=>({path,status,after:readFileSync(path,'utf8'),before:status==='A'?null:'prior production content'}));
- // PR766 changed the Worker scheduler after the immutable PR767 baseline.
- // The scope must fail closed and run full CI rather than reuse the pinned fast path.
- assert.equal(classifyBrowserScope(changes),'full','new main Worker source requires full CI');
+ // The new SHA-1 pin is the reviewed V3.294 Worker plus already-merged PR766 Auto GM scheduler.
+ // The 14-file exact-diff contract remains fail-closed for unreviewed edits.
+ assert.equal(classifyBrowserScope(changes),'gmww-chat-live-v3294','reviewed merged Worker must pass focused mandatory CI');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');

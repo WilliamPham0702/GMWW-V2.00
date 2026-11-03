@@ -3969,7 +3969,7 @@ function isChatLiveV3294Scope(changes){
    const changed=by.get(path);
    if(typeof changed?.after!=='string'||changed.after!==fs.readFileSync(path,'utf8'))return false;
   }
-  const pins=new Map([["docs/releases/GMWW-RUNTIME-V3.294-LIVE-VOICE-FAST-20261103.md","30e2e0dfbbaee825a93cdba5d5fbf7581de820b0"],["tests/gmww-chat-live-meter-fast-send-v3294.test.mjs","959f2d3f5732c933a7c7b48ad9be1f98cc464d45"],["package.json","e313cb2bbba5431d675515a6701f7fb614600043"],["package-lock.json","4581de41ea8df56428925eed58ad4a674b9e0231"],["server-game/src/00-core-and-library.part","3f848d940ad20fa0ac62f51d0e94ecdd8d70987d"],["server-game/src/45-online-chat.part","34aa6de316a3049ed66d8a8ced2e404798ffc033"],["server-game/current/GMWW.html","b4e3fe442980e535270c2d9ffecf61587a05df3d"],["server-game/current/app.js","8c954449d688545614bb2e59418b9e1348b3c51a"],["src/index.js","96cb5ddce5512c22838755a7786d035e669e2bd5"],["src/player-web-src/35-online-chat.part","73166f4b908057980ad36f78383d05c8ca1f0ed1"],["src/gmww-members-live.js","eb00c88647952711f06eb0441cd023834325322f"]]);
+  const pins=new Map([["docs/releases/GMWW-RUNTIME-V3.294-LIVE-VOICE-FAST-20261103.md","30e2e0dfbbaee825a93cdba5d5fbf7581de820b0"],["tests/gmww-chat-live-meter-fast-send-v3294.test.mjs","959f2d3f5732c933a7c7b48ad9be1f98cc464d45"],["package.json","e313cb2bbba5431d675515a6701f7fb614600043"],["package-lock.json","4581de41ea8df56428925eed58ad4a674b9e0231"],["server-game/src/00-core-and-library.part","3f848d940ad20fa0ac62f51d0e94ecdd8d70987d"],["server-game/src/45-online-chat.part","34aa6de316a3049ed66d8a8ced2e404798ffc033"],["server-game/current/GMWW.html","b4e3fe442980e535270c2d9ffecf61587a05df3d"],["server-game/current/app.js","8c954449d688545614bb2e59418b9e1348b3c51a"],["src/index.js","dcb3cacb63b7a140058034a5676fc84e55e6c2f3"],["src/player-web-src/35-online-chat.part","73166f4b908057980ad36f78383d05c8ca1f0ed1"],["src/gmww-members-live.js","eb00c88647952711f06eb0441cd023834325322f"]]);
   for(const [file,sha] of pins){
    const bytes=fs.readFileSync(file);
    if(createHash('sha1').update('blob '+bytes.length+'\0').update(bytes).digest('hex')!==sha)return false;
@@ -3980,7 +3980,7 @@ function isChatLiveV3294Scope(changes){
   const worker=fs.readFileSync('src/index.js','utf8');
   return w.includes("steps.scope.outputs.mode == 'gmww-chat-live-v3294'")&&
     w.includes('tests/gmww-chat-live-meter-fast-send-v3294.test.mjs')&&
-    w.includes('tests/online-chat-authority.test.mjs')&&w.includes('npm run check')&&
+    w.includes('tests/online-chat-authority.test.mjs')&&w.includes('tests/gmww-auto-gm-alarm-recovery.test.mjs')&&w.includes('tests/assassin-player-public-privacy-20261103.test.mjs')&&w.includes('npm run check')&&
     gm.includes('gmwwGMVoiceMeterStart(stream)')&&player.includes('gmwwChatVoiceMeterStart(stream)')&&
     worker.includes('await Promise.all(writes)')&&
     JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.294.0';

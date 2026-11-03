@@ -1,6 +1,6 @@
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
-import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices} from "./gmww-online-chat-policy.js";
+import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,playerSafeInteraction} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -2937,7 +2937,7 @@ export class RoomDurableObject extends DurableObject {
       rows=(await this.ctx.storage.get("interactions"))||[],meta=await this.ctx.storage.get("meta");
     const row=rows.find(x=>String(x?.id)===id&&normalizeLoginId(x?.loginId)===loginId);
     if(!row)return j({ok:false,error:"INTERACTION_NOT_FOUND"},404);
-    if(row.status==="responded"){const {gmChoice,...safe}=row;return j({ok:true,interaction:safe,idempotent:true});}
+    if(row.status==="responded")return j({ok:true,interaction:playerSafeInteraction(row),idempotent:true});
     if(row.matchId&&meta?.matchId&&String(row.matchId)!==String(meta.matchId))
       return j({ok:false,error:"STALE_INTERACTION",message:"Tương tác này thuộc ván cũ."},409);
     const isAssassin=row.type==="assassin_mark";
@@ -2978,11 +2978,16 @@ export class RoomDurableObject extends DurableObject {
        createdAt:now,source:"player"});
     // Never send personal response details on a socket with a spoofable
     // participantId. Player Web retrieves them from the authenticated /me API.
-    if(meta.demo!==true)this.broadcast({type:"player_interaction_response",interaction:{...row,gmChoice:undefined},
+    const safeResponse=playerSafeInteraction(row);
+    // WebSocket broadcasts disclose neither Assassin identity nor choice.
+    const socketResponse=isAssassin?
+      {id:row.id,type:"assassin_mark",loginId,status:"responded",effectActive:false}:
+      safeResponse;
+    if(meta.demo!==true)this.broadcast({type:"player_interaction_response",interaction:socketResponse,
       assassinOutcome,serverTime:Date.now()});
     if(assassinOutcome==="dead")this.broadcast({type:"player_status_changed",loginId,
       statusId:"dead",active:true,serverTime:Date.now()});
-    return j({ok:true,interaction:{...row,gmChoice:undefined},assassinOutcome});
+    return j({ok:true,interaction:safeResponse,assassinOutcome});
   }
   async gmRename(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,name=normalizeRoomName(body?.roomName);if(!name)return j({ok:false,error:"INVALID_ROOM_NAME",message:"Tên Phòng không hợp lệ."},400);meta.roomName=name;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);await this.scheduleRoomAlarm(meta);const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta)})}
   async gmReset(request,body){
@@ -3081,9 +3086,9 @@ export class RoomDurableObject extends DurableObject {
     const legacyRole=await this.ctx.storage.get("role:"+loginId),storedRoles=await this.ctx.storage.get("roles:"+loginId),legacyRows=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]),activeSnapshot=currentPrivateDeliverySnapshot(await this.ctx.storage.get("deliverySnapshot:"+loginId),meta),roleRows=privateDeliveryRoles(activeSnapshot,legacyRows),roles=roleRows.map(privateRole),role=roles[0]||null,cardBackImage=(await this.ctx.storage.get("cardBackImage"))||null,rows=(await this.ctx.storage.get("interactions"))||[],sameMatch=x=>(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId)),interactions=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&x?.status==="pending"&&sameMatch(x)&&
       (x.type!=="assassin_mark"||(String(meta?.cyclePhase||"")==="morning"&&Number(x.night)===Number(meta.cycleNight)&&
        !rows.some(y=>normalizeLoginId(y?.loginId)===loginId&&["expelled","dead"].includes(String(y.type))&&y.effectActive!==false&&sameMatch(y)))))
-      .slice(-10).map(({gmChoice,...safe})=>safe),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&
+      .slice(-10).map(playerSafeInteraction),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&
       (x.type!=="assassin_mark"||String(meta?.cyclePhase||"")==="morning")&&
-      (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest).map(({gmChoice,...safe})=>safe);
+      (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest).map(playerSafeInteraction);
     const storedArtifact=await this.ctx.storage.get("artifact:"+loginId),
       // A role assignment also contains the committed artifact. Use it if the
       // legacy standalone Artifact key is absent; do not hide an assigned card.
