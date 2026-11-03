@@ -4383,6 +4383,7 @@ function isAssassinPublicWorkerSecurityScope(changes,base){
     ['src/gmww-online-chat-policy.js','M'],
     ['src/index.js','M'],
     ['tests/assassin-player-public-privacy-20261103.test.mjs','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
     ['.github/scripts/ci-browser-scope.mjs','M'],
     ['.github/workflows/check-player-web.yml','M'],
     ['docs/releases/GMWW-ASSASSIN-PUBLIC-PRIVACY-WORKER-20261103.md','A']
