@@ -952,6 +952,7 @@ export class RoomDurableObject extends DurableObject {
         }
       }
       if(changed){await this.ctx.storage.put(key,current);
+        await this.scheduleRoomAlarm(meta);
         this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:gallowsSnapshot(current,meta,now),serverTime:now})}
     }
     return {key,ballot:current,eligible};
@@ -968,6 +969,7 @@ export class RoomDurableObject extends DurableObject {
       if(ballot.stage!=="resolved")return j({ok:false,error:"GALLOWS_VERDICT_NOT_READY"},409);
       const updated={...ballot,acknowledgedAt:now,updatedAt:now};
       await this.ctx.storage.put(key,updated);
+      await this.scheduleRoomAlarm(meta);
       this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(updated,meta,now),serverTime:now});
       return j({ok:true,gallows:gallowsSnapshot(updated,meta,now)});
     }
@@ -1043,6 +1045,7 @@ export class RoomDurableObject extends DurableObject {
     if(!result.ok)return j({ok:false,error:result.error},409);
     await this.ctx.storage.put(key,result.value);
     if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
+    else await this.scheduleRoomAlarm(meta);
     const publicBallot=gallowsSnapshot(meta.demo?await this.ctx.storage.get(key):result.value,meta,now);
     this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:publicBallot,serverTime:now});
     return j({ok:true,gallows:publicBallot,serverTime:now});
@@ -2014,6 +2017,9 @@ export class RoomDurableObject extends DurableObject {
     // acknowledgment, including if Auto GM reaches the end of Day early.
     if(p==="night"&&String(meta.cyclePhase||"")==="morning"&&n===Number(meta.cycleNight||0)+1&&!meta.demo){
       const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
+      // A timeout-driven transition is forbidden until the whole Gallows finishes.
+      if(source==="auto"&&ballot?.stage!=="resolved")
+        return {ok:false,error:"GALLOWS_NOT_RESOLVED",message:"Phải hoàn tất Lên Giàn trước khi chuyển Đêm."};
       const at=Number(ballot?.resolvedAt||0);
       if(ballot?.stage==="resolved"&&at>0&&!ballot.acknowledgedAt&&Date.now()<at+30000)
         return {ok:false,error:"GALLOWS_VERDICT_PENDING",message:"Đang công bố kết quả Lên Giàn; GM xác nhận hoặc chờ đủ 30 giây."};
@@ -2138,13 +2144,27 @@ export class RoomDurableObject extends DurableObject {
     }
     if(cyclePhase==="morning"||cyclePhase==="day"){
       const deadline=Date.parse(meta.dayDeadlineAt||'');
-      const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),
+      const cfg=(await this.ctx.storage.get("gameConfig"))||{},
+        sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),
         started=Date.parse(meta.cycleStartedAt||"");
-      const due=Number.isFinite(deadline)?deadline:sec&&Number.isFinite(started)?started+sec*1000:0;
-      if(meta.demo)return due;
+      // A zero-second discussion is due at cycle start, never 'timer absent'.
+      const discussionDue=Number.isFinite(deadline)?deadline:Number.isFinite(started)?started+sec*1000:0;
+      if(meta.demo)return discussionDue;
+      if(!discussionDue)return 0;
       const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
-      const at=Number(ballot?.resolvedAt||0);
-      return ballot?.stage==="resolved"&&!ballot.acknowledgedAt&&at>0?Math.max(due,at+30000):due;
+      const stage=String(ballot?.stage||"ready"),mode=gallowsMode(ballot);
+      if(mode==="gm"&&stage!=="resolved")return 0;
+      if(stage==="ready")return discussionDue;
+      if(stage==="nominating")return Math.max(discussionDue,Number(ballot.nominationDeadlineAt)||Date.now());
+      // Brief intermission for Server's public nominee and saved audio cue.
+      if(stage==="selecting")return Math.max(discussionDue,Number(ballot.hangingStartedAt||Date.now())+3000);
+      if(stage==="voting")return Math.max(discussionDue,Number(ballot.deadlineAt)||Date.now());
+      if(stage==="resolved"){
+        const verdictAt=Number(ballot.resolvedAt||0);
+        if(!verdictAt)return 0;
+        return ballot.acknowledgedAt?Date.now():Math.max(discussionDue,verdictAt+30000);
+      }
+      return 0;
     }
     return 0
   }
@@ -2159,7 +2179,35 @@ export class RoomDurableObject extends DurableObject {
     const due=await this.autoAdvanceDue(meta);if(!due||due>Date.now()+25)return false;
     const phase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
     if(phase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(runtime&&!runtime.completed)await this.advanceNightRuntime(meta,"next","auto");const fresh=await this.ctx.storage.get("meta"),after=await this.getNightRuntime(fresh,night,true);if(after?.completed)await this.applyCycle(fresh,"morning",night,"morning-"+night,"auto");else await this.scheduleRoomAlarm(fresh);return true}
-    if(phase==="morning"||phase==="day"){await this.applyCycle(meta,"night",night+1,"night-"+(night+1),"auto");return true}
+    if(phase==="morning"||phase==="day"){
+      // Advance exactly one Server-owned gallows stage per timeout. A running
+      // match never jumps directly from discussion to the next night.
+      const {key,ballot}=await this.gallowsState(meta);
+      const now=Date.now(),stage=String(ballot.stage||"ready"),mode=gallowsMode(ballot);
+      let step=null;
+      if(mode==="auto"){
+        if(stage==="ready")step=gallowsOpen(ballot,now);
+        else if(stage==="nominating")step=gallowsCloseNomination(ballot,now);
+        else if(stage==="selecting"&&now>=Number(ballot.hangingStartedAt||0)+3000)
+          step=gallowsBegin(ballot,String(ballot.candidateId||""),now);
+      }
+      if(step?.ok&&step.value!==ballot){
+        await this.ctx.storage.put(key,step.value);
+        this.broadcast({type:"gallows_updated",room:publicRoom(meta),
+          gallows:gallowsSnapshot(step.value,meta,now),serverTime:now});
+        await this.scheduleRoomAlarm(meta);
+        return true;
+      }
+      if(stage==="resolved"&&Number(ballot.resolvedAt)>0&&
+         (ballot.acknowledgedAt||now>=Number(ballot.resolvedAt)+30000)){
+        const advanced=await this.applyCycle(meta,"night",night+1,"night-"+(night+1),"auto");
+        if(advanced?.ok)return true;
+        console.error("GMWW_AUTO_GALLOWS_TRANSITION",advanced?.error||"UNKNOWN");
+      }
+      // gallowsState may have committed a nomination/vote outcome just now.
+      await this.scheduleRoomAlarm(meta);
+      return true;
+    }
     return false
   }
   async gmTurn(request,body){
