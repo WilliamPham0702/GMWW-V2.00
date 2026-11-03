@@ -10,6 +10,7 @@ import {archiveIds,archiveSourceAllowed,archiveScope,archiveWriteDecision,
   compareArchiveSecret} from './b-backup-archive-policy.mjs';
 
 const MAX_BODY=100000;
+const EXPECTED_HOST='gmww-b-backup-archive.gmww-stage-b-0702-2026.workers.dev';
 function j(value,status=200){
   return new Response(JSON.stringify(value),{status,headers:{
     'content-type':'application/json; charset=utf-8',
@@ -118,9 +119,11 @@ export class BackupArchiveDO extends DurableObject {
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
+    if(url.hostname!==EXPECTED_HOST && !(['localhost','127.0.0.1'].includes(url.hostname)&&env.GMWW_B_BACKUP_SYNTHETIC_ONLY==='1'))
+      return j({ok:false,error:'B_ACCOUNT_HOST_REQUIRED'},404);
     if(url.pathname==='/health'&&request.method==='GET')
       return j({ok:true,environment:'cloudflare-b',mode:'backup-archive-isolated',
-        productionSwitchAllowed:false,failoverReady:false,productionDataConnected:false});
+        productionSwitchAllowed:false,failoverReady:false,productionBackupVerified:false});
     if(!['/v1/chunk','/v1/status','/v1/ciphertext'].includes(url.pathname))
       return j({ok:false,error:'NOT_FOUND'},404);
     if(!enabled(env))return j({ok:false,error:'BACKUP_NOT_CONFIGURED'},503);
@@ -145,6 +148,7 @@ export default {
       if(url.pathname==='/v1/status')
         return doStub(env,ids.backupId,ids.objectDigest).fetch(
           'https://archive.internal/internal/status',safeHeaders({ids}));
+      if(!url.searchParams.has('index'))return j({ok:false,error:'BAD_INDEX'},400);
       const index=Number(url.searchParams.get('index'));
       if(!Number.isSafeInteger(index)||index<0||index>1023)
         return j({ok:false,error:'BAD_INDEX'},400);
