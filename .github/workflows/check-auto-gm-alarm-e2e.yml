@@ -1,0 +1,43 @@
+name: Check Auto GM Actual Durable Object Alarm (P0)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/index.js"
+      - "tests/worker-auto-gm-alarm-e2e.mjs"
+      - ".github/workflows/check-auto-gm-alarm-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actual-alarm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install pinned packages
+        run: npm ci
+      - name: Check source and E2E syntax
+        run: |
+          node --check src/index.js
+          node --check tests/worker-auto-gm-alarm-e2e.mjs
+      - name: Verify real DO alarm and player heartbeat on local workerd
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-auto-gm-e2e.log 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true; tail -120 /tmp/gmww-auto-gm-e2e.log || true' EXIT
+          for attempt in $(seq 1 50); do
+            if curl --fail --silent --show-error http://127.0.0.1:8787/api/health >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          curl --fail --silent --show-error http://127.0.0.1:8787/api/health
+          node tests/worker-auto-gm-alarm-e2e.mjs
