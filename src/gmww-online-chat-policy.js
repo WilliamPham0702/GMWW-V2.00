@@ -103,9 +103,10 @@ export function publicChatNotices(meta,players,rows){
     wolf_bitten:'đã bị Sói cắn',marked:'đã bị đánh dấu',infected:'đã bị nhiễm bệnh',
     mute:'đã bị câm',disabled_permanent:'đã mất năng lực',disabled_2n:'đã mất năng lực 2 đêm'};
   const messages=[],seen=new Set();
-  const add=(row,id,text,stamp)=>{
+  const add=(row,id,text,stamp,event='status')=>{
     const player=normalize(id);if(!members['member:'+player])return;
-    const key='notice:'+match+':'+String(row.id||row.clientEventId||row.createdAt||'')+':'+player+':'+text;
+    // An event ID is independent of mutable names and status text.
+    const key='notice:'+match+':'+String(row.id||row.clientEventId||row.createdAt||'')+':'+player+':'+event;
     if(seen.has(key))return;seen.add(key);
     const parsed=Date.parse(String(stamp||row.respondedAt||row.resolvedAt||row.createdAt||''));
     messages.push({id:key,senderId:'system',senderName:'Thông cáo Làng',system:true,isGM:false,
@@ -121,7 +122,7 @@ export function publicChatNotices(meta,players,rows){
       // A mark is a distinct public event. Keep it visible after the response
       // changes the interaction to "responded" and clears effectActive.
       // Publish the generic role type only, never the actor's identity.
-      add(row,row.loginId,name+' đã bị Sát Thủ chọn.',row.createdAt);
+      add(row,row.loginId,name+' đã bị Sát Thủ chọn.',row.createdAt,'assassin-selected');
       if(row.status==='responded'&&['👍','👎'].includes(String(row.response))&&
          ['👍','👎'].includes(String(row.gmChoice))){
         // Public chat reports the verified outcome only. Never expose the actor's
@@ -129,7 +130,7 @@ export function publicChatNotices(meta,players,rows){
         const survived=row.response===row.gmChoice;
         add(row,row.loginId,survived?
           'Chúc mừng '+name+' đã lựa chọn đúng và tiếp tục sống.':
-          'Chia buồn '+name+' đã lựa chọn sai và đã chết.',row.respondedAt);
+          'Chia buồn '+name+' đã lựa chọn sai và đã chết.',row.respondedAt,'assassin-result');
       }
       continue;
     }
