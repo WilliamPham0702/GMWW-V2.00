@@ -46,6 +46,23 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR769 Worker-only: preserve all game/runtime files while sealing public sockets.
+      - name: PR769 — public Assassin privacy, Player Web and Worker-only CI
+        if: steps.scope.outputs.mode == 'assassin-public-worker-privacy'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/gmww-online-chat-policy.js
+          node --check src/index.js
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test \
+            tests/assassin-player-public-privacy-20261103.test.mjs \
+            tests/player-v3-village-status-daychat-20261102.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/online-frozen-chat-day-20261031.test.mjs \
+            tests/player-visual-notice-status-sync-20261028.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          echo 'PASS: hidden Assassin identity/role never appears in public bulletin or public WebSocket' >> "$GITHUB_STEP_SUMMARY"
       # PR766: reviewed immutable Worker delta, focused DO/online/security tests.
       # Classifier checks exactly five changed files and before/after Worker blob SHA1.
       - name: PR766 — Auto GM alarm recovery, Worker, Online and privacy
