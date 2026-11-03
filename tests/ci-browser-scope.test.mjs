@@ -1488,3 +1488,41 @@ test('main-push classifier executes before historical full-suite fallback for ex
  const full=selector.indexOf('Main contains changes outside the verified scoped lists',d);
  assert.ok(d>=0&&first>d&&full>first,'exact Worker check must run BEFORE legacy main push full return');
 });
+
+
+test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',()=>{
+ const modifiedPaths=[
+  'server-game/src/40-battle-and-timeline.part',
+  'src/player-web-src/35-online-chat.part',
+  'server-game/current/app.js',
+  'server-game/src/00-core-and-library.part',
+  'src/gmww-members-live.js',
+  'tests/gmww-wolf-orbit-reuse-v3295.test.mjs',
+  'tests/gmww-character-orbit-visuals-20261103.test.mjs',
+  'tests/gmww-online-four-fixes-v3293.test.mjs',
+  'assets/village/status-visuals.css',
+  'server-game/current/status-visuals.css',
+  'server-game/current/GMWW.html',
+  'src/index.js',
+  'package.json',
+  'package-lock.json',
+  '.github/scripts/ci-browser-scope.mjs',
+  '.github/workflows/check-player-web.yml',
+  'tests/ci-browser-scope.test.mjs'
+ ];
+ const added=['docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md','tests/gmww-comet-turn-orbit-v3296.test.mjs'];
+ const rows=[...modifiedPaths.map(path=>{
+  const after=readFileSync(path,'utf8');
+  let before=after;
+  if(path==='server-game/src/40-battle-and-timeline.part'||path==='src/player-web-src/35-online-chat.part')
+    before=after.replace("kind==='actor'?'☄️':'🐦‍🔥'","kind==='actor'?'🫧':'🐦‍🔥'");
+  if(path.startsWith('tests/'))before=after.split('☄️').join('🫧');
+  if(path.endsWith('status-visuals.css'))before=after.replace('V3.296: ☄️','V3.295: 🫧');
+  return{path,status:'M',before,after};
+ }),...added.map(path=>({path,status:'A',before:null,after:readFileSync(path,'utf8')}))];
+ assert.equal(classifyBrowserScope(rows),'comet-orbit-v3296');
+ assert.equal(classifyBrowserScope(rows.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...rows,rows[0]]),'full');
+ assert.equal(classifyBrowserScope([...rows,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'unsafe IPA'}]),'full');
+ assert.equal(classifyBrowserScope(rows.map(x=>x.path==='src/player-web-src/35-online-chat.part'?{...x,after:x.after.replace('☄️','⭐')}:x)),'full');
+});
