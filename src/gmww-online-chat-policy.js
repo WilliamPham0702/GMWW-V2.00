@@ -119,6 +119,9 @@ export function publicChatNotices(meta,players,rows){
     if(currentNight>0&&Number(row.night||currentNight)!==currentNight)continue;
     const name=nameOf(row.loginId);
     if(row.type==='assassin_mark'){
+      // A cancelled/undone mark must not become public for the first time.
+      // A responded mark is already resolved and its selection stays visible.
+      if(row.status!=='responded'&&row.effectActive===false)continue;
       // A mark is a distinct public event. Keep it visible after the response
       // changes the interaction to "responded" and clears effectActive.
       // Publish the generic role type only, never the actor's identity.
