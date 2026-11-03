@@ -1,7 +1,7 @@
 # GMWW V3.293 – Auto GM Worker hotfix (03/11/2026)
 
 ## Thay đổi
-- Bảo vệ giờ chuyển vai tự động khỏi bị ghi đè bởi báo thức dọn phòng hoặc giới hạn truy cập.
+- Khắc phục gốc: heartbeat của người chơi từng đặt báo thức dọn phòng, ghi đè lịch chuyển vai Auto GM; các thao tác phụ khi phòng đang chơi cũng được chuyển sang bộ hẹn ưu tiên deadline.
 - GET trạng thái GM đã xác thực sẽ kiểm tra lịch hẹn đang tồn tại: nếu trễ/mất thì đặt lại; nếu đã đến hạn thì DO tự chuyển lượt.
 - Thêm kiểm thử thực thi hàm scheduler có mô phỏng DO storage.
 - Giữ nguyên các chức năng đã nghiệm thu ĐẠT: Sát Thủ 👍👎, realtime GM và vòng ⭐🔥.
