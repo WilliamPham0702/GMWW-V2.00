@@ -71,6 +71,31 @@ jobs:
           npm run check
           test -s docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md
 
+      # V3.293 postmerge: four-file CI-only recovery from reviewed PR761.
+      # Fail closed on unknown changes. Release remains separately gated.
+      - name: V3.293 — postmerge CI-only privacy, Online action and Worker validation
+        if: steps.scope.outputs.mode == 'online-v3293-postmerge-ci'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-online-four-fixes-v3293.test.mjs \
+            tests/demo-hybrid-real-players.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-V3.293-POSTMERGE-CI-RECOVERY-20261103.md
+
       # V3.292: reviewed three-fix scope (voice explicit-send, mic session, night-turn clock).
       # Guard checks every changed path and exact Worker version/import/timing projection.
       # Native/DO/unknown edits run full CI; privacy, source integrity and Worker build remain required.
