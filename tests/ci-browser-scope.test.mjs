@@ -1340,3 +1340,20 @@ test('V3.293 early-main CI gate strict source safeguard rejects unknown or nativ
  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
  assert.equal(classifyBrowserScope(changes.map((x,i)=>i===2?{...x,status:'D'}:x)),'full');
 });
+
+test('PR767 immutable V3.294 live microphone+fast private Chat CI-LITE remains fail-closed',()=>{
+ const paths=[[".github/scripts/ci-browser-scope.mjs","M"],[".github/workflows/check-player-web.yml","M"],["tests/ci-browser-scope.test.mjs","M"],["docs/releases/GMWW-RUNTIME-V3.294-LIVE-VOICE-FAST-20261103.md","A"],["tests/gmww-chat-live-meter-fast-send-v3294.test.mjs","A"],["package.json","M"],["package-lock.json","M"],["server-game/src/00-core-and-library.part","M"],["server-game/src/45-online-chat.part","M"],["server-game/current/GMWW.html","M"],["server-game/current/app.js","M"],["src/index.js","M"],["src/player-web-src/35-online-chat.part","M"],["src/gmww-members-live.js","M"]];
+ const changes=paths.map(([path,status])=>({path,status,after:readFileSync(path,'utf8'),before:status==='A'?null:'prior production content'}));
+ assert.equal(classifyBrowserScope(changes),'gmww-chat-live-v3294');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'wrangler.jsonc',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,after:c.after+'\\n// unreviewed data access'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/player-web-src/35-online-chat.part'?{...c,after:c.after+'\\n// private audio leak'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='package.json'?{...c,after:c.after.replace('3.294.0','3.295.0')}:c)),'full');
+ const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ for(const required of ['tests/gmww-chat-live-meter-fast-send-v3294.test.mjs','tests/online-chat-authority.test.mjs','npm run check', "steps.scope.outputs.mode == 'gmww-chat-live-v3294'"])
+  assert.ok(workflow.includes(required),required);
+});
