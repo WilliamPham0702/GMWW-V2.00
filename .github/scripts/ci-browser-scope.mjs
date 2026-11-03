@@ -4620,9 +4620,9 @@ function detect(){
     try{
       const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
       if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
-        const lines=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\\n').filter(Boolean);
+        const lines=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
         const changes=lines.map(line=>{
-          const [status,file]=line.split('\\t');
+          const [status,file]=line.split('\t');
           return{status,path:file,before:status==='M'?git('show',base+':'+file):null,
             after:status==='M'||status==='A'?fs.readFileSync(file,'utf8'):null};
         });
