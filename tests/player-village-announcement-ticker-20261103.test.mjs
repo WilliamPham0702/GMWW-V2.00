@@ -92,3 +92,12 @@ test('entire public night/day history remains preserved above earlier 100/150 ca
  const ticker=readFileSync('src/player-web-src/35-online-chat.part','utf8');
  assert.doesNotMatch(ticker,/filter\(n=>n\?\.system===true&&typeof n\.text==='string'\)\.slice\(-150\)/);
 });
+
+test('marquee skips empty records while retaining all actual village announcements',()=>{
+ const src=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ assert.match(src,/n\.text\.trim\(\)\.length>0/);
+ assert.match(src,/gmwwVillageTickerUpdate\(result\.notices,result\.noticeCycleNight\)/);
+ const fake=[{id:'valid',system:true,text:'A Dũng đã bị Sát Thủ chọn.'},{id:'empty',system:true,text:'   '}];
+ const visible=fake.filter(n=>n?.system===true&&typeof n.text==='string'&&n.text.trim().length>0);
+ assert.deepEqual(visible.map(x=>x.id),['valid']);
+});
