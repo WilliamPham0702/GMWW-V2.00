@@ -3921,6 +3921,39 @@ function isV3293EarlyGateCiFixScope(changes){
 }
 
 
+// PR768: fail closed for any changed file or unseen Worker blob.
+function isAutoGmZeroDayP0Scope(changes){
+  const expected=new Map([
+    ['src/index.js','M'],
+    ['tests/v389-night-runtime-integration.test.mjs','M'],
+    ['tests/worker-auto-gm-alarm-e2e.mjs','A'],
+    ['.github/workflows/check-auto-gm-alarm-e2e.yml','A'],
+    ['docs/releases/GMWW-AUTO-GM-ZERO-DAY-P0-20261103.md','A'],
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M']
+  ]);
+  if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+  try{
+    const by=new Map(changes.map(x=>[x.path,x]));
+    const source=by.get('src/index.js'),blob=s=>createHash('sha1').update('blob '+Buffer.byteLength(s)+'\x00').update(s).digest('hex');
+    if(typeof source.before!=='string'||typeof source.after!=='string'||
+       blob(source.before)!=='4973de258199ae445eaa37dd9a7504d3ab16deff'||
+       blob(source.after)!=='813ae3c9ac98c2de2fd114e83fac860ce73f459f')return false;
+    const e2e=by.get('tests/worker-auto-gm-alarm-e2e.mjs')?.after||'';
+    const old=by.get('tests/v389-night-runtime-integration.test.mjs')?.after||'';
+    const notes=by.get('docs/releases/GMWW-AUTO-GM-ZERO-DAY-P0-20261103.md')?.after||'';
+    const wf=by.get('.github/workflows/check-player-web.yml')?.after||'';
+    const real=by.get('.github/workflows/check-auto-gm-alarm-e2e.yml')?.after||'';
+    return e2e.includes('zeroSecondDayMustEndWithoutGmRead')&&
+      e2e.includes('DO alarm did not complete the night')&&
+      old.includes('manual day')&&notes.includes('rollback')&&
+      wf.includes("steps.scope.outputs.mode == 'auto-gm-zero-day-p0'")&&
+      real.includes('node tests/worker-auto-gm-alarm-e2e.mjs');
+  }catch{return false}
+}
+
 // PR766 Auto GM alarm: exact 5-file Server-only hotfix. Lock the full Worker
 // blob on both sides; an unreviewed change to ANY executable code falls back
 // to the complete CI suite.
@@ -3957,6 +3990,7 @@ function isAutoGmAlarmV3293Scope(changes){
   }catch{return false}
 }
 function classifyBrowserScope(changes){
+  if(isAutoGmZeroDayP0Scope(changes))return 'auto-gm-zero-day-p0';
   if(isAutoGmAlarmV3293Scope(changes))return 'auto-gm-alarm-v3293';
   if(isV3293EarlyGateCiFixScope(changes))return 'online-v3293-postmerge-ci';
   if(isV3293PostmergeCiScope(changes))return 'online-v3293-postmerge-ci';
@@ -4347,6 +4381,23 @@ function isV3289PR738VersionOnlyScope(base){
   return true;
 }
 function detect(){
+  // P0 exact main/PR scope: never bypass Worker dry-run or privacy tests.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{
+          const [status,path]=row.split('\t');
+          return{status,path,before:status==='M'?git('show',base+':'+path):null,
+            after:status==='M'||status==='A'?fs.readFileSync(path,'utf8'):null};
+        });
+        if(isAutoGmZeroDayP0Scope(changes))
+          return{mode:'auto-gm-zero-day-p0',reason:'PR768 exact Worker Auto GM E2E + scoped security regression'};
+      }
+    }catch{}
+  }
+
   // PR766 Worker-only hotfix: exact source SHA-1 blobs + 5 allowed files.
   // Works for both PR validation and the first-parent main postmerge diff.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
