@@ -388,7 +388,7 @@ function gmwwChatDockSync(){
 function gmwwVillageTickerUpdate(notices,cycleNight){
  const ticker=document.getElementById('gmwwVillageTicker'),track=document.getElementById('gmwwVillageTickerTrack'),clip=document.getElementById('gmwwVillageTickerClip');
  if(!ticker||!track||!clip)return;
- const safe=(Array.isArray(notices)?notices:[]).filter(n=>n?.system===true&&typeof n.text==='string');
+ const safe=(Array.isArray(notices)?notices:[]).filter(n=>n?.system===true&&typeof n.text==='string'&&n.text.trim().length>0);
  const sig=JSON.stringify([state.roomCode,state.room?.matchId,cycleNight,safe.map(n=>[n.id,n.text])]);
  if(ticker.dataset.sig===sig)return;
  ticker.dataset.sig=sig;
