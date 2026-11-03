@@ -4282,7 +4282,78 @@ function isPR778FinalMainScope(changes){
  }catch{return false;}
 }
 
+// V3.296: exact 19-file icon-only Runtime update. Refuse unknown files,
+// changed animation/rules, unsafe Native files, or version drift.
+// Required Worker check still runs syntax, assembly, focused privacy, and dry-run.
+function isV3296CometOrbitScope(changes){
+ const expected=new Map([
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['src/gmww-members-live.js','M'],
+  ['tests/gmww-wolf-orbit-reuse-v3295.test.mjs','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','M'],
+  ['tests/gmww-online-four-fixes-v3293.test.mjs','M'],
+  ['assets/village/status-visuals.css','M'],
+  ['server-game/current/status-visuals.css','M'],
+  ['server-game/current/GMWW.html','M'],
+  ['src/index.js','M'],
+  ['package.json','M'],
+  ['package-lock.json','M'],
+  ['docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md','A'],
+  ['tests/gmww-comet-turn-orbit-v3296.test.mjs','A'],
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['tests/ci-browser-scope.test.mjs','M']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(x=>x.path)).size!==expected.size||
+    changes.some(x=>expected.get(x.path)!==x.status))return false;
+ try{
+  const rows=new Map(changes.map(x=>[x.path,x]));
+  const after=p=>String(rows.get(p)?.after??fs.readFileSync(p,'utf8'));
+  const before=p=>String(rows.get(p)?.before??'');
+  const original="kind==='actor'?'🫧':'🐦‍🔥'";
+  const updated="kind==='actor'?'☄️':'🐦‍🔥'";
+  const gm='server-game/src/40-battle-and-timeline.part';
+  const web='src/player-web-src/35-online-chat.part';
+  const exactIcon=p=>before(p).includes(original)&&before(p).replace(original,updated)===after(p);
+  if(!exactIcon(gm)||!exactIcon(web))return false;
+  if(!after(gm).includes("item.className='gmww-sv-orbit-item'")||
+     !after(web).includes('gmwwSvVerticalOrbit 6s linear infinite'))return false;
+  for(const p of ['tests/gmww-wolf-orbit-reuse-v3295.test.mjs',
+      'tests/gmww-character-orbit-visuals-20261103.test.mjs',
+      'tests/gmww-online-four-fixes-v3293.test.mjs']){
+    if(!before(p).includes('🫧')||before(p).split('🫧').join('☄️')!==after(p))return false;
+  }
+  for(const p of ['server-game/current/status-visuals.css','assets/village/status-visuals.css']){
+    if(!before(p).includes('V3.295: 🫧')||
+       before(p).replace('V3.295: 🫧','V3.296: ☄️')!==after(p))return false;
+  }
+  if(!after('src/gmww-members-live.js').includes('gmwwSvVerticalOrbit 6s linear infinite')||
+     !after('src/gmww-members-live.js').includes("kind==='actor'?'☄️':'🐦‍🔥'"))return false;
+  const core=after('server-game/src/00-core-and-library.part');
+  if(!core.includes("const VERSION='3.296'")||
+     !after('server-game/current/app.js').includes("const VERSION='3.296'")||
+     !after('src/index.js').includes('VERSION="V3.296"')||
+     !after('server-game/current/GMWW.html').includes('<title>GMWW V3.296</title>')||
+     JSON.parse(after('package.json')).version!=='3.296.0'||
+     JSON.parse(after('package-lock.json')).version!=='3.296.0')return false;
+  const originalWolf=fs.readFileSync('assets/status-visuals.js','utf8');
+  if(!originalWolf.includes("wolf_bitten:['🐺']")||
+     !after('server-game/current/status-visuals.css').includes('animation:gmwwSvVerticalOrbit 6s linear infinite!important')||
+     !after('assets/village/status-visuals.css').startsWith(after('server-game/current/status-visuals.css')))return false;
+  if(!after('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'comet-orbit-v3296'")||
+     !after('tests/ci-browser-scope.test.mjs').includes('V3.296 exact comet-only CI scope')||
+     !after('tests/gmww-comet-turn-orbit-v3296.test.mjs').includes('☄️')||
+     !after('docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md').includes('Rollback'))return false;
+  return true;
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isV3296CometOrbitScope(changes))return 'comet-orbit-v3296';
   if(isPR778FinalMainScope(changes))return 'pr778-postmerge-worker';
   if(isPR778PostmergeWorkerScope(changes))return 'pr778-postmerge-worker';
   if(isPR778BulletinRecoveryScope(changes))return 'pr778-bulletin-worker-recovery';

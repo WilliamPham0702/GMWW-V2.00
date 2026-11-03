@@ -719,7 +719,7 @@ function gmwwOnlineTurnEffects(offers){
        for(let k=0;k<count;k++){
          const item=doc.createElement('span');item.className='gmww-sv-orbit-item';
          item.style.setProperty('--orbit-delay',(-6*k/count).toFixed(4)+'s');
-         const icon=doc.createElement('span');icon.textContent=kind==='actor'?'🫧':'🐦‍🔥';
+         const icon=doc.createElement('span');icon.textContent=kind==='actor'?'☄️':'🐦‍🔥';
          item.appendChild(icon);orbit.appendChild(item);
        }
      }

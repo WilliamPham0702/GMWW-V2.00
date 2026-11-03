@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.295';
+const VERSION='3.296';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -6952,7 +6952,7 @@ function battleMarkPlayers(){
         orb.replaceChildren(...Array.from({length:count},(_,k)=>{
           const item=document.createElement('span');item.className='gmww-sv-orbit-item';
           item.style.setProperty('--orbit-delay',(-6*k/count).toFixed(4)+'s');
-          const icon=document.createElement('span');icon.textContent=kind==='actor'?'🫧':'🐦‍🔥';
+          const icon=document.createElement('span');icon.textContent=kind==='actor'?'☄️':'🐦‍🔥';
           item.appendChild(icon);return item;
         }));
       }

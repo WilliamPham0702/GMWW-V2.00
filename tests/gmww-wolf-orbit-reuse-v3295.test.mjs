@@ -20,13 +20,13 @@ test('Do not change wolf bite orbit; same keyframe used for turn and target',()=
   assert.ok(gmCss.includes('gmwwCharacterBodyOrbit'),'Legacy CSS untouched; new DOM spans do not use it');
   assert.ok(!gmPart.includes('gmwwCharacterBodyOrbit'),'New markup must not call legacy orbit');
 });
-test('GM uses six staggered 🫧 or 🐦‍🔥 nodes with wolf status classes',()=>{
+test('GM uses six staggered ☄️ or 🐦‍🔥 nodes with wolf status classes',()=>{
   for(const source of [gmPart,gmCompiled]){
     assert.ok(source.includes("className='battle-orbit gmww-sv-orbit'"));
     assert.ok(source.includes("item.className='gmww-sv-orbit-item'"));
     assert.ok(source.includes("kind=actorOn?'actor':'target',count=6"));
     assert.ok(source.includes("(-6*k/count).toFixed(4)+'s'"));
-    assert.ok(source.includes("kind==='actor'?'🫧':'🐦‍🔥'"));
+    assert.ok(source.includes("kind==='actor'?'☄️':'🐦‍🔥'"));
   }
 });
 test('Player Web shares exact wolf keyframe, six icons and phase',()=>{
@@ -35,7 +35,7 @@ test('Player Web shares exact wolf keyframe, six icons and phase',()=>{
   assert.ok(player.includes("className='gmww-online-orbit gmww-sv-orbit'"));
   assert.ok(player.includes("item.className='gmww-sv-orbit-item'"));
   assert.ok(player.includes("kind=actor?'actor':'target',count=6"));
-  assert.ok(player.includes("kind==='actor'?'🫧':'🐦‍🔥'"));
+  assert.ok(player.includes("kind==='actor'?'☄️':'🐦‍🔥'"));
   assert.ok(!player.includes('gmww-player-character-orbit'));
 });
 test('Player bundle contains exactly current authored source',()=>{
