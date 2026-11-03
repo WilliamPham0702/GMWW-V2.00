@@ -706,6 +706,19 @@ function connectPlaySocket(){
       if(d.runtime)playSceneRuntime.nightRuntime=d.runtime;else if(d.nightRuntime)playSceneRuntime.nightRuntime=d.nightRuntime;
       if(Array.isArray(d.players))playSceneRuntime.players=d.players;
       playSceneRuntime.lastSyncAt=Date.now();savePlayScene();renderPlayScene();
+      // Socket Auto GM transitions may arrive while a busy GM panel temporarily
+      // suppresses the regular audio attempt. Retry only THIS confirmed turn.
+      if(d.type==='night_turn'&&d.source==='auto'&&d.runtime?.currentId){
+        const expected=String(d.runtime.currentId);
+        for(const delay of [180,900,1800])setTimeout(()=>{
+          if(playSceneState.step!=='battle'||playSceneState.phase!=='night'||
+             String(playSceneRuntime.nightRuntime?.currentId||'')!==expected)return;
+          if(battleState.lastAudioTurnKey===battleState.key||
+             battleState.audioPendingTurnKey===battleState.key)return;
+          if(!playAudioMuted()&&!playSceneRuntime.busy&&!battleState.busy)
+            battleAudioForTurn(battleTurn(),true);
+        },delay);
+      }
       if(playSceneRuntime.roomSyncTimer)clearTimeout(playSceneRuntime.roomSyncTimer);
       playSceneRuntime.roomSyncTimer=setTimeout(()=>{playSceneRuntime.roomSyncTimer=0;playSyncRoom(true)},180);return
     }
