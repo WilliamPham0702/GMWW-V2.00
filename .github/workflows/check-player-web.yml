@@ -71,6 +71,32 @@ jobs:
           test -s docs/releases/GMWW-V3293-AUTO-GM-HOTFIX-20261103.md
           echo 'PASS PR766: authoritative Auto GM, Worker, Online and privacy checks.' >> "$GITHUB_STEP_SUMMARY"
 
+      # PR767: exact V3.294 voice recording/meter and storage scoped CI-LITE.
+      # Still verifies packaging, private audio access, replay, Worker dry-run and rollback notes.
+      - name: PR767 — live microphone waveform and fast private Chat voice V3.294
+        if: steps.scope.outputs.mode == 'gmww-chat-live-v3294'
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node --check src/gmww-members-live.js
+          node --check .github/scripts/ci-browser-scope.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-chat-live-meter-fast-send-v3294.test.mjs \
+            tests/gmww-auto-gm-alarm-recovery.test.mjs \
+            tests/assassin-player-public-privacy-20261103.test.mjs \
+            tests/gmww-chat-voice-send-v3292.test.mjs \
+            tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/online-frozen-chat-day-20261031.test.mjs \
+            tests/player-v3-village-status-daychat-20261102.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.294-LIVE-VOICE-FAST-20261103.md
       # PR761: strict 17-file CI-LITE gate, never skip Worker or private-action tests.
       - name: PR761 — V3.293 Online turn, Assassin, GM realtime, ⭐🔥 and privacy
         if: steps.scope.outputs.mode == 'online-turn-v3293'
