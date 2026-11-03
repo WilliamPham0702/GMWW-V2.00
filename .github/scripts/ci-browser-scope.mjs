@@ -4131,6 +4131,7 @@ function isV3295WolfOrbitScope(changes){
   ['tests/ci-browser-scope.test.mjs','M'],
   ['tests/gmww-character-orbit-visuals-20261103.test.mjs','M'],
   ['tests/gmww-wolf-orbit-reuse-v3295.test.mjs','A'],
+  ['tests/gmww-online-four-fixes-v3293.test.mjs','M'],
   ['.github/scripts/ci-browser-scope.mjs','M'],
   ['.github/workflows/check-player-web.yml','M']
  ]);
