@@ -1242,3 +1242,40 @@ test('PR753 voice and clock V3.292 exact guarded scope keeps mandatory privacy a
  'tests/online-chat-authority.test.mjs','tests/ci-browser-scope.test.mjs','npm run check',
  "steps.scope.outputs.mode == 'gmww-voice-clock-v3292'"])assert.ok(worker.includes(required),required);
 });
+
+test('PR761 V3.293 exact Online action, realtime, privacy and Runtime scope fails closed',()=>{
+ const paths=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['docs/releases/GMWW-RUNTIME-V3.293-ONLINE-20261103.md','A'],
+  ['package-lock.json','M'],['package.json','M'],
+  ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/30-village-and-setup.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/gmww-members-live.js','M'],['src/index.js','M'],
+  ['src/player-web-src/30-rooms-and-realtime.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/demo-hybrid-real-players.test.mjs','M'],
+  ['tests/gmww-online-four-fixes-v3293.test.mjs','A']
+ ];
+ const oldMarkers=new Map([
+  ['package.json',['"version": "3.293.0"','"version": "3.292.0"']],
+  ['package-lock.json',['"version": "3.293.0"','"version": "3.292.0"']],
+  ['server-game/current/GMWW.html',['<title>GMWW V3.293</title>','<title>GMWW V3.292</title>']],
+  ['server-game/src/00-core-and-library.part',["const VERSION='3.293'","const VERSION='3.292'"]],
+  ['src/index.js',['VERSION="V3.293"','VERSION="V3.292"']]
+ ]);
+ const changes=paths.map(([path,status])=>{
+  const after=readFileSync(path,'utf8'),markers=oldMarkers.get(path);
+  const before=status==='M'?(markers?after.replaceAll(...markers):'unchanged baseline source') :null;
+  return {path,status,after,before};
+ });
+ assert.equal(classifyBrowserScope(changes),'online-turn-v3293');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ assert.equal(classifyBrowserScope(changes.map((c,i)=>i===0?{...c,status:'D'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/index.js'?{...c,after:c.after.replace('this.broadcast({type:"battle_action_confirmed",matchId,serverTime:Date.now()})','this.broadcast({type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()})')}:c)),'full');
+});
