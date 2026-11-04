@@ -21,7 +21,6 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
     'html body #gmwwChatLines{min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}',
     'html body #gmwwChatText{font-size:16px!important}',
     'html body #gmwwChatLaunch{top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(12px,env(safe-area-inset-bottom)))!important;bottom:auto!important;transform:translate(-50%,-100%)!important}',
-    'html body #gmwwOnlineDock{top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(10px,env(safe-area-inset-bottom)) - 70px)!important;bottom:auto!important;transform:translate(-50%,-100%)!important}',
     'html body #gmwwOnlinePick{top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(12px,env(safe-area-inset-bottom)) - 140px)!important;bottom:auto!important;transform:translate(-50%,-100%)!important}'
   ].join('');
   document.head.appendChild(style);

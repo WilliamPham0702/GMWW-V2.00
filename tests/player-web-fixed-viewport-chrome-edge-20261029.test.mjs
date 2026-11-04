@@ -34,7 +34,8 @@ test('Chat remains inside visible viewport during keyboard input; messages alone
   assert.match(boot,/#gmwwChatText\{font-size:16px!important/);
   assert.match(chat,/function gmwwChatClosePanel\(/);
   assert.match(chat,/const panel=document\.getElementById\('gmwwChatPanel'\);if\(panel\?\.contains\(event\.target\)\)return/);
-  assert.match(boot,/#gmwwOnlineDock\{[^']*gmww-player-visible-height/);
+  // V3.301: action icons are anchored on the campfire (gmwwOnlinePlaceAtFire), never pinned to the bottom.
+  assert.doesNotMatch(boot,/#gmwwOnlineDock\{[^']*gmww-player-visible-height/);
   assert.match(boot,/#gmwwChatLaunch\{[^']*gmww-player-visible-height/);
 });
 
