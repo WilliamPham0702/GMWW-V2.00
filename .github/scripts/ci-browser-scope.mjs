@@ -4352,7 +4352,33 @@ function isV3296CometOrbitScope(changes){
  }catch{return false}
 }
 
+// V3296_POSTMERGE_RECOVERY — two CI-only files. Runtime V3.296 remains byte-identical
+// to merged PR #784. This selector can never authorize gameplay/IPA/asset changes.
+function isV3296CiOnlyRecoveryScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['tests/ci-browser-scope.test.mjs','M']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    changes.some(row=>expected.get(row.path)!==row.status)||
+    new Set(changes.map(row=>row.path)).size!==expected.size)return false;
+ try{
+  const version=JSON.parse(fs.readFileSync('package.json','utf8')).version;
+  const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+  const player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
+  const css=fs.readFileSync('server-game/current/status-visuals.css','utf8');
+  return version==='3.296.0'&&
+    gm.includes("kind==='actor'?'☄️':'🐦‍🔥'")&&
+    player.includes("kind==='actor'?'☄️':'🐦‍🔥'")&&
+    css.includes('animation:gmwwSvVerticalOrbit 6s linear infinite!important')&&
+    fs.existsSync('docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md')&&
+    fs.readFileSync('.github/scripts/ci-browser-scope.mjs','utf8').includes('V3296_POSTMERGE_RECOVERY')&&
+    fs.readFileSync('tests/ci-browser-scope.test.mjs','utf8').includes('V3296_POSTMERGE_RECOVERY');
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isV3296CiOnlyRecoveryScope(changes))return 'comet-orbit-v3296';
   if(isV3296CometOrbitScope(changes))return 'comet-orbit-v3296';
   if(isPR778FinalMainScope(changes))return 'pr778-postmerge-worker';
   if(isPR778PostmergeWorkerScope(changes))return 'pr778-postmerge-worker';
@@ -4802,6 +4828,37 @@ export function publicInteractionReceipt(row){
     notes.includes('Rollback');
 }
 function detect(){
+  // V3296_POSTMERGE_RECOVERY: exact 2-file CI fix can certify *existing*
+  // reviewed Runtime #784 only when SHA ancestry and all runtime bytes match.
+  // Keep all required security, assembly, focused privacy and Worker dry-run tests.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const isPush=process.env.GMWW_CI_EVENT==='push';
+      if(!isPush||process.env.GITHUB_REF==='refs/heads/main'){
+        const pinned='fb3528abfd80b1eee5d96abe34fbb69059692678';
+        const parent=git('rev-parse','HEAD^1').trim();
+        if(parent===pinned){
+          git('merge-base','--is-ancestor',pinned,'HEAD');
+          git('diff','--quiet',pinned,'HEAD','--',
+            'src','server-game','assets','update-system',
+            'package.json','package-lock.json','wrangler.jsonc');
+          const base=isPush?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+          if(base==='HEAD^1'||base===pinned){
+            const rows=git('diff','--name-status','--no-renames',base,'HEAD')
+              .trim().split('\n').filter(Boolean);
+            const changes=rows.map(line=>{
+              const [status,path]=line.split('\t');
+              return{status,path};
+            });
+            if(isV3296CiOnlyRecoveryScope(changes))
+              return{mode:'comet-orbit-v3296',
+                reason:'V3.296 exact CI-only recovery; unchanged reviewed merge '+pinned};
+          }
+        }
+      }
+    }catch{} // Any changed gameplay or unknown ancestry must run full CI.
+  }
+
   // FIRST: verify PR778 main/PR Worker-only release, before historic push FULL
   // short circuit. This is an exact-files check, not a general CI bypass.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
