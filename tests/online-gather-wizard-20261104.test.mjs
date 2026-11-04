@@ -69,7 +69,7 @@ test('Random and Manual placement share the same Seat prerequisite',()=>{
   assert.match(random,/!progress\.seatConfigured/);
   assert.match(manual,/!progress\.seatConfigured/);
   assert.doesNotMatch(random,/await playCallOnlineMembers\(\)/);
-  const preset=section(setup,'async function playApplySeatPreset(count){','function ');
+  const preset=setup.slice(setup.indexOf('async function playApplySeatPreset(count){'));
   assert.match(preset,/if\(ok\)\{playSceneState\.gatherSeatPresetRoom=/);
   assert.match(roles,/if\(rosterChanged\)playSceneState\.gatherSeatPresetRoom=''/);
 });
