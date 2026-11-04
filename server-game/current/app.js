@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.299';
+const VERSION='3.300';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -4647,7 +4647,7 @@ function renderPlayRoomModeControl(){
   const mode=playRoomUiState.pendingMode||(room.demo===true?'demo':playSceneState.roomMode);
   const selected=!roomReady||!playRoomUiState.modeTouched?'choose':mode;
   modeToggle.dataset.mode=selected;
-  modeToggle.disabled=!roomReady||!!playSceneRuntime.busy||!!room.seatsLocked||
+  modeToggle.disabled=!roomReady||!!playSceneRuntime.busy||
     ['running','started','game','playing'].includes(String(room.phase||'lobby').toLowerCase());
   const labels={choose:'CHẾ ĐỘ',offline:'📴 OFFLINE',online:'🌐 ONLINE',demo:'🎮 DEMO'};
   const label=modeToggle.querySelector('b');if(label)label.textContent=labels[selected]||labels.choose;
@@ -5133,7 +5133,7 @@ function bindPlayRoomModeButtons(){
   const button=document.getElementById('playRoomModeToggle');if(!button||button.dataset.modeBound==='1')return;
   button.dataset.modeBound='1';
   button.addEventListener('click',()=>{
-    if(playSceneRuntime.busy||!isLivePlayRoom()||String(playRoomUiState.selectedCode)!==String(playSceneState.roomCode)||playSceneRuntime.room?.seatsLocked)return;
+    if(playSceneRuntime.busy||!isLivePlayRoom()||String(playRoomUiState.selectedCode)!==String(playSceneState.roomCode)||['running','started','game','playing'].includes(String(playSceneRuntime.room?.phase||'lobby').toLowerCase()))return;
     const current=playRoomUiState.pendingMode||(playSceneRuntime.room?.demo===true?'demo':playSceneState.roomMode);
     playRoomUiState.pendingMode=nextPlayRoomMode(current,playRoomUiState.modeTouched);
     playRoomUiState.modeTouched=true;

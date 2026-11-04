@@ -16,6 +16,13 @@ export function sanitizeGameConfig(v){
   const timing={villageDiscussionSec:clampSec(v?.timing?.villageDiscussionSec??v?.villageDiscussionSec??300),wolfDiscussionSec:clampSec(v?.timing?.wolfDiscussionSec??v?.wolfDiscussionSec??30),earlyArtifactSec:clampSec(v?.timing?.earlyArtifactSec??v?.earlyArtifactSec??30),defaultActionSec,artifactActionSec:clampSec(v?.timing?.artifactActionSec??30),gallowsNominationSec:Math.max(1,clampSec(v?.timing?.gallowsNominationSec??10)||10),gallowsVoteSec:Math.max(1,clampSec(v?.timing?.gallowsVoteSec??10)||10),autoAdvance:v?.timing?.autoAdvance!==false};
   return{id:String(v.id||"").slice(0,120),name:String(v.name||"Game Online").slice(0,120),playerCount:Math.max(0,Math.min(100,Number(v.playerCount||0))),roles,artifactsEnabled:v.artifactsEnabled===false?false:(v.artifactsEnabled===true||(Array.isArray(v.artifacts)&&v.artifacts.length>0)),artifacts:v.artifactsEnabled===false?[]:(Array.isArray(v.artifacts)?v.artifacts.slice(0,100).map(a=>({artifactId:String(a?.artifactId||"").slice(0,100),order:Number(a?.order||0)})):[]),artifactLimitPerCycle:Math.max(0,Math.min(30,Math.trunc(Number(v.artifactLimitPerCycle??3)||0))),timing}
 }
+// DEMO isolation covers a live match only (roles dealt or started, not yet ended).
+export function roomModeSwitchBlocked(meta,assignments){
+  const phase=String(meta?.phase||"lobby").toLowerCase();
+  if(["running","started","game","playing","role_delivery"].includes(phase))return true;
+  if(meta?.endedAt)return false;
+  return !!(meta?.startedAt||meta?.roleDeliveredAt||(Array.isArray(assignments)&&assignments.length));
+}
 export function normalizeRoomMode(v){return String(v||"").trim().toLowerCase()==="offline"?"offline":"online"}
 export function normalizeSeatMoveMode(v){return String(v||"").trim().toLowerCase()==="walk"?"walk":"instant"}
 export function normalizeSeatCount(v,fallback=12){const n=Math.trunc(Number(v));return Math.max(1,Math.min(30,Number.isFinite(n)&&n>0?n:(Math.trunc(Number(fallback))||12)))}
