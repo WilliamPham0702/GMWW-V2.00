@@ -7,7 +7,7 @@ import {character40Catalog,character40Image} from "./gmww-character40-catalog.js
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
 import {projectPublicTurnClock} from "./gmww-public-turn-clock.js";
-import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes,gallowsSetDuration,gallowsCloseNomination} from "./gmww-gallows-rules.js";
+import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes,gallowsSetDuration,gallowsCloseNomination,autoGallowsDue,AUTO_GALLOWS_LOCK_PAUSE_MS} from "./gmww-gallows-rules.js";
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,publicVillageStatusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
@@ -50,7 +50,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.304",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3304-entrance-icons-day-audio",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.305",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3305-gallows-autogm-admin-dock",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1226,6 +1226,26 @@ export class RoomDurableObject extends DurableObject {
     this.lastAnnouncementSig=sig;
     if(cue)this.broadcast({type:'announcement_ready',audioCue:cue,serverTime:Date.now()});
   }
+  // V3.305: the Server itself starts "Đếm ngược 30 giây cuối" for every Player Web,
+  // independent of the GM app being open/foreground. GM uploads the clip at day start.
+  async dayCountdownDue(meta){
+    if(!meta||meta.demo===true||meta.phase!=='running'||String(meta.cyclePhase||'')!=='morning'||meta.autoGM===false)return 0;
+    const deadline=Date.parse(meta.dayDeadlineAt||'');if(!Number.isFinite(deadline)||Date.now()>=deadline)return 0;
+    const key=String(meta.matchId||'')+':'+String(meta.cycleKey||'');
+    if((await this.ctx.storage.get('annCountdown'))===key)return 0;
+    const lib=await announcementLibrary(this.ctx.storage);if(!lib['system:audio_system_countdown'])return 0;
+    return Math.max(Date.now(),deadline-DAY_COUNTDOWN_MS);
+  }
+  async dayCountdownCue(meta){
+    const due=await this.dayCountdownDue(meta);if(!due||due>Date.now()+25)return false;
+    const key=String(meta.matchId||'')+':'+String(meta.cycleKey||''),deadline=Date.parse(meta.dayDeadlineAt);
+    const prev=await this.ctx.storage.get('annDay'),same=prev&&prev.matchId===String(meta.matchId||'')&&prev.cycleKey===String(meta.cycleKey||'');
+    await this.ctx.storage.put('annDay',{matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),seq:same?Number(prev.seq||0)+1:1,
+      targets:['system:audio_system_countdown'],startedAt:Math.min(Date.now(),deadline-DAY_COUNTDOWN_MS)});
+    await this.ctx.storage.put('annCountdown',key);
+    await this.syncAnnouncementCue(false);
+    return true;
+  }
   async gmAnnouncement(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta;
@@ -1240,6 +1260,7 @@ export class RoomDurableObject extends DurableObject {
     }
     const saved=await saveAnnouncementTarget(this.ctx.storage,target,decodeRecording(body));
     if(saved.ok&&meta?.phase==='running')await this.syncAnnouncementCue(false);
+    if(saved.ok&&target==='system:audio_system_countdown')await this.scheduleRoomAlarm(await this.ctx.storage.get('meta')||meta);
     return saved;
   }
   async gmDayAnnouncement(meta,body){
@@ -1445,6 +1466,8 @@ export class RoomDurableObject extends DurableObject {
     meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);
     meta.deliveryVersion=Number(body?.deliveryVersion||meta.deliveryVersion||0);
     meta.phase="running";meta.status="running";meta.gmStage="battle";
+    // V3.305: every real match enters with Auto GM ON (a previous match may have paused it).
+    if(meta.demo!==true)meta.autoGM=true;
     meta.locked=false;meta.seatsLocked=true;meta.startedAt=new Date().toISOString();meta.endedAt=null;
     await this.ctx.storage.put("players",players);
     await this.ctx.storage.put("interactions",[]);
@@ -2201,14 +2224,13 @@ export class RoomDurableObject extends DurableObject {
       const due=Number.isFinite(deadline)?deadline:sec&&Number.isFinite(started)?started+sec*1000:0;
       if(meta.demo)return due;
       const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
-      const at=Number(ballot?.resolvedAt||0);
-      return ballot?.stage==="resolved"&&!ballot.acknowledgedAt&&at>0?Math.max(due,at+30000):due;
+      return autoGallowsDue(ballot,meta,due,Date.now());
     }
     return 0
   }
   async scheduleRoomAlarm(meta=null){
     meta=meta||await this.ctx.storage.get("meta");if(!meta||String(meta.phase||"").toLowerCase()==="deleted")return 0;
-    const expiryDue=this.roomExpiryDue(meta),autoDue=await this.autoAdvanceDue(meta),demoDue=meta.demo?await nextServerDemoDue(this,meta):0,due=Math.min(expiryDue,autoDue||Infinity,demoDue||Infinity),next=Math.max(Date.now()+25,due);
+    const expiryDue=this.roomExpiryDue(meta),autoDue=await this.autoAdvanceDue(meta),demoDue=meta.demo?await nextServerDemoDue(this,meta):0,countdownDue=typeof this.dayCountdownDue==="function"?await this.dayCountdownDue(meta):0,due=Math.min(expiryDue,autoDue||Infinity,demoDue||Infinity,countdownDue||Infinity),next=Math.max(Date.now()+25,due);
     try{await this.ctx.storage.setAlarm(next)}catch(error){console.error("GMWW_ROOM_ALARM_SCHEDULE",error);if(meta.demo)throw error}
     return next
   }
@@ -2217,8 +2239,26 @@ export class RoomDurableObject extends DurableObject {
     const due=await this.autoAdvanceDue(meta);if(!due||due>Date.now()+25)return false;
     const phase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
     if(phase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(runtime&&!runtime.completed)await this.advanceNightRuntime(meta,"next","auto");const fresh=await this.ctx.storage.get("meta"),after=await this.getNightRuntime(fresh,night,true);if(after?.completed)await this.applyCycle(fresh,"morning",night,"morning-"+night,"auto");else await this.scheduleRoomAlarm(fresh);return true}
-    if(phase==="morning"||phase==="day"){await this.applyCycle(meta,"night",night+1,"night-"+(night+1),"auto");return true}
+    if(phase==="morning"||phase==="day"){
+      // V3.305: discussion end opens the Gallows (nominate → lock → vote → verdict); night only after the verdict.
+      if(!meta.demo&&typeof this.autoGallowsStep==="function"&&await this.autoGallowsStep(meta)!=="night"){await this.scheduleRoomAlarm(await this.ctx.storage.get("meta")||meta);return true}
+      await this.applyCycle(meta,"night",night+1,"night-"+(night+1),"auto");return true}
     return false
+  }
+  async autoGallowsStep(meta){
+    const {key,ballot}=await this.gallowsState(meta),now=Date.now(),stage=String(ballot.stage||"ready");
+    if(stage==="resolved")return Number(ballot.acknowledgedAt||0)>0||now>=Number(ballot.resolvedAt||0)+30000?"night":"wait";
+    if(gallowsMode(ballot)!=="auto")return "wait";
+    let result=null;
+    if(stage==="ready")result=gallowsOpen(ballot,now);
+    else if(stage==="selecting"&&now>=Number(ballot.hangingStartedAt||0)+AUTO_GALLOWS_LOCK_PAUSE_MS){
+      const target=ballot.candidateId||gallowsAutomaticNominee(ballot);
+      result=target?gallowsBegin(ballot,target,now):gallowsCloseNomination(ballot,now);
+    }
+    if(!result?.ok)return "wait";
+    await this.ctx.storage.put(key,result.value);
+    this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:gallowsSnapshot(result.value,meta,now),serverTime:now});
+    return "gallows";
   }
   async gmTurn(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta;
@@ -3114,6 +3154,7 @@ export class RoomDurableObject extends DurableObject {
         for(const event of events)this.broadcast(event);
         return;
       }
+      if(typeof this.dayCountdownCue==="function"&&await this.dayCountdownCue(meta)){await this.scheduleRoomAlarm(meta);return}
       if(await this.runAutoAdvanceIfDue(meta))return;
       meta=await this.ctx.storage.get("meta");const due=this.roomExpiryDue(meta);
       if(Date.now()<due){await this.scheduleRoomAlarm(meta);return}
@@ -4348,7 +4389,7 @@ function announcementTargetsForTurn(turn){
   return rid(turn)?['cards:'+rid(turn)]:[];
 }
 // Daytime clips are public system announcements only (never role cards/artifacts).
-const ANNOUNCE_DAY_MAX=12;
+const ANNOUNCE_DAY_MAX=12,DAY_COUNTDOWN_MS=30000;
 function dayAnnouncementTargets(list){
   const out=[];for(const t of Array.isArray(list)?list:[]){const v=String(t||'');
     if(/^system:audio_system_[A-Za-z0-9_]{1,100}$/.test(v)&&!out.includes(v))out.push(v);if(out.length>=ANNOUNCE_DAY_MAX)break}

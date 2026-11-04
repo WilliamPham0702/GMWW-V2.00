@@ -468,6 +468,28 @@ function gmwwChatDockSync(){
   };
   tick();if(!gmwwOnlineFooterTimer)gmwwOnlineFooterTimer=setInterval(tick,1000);
 }
+// V3.305: the same running Village bulletin also sits on the top menu, right after "Làng ơi dậy đi".
+let gmwwTopTicker={sig:'',content:''};
+function gmwwTopTickerRender(){
+ const root=document.getElementById('gmwwPlayerTimeline')?.shadowRoot,list=root?.querySelector('#battleTimeline');if(!list)return;
+ if(!root.getElementById('gmwwTopTickerCss')){const css=document.createElement('style');css.id='gmwwTopTickerCss';
+  css.textContent='.gmww-top-ticker{flex:1 1 220px;min-width:160px;max-width:100%;align-self:stretch;display:flex;align-items:center;gap:6px;overflow:hidden;padding:0 10px;border-radius:14px;background:rgba(31,30,44,.62);border:1px solid #ffd18b55;box-sizing:border-box}'+
+   '.gmww-top-ticker i{flex:0 0 auto;font-style:normal;color:#ffd18b;font:800 13px/1 system-ui}.gmww-top-ticker span{flex:1;min-width:0;overflow:hidden;white-space:nowrap}'+
+   '.gmww-top-ticker b{display:inline-block;width:max-content;white-space:nowrap;color:#ffb1b1;font:700 13px/1.6 system-ui;will-change:transform;animation:gmww-top-marquee var(--gmww-top-duration,24s) linear infinite}'+
+   '@keyframes gmww-top-marquee{from{transform:translateX(var(--gmww-top-start,240px))}to{transform:translateX(-100%)}}'+
+   '@media(prefers-reduced-motion:reduce){.gmww-top-ticker b{animation:none!important;transform:none!important}}';
+  root.appendChild(css)}
+ let node=list.querySelector('.gmww-top-ticker');
+ const day=state.room?.phase==='running'&&String(state.room?.cyclePhase||'')!=='night'&&!!gmwwTopTicker.content;
+ if(!day){node?.remove();return}
+ if(!node){node=document.createElement('div');node.className='gmww-top-ticker';node.setAttribute('role','marquee');node.innerHTML='<i>📢</i><span><b></b></span>'}
+ if(node.parentNode!==list||list.lastElementChild!==node)list.appendChild(node);
+ if(node.dataset.sig===gmwwTopTicker.sig)return;node.dataset.sig=gmwwTopTicker.sig;
+ const clip=node.querySelector('span'),track=node.querySelector('b');track.textContent=gmwwTopTicker.content;
+ node.title=gmwwTopTicker.content;node.setAttribute('aria-label','Thông cáo Làng: '+gmwwTopTicker.content);
+ const width=Math.max(1,clip.clientWidth||200),distance=width+Math.max(1,track.scrollWidth);
+ track.style.setProperty('--gmww-top-start',width+'px');track.style.setProperty('--gmww-top-duration',Math.max(18,Math.ceil(distance/30))+'s');
+}
 function gmwwVillageTickerUpdate(notices,cycleNight){
  const ticker=document.getElementById('gmwwVillageTicker'),track=document.getElementById('gmwwVillageTickerTrack'),clip=document.getElementById('gmwwVillageTickerClip');
  if(!ticker||!track||!clip)return;
@@ -477,6 +499,7 @@ function gmwwVillageTickerUpdate(notices,cycleNight){
  ticker.dataset.sig=sig;
  const content=safe.length?safe.map(n=>n.text).join('     •     '):'Chưa có thông cáo công khai.';
  track.textContent=content;ticker.classList.toggle('has-notices',safe.length>0);
+ gmwwTopTicker={sig,content:safe.length?content:''};gmwwTopTickerRender();
  ticker.title=content;ticker.setAttribute('aria-label','Thông cáo Làng: '+content);
  if(!safe.length)return;
  const width=Math.max(1,clip.clientWidth),distance=width+Math.max(1,track.scrollWidth);
@@ -970,7 +993,9 @@ function renderOnlineActionDock(){
  }
 }
 
-{const replace=()=>requestAnimationFrame(()=>gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock')));window.addEventListener('resize',replace,{passive:true});window.visualViewport?.addEventListener?.('resize',replace,{passive:true})}
+{const replace=()=>requestAnimationFrame(()=>gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock')));window.addEventListener('resize',replace,{passive:true});window.visualViewport?.addEventListener?.('resize',replace,{passive:true});
+ // Follow the footer when the chat opens/closes, so icons stay above the chat box.
+ let watched=null;setInterval(()=>{const f=document.getElementById('gmwwOnlineFooter');if(f&&f!==watched&&typeof ResizeObserver==='function'){watched=f;new ResizeObserver(replace).observe(f)}},1500)}
 function gmwwOnlinePlaceAtFire(dock){
  if(!dock)return;
  // V3.304: action icons rest at the village entrance stairs, just above the bottom menu
@@ -978,7 +1003,8 @@ function gmwwOnlinePlaceAtFire(dock){
  const vw=window.innerWidth,vh=window.innerHeight,footer=document.getElementById('gmwwOnlineFooter');
  // offsetTop ignores the idle-hide transform, so the icon does not jump when the menu hides.
  const footerTop=footer&&footer.offsetHeight>0&&Number.isFinite(footer.offsetTop)&&footer.offsetTop>vh*.5?footer.offsetTop:vh-Math.max(84,vh*.11);
- const x=vw/2,bottom=Math.max(140,Math.min(vh-24,footerTop-10));
+ // V3.305: one notch higher so the icons never sit on the chat lines above the footer.
+ const x=vw/2,bottom=Math.max(140,Math.min(vh-24,footerTop-48));
  dock.style.transform='translate(-50%,-100%)';
  dock.style.left=Math.max(32,Math.min(vw-32,x))+'px';
  dock.style.top=bottom+'px';

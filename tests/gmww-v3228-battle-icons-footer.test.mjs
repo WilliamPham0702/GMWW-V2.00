@@ -76,6 +76,6 @@ test('Initial action icons anchor above the bottom controls at the village entra
  const source=piece(app,'function battleIconEntryPoint(){','function battleIconResetPositions(){');
  assert.ok(!source.includes('play-core-pearl'),'no longer spawned on the campfire');
  assert.ok(source.includes("getElementById('battleBottomControls')"));
- assert.ok(source.includes('backup.top-size.height/2-10'));
+ assert.ok(source.includes('backup.top-size.height/2-48'));
  assert.ok(app.includes('const entry=battleIconEntryPoint()'));
 });
