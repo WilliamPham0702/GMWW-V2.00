@@ -1,4 +1,5 @@
 import {readFileSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {classifyBrowserScope} from '../.github/scripts/ci-browser-scope.mjs';
