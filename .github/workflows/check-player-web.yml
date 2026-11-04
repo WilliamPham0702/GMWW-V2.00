@@ -1956,7 +1956,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --input-type=module <<'NODE'
+          rc=0; node --input-type=module <<'NODE' || rc=$?
           import {execFileSync} from 'node:child_process';
           import {readFileSync} from 'node:fs';
           const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
@@ -1981,13 +1981,15 @@ jobs:
             ['tests/v3177-room-mode-glass-dock.test.mjs','M']
           ]);
           const changes=git('diff','--name-status','--no-renames',base,'HEAD').split('\n').filter(Boolean).map(x=>x.split('\t'));
-          if(changes.length!==spec.size || changes.some(([status,path])=>spec.get(path)!==status))
-            throw Error('PR789/V3.299 scope mismatch; ordinary full CI stays mandatory.');
+          if(changes.length!==spec.size || changes.some(([status,path])=>spec.get(path)!==status)){
+            console.log('PR789/V3.299 scope mismatch; ordinary full CI stays mandatory.');process.exit(3);}
           if(JSON.parse(readFileSync('package.json','utf8')).version!=='3.299.0')throw Error('Runtime version is not V3.299');
           if(!readFileSync('server-game/current/app.js','utf8').includes("kind==='actor'?'🧞‍♂️':'🐦‍🔥'"))throw Error('V3.298 orbit not preserved');
           if(!readFileSync('server-game/current/app.js','utf8').includes('const VERSION=\'3.299\''))throw Error('GM Runtime does not match V3.299');
           console.log('V3.299 exact scope verified; preserve V3.297 audio and V3.298 orbit via dedicated regression.');
           NODE
+          if [ "$rc" = 3 ]; then exit 0; fi
+          [ "$rc" = 0 ]
           node --check server-game/current/app.js
           node --check src/index.js
           node .github/scripts/assemble-gm-app.mjs --verify
@@ -2007,19 +2009,19 @@ jobs:
       # PR793 V3.300: fail-closed gate for room mode switching after gather/seat lock.
       - name: V3.300 room mode — verify exact Runtime delta and focused safety
         id: room_mode_v3300
-        if: steps.scope.outputs.mode == 'full' && ((github.event_name == 'pull_request' && github.event.pull_request.number == 793) || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+        if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
         env:
-          GMWW_RM_EVENT: ${{ github.event_name }}
-          GMWW_RM_BASE: ${{ github.event.pull_request.base.sha }}
+          # Fixed pre-V3.300 main; any later unrelated change falls back to full CI.
+          GMWW_RM_BASE: 8ce21f80835f5fff6a09a412d5b4ec916bc1f11b
         shell: bash
         run: |
           set -euo pipefail
-          node --input-type=module <<'NODE'
+          rc=0; node --input-type=module <<'NODE' || rc=$?
           import {execFileSync} from 'node:child_process';
           import {readFileSync} from 'node:fs';
           const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
-          const base=process.env.GMWW_RM_EVENT==='pull_request' ? process.env.GMWW_RM_BASE : git('rev-parse','HEAD^1');
-          if(!/^[0-9a-f]{40}$/.test(base))process.exit(1);
+          const base=process.env.GMWW_RM_BASE;
+          try{execFileSync('git',['merge-base','--is-ancestor',base,'HEAD'])}catch{process.exit(3)}
           const spec=new Map([
             ['.github/scripts/prepare-update-channel.mjs','M'],
             ['.github/workflows/check-player-web.yml','M'],
@@ -2035,13 +2037,15 @@ jobs:
             ['tests/v3175-post-create-room-mode.test.mjs','M']
           ]);
           const changes=git('diff','--name-status','--no-renames',base,'HEAD').split('\n').filter(Boolean).map(x=>x.split('\t'));
-          if(changes.length!==spec.size || changes.some(([status,path])=>spec.get(path)!==status))
-            throw Error('PR793/V3.300 scope mismatch; ordinary full CI stays mandatory.');
+          if(changes.length!==spec.size || changes.some(([status,path])=>spec.get(path)!==status)){
+            console.log('PR793/V3.300 scope mismatch; ordinary full CI stays mandatory.');process.exit(3);}
           if(JSON.parse(readFileSync('package.json','utf8')).version!=='3.300.0')throw Error('Runtime version is not V3.300');
           if(!readFileSync('server-game/current/app.js','utf8').includes("const VERSION='3.300'"))throw Error('GM Runtime does not match V3.300');
           console.log('V3.300 exact scope verified.');
           NODE
-          git diff --check "${GMWW_RM_BASE:-HEAD^1}" HEAD
+          if [ "$rc" = 3 ]; then exit 0; fi
+          [ "$rc" = 0 ]
+          git diff --check "$GMWW_RM_BASE" HEAD
           node --check server-game/current/app.js
           node --check src/index.js
           node .github/scripts/assemble-gm-app.mjs --verify
