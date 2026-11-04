@@ -466,6 +466,8 @@ async function playSetSeatLock(locked=true){
   try{const data=await playRoomApi('/seat-lock',{method:'POST',body:JSON.stringify({locked:locked!==false})});playSceneRuntime.room=data.room||playSceneRuntime.room;renderPlayScene();return !!data.seatsLocked}catch(err){playFlashError(err.message);return false}
 }
 async function playFinishSeating(){
+  const progress=playGatherSequenceStatus();
+  if(!progress.hasMembers||!progress.seatConfigured||!progress.allSeated){playFlashError('Hoàn tất Gọi người → Seat Mẫu → Phân vị trí trước khi chốt.');return}
   const members=playLiveMembers(),missing=members.filter(m=>!Number(m?.seatId||0));if(missing.length){playFlashError('Còn '+missing.length+' Người Chơi chưa có vị trí. Dùng “Phân vị trí còn lại” hoặc chọn từng người.');return}
   const locked=await playSetSeatLock(true);if(locked){playSceneState.step='game';playSceneState.activePlayerId='';savePlayScene();renderPlayScene();void playPublishStage('game')}
 }
