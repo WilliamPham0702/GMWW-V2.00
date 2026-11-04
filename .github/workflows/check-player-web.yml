@@ -2004,8 +2004,23 @@ jobs:
           test -s docs/releases/GMWW-RUNTIME-V3.299-GATHER-ONLINE-20261104.md
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'V3.299: exact 18-file gather Runtime, source/OTA/orbit/audio safety gates PASS.' >> "$GITHUB_STEP_SUMMARY"
+      - name: "Issue #773 — scoped backup exporter, authentication and Worker dry-run"
+        id: backup_export
+        if: github.event_name == 'pull_request'
+        env:
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          SCOPE="$(node .github/scripts/gmww-backup-export-scope.mjs)"
+          if [ "$SCOPE" = "true" ]; then
+            node --check src/index.js
+            node --check src/gmww-backup-export.js
+            node --test tests/gmww-backup-export.test.mjs infra/cloudflare-standby/production-backup-envelope.test.mjs tests/dual-cloudflare-release-guard.test.mjs
+            npm run check
+            npx wrangler deploy --dry-run
+            echo "scoped=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.backup_export.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
