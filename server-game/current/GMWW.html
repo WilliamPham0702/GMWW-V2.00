@@ -111,6 +111,32 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
 @media(max-width:390px){#gmwwPlayerWebShareSettings{padding:10px;gap:6px}#gmwwPlayerWebShareSettings .gmww-share-head h3{font-size:15px}#gmwwPlayerWebShareSettings .gmww-share-actions button b{font-size:11px}}
 </style>
 <!-- END GMWW_PLAYER_SHARE_STYLE -->
+<style id="gmwwGatherFlowStyle">
+/* Six-step Gathering menu: exactly one horizontal, swipeable row. */
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions{
+  display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;
+  touch-action:pan-x!important;scrollbar-width:none;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;gap:6px!important;
+}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button{
+  flex:0 0 auto!important;white-space:nowrap!important;min-height:43px!important;
+}
+#playGatherToolbar .play-gather-toolbar-actions>button:disabled{opacity:.36!important;filter:saturate(.55)}
+#playGatherToolbar .play-gather-toolbar-actions>button.is-current:not(:disabled){
+  border-color:#ffe39b!important;background:rgba(161,112,31,.35)!important;color:#fff7cf!important;
+}
+#playGatherToolbar .play-gather-toolbar-actions>button.is-complete:not(:disabled){
+  border-color:rgba(125,230,207,.7)!important;
+}
+#playGatherToolbar #playRoomModeToggle[data-mode="online"]{border-color:rgba(91,223,220,.8)!important}
+#playGatherToolbar #playRoomModeToggle[data-mode="offline"]{border-color:rgba(255,211,133,.75)!important}
+#playGatherToolbar #playRoomModeToggle[data-mode="demo"]{border-color:rgba(204,155,255,.85)!important}
+#playSeatPresetPanel .play-seat-preset-tools{display:flex;align-items:center;gap:6px}
+#playSeatPresetPanel .play-seat-preset-tools>button{
+  flex:0 0 30px;height:30px;border-radius:10px;border:1px solid #7cc9d5;
+  background:#13516c;color:#fff;font-size:19px;line-height:1;
+}
+</style>
 </head>
 <body>
 <div id="app">
