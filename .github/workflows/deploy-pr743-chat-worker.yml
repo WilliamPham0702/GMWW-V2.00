@@ -1,0 +1,148 @@
+name: Deploy PR743 Chat Worker A (no Runtime/IPA)
+# Retired 2026-11-04: one-off deploy for an already-merged PR. Its fail-closed exact-scope
+# gate can no longer match main, so automatic runs only skipped or failed. Kept for history;
+# it no longer runs automatically. Production deploys go through GMWW V3 Worker and Player Web Delivery
+# (Worker-only) and Deploy Production (Runtime), both in concurrency group gmww-production.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: gmww-pr743-chat-worker-production
+  cancel-in-progress: false
+jobs:
+  release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify reviewed PR743, unchanged runtime and exact CI release recovery
+        shell: bash
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$TESTED_SHA" || { echo "::error::Main moved; no deployment"; exit 1; }
+          git merge-base --is-ancestor 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD
+          git merge-base --is-ancestor cc430dd97af48aba6afb1d415582d9e5818457dd HEAD
+          test "$(node -p 'require("./package.json").version')" = '3.289.0'
+          git diff --quiet 7b981859d4f9171e47f4a7c0d7164b50f27d7bda HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc .github/scripts/prepare-update-channel.mjs || {
+            echo "::error::Runtime/assets/config changed since PR743 merge"; exit 1;
+          }
+          # This workflow is only permitted from an exact three-file postmerge CI fix.
+          diff -u <(printf '%s\n' \
+            .github/scripts/ci-browser-scope.mjs \
+            .github/workflows/deploy-pr743-chat-worker.yml \
+            tests/ci-browser-scope.test.mjs | sort) \
+            <(git diff --name-only HEAD^1 HEAD | sort)
+          GMWW_CI_EVENT=push GITHUB_REF=refs/heads/main node .github/scripts/ci-browser-scope.mjs | grep -F 'gmww-chat-pr743-postmerge'
+          # Required main checks, not just a PR green badge.
+          for trial in $(seq 1 30); do
+            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            result=$(printf '%s' "$runs" | jq -r --arg sha "$TESTED_SHA" '[.workflow_runs[] | select(.event=="workflow_run" and .head_sha==$sha and .name=="GMWW AUTO-DELIVERY V3.0")] | sort_by(.run_number) | last | .conclusion // "pending"')
+            case "$result" in
+              success) break;;
+              failure|cancelled|timed_out|action_required) echo "::error::V3 release CI $result"; exit 1;;
+            esac
+            if [ "$trial" = 30 ]; then echo "::error::V3 release gate missing or pending"; exit 1; fi
+            sleep 10
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Compile and verify authorized Chat/voice/permissions offline
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs tests/online-chat-authority.test.mjs tests/online-frozen-chat-day-20261031.test.mjs
+          npm run check
+      - name: Record Production health and previous Cloudflare A Worker version
+        id: previous
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          URL="https://gmww-v2-00.williampham0702.workers.dev"
+          curl -fsS --max-time 20 "$URL/api/health?chat-pr743-before=$(date +%s)" > /tmp/pr743-before-health.json
+          node -e "const d=require('/tmp/pr743-before-health.json');if(d.project!=='GMWW-V2.00'||d.status!=='online')process.exit(1)"
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/pr743-before-deploy.json
+          node - <<'NODE' >> "$GITHUB_OUTPUT"
+          const d=require('/tmp/pr743-before-deploy.json');
+          const v=d.result?.deployments?.[0]?.versions?.[0];
+          if(!d.success||!v?.version_id||v.percentage!==100)throw Error('Previous Cloudflare A Worker 100% deployment not verified');
+          console.log('version='+v.version_id);
+          NODE
+      - name: Deploy Worker and Player Web to Cloudflare A only (no OTA, IPA or data migration)
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      - name: Smoke Production health, voice UI and unauthenticated access denial
+        if: steps.deploy.outcome == 'success'
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS: ${{ steps.previous.outputs.version }}
+        run: |
+          set -euo pipefail
+          URL="https://gmww-v2-00.williampham0702.workers.dev"
+          success=0
+          for n in $(seq 1 16); do
+            if curl -fsS --max-time 20 "$URL/api/health?chat743=$n-$(date +%s)" -o /tmp/pr743-health.json &&
+               node -e "const d=require('/tmp/pr743-health.json');if(d.project!=='GMWW-V2.00'||d.status!=='online'||d.version!=='V3.289')process.exit(1)" &&
+               curl -fsS --max-time 25 "$URL/gmww-members-live.js?chat743=$n-$(date +%s)" -o /tmp/pr743-player.js &&
+               grep -Fq 'gmwwChatVoiceToggle' /tmp/pr743-player.js; then success=1;break;fi
+            sleep 5
+          done
+          test "$success" = 1 || { echo "::error::New Production Chat Player Web / health smoke failed"; exit 1; }
+          # No room created, no live session/data accessed. Unknown room audio must fail closed.
+          CODE=$(curl -sS --max-time 15 -o /tmp/pr743-denied.json -w '%{http_code}' \
+            "$URL/api/rooms/GMWWPR743TEST/chat/audio/12345678-1234-1234-1234-123456789012")
+          test "$CODE" != 200 || { echo "::error::Unauthenticated voice read was allowed"; exit 1; }
+          curl -fsS --retry 3 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > /tmp/pr743-after-deploy.json
+          PREVIOUS="$PREVIOUS" node - <<'NODE'
+          const d=require('/tmp/pr743-after-deploy.json');
+          const v=d.result?.deployments?.[0]?.versions?.[0];
+          if(!d.success||!v?.version_id||v.percentage!==100||v.version_id===process.env.PREVIOUS)
+            throw Error('New Cloudflare A Worker version not verified at 100%');
+          NODE
+          echo "PASS: Cloudflare A Worker health, Player Web voice UI, deny-by-default, full deployment. No OTA/IPA." >> "$GITHUB_STEP_SUMMARY"
+      - name: Automatic rollback to previous Cloudflare A Worker if postdeploy checks fail
+        if: failure() && steps.deploy.outcome == 'success' && steps.previous.outputs.version != ''
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIOUS: ${{ steps.previous.outputs.version }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE' > /tmp/pr743-rollback.json
+          console.log(JSON.stringify({strategy:'percentage',versions:[{version_id:process.env.PREVIOUS,percentage:100}],annotations:{'workers/message':'PR743 Chat Worker postdeploy smoke failed — rollback'}}))
+          NODE
+          curl -fsS -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+            --data-binary @/tmp/pr743-rollback.json \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments" > /tmp/pr743-rollback-response.json
+          node -e "if(!require('/tmp/pr743-rollback-response.json').success)process.exit(1)"
+          echo "ROLLBACK: previous Cloudflare A Worker restored without touching room data, IPA, URL, DNS, Cloudflare B or Oracle." >> "$GITHUB_STEP_SUMMARY"

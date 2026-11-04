@@ -9,21 +9,24 @@ const css=read('server-game/current/style.css');
 const from=part.indexOf('function gmwwSetupFreeBattleIcons(){');
 const to=part.indexOf('function battleMorningRows(){',from);
 const source=part.slice(from,to);
-test('The three sea shortcuts keep original unboxed emoji',()=>{
- for(const [id,emoji] of [['battleFactionStatsToggle','🌈'],['battleDayNoticeToggle','🏖️'],['battleDayGallowsToggle','⛱️']]){
+test('Day footer retains its functional icons and the independent ⚖️ shortcut',()=>{
+ for(const id of ['battleFactionStatsToggle','battleDayNoticeToggle','battleDayGallowsToggle']){
   const pos=html.indexOf('id="'+id+'"');
-  assert.ok(pos>=0&&html.slice(pos,pos+400).includes(emoji),id);
+  assert.ok(pos>=0,id+' exists');
+  const button=html.slice(pos,html.indexOf('</button>',pos)+9);
+  if(id==='battleFactionStatsToggle')assert.match(button,/⚖️/);
+  else assert.match(button,/<svg class="gmww-footer-icon"/);
  }
- assert.match(css,/#battleBottomControls #battleSeaShortcuts/);
+ assert.match(html,/id="battleBottomControls"[^>]+Thanh dưới: Đồng hồ/);
  assert.match(css,/#battleBottomControls #battleDayGallowsFloat/);
 });
-test('Shortcuts are docked, no longer free-draggable; only Demo remains floating',()=>{
- assert.match(source,/battleSeaShortcuts/);
+test('Day shortcuts use fixed dock; only DEMO and the independent ⚖️ shortcut float',()=>{
  assert.match(source,/battleMainActionSlot/);
- assert.match(source,/for\(const id of \['battleDemoObserver'\]\)/);
- assert.doesNotMatch(source,/for\(const id of \['battleFactionStatsFloat','battleDayNoticeFloat','battleDayGallowsFloat','battleDemoObserver'\]\)/);
+ assert.match(source,/for\(const id of \['battleDayNoticeFloat','battleDayGallowsFloat'\]\)/);
+ assert.match(source,/for\(const id of \['battleDemoObserver','battleFactionStatsFloat'\]\)/);
+ assert.match(source,/document\.getElementById\('battleSeaShortcuts'\)\?\.remove\(\)/);
  assert.match(source,/item\.classList\.remove\('gmww-free-icon'\)/);
- assert.match(source,/gallows\.classList\.remove\('gmww-free-icon'\)/);
+ assert.match(source,/panel\.classList\.add\('gmww-free-icon'\)/);
 });
 test('Touch buttons still open original server-backed stats, village notice and gallows',()=>{
  assert.match(controls,/battleFactionStatsToggle'\)\?\.addEventListener\('click'/);

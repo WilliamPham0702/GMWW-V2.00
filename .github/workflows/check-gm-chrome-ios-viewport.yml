@@ -1,0 +1,46 @@
+name: Check GM iPhone Chrome viewport
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server-game/current/GMWW.html'
+      - 'tests/gm-chrome-ios-viewport-20261030.test.mjs'
+      - '.github/workflows/check-gm-chrome-ios-viewport.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gm-chrome-ios-viewport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Focused Chrome iOS viewport regression (GM Server only)
+        run: |
+          node --test tests/gm-chrome-ios-viewport-20261030.test.mjs
+      - name: Verify GM CSS unchanged and source-backed JS changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code origin/main...HEAD -- server-game/current/style.css
+          ACTUAL=$(git diff --unified=0 origin/main...HEAD -- server-game/current/app.js | grep -E '^[+-][^+-]' || true)
+          if [ -z "$ACTUAL" ]; then
+            echo "HTML-only compact Player Web share change: no GM app.js modifications."
+            exit 0
+          fi
+          EXPECTED=$(printf '%s\n' "-const VERSION='3.277';" "+const VERSION='3.278';")
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            # Functional GM PRs may alter JS legitimately, but only with corresponding
+            # source module changes and a byte-for-byte reproducible GM bundle.
+            if git diff --quiet origin/main...HEAD -- server-game/src/; then
+              echo "::error::GM JS changed without source modules (not a version-only PR)"
+              printf 'Actual changes:\n%s\n' "$ACTUAL"
+              exit 1
+            fi
+            node .github/scripts/assemble-gm-app.mjs --verify
+          fi

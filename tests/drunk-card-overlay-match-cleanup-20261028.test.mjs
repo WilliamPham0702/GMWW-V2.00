@@ -26,7 +26,7 @@ test('Player Web has no new dialog, title, count or Finish button; selects exact
   assert.match(section,/draw\?\.status==='pending'/);
   assert.match(section,/card\.onclick=\(\)=>submitDrunkDraw\(c\.id\)/);
   assert.doesNotMatch(section,/<h2>|<p>|dd-result|dd-finish|card\.textContent/);
-  assert.match(web,/function disconnectRoom\(\)\{\s*clearDrunkDraw\(\)/);
+  assert.match(web,/function disconnectRoom\(\)\{\s*gmwwChatUnmount\(\);clearDrunkDraw\(\)/);
   assert.match(results,/function showResult[\s\S]*?clearDrunkDraw\(\)/);
   assert.match(results,/async function closeResult\(\)\{\s*clearDrunkDraw\(\)/);
 });
@@ -43,7 +43,9 @@ test('GM overlay stays inside game shell, not on unrelated homepage',()=>{
 function roomHarness(){
   const snippet=worker.slice(worker.indexOf('  async gmReset('),worker.indexOf('  async alarm(){'));
   assert.ok(snippet.startsWith('  async gmReset('));
-  const Room=vm.runInNewContext('(class Room{'+snippet+'})',{
+  const voice=worker.slice(worker.indexOf('  async chatVoiceClear(){'),worker.indexOf('  async playerChatRead('));
+  assert.ok(voice.startsWith('  async chatVoiceClear(){'));
+  const Room=vm.runInNewContext('(class Room{'+snippet+voice+'})',{
     ROOM_IDLE_TTL:72*60*60*1000,
     j:result=>result,
     normalizeWinnerFaction:v=>v||'',

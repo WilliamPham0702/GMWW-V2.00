@@ -3,8 +3,68 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>GMWW V3.265</title>
-<link rel="stylesheet" href="style.css?v=gmww-v3265-pinch-spacing">
+
+<!-- GM Server viewport: only Chrome on iOS; Safari, Edge, and native IPA are unchanged. -->
+<style id="gmwwChromeViewportLock">
+html.gmww-ios-chrome,html.gmww-ios-chrome body{
+  width:100%!important;height:var(--gmww-gm-visible-height,100dvh)!important;
+  min-height:0!important;max-height:var(--gmww-gm-visible-height,100dvh)!important;
+  overflow:hidden!important;overscroll-behavior:none
+}
+html.gmww-ios-chrome #app{
+  position:fixed!important;top:var(--gmww-gm-visible-top,0px)!important;
+  bottom:auto!important;left:0!important;right:0!important;width:100%!important;
+  height:var(--gmww-gm-visible-height,100dvh)!important;
+  min-height:0!important;max-height:var(--gmww-gm-visible-height,100dvh)!important;
+  overflow:hidden!important
+}
+html.gmww-ios-chrome #stage{height:100%!important;min-height:0!important;overflow:hidden!important}
+html.gmww-ios-chrome body.play-immersive #start.play-page.active{
+  position:absolute!important;inset:0!important;height:100%!important;
+  min-height:0!important;max-height:100%!important;overflow:hidden!important
+}
+html.gmww-ios-chrome body.play-immersive #start .play-shell{
+  height:100%!important;min-height:0!important;max-height:100%!important;
+  overflow:hidden!important
+}
+</style>
+<script id="gmwwChromeViewportScript">
+(function lockChromeIosGameViewport(){
+  'use strict';
+  // Other iOS browsers and the native GM shell retain their existing layout.
+  if(!/CriOS\//.test(navigator.userAgent)||!/iP(hone|ad|od)/.test(navigator.userAgent))return;
+  var root=document.documentElement;
+  root.classList.add('gmww-ios-chrome');
+  var scheduled=false;
+  function syncViewport(){
+    scheduled=false;
+    var view=window.visualViewport;
+    var height=Math.max(1,Math.round(Number(view&&view.height)||window.innerHeight||root.clientHeight||1));
+    var top=Math.max(0,Math.round(Number(view&&view.offsetTop)||0));
+    root.style.setProperty('--gmww-gm-visible-height',height+'px');
+    root.style.setProperty('--gmww-gm-visible-top',top+'px');
+  }
+  function scheduleViewport(){
+    if(scheduled)return;
+    scheduled=true;
+    window.requestAnimationFrame(syncViewport);
+  }
+  syncViewport();
+  window.addEventListener('resize',scheduleViewport,{passive:true});
+  window.addEventListener('orientationchange',scheduleViewport,{passive:true});
+  window.addEventListener('pageshow',scheduleViewport,{passive:true});
+  document.addEventListener('visibilitychange',scheduleViewport,{passive:true});
+  document.addEventListener('focusin',scheduleViewport,{passive:true});
+  document.addEventListener('focusout',scheduleViewport,{passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',scheduleViewport,{passive:true});
+    window.visualViewport.addEventListener('scroll',scheduleViewport,{passive:true});
+  }
+})();
+</script>
+
+<title>GMWW V3.304</title>
+<link rel="stylesheet" href="style.css?v=gmww-v3268-template-dock">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
 <link rel="stylesheet" href="status-visuals.css?v=status-v9">
@@ -27,6 +87,55 @@
 #settings #gmwwCloudflarePanel .gmww-cloudflare-notice{display:block;margin-top:11px;line-height:1.5;opacity:.85}
 #settings #gmwwCfActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
 #settings #gmwwCfActions button{min-width:0;flex:1 1 130px}
+</style>
+
+<!-- BEGIN GMWW_PLAYER_SHARE_STYLE -->
+<style>
+#gmwwPlayerWebShareSettings{display:grid;gap:7px;margin:8px 0;padding:12px;border:1px solid rgba(118,204,235,.28);border-radius:14px;background:rgba(4,49,74,.23);min-width:0}
+#gmwwPlayerWebShareSettings .gmww-share-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+#gmwwPlayerWebShareSettings .gmww-share-head h3{margin:0;font-size:16px;line-height:1.3}
+#gmwwPlayerWebShareSettings .gmww-share-badge{flex:none;border:1px solid rgba(130,205,233,.36);border-radius:999px;padding:3px 8px;font-size:11px;color:#c9f0ff;background:rgba(12,91,126,.35)}
+#gmwwPlayerWebShareSettings .gmww-share-choices{display:grid;gap:5px;border:0;padding:0;margin:0;min-width:0}
+#gmwwPlayerWebShareSettings .gmww-share-choice{display:flex;align-items:center;gap:7px;min-width:0;cursor:pointer}
+#gmwwPlayerWebShareSettings .gmww-share-choice input{flex:none;margin:0;accent-color:#45c5f4}
+#gmwwPlayerWebShareSettings .gmww-share-choice span{min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+#gmwwPlayerWebShareSettings .gmww-share-choice b{font-size:13px}
+#gmwwPlayerWebShareSettings .gmww-share-choice:has(input:disabled){opacity:.65;cursor:not-allowed}
+#gmwwPlayerWebShareSettings .gmww-share-choice small{font-size:11px;line-height:1.3}
+#gmwwPlayerWebShareSettings .gmww-share-url{font-size:12px;line-height:1.35;overflow-wrap:anywhere;user-select:text;color:#d3efff;padding:8px 10px;border:1px solid rgba(118,204,235,.25);border-radius:9px;background:rgba(2,28,46,.3)}
+#gmwwPlayerWebShareSettings .gmww-share-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#gmwwPlayerWebShareSettings .gmww-share-actions button{width:100%;min-width:0;min-height:38px;height:38px;padding:6px 8px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:10px}
+#gmwwPlayerWebShareSettings .gmww-share-actions button span{font-size:17px}
+#gmwwPlayerWebShareSettings .gmww-share-actions button b{font-size:12px}
+#gmwwPlayerWebShareSettings .gmww-share-status{font-size:11px;line-height:1.3;overflow-wrap:anywhere;opacity:.8}
+@media(max-width:390px){#gmwwPlayerWebShareSettings{padding:10px;gap:6px}#gmwwPlayerWebShareSettings .gmww-share-head h3{font-size:15px}#gmwwPlayerWebShareSettings .gmww-share-actions button b{font-size:11px}}
+</style>
+<!-- END GMWW_PLAYER_SHARE_STYLE -->
+<style id="gmwwGatherFlowStyle">
+/* Six-step Gathering menu: exactly one horizontal, swipeable row. */
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions{
+  display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;
+  touch-action:pan-x!important;scrollbar-width:none;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;gap:6px!important;
+}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button{
+  flex:0 0 auto!important;white-space:nowrap!important;min-height:43px!important;
+}
+#playGatherToolbar .play-gather-toolbar-actions>button:disabled{opacity:.36!important;filter:saturate(.55)}
+#playGatherToolbar .play-gather-toolbar-actions>button.is-current:not(:disabled){
+  border-color:#ffe39b!important;background:rgba(161,112,31,.35)!important;color:#fff7cf!important;
+}
+#playGatherToolbar .play-gather-toolbar-actions>button.is-complete:not(:disabled){
+  border-color:rgba(125,230,207,.7)!important;
+}
+#playGatherToolbar #playRoomModeToggle[data-mode="online"]{border-color:rgba(91,223,220,.8)!important}
+#playGatherToolbar #playRoomModeToggle[data-mode="offline"]{border-color:rgba(255,211,133,.75)!important}
+#playGatherToolbar #playRoomModeToggle[data-mode="demo"]{border-color:rgba(204,155,255,.85)!important}
+#playSeatPresetPanel .play-seat-preset-tools{display:flex;align-items:center;gap:6px}
+#playSeatPresetPanel .play-seat-preset-tools>button{
+  flex:0 0 30px;height:30px;border-radius:10px;border:1px solid #7cc9d5;
+  background:#13516c;color:#fff;font-size:19px;line-height:1;
+}
 </style>
 </head>
 <body>
@@ -137,24 +246,20 @@
             <span id="playGatherCount" aria-live="polite">0 người</span>
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
           </div>
-          <div class="play-gather-mode-row" aria-label="Hình thức chơi">
-            <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Chuyển Online, Offline, Demo"><b>CHẾ ĐỘ</b></button>
-            <div class="play-seat-shift-buttons"><button type="button" data-seat-shift="reset" aria-label="Khôi phục vị trí và giãn cách Seat mặc định" title="Khôi phục mặc định">🔄</button></div>
-          </div>
-          <div class="play-gather-toolbar-actions">
-            <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
+          <div class="play-gather-toolbar-actions" role="toolbar" aria-label="Menu Tập hợp; vuốt ngang để xem đủ sáu mục">
+            <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>TẬP HỢP</b></button>
             <button id="playGatherSeatPreset" type="button" aria-haspopup="dialog" aria-controls="playSeatPresetPanel" aria-expanded="false"><span aria-hidden="true">◉</span><b>SEAT</b></button>
-            <button id="playGatherRandom" type="button"><span aria-hidden="true">⚄</span><b>NGẪU NHIÊN</b></button>
-            <button id="playGatherManual" type="button"><span aria-hidden="true">☝</span><b>THỦ CÔNG</b></button>
-            <button id="playGatherConfirm" type="button"><span aria-hidden="true">✓</span><b>CHỐT VỊ TRÍ</b></button>
+            <button id="playGatherDistribute" type="button" data-mode="choose" aria-label="Phân bố: lần đầu ngẫu nhiên, lần thứ hai thủ công"><span aria-hidden="true">⚄</span><b>PHÂN BỐ</b></button>
+            <button id="playGatherConfirm" type="button"><span aria-hidden="true">✓</span><b>CHỐT</b></button>
             <button id="playGatherDisband" type="button"><span aria-hidden="true">↩</span><b>GIẢI TÁN</b></button>
+            <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Chuyển chế độ Online, Offline, Demo"><span aria-hidden="true">🌐</span><b>CHẾ ĐỘ</b></button>
           </div>
         </section>
 
         <section class="play-seat-preset-panel" id="playSeatPresetPanel" role="dialog" aria-label="Chọn Seat Mẫu" aria-modal="false" hidden>
           <div class="play-seat-preset-heading">
             <div><b>SEAT MẪU</b><small>Chạm vào sơ đồ dấu chấm để chọn vị trí</small></div>
-            <button type="button" id="playSeatPresetClose" aria-label="Đóng Seat Mẫu">×</button>
+            <div class="play-seat-preset-tools"><button type="button" data-seat-shift="reset" aria-label="Khôi phục vị trí và giãn cách Seat mặc định" title="Khôi phục Seat">🔄</button><button type="button" id="playSeatPresetClose" aria-label="Đóng Seat Mẫu">×</button></div>
           </div>
           <p class="play-seat-preset-auto" id="playSeatPresetAutoHint">Một vòng tròn 360° quanh lửa • Mẫu 6, 8…30 người</p>
           <div id="playSeatPresetGrid" class="play-seat-preset-grid" aria-label="Sơ đồ các Seat Mẫu"></div>
@@ -227,17 +332,17 @@
 
 
 
-        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Báo · Hành động · Lên Giàn · Khôi phục">
+        <section id="battleBottomControls" class="battle-bottom-controls-v3104" aria-label="Thanh dưới: Đồng hồ · Thông cáo Làng · Cán Cân Đại Dương · Lên Giàn · Khôi phục · Chat">
         <section id="playBattleClockFloat" class="battle-clock-float-v396" aria-label="Đồng hồ đếm ngược trong thanh dưới" hidden>
           <button id="battleClockButton" type="button" aria-label="Đồng hồ đếm ngược" title="Đồng hồ đếm ngược của lượt hiện tại"><span class="battle-clock-grip" aria-hidden="true">⠿</span><small class="battle-clock-caption" aria-hidden="true"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="17"/><path d="M24 13v11l8 5"/></svg></small><output id="battleCountdown" role="timer" aria-label="Thời gian còn lại" aria-live="off">--:--</output></button>
         </section>
 
-        <section id="battleFactionStatsFloat" class="battle-faction-stats-float" aria-label="Thống kê các phe" hidden>
-          <button id="battleFactionStatsToggle" type="button" aria-controls="battleFactionStats" aria-pressed="false" aria-label="Mở thống kê và dự báo phe" title="Thống kê và dự báo phe">🌈</button>
-        </section>
         <!-- Dedicated role/Artifact action tray; no fixed GM controls in this footer. -->
         <section id="battleDayNoticeFloat" class="battle-day-icon-float" aria-label="Thông cáo Làng" hidden>
           <button id="battleDayNoticeToggle" type="button" aria-label="Mở hoặc đóng Thông cáo Làng" aria-controls="battleMorningReport" aria-pressed="false" title="Thông cáo Làng"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 35h20l-3.7-6.2V21c0-5.8-3-9.5-6.3-9.5S17.7 15.2 17.7 21v7.8L14 35Z"/><path d="M21 39h6M24 7v2"/></svg></button>
+        </section>
+        <section id="battleFactionStatsFloat" class="battle-day-icon-float" aria-label="Cán Cân Đại Dương" hidden>
+          <button id="battleFactionStatsToggle" type="button" aria-controls="battleFactionStats" aria-pressed="false" aria-label="Cán Cân Đại Dương" title="Cán Cân Đại Dương">⚖️</button>
         </section>
         <section id="battleDayActionFloat" class="battle-day-icon-float" aria-label="Hành động ban ngày" hidden>
           <button id="battleDayActionToggle" type="button" aria-controls="battleDayActionMenu" aria-expanded="false"><span aria-hidden="true">✦</span><b>HÀNH ĐỘNG</b><small>Chọn chức năng</small></button>
@@ -256,6 +361,9 @@
         </section>
         <section id="battleUndoFloat" class="battle-undo-float-v399" aria-label="Khôi phục hành động vừa xác nhận" hidden>
           <button id="battleUndoButton" type="button" title="Khôi phục hành động vừa xác nhận" aria-label="Khôi phục hành động vừa xác nhận" disabled><span aria-hidden="true"><svg class="gmww-footer-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 15H7V7"/><path d="M8 15a18 18 0 1 1-1.4 17"/><path d="M7 15c3.5-5.7 9-8.7 16-8.7"/></svg></span><small class="gmww-footer-hidden-label">KHÔI PHỤC</small></button>
+        </section>
+        <section id="battleGMChatFloat" class="battle-day-icon-float" aria-label="Chat Server" hidden>
+          <button id="battleGMChatToggle" type="button" aria-controls="gmwwGMChatPanel" aria-pressed="false" aria-label="Mở Chat GM" title="Chat Làng và Chat riêng">💬</button>
         </section>
         </section>
         <section id="battleTargetSheet" class="battle-target-sheet-v399" hidden role="dialog" aria-modal="false" aria-label="Chọn mục tiêu cho hành động">
@@ -656,6 +764,21 @@
           </div>
           <div class="health-v236-actions update-actions"><button class="settings-action settings-action-server" id="exportLocalData" type="button" aria-label="Xuất toàn bộ dữ liệu chưa đồng bộ ra file JSON"><span>⬇</span><b>XUẤT DỮ LIỆU CHƯA ĐỒNG BỘ</b></button></div>
         </div>
+        <!-- BEGIN GMWW_PLAYER_SHARE_UI -->
+        <section class="settings-tool-inner gmww-web-share-card" id="gmwwPlayerWebShareSettings" aria-labelledby="gmwwShareTitle">
+          <div class="gmww-share-head"><h3 id="gmwwShareTitle">🔗 Chia sẻ Player Web</h3><span class="gmww-share-badge">Cloudflare</span></div>
+          <fieldset class="gmww-share-choices" aria-label="Chọn link gửi cho người chơi">
+            <label class="gmww-share-choice" for="gmwwShareLegacy"><input id="gmwwShareLegacy" type="radio" name="gmwwShareChoice" value="legacy" checked><span><b>Link hiện tại</b></span></label>
+            <label class="gmww-share-choice" for="gmwwShareAlias"><input id="gmwwShareAlias" type="radio" name="gmwwShareChoice" value="alias" disabled><span><b>Link mới</b><small id="gmwwShareAliasLabel">https://gamemasoi.pages.dev/</small></span></label>
+          </fieldset>
+          <div class="gmww-share-url" id="gmwwShareChosenUrl" aria-live="polite">https://gmww-v2-00.williampham0702.workers.dev/</div>
+          <div class="gmww-share-actions">
+            <button class="settings-action settings-action-server" id="gmwwShareCopy" type="button"><span>⧉</span><b>SAO CHÉP</b></button>
+            <button class="settings-action settings-action-server" id="gmwwShareSend" type="button"><span>↗</span><b>GỬI LINK</b></button>
+          </div>
+          <small class="gmww-share-status" id="gmwwShareStatus" role="status">Đang dùng link Cloudflare hiện tại.</small>
+        </section>
+        <!-- END GMWW_PLAYER_SHARE_UI -->
         </div>
         <div class="settings-unified-box" id="settingsGroupHealth">
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>
@@ -806,7 +929,7 @@
 
 <div class="sheet hidden" id="playGameSheet">
   <div class="sheet-card play-game-sheet-card" data-mode="play">
-    <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div></div>
+    <div class="sheet-head"><div><h3>Chọn Ván</h3><small id="playGameRoomLabel">Phòng —</small></div><button id="playGameDockToggle" type="button" aria-label="Thu gọn bảng Ván Mẫu vào menu dưới" aria-expanded="true" title="Thu gọn / mở Ván Mẫu">⌄</button></div>
     <p id="playGameStatus" class="play-game-status" role="status" aria-live="polite" hidden></p>
     <div class="play-template-scroll">
       <div class="play-template-picker-row play-template-actions-row" role="group" aria-label="Ván gợi ý, Auto Ván, Thêm mới">
@@ -1006,7 +1129,93 @@
 <script src="gmww-local-export.js?v=3.122-export"></script>
 <script src="status-visuals.js?v=status-v9"></script>
 <script src="action-icon-library.js?v=sea-art-v3"></script>
-<script src="app.js?v=gmww-v3265-pinch-spacing"></script>
+<script src="app.js?v=gmww-v3268-template-dock"></script>
+
+<script>
+/* BEGIN GMWW_PLAYER_SHARE_SCRIPT */
+(()=>{
+  'use strict';
+  const oldUrl='https://gmww-v2-00.williampham0702.workers.dev/';
+  const choiceKey='GMWW_PLAYER_SHARE_LINK_CHOICE_V1';
+  // Verified on iPhone and Cloudflare Pages Production via PR #676 (2026-10-31).
+  // Keep the approved hostname fixed; do not enable arbitrary remote aliases.
+  const approvedAliasUrl='https://gamemasoi.pages.dev/';
+  function verifiedAlias(){
+    try{
+      const parsed=new URL(approvedAliasUrl);
+      if(parsed.protocol!=='https:'||parsed.username||parsed.password||
+         parsed.search||parsed.hash||parsed.pathname!=='/'||parsed.origin===new URL(oldUrl).origin)return '';
+      return parsed.origin+'/';
+    }catch(_){return ''}
+  }
+  const alias=verifiedAlias();
+  const oldChoice=document.getElementById('gmwwShareLegacy');
+  const newChoice=document.getElementById('gmwwShareAlias');
+  const aliasLabel=document.getElementById('gmwwShareAliasLabel');
+  const chosen=document.getElementById('gmwwShareChosenUrl');
+  const status=document.getElementById('gmwwShareStatus');
+  const copyButton=document.getElementById('gmwwShareCopy');
+  const sendButton=document.getElementById('gmwwShareSend');
+  if(!oldChoice||!newChoice||!chosen||!copyButton||!sendButton)return;
+  newChoice.disabled=!alias;
+  if(alias&&aliasLabel)aliasLabel.textContent=alias;
+  let saved='legacy';
+  try{saved=window.localStorage.getItem(choiceKey)==='alias'?'alias':'legacy'}catch(_){}
+  oldChoice.checked=!alias||saved!=='alias';
+  newChoice.checked=!!alias&&saved==='alias';
+  const currentUrl=()=>newChoice.checked&&alias?alias:oldUrl;
+  function render(){
+    chosen.textContent=currentUrl();
+    if(status)status.textContent=newChoice.checked?'Đang dùng link mới đã được xác minh.':'Đang dùng link Cloudflare hiện tại.';
+    try{window.localStorage.setItem(choiceKey,newChoice.checked?'alias':'legacy')}catch(_){}
+  }
+  oldChoice.addEventListener('change',render);
+  newChoice.addEventListener('change',render);
+  render();
+  async function copyUrl(){
+    const value=currentUrl();
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      try{
+        await navigator.clipboard.writeText(value);
+        if(status)status.textContent='Đã sao chép link Player Web.';
+        return;
+      }catch(_){
+        // Safari/iOS may deny Clipboard API even after a user tap.
+        // Fall through to the gesture-scoped text selection fallback.
+      }
+    }
+    const input=document.createElement('textarea');
+    input.value=value;
+    input.setAttribute('readonly','');
+    input.style.position='fixed';
+    input.style.opacity='0';
+    document.body.appendChild(input);
+    try{
+      input.focus();
+      input.select();
+      if(typeof input.setSelectionRange==='function')input.setSelectionRange(0,value.length);
+      if(!document.execCommand('copy'))throw new Error('copy_unavailable');
+    }finally{
+      input.remove();
+    }
+    if(status)status.textContent='Đã sao chép link Player Web.';
+  }
+  copyButton.addEventListener('click',async()=>{
+    try{await copyUrl()}catch(_){if(status)status.textContent='Không thể sao chép tự động; hãy nhấn giữ vào đường link phía trên để sao chép.'}
+  });
+  sendButton.addEventListener('click',async()=>{
+    try{
+      if(typeof navigator.share==='function')await navigator.share({title:'GMWW — Player Web',url:currentUrl()});
+      else await copyUrl();
+    }catch(e){
+      if(e&&e.name==='AbortError')return;
+      if(status)status.textContent='Không thể mở chia sẻ. Dùng nút SAO CHÉP để lấy link.';
+    }
+  });
+})();
+/* END GMWW_PLAYER_SHARE_SCRIPT */
+</script>
+
 
 <script>
 /* GMWW lobby state guard: before a room exists, the GM view is the shared lobby. */

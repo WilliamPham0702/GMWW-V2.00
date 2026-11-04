@@ -59,6 +59,7 @@ const state={published:{revision:0,day:null,night:null},draft:{day:null,night:nu
 const boot=document.getElementById('sceneBootStatus');
 const localCache=createVillageLocalCache(location.href);
 let lastGallowsAnchorKey='';
+let lastFireAnchorKey='';
 let localSnapshot=null;
 async function restoreLocal(){
  const saved=await localCache.restore();if(!saved)return;
@@ -75,6 +76,14 @@ function apply(){
  // Scene metadata is shared globally; players never write it.
  const anchors=state.published.gallowsAnchors||{},signature=key+':'+JSON.stringify(anchors);
  globalThis.GMWW_VILLAGE_GALLOWS_ANCHORS=anchors;
+ // Fire anchor = the marker the GM placed on each published image (same source as GM Server).
+ const fires=state.published.fireAnchors||{},hasImage={day:!!state.published.day,night:!!state.published.night};
+ globalThis.GMWW_VILLAGE_FIRE_ANCHORS=fires;globalThis.GMWW_VILLAGE_SCENE_IMAGES=hasImage;
+ const fireSig=key+':'+JSON.stringify([fires,hasImage]);
+ if(fireSig!==lastFireAnchorKey){
+   lastFireAnchorKey=fireSig;
+   if(typeof Event==='function'&&typeof window.dispatchEvent==='function')window.dispatchEvent(new Event('gmww:village-fire-anchor'));
+ }
  if(signature!==lastGallowsAnchorKey){
    lastGallowsAnchorKey=signature;
    if(typeof Event==='function'&&typeof window.dispatchEvent==='function')window.dispatchEvent(new Event('gmww:village-gallows-anchor'));
@@ -148,4 +157,4 @@ if(editor){
 }
 new MutationObserver(apply).observe(game,{attributes:true,attributeFilter:['class']});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync()});
-void sync();setInterval(sync,5000);
+void sync();setInterval(()=>{if(!document.hidden)void sync()},5000);

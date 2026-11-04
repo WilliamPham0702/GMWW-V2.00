@@ -31,12 +31,15 @@ const assignments=sessions.map((s,i)=>({loginId:s.id,roleId:'role-browser-'+i,ro
 }));
 await request('/api/gm/rooms/'+room.roomCode+'/assignments',{method:'POST',token:room.gmToken,
  body:{matchId:'browser-'+mark,matchRevision:1,deliveryVersion:1,assignments,multiAssign:false}});
+// Online village exposes two movable miniature cards. The retired stacked
+// #gmwwPlayerPrivateDock is never the entry point in current Player Web.
 for(const [i,s] of sessions.entries()){
  let browser,context,page;const errors=[];
  try{
    browser=await s.launch();
    context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
    await context.addInitScript(data=>{
+     if(window.top!==window)return;
      localStorage.setItem('gmww_token',data.token);
      localStorage.setItem('gmww_member',JSON.stringify(data.member));
      localStorage.setItem('gmww_active_room_v4',JSON.stringify({roomCode:data.code,participantId:'member:'+data.loginId,savedAt:Date.now()}));
@@ -44,63 +47,66 @@ for(const [i,s] of sessions.entries()){
    page=await context.newPage();
    page.on('pageerror',e=>errors.push(e.message));
    await page.goto(origin+'/'+room.roomCode,{waitUntil:'domcontentloaded',timeout:35000});
-   const role=page.locator('#gmwwPlayerPrivateDock button[data-private-card="role"]');
+   const mini=page.locator('#gmwwPlayerMiniCards');
+   const role=mini.locator('[data-mini="role"]');
    try{await role.waitFor({state:'visible',timeout:22000})}
    catch(e){
      const debug=await page.evaluate(()=>{
-       const describe=id=>{const el=document.querySelector(id);return el?{hidden:el.hidden,display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility,cls:el.className,deliveryState:el.dataset.deliveryState||'',privateCardView:el.dataset.privateCardView||'',focus:el.dataset.privateCardFocus||''}:null};
-       return {path:location.pathname,game:describe('#game'),dock:describe('#gmwwPlayerPrivateDock'),role:describe('#gmwwPlayerPrivateDock button[data-private-card="role"]'),login:describe('#login'),screens:[...document.querySelectorAll('.screen.active')].map(e=>e.id),version:document.documentElement.dataset.gmwwMembersVersion||null};
+       const describe=id=>{const el=document.querySelector(id);return el?{hidden:el.hidden,display:getComputedStyle(el).display,visibility:getComputedStyle(el).visibility,cls:el.className,privateCardView:el.dataset.privateCardView||''}:null};
+       return {path:location.pathname,game:describe('#game'),mini:describe('#gmwwPlayerMiniCards'),
+         role:describe('#gmwwPlayerMiniCards [data-mini="role"]'),legacy:describe('#gmwwPlayerPrivateDock'),
+         screens:[...document.querySelectorAll('.screen.active')].map(e=>e.id),
+         version:document.documentElement.dataset.gmwwMembersVersion||null};
      }).catch(()=>({error:'page closed'}));
      const privateData=await request('/api/rooms/'+room.roomCode+'/me',{token:s.token}).catch(err=>({error:String(err.message)}));
-     throw new Error('role back not visible '+JSON.stringify({debug,receipt:{phase:privateData?.room?.phase,roleId:privateData?.role?.roleId,artifactId:privateData?.artifact?.artifactId,manifest:privateData?.deliveryManifest}})+'; '+e.message);
+     throw new Error('role miniature not visible '+JSON.stringify({debug,receipt:{
+       phase:privateData?.room?.phase,roleId:privateData?.role?.roleId,
+       artifactId:privateData?.artifact?.artifactId,manifest:privateData?.deliveryManifest}})+'; '+e.message);
    }
-   const deck=page.locator('#gmwwPlayerPrivateDock');
-   assert.equal(await deck.locator('[data-shuffle-deck], .gmww-deck-shuffle').count(),0,'no dedicated shuffle button');
-   assert.equal(await deck.getAttribute('data-deck-top'),'role','new Role starts above Artifact');
-   await role.click({timeout:10000});
+   // Verify the old dedicated dock is not exposed and only one miniature
+   // Role/Artifact pair exists; no duplicated role backs around the village.
+   assert.equal(await page.locator('#gmwwPlayerMiniCards [data-mini="role"]').count(),1);
+   assert.equal(await page.locator('#gmwwPlayerMiniCards [data-mini="artifact"]').count(),1);
+   assert.equal(await page.locator('#gmwwPlayerPrivateDock:visible').count(),0,'legacy stacked dock must not be visible');
    const face=page.locator('#gmwwPlayerUnifiedCard:not([hidden])');
+   await role.click({timeout:10000});
    await face.waitFor({state:'visible',timeout:15000});
    const roleTitle=(await face.locator('.gmww-card-title').innerText()).toLocaleLowerCase('vi-VN');
-   assert.ok(roleTitle.includes(('Vai '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect Role face '+roleTitle);
-   // Tapping the full card closes it; the viewed Role automatically sinks.
+   assert.ok(roleTitle.includes(('Vai '+s.kind).toLocaleLowerCase('vi-VN')),'wrong private Role: '+roleTitle);
+   for(const peer of sessions.filter(p=>p.kind!==s.kind)){
+     assert.ok(!roleTitle.includes(('Vai '+peer.kind).toLocaleLowerCase('vi-VN')),'Role leaked from '+peer.kind);
+   }
    await face.click({position:{x:35,y:35},timeout:10000});
    await face.waitFor({state:'hidden',timeout:10000});
-   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','viewed Role automatically goes below Artifact');
-   // Chrome/Edge regression: the rear card must open on FIRST tap; refresh is never required.
-   await role.click({timeout:10000});
-   assert.equal(await deck.getAttribute('data-deck-top'),'role','tapping lower Role raises it above Artifact');
-   await face.waitFor({state:'visible',timeout:10000});
-   await page.mouse.click(7,7);
-   await face.waitFor({state:'hidden',timeout:10000});
-   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','Role returns below after viewing');
-   const actionPanel=page.locator('#gmwwArtifactBar');
-   if(await actionPanel.count())assert.equal(await actionPanel.evaluate(el=>getComputedStyle(el).display),'none','offline Player must hide Artifact controls');
-   const artifact=deck.locator('button[data-private-card="artifact"]');
+   // Switching cards must work first tap, without refresh or legacy deck.
+   await role.waitFor({state:'visible',timeout:10000});
+   const artifact=mini.locator('[data-mini="artifact"]');
    await artifact.waitFor({state:'visible',timeout:10000});
-   await artifact.click({position:{x:60,y:65},timeout:10000});
+   await artifact.click({timeout:10000});
    await face.waitFor({state:'visible',timeout:10000});
-   assert.equal(await deck.getAttribute('data-deck-top'),'artifact','Artifact selected is now top');
    const artTitle=(await face.locator('.gmww-card-title').innerText()).toLocaleLowerCase('vi-VN');
-   assert.ok(artTitle.includes(('Bảo Vật '+s.kind).toLocaleLowerCase('vi-VN')),'incorrect Artifact face '+artTitle);
+   assert.ok(artTitle.includes(('Bảo Vật '+s.kind).toLocaleLowerCase('vi-VN')),'wrong private Artifact: '+artTitle);
+   for(const peer of sessions.filter(p=>p.kind!==s.kind)){
+     assert.ok(!artTitle.includes(('Bảo Vật '+peer.kind).toLocaleLowerCase('vi-VN')),'Artifact leaked from '+peer.kind);
+   }
    if(s.kind==='Chrome'){
-     // An untouched full card folds itself after 30 seconds for privacy.
+     // An untouched expanded private card folds after the 30-second privacy idle.
      await face.waitFor({state:'hidden',timeout:37000});
-     assert.equal(await page.locator('#game').getAttribute('data-private-card-view'),'closed');
-   }else if(s.kind==='Edge'){
+   }else{
      await face.click({position:{x:35,y:35},timeout:10000});
      await face.waitFor({state:'hidden',timeout:10000});
-   }else{
-     await page.mouse.click(7,7);
-     await face.waitFor({state:'hidden',timeout:10000});
    }
+   await role.waitFor({state:'visible',timeout:10000});
    let received;
    for(let attempt=0;attempt<24;attempt++){
      received=await request('/api/rooms/'+room.roomCode+'/me',{token:s.token});
-     if(received.deliveryManifest.receivedAt)break;
+     if(received.deliveryManifest?.receivedAt)break;
      await new Promise(resolve=>setTimeout(resolve,250));
    }
-   assert.ok(received?.deliveryManifest?.receivedAt,'browser should eventually confirm full private receipt');
-   console.log(JSON.stringify({browser:s.kind,success:true,role:roleTitle,artifact:'opened'}));
+   assert.ok(received?.deliveryManifest?.receivedAt,'browser must confirm its own private receipt');
+   assert.equal(received.role?.roleId,'role-browser-'+i,'authenticated member receives assigned Role only');
+   assert.equal(received.artifact?.artifactId,'artifact-browser-'+i,'authenticated member receives assigned Artifact only');
+   console.log(JSON.stringify({browser:s.kind,success:true,role:roleTitle,artifact:'opened',privateReceipt:true}));
  }catch(error){
    if(page)try{await page.screenshot({path:'/tmp/gmww-player-cards-'+s.kind.toLowerCase()+'.png',fullPage:true})}catch{}
    throw new Error('Browser '+s.kind+' failed: '+error.message+'; page errors='+JSON.stringify(errors));
@@ -109,4 +115,5 @@ for(const [i,s] of sessions.entries()){
    if(browser)await browser.close().catch(()=>{});
  }
 }
+
 console.log('All Chrome / Edge / WebKit private-card opens passed');

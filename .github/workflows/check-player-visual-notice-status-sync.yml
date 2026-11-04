@@ -1,0 +1,35 @@
+name: Check Player Visual Notice and Status Permissions (focused)
+on:
+  pull_request:
+    paths:
+      - 'src/index.js'
+      - 'src/gmww-public-room-contract.js'
+      - 'src/gmww-members-live.js'
+      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'server-game/current/app.js'
+      - 'server-game/src/30-village-and-setup.part'
+      - 'tests/player-visual-notice-status-sync-20261028.test.mjs'
+      - 'tests/status-visuals-v1.test.mjs'
+      - '.github/workflows/check-player-visual-notice-status-sync.yml'
+  workflow_dispatch:
+
+jobs:
+  player-visual-notice:
+    name: Confirm visual-only notices and GM visibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify source packages
+        run: |
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Verify Worker and GM JavaScript syntax
+        run: |
+          node --check src/index.js
+          node --check server-game/current/app.js
+      - name: Run only affected regression tests
+        run: node --test tests/player-visual-notice-status-sync-20261028.test.mjs tests/status-visuals-v1.test.mjs

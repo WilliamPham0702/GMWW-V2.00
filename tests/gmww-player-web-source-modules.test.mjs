@@ -3,12 +3,14 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
+import {playerServerMenuBundle} from '../.github/scripts/player-server-menu.mjs';
 
 const paths=[
   'src/player-web-src/00-bootstrap-and-session.part',
   'src/player-web-src/10-role-card-artwork.part',
   'src/player-web-src/20-village-and-profile.part',
   'src/player-web-src/30-rooms-and-realtime.part',
+  'src/player-web-src/35-online-chat.part',
   'src/player-web-src/40-cards-and-game.part',
   'src/player-web-src/50-privacy-and-runtime.part'
 ];
@@ -18,9 +20,9 @@ const script=()=>JSON.parse(compiled().slice('export const gmwwMembersLiveScript
 
 test('G3.9: source parts assemble the EXACT deployed Player Web JavaScript',()=>{
   const pieces=paths.map(p=>readFileSync(p,'utf8'));
-  assert.equal(pieces.length,6);
+  assert.equal(pieces.length,7);
   for(const [i,part] of pieces.entries())assert.ok(part.length>1000,'Missing source part '+i);
-  const body=pieces.join('');
+  const body=pieces.join('').replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(process.cwd()))+";\n");
   assert.equal(body,script(),'Decoded Player Web source must be unchanged');
   const emitted='export const gmwwMembersLiveScript = '+JSON.stringify(body)+';\n';
   assert.equal(hash(Buffer.from(emitted)),hash(Buffer.from(compiled())));

@@ -14,6 +14,7 @@ test('resume reaches full roster and realtime connection after authenticated rec
     savedActiveRoom:()=>({roomCode:'ABCDEF'}),rememberActiveRoom:noop,
     api:async()=>({room:{code:'ABCDEF',phase:'lobby'},player}),
     gmwwAcknowledgePrivateDelivery:noop,restoreCachedRole:noop,applyRoleCardBack:noop,
+    renderDrunkDraw:noop,gmwwChatMount:noop,gmwwChatAnnounce:noop,renderPlayerTimeline:noop,renderOnlineActionDock:noop,
     handlePendingInteractions:noop,syncRoleEffects:noop,loadRooms:async()=>{},
     gmwwRefreshPublicRoster:async()=>{state.players=[player,other];return true},
     auth:()=>({}),renderRooms:noop,connectWS:()=>connected++,
@@ -34,6 +35,7 @@ test('private receipt installs Role and Artifact without refresh or legacy seat-
     gmwwReadPrivateReceipt:async()=>({__gmwwFetchedAt:1,room:{phase:'role_delivery'},role,artifact}),
     renderGallowsWidget:noop,handlePendingInteractions:noop,syncRoleEffects:noop,
     renderPlayerPrivateDock:noop,gmwwAcknowledgePrivateDelivery:noop,
+    renderDrunkDraw:noop,gmwwChatAnnounce:noop,renderPlayerTimeline:noop,renderOnlineActionDock:noop,renderDemoActions:noop,
     rememberActiveRole:noop,renderRole:noop,maybeOpenGame:noop,restoreCachedRole:noop};
   const a=script.indexOf('async function refreshPrivateRole(force=false){');
   const b=script.indexOf('async function ensureRoleGameView(',a);

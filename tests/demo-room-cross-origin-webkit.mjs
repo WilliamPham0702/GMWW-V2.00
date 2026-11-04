@@ -26,7 +26,7 @@ try{
   await gm('/participants',{members:people,replace:true});await gm('/seat-lock',{locked:true});
   await gm('/assignments',{matchId:'demo-'+serial+mode,assignments:people.map((p,i)=>({...p,roleId:rosterCards[i].id,roleName:rosterCards[i].name,faction:rosterCards[i].faction,roleCard:rosterCards[i]}))});
   await gm('/start',{matchId:'demo-'+serial+mode});await gm('/cycle',{phase:'night',night:1,cycleKey:'night-1'});
-  assert.equal((await gm('')).room.roomMode,mode);assert.ok(!(await req('/api/rooms')).rooms.some(r=>r.code===code));
+  assert.equal((await gm('')).room.roomMode,mode);assert.ok((await req('/api/rooms')).rooms.some(r=>r.code===code&&r.demo===true));
   const context=await browser.newContext({viewport:{width:430,height:932},isMobile:true,hasTouch:true});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:'+pageServer.address().port);
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');

@@ -2,7 +2,7 @@ name: Deploy Production
 
 on:
   workflow_run:
-    workflows: ["Check Player Web Worker"]
+    workflows: ["GMWW AUTO-DELIVERY V3.0"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Chặn auto-deploy khi commit chỉ sửa CI
         id: scope
         shell: bash
@@ -41,13 +41,30 @@ jobs:
           if [ ! -s /tmp/gmww-production-change-scope.txt ]; then SHOULD_DEPLOY=true; fi
           while IFS= read -r FILE; do
             case "$FILE" in
-              .github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs)
+              .github/workflows/github-runtime-ota.yml|.github/runtime-release/verify-package.mjs|.github/runtime-release/verify-package.test.mjs|docs/releases/GMWW-GITHUB-RUNTIME-OTA-20261029.md|.github/scripts/ci-browser-scope.mjs|.github/workflows/check-player-card-browsers.yml|.github/workflows/deploy-production.yml|docs/releases/ci-browser-focused-gallows-20261024.md|docs/releases/GMWW-V3.203-focused-release-gate-20261024.md|tests/ci-browser-scope.test.mjs|.github/workflows/check-player-web.yml|.github/scripts/ci-browser-scope.mjs|.github/workflows/ci-policy-gate.yml|docs/releases/GMWW-CI-POLICY-GATE-20261029.md|docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md|.github/workflows/check-pr-preview-github.yml|.github/scripts/guard-pr-preview-ci.mjs|tests/github-actions-pr-preview-ci.test.mjs|docs/releases/GMWW-GITHUB-ACTIONS-PR-PREVIEW-20261029.md|.github/workflows/build-server-game-ipa.yml|.github/workflows/check-dual-renderer.yml|.github/workflows/check-drunk-spiritualist.yml|.github/workflows/github-release-backup-retention.yml|.github/scripts/release-backup-retention.mjs|tests/release-backup-retention.test.mjs|docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md|oracle-staging/*|infra/oracle-staging/*|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031.md|tests/oracle-staging-bootstrap.test.mjs|.github/workflows/check-oracle-staging-bootstrap.yml|docs/architecture/oracle-staging-bootstrap-20261031.md|infra/pages/gamemasoi/*|tests/pages-online-chat-reconnect-e2e.mjs|.github/workflows/check-pages-online-chat-reconnect.yml|tests/gamemasoi-pages-link.test.mjs|.github/workflows/deploy-gamemasoi-pages.yml|.github/workflows/deploy-demo-transport-677.yml|tests/demo-transport-677-release.test.mjs|docs/releases/GMWW-PR677-WORKER-ONLY-RELEASE-20261031.md|docs/releases/GMWW-PR690-DEMO-ONLINE-DEPLOY-RECOVERY-20261031.md|docs/releases/GMWW-GAMEMASOI-PAGES-LINK-20261031.md|tests/production-deploy-architecture-docs.test.mjs)
                 ;;
               *)
                 SHOULD_DEPLOY=true
                 ;;
             esac
           done < /tmp/gmww-production-change-scope.txt
+          # GMWW AUTO-DELIVERY V3.0: CI/docs/unknown/sensitive changes never touch Production.
+          # This is additive to the historical safety checks, not a bypass.
+          if [ -s /tmp/gmww-production-change-scope.txt ] && test -f .github/scripts/v3-delivery-plan.mjs; then
+            V3_TARGET=$(node .github/scripts/v3-delivery-plan.mjs /tmp/gmww-production-change-scope.txt --field=target)
+            case "$V3_TARGET" in
+              none|blocked|pages|worker)
+                SHOULD_DEPLOY=false
+                echo "V3 scope $V3_TARGET: NO Production Worker/OTA deployment." >> "$GITHUB_STEP_SUMMARY"
+                ;;
+            esac
+          fi
+          # PR612: dedicated Worker-only release. Never use this generic Runtime OTA pipeline.
+          if grep -Fxq 'docs/releases/GMWW-VILLAGE-REMOVE-OLD-ONLINE-20261029.md' /tmp/gmww-production-change-scope.txt &&
+             grep -Fxq 'assets/village/index.html' /tmp/gmww-production-change-scope.txt; then
+            SHOULD_DEPLOY=false
+            echo 'PR612: dedicated Worker-only Player Web deployment; Runtime OTA unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           # V3.238 recovery: deploy only the already verified Runtime, when
           # exactly this workflow and scope classifier are repaired.
           if [ "$(node -p 'require("./package.json").version')" = "3.238.0" ]; then
@@ -69,6 +86,16 @@ jobs:
           # Separate artwork CI-policy PR never publishes a duplicate Runtime.
           SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
           if [[ "$SCOPE" == "GMWW browser CI scope: icon-artwork-policy |"* || "$SCOPE" == "GMWW browser CI scope: fairy-ci-policy |"* ]]; then SHOULD_DEPLOY=false; fi
+          # V3.273 Player Web login PR #599: deploy by dedicated Worker-only workflow.
+          # Never publish Runtime OTA/IPA from the corresponding CI-only release repair.
+          if [ "$(node -p 'require("./package.json").version')" = "3.273.0" ]; then
+            if git log -1 --format=%B | grep -qE 'Merge PR #599|Merge pull request #599'; then
+              SHOULD_DEPLOY=false
+            elif [ "$(wc -l < /tmp/gmww-production-change-scope.txt | tr -d ' ')" = "1" ] &&
+                 grep -Fxq '.github/workflows/deploy-player-web-login-v3273.yml' /tmp/gmww-production-change-scope.txt; then
+              SHOULD_DEPLOY=false
+            fi
+          fi
           # Worker-only Player receipt recovery uses its dedicated same-SHA gated workflow.
           if [[ "$SCOPE" == "GMWW browser CI scope: player-receipt-hotfix |"* ]]; then SHOULD_DEPLOY=false; fi
           # PR550 test-only rule regression: exact verified five-file scope, no Worker/GM/IPA change.
@@ -83,6 +110,243 @@ jobs:
           if [ "$(node -p "require('./package.json').version")" = "3.248.0" ] &&
              [[ "$SCOPE" == "GMWW browser CI scope: runtime-3248-postmerge |"* ]]; then
             SHOULD_DEPLOY=true
+          fi
+          # V3.274 PR613 recovery: deliver the already-merged, previously blocked
+          # artwork runtime ONLY for the exact five-file CI repair and ancestor.
+          if grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            test "$(node -p 'require("./package.json").version')" = '3.274.0'
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' \
+              'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' | sort)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::Unexpected paths in V3.274 OTA CI repair"; exit 1; }
+            SHOULD_DEPLOY=true
+            echo 'PR613: previously merged V3.274 Runtime, strictly audited CI recovery; no IPA or DO modification.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # PR613 second CI-only proof correction: source remains V3.274.
+          if grep -Fxq 'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            test "$(node -p 'require("./package.json").version')" = '3.274.0'
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' \
+              'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' | sort)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::V3.274 release-proof scope mismatch"; exit 1; }
+            SHOULD_DEPLOY=true
+            echo 'PR613: release-only CI proof correction, original role checks retained; no source or IPA changes.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # PR613 V3.274 verification-only correction: the public Character40
+          # image route intentionally serves canonical originals, not generated
+          # deploy-time thumbnails. Only exact five-file CI/docs repair is allowed.
+          if grep -Fxq 'docs/releases/GMWW-PR613-character40-proof-ci-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            test "$(node -p 'require("./package.json").version')" = '3.274.0'
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/scripts/verify-character40-production.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' \
+              'docs/releases/GMWW-PR613-character40-proof-ci-20261029.md' | sort)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::V3.274 Character40 proof repair scope mismatch"; exit 1; }
+            grep -Fq "u.pathname='/characters/gmww40/originals/'+visual+'.webp'" src/gmww-character40-catalog.js
+            SHOULD_DEPLOY=true
+            echo 'V3.274 PR613: canonical Character40 original-image SHA proof repaired; Runtime source/IPA/data unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # PR629 Native OTA Stage 2: exact 10-file Native-only release.
+          # Never deploy Worker/Cloudflare Production for this IPA feature.
+          if grep -Fxq 'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md' /tmp/gmww-production-change-scope.txt; then
+            EXPECTED=$(printf '%s\n' \
+              'server-game/GMWW-Server/GameView.swift' \
+              'server-game/src/10-library-and-settings.part' \
+              'server-game/current/app.js' \
+              '.github/workflows/build-server-game-ipa.yml' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/check-native-github-ota.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/native-github-first-ota-stage2.test.mjs' \
+              'docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md' | sort)
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            test "$ACTUAL" = "$EXPECTED" || { echo "::error::PR629 Native OTA scope expanded; refuse silent deploy-skip"; exit 1; }
+            test "$(node -p 'require("./package.json").version')" = '3.275.0'
+            grep -Fq 'GMWW_NATIVE_GITHUB_OTA=true' server-game/GMWW-Server/GameView.swift
+            SHOULD_DEPLOY=false
+            echo 'PR629 Native OTA only: Cloudflare Worker, IPA Production and game data are isolated.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # The exact CI-only scope extension for Player V3.277 must never deploy gameplay.
+          CI_PLAYER_PATHS=$(printf '%s\n' \
+            '.github/scripts/ci-browser-scope.mjs' \
+            '.github/scripts/player-interactions-scope.mjs' \
+            '.github/workflows/check-player-web.yml' \
+            '.github/workflows/deploy-production.yml' \
+            'tests/player-interactions-ci.test.mjs' | sort)
+          if [ "$(sort /tmp/gmww-production-change-scope.txt)" = "$CI_PLAYER_PATHS" ]; then
+            SHOULD_DEPLOY=false
+            echo 'CI-only Player lobby V3.277 scope extension: skip Production/Runtime.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # BEGIN GMWW_ARCHITECTURE_DOCS_GUARD
+          # Documentation-only changes must never trigger a Worker/Runtime publish.
+          # A mixed source/assets change is NOT exempt. Keep this after legacy overrides.
+          GMWW_DOCS_SCOPE_FILE="${GMWW_PRODUCTION_CHANGED_PATH:-/tmp/gmww-production-change-scope.txt}"
+          if [ -s "$GMWW_DOCS_SCOPE_FILE" ] && ! grep -Ev '^docs/architecture/[A-Za-z0-9._/-]+[.]md$' "$GMWW_DOCS_SCOPE_FILE" >/dev/null; then
+            SHOULD_DEPLOY=false
+            echo 'GĐ1–GĐ3 architecture documentation only: skip Production Worker/Runtime.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # END GMWW_ARCHITECTURE_DOCS_GUARD
+
+          # BEGIN GMWW_PR637_STAGED_RELEASE_GUARD
+          # A merge of the link-sharing UI is NOT an automatic Runtime/Worker release.
+          # The CI-only guard PR must likewise not trigger Production.
+          RELEASE_PATHS=$(sort /tmp/gmww-production-change-scope.txt)
+          POLICY_ONLY=$(printf '%s\n' \
+            '.github/scripts/ci-browser-scope.mjs' \
+            '.github/workflows/deploy-production.yml' \
+            '.github/workflows/github-runtime-ota.yml' \
+            'docs/releases/GMWW-CI-SCOPED-MAIN-20261029.md' \
+            'tests/ci-browser-scope.test.mjs' | sort)
+          PR637_ONLY=$(printf '%s\n' \
+            '.github/scripts/ci-browser-scope.mjs' \
+            '.github/workflows/build-server-game-ipa.yml' \
+            '.github/workflows/check-gallows-redesign.yml' \
+            '.github/workflows/check-gm-free-icons-501.yml' \
+            '.github/workflows/check-gm-player-link-share.yml' \
+            '.github/workflows/check-player-web.yml' \
+            '.github/workflows/prepare-runtime-v3202-candidate.yml' \
+            'server-game/current/GMWW.html' \
+            'tests/gm-player-web-share-link.test.mjs' | sort)
+          if [ "$RELEASE_PATHS" = "$POLICY_ONLY" ]; then
+            SHOULD_DEPLOY=false
+            echo "CI-only PR637 release guard: no Production deployment." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$RELEASE_PATHS" = "$PR637_ONLY" ] ||
+             git log -1 --format=%B | grep -Eq '(^Merge pull request #637([[:space:]]|$)|\(#637\)$)'; then
+            grep -Fq 'BEGIN GMWW_PLAYER_SHARE_SCRIPT' server-game/current/GMWW.html || {
+              echo "::error::PR637 marker missing; refuse automatic deploy"; exit 1;
+            }
+            SHOULD_DEPLOY=false
+            echo "PR637 staged release: NEVER auto-deploy Worker/Runtime; explicit gated dispatch required." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # END GMWW_PR637_STAGED_RELEASE_GUARD
+
+          # PR645 V3.279: postmerge browser gate repair releases the already
+          # owner-accepted Online runtime ONLY for this exact CI-only fix.
+          # This is NOT a general exception: the downstream deploy job still
+          # requires same-SHA Worker CI, Chrome/Edge/WebKit CI and OTA guards.
+          if [ "$(node -p 'require("./package.json").version')" = '3.279.0' ] &&
+             git merge-base --is-ancestor d9527d6625868c0a25395e8ebf982446b4e4712b HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/check-player-card-browsers.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              grep -Fq 'function gmwwOnlinePlaceAtFire(dock){' src/player-web-src/35-online-chat.part || {
+                echo "::error::PR645 modern Online renderer missing; refusing V3.279 release"; exit 1;
+              }
+              SHOULD_DEPLOY=true
+              echo 'PR645 V3.279: exact postmerge browser CI fix; keep all same-SHA browser/Worker/OTA production gates.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          # PR652 V3.280: exact postmerge CI-only release handshake.
+          # The approved Online gameplay commit must be an ancestor and every
+          # gameplay, IPA, Oracle and data-affecting source must remain unchanged.
+          if [ "$(node -p 'require("./package.json").version')" = '3.280.0' ] &&
+             git merge-base --is-ancestor 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/check-player-web.yml' \
+              '.github/workflows/check-player-card-browsers.yml' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc || {
+                echo "::error::PR652 gameplay or version changed since owner acceptance"; exit 1;
+              }
+              grep -Fq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js || exit 1
+              grep -Fq 'soi-can-canonical' server-game/current/app.js || exit 1
+              SHOULD_DEPLOY=true
+              echo 'PR652 V3.280: same-SHA Worker, browser, integrity and OTA gates remain mandatory; no IPA/Oracle/data change.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          # PR652 V3.280: final selector ordering repair.
+          # The prior five-file CI release gate was tested but main-push selection
+          # returned early. Permit this exact three-file CI-only correction, never
+          # altered source, IPA, data or a new Runtime version.
+          if [ "$(node -p 'require("./package.json").version')" = '3.280.0' ] &&
+             git merge-base --is-ancestor fa48216517e692924b47a936767369d0d654523c HEAD; then
+            ACTUAL=$(sort /tmp/gmww-production-change-scope.txt)
+            EXPECTED=$(printf '%s\n' \
+              '.github/scripts/ci-browser-scope.mjs' \
+              '.github/workflows/deploy-production.yml' \
+              'tests/ci-browser-scope.test.mjs' | sort)
+            if [ "$ACTUAL" = "$EXPECTED" ]; then
+              git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc || {
+                echo "::error::PR652 Runtime source changed since owner acceptance"; exit 1;
+              }
+              grep -Fq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js || exit 1
+              grep -Fq 'soi-can-canonical' server-game/current/app.js || exit 1
+              SHOULD_DEPLOY=true
+              echo 'PR652 V3.280 final release gate: exact 3 CI-only files; Worker/browser/OTA same SHA mandatory.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          # BEGIN GMWW_DUAL_CLOUDFLARE_STAGING_GUARD
+          # Only synthetic Cloudflare B files, their test, docs and exact CI workflow may bypass deploy.
+          # Any changed source/runtime/asset file invalidates this exception.
+          STANDBY_UNRELATED=$(grep -Ev '^(infra/cloudflare-standby/[^/]+|tests/dual-cloudflare-release-guard[.]test[.]mjs|tests/github-actions-pr-preview-ci[.]test[.]mjs|tests/ci-browser-scope[.]test[.]mjs|[.]github/scripts/ci-browser-scope[.]mjs|docs/architecture/dual-cloudflare-standby-20261101[.]md|[.]github/workflows/(check-cloudflare-standby|deploy-production|github-runtime-ota|check-pr-preview-github|check-player-web)[.]yml)$' /tmp/gmww-production-change-scope.txt || true)
+          if [ -s /tmp/gmww-production-change-scope.txt ] && [ -z "$STANDBY_UNRELATED" ] &&
+             grep -Eq '^infra/cloudflare-standby/[^/]+[.]mjs$' /tmp/gmww-production-change-scope.txt &&
+             grep -Eq '^infra/cloudflare-standby/[^/]+[.]test[.]mjs$' /tmp/gmww-production-change-scope.txt; then
+            SHOULD_DEPLOY=false
+            echo 'Cloudflare B STAGING synthetic fixtures only: SKIP Production deployment.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # END GMWW_DUAL_CLOUDFLARE_STAGING_GUARD
+          # Isolated Oracle local workerd bootstrap must not auto-deploy Production.
+          ORACLE_LOCAL_UNRELATED=$(grep -Ev '^(infra/oracle-staging/[^/]+|docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031[.]md|[.]github/workflows/(deploy-production|github-runtime-ota|check-oracle-staging-bootstrap|check-player-web)[.]yml|[.]github/scripts/ci-browser-scope[.]mjs)$' /tmp/gmww-production-change-scope.txt || true)
+          if [ -s /tmp/gmww-production-change-scope.txt ] && [ -z "$ORACLE_LOCAL_UNRELATED" ] &&
+             grep -Fxq 'infra/oracle-staging/start-local.sh' /tmp/gmww-production-change-scope.txt &&
+             grep -Fxq 'infra/oracle-staging/bootstrap.test.mjs' /tmp/gmww-production-change-scope.txt; then
+            SHOULD_DEPLOY=false
+            echo 'Oracle LOCAL STAGING only: SKIP Production Worker deploy.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # Oracle STAGING bootstrap / repair are CI-only. Unknown files fail closed.
+          ORACLE_UNRELATED=$(grep -Ev '^(oracle-staging/[^/]+|tests/oracle-staging-bootstrap[.]test[.]mjs|docs/architecture/oracle-staging-bootstrap-20261031[.]md|[.]github/workflows/(check-oracle-staging-bootstrap|deploy-production|github-runtime-ota|check-player-web)[.]yml|[.]github/scripts/ci-browser-scope[.]mjs)$' /tmp/gmww-production-change-scope.txt || true)
+          if [ -s /tmp/gmww-production-change-scope.txt ] && [ -z "$ORACLE_UNRELATED" ] &&
+             grep -Fxq 'oracle-staging/server.mjs' /tmp/gmww-production-change-scope.txt &&
+             grep -Fxq 'tests/oracle-staging-bootstrap.test.mjs' /tmp/gmww-production-change-scope.txt; then
+            SHOULD_DEPLOY=false
+            echo 'Oracle STAGING-only bootstrap: SKIP Production Worker deploy.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          ORACLE_REPAIR_UNRELATED=$(grep -Ev '^([.]github/workflows/(deploy-production|github-runtime-ota)[.]yml|[.]github/scripts/ci-browser-scope[.]mjs|tests/oracle-staging-bootstrap[.]test[.]mjs)$' /tmp/gmww-production-change-scope.txt || true)
+          if [ -s /tmp/gmww-production-change-scope.txt ] && [ -z "$ORACLE_REPAIR_UNRELATED" ] &&
+             grep -Fxq 'tests/oracle-staging-bootstrap.test.mjs' /tmp/gmww-production-change-scope.txt &&
+             grep -Fxq '.github/workflows/deploy-production.yml' /tmp/gmww-production-change-scope.txt; then
+            SHOULD_DEPLOY=false
+            echo 'Oracle release-guard CI repair: SKIP Production Worker deploy.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # Exactly scoped link-only Runtime catalog automation. No Worker/Runtime/IPA deploy.
+          CATALOG_ONLY=$(printf '%s\n' \
+            '.github/workflows/runtime-download-catalog.yml' \
+            '.github/scripts/update-runtime-download-catalog.mjs' \
+            'tests/runtime-download-catalog.test.mjs' \
+            '.github/workflows/deploy-production.yml' \
+            '.github/workflows/github-runtime-ota.yml' | sort)
+          # Keep any subset of catalog-only paths CI-only, never Production.
+          if [ -s /tmp/gmww-production-change-scope.txt ] &&
+             { grep -Fxq '.github/scripts/update-runtime-download-catalog.mjs' /tmp/gmww-production-change-scope.txt ||
+               grep -Fxq '.github/workflows/runtime-download-catalog.yml' /tmp/gmww-production-change-scope.txt; } &&
+             ! grep -Ev '^([.]github/workflows/(runtime-download-catalog|deploy-production|github-runtime-ota)[.]yml|[.]github/scripts/(update-runtime-download-catalog|ci-browser-scope)[.]mjs|[.]github/workflows/check-player-web[.]yml|tests/runtime-download-catalog[.]test[.]mjs)$' /tmp/gmww-production-change-scope.txt >/dev/null; then
+
+            SHOULD_DEPLOY=false
+            echo 'Runtime download catalog links only: skip Production deploy.' >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
           if [ "$SHOULD_DEPLOY" = false ]; then
@@ -1464,9 +1728,137 @@ jobs:
           echo "approved=true" >> "$GITHUB_OUTPUT"
           echo "V3.261: GM movement CSS translate, walk/idle facing/run-home, OTA SHA-256 mandatory, IPA V3.257 unchanged." >> "$GITHUB_STEP_SUMMARY"
 
+      # PR595 has its own approved, fail-closed GM/chat release scope.
+      # Never reuse this exception for another version or arbitrary code changes.
+      - name: V3.272 PR595 — chốt CI GM/chat đúng SHA, không xây IPA
+        id: gmadmin3272_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.272.0" ]; then exit 0; fi
+          test -s docs/releases/gm-admin-top-chat-20261028.md
+          grep -Fq 'NATIVE_SHELL_VERSION="3.264"' src/index.js
+          node .github/scripts/verify-gmww-versions.mjs
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --test tests/gm-admin-top-chat-20261028.test.mjs tests/online-chat-authority.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-admin-top-chat-3272 |"* ]] || {
+            echo "::error::PR595 unexpected file changes; release denied."; exit 1;
+          }
+          VERIFIED=false
+          for TRY in $(seq 1 24); do
+            RUNS=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            if printf '%s' "$RUNS" | node -e '
+              let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{
+                const runs=(JSON.parse(s).workflow_runs||[]).filter(x=>x.head_sha===process.env.TESTED_SHA&&x.event==="push");
+                const good=n=>runs.some(x=>x.name===n&&x.conclusion==="success");
+                process.exit(good("Check Player Web Worker")&&
+                  good("Check GM Chat Flamingo and 3 Persistent Actions")?0:1);
+              })'; then VERIFIED=true; break; fi
+            sleep 10
+          done
+          test "$VERIFIED" = true || {
+            echo "::error::Missing exact-main-SHA GM chat and Worker CI SUCCESS."; exit 1;
+          }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "GMWW V3.272 PR595: GM Chat 🦩 + Giết/Cứu/Cấm Chat, Runtime OTA SHA-256 và gói thủ công; IPA V3.264 không đổi; rollback V3.271." >> "$GITHUB_STEP_SUMMARY"
+
+      # V3.274: Only approved Artifact artwork translation may bypass unrelated
+      # legacy browser suites. Verify focused CI on the exact main SHA.
+      - name: V3.274 PR613 — xác minh Artifact căn giữa và giữ nguyên Vai Trò
+        id: artifact3274_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.274.0" ]; then exit 0; fi
+          test -s docs/releases/GMWW-artifact-preview-centering-main-20261029.md
+          grep -Fq 'V3.274 PR613:' .github/scripts/prepare-update-channel.mjs
+          grep -Fq 'NATIVE_SHELL_VERSION="3.264"' src/index.js
+          node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs
+          node --test --test-name-pattern="PR613 Artifact preview V3.274" tests/ci-browser-scope.test.mjs
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          test "$GITHUB_EVENT_NAME" = "workflow_run" || { echo "::error::Manual release requires separate approval"; exit 1; }
+          # With a CI-only follow-up, the original main SHA already proved
+          # role-card isolation. It must be an immutable ancestor with no new
+          # app/runtime files in the five-file recovery scope.
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          IS_RECOVERY=false
+          if [[ "$SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]]; then
+            IS_RECOVERY=true
+            git merge-base --is-ancestor 2171214cec2c9af92994c27caaa8f75e976dbb1c HEAD
+            BASE_RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=28f62f91dea9538b79b06177cd1d7cdbd7703e57&per_page=100")
+            printf '%s' "$BASE_RUNS" | node -e '
+              let raw="";process.stdin.on("data",c=>raw+=c).on("end",()=>{
+                const a=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.event==="pull_request"&&r.head_sha==="28f62f91dea9538b79b06177cd1d7cdbd7703e57");
+                const names=["Check Approved Role Card Settings","Check GM card artwork centering (20261029)"];
+                process.exit(names.every(n=>a.some(r=>r.name===n&&r.conclusion==="success"))?0:1);
+              })' || { echo "::error::Original PR613 verified PR role/Artifact proof missing"; exit 1; }
+          fi
+          export IS_RECOVERY
+          VERIFIED=false
+          for TRY in $(seq 1 30); do
+            RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            if printf '%s' "$RUNS" | node -e '
+              let raw="";process.stdin.on("data",x=>raw+=x).on("end",()=>{
+                const runs=(JSON.parse(raw).workflow_runs||[]).filter(x=>x.head_sha===process.env.TESTED_SHA&&x.event==="push");
+                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Stability Gate"]; if(process.env.IS_RECOVERY!=="true")required.push("Check Approved Role Card Settings");
+                process.exit(required.every(name=>runs.some(r=>r.name===name&&r.conclusion==="success"))?0:1);
+              })
+            '; then VERIFIED=true; break; fi
+            sleep 6
+          done
+          test "$VERIFIED" = true || { echo "::error::Required scoped checks not SUCCESS at exact main SHA"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.274 PR613: Artifact centered without scale distortion, role isolation, OTA SHA-256; IPA V3.264 unchanged; rollback V3.273." >> "$GITHUB_STEP_SUMMARY"
+      # PR628 V3.275: scope-verified Runtime release without changing IPA.
+      - name: V3.275 PR628 — nghiệm thu GM Card và đóng panel khi chạm ngoài
+        id: card3275_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED_SHA: ${{ steps.tested.outputs.sha }}
+        run: |
+          set -euo pipefail
+          echo "approved=false" >> "$GITHUB_OUTPUT"
+          if [ "$(node -p "require('./package.json').version")" != "3.275.0" ]; then exit 0; fi
+          test "$GITHUB_EVENT_NAME" = "workflow_run" || { echo "::error::V3.275 requires main push CI"; exit 1; }
+          test -s docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md
+          grep -Fq 'V3.275 PR628:' .github/scripts/prepare-update-channel.mjs
+          grep -Fq 'VERSION="V3.275",NATIVE_SHELL_VERSION="3.264"' src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs tests/gm-card-fit-outside-dismiss-20261029.test.mjs tests/gm-card-outside-ci-scope-20261029.test.mjs
+          SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+          [[ "$SCOPE" == "GMWW browser CI scope: gm-card-outside-3275 |"* ]] || { echo "::error::V3.275 release scope mismatch: $SCOPE"; exit 1; }
+          VERIFIED=false
+          for TRY in $(seq 1 30); do
+            RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$TESTED_SHA&per_page=100")
+            if printf '%s' "$RUNS" | node -e '
+              let raw="";process.stdin.on("data",c=>raw+=c).on("end",()=>{
+                const runs=(JSON.parse(raw).workflow_runs||[]).filter(r=>r.head_sha===process.env.TESTED_SHA&&r.event==="push"&&r.head_branch==="main");
+                const required=["Check Player Web Worker","Check GM card artwork centering (20261029)","CI Stability Gate","Check Approved Role Card Settings","Check GM Chat Flamingo and 3 Persistent Actions"];
+                process.exit(required.every(n=>runs.some(r=>r.name===n&&r.conclusion==="success"))?0:1);
+              })'; then VERIFIED=true; break; fi
+            sleep 6
+          done
+          test "$VERIFIED" = true || { echo "::error::V3.275 same-SHA focused checks not SUCCESS"; exit 1; }
+          echo "approved=true" >> "$GITHUB_OUTPUT"
+          echo "V3.275 PR628 GM Card + outside-dismiss PASS. Runtime OTA SHA-256, IPA V3.264 unchanged, rollback V3.274." >> "$GITHUB_STEP_SUMMARY"
       # Historical V3.236/V3.237 gates are intentionally omitted from the V3.238 release.
       - name: Chặn Production nếu Chrome Edge WebKit CI chưa SUCCESS
-        if: steps.cardrule3263_release.outputs.approved != 'true' && steps.drunk3260_release.outputs.approved != 'true' && steps.gmvote3259_release.outputs.approved != 'true' && steps.audio3258_release.outputs.approved != 'true' && steps.fireradius3262_release.outputs.approved != 'true' && steps.firewalk3261_release.outputs.approved != 'true' && steps.firewalk3256_release.outputs.approved != 'true' && steps.drunk255_release.outputs.approved != 'true' && steps.thermal3254_release.outputs.approved != 'true' && steps.motion3253_release.outputs.approved != 'true' && steps.ui3252_release.outputs.approved != 'true' && steps.ui3251_release.outputs.approved != 'true' && steps.role250_release.outputs.approved != 'true' && steps.rule249_release.outputs.approved != 'true' && steps.runtime248_release.outputs.approved != 'true' && steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
+        if: steps.card3275_release.outputs.approved != 'true' && steps.artifact3274_release.outputs.approved != 'true' && steps.gmadmin3272_release.outputs.approved != 'true' && steps.cardrule3263_release.outputs.approved != 'true' && steps.drunk3260_release.outputs.approved != 'true' && steps.gmvote3259_release.outputs.approved != 'true' && steps.audio3258_release.outputs.approved != 'true' && steps.fireradius3262_release.outputs.approved != 'true' && steps.firewalk3261_release.outputs.approved != 'true' && steps.firewalk3256_release.outputs.approved != 'true' && steps.drunk255_release.outputs.approved != 'true' && steps.thermal3254_release.outputs.approved != 'true' && steps.motion3253_release.outputs.approved != 'true' && steps.ui3252_release.outputs.approved != 'true' && steps.ui3251_release.outputs.approved != 'true' && steps.role250_release.outputs.approved != 'true' && steps.rule249_release.outputs.approved != 'true' && steps.runtime248_release.outputs.approved != 'true' && steps.icon247_release.outputs.approved != 'true' && steps.fairy246_release.outputs.approved != 'true' && steps.timeline244_release.outputs.approved != 'true' && steps.lobby541_release.outputs.approved != 'true' && steps.fairy242_release.outputs.approved != 'true' && steps.icon_artwork_release.outputs.approved != 'true' && steps.gallows_release.outputs.approved != 'true' && steps.gallows_release_3204.outputs.approved != 'true' && steps.gallows_release_3205.outputs.approved != 'true' && steps.gallows_release_3206.outputs.approved != 'true' && steps.demo475_release_3207.outputs.approved != 'true' && steps.icon_release_3210.outputs.approved != 'true' && steps.icon_cleanup_3212.outputs.approved != 'true' && steps.icon_wave3_3213.outputs.approved != 'true' && steps.icon_game_3215.outputs.approved != 'true' && steps.icon_wave5_3218.outputs.approved != 'true' && steps.arena_home_release_3223.outputs.approved != 'true' && steps.active_icons_3225.outputs.approved != 'true' && steps.fire_icons_3226.outputs.approved != 'true' && steps.icon_action_v2_3227.outputs.approved != 'true' && steps.icon_footer_3229.outputs.approved != 'true' && steps.gm501_release_3224.outputs.approved != 'true' && steps.runtime_warning_3232.outputs.approved != 'true' && steps.gm_ui_audio_3233.outputs.approved != 'true' && steps.gm238_release.outputs.approved != 'true' && steps.witch240_release.outputs.approved != 'true' && steps.night245_release.outputs.approved != 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1523,6 +1915,15 @@ jobs:
           # Publish the cumulative iPhone OTA once, scoped to the exact
           # approved V3.207 merged commit (not a generic CI bypass).
           VERSION=$(node -p "require('./package.json').version")
+          # Exact postmerge Artifact V3.274 repair must publish the pending
+          # Runtime payload, not misclassify five CI-only files as server_only.
+          if [ "$VERSION" = "3.274.0" ] && \
+             { grep -Fxq 'docs/releases/GMWW-PR613-postmerge-ci-20261029.md' /tmp/gmww-changed-files.txt || grep -Fxq 'docs/releases/GMWW-PR613-release-proof-ci-20261029.md' /tmp/gmww-changed-files.txt; }; then
+            RELEASE_SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
+            [[ "$RELEASE_SCOPE" == "GMWW browser CI scope: artifact-preview-3274-postmerge |"* ]] || { echo "::error::V3.274 recovery source scope mismatch"; exit 1; }
+            TYPE=runtime
+            echo 'Runtime OTA V3.274: publish the pending verified Artifact package. IPA V3.264 unchanged.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "$VERSION" = "3.207.0" ] && \
              test -s docs/releases/GMWW-V3.207-demo475-production-20261025.md && \
              git merge-base --is-ancestor 8772337ab95e7561aeba6d63b2ec2337d7bbee94 HEAD; then
@@ -1688,7 +2089,7 @@ jobs:
           test "$OK" = "1"
           # Runtime V3.160 can stay unchanged on a server-only deploy. Health version
           # alone cannot prove the just-uploaded static assets have reached the edge.
-          # Wait for the new portrait bytes, then verify all 40 IDs. Fail closed if
+          # Wait for the canonical original artwork bytes served by character40Image, then verify all 40 IDs. Fail closed if
           # propagation never finishes; retain the previous deployment for rollback.
           AVATAR_READY=0
           for TRY in $(seq 1 40); do
@@ -1696,21 +2097,21 @@ jobs:
               -H 'Cache-Control: no-cache' \
               "$URL/api/game-characters/character-01/image?rev=c40-4&edge-propagation=$TRY-$(date +%s)" \
               > /tmp/gmww-live-avatar.webp; then
-              if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/portraits/character-01.webp; then
+              if cmp -s /tmp/gmww-live-avatar.webp assets/characters/gmww40/originals/character-01.webp; then
                 AVATAR_READY=1
                 break
               fi
-              echo "::warning::Waiting for Character40 portrait edge propagation ($TRY/40); expected bytes $(wc -c < assets/characters/gmww40/portraits/character-01.webp), received $(wc -c < /tmp/gmww-live-avatar.webp)"
+              echo "::warning::Waiting for Character40 original artwork edge propagation ($TRY/40); expected bytes $(wc -c < assets/characters/gmww40/originals/character-01.webp), received $(wc -c < /tmp/gmww-live-avatar.webp)"
             fi
             sleep 2
           done
           test "$AVATAR_READY" = "1" || {
             echo "::error::New Worker assets did not propagate; production verification blocked."
-            echo "Expected SHA: $(shasum -a 256 assets/characters/gmww40/portraits/character-01.webp)"
+            echo "Expected SHA: $(shasum -a 256 assets/characters/gmww40/originals/character-01.webp)"
             echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
             exit 1
           }
-          echo "Verify Production: fresh Character40 portrait revision is live."
+          echo "Verify Production: canonical Character40 original artwork revision is live."
 
           for N in $(seq 1 40); do
             ID=$(printf 'character-%02d' "$N")
@@ -1720,7 +2121,7 @@ jobs:
                 -H 'Cache-Control: no-cache' \
                 "$URL/api/game-characters/$ID/image?rev=c40-4&verify-avatar=$N-$TRY-$(date +%s)" \
                 > /tmp/gmww-live-avatar.webp && \
-                cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/portraits/$ID.webp"; then
+                cmp -s /tmp/gmww-live-avatar.webp "assets/characters/gmww40/originals/$ID.webp"; then
                 MATCHED=1
                 break
               fi
@@ -1728,12 +2129,12 @@ jobs:
             done
             test "$MATCHED" = "1" || {
               echo "::error::Production avatar/atlas bytes differ for $ID"
-              echo "Expected SHA: $(shasum -a 256 "assets/characters/gmww40/portraits/$ID.webp")"
+              echo "Expected SHA: $(shasum -a 256 "assets/characters/gmww40/originals/$ID.webp")"
               echo "Observed SHA: $(shasum -a 256 /tmp/gmww-live-avatar.webp)"
               exit 1
             }
           done
-          echo "Verify Production: all 40 portrait/animation identities and bytes PASS."
+          echo "Verify Production: all 40 canonical artwork/animation identities and bytes PASS."
 
           # Safari Player iframe must resolve full village HTML, not the Worker 404 page.
           curl --fail --location --silent --show-error --retry 5 --retry-delay 2 --max-time 30 "$URL/village/?embed=1&v=303" > /tmp/gmww-production-village.html

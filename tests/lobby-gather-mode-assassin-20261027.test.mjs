@@ -4,7 +4,7 @@ import fs from 'node:fs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const html=read('server-game/current/GMWW.html');
 const gm=read('server-game/current/app.js');
-const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
+const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
 test('app source and packaged runtime match',()=>{
   assert.equal(gm,parts.map(n=>read('server-game/src/'+n)).join(''));
 });
@@ -16,8 +16,8 @@ test('room creation step is not exposed and gathering follows lobby',()=>{
 });
 test('one mode toggle in gathering with existing server protection',()=>{
   assert.equal((html.match(/id="playRoomModeToggle"/g)||[]).length,1);
-  assert.match(html,/<div class="play-gather-mode-row"[\s\S]*?id="playRoomModeToggle"/);
-  assert.match(gm,/PLAY_ROOM_MODE_CYCLE=\['offline','online','demo'\]/);
+  assert.match(html,/<div class="play-gather-toolbar-actions"[^>]*>[\s\S]*?id="playRoomModeToggle"/);
+  assert.match(gm,/PLAY_ROOM_MODE_CYCLE=\['online','offline','demo'\]/);
   assert.match(gm,/async function flushPlayRoomMode/);
   assert.match(gm,/ROOM_MODE_REQUIRES_EMPTY_RESET/);
 });

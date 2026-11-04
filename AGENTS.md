@@ -1,3 +1,17 @@
+# GMWW AUTO-DELIVERY V3.0 — MẶC ĐỊNH TỪ 01/11/2026
+
+**Quy trình mới đã được phê duyệt sau nghiệm thu Player Web trên iPhone.** Chính sách vận hành: docs/architecture/GMWW-AUTO-DELIVERY-V3.0.md. Chỉ dẫn này ưu tiên hơn quy tắc giao nhận và phát hành cũ bên dưới nếu có xung đột.
+
+- Một task → một nhánh → một PR; xác minh nguyên nhân gốc và kiểm thử đúng phạm vi, không tạo vòng PR chữa CI.
+- V3 Scope Gate; CI cơ bản + CI tích hợp theo rủi ro; required CI Policy Gate SUCCESS cùng SHA mới merge.
+- Worker/Player Web → Worker-only deploy và smoke + rollback; Runtime thật thay đổi → bản OTA mới .gmwwupdate + SHA-256 + Release notes tiếng Việt và rollback; không phát hành OTA giả/trùng.
+- Mặc định bảo toàn dữ liệu, DO, URL gamemasoi.pages.dev, IPA và PR #581 3D đã đóng băng.
+- Chủ dự án phê duyệt quy trình V3 cho phát hành an toàn thường lệ khi CI/health đạt. Native, DO migration, xóa dữ liệu, đổi URL và thay đổi nhạy cảm cần phê duyệt riêng.
+- Không báo phát hành xong khi chưa xác minh GitHub/Cloudflare thật. Nếu bế tắc 5 phút, đổi hướng và giữ commit.
+- Không xóa hàng loạt workflow kiểm thử cũ trước khi thay thế tương đương được xác minh.
+
+---
+
 # GMWW — Quy tắc bắt buộc khi xử lý task và kiểm thử
 
 ## Nguyên tắc số 1: CHỈ KIỂM THỬ ĐÚNG PHẠM VI
@@ -13,6 +27,6 @@
 7. Không bỏ qua kiểm tra an toàn bắt buộc về cú pháp, tính toàn vẹn bản build, dữ liệu, phân quyền. **Trước phát hành Production** có thể cần bộ kiểm thử release toàn diện riêng; **tách nó khỏi kiểm thử xác nhận bugfix** và báo rõ lý do.
 8. Không chạy lại toàn bộ CI sau mỗi sửa nhỏ nếu có thể gom commit; ưu tiên kiểm tra đúng bài lỗi trước. Khi thất bại, đọc **dòng AssertionError/root cause**, không coi `exit code 1` hoặc các request phụ/404 là nguyên nhân khi chưa có chứng cứ.
 9. Không được khai báo `SUCCESS` cho test chưa chạy. Báo **PASS / FAIL / CHƯA CHẠY** với bằng chứng, nêu rõ test nào cố ý bỏ qua vì không liên quan.
-10. Mọi update Server/Runtime/IPA/Player Web phải kèm release notes/changelog. Không tự merge hoặc deploy Production trước khi chủ dự án phê duyệt, bảo toàn phòng/DO/lịch sử/IPA và ghi phương án rollback.
+10. Mọi update Server/Runtime/IPA/Player Web phải kèm release notes/changelog. Được áp dụng AUTO-DELIVERY V3.0 theo phê duyệt thường trực cho phạm vi an toàn khi required CI cùng SHA SUCCESS; thay đổi nhạy cảm phải phê duyệt riêng, bảo toàn phòng/DO/lịch sử/IPA và có rollback.
 
 **Kết quả mong muốn:** Một task → một phạm vi tác động → các test cần thiết của task → báo cáo ngắn, chính xác. Không kiểm thử lan man.

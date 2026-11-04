@@ -28,7 +28,8 @@ test('Browser cannot nominate or vote on behalf of Demo once server owns executi
  const h=leaseHarness();await h.run({command:'start'});let calls=0;h.room.playerGallows=async()=>{calls++;return Response.json({ok:true})};
  for(const command of ['heartbeat','nominate','vote','finish'])assert.equal((await h.run({command})).error,'DEMO_SERVER_OWNED');assert.equal(calls,0);
  assert.equal((await h.run({command:'start',owner:'demo-abcdefghijklmnop'})).error,'DEMO_RUNTIME_UPDATE_REQUIRED');
- assert.match(worker,/if\(meta\?\.demo===true&&!authorizedDemo\)return j/);
+ assert.match(worker,/if\(meta\?\.demo===true&&!authorizedDemo\)\{/);
+ assert.match(worker,/DEMO_PLAYER_NOT_JOINED/);
 });
 
 test('Demo moves completed night into the next day then advances resolved day into the next night',async()=>{

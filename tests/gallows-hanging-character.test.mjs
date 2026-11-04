@@ -8,7 +8,7 @@ const ballot=(mode='auto')=>({id:'g-1',matchId:'m-1',cycleKey:'day-1',stage:'sel
  eligible:['alice','bob','charlie'],candidateId:null,votes:{},nominations:{},voteDurationSec:10});
 
 test('Automatic execution vote suspends ONLY the selected, living candidate; result releases',()=>{
- const start=gallowsBegin(ballot(),'bob',1000);
+ const start=gallowsBegin({...ballot(),nominations:{alice:'bob',charlie:'bob'}},'bob',1000);
  assert.equal(start.ok,true);
  const h=gallowsHangingState(start.value,1001);
  assert.deepEqual(h,{active:true,candidateId:'bob',stage:'voting',startedAt:1000});

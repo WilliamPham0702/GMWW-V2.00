@@ -15,12 +15,12 @@ test('PR367/369 reconciliation uses existing members, never fabricated account i
   assert.match(events,/const chosen=source\.filter/);
   assert.doesNotMatch(worker,/import\s*\{[^}]*makeDemoPlayers/);
   assert.doesNotMatch(setup,/dm\s*\+\s*roomCode/);
-  assert.match(worker,/DEMO_ROOM_GM_ONLY/);
+  assert.match(worker,/DEMO_LOGIN_REQUIRED/);
 });
 
-test('Reconciled room stays private and invisible to normal Player Web',()=>{
-  assert.match(worker,/if\(r\?\.demo===true\)continue/);
-  assert.match(worker,/DEMO_ROOM_GM_ONLY/);
+test('Hybrid DEMO appears to members but retains trial-only data',()=>{
+  assert.doesNotMatch(worker,/if\(r\?\.demo===true\)continue/);
+  assert.match(worker,/DEMO_LOGIN_REQUIRED/);
   assert.match(worker,/if\(data\?\.room\?\.demo===true\)\{await syncRoomDirectory/);
   assert.match(html,/id="playCreatedRoomList"/);
   assert.match(html,/<button id="playRoomModeToggle"/);

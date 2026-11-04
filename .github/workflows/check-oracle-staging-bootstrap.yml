@@ -1,0 +1,84 @@
+name: Check Oracle STAGING bootstrap (no deployment)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'oracle-staging/**'
+      - 'infra/oracle-staging/**'
+      - '.github/workflows/github-runtime-ota.yml'
+      - 'docs/releases/GMWW-ORACLE-STAGING-LOCAL-20261031.md'
+      - 'tests/oracle-staging-bootstrap.test.mjs'
+      - '.github/workflows/check-oracle-staging-bootstrap.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    name: Oracle STAGING fail-closed readiness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check oracle-staging/server.mjs
+      - run: node --test tests/oracle-staging-bootstrap.test.mjs
+      - run: node --test oracle-staging/sqlite-fixture-adapter.test.mjs
+      - run: bash -n infra/oracle-staging/start-local.sh
+      - run: node --test infra/oracle-staging/bootstrap.test.mjs
+      - run: node --test infra/oracle-staging/probe-local.test.mjs
+      - run: node --test infra/oracle-staging/verify-two-backends.test.mjs
+      - name: Oracle STAGING real Worker login, room, WS and persisted reconnect (LOCAL only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          export GMWW_ORACLE_STAGING=1 GMWW_ORACLE_PROBE_ONLY=1 GMWW_ORACLE_PORT=8877 GMWW_ORACLE_FIXTURE_ONLY=1
+          export GMWW_ORACLE_STATE_DIR="$(mktemp -d)"
+          LOG="$(mktemp)"
+          PID=""
+          cleanup() {
+            if [[ -n "$PID" ]]; then kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true; fi
+            if [[ "${GMWW_ORACLE_STATE_DIR}" == /tmp/* ]]; then rm -rf -- "$GMWW_ORACLE_STATE_DIR"; fi
+            rm -f -- "$LOG"
+          }
+          trap cleanup EXIT
+          start_worker() {
+            bash infra/oracle-staging/start-local.sh > "$LOG" 2>&1 &
+            PID=$!
+            for i in {1..80}; do
+              if curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:8877/api/health > /dev/null 2>&1; then return 0; fi
+              if ! kill -0 "$PID" 2>/dev/null; then cat "$LOG"; return 1; fi
+              sleep 2
+            done
+            cat "$LOG"
+            return 1
+          }
+          start_worker
+          node infra/oracle-staging/probe-local.mjs create || { cat "$LOG"; exit 1; }
+          kill "$PID"; wait "$PID" || true; PID=""
+          start_worker
+          node infra/oracle-staging/probe-local.mjs resume || { cat "$LOG"; exit 1; }
+      - name: Verify unique GitHub Runtime package/publish jobs and isolated Oracle guard
+        shell: bash
+        run: |
+          node <<'NODE'
+          const assert=require('node:assert/strict');
+          const fs=require('node:fs');
+          const s=fs.readFileSync('.github/workflows/github-runtime-ota.yml','utf8');
+          const count=(v)=>s.split(v).length-1;
+          for(const [needle,n] of [['\n  package:\n',1],['\n  publish:\n',1],['ORACLE_LOCAL_UNRELATED=',1],['echo "skip_auto_release=$SKIP_AUTO_RELEASE"',1]]){
+            assert.equal(count(needle),n,'duplicate or missing '+needle);
+          }
+          assert.ok(s.includes('Oracle LOCAL STAGING only: NO automatic Runtime release.'));
+          assert.ok(s.includes('RUNTIME_CI_RECOVERY_UNRELATED='));
+          assert.ok(s.includes('Runtime CI-only YAML guard: NO automatic Runtime release.'));
+          assert.ok(s.includes('tests/pages-online-chat-reconnect-e2e[.]mjs'));
+          NODE
+      - name: Confirm bootstrap cannot mutate game or Production
+        run: |
+          ! grep -Eq '(DurableObject|cloudflare:workers|wrangler deploy|\.gmwwupdate|DELETE FROM|TRUNCATE)' oracle-staging/server.mjs
+          test ! -e oracle-staging/.env

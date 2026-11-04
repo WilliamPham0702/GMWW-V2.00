@@ -1,0 +1,90 @@
+name: GMWW GitHub Release Backup and Retention
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/github-release-backup-retention.yml"
+      - ".github/scripts/release-backup-retention.mjs"
+      - "tests/release-backup-retention.test.mjs"
+      - "docs/releases/GMWW-GITHUB-BACKUP-RETENTION-20261031.md"
+  schedule:
+    - cron: "13 5 * * 0"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Preview without deletion, or execute protected cleanup on main
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - execute
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-release-retention
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Unit tests and deletion safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate release retention syntax and scoped unit tests
+        run: |
+          node --check .github/scripts/release-backup-retention.mjs
+          node --test tests/release-backup-retention.test.mjs
+
+  backup-retention:
+    name: Verify monthly copies then prune expired Release binaries
+    needs: verify
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GMWW_PRUNE_APPROVED: ${{ github.event_name == 'schedule' || inputs.action == 'execute' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate the current main HEAD before touching releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          git fetch --no-tags origin main --depth=1
+          test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/main)"
+      - name: Preview only, or backup and execute safe retention
+        shell: bash
+        env:
+          MODE: ${{ github.event_name == 'schedule' && 'execute' || inputs.action }}
+        run: |
+          set -euo pipefail
+          if test "$MODE" = execute; then
+            node .github/scripts/release-backup-retention.mjs --execute | tee "$RUNNER_TEMP/retention-report.jsonl"
+          else
+            node .github/scripts/release-backup-retention.mjs | tee "$RUNNER_TEMP/retention-report.jsonl"
+          fi
+          {
+            echo '### GMWW GitHub backup/retention'
+            echo ''
+            echo "Mode: $MODE"
+            echo 'Monthly backup releases preserve verified Runtime/IPA bytes before deletion.'
+            echo 'No repository source, IPA install, player data, Worker, or Oracle changes.'
+          } >> "$GITHUB_STEP_SUMMARY"

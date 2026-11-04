@@ -1,0 +1,29 @@
+name: Check Player Web First Paint (focused)
+on:
+  pull_request:
+    paths:
+      - 'src/gmww-members-page.js'
+      - 'src/player-web-src/20-village-and-profile.part'
+      - 'src/gmww-members-live.js'
+      - 'tests/player-web-first-paint-cleanup.test.mjs'
+      - '.github/workflows/check-player-web-first-paint.yml'
+  workflow_dispatch:
+jobs:
+  first-paint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: No fake content on first paint and scoped Online regressions
+        run: node --test tests/player-web-first-paint-cleanup.test.mjs tests/player-web-online-village-20261028.test.mjs tests/player-web-remove-redundant-stage-tabs.test.mjs tests/player-web-receipt-patch-hotfix.test.mjs
+      - name: Verify bundled Player Web and syntax
+        run: |
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+      - name: Verify Worker bundle (no deployment)
+        run: npx wrangler deploy --dry-run --outdir /tmp/gmww-player-first-paint

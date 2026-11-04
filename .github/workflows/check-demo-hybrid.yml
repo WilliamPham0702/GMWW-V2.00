@@ -1,0 +1,57 @@
+name: Check Hybrid DEMO Humans + AI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/index.js'
+      - 'src/gmww-demo-runner.js'
+      - 'src/gmww-members-live.js'
+      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'tests/demo-*.mjs'
+      - 'tests/demo-*.test.mjs'
+      - 'tests/gmww-player-web-source-modules.test.mjs'
+      - '.github/workflows/check-demo-hybrid.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    name: DEMO live-auth, action ownership, auto-fallback, privacy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Worker, DEMO and web compilation integrity
+        run: |
+          node --check src/index.js
+          node --check src/gmww-demo-runner.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-player-web.mjs --verify
+      - name: Human and AI collision, DEMO isolation and web source
+        run: |
+          node --test tests/demo-hybrid-real-players.test.mjs tests/demo-room-gm-safety.test.mjs tests/demo-room-lease-phases.test.mjs tests/demo-pr367-369-reconciliation.test.mjs tests/demo-server-runner.test.mjs tests/gmww-player-web-source-modules.test.mjs
+      - name: Cloudflare build safety (no Production deployment)
+        run: npm run check
+      - name: Isolated local Worker — real sign-in, join, own action and no duplicate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/gmww-hybrid-worker.log 2>&1 &
+          WPID=$!
+          trap 'kill "$WPID" 2>/dev/null || true' EXIT
+          READY=0
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 4 http://127.0.0.1:8787/api/health > /tmp/gmww-hybrid-health.json 2>/dev/null; then READY=1; break; fi
+            sleep 1
+          done
+          if [ "$READY" != 1 ]; then cat /tmp/gmww-hybrid-worker.log; exit 1; fi
+          node tests/demo-hybrid-live-e2e.mjs

@@ -15,9 +15,9 @@ try{
   const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head>
   <body class="play-immersive"><section id="start"><div id="playShell" data-step="battle" data-battle-phase="day">
     <section id="battleBottomControls">
-      <section id="battleFactionStatsFloat" class="battle-faction-stats-float"><button id="battleFactionStatsToggle" aria-pressed="false">🌈</button></section>
-      <section id="battleDayNoticeFloat" class="battle-day-icon-float"><button id="battleDayNoticeToggle">🏖️</button></section>
-      <section id="battleDayGallowsFloat" class="battle-day-icon-float"><button id="battleDayGallowsToggle">⛱️</button></section>
+      <section id="battleFactionStatsFloat" class="battle-faction-stats-float"><button id="battleFactionStatsToggle" aria-pressed="false">⚖️</button></section>
+      <section id="battleDayNoticeFloat" class="battle-day-icon-float"><button id="battleDayNoticeToggle"><svg class="gmww-footer-icon" viewBox="0 0 48 48" aria-hidden="true"></svg></button></section>
+      <section id="battleDayGallowsFloat" class="battle-day-icon-float"><button id="battleDayGallowsToggle"><svg class="gmww-footer-icon" viewBox="0 0 48 48" aria-hidden="true"></svg></button></section>
     </section>
     <section id="playBattleDock">
       <aside id="battleDemoObserver" aria-label="Quan sát DEMO">
@@ -41,18 +41,23 @@ try{
     });
     window.pr501={getOpened:()=>opened,setup:gmwwSetupFreeBattleIcons};`});
 
-  for(const [id,emoji] of [['battleFactionStatsToggle','🌈'],['battleDayNoticeToggle','🏖️'],['battleDayGallowsToggle','⛱️'],['battleDemoCollapse','🐦‍🔥']]){
+  // Only ⚖️ and DEMO remain independently floating; Notice and Gallows live in the fixed footer.
+  for(const [id,kind,free] of [['battleFactionStatsToggle','⚖️',true],['battleDayNoticeToggle','svg',false],['battleDayGallowsToggle','svg',false],['battleDemoCollapse','🐦‍🔥',true]]){
     const node=page.locator('#'+id);
-    assert.equal((await node.textContent()).trim().includes(emoji),true,id+' incorrect emoji (rendered '+JSON.stringify(await node.textContent())+')');
+    if(kind==='svg')assert.equal(await node.locator('svg.gmww-footer-icon').count(),1,id+' must use the current unboxed SVG artwork');
+    else assert.equal((await node.textContent()).trim().includes(kind),true,id+' incorrect icon');
     const shape=await node.evaluate(el=>{
       const style=getComputedStyle(el),r=el.getBoundingClientRect();
       return {width:r.width,height:r.height,background:style.backgroundColor,border:style.borderTopWidth,
-        parent:el.closest('.gmww-free-icon')?.parentElement?.id};
+        parent:el.closest('.gmww-free-icon')?.parentElement?.id,
+        footer:!!el.closest('#battleBottomControls')};
     });
-    assert.ok(shape.width>=44&&shape.height>=44&&shape.width<=53,id+' icon touch size: '+JSON.stringify(shape));
+    const maxWidth=id==='battleDemoCollapse'?130:free?56:90;
+    assert.ok(shape.width>=44&&shape.height>=44&&shape.width<=maxWidth,id+' touch size: '+JSON.stringify(shape));
     assert.equal(shape.background,'rgba(0, 0, 0, 0)',id+' must have no box background');
     assert.equal(shape.border,'0px',id+' must have no box border');
-    assert.equal(shape.parent,'playShell',id+' must escape footer and dock');
+    if(free)assert.equal(shape.parent,'playShell',id+' must float above the village');
+    else {assert.equal(shape.parent,undefined,id+' must not be draggable');assert.equal(shape.footer,true,id+' stays in fixed footer');}
   }
   assert.equal(await page.locator('#battleDemoObserver').evaluate(x=>x.classList.contains('is-collapsed')),true);
   await page.locator('#battleDemoCollapse').click();
@@ -92,5 +97,5 @@ try{
   });
   assert.ok(Math.abs(persisted.x-moved.after.x)<2&&Math.abs(persisted.y-moved.after.y)<2,'Rerender must not reset position');
   await page.screenshot({path:'/tmp/gmww-pr501-iphone-webkit-icons.png'});
-  console.log('PASS PR501 390x844 iPhone WebKit: emoji buttons without boxes, touch drag, persistence, DEMO and stats tap');
+  console.log('PASS GM 390x844 iPhone WebKit: fixed SVG footer, floating ⚖️ and DEMO, touch drag, persistence and stats tap');
 }finally{await browser.close()}

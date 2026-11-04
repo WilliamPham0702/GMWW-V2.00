@@ -1,0 +1,74 @@
+name: Check Dual Cloudflare STAGING (no deployment)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/cloudflare-standby/**'
+      - 'tests/dual-cloudflare-release-guard.test.mjs'
+      - 'docs/architecture/dual-cloudflare-standby-20261101.md'
+      - '.github/workflows/check-cloudflare-standby.yml'
+      - '.github/workflows/deploy-production.yml'
+      - '.github/workflows/github-runtime-ota.yml'
+  # Only merged trusted code can use GitHub Actions secret. No PR secret exposure.
+  push:
+    branches: [main]
+    paths:
+      - 'infra/cloudflare-standby/b-staging-live-e2e.mjs'
+      - 'infra/cloudflare-standby/b-staging-live-e2e.test.mjs'
+      - '.github/workflows/check-cloudflare-standby.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.event_name == 'pull_request'
+    name: Cloudflare B synthetic snapshot and fail-closed gates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate standby fixture contracts
+        run: |
+          node --check infra/cloudflare-standby/b-staging-live-e2e.mjs
+          node --check infra/cloudflare-standby/fixture-contract.mjs
+          node --check infra/cloudflare-standby/storage-adapter.mjs
+          node --test infra/cloudflare-standby/*.test.mjs
+      - name: Compile Cloudflare B synthetic Worker WITHOUT deployment
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx wrangler deploy --dry-run --config infra/cloudflare-standby/wrangler-b-staging.jsonc
+          # Isolated B archive Worker; never deploy or connect to Production
+          npx wrangler deploy --dry-run --config infra/cloudflare-standby/wrangler-b-backup-archive.jsonc
+      - name: Verify Production and OTA only skip isolated standby changes
+        run: node --test tests/dual-cloudflare-release-guard.test.mjs
+      - name: Refuse production mutations or credentials
+        run: |
+          test ! -e infra/cloudflare-standby/.env
+          ! grep -Eq 'wrangler deploy|cloudflare\.request\(|productionSwitchAllowed: *true' infra/cloudflare-standby/*.mjs
+
+  live-b:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    name: GitHub-hosted B-only live HTTP/WebSocket E2E (missing key = BLOCKED)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify B live harness contract (no configuration writes)
+        run: |
+          node --check infra/cloudflare-standby/b-staging-live-e2e.mjs
+          node --test infra/cloudflare-standby/b-staging-live-e2e.test.mjs
+      - name: B-only live E2E; never Production or any Cloudflare API write
+        env:
+          GMWW_B_SYNTHETIC_ADMIN_KEY: ${{ secrets.GMWW_B_SYNTHETIC_ADMIN_KEY }}
+        run: node infra/cloudflare-standby/b-staging-live-e2e.mjs

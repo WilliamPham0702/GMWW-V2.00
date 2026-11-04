@@ -61,9 +61,33 @@ export function statusTagsFor(rows,meta,loginId,players={}){
     const kind=STATUS_VISUAL_LEGACY[row?.type];if(!kind||!valid(row)||normalizeLoginId(row?.loginId)!==normalizeLoginId(loginId))continue;
     if(row?.matchId&&matchId&&String(row.matchId)!==matchId)continue;
     const statusId=kind.statusId||row.type;
-    const canSee=Object.prototype.hasOwnProperty.call(display,statusId)?display[statusId]===true:statusId!=="marked";
+    const canSee=display[statusId]===true;
     if(canSee)tags.set(statusId,{statusId,label:kind.label,icon:kind.icon});
   }
   return [...tags.values()];
 }
+/**
+ * Publicly confirmed village outcomes. Night targets and hidden role data stay
+ * private; after dawn, death/exile/assassin mark match the GM's visible badges.
+ * Keep statusTagsFor() unchanged for GM-configured special effects.
+ */
+export function publicVillageStatusTagsFor(rows,meta,loginId,players={}){
+  const tags=new Map(statusTagsFor(rows,meta,loginId,players).map(x=>[x.statusId,x]));
+  if(meta?.phase!=='running'||!['morning','day'].includes(String(meta?.cyclePhase||'')))return [...tags.values()];
+  const id=normalizeLoginId(loginId),match=String(meta.matchId||''),now=Date.now();
+  for(const row of Array.isArray(rows)?rows:[]){
+    if(normalizeLoginId(row?.loginId)!==id||row?.effectActive===false)continue;
+    if(row.matchId&&String(row.matchId)!==match)continue;
+    if(row.expiresAt&&Date.parse(row.expiresAt)<=now)continue;
+    const kind=row.type==='dead'?'dead':row.type==='expelled'?'expelled':
+      row.type==='assassin_mark'&&row.status!=='responded'?'marked':
+      row.type==='status'&&row.statusId==='marked'?'marked':'';
+    const def=kind==='dead'?{label:'Đã Chết',icon:'💀'}:
+      kind==='expelled'?{label:'Bị Đuổi',icon:'🚪'}:
+      kind==='marked'?{label:'Bị đánh dấu',icon:'🎯'}:null;
+    if(def)tags.set(kind,{statusId:kind,...def});
+  }
+  return [...tags.values()];
+}
+
 export function publicRoom(m){return{seatOffset:globalThis.GMWW_VILLAGE_LAYOUT?.normalizeSeatOffset(m.seatOffset)||{x:0,y:0},seatSpacing:globalThis.GMWW_VILLAGE_LAYOUT?.normalizeSeatSpacing(m.seatSpacing)||100,statusDisplay:m.statusDisplay&&typeof m.statusDisplay==="object"?m.statusDisplay:{},gmStage:roomUiStage(m),gmStageRevision:Number(m.gmStageRevision||0),code:m.code,roomName:m.roomName||("Phòng "+m.code),matchId:m.matchId||null,lastEndedMatchId:m.lastEndedMatchId||null,matchRevision:Number(m.matchRevision||0),deliveryVersion:Number(m.deliveryVersion||0),resetVersion:Number(m.resetVersion||0),status:m.status,phase:m.phase||"lobby",locked:!!m.locked,seatsLocked:!!m.seatsLocked,enabled:m.enabled!==false,autoGM:m.autoGM!==false,demo:m.demo===true,roomMode:normalizeRoomMode(m.roomMode),seatMoveMode:normalizeSeatMoveMode(m.seatMoveMode),seatCount:normalizeSeatCount(m.seatCount,Number(m.playerCount||0)||12),seatLayout:normalizeSeatLayout(m.seatLayout),gameName:m.gameName||"",playerCount:Number(m.playerCount||0),cycleKey:m.cycleKey||null,cyclePhase:m.cyclePhase||null,cycleNight:Number(m.cycleNight||0),cycleStartedAt:m.cycleStartedAt||null,dayDeadlineAt:m.dayDeadlineAt||null,dayPausedRemainingMs:m.autoGM===false&&m.autoPausedRemainingMs!=null?Math.max(0,Number(m.autoPausedRemainingMs)||0):null,roleDeliveredAt:m.roleDeliveredAt||null,startedAt:m.startedAt||null,endedAt:m.endedAt||null,winnerFaction:m.winnerFaction||null,winnerLabel:m.winnerLabel||null,resultVersion:Number(m.resultVersion||0),deletedAt:m.deletedAt||null,createdAt:m.createdAt,updatedAt:m.updatedAt}}

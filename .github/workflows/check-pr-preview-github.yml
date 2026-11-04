@@ -1,0 +1,208 @@
+name: Check GMWW PR Preview (GitHub Actions)
+# PR732_SHA_ISOLATED_MAIN: no Preview bypass; retain required isolated Cloudflare Preview.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+# Intentionally no push, workflow_run, or Production deploy trigger.
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  oracle-scope:
+    name: Verify Oracle-only Preview exclusion (no gameplay changes)
+    runs-on: ubuntu-latest
+    outputs:
+      oracle_only: ${{ steps.scope.outputs.oracle_only }}
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+      preview_ci_only: ${{ steps.scope.outputs.preview_ci_only }}
+      v3_policy_only: ${{ steps.scope.outputs.v3_policy_only }}
+      v3_cutover_only: ${{ steps.scope.outputs.v3_cutover_only }}
+      runtime_release_only: ${{ steps.scope.outputs.runtime_release_only }}
+      standby_only: ${{ steps.scope.outputs.standby_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: scope
+        name: Exact allowlist; unknown changes require normal Preview
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {execFileSync} from 'node:child_process';
+          import {appendFileSync} from 'node:fs';
+          const changed=execFileSync('git',['diff','--name-status','--no-renames',process.env.BASE,process.env.HEAD],{encoding:'utf8'})
+            .trim().split('\n').filter(Boolean).map(line=>{
+              const tab=line.indexOf('\t');
+              return {status:line.slice(0,tab),path:line.slice(tab+1)};
+            });
+          const allowed=new Set([
+            'oracle-staging/sqlite-fixture-adapter.mjs',
+            'oracle-staging/sqlite-fixture-adapter.test.mjs',
+            '.github/workflows/check-oracle-staging-bootstrap.yml',
+            '.github/workflows/github-runtime-ota.yml',
+            '.github/workflows/check-pr-preview-github.yml',
+            'docs/architecture/oracle-staging-bootstrap-20261031.md',
+            'tests/github-actions-pr-preview-ci.test.mjs'
+          ]);
+          const only=changed.length===7&&new Set(changed.map(c=>c.path)).size===7&&changed.every(c=>allowed.has(c.path)&&['A','M'].includes(c.status));
+          // Fail-closed: docs-only means ONLY ordinary Markdown inside docs/, never code or workflow files.
+          const docsOnly = changed.length > 0 && changed.every(c => ['A','M'].includes(c.status) && /^docs\/[A-Za-z0-9/_-]+\.md$/.test(c.path));
+          // This exact two-file CI-contract change cannot affect gameplay/Worker assets.
+          const ciOnly = changed.length === 4 && changed.every(c => ['A','M'].includes(c.status) && ['.github/workflows/check-pr-preview-github.yml','tests/github-actions-pr-preview-ci.test.mjs','.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'].includes(c.path)) && new Set(changed.map(c => c.path)).size === 4;
+          // AUTO-DELIVERY V3.0: exact policy/CI-only PR, no gameplay or DO changes.
+          // Still run Worker dry-run, required CI and V3 gates; do NOT allocate Preview DO quota.
+          const v3PolicyOnly = changed.length===11 && new Set(changed.map(c=>c.path)).size===11 &&
+            changed.every(c=>({
+              'AGENTS.md':'M',
+              '.github/scripts/v3-delivery-plan.mjs':'A',
+              'tests/v3-delivery-plan.test.mjs':'A',
+              'docs/architecture/GMWW-AUTO-DELIVERY-V3.0.md':'A',
+              '.github/workflows/gmww-auto-delivery-v3.yml':'A',
+              '.github/workflows/ci-policy-gate.yml':'M',
+              '.github/workflows/check-player-web.yml':'M',
+              '.github/workflows/deploy-production.yml':'M',
+              '.github/workflows/github-runtime-ota.yml':'M',
+              '.github/workflows/check-pr-preview-github.yml':'M',
+              'tests/github-actions-pr-preview-ci.test.mjs':'M'
+            })[c.path]===c.status);
+          // Exact V3 release-handoff workflow migration: only CI YAML and contract tests.
+          // No DO namespace is allocated; Worker dry-run and Policy Gate still run.
+          const v3CutoverOnly = changed.length===9 && new Set(changed.map(c=>c.path)).size===9 &&
+            changed.every(c=>({
+              '.github/workflows/gmww-v3-worker-production.yml':'A',
+              '.github/workflows/deploy-production.yml':'M',
+              '.github/workflows/github-runtime-ota.yml':'M',
+              '.github/workflows/deploy-gamemasoi-pages.yml':'M',
+              '.github/workflows/check-player-web.yml':'M',
+              '.github/workflows/check-pr-preview-github.yml':'M',
+              'tests/github-actions-pr-preview-ci.test.mjs':'M',
+              'tests/v3-release-cutover.test.mjs':'A',
+              '.github/workflows/ci-policy-gate.yml':'M'
+            })[c.path]===c.status);
+          const runtimeReleaseOnly = changed.length === 9 && new Set(changed.map(c=>c.path)).size === 9 && changed.every(c => ({'package.json':'M','package-lock.json':'M','server-game/current/GMWW.html':'M','server-game/current/app.js':'M','server-game/src/00-core-and-library.part':'M','src/index.js':'M','.github/scripts/prepare-update-channel.mjs':'M','tests/demo-runtime-v3285-release.test.mjs':'M','docs/releases/GMWW-RUNTIME-V3.286-MERGED-ONLY-20261101.md':'A'})[c.path] === c.status);
+          const standbyOnly = (changed.length===6 && new Set(changed.map(c=>c.path)).size===6 && changed.every(c=>({ 'infra/cloudflare-standby/stage4-readiness.mjs':'A', 'infra/cloudflare-standby/stage4-readiness.test.mjs':'A', 'docs/architecture/dual-cloudflare-standby-20261101.md':'M', '.github/scripts/ci-browser-scope.mjs':'M', 'tests/ci-browser-scope.test.mjs':'M', '.github/workflows/check-pr-preview-github.yml':'M' })[c.path]===c.status)) || (changed.length===6 && new Set(changed.map(c=>c.path)).size===6 && changed.every(c=>({ 'infra/cloudflare-standby/b-staging-live-e2e.mjs':'M', 'infra/cloudflare-standby/b-staging-live-e2e.test.mjs':'M', '.github/workflows/check-cloudflare-standby.yml':'M', '.github/workflows/check-pr-preview-github.yml':'M', '.github/scripts/ci-browser-scope.mjs':'M', 'tests/ci-browser-scope.test.mjs':'M' })[c.path]===c.status)) || (changed.length===6 && new Set(changed.map(c=>c.path)).size===6 && changed.every(c=>({ 'infra/cloudflare-standby/b-staging-live-e2e.mjs':'A', 'infra/cloudflare-standby/b-staging-live-e2e.test.mjs':'A', '.github/workflows/check-cloudflare-standby.yml':'M', '.github/workflows/check-pr-preview-github.yml':'M', '.github/scripts/ci-browser-scope.mjs':'M', 'tests/ci-browser-scope.test.mjs':'M' })[c.path]===c.status)) || changed.length>=2 && new Set(changed.map(c=>c.path)).size===changed.length && ((changed.some(c=>c.path==='infra/cloudflare-standby/fixture-contract.mjs') && changed.some(c=>c.path==='infra/cloudflare-standby/fixture-contract.test.mjs')) || (changed.some(c=>c.path==='infra/cloudflare-standby/storage-adapter.mjs') && changed.some(c=>c.path==='infra/cloudflare-standby/storage-adapter.test.mjs')) || (changed.some(c=>c.path==='infra/cloudflare-standby/b-staging-worker.mjs') && changed.some(c=>c.path==='infra/cloudflare-standby/b-staging-worker.test.mjs') && changed.some(c=>c.path==='infra/cloudflare-standby/wrangler-b-staging.jsonc'))) && changed.every(c=>['A','M'].includes(c.status)&&(['infra/cloudflare-standby/fixture-contract.mjs','infra/cloudflare-standby/fixture-contract.test.mjs','infra/cloudflare-standby/storage-adapter.mjs','infra/cloudflare-standby/storage-adapter.test.mjs','infra/cloudflare-standby/b-staging-worker.mjs','infra/cloudflare-standby/b-staging-worker.test.mjs','infra/cloudflare-standby/b-stage3-e2e.mjs','infra/cloudflare-standby/b-stage3-e2e.test.mjs','infra/cloudflare-standby/wrangler-b-staging.jsonc','infra/cloudflare-standby/STAGE3-README.md','docs/architecture/dual-cloudflare-standby-20261101.md','tests/dual-cloudflare-release-guard.test.mjs','tests/github-actions-pr-preview-ci.test.mjs','tests/ci-browser-scope.test.mjs','.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml','.github/workflows/check-cloudflare-standby.yml','.github/workflows/deploy-production.yml','.github/workflows/github-runtime-ota.yml','.github/workflows/check-pr-preview-github.yml'].includes(c.path)));
+          appendFileSync(process.env.GITHUB_OUTPUT,'oracle_only='+String(only)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'docs_only='+String(docsOnly)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'preview_ci_only='+String(ciOnly)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'v3_policy_only='+String(v3PolicyOnly)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'v3_cutover_only='+String(v3CutoverOnly)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'runtime_release_only='+String(runtimeReleaseOnly)+'\n');
+          appendFileSync(process.env.GITHUB_OUTPUT,'standby_only='+String(standbyOnly)+'\n');
+          if(standbyOnly)console.log('Synthetic Cloudflare B STAGING only: local CI passes, no Preview namespace created.');
+          console.log(runtimeReleaseOnly?'Exact V3.286 release candidate: verify immutable source bytes locally, no new Durable Object namespace.':only?'Oracle SQLite-only: no Preview deploy.':docsOnly?'Docs-only: skip Worker build and Cloudflare Preview.':ciOnly?'Preview CI-only: local safety validation, no Cloudflare Preview.':v3PolicyOnly?'V3 policy-only PR: required CI and local Worker build, NO Preview DO allocation.':v3CutoverOnly?'V3 release-handoff CI-only PR: required checks, NO Preview DO allocation.':'Gameplay or unknown scope: retain isolated Preview publication gate.');
+          NODE
+  # V3.286 main-push parser repair affects CI only; Preview stays isolated.
+  # Postmerge CI-LITE V3.286 release recovery: same four-file Preview-only scope, no Worker Preview namespace.
+  validate-preview:
+    name: Validate isolated Preview without Cloudflare Builds
+    needs: oracle-scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Docs-only CI-LITE gate (retains required policy check)
+        if: needs.oracle-scope.outputs.docs_only == 'true'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --check "$BASE" "$HEAD"
+          echo "PASS: documentation-only changes; CI Policy Gate remains required."
+      - name: Node.js 22
+        if: needs.oracle-scope.outputs.docs_only != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies without lifecycle scripts
+        if: needs.oracle-scope.outputs.docs_only != 'true'
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Assert Preview config cannot bind Production data
+        if: needs.oracle-scope.outputs.docs_only != 'true'
+        run: node .github/scripts/guard-pr-preview-ci.mjs
+      - name: Verify GitHub Actions Preview security contract
+        if: needs.oracle-scope.outputs.docs_only != 'true'
+        run: node --test tests/github-actions-pr-preview-ci.test.mjs
+      - name: Verify no gameplay edits are hidden by V3.286 version bump
+        if: needs.oracle-scope.outputs.runtime_release_only == 'true'
+        env:
+          GMWW_CI_EVENT: pull_request
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          SCOPE="$(node .github/scripts/ci-browser-scope.mjs | head -1)"
+          case "$SCOPE" in
+            "GMWW browser CI scope: runtime-merged-v3286 |"*) echo "PASS: audited V3.286 scope" ;;
+            *) echo "::error::Release-only byte audit failed: $SCOPE"; exit 1 ;;
+          esac
+          node --test tests/online-chat-authority.test.mjs tests/online-frozen-chat-day-20261031.test.mjs tests/online-player-fire-turn-dead-ui-20261031.test.mjs tests/player-toast-above-chat-20261031.test.mjs
+      - name: Build Worker locally, without publishing or Cloudflare build minutes
+        if: needs.oracle-scope.outputs.docs_only != 'true'
+        run: npm run check
+
+  publish-preview:
+    name: Publish isolated Worker Preview (never Production)
+    needs: [validate-preview, oracle-scope]
+    # Token use is limited to owner-authored PRs from this same repo.
+    # Forks and other authors still receive token-free validation.
+    if: ${{ needs.validate-preview.result == 'success' && needs.oracle-scope.result == 'success' && needs.oracle-scope.outputs.oracle_only != 'true' && needs.oracle-scope.outputs.docs_only != 'true' && needs.oracle-scope.outputs.preview_ci_only != 'true' && needs.oracle-scope.outputs.v3_policy_only != 'true' && needs.oracle-scope.outputs.v3_cutover_only != 'true' && needs.oracle-scope.outputs.runtime_release_only != 'true' && needs.oracle-scope.outputs.standby_only != 'true' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login == github.repository_owner }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Recheck immutable Preview resource boundary
+        run: node .github/scripts/guard-pr-preview-ci.mjs
+      - name: Create/update ONLY the PR Preview
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::Missing existing GitHub Cloudflare credentials. Never bypass Preview required check."
+            exit 1
+          fi
+          # Cloudflare code 10067 (Free DO namespace cap) is a real failure; never bypass or auto-delete Preview/data.
+          # Cloudflare Preview uses a separate DO namespace; this is NOT wrangler deploy.
+          npx --no-install wrangler preview --config wrangler.jsonc \
+            --worker-name gmww-v2-00 --name "pr-${PR_NUMBER}"
+          # Read-only GET smoke test of the actual Preview endpoint.
+          BASE="https://pr-${PR_NUMBER}-gmww-v2-00.williampham0702.workers.dev"
+          curl --fail --location --silent --show-error --retry 6 \
+            --retry-all-errors --retry-delay 2 --max-time 25 \
+            "$BASE/" --output "$RUNNER_TEMP/gmww-pr-preview-home.html"
+          test -s "$RUNNER_TEMP/gmww-pr-preview-home.html"
+          {
+            echo "### GMWW isolated PR Preview"
+            echo "PR #${PR_NUMBER}: published with Wrangler Preview via GitHub Actions."
+            echo "No Workers Builds minutes, production deploy, IPA, Runtime OTA, or production data."
+            echo "View the Preview URL under Cloudflare Workers > gmww-v2-00 > Previews."
+          } >> "$GITHUB_STEP_SUMMARY"

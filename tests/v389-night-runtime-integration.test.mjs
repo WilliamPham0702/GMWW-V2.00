@@ -433,7 +433,7 @@ test('batched GM action reverses both targets and one Artifact use on server',as
   assert.deepEqual(h.data.get('players'),Object.fromEntries(['alice','bob','carol','dave'].map(loginId=>['member:'+loginId,{loginId}])));
 });
 
-test('GM undo rejects stale turn and changed state; frozen role owner cannot act',async()=>{
+test('GM undo rejects changed state, safely rewinds auto-advance; frozen role owner cannot act',async()=>{
   const h=harness({artifact:false});
   await h.jump('role');
   const meta=await h.meta(),rt=await h.runtime();
@@ -443,9 +443,10 @@ test('GM undo rejects stale turn and changed state; frozen role owner cannot act
   h.data.get('interactions').push({id:'external',loginId:'carol',type:'dead',effectActive:true,matchId:'test-match'});
   assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STATE_CHANGED');
   h.data.get('interactions').pop();
-  await h.room.gmTurn(null,{action:'next',expectedTurnId:rt.currentId}); // advance to the next configured role
-  assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).error,'UNDO_STALE_TURN');
-  const i=await h.data.get('interactions');
+  await h.room.gmTurn(null,{action:'next',expectedTurnId:rt.currentId}); // UI may auto-advance after confirmation
+  assert.equal((await result(await h.room.gmBattleUndo(null,{undoToken:done.undoToken}))).ok,true);
+  assert.equal((await h.runtime()).currentId,rt.currentId,'Undo returns GM to the confirmed action');
+  const i=await h.data.get('interactions')||[];
   i.push({id:'freeze-owner',loginId:'alice',type:'frozen',effectActive:true,matchId:'test-match'});
   h.data.set('interactions',i);
   await h.jump('role'); // After the shared pack turn there may be no second bare-Wolf role.

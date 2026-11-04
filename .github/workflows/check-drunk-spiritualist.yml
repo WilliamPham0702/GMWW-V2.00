@@ -38,12 +38,32 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Phân loại PR Player Web avatar so với RULE
+        id: scope
+        env:
+          GMWW_CI_EVENT: ${{ github.event_name }}
+          GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node .github/scripts/ci-browser-scope.mjs
+      - name: PR603 — kiểm icon tài khoản và bundle; không kiểm RULE Say Rượu
+        if: steps.scope.outputs.mode == 'player-top-avatar-603'
+        run: |
+          node --test tests/player-web-top-account-avatar-20261029.test.mjs
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/gmww-members-live.js
+      - name: CI-only policy — chỉ kiểm chốt an toàn, không chạy RULE Say Rượu
+        if: steps.scope.outputs.mode == 'ci-policy'
+        run: |
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --test --test-name-pattern='CI-only merge' tests/ci-browser-scope.test.mjs
       - name: Test exact card selection, DO inheritance, faction comparison and private Player delivery
+        if: steps.scope.outputs.mode != 'player-top-avatar-603' && steps.scope.outputs.mode != 'ci-policy'
         run: |
           node --test tests/drunk-draw-spiritualist-expelled-20261027.test.mjs tests/v389-night-runtime-integration.test.mjs tests/witch-drunk-clone-20261027.test.mjs tests/gmww-wolf-night-resolution.test.mjs tests/drunk-card-overlay-match-cleanup-20261028.test.mjs tests/member-ranking-games-first-v3221.test.mjs
           node --check src/index.js

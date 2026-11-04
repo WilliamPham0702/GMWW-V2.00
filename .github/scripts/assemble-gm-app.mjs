@@ -13,6 +13,7 @@ const parts=[
   '20-members-and-roster.part',
   '30-village-and-setup.part',
   '40-battle-and-timeline.part',
+  '45-online-chat.part',
   '50-roles-and-artifacts.part'
 ];
 const target=path.join(root,'server-game/current/app.js');

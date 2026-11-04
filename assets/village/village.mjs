@@ -59,8 +59,7 @@ export function mapPublicPlayers(state){
 }
 const game=typeof document==="undefined"?null:document.getElementById("game");
 if(game){
-  const players=document.getElementById("players"),roster=document.getElementById("roster"),selection=document.getElementById("selection");
-  const names=["Minh","Lan","Huy","An","Mai","Khoa","Linh","Dũng","Phương","Quân","Trang","Đức","Ngọc","Hà","Nam","Thảo","Long","Vy","Tuấn","Nhi","Khánh","Tú","Sơn","Oanh","Hùng","Hoa","Bảo","Tâm","Vân","Đạt"];
+  const players=document.getElementById("players");
   // Integration contract: server-filtered public player records only (never role/faction).
   const params=new URLSearchParams(window.location.search),embedded=params.get("embed")==="1"&&window.parent!==window;
   if(embedded)document.documentElement.classList.add("embedded");
@@ -73,8 +72,8 @@ if(game){
     ["pointerdown","pointermove","touchstart","wheel","keydown"].forEach(type=>window.addEventListener(type,gmwwSignalUserActivity,{passive:true,capture:true}));
   }
   const supplied=Array.isArray(window.GMWW_VILLAGE_PLAYERS)?window.GMWW_VILLAGE_PLAYERS.slice(0,30):mapPublicPlayers(window.GMWW_PUBLIC_ROOM_STATE);
-  const sample=names.map((displayName,i)=>({id:"sample-"+(i+1),displayName,avatarUrl:""}));
-  let all=embedded?[]:(supplied?.length?supplied:sample);
+  // Only server-supplied participants; never render generated demo players.
+  let all=embedded?[]:(supplied||[]);
   let liveRoom=embedded;
   function trustedAvatarUrl(raw){
     if(typeof raw!=="string"||!raw.trim())return "";
@@ -84,7 +83,7 @@ if(game){
   }
   const CHARACTER_SCALES=[75,100,125,150,175,200],normalizeCharacterScale=value=>{const n=Number(value);if(!Number.isFinite(n))return 100;return CHARACTER_SCALES.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALES[0])};
   let matchStartedAt=0,battleStatic=false;
-  let night=false,selectedId=null,count=12,seatLayout="",seatOffset={x:0,y:0},seatSpacing=100,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},moveFrame=0,arrivalNotified=new Set();
+  let night=false,selectedId=null,count=12,seatLayout="",seatOffset={x:0,y:0},seatSpacing=100,setupState={enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100,showSeats:false},moveFrame=0,arrivalNotified=new Set();
   const visualFallbackMoves=new Map();
   // Last actually painted world position; never infer an expired move's start
   // from a newer heartbeat (which would make avatars teleport to the endpoint).
@@ -167,11 +166,14 @@ if(game){
     return out
   }
   function screenPoint(p,width=stageElement.clientWidth||864,height=stageElement.clientHeight||1536){return layout.toScreen(p,width,height)}
+  // Same rule as GM Server villageFirePosition(): published marker → centre of an imported image → GP2 landmark.
+  function fireScreenPoint(){const key=night?"night":"day",a=globalThis.GMWW_VILLAGE_FIRE_ANCHORS?.[key];if(a&&[a.x,a.y].every(Number.isFinite))return{x:Math.max(0,Math.min(100,a.x)),y:Math.max(0,Math.min(100,a.y))};if(globalThis.GMWW_VILLAGE_SCENE_IMAGES?.[key])return{x:50,y:50};return screenPoint(layout.fire)}
+  function placeFire(){const f=document.querySelector('.fire'),p=fireScreenPoint();if(f){f.style.left=p.x+'%';f.style.top=p.y+'%';}}
   function walkDirection(data){const dx=Number(data?.moveToX)-Number(data?.moveFromX);return Number.isFinite(dx)&&dx<-.01?"left":"right"}
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?rev=c40-1&dir=left":"?rev=c40-1";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
   function visuallyDeceased(data){return Array.isArray(data?.statusTags)&&data.statusTags.some(x=>x?.statusId==="dead")}
   function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(visuallyDeceased(data)||data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
-  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),hanging=battleStatic&&!dead&&data?.isGM!==true&&data?.kind!=="gm"&&setupState?.gallowsHanging?.active===true&&String(data?.id||"").replace(/^member:/,"")===String(setupState.gallowsHanging.candidateId||""),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=hanging?"walking":sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":hanging?"walk":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:hanging?"walk":data?.villageActivity||base.activity||"idle",paused:hanging?false:base.paused},data?.gameCharacterId||"character-01")}
+  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),hanging=battleStatic&&!dead&&data?.isGM!==true&&data?.kind!=="gm"&&setupState?.gallowsHanging?.active===true&&String(data?.id||"").replace(/^member:/,"")===String(setupState.gallowsHanging.candidateId||""),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=hanging?"walking":sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":hanging?"walk":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:hanging?"walk":data?.villageActivity||base.activity||"idle",paused:battleStatic&&!hanging?true:hanging?false:base.paused},data?.gameCharacterId||"character-01")}
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
   /* Pirate nomination gesture lives INSIDE the village iframe so pointerup
      can hit a Character. The parent sends a signed member request to the DO. */
@@ -184,6 +186,7 @@ if(game){
       const style=document.createElement('style');style.id='gmwwPirateSnapCss';
       style.textContent=`
         #gmwwPirateNominate{transition:filter .12s ease,scale .12s ease;cursor:grab}
+        #gmwwPirateNominate .gmww-gallows-nominate-art{display:block;width:36px;height:36px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;user-select:none}
         #gmwwPirateNominate.gmww-snap-near{filter:drop-shadow(0 0 14px #ffe77b) drop-shadow(0 4px 7px #000b)!important;scale:1.14}
         #gmwwPirateNominate.gmww-snap-picked{filter:drop-shadow(0 0 16px #ffe77b) drop-shadow(0 6px 8px #000d)!important}
         #players .player.gmww-gallows-snap-target .portrait,
@@ -205,11 +208,13 @@ if(game){
       `;
       document.head.append(style);
       flag=document.createElement('button');flag.id='gmwwPirateNominate';flag.type='button';
-      flag.setAttribute('aria-label','Kéo cờ đỏ gần Character để hút; thả để chọn tạm, OK để gửi đề cử hoặc Khôi Phục');
-      flag.title='Cờ đỏ: kéo tới người chơi · thả chọn tạm · OK hoặc Khôi Phục';
-      // Use the native red-flag emoji at its regular icon scale, without a box.
-      flag.textContent='🚩';
-      flag.style.cssText='position:fixed;z-index:1008;width:48px;height:48px;font-size:38px;line-height:48px;text-align:center;padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
+      flag.setAttribute('aria-label','Kéo biểu tượng Lên Giàn đến người nghi thuộc phe xấu; thả để chọn tạm, OK để gửi đề cử hoặc Khôi Phục');
+      flag.title='Đề cử Lên Giàn: kéo tới người chơi · thả chọn tạm · OK hoặc Khôi Phục';
+      // Keep the 48px drag/touch target; render the approved transparent B icon at 36px.
+      const icon=document.createElement('img');icon.className='gmww-gallows-nominate-art';
+      icon.src=new URL('./gmww-gallows-nominate-b.png',import.meta.url).href;
+      icon.alt='';icon.draggable=false;flag.replaceChildren(icon);
+      flag.style.cssText='position:fixed;z-index:1008;width:48px;height:48px;line-height:48px;text-align:center;padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
       flag.hidden=true;document.body.append(flag);
       const controls=document.createElement('div');controls.id='gmwwPirateConfirm';controls.hidden=true;
       controls.innerHTML='<button type="button" data-gallows-ok>✓ OK</button><button type="button" data-gallows-reset>↶ KHÔI PHỤC</button>';
@@ -418,8 +423,8 @@ if(game){
     button.addEventListener("click",e=>{e.stopPropagation();
       const current=button._gmwwLive||{data,actualSeat,playerName,isGM},player=current.data;
       if(current.isGM){if(embedded)window.parent.postMessage({type:"gmww:gm-character-click"},window.location.origin);return}
-      if(embedded){if(String(player.id)!==String(setupState.viewerParticipantId||""))window.parent.postMessage({type:"gmww:player-click",participantId:player.id,seatId:current.actualSeat},window.location.origin);return}
-      selectedId=player.id;document.getElementById("selectedLabel").textContent="Đã chọn: "+(current.actualSeat?("Vị trí "+current.actualSeat+" · "):"")+current.playerName;selection.hidden=false;render()
+      if(embedded){if(String(player.id)===String(setupState.viewerParticipantId||"")){const now=Date.now();if(now-Number(button._gmwwOwnTapAt||0)<380){button._gmwwOwnTapAt=0;window.parent.postMessage({type:"gmww:own-character-doubletap"},window.location.origin)}else button._gmwwOwnTapAt=now}else window.parent.postMessage({type:"gmww:player-click",participantId:player.id,seatId:current.actualSeat},window.location.origin);return}
+      // Standalone scene is read-only; the active shell handles player actions.
     });
     return button
   }
@@ -554,10 +559,10 @@ if(game){
     villageRenderMetrics.renders++;
     const seatCount=Math.max(1,Math.min(30,Number(count)||12)),ps=positions(seatCount,seatLayout,seatOffset,seatSpacing),seatMap=new Map(),unseated=[];
     for(const item of all){const sid=Number(item?.displaySeatId||item?.seatId||0);if(sid>=1&&sid<=seatCount&&!seatMap.has(sid))seatMap.set(sid,item);else if(!sid)unseated.push(item)}
-    const desiredPlayers=[];roster.replaceChildren();
+    const desiredPlayers=[];
     // Empty leaves are optional; occupied seats must always render their characters.
     ps.forEach((p,i)=>{
-      const seatId=i+1,data=seatMap.get(seatId)||(!liveRoom&&!embedded?(all[i]||sample[i]):null);
+      const seatId=i+1,data=seatMap.get(seatId)||null;
       if(!data){
         if(setupState.showSeats===false)return;
         const reserved=all.some(x=>Number(x?.moveTargetSeatId||0)===seatId&&x?.movementStatus==="moving");
@@ -575,16 +580,15 @@ if(game){
         if(empty.getAttribute("aria-label")!==aria)empty.setAttribute("aria-label",aria);
         desiredPlayers.push(empty);return
       }
-      const pos=movementPosition(data,p),button=stablePlayerNode(data,pos,seatId,i);desiredPlayers.push(button);const item=document.createElement("span");item.textContent=seatId+" · "+safeText(data.displayName)+(liveRoom?(data.online?" ●":" ○"):"");roster.append(item)
+      const pos=movementPosition(data,p),button=stablePlayerNode(data,pos,seatId,i);desiredPlayers.push(button)
     });
-    for(const data of unseated){const gmIdle=(data?.isGM===true||data?.kind==="gm")&&data?.movementStatus!=="moving";const pos=gmIdle?{x:layout.fire.x,y:layout.fire.y-7.5}:movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button);if(data?.isGM===true||data?.kind==="gm")continue;const item=document.createElement("span");item.textContent="Làng · "+safeText(data.displayName)+(data.online?" ●":" ○");roster.append(item)}
+    for(const data of unseated){const gmIdle=(data?.isGM===true||data?.kind==="gm")&&data?.movementStatus!=="moving";const pos=gmIdle?{x:layout.fire.x,y:layout.fire.y-7.5}:movementPosition(data,null),button=stablePlayerNode(data,pos,null,all.indexOf(data));desiredPlayers.push(button)}
     reconcileVillageChildren(players,desiredPlayers);
     document.getElementById('gmwwPirateNominate')?.gmwwSyncSelection?.();
     syncGallowsHangingVisual();
     const alive=new Set(all.map(p=>String(p.id)));
     for(const id of mountedPlayerNodes.keys())if(!alive.has(id)){mountedPlayerNodes.delete(id);deceasedDisplayPoints.delete(id)}
     villageRenderMetrics.mounted=mountedPlayerNodes.size;
-    document.getElementById("count").textContent=all.filter(x=>Number(x?.seatId||0)>0).length+"/"+seatCount;
     renderPortal();
     const clock=Date.now()+Number(setupState.clockOffsetMs||0);
     const expirations=all.filter(p=>p?.villageActivity==="sitting"&&Number(p.sitUntil||0)>clock).map(p=>Number(p.sitUntil));
@@ -611,32 +615,10 @@ if(game){
     }
     if(active)moveFrame=requestAnimationFrame(animateMovementFrame);else moveFrame=0
   }
-  if(supplied?.length){count=Math.min(30,Math.max(supplied.length,...supplied.map(x=>Number(x?.seatId||0)||0)));document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;}
-  document.getElementById("size").addEventListener("change",e=>{count=Number(e.target.value);selectedId=null;selection.hidden=true;render();});
-  if(!embedded)installVillageCamera(document.querySelector(".stage"),document.getElementById("scene"),document.getElementById("zoom"));
-  function applyPhase(nextNight,cycle={}){
-    night=!!nextNight;game.classList.toggle("night",night);game.classList.toggle("day",!night);
-    const n=Number(cycle?.night||0),d=Number(cycle?.day||0),seq=night?n:d;
-    document.getElementById("phaseIcon").textContent=night?"🌙":"☀️";
-    document.getElementById("phaseLabel").textContent=(night?"Đêm ":"Ngày ")+(seq?String(seq).padStart(2,"0"):"");
-    document.getElementById("phaseDetail").textContent=night?"Ban đêm":"Thảo luận ban ngày";
-    document.getElementById("mode").textContent=night?"☀️ Ngày":"🌙 Đêm";
-    document.getElementById("chatTitle").textContent=night?"Chat nhóm riêng":"Chat chung";
-    document.getElementById("voiceState").textContent=night?"● Không có voice ban đêm":"● Voice ban ngày";
-    document.getElementById("voice").hidden=night;
-  }
-  document.getElementById("mode").addEventListener("click",()=>applyPhase(!night,{}));
-  document.querySelectorAll("[data-tab]").forEach(btn=>btn.addEventListener("click",()=>{
-    document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===btn));
-    document.querySelectorAll(".tab").forEach(t=>{t.hidden=t.id!==btn.dataset.tab;t.classList.toggle("active",t.id===btn.dataset.tab)});
-  }));
-  document.getElementById("clearSelection").addEventListener("click",()=>{selectedId=null;selection.hidden=true;render()});
-  document.getElementById("chatForm").addEventListener("submit",e=>{
-    e.preventDefault();const input=document.getElementById("chatText"),text=input.value.trim();if(!text)return;
-    const p=document.createElement("p"),b=document.createElement("b");b.textContent="Bạn: ";p.append(b,document.createTextNode(text));document.getElementById("messages").append(p);input.value="";p.scrollIntoView({block:"nearest"});
-  });
-  let muted=true,speaker=true;document.getElementById("mic").addEventListener("click",e=>{muted=!muted;e.target.textContent=muted?"🎙️ Micro: Tắt":"🎙️ Micro: Bật (mô phỏng)"});
-  document.getElementById("speaker").addEventListener("click",e=>{speaker=!speaker;e.target.textContent=speaker?"🔊 Loa: Bật":"🔇 Loa: Tắt"});
+  if(supplied?.length)count=Math.min(30,Math.max(supplied.length,...supplied.map(x=>Number(x?.seatId||0)||0)));
+  if(!embedded)installVillageCamera(document.querySelector(".stage"),document.getElementById("scene"),null);
+  // Phase artwork follows the real room state; no local Online setup toggles.
+  function applyPhase(nextNight){night=!!nextNight;game.classList.toggle("night",night);game.classList.toggle("day",!night);}
   let lastExternalRenderSignature="";
   function applyExternalState(payload){
     const incoming=mapPublicPlayers({players:Array.isArray(payload?.players)?payload.players:[]}),room=payload?.room||{},cycle=payload?.cycle||{},phase=String(cycle.phase||"").toLowerCase(),nextSetup=payload?.setup&&typeof payload.setup==="object"?payload.setup:{enabled:false,walkEnabled:false,previewCharacterId:"",selectedSeatId:null,viewerParticipantId:"",clockOffsetMs:0,characterScale:100},nextCount=Math.max(1,Math.min(30,Number(room.seatCount||0)||Math.max(incoming.length,...incoming.map(x=>Number(x?.seatId||0)||0),1)));
@@ -654,13 +636,13 @@ if(game){
       if(matchStartedAt&&p.movementStatus==="moving"&&Number(p.moveStartedAt)>0&&
         Number(p.moveStartedAt)<=matchStartedAt)p.movementStatus="idle";
     }
-    const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline",onlineSupport=document.getElementById("onlineSupport");if(onlineSupport){onlineSupport.hidden=offline;onlineSupport.setAttribute("aria-hidden",offline?"true":"false")}document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
+    const previousAll=all;all=incoming;const bridged=bridgeIncomingPositions(incoming,nextSetup,nextCount,previousAll);setupState=nextSetup;setupState.characterScale=normalizeCharacterScale(setupState.characterScale);all=bridged;count=nextCount;const offline=String(room.roomMode||"online").toLowerCase()==="offline";document.body.classList.toggle("room-offline",offline);document.body.classList.toggle("room-online",!offline);
     document.body.classList.toggle("player-prep",room.playerSceneMode==="lobby");
     document.body.classList.toggle("player-battle",battleStatic);
-    if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
+    if(selectedId&&!all.some(p=>p.id===selectedId))selectedId=null;
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
-    const fire=document.querySelector('.fire'),point=screenPoint(layout.fire);if(fire){fire.style.left=point.x+'%';fire.style.top=point.y+'%';}
+    placeFire();
     const nextSig=JSON.stringify([nextCount,seatLayout,seatOffset,seatSpacing,room.roomMode,room.playerSceneMode,
       setupState,all.map(x=>[x.id,x.seatId,x.displaySeatId,x.positionX,x.positionY,x.movementStatus,x.moveId,
         x.moveFromX,x.moveFromY,x.moveToX,x.moveToY,x.moveStartedAt,x.moveDurationMs,
@@ -668,11 +650,10 @@ if(game){
     if(nextSig!==lastExternalRenderSignature){lastExternalRenderSignature=nextSig;render()}
   }
   if(embedded){
-    document.getElementById("size").hidden=true;document.querySelector("label[for=size]").hidden=true;
-    document.getElementById("mode").hidden=true;
     const stage=document.querySelector('.stage');stage.addEventListener('click',event=>{if(!setupState.walkEnabled)return;if(event.target.closest('.player,.seat-empty,.hud,.scene-controls,.fire,.gmww-portal,.gmww-portal-notice'))return;const r=stage.getBoundingClientRect(),raw=layout.fromScreen(event.clientX-r.left,event.clientY-r.top,r.width,r.height);if(!layout.inside(raw.x,raw.y))return;const point=layout.clampPoint(raw.x,raw.y);window.parent.postMessage({type:'gmww:ground-click',...point},window.location.origin)});
     document.querySelector('.fire')?.addEventListener('click',()=>window.parent.postMessage({type:'gmww:fire-click'},window.location.origin));
-    window.addEventListener('resize',()=>{render();const f=document.querySelector('.fire'),p=screenPoint(layout.fire);if(f){f.style.left=p.x+'%';f.style.top=p.y+'%';}renderPortal()});
+    window.addEventListener('resize',()=>{render();placeFire();renderPortal()});
+    window.addEventListener('gmww:village-fire-anchor',placeFire);
 
 
     window.addEventListener("message",event=>{
@@ -687,8 +668,6 @@ if(game){
   const roomCode=embedded?"":validateRoomCode(window.GMWW_VILLAGE_ROOM_CODE||params.get("room"));
   if(roomCode){
     liveRoom=true;
-    document.getElementById("size").hidden=true;
-    document.querySelector("label[for=size]").hidden=true;
     createPublicRoomPoller({
       roomCode,
       visibility:()=>!document.hidden,
@@ -699,12 +678,12 @@ if(game){
         matchStartedAt=Date.parse(room.startedAt||"")||0;
         const visualSeats=layout.projectedSeatIds(all.filter(p=>!p.isGM),count);
         for(const p of all)if(!p.isGM)p.displaySeatId=liveDisplaySeatId(p,visualSeats);
-        if(selectedId&&!all.some(p=>p.id===selectedId)){selectedId=null;selection.hidden=true;}
+        if(selectedId&&!all.some(p=>p.id===selectedId))selectedId=null;
         render();if(room?.roomName)document.title="GMWW · "+safeText(room.roomName);
       },
-      onError:()=>{document.getElementById("count").textContent="Mất kết nối";}
+      onError:()=>{document.body.dataset.villageConnection="error";}
     });
   }
   if(!liveRoom)render();
-  else{players.replaceChildren();roster.replaceChildren();document.getElementById("count").textContent="Đang kết nối";}
+  else{players.replaceChildren();document.body.dataset.villageConnection="connecting";}
 }

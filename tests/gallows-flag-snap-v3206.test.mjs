@@ -23,7 +23,9 @@ test('Snap chọn Character hợp lệ gần nhất, không hút người chết
 
 test('Cờ đỏ kích cỡ chuẩn, không khung, hút Character và giữ nút xác nhận',()=>{
   assert.match(village,/width:48px;height:48px/);
-  assert.match(village,/flag\.textContent='🚩'/);
+  assert.match(village,/gmww-gallows-nominate-b\.png/);
+  assert.match(village,/flag\.replaceChildren\(icon\)/);
+  assert.doesNotMatch(village,/flag\.textContent='🚩'/);
   assert.match(village,/background:transparent;border:0;box-shadow:none/);
   assert.match(village,/gmww-gallows-snap-target/);
   assert.match(village,/outline:4px solid #ffdf6c/);

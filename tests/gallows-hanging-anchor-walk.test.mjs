@@ -38,18 +38,18 @@ test('Player Web nhận tọa độ từ bản bối cảnh chung và phát lạ
   assert.match(village,/gmww:village-gallows-anchor/);
   assert.match(village,/sceneAnchor=globalThis.GMWW_VILLAGE_GALLOWS_ANCHORS/);
   assert.match(village,/configured\?firePoint.y:firePoint.y-15/);
-  assert.match(read('assets/village/index.html'),/scene-manager.mjs\?v=3202-gallows/);
+  assert.match(read('assets/village/index.html'),/scene-manager.mjs\?v=3301-fire/);
 });
 
 test('Chỉ Character treo dùng Walk sẵn có, không dựng dây/cây/nhãn trên đầu',()=>{
   const css=read('server-game/current/gallows-hanging.css');
   const villageCss=read('assets/village/village.css');
   assert.match(gmBattle,/state=hanging\?'walking'/);
-  assert.match(gmBattle,/paused:effect==='dead'\|\|\(battleStatic&&!hanging\)/);
+  assert.match(gmBattle,/paused:effect==='dead'\|\|\(battleStatic&&!hanging&&!runTarget&&!travel\)/);
   assert.match(gmBattle,/hanging:active/);
   assert.match(village,/state=hanging\?"walking"/);
   assert.match(village,/motion=dead\?"dead":state==="sitting"\?"sit":hanging\?"walk"/);
-  assert.match(village,/paused:hanging\?false:base.paused/);
+  assert.match(village,/paused:battleStatic&&!hanging\?true:hanging\?false:base.paused/);
   assert.match(villageCss,/player:not\(\.gmww-gallows-hanging\)/);
   assert.doesNotMatch(css,/content\s*:|@keyframes|struggle/);
   assert.doesNotMatch(villageCss,/gmww-gallows-struggle|\.player\.gmww-gallows-hanging::before|\.player\.gmww-gallows-hanging::after/);

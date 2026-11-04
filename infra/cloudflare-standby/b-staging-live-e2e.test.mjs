@@ -1,0 +1,54 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {STAGING_BASE,assertBUrl,publicChecks,diagnoseBLogin,fullChecks} from './b-staging-live-e2e.mjs';
+
+test('GitHub E2E is locked to isolated B HTTPS Worker; cannot query A',()=>{
+  assert.equal(STAGING_BASE,'https://gmww-b-staging-synthetic.gmww-stage-b-0702-2026.workers.dev');
+  assert.equal(assertBUrl('/health'),STAGING_BASE+'/health');
+  for(const path of ['https://gmww-v2-00.williampham0702.workers.dev/health','//elsewhere/health','/../health','/qa/..//health'])assert.throws(()=>assertBUrl(path));
+  const source=readFileSync(new URL('./b-staging-live-e2e.mjs',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/cloudflare\.request|wrangler\s+deploy|productionSwitchAllowed\s*:\s*true/);
+  const workflow=readFileSync(new URL('../../.github/workflows/check-cloudflare-standby.yml',import.meta.url),'utf8');
+  assert.match(workflow,/permissions:\s*\n\s*contents:\s*read/);
+  assert.doesNotMatch(workflow,/pull_request_target|CLOUDFLARE_API_TOKEN|workers\.dev\/api/);
+  assert.match(workflow,/secrets\.GMWW_B_SYNTHETIC_ADMIN_KEY/);
+});
+test('public live checks require B health, fail-closed statuses and no false parity',async()=>{
+  const called=[];
+  const request=async (path, opts={})=>{
+    called.push({path,hasKey:!!opts.fixtureKey});
+    if(path==='/health')return {status:200,data:{ok:true,environment:'cloudflare-b',mode:'synthetic-only',productionSwitchAllowed:false,productionDataConnected:false,loginSessionVerified:false,websocketVerified:false}};
+    return {status:401,data:{ok:false,environment:'cloudflare-b',productionSwitchAllowed:false}};
+  };
+  await publicChecks(request);
+  assert.equal(called.length,3);
+  assert.deepEqual(called.map(x=>x.path),['/health','/qa/login','/qa/login']);
+  const bad=async()=>({status:200,data:{ok:true,environment:'cloudflare-b',mode:'synthetic-only',productionSwitchAllowed:Boolean(1)}});
+  await assert.rejects(publicChecks(bad),/failover/);
+});
+
+test('auth 401 reports safe classification without exposing the secret or its hash',async()=>{
+  const secret='fixture-secret-test-that-is-long-and-private-123';
+  const response={status:401,data:{environment:'cloudflare-b',error:'STAGING_FIXTURE_KEY_REQUIRED',productionSwitchAllowed:false}};
+  const details=diagnoseBLogin(response,secret);
+  assert.deepEqual(details,{
+    stage:'B_SYNTHETIC_GM_LOGIN',httpStatus:401,responseCode:'STAGING_FIXTURE_KEY_REQUIRED',
+    keyPresent:true,keyMeetsMinimum:true,keyHasEdgeWhitespace:false,keyHasControlCharacter:false,keyHasMatchingOuterQuotes:false
+  });
+  assert.ok(!JSON.stringify(details).includes(secret));
+  assert.equal(diagnoseBLogin(response,'  '+secret+' ').keyHasEdgeWhitespace,true);
+  assert.equal(diagnoseBLogin(response,'"'+secret+'"').keyHasMatchingOuterQuotes,true);
+  assert.equal(diagnoseBLogin(response,secret+'\n').keyHasControlCharacter,true);
+  assert.equal(diagnoseBLogin({...response,data:{error:secret}},secret).responseCode,'UNCLASSIFIED');
+  const printed=[];
+  const originalError=console.error;
+  console.error=(...args)=>printed.push(args.join(' '));
+  try{
+    await assert.rejects(fullChecks(secret,async()=>response),/GM login HTTP status mismatch/);
+  }finally{console.error=originalError;}
+  assert.equal(printed.length,1);
+  assert.match(printed[0],/B_ONLY_AUTH_DIAGNOSTIC/);
+  assert.match(printed[0],/STAGING_FIXTURE_KEY_REQUIRED/);
+  assert.ok(!printed[0].includes(secret));
+});

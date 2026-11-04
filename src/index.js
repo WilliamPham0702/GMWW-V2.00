@@ -1,19 +1,22 @@
-import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from "./gmww-demo-runner.js";
+import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlayerActions,playerOfferedActions} from "./gmww-demo-runner.js";
+import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
+import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,mergePublicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
 import {dayClockRemainingMs,shiftDayClock} from "./gmww-day-clock.js";
+import {projectPublicTurnClock} from "./gmww-public-turn-clock.js";
 import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gallowsResolve,gallowsOpen,gallowsDurationSec,gallowsSetRestriction,gallowsSetMode,gallowsManualVote,gallowsManualResolve,gallowsSelectCandidate,gallowsMode,gallowsNominationTotals,gallowsAutomaticNominee,gallowsAutomaticOutcome,gallowsBlockedNomination,gallowsBlockedVotes,gallowsSetDuration,gallowsCloseNomination} from "./gmww-gallows-rules.js";
-import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
+import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,publicVillageStatusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
-import { sanitizeGameConfig, normalizeRoomMode, normalizeSeatMoveMode, normalizeSeatCount } from "./gmww-room-config-rules.js";
+import { sanitizeGameConfig, roomModeSwitchBlocked, normalizeRoomMode, normalizeSeatMoveMode, normalizeSeatCount } from "./gmww-room-config-rules.js";
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
 import { resolveWolfNight, readNightAssignments, isNightImmune, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
-import { wolfPackMembers, shouldWakeWolfPack, privateWolfRecognition } from "./gmww-wolf-recognition.js";
+import { wolfPackMembers, shouldWakeWolfPack, privateWolfRecognition, privateRoleGroupRecognition } from "./gmww-wolf-recognition.js";
 import {releaseCatalog} from "./gmww-release-catalog.js";
 import {releaseBases} from "./gmww-release-bases.js";
 import {selectBuildVerifiedManifest,selectCatalogDelta} from "./gmww-release-catalog-policy.js";
@@ -22,6 +25,7 @@ const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
 import { shouldSkipMemberHeartbeat, shouldSkipMemberSessionTouch, shouldSkipGmHeartbeat, shouldSkipDirectoryHeartbeat, GMWW_WRITE_OPTIMIZER_VERSION } from "./gmww-do-write-optimizer.js";
 import { authorizedPitr } from "./gr01-pitr-auth.js";
+import { BACKUP_EXPORT_ROUTE, BACKUP_EXPORT_DO_PATH, handleBackupExportInDo, handleBackupExportRoute } from "./gmww-backup-export.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
 import { oldWitchActionCheck } from "./gmww-old-witch-rules.js";
@@ -46,7 +50,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.265",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3265-seat-pinch",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.304",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3304-entrance-icons-day-audio",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -72,8 +76,11 @@ export class RoomDurableObject extends DurableObject {
   }
   async fetch(request){
     const path=new URL(request.url).pathname;
+    if(path==="/gm/announcement"&&request.method==="PUT")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     // GR01 recovery marker: internal DO stub requests only, read-only.
     // No Production restore route exists here; unconfigured credentials fail closed.
+    // #773 read-only encrypted export; 404 unless dedicated backup secrets exist.
+    if(path===BACKUP_EXPORT_DO_PATH)return handleBackupExportInDo(this.ctx,this.env,request,authorizedPitr);
     if(path==="/__gr01/pitr/bookmark"){
       if(request.method!=="POST"||!(await authorizedPitr(request,this.env?.GR01_INTERNAL_PITR_TOKEN)))
         return new Response("Not found",{status:404,headers:{"cache-control":"no-store"}});
@@ -85,8 +92,10 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
+    // Serialize GM recovery reads with the authoritative alarm turn transition.
+    if(path==="/gm/state"&&request.method==="GET")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     if((path==="/global-settings/village-scene"&&request.method==="PUT")||(path==="/global-settings/village-scene/rollback"&&request.method==="POST")||(path==="/global-settings/village-scene/reset"&&request.method==="POST"))return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
-    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
+    if(request.method==='POST'&&['/player/setup','/player/move','/player/move-complete','/player/seat-swap','/gm/start','/gm/assign','/gm/config','/gm/enabled','/gm/delete','/gm/role-assets','/gm/move','/gm/seat','/gm/room-settings','/gm/seat-lock','/gm/stage','/gm/seats/randomize-remaining','/gm/cycle','/gm/turn','/gm/auto','/gm/end','/gm/reset','/members/record-result','/gm/interaction','/gm/battle-action','/gm/day-action','/gm/day-clock','/gm/demo','/gm/battle-undo','/gm/gallows','/player/gallows','/player/artifact-activate','/player/interaction/respond','/player/demo-action','/player/action','/join','/leave','/gm/participants','/gm/kick','/heartbeat','/player/state','/player/delivery-received','/player/chat/send','/gm/chat','/gm/chat/moderate'].includes(path))return this.ctx.blockConcurrencyWhile(async()=>{
       const response=await this.handleFetch(request),meta=await this.ctx.storage.get("meta");
       if(meta?.demo&&response.ok){
         if(path==="/gm/gallows")await this.ctx.storage.delete("demoPlan");
@@ -105,12 +114,18 @@ export class RoomDurableObject extends DurableObject {
     const result=stepPublicEntryWindow(previous,policy,Date.now());
     if(result.allowed){
       await this.ctx.storage.put("security-rate",result.next);
-      await this.ctx.storage.setAlarm(result.next.startedAt+policy.windowMs+1000);
+      // A Durable Object holds one alarm only: admission writes must not postpone Auto GM.
+      const meta=await this.ctx.storage.get("meta");
+      if(meta&&String(meta.phase||"").toLowerCase()!=="deleted")await this.scheduleRoomAlarm(meta);
+      else await this.ctx.storage.setAlarm(result.next.startedAt+policy.windowMs+1000);
     }
     return j({ok:result.allowed,retryAfterSeconds:result.retryAfterSeconds},result.allowed?200:429);
   }
   async handleFetch(request){
     const url=new URL(request.url);
+    if(url.pathname==="/gm/announcement"&&request.method==="PUT")return this.gmAnnouncement(request,await safeJson(request));
+    if(url.pathname==="/gm/announcement"&&request.method==="GET")return this.gmAnnouncementLibrary(request);
+    if(url.pathname==="/player/announcement"&&request.method==="POST")return this.playerAnnouncement(await safeJson(request));
     if(url.pathname==="/security/rate-limit"&&request.method==="POST")return this.securityRateLimit(await safeJson(request));
     if(url.pathname==="/storage-optimizer/stats"&&request.method==="GET")return j(this.gmwwWriteOptimizerStatus());
     if(url.pathname==="/health/storage"&&request.method==="GET"){
@@ -177,10 +192,19 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-settings/gm-move"&&request.method==="POST")return this.globalGmMovePut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
       if(await this.ctx.storage.get("meta"))return j({ok:false,error:"ROOM_EXISTS"},409);
-      const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Làng Asahi"),roomMode=normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,gmStage:"room",gmStageRevision:0,enabled,autoGM:b?.demo===true?false:true,demo:b?.demo===true,roomMode,seatMoveMode,seatCount,seatLayout:villageLayout.recommendedSeatShape(seatCount),gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
+      const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Làng Asahi"),roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,gmStage:"room",gmStageRevision:0,enabled,autoGM:b?.demo===true?false:true,demo:b?.demo===true,roomMode,seatMoveMode,seatCount,seatLayout:villageLayout.recommendedSeatShape(seatCount),gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
       await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);if(cfg)await this.ctx.storage.put("gameConfig",cfg);if(validImageDataUrl(b?.cardBackImage))await this.ctx.storage.put("cardBackImage",String(b.cardBackImage));return j({ok:true,room:publicRoom(meta),gmToken},201);
     }
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
+    if(url.pathname==="/player/chat"&&request.method==="POST")return this.playerChatRead(await safeJson(request));
+    if(url.pathname==="/player/chat/send"&&request.method==="POST")return this.playerChatSend(await safeJson(request));
+    const playerVoice=url.pathname.match(/^\/player\/chat\/audio\/([a-f0-9-]{36})$/);
+    if(playerVoice&&request.method==="POST")return this.chatVoiceRead({loginId:(await safeJson(request))?.loginId},playerVoice[1]);
+    const gmVoice=url.pathname.match(/^\/gm\/chat\/audio\/([a-f0-9-]{36})$/);
+    if(gmVoice&&request.method==="GET")return this.chatVoiceRead({gm:true,request},gmVoice[1]);
+    if(url.pathname==="/gm/chat"&&request.method==="GET")return this.gmChatRead(request);
+    if(url.pathname==="/gm/chat"&&request.method==="POST")return this.gmChatSend(request,await safeJson(request));
+    if(url.pathname==="/gm/chat/moderate"&&request.method==="POST")return this.gmChatModerate(request,await safeJson(request));
     if(url.pathname==="/gm/state"&&request.method==="GET")return this.gmState(request);
     if(url.pathname==="/gm/action-log"&&request.method==="GET")return this.gmActionLog(request);
     if(url.pathname==="/gm/assign"&&request.method==="POST")return this.gmAssign(request,await safeJson(request));
@@ -222,6 +246,9 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/player/artifact-activate"&&request.method==="POST")return this.playerArtifactActivate(await safeJson(request));
     if(url.pathname==="/player/interaction/respond"&&request.method==="POST")return this.playerInteractionRespond(await safeJson(request));
     if(url.pathname==="/player/gallows"&&request.method==="POST")return this.playerGallows(await safeJson(request));
+    if(url.pathname==="/player/demo-action"&&request.method==="POST")return this.playerDemoAction(await safeJson(request));
+    if(url.pathname==="/player/action"&&request.method==="POST")return this.playerPhaseAction(await safeJson(request),true);
+    if(url.pathname==="/player/undo-action"&&request.method==="POST")return this.playerPhaseUndo(await safeJson(request));
     if(url.pathname==="/player/setup"&&request.method==="POST")return this.playerSetup(await safeJson(request));
     if(url.pathname==="/player/move"&&request.method==="POST")return this.playerMove(await safeJson(request));
     if(url.pathname==="/player/move-complete"&&request.method==="POST")return this.playerMoveComplete(await safeJson(request));
@@ -677,11 +704,20 @@ export class RoomDurableObject extends DurableObject {
 
   async globalUiSettingsGet(){
     const rec=await this.ctx.storage.get("globalSetting:ui"),raw=Number(rec?.characterScale),characterScale=normalizeCharacterScale(raw,100);
-    return j({ok:true,characterScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
+    const actionIconScale=[25,50,75,100,125,150].includes(Number(rec?.actionIconScale))?Number(rec.actionIconScale):100;
+    return j({ok:true,characterScale,actionIconScale,backgroundDim:0,updatedAt:rec?.updatedAt||null});
   }
   async globalUiSettingsPut(body){
-    const raw=Number(body?.characterScale);if(!Number.isFinite(raw))return j({ok:false,error:"INVALID_CHARACTER_SCALE"},400);
-    const characterScale=normalizeCharacterScale(raw,100),rec={characterScale,backgroundDim:0,updatedAt:new Date().toISOString()};
+    const hasCharacter=Object.prototype.hasOwnProperty.call(body||{},"characterScale"),
+      hasIcon=Object.prototype.hasOwnProperty.call(body||{},"actionIconScale");
+    if(!hasCharacter&&!hasIcon)return j({ok:false,error:"INVALID_UI_SETTINGS"},400);
+    if(hasCharacter&&!Number.isFinite(Number(body.characterScale)))return j({ok:false,error:"INVALID_CHARACTER_SCALE"},400);
+    if(hasIcon&&![25,50,75,100,125,150].includes(Number(body.actionIconScale)))
+      return j({ok:false,error:"INVALID_ACTION_ICON_SCALE"},400);
+    const prior=await this.ctx.storage.get("globalSetting:ui")||{},
+      characterScale=hasCharacter?normalizeCharacterScale(Number(body.characterScale),100):normalizeCharacterScale(Number(prior.characterScale),100),
+      actionIconScale=hasIcon?Number(body.actionIconScale):([25,50,75,100,125,150].includes(Number(prior.actionIconScale))?Number(prior.actionIconScale):100),
+      rec={...prior,characterScale,actionIconScale,backgroundDim:0,updatedAt:new Date().toISOString()};
     await this.ctx.storage.put("globalSetting:ui",rec);await this.ctx.storage.delete("globalSetting:webVeil");return j({ok:true,...rec});
   }
   async globalWebSyncGet(){
@@ -765,7 +801,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async roomDirectoryList(url){
     const includeEnded=String(url?.searchParams?.get("includeEnded")||"")==="1",includeDisabled=String(url?.searchParams?.get("includeDisabled")||"")==="1",rows=await this.ctx.storage.list({prefix:"roomdir:"}),rooms=[],nowMs=Date.now();
-    for(const [key,r] of rows){const phase=String(r?.phase||"").toLowerCase(),last=Date.parse(r?.updatedAt||r?.createdAt||"");if(phase==="deleted"||(Number.isFinite(last)&&nowMs-last>=ROOM_IDLE_TTL)){await this.ctx.storage.delete(key);continue}if(r?.demo===true)continue;if(!includeDisabled&&r?.enabled===false)continue;if(!includeEnded){if(phase==="ended")continue;const lease=Number(r?.leaseUntil||0);if((lease&&nowMs>lease)||(!lease&&Number.isFinite(last)&&nowMs-last>ROOM_DIRECTORY_LEASE))continue}rooms.push(r)}
+    for(const [key,r] of rows){const phase=String(r?.phase||"").toLowerCase(),last=Date.parse(r?.updatedAt||r?.createdAt||"");if(phase==="deleted"||(Number.isFinite(last)&&nowMs-last>=ROOM_IDLE_TTL)){await this.ctx.storage.delete(key);continue}if(!includeDisabled&&r?.enabled===false)continue;if(!includeEnded){if(phase==="ended")continue;const lease=Number(r?.leaseUntil||0),activeDemo=r?.demo===true&&phase==="running"&&r?.enabled!==false;if(!activeDemo&&((lease&&nowMs>lease)||(!lease&&Number.isFinite(last)&&nowMs-last>ROOM_DIRECTORY_LEASE)))continue}rooms.push(r)}
     rooms.sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));return j({ok:true,count:rooms.length,rooms,ttlHours:72,leaseSeconds:Math.floor(ROOM_DIRECTORY_LEASE/1000)});
   }
   async roomDirectoryDelete(body){const code=normalizeRoomCode(body?.code);if(isValidRoomCode(code))await this.ctx.storage.delete("roomdir:"+code);return j({ok:true,deleted:true,code})}
@@ -780,7 +816,7 @@ export class RoomDurableObject extends DurableObject {
     // by publicPlayer().online instead of deleting the roster entry.
     return{players:players||{},removed:[]};
   }
-  async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],frozenLogins=activeFrozenLoginIds(interactions,meta,Date.now());return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(p=>({...publicPlayer(p),frozen:meta?.statusDisplay?.frozen===false?false:frozenLogins.has(normalizeLoginId(p?.loginId)),statusTags:statusTagsFor(interactions,meta,p?.loginId,players)})),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
+  async publicState(){const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND"},404);let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;const interactions=(await this.ctx.storage.get("interactions"))||[],frozenLogins=activeFrozenLoginIds(interactions,meta,Date.now());return j({ok:true,room:publicRoom(meta),players:Object.values(players).map(p=>({...publicPlayer(p),frozen:meta?.statusDisplay?.frozen===true&&frozenLogins.has(normalizeLoginId(p?.loginId)),statusTags:publicVillageStatusTagsFor(interactions,meta,p?.loginId,players)})),connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})}
   async gmAuthorized(request){const meta=await this.ctx.storage.get("meta");if(!meta)return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};const token=bearer(request);if(!token)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};if(token!==GM_SYNC_TOKEN&&await sha256(token)!==meta.gmTokenHash)return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};
     if(meta.demo&&request.method==="POST"&&/^\/gm\/(?:battle-action|day-action|day-clock|gallows|turn|cycle|end)$/.test(new URL(request.url).pathname)){
       const lease=await this.ctx.storage.get("demoLease");
@@ -1015,9 +1051,90 @@ export class RoomDurableObject extends DurableObject {
     this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:publicBallot,serverTime:now});
     return j({ok:true,gallows:publicBallot,serverTime:now});
   }
+  // Member session is verified at the public route; loginId cannot be forged by Player Web.
+  // The SAME GM action handlers enforce target legality, role limits, use ledger and receipts.
+  async playerDemoAction(body){return this.playerPhaseAction(body,false)}
+  async playerPhaseAction(body,online=false){
+    const meta=await this.ctx.storage.get("meta"),loginId=normalizeLoginId(body?.loginId);
+    if(online?(meta?.demo===true||meta?.phase!=="running"||String(meta?.roomMode||"").toLowerCase()!=="online"):(meta?.demo!==true||meta?.phase!=="running"))
+      return j({ok:false,error:online?"ONLINE_ACTION_NOT_RUNNING":"DEMO_ACTION_NOT_RUNNING"},409);
+    const players=await this.ctx.storage.get("players")||{};
+    if(!loginId||!players["member:"+loginId]||(!online&&players["member:"+loginId]?.humanControlled!==true))
+      return j({ok:false,error:online?"ONLINE_PLAYER_NOT_JOINED":"DEMO_PLAYER_NOT_JOINED"},403);
+    if(String(body?.matchId||"")!==String(meta.matchId||"")||
+      String(body?.cycleKey||"")!==String(meta.cycleKey||""))
+      return j({ok:false,error:"DEMO_ACTION_STALE"},409);
+    // Private action offers remain visible while Frozen/Expelled, but execution is blocked on Server.
+    if(online){
+      const effects=await this.ctx.storage.get('interactions')||[];
+      const blocked=effects.some(x=>normalizeLoginId(x?.loginId)===loginId&&x?.effectActive!==false&&
+        (!x?.matchId||String(x.matchId)===String(meta.matchId))&&
+        (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&
+        (x.type==='dead'||x.type==='expelled'||(x.type==='frozen'&&meta.cyclePhase==='night')));
+      if(blocked)return j({ok:false,error:'ACTOR_CANNOT_ACT',message:'Đã thấy hành động, nhưng bạn đang chịu hiệu ứng và không được thực hiện lượt này.'},409);
+    }
+    const actions=online?await playerOfferedActions(this,meta,loginId):await demoPlayerActions(this,meta,loginId),
+      action=actions.find(a=>a.key===String(body?.actionKey||""));
+    if(!action)return j({ok:false,error:"DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN"},409);
+    const targets=Array.isArray(body?.targetIds)?body.targetIds.map(normalizeLoginId):[];
+    if(targets.length!==action.targetCount||new Set(targets).size!==targets.length||
+      targets.some(id=>!id||!players["member:"+id]||(action.noSelf&&id===loginId)))
+      return j({ok:false,error:"DEMO_TARGET_INVALID"},400);
+    const request=this.demoInternalRequest(),token=(online?"human-online-":"human-demo-")+crypto.randomUUID();
+    let response;
+    if(meta.cyclePhase==="morning"){
+      response=await this.gmDayAction(request,{matchId:meta.matchId,cycleKey:meta.cycleKey,
+        actorId:loginId,roleId:action.roleId,artifactId:action.artifactId,
+        actionId:action.actionId,targetIds:targets,clientEventId:token});
+    }else if(meta.cyclePhase==="night"){
+      const runtime=await this.getNightRuntime(meta,meta.cycleNight,false),
+        turn=runtime?.queue?.[runtime.cursor];
+      if(!turn||runtime.completed)return j({ok:false,error:"DEMO_TURN_ENDED"},409);
+      const seer=!action.artifactId&&['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(action.actionId),
+        transfer=!action.artifactId&&action.actionId==="action_transfer_bite",
+        assassin=action.actionId==="action_assassin_mark",
+        direction=String(body?.direction||""),choice=String(body?.assassinChoice||"");
+      if(transfer&&!["left","none","right"].includes(direction))return j({ok:false,error:"DEMO_DIRECTION_REQUIRED"},400);
+      if(assassin&&!["👍","👎"].includes(choice))return j({ok:false,error:"DEMO_ASSASSIN_CHOICE_REQUIRED"},400);
+      response=await this.gmBattleAction(request,{matchId:meta.matchId,cycleKey:meta.cycleKey,
+        turnId:turn.id,night:meta.cycleNight,actorId:loginId,artifactId:action.artifactId,
+        actionId:action.actionId,type:action.type,effectId:"",effectName:action.name,
+        targetIds:seer||transfer||action.noTarget?[loginId]:targets,
+        ...(seer?{revealTargetIds:targets}:{}),...(transfer?{direction}:{}),
+        ...(assassin?{assassinChoice:choice}:{}),clientEventId:token,source:online?"online-human":"demo-human"});
+    }else return j({ok:false,error:"DEMO_PHASE_INVALID"},409);
+    if(!response.ok)return response;
+    const result=await response.json();
+    // Never forward the GM undo ledger, wolf pack internals or private assignments.
+    return j({ok:true,actionId:action.actionId,actorId:loginId,
+      ...(result.revelation?{revelation:result.revelation}:{}),
+      ...(meta.cyclePhase==="morning"&&result.result?{result:result.result}: {})});
+  }
+  // Authenticated member may undo ONLY their latest Online night action.
+  // The existing GM snapshot guard refuses all intervening changes.
+  async playerPhaseUndo(body){
+    const meta=await this.ctx.storage.get("meta"),actorId=normalizeLoginId(body?.loginId);
+    if(!actorId||meta?.phase!=="running"||meta?.demo===true||
+      String(meta?.roomMode||"").toLowerCase()!=="online"||meta?.cyclePhase!=="night"||
+      String(body?.matchId||"")!==String(meta.matchId||"")||
+      String(body?.cycleKey||"")!==String(meta.cycleKey||""))
+      return j({ok:false,error:"ONLINE_UNDO_STALE"},409);
+    const players=await this.ctx.storage.get("players")||{};
+    if(!players["member:"+actorId])return j({ok:false,error:"ONLINE_PLAYER_NOT_JOINED"},403);
+    const record=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
+    if(!record||record.undone||normalizeLoginId(record.actorId)!==actorId||
+      record.source!=="online-human")
+      return j({ok:false,error:"ONLINE_UNDO_NOT_OWNER",message:"Chỉ khôi phục được hành động gần nhất của chính bạn."},409);
+    const result=await this.gmBattleUndo(this.demoInternalRequest(),{undoToken:record.token});
+    if(!result.ok)return result;
+    return j({ok:true,undone:true});
+  }
   async playerGallows(body,authorizedDemo=false){
     const meta=await this.ctx.storage.get("meta"),loginId=normalizeLoginId(body?.loginId);
-    if(meta?.demo===true&&!authorizedDemo)return j({ok:false,error:"DEMO_ROOM_GM_ONLY"},403);
+    if(meta?.demo===true&&!authorizedDemo){
+      const actor=(await this.ctx.storage.get("players")||{})["member:"+loginId];
+      if(actor?.humanControlled!==true)return j({ok:false,error:"DEMO_PLAYER_NOT_JOINED"},403);
+    }
     if(!meta||String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")
       return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
     const {key,ballot,eligible}=await this.gallowsState(meta);
@@ -1044,7 +1161,21 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmState(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const {meta}=auth;let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
+    let meta=auth.meta;
+    // Repair existing rooms whose DO alarm was replaced by a legacy TTL write.
+    // Advance only at the authoritative deadline; never trust a client timer.
+    if(String(meta.phase||"").toLowerCase()==="running"&&meta.autoGM!==false){
+      const due=await this.autoAdvanceDue(meta);
+      if(due&&due<=Date.now()+25){
+        const advanced=await this.runAutoAdvanceIfDue(meta);
+        if(advanced)meta=await this.ctx.storage.get("meta")||meta;
+        else await this.scheduleRoomAlarm(meta);
+      }else if(due){
+        const alarmAt=await this.ctx.storage.getAlarm();
+        if(alarmAt===null||alarmAt>due+1000)await this.scheduleRoomAlarm(meta);
+      }
+    }
+    let players=(await this.ctx.storage.get("players"))||{};const pruned=await this.pruneOfflinePlayers(meta,players);players=pruned.players;
     const interactions=(await this.ctx.storage.get("interactions"))||[],effectTypes=new Set(["frozen","expelled","dead","assassin_mark","status"]),activeEffects=[...interactions.filter(x=>effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&(!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())&&(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId))),...confirmedNightStatusVisuals(interactions,meta,players)].slice(-100),interactionResponses=interactions.filter(x=>x?.status==="responded").slice(-100),artifactCycleKeyValue=currentArtifactCycleKey(meta),artifactCycle=(await this.ctx.storage.get("artifactCycle:"+artifactCycleKeyValue))||{cycleKey:artifactCycleKeyValue,accepted:[]};
     const battleActionUsage=(await this.ctx.storage.get("battleRoleUsage:"+String(meta.matchId||"")))||[];
     const lastBattleAction=await this.ctx.storage.get("battleLastAction:"+String(meta.matchId||""));
@@ -1069,6 +1200,73 @@ export class RoomDurableObject extends DurableObject {
       // Never derive the village bulletin from only the short-lived rules buffer.
       villageHistory:await this.villageHistoryForMatch(meta,interactions),
       interactionResponses,activeEffects,drunkDraws,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
+  }
+  async currentAnnouncement(meta,runtime){
+    if(runtime===undefined)runtime=meta?.cyclePhase==='night'?await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
+    const day=meta&&meta.cyclePhase!=='night'?await this.ctx.storage.get('annDay'):null;
+    return announcementCue(meta,runtime,day);
+  }
+  // Public cue for Players: label, Server start time and opaque clip URLs only.
+  async announcementWithAudio(meta,runtime){
+    const cue=await this.currentAnnouncement(meta,runtime);if(!cue)return null;
+    const lib=await announcementLibrary(this.ctx.storage),hashes=cue.targets.map(t=>lib[t]).filter(Boolean);
+    const out={key:cue.key,label:cue.label,startedAt:cue.startedAt};
+    if(hashes.length){out.audio=hashes.map(h=>'/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a='+h);out.audioUrl=out.audio[0]}
+    return out;
+  }
+  scheduleAnnouncementSync(){
+    if(this.announcementSyncTimer)return;
+    this.announcementSyncTimer=setTimeout(()=>{this.announcementSyncTimer=null;this.syncAnnouncementCue(false).catch(()=>{})},60);
+  }
+  // Push the cue to every socket whenever the current turn or its clips change.
+  async syncAnnouncementCue(force){
+    const meta=await this.ctx.storage.get('meta'),cue=meta?await this.announcementWithAudio(meta):null;
+    const sig=cue?cue.key+'|'+(cue.audio||[]).join(','):'';
+    if(!force&&sig===this.lastAnnouncementSig)return;
+    this.lastAnnouncementSig=sig;
+    if(cue)this.broadcast({type:'announcement_ready',audioCue:cue,serverTime:Date.now()});
+  }
+  async gmAnnouncement(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta;
+    // V3.304: daytime GM audio queue (wake-up, deaths, Lên Giàn results...) as one public cue.
+    if(Array.isArray(body?.day))return this.gmDayAnnouncement(meta,body);
+    let target=String(body?.target||'');
+    if(!target){
+      // Runtime <=V3.302 uploads the current turn's first clip by turn key.
+      const cue=await this.currentAnnouncement(meta);
+      if(!cue||body?.key!==cue.key||!cue.targets[0])return j({ok:false,error:'STALE_AUDIO_CUE'},409);
+      target=cue.targets[0];
+    }
+    const saved=await saveAnnouncementTarget(this.ctx.storage,target,decodeRecording(body));
+    if(saved.ok&&meta?.phase==='running')await this.syncAnnouncementCue(false);
+    return saved;
+  }
+  async gmDayAnnouncement(meta,body){
+    const targets=dayAnnouncementTargets(body.day);
+    if(meta?.phase!=='running'||!['morning','day'].includes(String(meta?.cyclePhase||'')))return j({ok:false,error:'DAY_AUDIO_NOT_ACTIVE'},409);
+    if(!targets.length)return j({ok:false,error:'INVALID_AUDIO_TARGET'},400);
+    const lib=await announcementLibrary(this.ctx.storage);
+    if(!targets.some(t=>lib[t]))return j({ok:false,error:'DAY_AUDIO_NOT_UPLOADED'},409);
+    const prev=await this.ctx.storage.get('annDay'),same=prev&&prev.matchId===String(meta.matchId||'')&&prev.cycleKey===String(meta.cycleKey||'');
+    // GM reports how long ago its local queue started; no device clock is trusted.
+    const lag=Math.max(0,Math.min(20000,Number(body?.elapsedMs)||0)),now=Date.now();
+    const day={matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),seq:same?Number(prev.seq||0)+1:1,targets,startedAt:now-lag};
+    await this.ctx.storage.put('annDay',day);
+    await this.syncAnnouncementCue(false);
+    return j({ok:true,seq:day.seq});
+  }
+  async gmAnnouncementLibrary(request){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    return j({ok:true,targets:await announcementLibrary(this.ctx.storage)});
+  }
+  async playerAnnouncement(body){
+    const meta=await this.ctx.storage.get('meta'),players=await this.ctx.storage.get('players')||{};
+    if(!meta||meta.enabled===false||!players['member:'+normalizeLoginId(body?.loginId)])return j({ok:false,error:'PLAYER_NOT_IN_ROOM'},403);
+    // Only clips of the turn that is live right now are readable by Players.
+    const cue=await this.announcementWithAudio(meta),hash=String(body?.a||'');
+    if(!cue?.audio?.some(u=>u.endsWith('?a='+hash)))return new Response(null,{status:404});
+    return readAnnouncementBlob(this.ctx.storage,hash);
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -1381,7 +1579,7 @@ export class RoomDurableObject extends DurableObject {
     }
     return j({ok:true,room,enabled,players:publicPlayers})
   }
-  async gmLock(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta;meta.locked=false;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,ignored:body?.locked===true,reason:body?.locked===true?"ROOM_LOCK_DISABLED":null,room:publicRoom(meta)})}
+  async gmLock(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta;meta.locked=false;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);await this.scheduleRoomAlarm(meta);const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,ignored:body?.locked===true,reason:body?.locked===true?"ROOM_LOCK_DISABLED":null,room:publicRoom(meta)})}
   async gmKick(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,players=(await this.ctx.storage.get("players"))||{},requested=String(body?.participantId||""),loginId=normalizeLoginId(body?.loginId),id=requested||(loginId?("member:"+loginId):"");
@@ -1454,7 +1652,7 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put("players",players);
     const selected=new Set(wanted.keys()),assignments=(await this.ctx.storage.get("assignments"))||[],nextAssignments=assignments.filter(a=>selected.has(normalizeLoginId(a?.loginId)));
     if(nextAssignments.length!==assignments.length)await this.ctx.storage.put("assignments",nextAssignments);
-    meta.playerCount=wanted.size;meta.locked=false;meta.seatsLocked=false;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}
+    meta.playerCount=wanted.size;meta.locked=false;meta.seatsLocked=false;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);await this.scheduleRoomAlarm(meta);
     const publicPlayers=Object.values(players).map(publicPlayer),room=publicRoom(meta);
     this.broadcast({type:"room_state",room,players:publicPlayers,rosterUpdated:true,disbandAll});
     if(disbandAll){
@@ -1492,12 +1690,12 @@ export class RoomDurableObject extends DurableObject {
     const demoChanging=desiredDemo!==previousDemo;
     if(demoChanging){
       const assignments=await this.ctx.storage.get("assignments")||[];
-      const locked=meta.seatsLocked===true||meta.locked===true;
-      if(locked||Object.keys(players).length||assignments.length||meta.startedAt||meta.roleDeliveredAt){
-        return j({ok:false,error:"ROOM_MODE_REQUIRES_EMPTY_RESET",message:"Để đổi sang hoặc rời DEMO, hãy dùng phòng trống hoặc RESET phòng trước. Dữ liệu người chơi hiện tại được giữ nguyên."},409);
+      // Gathered/seated players may switch mode in the lobby; only a live match stays isolated.
+      if(roomModeSwitchBlocked(meta,assignments)){
+        return j({ok:false,error:"ROOM_MODE_REQUIRES_EMPTY_RESET",message:"Không đổi DEMO khi ván đang diễn ra hoặc đã Phân Vai. Kết thúc ván rồi đổi chế độ."},409);
       }
     }
-    const roomMode=desiredDemo?"offline":body&&Object.prototype.hasOwnProperty.call(body,"roomMode")?normalizeRoomMode(body.roomMode):normalizeRoomMode(meta.roomMode);
+    const roomMode=desiredDemo?"online":body&&Object.prototype.hasOwnProperty.call(body,"roomMode")?normalizeRoomMode(body.roomMode):normalizeRoomMode(meta.roomMode);
     const seatMoveMode=body&&Object.prototype.hasOwnProperty.call(body,"seatMoveMode")?normalizeSeatMoveMode(body.seatMoveMode):normalizeSeatMoveMode(meta.seatMoveMode);
     const requested=body&&Object.prototype.hasOwnProperty.call(body,"seatCount")?normalizeSeatCount(body.seatCount,meta.seatCount):normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12);
     const hasSeatLayout=!!body&&Object.prototype.hasOwnProperty.call(body,"seatLayout"),changedCount=requested!==normalizeSeatCount(meta.seatCount),seatLayout=hasSeatLayout?normalizeSeatLayout(body.seatLayout):changedCount?villageLayout.recommendedSeatShape(requested):normalizeSeatLayout(meta.seatLayout);
@@ -1525,7 +1723,7 @@ export class RoomDurableObject extends DurableObject {
     if(demoChanging){
       meta.demo=desiredDemo;meta.autoGM=desiredDemo?false:true;
       // Retain historical room data; only clear stale demonstration lease/timer.
-      await this.ctx.storage.delete("demoLease");await this.ctx.storage.delete("demoClock");
+      for(const key of ["demoLease","demoClock","demoPlan"])await this.ctx.storage.delete(key);
     }
     meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;
     await this.ctx.storage.put("players",players);await this.ctx.storage.put("meta",meta);
@@ -1713,7 +1911,7 @@ export class RoomDurableObject extends DurableObject {
       id:"wolf-introduction",kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",
       recognitionIds:wolfMembers.map(a=>a.loginId),durationSec:wolfDiscussionSec,status:"pending"});
     const roleOrder=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map((r,i)=>[String(r?.roleId||""),Number(r?.order||i+1)])),groups=new Map();
-    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid||rid==="role_villager"&&a.inheritedFromRoleId==="role_drunk")continue;
+    for(const a of assignments){const rid=String(a?.roleId||"");if(!rid||rid==="role_villager")continue; // Ordinary villagers never have a night wake-up turn; their Artifacts are scheduled separately.
       const lid=normalizeLoginId(a?.loginId),drunkInheritedWolf=rid==="role_snow_wolf"&&a.inheritedFromRoleId==="role_drunk";
       const groupId=drunkInheritedWolf?rid+":drunk:"+lid:rid;
       let g=groups.get(groupId);
@@ -1982,7 +2180,20 @@ export class RoomDurableObject extends DurableObject {
   async autoAdvanceDue(meta){
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return 0;
     const cyclePhase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
-    if(cyclePhase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(!runtime)return 0;if(runtime.completed)return Date.now();if(runtime.queue?.[runtime.cursor]?.kind==="village-wakeup")return Date.now();const due=Date.parse(runtime.deadlineAt||"");return Number.isFinite(due)?due:0}
+    if(cyclePhase==="night"){
+      const runtime=await this.getNightRuntime(meta,night,true);
+      if(!runtime)return 0;
+      if(runtime.completed)return Date.now();
+      const active=runtime.queue?.[runtime.cursor];
+      if(!active||active.kind==="village-wakeup")return Date.now();
+      const deadline=Date.parse(runtime.deadlineAt||"");
+      if(Number.isFinite(deadline))return deadline;
+      // Reconstruct a missing deadline from the original Server turn start.
+      // Zero-duration turns advance immediately only while Auto GM is enabled.
+      const started=Date.parse(active.startedAt||runtime.startedAt||"");
+      const seconds=Math.max(0,Number(active.durationSec)||0);
+      return Number.isFinite(started)?started+seconds*1000:Date.now();
+    }
     if(cyclePhase==="morning"||cyclePhase==="day"){
       const deadline=Date.parse(meta.dayDeadlineAt||'');
       const cfg=(await this.ctx.storage.get("gameConfig"))||{},sec=Math.max(0,Number(cfg?.timing?.villageDiscussionSec)||0),
@@ -1998,7 +2209,7 @@ export class RoomDurableObject extends DurableObject {
   async scheduleRoomAlarm(meta=null){
     meta=meta||await this.ctx.storage.get("meta");if(!meta||String(meta.phase||"").toLowerCase()==="deleted")return 0;
     const expiryDue=this.roomExpiryDue(meta),autoDue=await this.autoAdvanceDue(meta),demoDue=meta.demo?await nextServerDemoDue(this,meta):0,due=Math.min(expiryDue,autoDue||Infinity,demoDue||Infinity),next=Math.max(Date.now()+25,due);
-    try{await this.ctx.storage.setAlarm(next)}catch(error){if(meta.demo)throw error}
+    try{await this.ctx.storage.setAlarm(next)}catch(error){console.error("GMWW_ROOM_ALARM_SCHEDULE",error);if(meta.demo)throw error}
     return next
   }
   async runAutoAdvanceIfDue(meta){
@@ -2307,8 +2518,8 @@ export class RoomDurableObject extends DurableObject {
     const payload={ok:true,kind,actionId,actorId,roleId,artifactId,targetIds:targets,
       day,result,serverTime:Date.now()};
     await this.ctx.storage.put(receiptKey,{fingerprint,result:payload});
-    this.broadcast({type:"day_action_confirmed",actionId,actorId,targetIds:targets,
-      day,serverTime:Date.now()});
+    // A shared socket only signals a committed action; GM reads targets privately.
+    this.broadcast({type:"day_action_confirmed",matchId,day,serverTime:Date.now()});
     return j(payload);
   }
   /* V3.99: a single GM confirmation is one reversible server operation, including
@@ -2350,7 +2561,7 @@ export class RoomDurableObject extends DurableObject {
         return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN"},403);
     }else if(!actors.includes(actorId))return j({ok:false,error:"INVALID_ACTOR_FOR_TURN"},403);
     if(step.kind==="wolf-pack-bite"&&
-      (String(body.actionId)!=="action_wolf_bite"||
+      (targets.length!==1||String(body.actionId)!=="action_wolf_bite"||
         !(step.biteActorIds||[]).map(normalizeLoginId).includes(actorId)))
       return j({ok:false,error:"INVALID_PACK_ACTION"},403);
     const players=await this.ctx.storage.get("players")||{};
@@ -2438,7 +2649,7 @@ export class RoomDurableObject extends DurableObject {
       if(packBite&&(!isWolfRole(row)||actionId!=="action_wolf_bite"))
         return j({ok:false,error:"INVALID_PACK_ACTOR"},403);
       if(packBite&&currentUsage.some(x=>String(x?.matchId)===matchId&&Number(x?.night)===Number(meta.cycleNight||1)&&
-        x?.actionId==="action_wolf_bite"))
+        x?.actionId==="action_wolf_bite"&&normalizeLoginId(x?.actorId)===actorId))
         return j({ok:false,error:"PACK_BITE_ALREADY_USED"},409);
       const policy=packBite?{roleId,actionId,singleActionPerNight:false,usageMode:"eachNight",usageCount:1,knownAction:true}:
         resolveRoleActionPolicy(roleCard,roleId,actionId);
@@ -2527,10 +2738,16 @@ export class RoomDurableObject extends DurableObject {
     const after=await snapshot(),undoToken="undo-"+crypto.randomUUID(),
       record={token:undoToken,matchId,cycleKey,night:Number(meta.cycleNight||1),turnId,
         label:String(body?.effectName||body?.actionId||"Hành động").slice(0,120),targetIds:targets,
-        before,after,undone:false,createdAt:new Date().toISOString()};
+        actorId,source:String(body?.source||"gm"),before,after,undone:false,createdAt:new Date().toISOString()};
     await this.ctx.storage.put(undoKey,record);
     const revealIds=Array.isArray(body?.revealTargetIds)&&body.revealTargetIds.length?body.revealTargetIds.map(normalizeLoginId):String(body?.revealTargetId||'')?[normalizeLoginId(body.revealTargetId)]:targets;
-    const revelation=effectiveTargets.length?resolveNightReveal({actionId:String(body?.actionId||''),targetIds:revealIds.filter(id=>players["member:"+id]&&(isFactionCompare||!isExpelled(id))),
+    const revealActionId=String(body?.actionId||'');
+    // Seer must receive "Không phải Sói" for an expelled target, even
+    // when their harmful effect is correctly skipped by the action executor.
+    const seerExcluded=revealActionId==='action_seer'&&revealIds.some(id=>isExpelled(id));
+    const revelation=(effectiveTargets.length||seerExcluded)?resolveNightReveal({actionId:revealActionId,
+      targetIds:revealIds.filter(id=>players["member:"+id]&&(isFactionCompare||revealActionId==='action_seer'||!isExpelled(id))),
+      expelledIds:revealActionId==='action_seer'?revealIds.filter(isExpelled):[],
       assignments:await readNightAssignments(this.ctx.storage,matchId)}):null;
     const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
       resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:(await this.ctx.storage.get("interactions"))||[],players,
@@ -2538,7 +2755,8 @@ export class RoomDurableObject extends DurableObject {
     const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt,
       ...(revelation?{revelation}:{}),...(wolfOutcome?{wolfOutcome}: {})};
     await this.ctx.storage.put(receiptKey,{fingerprint,result});
-    this.broadcast({type:"battle_action_confirmed",matchId,turnId,targets,serverTime:Date.now()});
+    // Never broadcast a private actor, targets or the undo ledger to member sockets.
+    this.broadcast({type:"battle_action_confirmed",matchId,serverTime:Date.now()});
     return j(result);
   }
   async gmBattleUndo(request,body){
@@ -2548,9 +2766,15 @@ export class RoomDurableObject extends DurableObject {
     if(!record||String(body?.undoToken||"")!==record.token)return j({ok:false,error:"UNDO_NOT_FOUND"},404);
     if(record.undone)return j({ok:true,idempotent:true,undone:true,turnId:record.turnId});
     if(String(meta.phase)!=="running"||String(meta.cyclePhase)!=="night"||
-      String(meta.cycleKey||"")!==record.cycleKey||Number(meta.cycleNight||0)!==record.night||
-      String(meta.currentNightTurnId||"")!==record.turnId)
-      return j({ok:false,error:"UNDO_STALE_TURN",message:"Chỉ khôi phục hành động vừa xác nhận trong lượt hiện tại."},409);
+      String(meta.cycleKey||"")!==record.cycleKey||Number(meta.cycleNight||0)!==record.night)
+      return j({ok:false,error:"UNDO_STALE_TURN",message:"Chỉ khôi phục hành động trong cùng đêm hiện tại."},409);
+    // Confirmations may auto-advance the GM timeline before Undo is tapped.
+    // Only allow rewind to this exact recorded turn if no later gameplay state
+    // has changed. Never roll back a different match/night or another action.
+    const runtime=await this.getNightRuntime(meta,Number(meta.cycleNight||1),false);
+    const undoIndex=runtime?.queue?.findIndex(step=>String(step?.id||"")===String(record.turnId))??-1;
+    if(undoIndex<0||!Number.isInteger(runtime.cursor)||runtime.cursor<undoIndex)
+      return j({ok:false,error:"UNDO_STALE_TURN",message:"Lượt đã thay đổi, không thể khôi phục."},409);
     for(const row of record.after){
       const current=await this.ctx.storage.get(row.key),exists=current!==undefined&&current!==null;
       if(exists!==row.exists||JSON.stringify(current??null)!==JSON.stringify(row.value??null))
@@ -2561,10 +2785,11 @@ export class RoomDurableObject extends DurableObject {
       else await this.ctx.storage.delete(row.key);
     }
     if(meta.demo)await this.ctx.storage.delete("demoPlan");
+    if(runtime.cursor!==undoIndex||runtime.completed||String(meta.currentNightTurnId||"")!==record.turnId)
+      await this.advanceNightRuntime(meta,"jump","gm-undo",undoIndex);
     record.undone=true;record.undoneAt=new Date().toISOString();await this.ctx.storage.put(key,record);
     const logId="ev-"+crypto.randomUUID();await this.ctx.storage.put("actionLog:"+String(Date.parse(record.undoneAt)).padStart(13,"0")+":"+logId,{id:logId,type:"battle_undo",loginId:String(record.targetIds||""),matchId,actionId:record.label,message:"GM hoàn tác: "+record.label,createdAt:record.undoneAt,source:"gm"});
-    this.broadcast({type:"battle_action_undone",matchId,turnId:record.turnId,targets:record.targetIds,
-      serverTime:Date.now()});
+    this.broadcast({type:"battle_action_undone",matchId,serverTime:Date.now()});
     this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
     return j({ok:true,undone:true,turnId:record.turnId,targets:record.targetIds});
   }
@@ -2745,8 +2970,8 @@ export class RoomDurableObject extends DurableObject {
     }
     const defaults={frozen:"Bạn đang bị Đóng Băng.",expelled:"Bạn đã bị Đuổi Khỏi Làng.",dead:"Bạn đã Chết.",thumb_vote:"Hãy chọn dấu phù hợp.",assassin_mark:"Bạn đã bị Đánh Dấu. Hãy chọn 👍 hoặc 👎 để xác định kết quả.",effect_notice:"Bạn đã nhận một Hiệu Ứng."},rawOptions=Array.isArray(body?.options)?body.options.map(x=>String(x||"").slice(0,40)).filter(Boolean).slice(0,4):[],cycleKey=String(body?.cycleKey??body?.roundKey??body?.nightKey??body?.nightIndex??body?.roundIndex??meta.cycleKey??"").slice(0,160),expiresAt=body?.expiresAt?String(body.expiresAt).slice(0,64):null,effectActive=["frozen","expelled","dead","assassin_mark"].includes(type),clientEventId=String(body?.clientEventId||"").slice(0,240),rows=(await this.ctx.storage.get("interactions"))||[];
     if(clientEventId){const existing=rows.find(x=>String(x?.clientEventId||"")===clientEventId&&normalizeLoginId(x?.loginId)===loginId);if(existing)return j({ok:true,interaction:existing,idempotent:true})}
-    const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),
-      ...(type==="assassin_mark"?{gmChoice:String(body?.assassinChoice||"")}: {}),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:null,respondedAt:null};
+    const now=new Date().toISOString(),choiceType=type==="thumb_vote"||type==="assassin_mark",silentVisualNotice=type==="effect_notice"&&body?.requireAck!==true&&body?.requireResponse!==true,interaction={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),clientEventId,eventId:String(body?.eventId||"").slice(0,240),engineEventType:String(body?.engineEventType||"").slice(0,120),matchId:String(body?.matchId||meta.matchId||""),loginId,type,message:String(body?.message||defaults[type]||"").slice(0,500),effectInstanceId:String(body?.effectInstanceId||"").slice(0,160),effectId:String(body?.effectId||"").slice(0,160),effectName:String(body?.effectName||"").slice(0,180),actionId:String(body?.actionId||"").slice(0,160),direction:String(body?.direction||"").slice(0,10),actorId:String(body?.actorId||"").slice(0,160),playerId:String(body?.playerId||"").slice(0,160),night:Number(body?.night||0),cycleKey,expiresAt,effectActive,emoji:String(body?.emoji||"").slice(0,20),title:String(body?.title||"").slice(0,180),requireAck:!!body?.requireAck,requireResponse:!!body?.requireResponse,responseHandler:String(body?.responseHandler||"").slice(0,120),
+      ...(type==="assassin_mark"?{gmChoice:String(body?.assassinChoice||"")}: {}),options:choiceType?(rawOptions.length?rawOptions:["👍","👎"]):["ĐÃ HIỂU"],status:silentVisualNotice?"responded":"pending",source:String(body?.source||"gm").slice(0,80),createdAt:now,response:silentVisualNotice?"AUTO_ACK":null,respondedAt:silentVisualNotice?now:null};
     if(type==="dead"&&body?.turnId&&String(meta.cyclePhase)==="night"){
       interaction.type="effect_notice";interaction.pendingDeath=true;interaction.effectActive=false;
       interaction.night=Number(meta.cycleNight);interaction.message="Tác động gây chết sẽ được giải quyết vào sáng hôm sau.";
@@ -2757,7 +2982,11 @@ export class RoomDurableObject extends DurableObject {
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     // Sát Thủ is secret at night: never broadcast the GM choice or open the player prompt early.
     // The player receives a sanitized private interaction from playerState only in the morning.
-    if(type!=="assassin_mark"&&!interaction.pendingDeath)this.broadcast({type:"player_interaction",interaction});
+    if(type!=="assassin_mark"&&!interaction.pendingDeath&&!silentVisualNotice){
+      // WebSocket participantId is not a verified member session. In DEMO,
+      // private actions MUST be obtained through the authenticated /me endpoint.
+      if(meta.demo!==true)this.broadcast({type:"player_interaction",interaction});
+    }
     return j({ok:true,interaction});
   }
   async playerInteractionRespond(body){
@@ -2766,7 +2995,7 @@ export class RoomDurableObject extends DurableObject {
       rows=(await this.ctx.storage.get("interactions"))||[],meta=await this.ctx.storage.get("meta");
     const row=rows.find(x=>String(x?.id)===id&&normalizeLoginId(x?.loginId)===loginId);
     if(!row)return j({ok:false,error:"INTERACTION_NOT_FOUND"},404);
-    if(row.status==="responded"){const {gmChoice,...safe}=row;return j({ok:true,interaction:safe,idempotent:true});}
+    if(row.status==="responded")return j({ok:true,interaction:playerSafeInteraction(row),idempotent:true});
     if(row.matchId&&meta?.matchId&&String(row.matchId)!==String(meta.matchId))
       return j({ok:false,error:"STALE_INTERACTION",message:"Tương tác này thuộc ván cũ."},409);
     const isAssassin=row.type==="assassin_mark";
@@ -2805,13 +3034,19 @@ export class RoomDurableObject extends DurableObject {
       {id:logId,type:"player_response",loginId,matchId:String(meta?.matchId||""),
        message:"Người chơi phản hồi: "+response+(assassinOutcome?" · Kết quả: "+assassinOutcome:""),
        createdAt:now,source:"player"});
-    this.broadcast({type:"player_interaction_response",interaction:{...row,gmChoice:undefined},
-      assassinOutcome,serverTime:Date.now()});
+    // Never send personal response details on a socket with a spoofable
+    // participantId. Player Web retrieves them from the authenticated /me API.
+    const safeResponse=playerSafeInteraction(row);
+    // Socket rooms have unverified listeners: broadcast only the public receipt.
+    // In particular, never disclose the Assassin action type or its outcome on WS.
+    const socketResponse=publicInteractionReceipt(row);
+    if(meta.demo!==true)this.broadcast({type:"player_interaction_response",interaction:socketResponse,
+      serverTime:Date.now()});
     if(assassinOutcome==="dead")this.broadcast({type:"player_status_changed",loginId,
       statusId:"dead",active:true,serverTime:Date.now()});
-    return j({ok:true,interaction:{...row,gmChoice:undefined},assassinOutcome});
+    return j({ok:true,interaction:safeResponse,assassinOutcome});
   }
-  async gmRename(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,name=normalizeRoomName(body?.roomName);if(!name)return j({ok:false,error:"INVALID_ROOM_NAME",message:"Tên Phòng không hợp lệ."},400);meta.roomName=name;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta)})}
+  async gmRename(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,name=normalizeRoomName(body?.roomName);if(!name)return j({ok:false,error:"INVALID_ROOM_NAME",message:"Tên Phòng không hợp lệ."},400);meta.roomName=name;meta.updatedAt=new Date().toISOString();meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);await this.scheduleRoomAlarm(meta);const players=(await this.ctx.storage.get("players"))||{};this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,room:publicRoom(meta)})}
   async gmReset(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,roomWasEnabled=meta.enabled!==false,now=new Date().toISOString(),transactionId=String(body?.transactionId||"").trim().slice(0,160),currentVersion=Number(meta.resetVersion||0),hasExpected=body?.expectedResetVersion!==undefined&&body?.expectedResetVersion!==null,expected=Number(body?.expectedResetVersion||0);
@@ -2819,6 +3054,7 @@ export class RoomDurableObject extends DurableObject {
     if(softPostGame&&hasExpected&&Number(expected)!==currentVersion&&meta.lastResetTransactionId!==transactionId)return j({ok:false,error:"RESET_VERSION_CONFLICT"},409);
     if(softPostGame&&transactionId&&meta.lastResetTransactionId===transactionId){const players=await this.ctx.storage.get("players")||{};return j({ok:true,reset:true,hardReset:false,idempotent:true,preserveParticipants:true,room:publicRoom(meta),players:Object.values(players).map(publicPlayer)})}
     if(softPostGame){
+      await this.chatVoiceClear();
       const players=(await this.ctx.storage.get("players"))||{},nextVersion=currentVersion+1;
       for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.lastSeenAt=now}
       await this.ctx.storage.put("players",players);await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);
@@ -2839,6 +3075,7 @@ export class RoomDurableObject extends DurableObject {
     if(hasExpected&&Number.isFinite(expected)&&expected!==currentVersion){
       return j({ok:false,error:"RESET_VERSION_CONFLICT",message:"Phòng đã thay đổi trước khi RESET. Hãy cập nhật Phòng rồi thử lại.",expectedResetVersion:expected,currentResetVersion:currentVersion,room:publicRoom(meta)},409)
     }
+    await this.chatVoiceClear();
     const oldPlayers=(await this.ctx.storage.get("players"))||{},removedPlayers=Object.values(oldPlayers).map(publicPlayer),nextVersion=currentVersion+1;
     await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.put("interactions",[]);await this.ctx.storage.put("seatSwaps",[]);
     await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");
@@ -2853,8 +3090,8 @@ export class RoomDurableObject extends DurableObject {
     return j(ack)
   }
   async gmEnd(request,body){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta,incomingMatchId=String(body?.matchId||""),now=new Date().toISOString();if(meta.matchId&&incomingMatchId&&String(meta.matchId)!==incomingMatchId)return j({ok:false,error:"MATCH_MISMATCH",message:"Không thể kết thúc vì đây không phải ván đang chạy trong Phòng."},409);const completionKey="matchCompletion:"+String(incomingMatchId||meta.matchId||""),completed=await this.ctx.storage.get(completionKey);
-    if(completed){for(const key of (await this.ctx.storage.list({prefix:"drunkDeck:"+String(incomingMatchId||meta.matchId||"")+":"})).keys())await this.ctx.storage.delete(key);const requested=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||"");if(requested&&requested!==completed.winnerFaction)return j({ok:false,error:"WINNER_ALREADY_CONFIRMED"},409);return j({...completed,idempotent:true})}
-    if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};for(const key of (await this.ctx.storage.list({prefix:"drunkDeck:"+endedMatchId+":"})).keys())await this.ctx.storage.delete(key);const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});const ack={ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true};if(endedMatchId)await this.ctx.storage.put(completionKey,ack);return j(ack)}
+    if(completed){await this.chatVoiceClear();for(const key of (await this.ctx.storage.list({prefix:"drunkDeck:"+String(incomingMatchId||meta.matchId||"")+":"})).keys())await this.ctx.storage.delete(key);const requested=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||"");if(requested&&requested!==completed.winnerFaction)return j({ok:false,error:"WINNER_ALREADY_CONFIRMED"},409);return j({...completed,idempotent:true})}
+    if(incomingMatchId)meta.matchId=incomingMatchId;meta.matchRevision=Number(body?.matchRevision||meta.matchRevision||0);const winnerFaction=normalizeWinnerFaction(body?.winnerFaction||body?.winner||body?.result?.winnerFaction||body?.result?.winner||""),winnerLabel=String(body?.winner||body?.winnerLabel||body?.result?.winner||winnerFaction||"").slice(0,180),endedMatchId=String(meta.matchId||"");meta.endedAt=now;meta.lastEndedMatchId=endedMatchId||null;meta.winnerFaction=winnerFaction||null;meta.winnerLabel=winnerLabel||null;meta.resultVersion=Number(meta.resultVersion||0)+1;meta.reopenAt=now;meta.phase="lobby";meta.status="waiting";meta.gmStage="seats";meta.locked=false;meta.cycleKey=null;meta.cyclePhase=null;meta.cycleNight=0;meta.currentNightTurnId=null;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);await this.chatVoiceClear();try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){};for(const key of (await this.ctx.storage.list({prefix:"drunkDeck:"+endedMatchId+":"})).keys())await this.ctx.storage.delete(key);const players=(await this.ctx.storage.get("players"))||{};for(const p of Object.values(players)){p.ready=playerSetupComplete(meta,p);p.reservedByGM=true}await this.ctx.storage.put("players",players);const rows=(await this.ctx.storage.get("interactions"))||[];for(const x of rows){if(x?.effectActive!==false&&(!x?.matchId||!endedMatchId||String(x.matchId)===endedMatchId))x.effectActive=false}await this.ctx.storage.put("interactions",pruneInteractions(rows));const room=publicRoom(meta),memberResults=[];for(const p of Object.values(players)){if(!p?.loginId)continue;const lid=normalizeLoginId(p.loginId),stored=await this.ctx.storage.get("roles:"+lid),legacy=await this.ctx.storage.get("role:"+lid),rrs=Array.isArray(stored)&&stored.length?stored:(legacy?[legacy]:[]),factions=rrs.map(rr=>rr?.roleCard?.faction??rr?.faction??""),result=winnerFaction&&factions.some(f=>normalizeWinnerFaction(f)===winnerFaction)?"win":"loss";memberResults.push({loginId:p.loginId,roleName:rrs.map(rr=>rr?.roleName||rr?.roleCard?.name||"").filter(Boolean).join(" + "),faction:factions.filter(Boolean).join(" + "),result})}this.broadcast({type:"game_result",matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,room});this.broadcast({type:"room_state",room,players:Object.values(players).map(publicPlayer),waitingRoom:true});const ack={ok:true,room,matchId:endedMatchId,winnerFaction:room.winnerFaction,winnerLabel:room.winnerLabel,memberResults,waitingRoom:true,ready:true};if(endedMatchId)await this.ctx.storage.put(completionKey,ack);return j(ack)}
   async alarm(){return this.ctx.blockConcurrencyWhile(()=>this.roomAlarm())}
   async roomAlarm(){
     try{
@@ -2880,6 +3117,7 @@ export class RoomDurableObject extends DurableObject {
       if(await this.runAutoAdvanceIfDue(meta))return;
       meta=await this.ctx.storage.get("meta");const due=this.roomExpiryDue(meta);
       if(Date.now()<due){await this.scheduleRoomAlarm(meta);return}
+      await this.chatVoiceClear();
       const now=new Date().toISOString();meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=now;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_EXPIRED")}catch{}
     }catch(e){
       console.error("GMWW_ROOM_ALARM",e);
@@ -2905,9 +3143,9 @@ export class RoomDurableObject extends DurableObject {
     const legacyRole=await this.ctx.storage.get("role:"+loginId),storedRoles=await this.ctx.storage.get("roles:"+loginId),legacyRows=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]),activeSnapshot=currentPrivateDeliverySnapshot(await this.ctx.storage.get("deliverySnapshot:"+loginId),meta),roleRows=privateDeliveryRoles(activeSnapshot,legacyRows),roles=roleRows.map(privateRole),role=roles[0]||null,cardBackImage=(await this.ctx.storage.get("cardBackImage"))||null,rows=(await this.ctx.storage.get("interactions"))||[],sameMatch=x=>(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId)),interactions=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&x?.status==="pending"&&sameMatch(x)&&
       (x.type!=="assassin_mark"||(String(meta?.cyclePhase||"")==="morning"&&Number(x.night)===Number(meta.cycleNight)&&
        !rows.some(y=>normalizeLoginId(y?.loginId)===loginId&&["expelled","dead"].includes(String(y.type))&&y.effectActive!==false&&sameMatch(y)))))
-      .slice(-10).map(({gmChoice,...safe})=>safe),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&
+      .slice(-10).map(playerSafeInteraction),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&
       (x.type!=="assassin_mark"||String(meta?.cyclePhase||"")==="morning")&&
-      (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest).map(({gmChoice,...safe})=>safe);
+      (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest).map(playerSafeInteraction);
     const storedArtifact=await this.ctx.storage.get("artifact:"+loginId),
       // A role assignment also contains the committed artifact. Use it if the
       // legacy standalone Artifact key is absent; do not hide an assigned card.
@@ -2922,15 +3160,50 @@ export class RoomDurableObject extends DurableObject {
     // pack role labels. Never copy names or faction into public room or websocket.
     const wolfRuntime=String(meta.cyclePhase)==="night"&&Number(meta.cycleNight)>0?
       await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
+    const privateAssignments=(await this.ctx.storage.get("assignments"))||[];
     const wolfRecognition=privateWolfRecognition(meta,wolfRuntime,loginId,
-      wolfPackMembers(await this.ctx.storage.get("assignments")||[],rows,meta.matchId));
+      wolfPackMembers(privateAssignments,rows,meta.matchId))||
+      privateRoleGroupRecognition(meta,wolfRuntime,loginId,privateAssignments,rows);
     const turn=wolfRuntime?.queue?.[wolfRuntime.cursor];
+    // Mirror the GM's current schedule without sending actor IDs, targets,
+    // permissions, or private role assignments to other players.
+    const publicTimeline=String(meta.phase)==="running"?
+      String(meta.cyclePhase)==="night"&&wolfRuntime?
+        {phase:"night",activeIndex:Math.max(0,Number(wolfRuntime.cursor)||0),
+          clock:projectPublicTurnClock(wolfRuntime),
+          steps:(wolfRuntime.queue||[]).slice(0,150).map((step,index)=>({
+            label:String(step?.label||"Lượt Vai Trò").slice(0,110),
+            status:index<Number(wolfRuntime.cursor)?"done":index===Number(wolfRuntime.cursor)?"active":"upcoming"
+          }))}:
+        {phase:String(meta.cyclePhase||"morning"),activeIndex:0,
+          // V3.304: Player top menu in daytime shows only the wake-up step (village notice and gallows boxes removed).
+          steps:[{label:"Làng ơi dậy đi",status:"active"}]}
+      :null;
+    // Public role call only. Never reveal the actor, role owner or hidden target.
+    const audioCue=await this.announcementWithAudio(meta,wolfRuntime);
     const drawn=Number(meta.cycleNight)===3&&String(meta.cyclePhase)==='night'?
       await this.ctx.storage.get('drunkDeck:'+String(meta.matchId)+':3:'+loginId):null;
     const drunkDraw=drawn&&(drawn.selectedId||
       turn?.roleId==='role_drunk'&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId))?
       drunkDeckView(drawn,false):null;
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,drunkDraw,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
+    const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
+    // GM battleMarkPlayers uses this same resolver to illuminate the confirmed
+    // Wolf-bite target at the Witch turn. Deliver it privately ONLY to the
+    // authenticated Witch actor in this active turn, never over public WS.
+    const witchActor=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"&&
+      String(meta.cyclePhase||"")==="night"&&turn&&!wolfRuntime?.completed&&
+      privateAssignments.some(a=>normalizeLoginId(a.loginId)===loginId&&a.roleId==="role_witch")&&
+      ((turn.roleId==="role_witch"&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId))||
+       (turn.roles||[]).some(r=>r.roleId==="role_witch"&&(r.loginIds||[]).map(normalizeLoginId).includes(loginId)));
+    const witchNightIntel=witchActor?resolveWolfNight({
+      interactions:rows,players,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),
+      matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
+    const witchBite=witchActor&&witchNightIntel?.ok?{
+      targetIds:witchNightIntel.packDisabled?[]:(witchNightIntel.attacked||[]).map(x=>normalizeLoginId(x.to)).filter(Boolean),
+      packDisabled:!!witchNightIntel.packDisabled
+    }:null;
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,witchBite,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
@@ -3140,19 +3413,187 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,room,player:publicPlayer(p),players:publicPlayers,arrived:true,seatId:targetSeatId})
   }
   async join(body){
-    const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.demo===true)return j({ok:false,error:"DEMO_ROOM_GM_ONLY",message:"Phòng Demo chỉ dùng trong GM Server."},403);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);
+    const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.demo===true&&!body?.member?.loginId)return j({ok:false,error:"DEMO_LOGIN_REQUIRED",message:"Đăng nhập thành viên để tham gia DEMO."},403);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);
     let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;const now=new Date().toISOString(),phase=String(meta.phase||"lobby").toLowerCase(),inProgress=["role_delivery","running","started","game","playing"].includes(phase);let player;
-    if(body?.member?.loginId){const m=body.member,key="member:"+m.loginId,evicted=(await this.ctx.storage.get("evictedMembers"))||[];if(evicted.includes(normalizeLoginId(m.loginId))&&!players[key])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"GM đã mời bạn ra khỏi Phòng. Hãy chờ GM gọi lại."},403);const resumeExisting=normalizeRoomCode(m.currentRoomCode||"")===normalizeRoomCode(meta.code||""),reserved=players[key]?.reservedByGM===true,known=!!players[key]||resumeExisting||reserved;if(meta.enabled===false&&!known)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!known)return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Chỉ Thành Viên đã tham dự mới có thể vào lại trận."},423);player={...players[key],participantId:key,kind:"member",loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:normalizeGameCharacterId(m.gameCharacterId)||normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:reserved===true||(players[key]?.ready??m.ready??false),reservedByGM:reserved,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:!players[key]&&resumeExisting?now:players[key]?.restoredAt||null};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
+    if(body?.member?.loginId){const m=body.member,key="member:"+m.loginId,evicted=(await this.ctx.storage.get("evictedMembers"))||[];if(evicted.includes(normalizeLoginId(m.loginId))&&!players[key])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"GM đã mời bạn ra khỏi Phòng. Hãy chờ GM gọi lại."},403);const resumeExisting=normalizeRoomCode(m.currentRoomCode||"")===normalizeRoomCode(meta.code||""),reserved=players[key]?.reservedByGM===true,known=!!players[key]||resumeExisting||reserved;if(meta.enabled===false&&!known)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!known&&meta.demo!==true)return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Chỉ Thành Viên đã tham dự mới có thể vào lại trận."},423);player={...players[key],participantId:key,kind:"member",humanControlled:meta.demo===true||players[key]?.humanControlled===true,loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:normalizeGameCharacterId(m.gameCharacterId)||normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:reserved===true||(players[key]?.ready??m.ready??false),reservedByGM:reserved,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:!players[key]&&resumeExisting?now:players[key]?.restoredAt||null};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
     else{const displayName=normalizeDisplayName(body?.guest?.displayName),avatarId=String(body?.guest?.avatarId||"");if(displayName.length<2||displayName.length>24)return j({ok:false,error:"INVALID_GUEST_NAME"},400);if(!(await this.validMemberAvatar(avatarId)))return j({ok:false,error:"INVALID_AVATAR"},400);const guestId=String(body?.guest?.guestId||crypto.randomUUID()),key="guest:"+guestId;if(meta.enabled===false&&!players[key])return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!players[key])return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Người ngoài không thể tham gia giữa trận."},423);player={participantId:key,kind:"guest",guestId,displayName,avatarId,gameCharacterId:normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:players[key]?.ready||false,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now()};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
     if(!normalizeSeatId(player?.seatId,meta.seatCount)&&player?.positionX==null&&player?.movementStatus!=="moving"){
       const portalNow=Date.now(),from={x:50,y:12},to={x:50,y:23};
       player.positionX=from.x;player.positionY=from.y;player.moveId="portal:"+crypto.randomUUID();player.moveFromX=from.x;player.moveFromY=from.y;player.moveToX=to.x;player.moveToY=to.y;player.moveStartedAt=portalNow;player.moveDurationMs=1100;player.moveTargetSeatId=null;player.movementStatus="moving";player.villageActivity="portal_arrival";player.ready=player.reservedByGM===true;players[player.participantId]=player;
     }
-    await this.ctx.storage.put("players",players);meta.locked=false;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);const publicRoster=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room:publicRoom(meta),players:publicRoster});return j({ok:true,player:publicPlayer(player),players:publicRoster,room:publicRoom(meta),resumed:!!player.restoredAt,setupRequired:!playerSetupComplete(meta,player)});
+    await this.ctx.storage.put("players",players);if(!inProgress)meta.locked=false;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);const publicRoster=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room:publicRoom(meta),players:publicRoster});return j({ok:true,player:publicPlayer(player),players:publicRoster,room:publicRoom(meta),resumed:!!player.restoredAt,setupRequired:!playerSetupComplete(meta,player)});
   }
   async ready(body){const id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt."},423);let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},404);if(!!body.ready&&!players[id].reservedByGM&&!playerSetupComplete(meta,players[id]))return j({ok:false,error:"SETUP_REQUIRED",message:"Hãy chọn Nhân Vật và vị trí ngồi trước khi Sẵn Sàng."},409);players[id].ready=players[id].reservedByGM===true||!!body.ready;players[id].lastHeartbeatAt=Date.now();players[id].lastSeenAt=new Date().toISOString();await this.ctx.storage.put("players",players);meta.updatedAt=players[id].lastSeenAt;meta.lastUsedAt=meta.updatedAt;await this.ctx.storage.put("meta",meta);this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});return j({ok:true,player:publicPlayer(players[id])})}
-  async heartbeat(body){const id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt."},423);let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(!id||!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},404);const now=new Date().toISOString();players[id].lastHeartbeatAt=Date.now();players[id].lastSeenAt=now;if(players[id].reservedByGM===true)players[id].ready=true;else if(body&&Object.prototype.hasOwnProperty.call(body,"ready"))players[id].ready=!!body.ready;await this.ctx.storage.put("players",players);meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}const room=publicRoom(meta);return j({ok:true,player:publicPlayer(players[id]),room})}
+  async heartbeat(body){const id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt."},423);let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(!id||!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},404);const now=new Date().toISOString();players[id].lastHeartbeatAt=Date.now();players[id].lastSeenAt=now;if(players[id].reservedByGM===true)players[id].ready=true;else if(body&&Object.prototype.hasOwnProperty.call(body,"ready"))players[id].ready=!!body.ready;await this.ctx.storage.put("players",players);meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);/* Heartbeat must preserve Auto GM turn deadline. */await this.scheduleRoomAlarm(meta);const room=publicRoom(meta);return j({ok:true,player:publicPlayer(players[id]),room})}
   async leave(body){const players=(await this.ctx.storage.get("players"))||{},id=String(body?.participantId||""),meta=await this.ctx.storage.get("meta");if(!id||!players[id])return j({ok:false,error:"PLAYER_NOT_FOUND",message:"Bạn không còn ở trong phòng."},404);delete players[id];await this.ctx.storage.put("players",players);if(meta){meta.updatedAt=new Date().toISOString();await this.ctx.storage.put("meta",meta)}for(const ws of this.ctx.getWebSockets()){try{if(ws.deserializeAttachment()?.participantId===id)ws.close(1000,"PLAYER_LEFT_ROOM")}catch{}}this.broadcast({type:"room_state",room:meta?publicRoom(meta):null,players:Object.values(players).map(publicPlayer)});return j({ok:true,left:true})}
+  // Chat content NEVER enters the public room DTO or broadcast WebSocket.
+  // The generic chat_tick only asks each authenticated client to fetch its own channel.
+  async chatAccess(loginId,requestedChannel="room"){
+    const meta=await this.ctx.storage.get("meta"),players=(await this.ctx.storage.get("players"))||{},
+      rows=(await this.ctx.storage.get("interactions"))||[],bans=(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{};
+    const id=normalizeLoginId(loginId);
+    // Server-only authenticated DM channel. Never deliver through public room chat or room state.
+    if(requestedChannel==="gm"){
+      const allowed=meta?.enabled!==false&&["running","role_delivery","lobby","waiting"].includes(String(meta?.phase||""))&&!!players["member:"+id];
+      // GM private chat remains available to every authenticated room member,
+      // including dead, expelled, frozen and muted players.
+      const permission=allowed?{canRead:true,canSend:true,channel:"gm:"+id,scope:"gm",reason:null}
+        :{canRead:false,canSend:false,channel:null,scope:null,reason:"CHAT_NOT_IN_ROOM"};
+      return{meta,players,rows,permission};
+    }
+    const runtime=meta?.cyclePhase==="night"?await this.getNightRuntime(meta,Number(meta.cycleNight||1),false):null;
+    const permission=chatPolicy({meta,players,rows,runtime,loginId,bans});
+    return{meta,players,rows,permission};
+  }
+
+  // Voice metadata is scoped to the current match. Internal chunks avoid any arbitrary UI KB limit.
+  async chatVoiceStore(scope,channel,voice){
+    const mime=String(voice?.mime||'').toLowerCase().split(';')[0].trim(),
+      durationMs=Number(voice?.durationMs),base64=voice?.base64;
+    if(!['audio/mp4','audio/webm','audio/ogg','audio/aac','audio/mpeg','audio/wav'].includes(mime)||
+       !Number.isFinite(durationMs)||durationMs<=0||durationMs>30000||
+       typeof base64!=='string'||!base64.length||base64.length%4!==0||
+       !/^[A-Za-z0-9+/]+={0,2}$/.test(base64))throw new Error('CHAT_VOICE_INVALID');
+    const id=crypto.randomUUID(),prefix='onlineChatVoice:'+scope+':'+id+':',unit=65536,parts=Math.ceil(base64.length/unit);
+    // Independent chunk keys may be written concurrently; the meta marker is
+    // committed only after every chunk completes, so readers never see partial audio.
+    for(let i=0;i<parts;i+=6){
+      const writes=[];
+      for(let n=i;n<Math.min(parts,i+6);n++)
+        writes.push(this.ctx.storage.put(prefix+n,base64.slice(n*unit,(n+1)*unit)));
+      await Promise.all(writes);
+    }
+    await this.ctx.storage.put(prefix+'meta',{channel,mime,durationMs,parts});
+    return {kind:'voice',voiceId:id,durationMs};
+  }
+  async chatVoiceRead({loginId,gm=false,request},id){
+    if(!/^[a-f0-9-]{36}$/.test(String(id||'')))return j({ok:false,error:'CHAT_AUDIO_NOT_FOUND'},404);
+    const meta=await this.ctx.storage.get('meta'),scope=chatStorageScope(meta),
+      prefix='onlineChatVoice:'+scope+':'+id+':',record=await this.ctx.storage.get(prefix+'meta');
+    if(!record)return j({ok:false,error:'CHAT_AUDIO_NOT_FOUND'},404);
+    if(gm){
+      const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    }else{
+      const who=normalizeLoginId(loginId),access=await this.chatAccess(who,record.channel.startsWith('gm:')?'gm':'room');
+      if(!access.players['member:'+who])return j({ok:false,error:'CHAT_AUDIO_FORBIDDEN'},403);
+      const allowed=record.channel==='gm:all'?access.permission.canRead:
+        record.channel==='gm:'+who?access.permission.canRead&&access.permission.channel==='gm:'+who:
+        access.permission.canRead&&access.permission.channel===record.channel;
+      if(!allowed)return j({ok:false,error:'CHAT_AUDIO_FORBIDDEN'},403);
+    }
+    const blocks=[];
+    for(let i=0;i<record.parts;i+=6){
+      const indices=Array.from({length:Math.min(6,record.parts-i)},(_,offset)=>i+offset);
+      blocks.push(...await Promise.all(indices.map(index=>this.ctx.storage.get(prefix+index))));
+    }
+    if(blocks.some(chunk=>typeof chunk!=='string'))return j({ok:false,error:'CHAT_AUDIO_UNAVAILABLE'},404);
+    return j({ok:true,mime:record.mime,base64:blocks.join(''),durationMs:record.durationMs});
+  }
+  async chatVoiceClear(){
+    // End/reset deletes voice audio and voice references, but retains text and other game data.
+    for(const key of (await this.ctx.storage.list({prefix:'onlineChatVoice:'})).keys())await this.ctx.storage.delete(key);
+    for(const [key,messages] of await this.ctx.storage.list({prefix:'onlineChat:'})){
+      if(Array.isArray(messages)&&messages.some(m=>m?.kind==='voice'))
+        await this.ctx.storage.put(key,messages.filter(m=>m?.kind!=='voice'));
+    }
+  }
+  async playerChatRead(body){
+    const loginId=normalizeLoginId(body?.loginId),{meta,players,rows,permission}=await this.chatAccess(loginId,body?.channel);
+    let notices=[],noticeCycleNight=0;
+    if(players["member:"+loginId]&&meta?.phase==="running"&&meta?.matchId){
+      const phase=String(meta.cyclePhase||"");
+      const currentNight=Math.max(0,Number(meta.cycleNight||0));
+      // A new night must never disclose its pending secret actions. Keep only
+      // the already-public bulletin from the preceding day until next dawn.
+      const resolved=["morning","day"].includes(phase);
+      noticeCycleNight=resolved?currentNight:phase==="night"?currentNight-1:0;
+      if(noticeCycleNight>0){
+        const noticeKey="villagePublicBulletin:"+String(meta.matchId)+":"+noticeCycleNight;
+        const stored=await this.ctx.storage.get(noticeKey);
+        notices=Array.isArray(stored?.items)?stored.items:[];
+        if(resolved){
+          // First public read backfills from durable room history, so even
+          // pruned interaction rows can produce a stable, replayable bulletin.
+          const source=stored?rows:await this.villageHistoryForMatch(meta,rows);
+          const latest=publicChatNotices(meta,players,source);
+          const merged=mergePublicChatNotices(notices,latest);
+          if(!stored||JSON.stringify(merged)!==JSON.stringify(notices))
+            await this.ctx.storage.put(noticeKey,{items:merged});
+          notices=merged;
+        }
+      }
+    }
+    const broadcasts=players["member:"+loginId]?(await this.ctx.storage.get("onlineChat:"+chatStorageScope(meta)+":gm:all"))||[]:[];
+    if(!permission.canRead)return j({ok:true,channel:null,messages:[],broadcasts,notices,noticeCycleNight,canSend:false,reason:permission.reason,phase:meta?.cyclePhase||null});
+    const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel;
+    return j({ok:true,channel:permission.channel,scope:permission.scope,
+      messages:(await this.ctx.storage.get(key))||[],broadcasts,notices,noticeCycleNight,canSend:permission.canSend,
+      reason:permission.reason,phase:meta.cyclePhase,cycleKey:meta.cycleKey});
+  }
+  async playerChatSend(body){
+    const loginId=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),hasVoice=body?.voice!==undefined;
+    if((!content&&!hasVoice)||String(body?.text||'').length>400||!!content&&hasVoice)return j({ok:false,error:"CHAT_INVALID_TEXT"},400);
+    const {meta,players,permission}=await this.chatAccess(loginId,body?.channel);
+    if(!permission.canSend)return j({ok:false,error:permission.reason||"CHAT_FORBIDDEN"},403);
+    const rateKey="onlineChatRate:"+chatStorageScope(meta)+":"+loginId,prev=Number(await this.ctx.storage.get(rateKey)||0);
+    if(Date.now()-prev<850)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
+    let media=null;
+    if(hasVoice)try{media=await this.chatVoiceStore(chatStorageScope(meta),permission.channel,body.voice)}
+    catch{return j({ok:false,error:"CHAT_VOICE_INVALID_OR_UNAVAILABLE"},400)}
+    const key="onlineChat:"+chatStorageScope(meta)+":"+permission.channel,
+      messages=(await this.ctx.storage.get(key))||[],now=Date.now(),
+      message={id:crypto.randomUUID(),senderId:loginId,
+        senderName:String(players["member:"+loginId]?.displayName||loginId).slice(0,42),
+        text:content,at:now,scope:permission.scope,...(media||{})};
+    await this.ctx.storage.put(key,[...messages.slice(-79),message]);
+    await this.ctx.storage.put(rateKey,now);
+    this.broadcast({type:"chat_tick",serverTime:now});
+    return j({ok:true,id:message.id,channel:permission.channel});
+  }
+  async gmChatRead(request){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,match=chatStorageScope(meta);
+    const records=match?await this.ctx.storage.list({prefix:"onlineChat:"+match+":"}):new Map(),
+      channels=[...records.entries()].map(([key,messages])=>({
+        channel:key.slice(("onlineChat:"+match+":").length),
+        messages:Array.isArray(messages)?messages.slice(-80):[]
+      }));
+    const participants=Object.values((await this.ctx.storage.get("players"))||{})
+      .filter(p=>p?.loginId).map(p=>({loginId:normalizeLoginId(p.loginId),displayName:String(p.displayName||p.loginId).slice(0,42)}));
+    return j({ok:true,matchId:match,phase:meta.cyclePhase||null,participants,
+      bans:(await this.ctx.storage.get("onlineChatBans:"+String(meta?.matchId||"")))||{},channels});
+  }
+  async gmChatSend(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const meta=auth.meta,id=normalizeLoginId(body?.loginId),content=chatNormalizeText(body?.text),
+      hasVoice=body?.voice!==undefined,players=(await this.ctx.storage.get("players"))||{};
+    const toVillage=String(body?.channel||'')==='room';
+    if(!["lobby","waiting","role_delivery","running"].includes(String(meta?.phase))||(!content&&!hasVoice)||!!content&&hasVoice||String(body?.text||"").length>400||
+      (!toVillage&&(!id||!players["member:"+id])))
+      return j({ok:false,error:"GM_CHAT_INVALID_MESSAGE"},400);
+    // GM broadcast is visible to all authenticated members, even when their group chat is closed.
+    const channel=toVillage?"gm:all":"gm:"+id;
+    const key="onlineChat:"+chatStorageScope(meta)+":"+channel,now=Date.now(),
+      rateKey="gmChatRate:"+chatStorageScope(meta)+":"+channel;
+    if(now-Number(await this.ctx.storage.get(rateKey)||0)<450)return j({ok:false,error:"CHAT_RATE_LIMIT"},429);
+    let media=null;
+    if(hasVoice)try{media=await this.chatVoiceStore(chatStorageScope(meta),channel,body.voice)}
+    catch{return j({ok:false,error:"CHAT_VOICE_INVALID_OR_UNAVAILABLE"},400)}
+    const messages=(await this.ctx.storage.get(key))||[],
+      message={id:crypto.randomUUID(),senderId:"gm",senderName:"GM",isGM:true,text:content,at:now,scope:toVillage?"gm-broadcast":"gm",...(media||{})};
+    await this.ctx.storage.put(key,[...messages.slice(-79),message]);await this.ctx.storage.put(rateKey,now);
+    this.broadcast({type:"chat_tick",serverTime:now});return j({ok:true,id:message.id,channel});
+  }
+  async gmChatModerate(request,body){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    const id=normalizeLoginId(body?.loginId),players=(await this.ctx.storage.get("players"))||{};
+    if(!id||!players["member:"+id]||typeof body?.muted!=="boolean")return j({ok:false,error:"CHAT_INVALID_MODERATION"},400);
+    const bans=(await this.ctx.storage.get("onlineChatBans:"+String(auth.meta.matchId||"")))||{};
+    if(body.muted)bans[id]=true;else delete bans[id];
+    await this.ctx.storage.put("onlineChatBans:"+String(auth.meta.matchId||""),bans);
+    this.broadcast({type:"chat_tick",serverTime:Date.now()});
+    return j({ok:true,loginId:id,muted:body.muted});
+  }
   async websocket(request,url){if(request.headers.get("Upgrade")?.toLowerCase()!=="websocket")return new Response("Expected WebSocket upgrade",{status:426});const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt."},423);const participantId=url.searchParams.get("participantId")||null;let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;if(participantId&&!players[participantId])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"Bạn đã rời Phòng do mất kết nối quá lâu. Hãy tham gia lại."},403);const now=new Date().toISOString();if(participantId&&players[participantId]){players[participantId].lastHeartbeatAt=Date.now();players[participantId].lastSeenAt=now;await this.ctx.storage.put("players",players)}const pair=new WebSocketPair(),[client,server]=Object.values(pair);this.ctx.acceptWebSocket(server);server.serializeAttachment({participantId,connectedAt:now});const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer),payload={type:"room_state",room,players:publicPlayers,serverTime:Date.now(),presenceChanged:true};server.send(JSON.stringify(payload));this.broadcast(payload);return new Response(null,{status:101,webSocket:client})}
   async webSocketMessage(ws,message){let d;try{d=JSON.parse(typeof message==="string"?message:new TextDecoder().decode(message))}catch{return}if(d?.type!=="ping")return;const participantId=ws.deserializeAttachment()?.participantId||null,meta=await this.ctx.storage.get("meta"),players=(await this.ctx.storage.get("players"))||{},now=new Date().toISOString();if(participantId&&players[participantId]){players[participantId].lastHeartbeatAt=Date.now();players[participantId].lastSeenAt=now;await this.ctx.storage.put("players",players)}try{ws.send(JSON.stringify({type:"pong",at:now,serverTime:Date.now()}))}catch{}}
   async markSocketDisconnected(ws){const participantId=ws?.deserializeAttachment?.()?.participantId||null;if(!participantId){this.broadcast({type:"presence",connections:this.ctx.getWebSockets().length});return}const other=this.ctx.getWebSockets().some(s=>s!==ws&&s.deserializeAttachment?.()?.participantId===participantId);if(other)return;const players=(await this.ctx.storage.get("players"))||{},meta=await this.ctx.storage.get("meta");if(players[participantId]){players[participantId].lastHeartbeatAt=0;players[participantId].lastSeenAt=new Date().toISOString();await this.ctx.storage.put("players",players)}if(meta)this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer),serverTime:Date.now(),presenceChanged:true});this.broadcast({type:"presence",connections:this.ctx.getWebSockets().length})}
@@ -3163,11 +3604,14 @@ export class RoomDurableObject extends DurableObject {
       Object.fromEntries(Object.entries(payload).filter(([key])=>key!=='runtime'&&key!=='nightRuntime')):payload;
     if(this.demoBroadcastBuffer){this.demoBroadcastBuffer.push(safe);return}
     const e=JSON.stringify(safe);for(const s of this.ctx.getWebSockets())try{s.send(e)}catch{}
+    // Any turn/phase change re-resolves the public turn audio for every device.
+    if(safe&&['night_turn','room_cycle','room_state','auto_gm','demo_control','room_reset','room_hard_reset','game_result'].includes(safe.type))this.scheduleAnnouncementSync();
   }
 }
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
+  if(url.pathname===BACKUP_EXPORT_ROUTE)return handleBackupExportRoute(request,env,authorizedPitr);
   // The Player's village runs inside an iframe at /village/?embed=1.
   // With Cloudflare Assets html_handling=none, /village/ does not resolve to
   // /village/index.html automatically. Forward this exact entry and its static
@@ -3199,9 +3643,8 @@ export default {async fetch(request,env){
   const templateRoleArtwork=url.pathname.match(/^\/api\/gm\/template-role-artwork\/([A-Za-z0-9_-]{1,120})$/);
   if(templateRoleArtwork&&request.method==="GET"){
     if(!env.ASSETS)return j({ok:false,error:"RUNTIME_ARTWORK_UNAVAILABLE"},503);
-    const assetUrl=new URL("/updates/runtime/"+VERSION+"/assets/role-artwork-v251/original/"+templateRoleArtwork[1]+".webp",request.url);
     try{
-      const asset=await env.ASSETS.fetch(new Request(assetUrl.toString(),{method:"GET"}));
+      const asset=await fetchCanonicalRoleArtwork(env.ASSETS,request.url,templateRoleArtwork[1],VERSION);
       if(!asset.ok)return j({ok:false,error:"ROLE_ARTWORK_NOT_FOUND"},asset.status===404?404:503);
       return new Response(asset.body,{status:200,headers:{...corsHeaders(),"content-type":"image/webp","cache-control":"public, max-age=86400","x-content-type-options":"nosniff"}});
     }catch{return j({ok:false,error:"RUNTIME_ARTWORK_UNAVAILABLE"},503)}
@@ -3452,6 +3895,26 @@ export default {async fetch(request,env){
   const leaveApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/leave$/);if(leaveApi&&request.method==="POST")return leaveRoomApi(env,leaveApi[1],request);
   const drunkDraw=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/drunk\/draw$/);
   if(drunkDraw&&request.method==='POST')return playerDrunkDrawApi(env,drunkDraw[1],request);
+  const gmAnnouncement=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
+  if(gmAnnouncement&&(request.method==='PUT'||request.method==='GET'))return roomProxy(env,gmAnnouncement[1],'/gm/announcement',request);
+  const playerAnnouncement=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
+  if(playerAnnouncement&&request.method==='GET'){
+    const code=normalizeRoomCode(playerAnnouncement[1]);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
+    const session=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));
+    if(!session.ok)return session;
+    const data=await session.json();
+    return roomStub(env,code).fetch('https://room.internal/player/announcement',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({loginId:data.member.loginId,a:url.searchParams.get('a')})});
+  }
+  const playerAudio=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat\/audio\/([a-f0-9-]{36})$/);
+  if(playerAudio&&request.method==="GET")return playerRoomChatAudioApi(env,playerAudio[1],playerAudio[2],request);
+  const gmAudio=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/audio\/([a-f0-9-]{36})$/);
+  if(gmAudio&&request.method==="GET")return roomProxy(env,gmAudio[1],"/gm/chat/audio/"+gmAudio[2],request);
+  const playerChat=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat$/);
+  if(playerChat&&(request.method==="GET"||request.method==="POST"))return playerRoomChatApi(env,playerChat[1],request);
+  const gmChat=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat$/);
+  if(gmChat&&(request.method==="GET"||request.method==="POST"))return roomProxy(env,gmChat[1],"/gm/chat",request);
+  const gmChatMute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/chat\/moderate$/);
+  if(gmChatMute&&request.method==="POST")return roomProxy(env,gmChatMute[1],"/gm/chat/moderate",request);
   const playerState=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/me$/);if(playerState&&request.method==="GET")return playerPrivateState(env,playerState[1],request);
   const deliveryReceived=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/delivery\/received$/);if(deliveryReceived&&request.method==="POST")return playerDeliveryReceivedApi(env,deliveryReceived[1],request);
   const roleViewed=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/role\/viewed$/);if(roleViewed&&request.method==="POST")return playerRoleViewedApi(env,roleViewed[1],request);
@@ -3459,6 +3922,9 @@ export default {async fetch(request,env){
   const artifactActivate=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/artifact\/activate$/);if(artifactActivate&&request.method==="POST")return playerArtifactActivateApi(env,artifactActivate[1],request);
   const playerInteraction=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/interaction\/respond$/);if(playerInteraction&&request.method==="POST")return playerInteractionRespondApi(env,playerInteraction[1],request);
   const playerGallowsRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(playerGallowsRoute&&request.method==="POST")return playerGallowsApi(env,playerGallowsRoute[1],request);
+  const playerDemoRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/demo-action$/);if(playerDemoRoute&&request.method==="POST")return playerDemoActionApi(env,playerDemoRoute[1],request);
+  const playerUndoRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/undo-action$/);if(playerUndoRoute&&request.method==="POST")return playerOnlineUndoApi(env,playerUndoRoute[1],request);
+  const playerOnlineRoute=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/action$/);if(playerOnlineRoute&&request.method==="POST")return playerOnlineActionApi(env,playerOnlineRoute[1],request);
   const playerSetup=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/setup$/);if(playerSetup&&request.method==="POST")return playerRoomSetupApi(env,playerSetup[1],request);
   const playerMove=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/move$/);if(playerMove&&request.method==="POST")return playerRoomMoveApi(env,playerMove[1],request);
   const playerMoveComplete=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/move\/complete$/);if(playerMoveComplete&&request.method==="POST")return playerRoomMoveCompleteApi(env,playerMoveComplete[1],request);
@@ -3552,6 +4018,28 @@ async function playerDrunkDrawApi(env,raw,request){
     method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({loginId:me.member.loginId,cardId:body.cardId})});
 }
+async function playerRoomChatAudioApi(env,raw,id,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json();
+  return roomStub(env,code).fetch(new Request("https://room.internal/player/chat/audio/"+id,{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({loginId:data.member.loginId})
+  }));
+}
+async function playerRoomChatApi(env,raw,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  // The external client controls neither loginId nor channel membership.
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),body=request.method==="POST"?await safeJson(request)||{}:{channel:new URL(request.url).searchParams.get("channel")};
+  const route=request.method==="POST"?"/player/chat/send":"/player/chat";
+  return roomStub(env,code).fetch(new Request("https://room.internal"+route,{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({loginId:data.member.loginId,text:body.text,voice:body.voice,channel:body.channel==="gm"?"gm":"room"})
+  }));
+}
 async function playerPrivateState(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),res=await roomStub(env,c).fetch("https://room.internal/player/state",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,member:data.member})});if(res.ok)await syncRoomDirectory(env,c);return res}
 async function playerRoomSetupApi(env,raw,request){
   const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
@@ -3575,6 +4063,33 @@ async function playerDeliveryReceivedApi(env,raw,request){const c=normalizeRoomC
 async function playerRoleViewedApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/role-viewed",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function playerArtifactViewedApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/artifact-viewed",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 async function playerArtifactActivateApi(env,raw,request){const c=normalizeRoomCode(raw);if(!isValidRoomCode(c))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,c).fetch("https://room.internal/player/artifact-activate",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...body,loginId:data.member.loginId})})}
+async function playerDemoActionApi(env,raw,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch("https://room.internal/player/demo-action",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({...body,loginId:data.member.loginId})});
+}
+async function playerOnlineActionApi(env,raw,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch("https://room.internal/player/action",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({...body,loginId:data.member.loginId})});
+}
+async function playerOnlineUndoApi(env,raw,request){
+  const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const data=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch("https://room.internal/player/undo-action",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({...body,loginId:data.member.loginId})});
+}
 async function playerGallowsApi(env,raw,request){
   const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
   const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
@@ -3706,9 +4221,8 @@ async function gmPackageCanonicalTemplateRole(env,raw,request){
   const status=await statusResponse.json();
   if(!status?.assets?.includes(assetId))return j({ok:false,error:"ROLE_NOT_IN_TEMPLATE"},400);
   if(!status.missing?.includes(assetId))return j({ok:true,assetId,cached:true,hasImage:true});
-  const imageUrl=new URL("/updates/runtime/"+VERSION+"/assets/role-artwork-v251/original/"+roleId+".webp",request.url);
   try{
-    const asset=await env.ASSETS.fetch(new Request(imageUrl.toString(),{method:"GET"}));
+    const asset=await fetchCanonicalRoleArtwork(env.ASSETS,request.url,roleId,VERSION);
     if(!asset.ok)return j({ok:false,error:"CANONICAL_ROLE_ARTWORK_MISSING",assetId,message:"Server không tìm thấy artwork gốc của "+roleId},asset.status===404?404:503);
     const mime=String(asset.headers.get("content-type")||"").toLowerCase();
     if(mime&&!mime.includes("image/")&&!mime.includes("octet-stream"))return j({ok:false,error:"INVALID_ROLE_ARTWORK_MIME"},424);
@@ -3810,3 +4324,100 @@ function normalizeDisplayName(v){return titleCaseDisplayName(String(v||"").trim(
 function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a.charCodeAt(i)^b.charCodeAt(i);return x===0}function randomToken(n){return bytesToBase64(crypto.getRandomValues(new Uint8Array(n))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"")}function bytesToBase64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s)}function base64ToBytes(v){const s=atob(v);return Uint8Array.from(s,c=>c.charCodeAt(0))}function bearer(r){const h=r.headers.get("Authorization")||"";return h.startsWith("Bearer ")?h.slice(7).trim():""}async function safeJson(r){try{return await r.json()}catch{return null}}function j(data,status=200){return Response.json(data,{status,headers:{...corsHeaders(),"cache-control":"no-store"}})}function corsHeaders(){return{"access-control-allow-origin":"*","access-control-allow-methods":"GET,POST,PUT,DELETE,OPTIONS","access-control-allow-headers":"content-type,authorization,x-gmww-demo-owner","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}}
 
 async function playerSeatSwapApi(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);const me=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,code).fetch('https://room.internal/player/seat-swap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...body,loginId:data.member.loginId})})}
+
+// BEGIN RECORDED PUBLIC ANNOUNCEMENTS
+// V3.303: public turn audio is server-driven. The GM uploads each configured clip once
+// per room (library keyed by audio target, stored by content hash). Every turn change
+// resolves the clips on the Server and pushes an opaque URL + Server start time to all
+// devices, so Players hear the same point even if the GM app is in background.
+const ANNOUNCE_WOLF_ROLES=['role_wolf','role_alpha_wolf'];
+function announcementTargetsForTurn(turn){
+  if(!turn)return [];
+  const rid=r=>String(r?.roleId||'');
+  if(turn.kind==='village-wakeup')return ['system:audio_system_day_wakeup'];
+  if(turn.kind==='early-artifact-window')return ['system:audio_system_early_artifacts'];
+  if(turn.kind==='wolf-introduction'||turn.kind==='wolf-pack-bite')return ['cards:audio_group_wolves'];
+  if(['artifact-main','early-artifact'].includes(turn.kind))return turn.artifactId?['artifacts:'+String(turn.artifactId)]:[];
+  if(turn.kind==='role-group'){
+    const roles=Array.isArray(turn.roles)?turn.roles:[],out=[],seen=new Set(),wolves=roles.some(r=>ANNOUNCE_WOLF_ROLES.includes(rid(r)));
+    if(wolves)out.push('cards:audio_group_wolves');
+    for(const r of roles){const id=rid(r);if(!id||seen.has(id)||wolves&&ANNOUNCE_WOLF_ROLES.includes(id))continue;seen.add(id);out.push('cards:'+id)}
+    return out.slice(0,6);
+  }
+  if(ANNOUNCE_WOLF_ROLES.includes(rid(turn)))return ['cards:audio_group_wolves'];
+  return rid(turn)?['cards:'+rid(turn)]:[];
+}
+// Daytime clips are public system announcements only (never role cards/artifacts).
+const ANNOUNCE_DAY_MAX=12;
+function dayAnnouncementTargets(list){
+  const out=[];for(const t of Array.isArray(list)?list:[]){const v=String(t||'');
+    if(/^system:audio_system_[A-Za-z0-9_]{1,100}$/.test(v)&&!out.includes(v))out.push(v);if(out.length>=ANNOUNCE_DAY_MAX)break}
+  return out;
+}
+function announcementCue(meta,runtime,day){
+  if(meta?.phase!=='running')return null;
+  if(meta.cyclePhase!=='night'&&day&&day.matchId===String(meta.matchId||'')&&day.cycleKey===String(meta.cycleKey||'')&&Array.isArray(day.targets)&&day.targets.length)
+    return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':day:'+Number(day.seq||1),
+      label:day.targets[0]==='system:audio_system_day_wakeup'?'Làng ơi dậy đi':'Thông báo Làng',
+      targets:dayAnnouncementTargets(day.targets),startedAt:Number(day.startedAt)||0};
+  const turn=runtime?.queue?.[runtime.cursor];
+  if(meta.cyclePhase==='night'&&turn)return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':'+String(turn.id),label:String(turn.label||'Đến lượt Vai Trò').slice(0,120),
+    targets:announcementTargetsForTurn(turn),startedAt:Date.parse(turn.startedAt||runtime.startedAt||'')||0};
+  if(meta.cyclePhase==='morning')return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':wakeup',label:'Làng ơi dậy đi',
+    targets:['system:audio_system_day_wakeup'],startedAt:Date.parse(meta.cycleStartedAt||'')||0};
+  return null;
+}
+const chunkSize=60000,maxBytes=2*1024*1024,ANNOUNCE_TARGET_RE=/^(cards|system|artifacts):[A-Za-z0-9_.:-]{1,120}$/,ANNOUNCE_HASH_RE=/^[a-f0-9]{32}$/,ANNOUNCE_MAX_TARGETS=200;
+function decodeRecording(body){
+  if(typeof body?.base64!=='string'||body.base64.length>Math.ceil(maxBytes/3)*4||!body.base64.length||!/^[-A-Za-z0-9+/]*={0,2}$/.test(body.base64))return null;
+  try{
+    const raw=atob(body.base64),bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+    if(!bytes.length||bytes.length>maxBytes)return null;
+    const text=(a,b)=>String.fromCharCode(...bytes.slice(a,b)),mime=String(body.mime||'').split(';')[0].toLowerCase();
+    const valid=mime==='audio/mpeg'&&(text(0,3)==='ID3'||bytes[0]===255&&(bytes[1]&224)===224)||
+      ['audio/mp4','audio/x-m4a'].includes(mime)&&text(4,8)==='ftyp'||
+      mime==='audio/ogg'&&text(0,4)==='OggS'||
+      ['audio/wav','audio/x-wav'].includes(mime)&&text(0,4)==='RIFF'&&text(8,12)==='WAVE';
+    return valid?{bytes,mime}:null;
+  }catch{return null}
+}
+async function announcementHash(bytes){
+  const d=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  return [...d.slice(0,16)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function announcementLibrary(storage){
+  const out={};for(const [k,v] of await storage.list({prefix:'annTarget:'}))if(v?.hash)out[k.slice(10)]=v.hash;return out;
+}
+// Store one clip for a target; old bytes are removed once no target references them.
+async function saveAnnouncementTarget(storage,target,recording){
+  if(!ANNOUNCE_TARGET_RE.test(String(target||'')))return Response.json({ok:false,error:'INVALID_AUDIO_TARGET'},{status:400});
+  if(!recording)return Response.json({ok:false,error:'INVALID_RECORDED_AUDIO'},{status:400});
+  const hash=await announcementHash(recording.bytes),lib=await announcementLibrary(storage),old=lib[target];
+  if(old===hash)return Response.json({ok:true,target,hash,unchanged:true});
+  if(!old&&Object.keys(lib).length>=ANNOUNCE_MAX_TARGETS)return Response.json({ok:false,error:'AUDIO_LIBRARY_FULL'},{status:409});
+  await storage.transaction(async tx=>{
+    if(!await tx.get('annBlob:'+hash)){
+      const count=Math.ceil(recording.bytes.length/chunkSize);
+      for(let i=0;i<count;i++)await tx.put('annBlob:'+hash+':'+i,recording.bytes.slice(i*chunkSize,(i+1)*chunkSize));
+      await tx.put('annBlob:'+hash,{mime:recording.mime,count,size:recording.bytes.length});
+    }
+    await tx.put('annTarget:'+target,{hash,updatedAt:Date.now()});
+    if(old&&!Object.entries(lib).some(([t,h])=>t!==target&&h===old)){
+      const prev=await tx.get('annBlob:'+old);
+      for(let i=0;i<Number(prev?.count||0);i++)await tx.delete('annBlob:'+old+':'+i);
+      await tx.delete('annBlob:'+old);
+    }
+  });
+  return Response.json({ok:true,target,hash});
+}
+async function readAnnouncementBlob(storage,hash){
+  if(!ANNOUNCE_HASH_RE.test(String(hash||'')))return new Response(null,{status:404});
+  return storage.transaction(async tx=>{
+    const meta=await tx.get('annBlob:'+hash);if(!meta)return new Response(null,{status:404});
+    const bytes=new Uint8Array(meta.size);let offset=0;
+    for(let i=0;i<meta.count;i++){const chunk=await tx.get('annBlob:'+hash+':'+i);if(!chunk)return new Response(null,{status:404});bytes.set(chunk,offset);offset+=chunk.length}
+    // Content-addressed: the URL changes when the GM changes the clip.
+    return new Response(bytes,{headers:{'content-type':meta.mime,'cache-control':'private, max-age=86400, immutable','x-content-type-options':'nosniff'}});
+  });
+}
+// END RECORDED PUBLIC ANNOUNCEMENTS
