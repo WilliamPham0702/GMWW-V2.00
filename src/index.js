@@ -25,6 +25,7 @@ const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
 import { shouldSkipMemberHeartbeat, shouldSkipMemberSessionTouch, shouldSkipGmHeartbeat, shouldSkipDirectoryHeartbeat, GMWW_WRITE_OPTIMIZER_VERSION } from "./gmww-do-write-optimizer.js";
 import { authorizedPitr } from "./gr01-pitr-auth.js";
+import { BACKUP_EXPORT_ROUTE, BACKUP_EXPORT_DO_PATH, handleBackupExportInDo, handleBackupExportRoute } from "./gmww-backup-export.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
 import { oldWitchActionCheck } from "./gmww-old-witch-rules.js";
@@ -88,6 +89,8 @@ export class RoomDurableObject extends DurableObject {
         return j({ok:false,error:"PITR_UNAVAILABLE"},503);
       }
     }
+    // #773 read-only encrypted export; 404 unless dedicated backup secrets exist.
+    if(path===BACKUP_EXPORT_DO_PATH)return handleBackupExportInDo(this.ctx,this.env,request,authorizedPitr);
     if(path==="/security/rate-limit"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     // Serialize GM recovery reads with the authoritative alarm turn transition.
     if(path==="/gm/state"&&request.method==="GET")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
@@ -3552,6 +3555,7 @@ export class RoomDurableObject extends DurableObject {
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
+  if(url.pathname===BACKUP_EXPORT_ROUTE)return handleBackupExportRoute(request,env,authorizedPitr);
   // The Player's village runs inside an iframe at /village/?embed=1.
   // With Cloudflare Assets html_handling=none, /village/ does not resolve to
   // /village/index.html automatically. Forward this exact entry and its static

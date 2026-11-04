@@ -28,3 +28,12 @@
 
 ## Rollback
 Không có deploy và không có dữ liệu cần rollback. Nếu không tương thích sau merge, revert PR #776 (chỉ module crypto, Worker B-only, test, Wrangler dry-run và tài liệu), không tác động A/B, Production hoặc Runtime. Tuyệt đối không coi encryption unit-test PASS là backup thật đã được xác minh.
+
+## Exporter A (PR claude/backup-a-exporter-773)
+- Module `src/gmww-backup-export.js`; route Worker `POST /api/backup/a-export` → DO nội bộ `/__gmww/backup/export`.
+- **Mặc định tắt (404)** nếu thiếu một trong hai Cloudflare Secret riêng trên A: `GMWW_BACKUP_EXPORT_TOKEN` (Bearer, ≥32 ký tự) và `GMWW_A_B_ARCHIVE_KEY` (32-byte base64url). Không dùng khóa GM cũ, nên không phụ thuộc PR #774.
+- Chỉ đọc (`storage.list` trong `blockConcurrencyWhile`), không ghi. Từ chối phòng còn WebSocket hoặc ván đang chạy (`running`, `role_delivery`) → 409.
+- Loại trừ `session:*`, `security-rate`, health marker. Giá trị có kiểu (Date/Uint8Array/Map/Set/BigInt) được mã hóa có thẻ, thứ tự key cố định.
+- Mỗi chunk ≤64 KiB được niêm phong AES-256-GCM bằng envelope sẵn có trước khi rời A; phân trang ≤8 chunk/lần; manifest kèm `bookmark` để phát hiện thay đổi giữa các trang (khác bookmark → chạy lại object).
+- Chưa có: provision secret, orchestrator chạy toàn bộ 57 DO, deploy B archive, trial restore.
+- Rollback: revert PR; khi chưa có secret, route không hoạt động nên deploy không đổi hành vi Production.
