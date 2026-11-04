@@ -11,7 +11,10 @@ function extract(text,start,end){
   const a=text.indexOf(start),b=text.indexOf(end,a+start.length);
   assert.ok(a>=0&&b>a,'Extract shipped source '+start);return text.slice(a,b);
 }
-const pirate=extract(village,'  function syncPirateNominationFlag(){','  function makePlayerButton(');
+// The production code is an ES module; this focused WebKit gesture harness injects
+// the extracted function as a classic inline script with the same document-relative asset.
+const pirate=extract(village,'  function syncPirateNominationFlag(){','  function makePlayerButton(')
+  .replace('import.meta.url','document.baseURI');
 const fire=extract(source,'function gmwwPlaceWolfMenuAtFire(menu){','\nfunction demoTurnDescription(');
 const browser=await webkit.launch({headless:true});
 try{
@@ -26,6 +29,9 @@ try{
  <div class="player" data-player-id="member:player1" style="position:fixed;left:50px;top:230px;width:85px;height:95px;background:#bb9"></div></div>
  </div></body></html>`;
  await page.route('https://v3189.qa.test/**',route=>route.fulfill({status:200,contentType:'text/html',body:html}));
+ await page.route('https://v3189.qa.test/gmww-gallows-nominate-b.png',route=>route.fulfill({
+   status:200,contentType:'image/png',body:fs.readFileSync('assets/village/gmww-gallows-nominate-b.png')
+ }));
  await page.goto('https://v3189.qa.test/');
  await page.addScriptTag({content:`
   window.__messages=[];
@@ -43,7 +49,8 @@ try{
     eligible(v){setupState.gallowsCanNominate=v;syncPirateNominationFlag()}};
   syncPirateNominationFlag();`});
  const flag=page.locator('#gmwwPirateNominate');
- assert.equal(await flag.isVisible(),true,'🚩 displayed to eligible Player');
+ assert.equal(await flag.isVisible(),true,'transparent icon B displayed to eligible Player');
+ assert.equal(await flag.locator('img.gmww-gallows-nominate-art').count(),1,'artwork loaded inside draggable touch target');
  const pulse=async (x,y,id)=>{
    await flag.dispatchEvent('pointerdown',{pointerId:id,button:0,clientX:350,clientY:700});
    await flag.dispatchEvent('pointerup',{pointerId:id,button:0,clientX:x,clientY:y});

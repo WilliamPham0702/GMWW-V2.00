@@ -134,5 +134,8 @@ test('exact V3 campfire scope retains targeted online, privacy and Worker tests 
  assert.match(yml,/tests\/player-web-server-visual-parity-20261101\.test\.mjs/);
  assert.match(yml,/npm run check/);
  assert.match(yml,/steps\.v3_fire_anchor\.outputs\.scoped != 'true'/);
- assert.match(yml,/\[ "\$\{\{ steps\.v3_fire_anchor\.outputs\.scoped \}\}" != 'true' \]/);
+ // 2026-11-04: the legacy synthetic 3-night fixture is retired for every scope;
+ // the real Worker night-rules E2E stays mandatory.
+ assert.doesNotMatch(yml,/node tests\/worker-engine-multinight-e2e\.mjs/);
+ assert.match(yml,/node tests\/worker-night-rules-e2e\.mjs/);
 });
