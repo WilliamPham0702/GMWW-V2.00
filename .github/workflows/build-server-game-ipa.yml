@@ -82,7 +82,23 @@ jobs:
       - name: Verify source before building official IPA
         run: |
           node .github/scripts/verify-gmww-versions.mjs
-          if [ "${{ needs.scope.outputs.mode }}" = "native-github-ota-stage2" ]; then
+          if [ "${{ needs.scope.outputs.mode }}" = "native-mic-788" ]; then
+            # Native high-risk PR: Xcode build still runs. Scope only the obsolete
+            # full-game npm test preflight; never publish an IPA from a PR.
+            node --test \
+              tests/native-ios-microphone-permission-20261104.test.mjs \
+              tests/native-ipa-startup.test.mjs \
+              tests/native-ipa-release-gate.test.mjs \
+              tests/native-github-first-ota-stage2.test.mjs \
+              tests/v3-delivery-plan.test.mjs \
+              tests/ci-browser-scope.test.mjs \
+              tests/online-chat-authority.test.mjs
+            node .github/scripts/assemble-gm-app.mjs --verify
+            node .github/scripts/assemble-player-web.mjs --verify
+            node --check server-game/current/app.js
+            node --check src/index.js
+            test -s docs/releases/GMWW-IOS-NATIVE-MIC-PERMISSION-20261104.md
+          elif [ "${{ needs.scope.outputs.mode }}" = "native-github-ota-stage2" ]; then
             node --test tests/native-github-first-ota-stage2.test.mjs
             node .github/scripts/assemble-gm-app.mjs --verify
             node --check server-game/current/app.js

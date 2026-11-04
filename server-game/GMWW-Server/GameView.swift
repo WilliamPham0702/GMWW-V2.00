@@ -663,6 +663,37 @@ struct GameWebView: UIViewRepresentable {
             syncIdleTimer()
         }
 
+        // Only the verified GMWW main document can skip the repeated WebKit
+        // origin prompt. iOS still owns the first app-level microphone consent.
+        private func isTrustedGMWWMicrophoneDocument(_ url: URL?) -> Bool {
+            guard let url = url, url.isFileURL else { return false }
+            let normalized = url.standardizedFileURL.resolvingSymlinksInPath()
+            let bundled = Bundle.main.url(forResource: "GMWW", withExtension: "html", subdirectory: "Web")
+            return [bundled, activeRuntimeHTML()].compactMap { $0 }
+                .contains { $0.standardizedFileURL.resolvingSymlinksInPath() == normalized }
+        }
+
+        @available(iOS 15.0, *)
+        func webView(_ webView: WKWebView,
+                     requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+                     initiatedByFrame frame: WKFrameInfo,
+                     type: WKMediaCaptureType,
+                     decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+            // Chat sends audio only; never grant camera permissions.
+            guard type == .microphone else { decisionHandler(.deny); return }
+
+            let isLocalOrigin = origin.`protocol` == "file" &&
+                (origin.host.isEmpty || origin.host == "localhost")
+            let sameMainDocument = frame.isMainFrame &&
+                frame.request.url?.standardizedFileURL == webView.url?.standardizedFileURL
+            if isLocalOrigin && sameMainDocument && isTrustedGMWWMicrophoneDocument(webView.url) {
+                decisionHandler(.grant)
+            } else {
+                // Unknown origins are handled by WebKit; never grant them silently.
+                decisionHandler(.prompt)
+            }
+        }
+
         func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
             guard webView.window != nil else { completionHandler(); return }
             let alert = UIAlertController(title: "GMWW", message: message, preferredStyle: .alert)
