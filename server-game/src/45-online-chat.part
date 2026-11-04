@@ -132,6 +132,7 @@ function gmwwGMVoiceCard(msg){
 }
 
 let gmwwGMVoiceRecorder=null,gmwwGMVoiceTimeout=null,gmwwGMVoiceDiscard=false;
+let gmwwGMVoiceGeneration=0;
 let gmwwGMVoiceDraft=null,gmwwGMVoicePendingSend=false,gmwwGMVoiceProcessing=false,gmwwGMVoiceStarting=false,gmwwGMVoiceBusy=false;
 let gmwwGMMicStream=null,gmwwGMMicIdleTimer=null;
 function gmwwGMMicRelease(){
@@ -177,18 +178,29 @@ async function gmwwGMVoiceSend(){
  gmwwGMVoiceBusy=true;
  const feedback=document.getElementById('gmwwGMRecordingStatus');if(feedback)feedback.textContent='Đang gửi thoại…';
  const button=document.querySelector('#gmwwGMChatVillage [type="submit"]');if(button)button.disabled=true;
+ const discardButton=document.getElementById('gmwwGMChatDiscard');if(discardButton)discardButton.disabled=true;
  try{
   await playRoomApi('/chat',{method:'POST',body:JSON.stringify(draft.target==='room'?{channel:'room',voice:draft.voice}:{loginId:draft.target,voice:draft.voice})});
   if(feedback)feedback.textContent='Đã gửi';
   gmwwGMVoiceDraft=null;await gmwwGMChatRefresh();gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();
  }catch(e){playFlashError('Không gửi được tin thoại: '+String(e?.message||e));gmwwGMVoicePreview()}
- finally{gmwwGMVoiceBusy=false;if(button)button.disabled=false}
+ finally{gmwwGMVoiceBusy=false;if(button)button.disabled=false;if(discardButton)discardButton.disabled=false}
+}
+function gmwwGMVoiceCancel(){
+ if(gmwwGMVoiceBusy)return; // Once upload starts, a local cancel cannot retract the request.
+ gmwwGMVoiceGeneration++;
+ gmwwGMVoiceDiscard=true;gmwwGMVoicePendingSend=false;gmwwGMVoiceDraft=null;
+ if(gmwwGMVoiceRecorder?.state==='recording'){
+  gmwwGMVoiceProcessing=true;gmwwGMVoiceRecorder.stop();return;
+ }
+ gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();
 }
 async function gmwwGMVoiceToggle(){
  if(gmwwGMVoiceRecorder?.state==='recording'){gmwwGMVoiceRecorder.stop();return}
  if(gmwwGMVoiceBusy||gmwwGMVoiceStarting||gmwwGMVoiceProcessing)return;
  if(!window.MediaRecorder||!navigator.mediaDevices?.getUserMedia){playFlashError('Trình duyệt chưa hỗ trợ ghi âm.');return}
  const target=document.getElementById('gmwwGMChatTarget')?.value||'room',room=String(playSceneState.roomCode||'');
+ const recordingGeneration=++gmwwGMVoiceGeneration;
  gmwwGMVoiceStarting=true;gmwwGMVoiceDraft=null;gmwwGMVoicePreview();
  try{
   const stream=await gmwwGMMicAcquire();
@@ -205,10 +217,11 @@ async function gmwwGMVoiceToggle(){
    gmwwGMVoiceProcessing=true;
    clearTimeout(gmwwGMVoiceTimeout);gmwwGMVoiceMeterStop();gmwwGMVoiceRecorder=null;gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();gmwwGMMicPark();
    try{
-    if(gmwwGMVoiceDiscard||String(playSceneState.roomCode||'')!==room||!chunks.length)return;
+    if(gmwwGMVoiceDiscard||recordingGeneration!==gmwwGMVoiceGeneration||String(playSceneState.roomCode||'')!==room||!chunks.length)return;
     const blob=new Blob(chunks,{type:recorder.mimeType||chunks[0]?.type||'audio/mp4'});
     const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';
     for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
+    if(gmwwGMVoiceDiscard||recordingGeneration!==gmwwGMVoiceGeneration)return;
     gmwwGMVoiceDraft={room,target,voice:{mime:blob.type.split(';')[0],durationMs:Math.min(30000,Math.max(1,Date.now()-start)),base64:btoa(binary)}};
     gmwwGMVoicePreview();
    }catch(e){playFlashError('Không lưu được bản ghi âm: '+String(e?.message||e))}
@@ -262,6 +275,9 @@ function gmwwGMChatMount(){
 #gmwwGMChatVillage select{border-radius:999px;background:rgba(41,43,67,.8);border:1px solid #ffffff50;max-width:116px;min-width:78px;padding:7px}
 #gmwwGMChatVillage #gmwwGMChatVoice,#gmwwGMChatVillage [type="submit"]{width:38px;height:38px;min-width:38px;flex:0 0 38px;border-radius:50%;display:grid;place-items:center;padding:0;border:1px solid #ffffff35;background:rgba(172,174,214,.16);color:#fff}
 #gmwwGMChatVillage [type="submit"]{background:linear-gradient(135deg,#8871dc,#5f54ae)}
+#gmwwGMChatVillage #gmwwGMChatDiscard{display:none;width:34px;height:34px;min-width:34px;flex:0 0 34px;border-radius:50%;border:1px solid #ff9cac88;background:rgba(170,55,80,.28);color:#ffe3e8;font-size:18px;padding:0;place-items:center}
+#gmwwGMChatVillage.is-recording #gmwwGMChatDiscard{display:grid}
+#gmwwGMChatVillage #gmwwGMChatDiscard:disabled{opacity:.4}
 #gmwwGMChatVillage button svg{width:21px;height:21px}
 #gmwwGMChatVillage #gmwwGMChatVoice[aria-pressed="true"]{background:rgba(241,91,116,.26);border-color:#ff7997}
 #gmwwGMChatVillage.is-recording input{display:none}
@@ -289,7 +305,7 @@ function gmwwGMChatMount(){
   if(!trigger){
     trigger=document.createElement('button');trigger.id='gmwwGMChatLaunch';trigger.type='button';trigger.textContent='🦩';trigger.title='GM • Mở Chat';trigger.setAttribute('aria-label','GM • Mở Chat');trigger.onclick=()=>{if(trigger.dataset.dragged==='1'){trigger.dataset.dragged='';return}gmwwGMChatOpen=!gmwwGMChatOpen;document.getElementById('gmwwGMChatPanel')?.classList.toggle('open',gmwwGMChatOpen);if(gmwwGMChatOpen)void gmwwGMChatRefresh()};gmwwGMChatMakeMovable(trigger);document.body.appendChild(trigger);
     const panel=document.createElement('section');panel.id='gmwwGMChatPanel';panel.setAttribute('aria-label','GM quản lý Chat');
-    panel.innerHTML='<header><strong>Trò chuyện (GM)</strong><button id="gmwwGMChatReload" type="button" aria-label="Làm mới">↻</button><button id="gmwwGMChatClose" type="button" aria-label="Đóng">×</button></header><div id="gmwwGMChatContent" role="log"></div><form id="gmwwGMChatVillage"><select id="gmwwGMChatTarget" aria-label="Người nhận"><option value="room">🌍 Cả làng</option></select><input type="text" maxlength="280" placeholder="Gửi tin nhắn…" aria-label="GM nhắn Chat Làng"><span id="gmwwGMRecording" hidden><span class="gmww-record-dot"></span><span class="gmww-live-meter" aria-label="Mức âm thanh từ micro"><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></span><span id="gmwwGMRecordingStatus">Đang ghi âm</span><time>0:00</time></span><button type="button" id="gmwwGMChatVoice" aria-label="Ghi âm" title="Ghi và gửi thoại tối đa 30 giây"></button><button type="submit" aria-label="Gửi tin nhắn">'+gmwwChatSendSvg+'</button></form>';document.body.appendChild(panel);gmwwGMVoiceButtonReset();
+    panel.innerHTML='<header><strong>Trò chuyện (GM)</strong><button id="gmwwGMChatReload" type="button" aria-label="Làm mới">↻</button><button id="gmwwGMChatClose" type="button" aria-label="Đóng">×</button></header><div id="gmwwGMChatContent" role="log"></div><form id="gmwwGMChatVillage"><select id="gmwwGMChatTarget" aria-label="Người nhận"><option value="room">🌍 Cả làng</option></select><input type="text" maxlength="280" placeholder="Gửi tin nhắn…" aria-label="GM nhắn Chat Làng"><span id="gmwwGMRecording" hidden><span class="gmww-record-dot"></span><span class="gmww-live-meter" aria-label="Mức âm thanh từ micro"><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i></span><span id="gmwwGMRecordingStatus">Đang ghi âm</span><time>0:00</time></span><button type="button" id="gmwwGMChatDiscard" aria-label="Hủy bản ghi thoại" title="Hủy bản ghi thoại chưa gửi">🗑️</button><button type="button" id="gmwwGMChatVoice" aria-label="Ghi âm" title="Ghi và gửi thoại tối đa 30 giây"></button><button type="submit" aria-label="Gửi tin nhắn">'+gmwwChatSendSvg+'</button></form>';document.body.appendChild(panel);gmwwGMVoiceButtonReset();
     document.getElementById('gmwwGMChatVillage').addEventListener('submit',async event=>{event.preventDefault();
       const input=event.currentTarget.querySelector('input'),button=event.currentTarget.querySelector('[type="submit"]'),text=input.value.trim(),
         target=document.getElementById('gmwwGMChatTarget')?.value||'room';
@@ -300,6 +316,7 @@ function gmwwGMChatMount(){
       finally{button.disabled=false}
     });
     document.getElementById('gmwwGMChatVoice').onclick=()=>void gmwwGMVoiceToggle();
+    document.getElementById('gmwwGMChatDiscard').onclick=gmwwGMVoiceCancel;
     document.getElementById('gmwwGMChatClose').onclick=()=>{gmwwGMChatOpen=false;panel.classList.remove('open');document.getElementById('battleGMChatToggle')?.setAttribute('aria-pressed','false')};
     document.getElementById('gmwwGMChatReload').onclick=()=>void gmwwGMChatRefresh();
     if(!document.documentElement.dataset.gmwwGmChatDismiss){

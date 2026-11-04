@@ -1658,3 +1658,55 @@ test('V3298 exact icon-only scope preserves wolf orbit and refuses extra files',
  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/player-web-src/35-online-chat.part'?
    {...c,after:c.after.replace('🐦‍🔥','🔥')}:c)),'full');
 });
+
+test('PR786 scoped voice cancellation stays fail-closed for unreviewed Worker/native/audio edits',()=>{
+ const prior='be3e52af3429fb9bc5cb8bd9c6e529a1ab57d26c';
+ const files=[
+  ['server-game/src/45-online-chat.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['server-game/current/app.js','M'],
+  ['src/gmww-members-live.js','M'],
+  ['tests/gmww-chat-voice-discard-20261104.test.mjs','A'],
+  ['docs/releases/GMWW-CHAT-VOICE-DISCARD-20261104.md','A'],
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['tests/ci-browser-scope.test.mjs','M']
+ ];
+ // Reviewed PR786 head: later releases (e.g. V3.301 version bump) legitimately change these files.
+ const reviewed='097e50680be44e0dd2911a6584016c51f24e66b1';
+ let pinnedAvailable=true;
+ try{execFileSync('git',['cat-file','-e',prior+'^{commit}'],{stdio:'ignore'});execFileSync('git',['cat-file','-e',reviewed+'^{commit}'],{stdio:'ignore'})}catch{pinnedAvailable=false}
+ const changes=files.map(([path,status])=>({
+  path,status,
+  before:status==='M'&&pinnedAvailable?execFileSync('git',['show',prior+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):null,
+  after:pinnedAvailable?execFileSync('git',['show',reviewed+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):readFileSync(path,'utf8')
+ }));
+ if(!pinnedAvailable){
+  // Shallow runners must fail closed rather than inventing an old blob.
+  assert.equal(classifyBrowserScope(changes),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+  return;
+ }
+ assert.equal(classifyBrowserScope(changes),'chat-voice-discard-786');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ for(const path of ['src/index.js','server-game/GMWW-Server/GameView.swift','wrangler.jsonc','package.json'])
+  assert.equal(classifyBrowserScope([...changes,{path,status:'M',before:'safe',after:'changed'}]),'full',path);
+ for(const path of ['server-game/src/45-online-chat.part','src/player-web-src/35-online-chat.part','server-game/current/app.js','src/gmww-members-live.js']){
+  const changed=changes.map(row=>row.path===path?{...row,after:row.after+'\n// unreviewed voice or privacy edit'}:row);
+  assert.equal(classifyBrowserScope(changed),'full',path);
+ }
+ assert.equal(classifyBrowserScope(changes.map((row,i)=>i===0?{...row,status:'D'}:row)),'full');
+ const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ for(const required of [
+  "steps.scope.outputs.mode == 'chat-voice-discard-786'",
+  'tests/gmww-chat-voice-discard-20261104.test.mjs',
+  'tests/gmww-chat-voice-send-v3292.test.mjs',
+  'tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs',
+  'tests/online-chat-authority.test.mjs',
+  'tests/online-frozen-chat-day-20261031.test.mjs',
+  'assemble-gm-app.mjs --verify',
+  'assemble-player-web.mjs --verify',
+  'npm run check'
+ ])assert.ok(workflow.includes(required),required);
+});
