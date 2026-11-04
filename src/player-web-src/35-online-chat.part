@@ -35,66 +35,102 @@ function gmwwChatColor(id){
  return 'hsl('+(38+((index>=0?index*137.508:hash)%278))+' 85% 78%)';
 }
 const gmwwChatAudioOff=()=>{try{return localStorage.getItem('gmww_player_announcement_audio_off')==='1'}catch{return false}};
-let gmwwAnnouncementAudio=null,gmwwAnnouncementUrl='',gmwwAnnouncementRequest=null,gmwwAnnouncementPending=null,gmwwAnnouncementGeneration=0,gmwwAnnouncementSource=null;
+let gmwwAnnouncementAudio=null,gmwwAnnouncementUrl='',gmwwAnnouncementRequest=null,gmwwAnnouncementPending=null,gmwwAnnouncementGeneration=0,gmwwAnnouncementSources=[];
+// V3.303: clips are content-addressed by the Server, so a role's clip is fetched once and
+// reused every night; decoded buffers are cached per Blob.
+const gmwwAnnouncementClips=new Map(),gmwwAnnouncementDecoded=new WeakMap();
+function gmwwStopAnnouncementSources(){for(const src of gmwwAnnouncementSources){try{src.stop(0)}catch{}}gmwwAnnouncementSources=[]}
 function gmwwStopAnnouncement(){
   gmwwAnnouncementGeneration++;gmwwAnnouncementRequest?.abort();gmwwAnnouncementRequest=null;
-  if(gmwwAnnouncementSource){try{gmwwAnnouncementSource.stop(0)}catch{}gmwwAnnouncementSource=null}
-  if(gmwwAnnouncementAudio){gmwwAnnouncementAudio.pause();gmwwAnnouncementAudio.removeAttribute('src');gmwwAnnouncementAudio.load();gmwwAnnouncementAudio=null}
+  gmwwStopAnnouncementSources();
+  if(gmwwAnnouncementAudio){gmwwAnnouncementAudio.onended=null;gmwwAnnouncementAudio.pause();gmwwAnnouncementAudio.removeAttribute('src');gmwwAnnouncementAudio.load();gmwwAnnouncementAudio=null}
   if(gmwwAnnouncementUrl)URL.revokeObjectURL(gmwwAnnouncementUrl);gmwwAnnouncementUrl='';
+}
+function gmwwAnnouncementUrls(pending){
+  const base='/api/rooms/'+encodeURIComponent(pending?.room||'')+'/announcement-audio?a=',cue=pending?.cue||{};
+  const list=Array.isArray(cue.audio)?cue.audio:(cue.audioUrl?[cue.audioUrl]:[]);
+  return list.filter(u=>typeof u==='string'&&u.startsWith(base)&&/^[a-f0-9]{32}$/.test(u.slice(base.length))).slice(0,6);
+}
+// Seconds since the Server started this turn: every device joins the clip at the same point.
+function gmwwAnnouncementOffset(cue){
+  const at=Number(cue?.startedAt)||0;if(!at)return 0;
+  const lag=(Date.now()+(Number(state.serverClockOffsetMs)||0)-at)/1000;
+  return lag<0.3?0:lag;
 }
 function gmwwChatAnnounce(cue){
   state.audioCue=cue?.key&&cue?.label?{key:String(cue.key),label:String(cue.label).slice(0,120)}:null;
   updatePlayerTopMenu();
   const key=cue?.key&&state.roomCode&&state.participantId?state.roomCode+':'+cue.key:'';
   if(gmwwAnnouncementPending?.key!==key){gmwwStopAnnouncement();gmwwAnnouncementPending=key?{key,cue,room:state.roomCode}:null}
-  else if(gmwwAnnouncementPending)gmwwAnnouncementPending.cue=cue;
+  else if(gmwwAnnouncementPending)gmwwAnnouncementPending.cue={...gmwwAnnouncementPending.cue,...cue};
   if(!key||key===gmwwPlayerCueKey||gmwwChatAudioOff())return;
-  // A missing recording is retryable: the GM upload may arrive on the next poll.
-  if(gmwwAnnouncementRequest||!cue.audioUrl)return;
+  // A missing clip is retryable: the Server pushes the cue again once the GM uploads it.
+  if(gmwwAnnouncementRequest||!gmwwAnnouncementUrls(gmwwAnnouncementPending).length)return;
   void gmwwPlayAnnouncement();
 }
 async function gmwwPlayAnnouncement(){
   const pending=gmwwAnnouncementPending;if(!pending||gmwwChatAudioOff()||pending.key===gmwwPlayerCueKey)return;
-  const expected='/api/rooms/'+encodeURIComponent(pending.room)+'/announcement-audio?key='+encodeURIComponent(pending.cue.key);
-  if(pending.cue.audioUrl!==expected)return;
+  const urls=gmwwAnnouncementUrls(pending);if(!urls.length)return;
   const generation=gmwwAnnouncementGeneration,controller=new AbortController();gmwwAnnouncementRequest=controller;
   try{
-    const response=await fetch(expected,{headers:auth(),cache:'no-store',signal:controller.signal});
-    if(!response.ok)return;
-    const blob=await response.blob();
+    const blobs=[];
+    for(const url of urls){
+      let blob=gmwwAnnouncementClips.get(url);
+      if(!blob){
+        const response=await fetch(url,{headers:auth(),signal:controller.signal});
+        if(!response.ok)return;
+        blob=await response.blob();
+        if(!/^audio\//i.test(blob.type)||blob.size>2*1024*1024)return;
+        gmwwAnnouncementClips.set(url,blob);
+        if(gmwwAnnouncementClips.size>40)gmwwAnnouncementClips.delete(gmwwAnnouncementClips.keys().next().value);
+      }
+      blobs.push(blob);
+    }
     if(generation!==gmwwAnnouncementGeneration||gmwwChatAudioOff()||state.roomCode!==pending.room)return;
-    if(!/^audio\//i.test(blob.type)||blob.size>2*1024*1024)return;
-    // V3.301: every Player hears every turn. A fresh HTMLAudio element per turn is
-    // blocked by iOS autoplay unless that player just tapped (only the acting role
-    // did), so play through the shared WebAudio context unlocked by any earlier tap.
-    if(await gmwwPlayAnnouncementBuffer(blob,generation,pending))return;
-    if(gmwwAnnouncementUrl)URL.revokeObjectURL(gmwwAnnouncementUrl);
-    gmwwAnnouncementUrl=URL.createObjectURL(blob);
-    const audio=gmwwAnnouncementAudio||(gmwwAnnouncementAudio=new Audio());audio.src=gmwwAnnouncementUrl;audio.volume=.85;
-    await audio.play();
-    if(generation===gmwwAnnouncementGeneration)gmwwPlayerCueKey=pending.key;
+    // Shared WebAudio context (unlocked by any earlier tap) avoids iOS autoplay blocks.
+    if(await gmwwPlayAnnouncementBuffers(blobs,generation,pending))return;
+    await gmwwPlayAnnouncementHtml(blobs,generation,pending);
   }catch{}finally{if(gmwwAnnouncementRequest===controller)gmwwAnnouncementRequest=null}
 }
-async function gmwwPlayAnnouncementBuffer(blob,generation,pending){
+function gmwwDecodeAnnouncement(c,blob){
+  const cached=gmwwAnnouncementDecoded.get(blob);if(cached)return Promise.resolve(cached);
+  return blob.arrayBuffer().then(data=>new Promise((resolve,reject)=>{let done=false;const ok=x=>{if(!done){done=true;gmwwAnnouncementDecoded.set(blob,x);resolve(x)}},bad=e=>{if(!done){done=true;reject(e)}};
+    try{const p=c.decodeAudioData(data,ok,bad);if(p&&typeof p.then==='function')p.then(ok,bad)}catch(e){bad(e)}}));
+}
+async function gmwwPlayAnnouncementBuffers(blobs,generation,pending){
   try{
     const c=gmwwAudio();if(!c||!gmwwAudioMaster)return false;
     if(c.state!=='running'){try{await c.resume()}catch{}}
     if(c.state!=='running')return false;
-    const data=await blob.arrayBuffer();
-    const buf=await new Promise((resolve,reject)=>{let done=false;const ok=x=>{if(!done){done=true;resolve(x)}},bad=e=>{if(!done){done=true;reject(e)}};
-      try{const p=c.decodeAudioData(data,ok,bad);if(p&&typeof p.then==='function')p.then(ok,bad)}catch(e){bad(e)}});
+    const buffers=[];for(const blob of blobs)buffers.push(await gmwwDecodeAnnouncement(c,blob));
     if(generation!==gmwwAnnouncementGeneration||gmwwChatAudioOff()||state.roomCode!==pending.room)return true;
-    const src=c.createBufferSource(),g=c.createGain();src.buffer=buf;g.gain.value=.85;src.connect(g);g.connect(gmwwAudioMaster);
-    if(gmwwAnnouncementSource){try{gmwwAnnouncementSource.stop(0)}catch{}}
-    gmwwAnnouncementSource=src;src.onended=()=>{if(gmwwAnnouncementSource===src)gmwwAnnouncementSource=null};src.start(0);
-    gmwwPlayerCueKey=pending.key;return true;
+    let skip=gmwwAnnouncementOffset(pending.cue),at=c.currentTime+0.02;
+    const total=buffers.reduce((n,b)=>n+b.duration,0);
+    gmwwStopAnnouncementSources();gmwwPlayerCueKey=pending.key;
+    if(skip>=total-0.15)return true; // already finished on every other device
+    for(const buf of buffers){
+      if(skip>=buf.duration){skip-=buf.duration;continue}
+      const src=c.createBufferSource(),g=c.createGain();src.buffer=buf;g.gain.value=.85;src.connect(g);g.connect(gmwwAudioMaster);
+      src.onended=()=>{gmwwAnnouncementSources=gmwwAnnouncementSources.filter(x=>x!==src)};
+      src.start(at,skip);at+=buf.duration-skip;skip=0;gmwwAnnouncementSources.push(src);
+    }
+    return true;
   }catch{return false}
 }
-// Retry a blocked autoplay using a real user gesture; keep one Player-owned audio element.
+async function gmwwPlayAnnouncementHtml(blobs,generation,pending){
+  const audio=gmwwAnnouncementAudio||(gmwwAnnouncementAudio=new Audio());let index=0;
+  const load=i=>{if(gmwwAnnouncementUrl)URL.revokeObjectURL(gmwwAnnouncementUrl);gmwwAnnouncementUrl=URL.createObjectURL(blobs[i]);audio.src=gmwwAnnouncementUrl;audio.volume=.85};
+  const seek=()=>{const skip=gmwwAnnouncementOffset(pending.cue);if(skip>0&&Number.isFinite(audio.duration))try{audio.currentTime=Math.min(skip,Math.max(0,audio.duration-0.05))}catch{}};
+  audio.onended=()=>{if(generation!==gmwwAnnouncementGeneration||++index>=blobs.length)return;load(index);audio.play().catch(()=>{})};
+  load(0);
+  try{audio.addEventListener?.('loadedmetadata',seek,{once:true})}catch{}
+  await audio.play();
+  if(generation===gmwwAnnouncementGeneration)gmwwPlayerCueKey=pending.key;
+}
+// Retry a blocked autoplay on a real tap; playback still joins at the Server's position.
 document.addEventListener('pointerdown',()=>{
-  if(gmwwChatAudioOff()||!gmwwAnnouncementPending||gmwwAnnouncementPending.key===gmwwPlayerCueKey)return;
-  if(gmwwAnnouncementAudio?.src){const generation=gmwwAnnouncementGeneration,key=gmwwAnnouncementPending.key;void gmwwAnnouncementAudio.play().then(()=>{if(generation===gmwwAnnouncementGeneration)gmwwPlayerCueKey=key}).catch(()=>{})}
-  else if(!gmwwAnnouncementRequest)void gmwwPlayAnnouncement();
+  if(gmwwChatAudioOff()||!gmwwAnnouncementPending||gmwwAnnouncementPending.key===gmwwPlayerCueKey||gmwwAnnouncementRequest)return;
+  void gmwwPlayAnnouncement();
 },{passive:true});
 function gmwwChatAudioButton(){const b=document.getElementById('gmwwChatAudio');if(b){b.textContent=gmwwChatAudioOff()?'🔇':'🔊';b.title=gmwwChatAudioOff()?'Bật audio thông báo':'Tắt audio thông báo'}}
 

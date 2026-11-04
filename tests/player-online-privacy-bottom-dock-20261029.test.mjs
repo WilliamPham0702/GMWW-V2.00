@@ -63,70 +63,117 @@ test('GM can reply to an authenticated private Player channel without public cha
 });
 
 import vm from 'node:vm';
+import {webcrypto} from 'node:crypto';
+// V3.303: thư viện audio lượt theo nội dung (hash) + Server tự đẩy cue tới mọi thiết bị.
 const recordingCode=worker.split('// BEGIN RECORDED PUBLIC ANNOUNCEMENTS')[1]?.split('// END RECORDED PUBLIC ANNOUNCEMENTS')[0]||'';
-const mod=vm.runInNewContext(recordingCode+';({saveAnnouncement:typeof saveAnnouncement===\"function\"?saveAnnouncement:null,readAnnouncement:typeof readAnnouncement===\"function\"?readAnnouncement:null})',{Response,Uint8Array,atob});
-test('public announcement recordings validate bytes and reject stale turn uploads',async()=>{
-  assert.equal(typeof mod.saveAnnouncement,'function','recorded announcement transport is missing');
-  const data=new Map(),storage={get:async k=>data.get(k),put:async(k,v)=>data.set(k,v),delete:async k=>data.delete(k),transaction:async fn=>fn(storage)};
-  const bytes=new Uint8Array(150000);bytes.set(new TextEncoder().encode('ID3'));
-  const body={key:'match:night:turn',mime:'audio/mpeg',base64:Buffer.from(bytes).toString('base64')};
-  assert.equal((await mod.saveAnnouncement(storage,body,'other')).status,409);
-  assert.equal(data.size,0);
-  assert.equal((await mod.saveAnnouncement(storage,{...body,mime:'text/html'},body.key)).status,400);
-  assert.equal((await mod.saveAnnouncement(storage,{...body,base64:Buffer.from('<html>').toString('base64')},body.key)).status,400);
-  assert.equal((await mod.saveAnnouncement(storage,body,body.key)).status,200);
-  const response=await mod.readAnnouncement(storage,body.key,body.key);
-  assert.equal(response.headers.get('content-type'),'audio/mpeg');
-  assert.equal(response.headers.get('cache-control'),'no-store');
-  assert.deepEqual(new Uint8Array(await response.arrayBuffer()),bytes);
-  assert.equal((await mod.readAnnouncement(storage,body.key,'next-turn')).status,404);
-  const small={...body,key:'next-turn',base64:Buffer.from('ID3recording').toString('base64')};
-  await mod.saveAnnouncement(storage,small,small.key);
-  assert.equal(data.has('announcement:chunk:1'),false,'previous recording chunks are removed');
+const annCtx={Response,Uint8Array,atob,crypto:webcrypto,Object,Date,Math,Number,String,Array,Set};
+const mod=vm.runInNewContext(recordingCode+';({announcementTargetsForTurn,announcementCue,saveAnnouncementTarget,readAnnouncementBlob,announcementLibrary,decodeRecording})',annCtx);
+const memStorage=()=>{const data=new Map(),storage={data,get:async k=>data.get(k),put:async(k,v)=>{data.set(k,v)},delete:async k=>data.delete(k),
+  list:async({prefix})=>new Map([...data].filter(([k])=>k.startsWith(prefix))),transaction:async fn=>fn(storage)};return storage};
+const mp3=(n,fill=0)=>{const b=new Uint8Array(n).fill(fill);b.set(new TextEncoder().encode('ID3'));return b};
+const b64=b=>Buffer.from(b).toString('base64');
+
+test('V3.303: Server maps each turn to the same clips the GM plays (wolves, groups, artifacts, wake-up)',()=>{
+  const t=mod.announcementTargetsForTurn;
+  assert.deepEqual([...t({kind:'role',roleId:'role_seer'})],['cards:role_seer']);
+  assert.deepEqual([...t({kind:'role',roleId:'role_alpha_wolf'})],['cards:audio_group_wolves']);
+  assert.deepEqual([...t({kind:'role-group',roles:[{roleId:'role_wolf'},{roleId:'role_cursed'},{roleId:'role_alpha_wolf'}]})],['cards:audio_group_wolves','cards:role_cursed']);
+  assert.deepEqual([...t({kind:'artifact-main',artifactId:'art_x'})],['artifacts:art_x']);
+  assert.deepEqual([...t({kind:'village-wakeup'})],['system:audio_system_day_wakeup']);
+  const runtime={cursor:0,queue:[{id:'t1',label:'Tiên Tri',roleId:'role_seer',startedAt:'2026-11-04T13:00:00.000Z'}]};
+  const cue=mod.announcementCue({phase:'running',cyclePhase:'night',matchId:'m',cycleKey:'night-1'},runtime);
+  assert.equal(cue.startedAt,Date.parse('2026-11-04T13:00:00.000Z'),'Server start time drives every device');
 });
 
-test('recorded audio room handlers enforce GM auth and current room membership',async()=>{
-  const start=worker.indexOf('  async currentAnnouncement(meta)'),end=worker.indexOf('  async gmRoleAssets(',start);
-  const Room=vm.runInNewContext('(class Room {'+worker.slice(start,end)+'})',{
-    ...mod,announcementCue:vm.runInNewContext(recordingCode+';announcementCue'),normalizeLoginId:x=>String(x||'').toLowerCase(),j:(data,status)=>Response.json(data,{status})
-  });
-  const meta={phase:'running',cyclePhase:'morning',matchId:'m',cycleKey:'day:1'};
-  const room=new Room();room.ctx={storage:{get:async k=>k==='meta'?meta:k==='players'?{'member:alice':{}}:null}};
+test('V3.303: clip library validates bytes, dedups by hash, serves cacheable bytes and frees replaced clips',async()=>{
+  const s=memStorage(),clip=mp3(150000,7);
+  const save=(target,bytes,mime='audio/mpeg')=>mod.saveAnnouncementTarget(s,target,mod.decodeRecording({mime,base64:b64(bytes)}));
+  assert.equal((await save('bad target',clip)).status,400);
+  assert.equal((await save('cards:role_seer',new TextEncoder().encode('<html>'))).status,400);
+  const first=await (await save('cards:role_seer',clip)).json();
+  assert.match(first.hash,/^[a-f0-9]{32}$/);
+  assert.equal((await (await save('cards:role_seer',clip)).json()).unchanged,true,'same clip is not stored twice');
+  const read=await mod.readAnnouncementBlob(s,first.hash);
+  assert.equal(read.headers.get('content-type'),'audio/mpeg');
+  assert.match(read.headers.get('cache-control'),/immutable/);
+  assert.deepEqual(new Uint8Array(await read.arrayBuffer()),clip);
+  const second=await (await save('cards:role_seer',mp3(900,3))).json();
+  assert.notEqual(second.hash,first.hash);
+  assert.equal(s.data.has('annBlob:'+first.hash),false,'replaced clip bytes are removed');
+  assert.equal(s.data.has('annBlob:'+first.hash+':1'),false);
+  assert.equal((await mod.readAnnouncementBlob(s,'../x')).status,404);
+});
+
+const roomClass=()=>{
+  const start=worker.indexOf('  async currentAnnouncement(meta,runtime)'),end=worker.indexOf('  async gmRoleAssets(',start);
+  return vm.runInNewContext('(class Room {'+worker.slice(start,end)+'})',{...mod,normalizeLoginId:x=>String(x||'').toLowerCase(),
+    j:(data,status)=>Response.json(data,{status}),setTimeout,Response});
+};
+
+test('V3.303: every turn change pushes the live clip + start time; Players read only the live clip',async()=>{
+  const Room=roomClass(),s=memStorage(),sent=[];
+  const runtime={cursor:0,queue:[{id:'t1',label:'Tiên Tri',roleId:'role_seer',startedAt:'2026-11-04T13:00:00.000Z'},{id:'t2',label:'Bảo Vệ',roleId:'role_guard'}]};
+  const meta={phase:'running',cyclePhase:'night',cycleNight:1,matchId:'m',cycleKey:'night-1',code:'ABCDEF'};
+  await s.put('meta',meta);await s.put('players',{'member:alice':{}});
+  const room=new Room();room.ctx={storage:s};room.getNightRuntime=async()=>runtime;room.broadcast=m=>sent.push(m);
+  room.gmAuthorized=async()=>({ok:true,meta});
+  // Legacy GM (<=V3.302) uploads by turn key: stored as that turn's first target.
+  const legacy=await room.gmAnnouncement({},{key:'m:night-1:t1',mime:'audio/mpeg',base64:b64(mp3(400,1))});
+  assert.equal(legacy.status,200);
+  const cue=sent.at(-1).audioCue;
+  assert.equal(sent.at(-1).type,'announcement_ready');
+  assert.equal(cue.startedAt,Date.parse('2026-11-04T13:00:00.000Z'));
+  assert.match(cue.audio[0],/^\/api\/rooms\/ABCDEF\/announcement-audio\?a=[a-f0-9]{32}$/);
+  assert.ok(!JSON.stringify(cue).includes('role_seer'),'role identity never reaches Players');
+  const hash=cue.audio[0].split('a=')[1];
+  // GM preloads the next turn while the GM app may later go to background.
+  await room.gmAnnouncement({},{target:'cards:role_guard',mime:'audio/mpeg',base64:b64(mp3(500,2))});
+  assert.equal((await room.playerAnnouncement({loginId:'alice',a:hash})).status,200);
+  assert.equal((await room.playerAnnouncement({loginId:'intruder',a:hash})).status,403);
+  runtime.cursor=1;runtime.queue[1].startedAt='2026-11-04T13:00:30.000Z';
+  await room.syncAnnouncementCue(false);
+  const next=sent.at(-1).audioCue;
+  assert.equal(next.key,'m:night-1:t2');
+  assert.equal(next.audio.length,1,'Server resolves the next clip without the GM');
+  assert.equal((await room.playerAnnouncement({loginId:'alice',a:hash})).status,404,'past turn clips are no longer readable');
+  assert.equal((await room.gmAnnouncement({},{key:'old-key',mime:'audio/mpeg',base64:b64(mp3(300))})).status,409);
   room.gmAuthorized=async()=>({ok:false,response:new Response(null,{status:401})});
   assert.equal((await room.gmAnnouncement({},{})).status,401);
-  assert.equal((await room.playerAnnouncement({loginId:'intruder',key:'m:day:1:wakeup'})).status,403);
-  meta.enabled=false;
-  assert.equal((await room.playerAnnouncement({loginId:'alice',key:'m:day:1:wakeup'})).status,403);
+  assert.equal((await room.gmAnnouncementLibrary({})).status,401);
+  assert.ok(worker.includes("['night_turn','room_cycle','room_state','auto_gm','demo_control','room_reset','room_hard_reset','game_result'].includes(safe.type))this.scheduleAnnouncementSync()"),'turn/phase broadcasts trigger the audio push');
 });
 
-test('Player retries late recordings, stops old audio on turn change and rejects foreign URLs',async()=>{
-  const data=new Map(),players=[],requests=[];
-  class RecordedAudio{
-    constructor(){this.src='';this.paused=false;players.push(this)}
-    play(){return Promise.resolve()}
-    pause(){this.paused=true}
-    load(){}
-    removeAttribute(){this.src=''}
-  }
-  const context={state:{roomCode:'ABCDEF',participantId:'member:alice'},document:{addEventListener(){}},localStorage:{getItem:k=>data.get(k)},
-    updatePlayerTopMenu(){},auth:()=>({Authorization:'Bearer player'}),Audio:RecordedAudio,AbortController,URL,
+test('V3.303: Player joins the clip at the Server position, skips finished clips, reuses cached clips and rejects foreign URLs',async()=>{
+  const starts=[],requests=[];let now=1_000_000;
+  class Ctx{constructor(){this.state='running';this.currentTime=5}resume(){return Promise.resolve()}
+    decodeAudioData(d,ok){const b={duration:4};ok(b);return Promise.resolve(b)}
+    createGain(){return{gain:{},connect(){}}}
+    createBufferSource(){return{connect(){},start:(at,off)=>starts.push(off),stop(){}}}}
+  const ctx=new Ctx();
+  const context={state:{roomCode:'ABCDEF',participantId:'member:alice',serverClockOffsetMs:0},document:{addEventListener(){}},localStorage:{getItem:()=>null},
+    updatePlayerTopMenu(){},auth:()=>({Authorization:'Bearer player'}),Audio:class{},AbortController,URL,WeakMap,Map,
+    Date:{now:()=>now},gmwwAudio:()=>ctx,gmwwAudioMaster:{},
     fetch:async(url,opts)=>{requests.push({url,opts});return new Response('ID3recording',{headers:{'content-type':'audio/mpeg'}})}};
-  const code=chat.slice(0,chat.indexOf('function gmwwChatAudioButton()'));
-  vm.runInNewContext(code+';globalThis.actions={announce:gmwwChatAnnounce,stop:gmwwStopAnnouncement};',context);
-  const cue={key:'m:night:1',label:'Bầy Sói'};
-  context.actions.announce(cue);
-  await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(requests.length,0);
-  context.actions.announce({...cue,audioUrl:'/api/rooms/ABCDEF/announcement-audio?key=m%3Anight%3A1'});
-  await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(players.length,1,'late GM recording plays after next private poll');
+  const code=chat.slice(chat.indexOf("const gmwwChatAudioOff"),chat.indexOf('function gmwwChatAudioButton()'));
+  vm.runInNewContext('let gmwwPlayerCueKey="";'+code+';globalThis.actions={announce:gmwwChatAnnounce};',context);
+  const url='/api/rooms/ABCDEF/announcement-audio?a='+'a'.repeat(32);
+  const tick=()=>new Promise(r=>setImmediate(r));
+  context.actions.announce({key:'m:n1:t1',label:'Tiên Tri',startedAt:now-1500,audio:[url]});
+  await tick();await tick();
   assert.equal(requests[0].opts.headers.Authorization,'Bearer player');
-  context.actions.announce({key:'next',label:'Bảo Vệ',audioUrl:'https://other.example/private.mp3'});
-  await new Promise(resolve=>setImmediate(resolve));
-  assert.equal(players[0].paused,true,'old cue is stopped');
+  assert.ok(Math.abs(starts[0]-1.5)<0.01,'late device seeks to where everyone else is');
+  context.actions.announce({key:'m:n2:t1',label:'Tiên Tri',startedAt:now,audio:[url]});
+  await tick();await tick();
+  assert.equal(requests.length,1,'same clip next night comes from cache');
+  assert.equal(starts[1],0,'on-time device starts from the beginning');
+  context.actions.announce({key:'m:n2:t2',label:'Bảo Vệ',startedAt:now-9000,audio:[url]});
+  await tick();await tick();
+  assert.equal(starts.length,2,'a clip already finished elsewhere is not replayed late');
+  context.actions.announce({key:'m:n2:t3',label:'X',startedAt:now,audio:['https://other.example/a.mp3']});
+  await tick();
   assert.equal(requests.length,1,'foreign recording URL is rejected');
-  context.actions.stop();
 });
+
 
 test('ISO server deadline produces a countdown',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const s=read('src/player-web-src/35-online-chat.part');

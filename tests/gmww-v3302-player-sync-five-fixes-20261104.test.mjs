@@ -37,16 +37,15 @@ test('2. drag paints once per frame with a GPU transform and cached hit boxes',(
 // Lỗi 3: chỉ vai đang hành động nghe audio (vừa chạm màn hình); người khác bị iOS chặn autoplay
 // và chỉ nhận audioUrl ở lần poll sau.
 test('3. every player is pushed the turn audio and plays it through unlocked WebAudio',()=>{
-  const gmUpload=slice(index,'async gmAnnouncement(request,body){','async playerAnnouncement');
-  assert.match(gmUpload,/this\.broadcast\(\{type:"announcement_ready",audioCue:\{key:cue\.key/);
-  assert.match(gmUpload,/if\(saved\.ok&&cue\?\.key\)/,'only a stored, current recording is announced');
-  assert.match(live,/if\(d\.type==='announcement_ready'\)\{if\(d\.audioCue\?\.key\)gmwwChatAnnounce\(d\.audioCue\);return\}/);
-  const play=slice(live,'async function gmwwPlayAnnouncement()','// Retry a blocked autoplay');
-  assert.ok(play.indexOf('gmwwPlayAnnouncementBuffer(blob,generation,pending)')<play.indexOf('new Audio()'),'WebAudio first, HTMLAudio fallback');
-  const buf=slice(live,'async function gmwwPlayAnnouncementBuffer','// Retry a blocked autoplay');
+  // V3.303 thay luồng tải-theo-lượt bằng thư viện audio do Server tự đẩy (xem test v3303).
+  assert.match(index,/if\(saved\.ok&&meta\?\.phase==='running'\)await this\.syncAnnouncementCue\(false\)/,'a stored clip is pushed to every socket');
+  assert.match(live,/if\(d\.type==='announcement_ready'\)\{[^}]*gmwwChatAnnounce\(d\.audioCue\);return\}/);
+  const play=slice(live,'async function gmwwPlayAnnouncement()','function gmwwDecodeAnnouncement');
+  assert.ok(play.indexOf('gmwwPlayAnnouncementBuffers(blobs,generation,pending)')<play.indexOf('gmwwPlayAnnouncementHtml('),'WebAudio first, HTMLAudio fallback');
+  const buf=slice(live,'async function gmwwPlayAnnouncementBuffers','async function gmwwPlayAnnouncementHtml');
   assert.match(buf,/g\.connect\(gmwwAudioMaster\)/);
   assert.match(buf,/gmwwPlayerCueKey=pending\.key/);
-  assert.match(slice(live,'function gmwwStopAnnouncement()','\n}'),/gmwwAnnouncementSource\.stop\(0\)/,'next turn stops the previous voice');
+  assert.match(slice(live,'function gmwwStopAnnouncementSources()','\n'),/src\.stop\(0\)/,'next turn stops the previous voice');
 });
 
 // Lỗi 4: đồng hồ, khung chat thu gọn và Khôi phục không cùng chiều cao; bỏ icon ↶.
@@ -60,7 +59,7 @@ test('4. footer row: clock, collapsed chat and text-only Khôi phục share one 
 
 // Lỗi 5: GM app quay lại từ nền vẫn hiện lượt cũ cho tới khi socket tự nối lại (backoff tới 10 s).
 test('5. GM Runtime resyncs at once on resume and when the turn deadline passes silently',()=>{
-  assert.match(gm,/const VERSION='3\.302'/);
+  assert.match(gm,/const VERSION='3\.30[2-9]'/);
   for(const ev of ["document.addEventListener('visibilitychange',playResumeRealtime)","window.addEventListener('pageshow',playResumeRealtime)","window.addEventListener('focus',playResumeRealtime)"])
     assert.ok(gm.includes(ev),ev);
   const resume=slice(gm,'function playResumeRealtime()','\ndocument.addEventListener');

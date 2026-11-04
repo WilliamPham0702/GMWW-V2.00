@@ -1,35 +1,49 @@
-// Publish only the public turn call. GM mute never changes Player audio permissions.
-let gmwwPublishedAnnouncement='',gmwwPublishingAnnouncement='',gmwwAnnouncementAttempt={key:'',at:0};
-async function gmwwPublishAnnouncement(turn){
-  const room=playSceneRuntime.room,code=String(playSceneState.roomCode||'');
-  if(!code||room?.phase!=='running')return;
-  const morning=room.cyclePhase==='morning';
-  const key=String(room.matchId)+':'+String(room.cycleKey)+':'+(morning?'wakeup':String(turn?.id||''));
-  if(!morning&&!turn?.id||gmwwPublishedAnnouncement===code+key||gmwwPublishingAnnouncement===code+key)return;
-  if(gmwwAnnouncementAttempt.key===code+key&&Date.now()-gmwwAnnouncementAttempt.at<5000)return;
-  gmwwAnnouncementAttempt={key:code+key,at:Date.now()};gmwwPublishingAnnouncement=code+key;
-  try{
-    const cue=morning?{kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'}:battleTurnAudioCue(turn);
-    if(!cue)return;
-    const candidates=battleFindAudioCandidates(cue.kind,cue.targetId,cue.name);
-    let blob=null;
-    for(const row of candidates){
-      const src=await battleWarmAudio(cue.kind,row);if(!src)continue;
-      const response=await fetch(src);if(!response.ok)continue;
-      const candidate=await response.blob();
-      if(candidate.size&&candidate.size<=2*1024*1024){blob=candidate;break}
-    }
-    if(!blob)return;
-    const bytes=new Uint8Array(await blob.arrayBuffer());let raw='';
-    const signature=(a,b)=>String.fromCharCode(...bytes.slice(a,b));
-    const mime=signature(0,3)==='ID3'||bytes[0]===255&&(bytes[1]&224)===224?'audio/mpeg':signature(4,8)==='ftyp'?'audio/mp4':signature(0,4)==='OggS'?'audio/ogg':signature(0,4)==='RIFF'&&signature(8,12)==='WAVE'?'audio/wav':'';
-    if(!mime)return;
-    for(let i=0;i<bytes.length;i+=16384)raw+=String.fromCharCode(...bytes.subarray(i,i+16384));
-    // Route and key are verified again by the room before storing any bytes.
-    await gmApi('/api/gm/rooms/'+encodeURIComponent(code)+'/announcement-audio',{method:'PUT',body:JSON.stringify({key,mime,base64:btoa(raw)}),timeoutMs:30000});
-    gmwwPublishedAnnouncement=code+key;
-  }catch(error){console.warn('Player recorded announcement pending',String(error?.message||error))}
-  finally{if(gmwwPublishingAnnouncement===code+key)gmwwPublishingAnnouncement=''}
+// V3.303: upload every configured turn clip once into the room library (content hash),
+// so the Server can push turn audio to all Players itself, even when this app is in
+// background. GM mute never changes Player audio permissions.
+let gmwwAnnouncementLib=null,gmwwAnnouncementLibRoom='',gmwwAnnouncementQueue=Promise.resolve();
+const gmwwAnnouncementWakeup={kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'};
+async function gmwwAnnouncementClip(cue){
+  for(const row of battleFindAudioCandidates(cue.kind,cue.targetId,cue.name)){
+    const src=await battleWarmAudio(cue.kind,row);if(!src)continue;
+    const response=await fetch(src);if(!response.ok)continue;
+    const blob=await response.blob();
+    if(blob.size&&blob.size<=2*1024*1024)return new Uint8Array(await blob.arrayBuffer());
+  }
+  return null;
+}
+async function gmwwUploadAnnouncementCues(cues){
+  const code=String(playSceneState.roomCode||'');
+  if(!code||playSceneRuntime.room?.phase!=='running')return;
+  if(gmwwAnnouncementLibRoom!==code){gmwwAnnouncementLib=null;gmwwAnnouncementLibRoom=code}
+  const path='/api/gm/rooms/'+encodeURIComponent(code)+'/announcement-audio';
+  if(!gmwwAnnouncementLib)gmwwAnnouncementLib=(await gmApi(path,{method:'GET',timeoutMs:15000}))?.targets||{};
+  const seen=new Set();
+  for(const cue of cues){
+    const target=cue?.kind&&cue?.targetId?String(cue.kind)+':'+String(cue.targetId):'';
+    if(!target||seen.has(target))continue;seen.add(target);
+    try{
+      const bytes=await gmwwAnnouncementClip(cue);if(!bytes)continue;
+      const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),hash=[...digest.slice(0,16)].map(b=>b.toString(16).padStart(2,'0')).join('');
+      if(gmwwAnnouncementLib[target]===hash)continue;
+      const signature=(a,b)=>String.fromCharCode(...bytes.slice(a,b));
+      const mime=signature(0,3)==='ID3'||bytes[0]===255&&(bytes[1]&224)===224?'audio/mpeg':signature(4,8)==='ftyp'?'audio/mp4':signature(0,4)==='OggS'?'audio/ogg':signature(0,4)==='RIFF'&&signature(8,12)==='WAVE'?'audio/wav':'';
+      if(!mime)continue;
+      let raw='';for(let i=0;i<bytes.length;i+=16384)raw+=String.fromCharCode(...bytes.subarray(i,i+16384));
+      // Target and bytes are verified again by the room before storing anything.
+      await gmApi(path,{method:'PUT',body:JSON.stringify({target,mime,base64:btoa(raw)}),timeoutMs:30000});
+      gmwwAnnouncementLib[target]=hash;
+    }catch(error){console.warn('Player turn audio pending',target,String(error?.message||error))}
+  }
+}
+// Current turn first, then the rest of tonight and the wake-up call.
+function gmwwPublishAnnouncement(turn){
+  const queue=playSceneRuntime.nightRuntime?.queue||[],cues=[];
+  if(turn)cues.push(...battleAudioCuesForTurn(turn));else cues.push(gmwwAnnouncementWakeup);
+  for(const t of queue)cues.push(...battleAudioCuesForTurn(t));
+  cues.push(gmwwAnnouncementWakeup);
+  gmwwAnnouncementQueue=gmwwAnnouncementQueue.then(()=>gmwwUploadAnnouncementCues(cues)).catch(()=>{});
+  return gmwwAnnouncementQueue;
 }
 
 
