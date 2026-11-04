@@ -83,7 +83,7 @@ test('Stage6: 40-look gallery and sample rituals cannot command live GMWW',()=>{
   const html=readFileSync('assets/village/arena-3d/live.html','utf8');
   assert.match(source,/if\(!synthetic\).*Bộ sưu tập mỹ thuật/);
   assert.match(source,/if\(!synthetic\).*Chế độ phòng thật chỉ hiển thị hiệu ứng/);
-  assert.match(source,/field\.setCastingTurn\(data\.casting\|\|null\)/);
+  assert.match(source,/field\.setCastingTurn\(normalized\)/);
   assert.match(source,/ritualArt\(requestedKind\)/);
   assert.match(html,/data-gallery="1"/);
   assert.match(html,/data-fx="vote"/);

@@ -5474,6 +5474,53 @@ async function playApplySeatPreset(count){
   const ok=await playUpdateRoomSettings({seatCount:count,seatLayout:shape});
   if(ok){playGatherFlow.seatChosen=true;playGatherFlow.distributeMode='';closePlaySeatPresetPanel();renderPlayGatherToolbar();}
 }
+
+// Arena 3D bridge (PR #581). Active ONLY when the 3D iframe is served by the
+// same Core origin as GMWW_SERVER_BASE (the STAGING 3D Runtime flavor). In the
+// Production Runtime the QA iframe is on another origin, so every handler is inert.
+// The GM bearer travels only by origin-checked postMessage, never in a URL.
+const GMWW_ARENA_CORE_ORIGIN=new URL(GMWW_SERVER_BASE).origin;
+function gmwwArenaFrame(event){
+  const frame=document.getElementById('gmwwArena3dQaFrame');
+  if(event.origin!==GMWW_ARENA_CORE_ORIGIN||!frame||!frame.isConnected||
+     frame.closest('[hidden]')||event.source!==frame.contentWindow)return null;
+  return frame;
+}
+window.addEventListener('message',event=>{
+  if(event.data?.kind!=='gmww-arena3d-ready')return;
+  const frame=gmwwArenaFrame(event);if(!frame)return;
+  const roomCode=String(playSceneState.roomCode||'').trim(),
+    gmToken=String(playSceneState.gmToken||'').trim();
+  if(!isLivePlayRoom()||!/^[A-Za-z0-9._~+\/=:-]{12,256}$/.test(gmToken))return;
+  frame.contentWindow.postMessage({kind:'gmww-arena3d-gm-context',roomCode,gmToken},GMWW_ARENA_CORE_ORIGIN);
+});
+let gmwwArenaAdoptSerial=0;
+window.addEventListener('message',async event=>{
+  if(event.data?.kind!=='gmww-arena3d-adopt-room')return;
+  const frame=gmwwArenaFrame(event);if(!frame)return;
+  const roomCode=String(event.data.roomCode||'').trim().toUpperCase(),
+    token=String(event.data.gmToken||'');
+  if(!/^[A-Z0-9]{4,12}$/.test(roomCode)||!/^[A-Za-z0-9._~+\/=:-]{12,256}$/.test(token))return;
+  const serial=++gmwwArenaAdoptSerial;
+  try{
+    // Core re-authenticates the bearer before any GM state changes.
+    const response=await fetch(GMWW_SERVER_BASE+'/api/gm/rooms/'+encodeURIComponent(roomCode),{
+      headers:{Authorization:'Bearer '+token},cache:'no-store'});
+    if(!response.ok)throw Error('Core từ chối quyền GM');
+    const verified=await response.json();
+    const room=verified?.room||{};
+    if(verified?.ok!==true||String(room.code||room.roomCode||roomCode).toUpperCase()!==roomCode)
+      throw Error('Core không xác nhận đúng phòng');
+    if(serial!==gmwwArenaAdoptSerial||event.source!==frame.contentWindow)return;
+    rememberPlayRoom(roomCode,token,room);
+    await selectPlayExistingRoom({roomCode,gmToken:token,roomMode:room.roomMode,demo:room.demo,
+      seatCount:room.seatCount,enabled:room.enabled});
+    window.dispatchEvent(new Event('gmww-arena3d-room-adopted'));
+  }catch(error){
+    if(serial!==gmwwArenaAdoptSerial||!frame.isConnected)return;
+    frame.contentWindow.postMessage({kind:'gmww-arena3d-adopt-failed',message:String(error?.message||error)},GMWW_ARENA_CORE_ORIGIN);
+  }
+});
 function playPublishStage(step){
   if(!isLivePlayRoom()||!['room','seats','game','roles','deal','battle'].includes(step))return Promise.resolve(null);
   // Skip duplicate stage POSTs; the Server already acknowledged this stage.

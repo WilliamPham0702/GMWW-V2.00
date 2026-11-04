@@ -6,6 +6,7 @@ import {projectGmOnlyVisuals,redactStagingPublicBroadcast} from './arena3d-visua
 import {stageCastingCue,classifyCastingAction} from '../assets/village/arena-3d/casting-choreography.mjs';
 import {stageAuthorizedRoleId,verifiedPrivateCard,familyForConfirmedAction,artifactVisualSnapshot,shouldRevokeVisualAfterUndo} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
 import {privateTurnActionOptions} from '../assets/village/arena-3d/stage29-gm-actions.mjs';
+import {injectArena3dPlayerEntry,isPlayerPagePath} from './arena3d-player-entry.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -274,6 +275,13 @@ export default {
     // Never expose Runtime/IPA release/update endpoints from the staging worker.
     if(url.pathname.startsWith('/api/update')||url.pathname.startsWith('/updates/')){
       return new Response('Not available on staging',{status:404,headers:{'cache-control':'no-store'}});
+    }
+    // PR #581: joined Players enter the public 3D village on STAGING only.
+    if(request.method==='GET'&&isPlayerPagePath(url.pathname)){
+      const response=await core.fetch(request,env,ctx);
+      if(!response.ok||!String(response.headers.get('content-type')||'').includes('text/html'))return response;
+      const headers=new Headers(response.headers);headers.delete('content-length');
+      return new Response(injectArena3dPlayerEntry(await response.text()),{status:response.status,headers});
     }
     return core.fetch(request,env,ctx);
   }

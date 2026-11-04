@@ -294,16 +294,27 @@ async function json(url,{method='GET',body,gm=false,token}={}){
 // Until the existing full Core deck/Artifact editor is rendered in 3D,
 // navigate back to GMWW's authoritative configuration flow. Do NOT invent
 // assignments or copy private decks into the public 3D scene.
+function parentTargetOrigin(){
+  const ancestor=String(location.ancestorOrigins?.[0]||'');
+  if(ancestor===location.origin)return location.origin;
+  if(ancestor==='null'||ancestor.startsWith('file:'))return '*';
+  return '';
+}
 $('open-setup').onclick=()=>{
   if(!productionCoreView)return;
   if(window.parent===window){notice('Hãy mở Arena 3D từ nút VÀO LÀNG của GMWW để dùng thiết lập ván hiện tại.');return;}
   // The selected Arena room must become the GMWW Core room BEFORE editing roles.
   // Transfer a GM bearer only to the exact official same-origin parent;
   // Core authenticates it independently. Never embed it in a URL.
+  // The iOS GMWW Runtime is a file:// page (opaque origin "null"), so an
+  // https targetOrigin would silently drop the message. Address the parent by
+  // its real ancestor origin: same origin, or the opaque native host only.
+  const host=parentTargetOrigin();
+  if(!host){notice('Không xác định được ứng dụng GM chủ. Hãy mở lại từ nút VÀO LÀNG.');return;}
   if(code&&gmToken){
-    window.parent.postMessage({kind:'gmww-arena3d-adopt-room',roomCode:code,gmToken},location.origin);
+    window.parent.postMessage({kind:'gmww-arena3d-adopt-room',roomCode:code,gmToken},host);
   }else{
-    window.parent.postMessage({kind:'gmww-arena3d-open-setup'},location.origin);
+    window.parent.postMessage({kind:'gmww-arena3d-open-setup'},host);
   }
 };
 function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
@@ -412,6 +423,11 @@ if(productionCoreView&&window.parent!==window){
   // its room bearer to the exact official Worker origin, never to STAGING.
   // Source/origin/room token are then verified by the official Core.
   window.parent.postMessage({kind:'gmww-arena3d-ready'},'*');
+  // Adoption result from the GM host: Core refused or the room mismatched.
+  window.addEventListener('message',event=>{
+    if(event.source!==window.parent||event.data?.kind!=='gmww-arena3d-adopt-failed')return;
+    notice('GM chưa nhận phòng: '+String(event.data.message||'Core từ chối').slice(0,120));
+  });
 }
 let seeded=[];
 $('seed').onclick=()=>guarded('Lấp Seat trống bằng thành viên thử',async()=>{
