@@ -86,7 +86,7 @@ test('5b. stale detector: quiet socket or overdue turn → resync; fresh traffic
 
 // Bổ sung: audio tự phát không phụ thuộc chạm vào menu.
 test('3b. taps on the village scene unlock audio and returning to the page resumes it',()=>{
-  assert.match(live,/gmww:village-ready'\)\{syncVillageFrame\(true\);gmwwBindVillageAudioUnlock\(\)/);
+  assert.match(live,/gmww:village-ready'\)\{syncVillageFrame\(true\);gmwwOnlinePlaceAtFire[^}]*gmwwBindVillageAudioUnlock\(\);\}/);
   const bind=slice(live,'function gmwwBindVillageAudioUnlock()','function unlockGmwwAudio');
   assert.match(bind,/doc\.addEventListener\(t,unlockGmwwAudio/);
   assert.match(live,/document\.addEventListener\('visibilitychange',gmwwAudioWake\)/);
