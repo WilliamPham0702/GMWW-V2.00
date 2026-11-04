@@ -8877,3 +8877,15 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 @media(prefers-reduced-motion:reduce){
   #start .play-player-token .play-player-avatar>.battle-orbit i{animation:none!important}
 }
+
+/* GMWW gathering wizard: only the current unlocked step is illuminated. */
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button.is-sequence-current:not(:disabled){
+  border-color:rgba(255,226,123,.95)!important;
+  background:linear-gradient(155deg,rgba(49,116,126,.97),rgba(19,77,99,.97))!important;
+  box-shadow:0 0 0 1px rgba(255,226,123,.25),0 0 13px rgba(255,226,123,.16)!important;
+  color:#fff6cb!important;
+}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button.is-sequence-done:not(:disabled):not(.is-sequence-current){opacity:.85}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button:disabled{
+  opacity:.32!important;filter:grayscale(.8);box-shadow:none!important;cursor:default;
+}
