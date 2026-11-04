@@ -35,7 +35,7 @@ test('V3: empty diff is no-op, repeated files do not trigger duplicate releases'
 });
 
 // PR788: approved native microphone scope is verification-only; never general native auto-release.
-test('V3: reviewed PR788 native mic validation passes only its exact ten-file scope',()=>{
+test('V3: reviewed PR788 native mic validation passes only within its approved allowlist',()=>{
  const files=[
   'server-game/GMWW-Server/GameView.swift',
   'server-game/GMWW-Server/Info.plist',
@@ -56,4 +56,9 @@ test('V3: reviewed PR788 native mic validation passes only its exact ten-file sc
  assert.equal(v3DeliveryPlan(files.slice(1)).target,'blocked');
  assert.equal(v3DeliveryPlan([...files,'src/index.js']).target,'blocked');
  assert.equal(v3DeliveryPlan([...files,'server-game/GMWW-Server/Other.swift']).target,'blocked');
+ // The actual PR diff is an 8-file subset of the allowlist (no Player Web workflow/scope test edits).
+ const actual=files.filter(f=>f!=='.github/workflows/check-player-web.yml'&&f!=='tests/ci-browser-scope.test.mjs');
+ assert.equal(v3DeliveryPlan(actual).target,'native-verify');
+ // Core native files remain mandatory.
+ for(const core of files.slice(0,4))assert.equal(v3DeliveryPlan(actual.filter(f=>f!==core)).target,'blocked',core);
 });

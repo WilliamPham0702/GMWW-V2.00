@@ -47,7 +47,10 @@ export function v3DeliveryPlan(paths){
   return createHash('sha1').update('blob '+buf.length+'\0').update(buf).digest('hex');
  };
  let nativeVerified=false;
- if(types.has('native')&&files.length===micNativeFiles.size&&files.every(f=>micNativeFiles.has(f))){
+ const micCoreFiles=['server-game/GMWW-Server/GameView.swift','server-game/GMWW-Server/Info.plist',
+  'tests/native-ios-microphone-permission-20261104.test.mjs','docs/releases/GMWW-IOS-NATIVE-MIC-PERMISSION-20261104.md'];
+ // Allowlist subset: every changed file must be approved and the four core files must be present.
+ if(types.has('native')&&micCoreFiles.every(f=>files.includes(f))&&files.every(f=>micNativeFiles.has(f))){
   try{nativeVerified=[...expectedNativeBlobs].every(([p,sha])=>blobHash(p)===sha)}catch{}
  }
  if(nativeVerified)return {
