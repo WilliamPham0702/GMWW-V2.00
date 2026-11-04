@@ -4378,7 +4378,7 @@ function isV3296CiOnlyRecoveryScope(changes){
 }
 
 function classifyBrowserScope(changes){
-  if(isV3296CiOnlyRecoveryScope(changes))return 'comet-orbit-v3296';
+  // Recovery is validated by detect() against real Git ancestry; never trust synthetic rows.
   if(isV3296CometOrbitScope(changes))return 'comet-orbit-v3296';
   if(isPR778FinalMainScope(changes))return 'pr778-postmerge-worker';
   if(isPR778PostmergeWorkerScope(changes))return 'pr778-postmerge-worker';
@@ -4837,12 +4837,12 @@ function detect(){
       if(!isPush||process.env.GITHUB_REF==='refs/heads/main'){
         const pinned='fb3528abfd80b1eee5d96abe34fbb69059692678';
         const parent=git('rev-parse','HEAD^1').trim();
-        if(parent===pinned){
+        const base=isPush?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+        if((isPush&&parent===pinned)||(!isPush&&base===pinned)){
           git('merge-base','--is-ancestor',pinned,'HEAD');
           git('diff','--quiet',pinned,'HEAD','--',
             'src','server-game','assets','update-system',
             'package.json','package-lock.json','wrangler.jsonc');
-          const base=isPush?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
           if(base==='HEAD^1'||base===pinned){
             const rows=git('diff','--name-status','--no-renames',base,'HEAD')
               .trim().split('\n').filter(Boolean);
