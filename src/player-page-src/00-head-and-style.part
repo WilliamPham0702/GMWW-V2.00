@@ -1,5 +1,5 @@
 const HTML=`<!doctype html>
-<html lang="vi">
+<html lang="vi" data-gmww-boot="pending">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -440,5 +440,12 @@ button,input,select,textarea{font:inherit}
   backdrop-filter:blur(2.5px)!important;
 }
 .screen>*{position:relative;z-index:1}
+</style>
+<style id="gmww-player-first-paint">
+/* Prevent any legacy mock/screen from reaching first paint during session restore. */
+html[data-gmww-boot="pending"] .app > .screen{visibility:hidden!important;pointer-events:none!important}
+html[data-gmww-boot="pending"] body::before{content:"Đang tải GMWW…";position:fixed;inset:0;z-index:999999;display:grid;place-items:center;background:#071426;color:#d9ebeb;font:600 13px Arial,Helvetica,sans-serif}
+#game .game-top,#game .role-hint,#game .game-status,#gmwwGameViewTabs{display:none!important}
+#game .role-stage[hidden]{display:none!important}
 </style>
 </head>
