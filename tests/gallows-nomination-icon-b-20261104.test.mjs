@@ -18,10 +18,10 @@ test('Icon B: both GM and Player carry one identical 128px transparent PNG',()=>
 
 test('Player drag icon is standalone artwork with same snap/preview/OK behavior',()=>{
   const code=readFileSync('assets/village/village.mjs','utf8');
-  assert.match(code,/gmww-gallows-nominate-art\{[^}]*width:36px;height:36px/);
+  assert.match(code,/gmww-gallows-nominate-art\{[^}]*width:36px;height:36px;position:absolute/);
   assert.match(code,/new URL\('\.\/gmww-gallows-nominate-b\.png',import\.meta\.url\)/);
   assert.match(code,/icon\.draggable=false;flag\.replaceChildren\(icon\)/);
-  assert.match(code,/width:48px;height:48px;display:flex/);
+  assert.match(code,/width:48px;height:48px;line-height:48px/);
   assert.match(code,/background:transparent;border:0;box-shadow:none/);
   for(const evt of ['gmww:gallows-preview-nominate','gmww:gallows-confirm-nominate','gmww:gallows-reset-nominate']){
     assert.ok(code.includes(evt),evt);
