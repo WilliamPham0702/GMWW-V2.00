@@ -28,7 +28,8 @@ test('Player Web fire uses the published fire marker, same rule as GM Server',()
 test('dragging lifts the real icon, magnet-sucks into a nearby player, misses fly home',()=>{
   const down=live.slice(live.indexOf('function gmwwOnlineIconDown'),live.indexOf('function gmwwOnlineTurnEffects'));
   assert.match(down,/node\.classList\?\.add\('gmww-online-lifted'\)/,'original icon must leave the fire while dragging');
-  assert.match(down,/gmwwOnlinePlayerCenter\(id\)/);
+  // V3.301: suction centre now comes from the per-frame cached snapshot (hit.cx/cy), not a live iframe read per move.
+  assert.match(down,/c=hit\?\{x:hit\.cx,y:hit\.cy\}:null/);
   assert.match(down,/ghost\.classList\?\.toggle\('is-magnet',!!c\)/);
   assert.match(down,/finished=true;cleanup\(\);settle\(\)/,'blur/cancel puts the icon back on the fire');
   assert.match(down,/gmwwOnlineFlyGhost\(ghost,c,true\)/,'drop → absorb animation into player');
@@ -39,7 +40,7 @@ test('dragging lifts the real icon, magnet-sucks into a nearby player, misses fl
 });
 
 test('restore button is labelled and pulses when an action can be restored',()=>{
-  assert.match(live,/undo\.id='gmwwPlayerRestore';undo\.innerHTML='<span aria-hidden="true">↶<\/span><small>Khôi phục<\/small>'/);
+  assert.match(live,/undo\.id='gmwwPlayerRestore';undo\.textContent='Khôi phục'/);
   const hint=new Function('document','state','gmwwOnlinePick','gmwwOnlineCanRestore',
     live.slice(live.indexOf('function gmwwOnlineRestoreHint'),live.indexOf('function gmwwOnlinePickAction'))+'\nreturn gmwwOnlineRestoreHint;');
   const cls=new Set(),b={classList:{toggle:(k,on)=>on?cls.add(k):cls.delete(k)},title:''},doc={getElementById:()=>b};
