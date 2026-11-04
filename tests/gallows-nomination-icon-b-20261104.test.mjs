@@ -10,7 +10,7 @@ const sha=x=>createHash('sha256').update(x).digest('hex');
 test('Icon B: both GM and Player carry one identical 128px transparent PNG',()=>{
   const a=readFileSync(gm),b=readFileSync(player);
   assert.deepEqual(a,b);
-  assert.equal(sha(a),'386c02b68a16f450941d1f422b403088b2385a5df385dcd0b1b3b467b81c12d1');
+  assert.equal(sha(a),'ee3fec28598f1e4d5b9d08bdfe2874adf60efdb3dc15775cdc9b71ddc8f14419');
   assert.equal(a.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
   assert.equal(a.readUInt32BE(16),128);assert.equal(a.readUInt32BE(20),128);
   assert.ok(a.includes(Buffer.from('tRNS')),'PNG must preserve alpha transparency');
