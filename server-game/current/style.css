@@ -8836,19 +8836,14 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 /* GM administrative actions: four independent free-floating icons, no dock frame. */
 #start #gmwwGMAdminDock{position:fixed!important;inset:0!important;width:0!important;height:0!important;z-index:99992!important;display:block!important;pointer-events:none!important}
 #start #gmwwGMAdminDock button{position:fixed!important;top:calc(env(safe-area-inset-top) + 112px);width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;padding:0!important;pointer-events:auto!important;touch-action:none!important}
-/* V3.305 top-right GM menu: Cứu · Giết · Cấm Chat · Auto GM (game action icons). */
-#start #gmwwGMAdminDock button[data-gm-admin="revive"]{left:calc(100vw - 202px)}
 #start #gmwwGMAdminDock button[data-gm-admin="dead"]{left:calc(100vw - 152px)}
-#start #gmwwGMAdminDock button[data-gm-admin="mute-chat"]{left:calc(100vw - 102px)}
-#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"]{left:calc(100vw - 52px)}
-#start #gmwwGMAdminDock button{border:0!important;background:transparent!important;border-radius:12px!important}
-#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"]::after{content:"AUTO";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);padding:1px 4px;border-radius:6px;font:800 8px/1.2 system-ui;letter-spacing:.04em;color:#3d0b05;background:#ff9b8f;pointer-events:none}
-#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"][data-state="on"]::after{color:#0c3317;background:#7ee08a}
-#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"][data-state="off"] img{filter:grayscale(.75) brightness(.8)}
+#start #gmwwGMAdminDock button[data-gm-admin="revive"]{left:calc(100vw - 102px)}
+#start #gmwwGMAdminDock button[data-gm-admin="mute-chat"]{left:calc(100vw - 52px)}
 #start #gmwwGMAdminDock button img,.gmww-gm-admin-ghost img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .gmww-gm-admin-ghost{width:44px;height:44px}
 #start #playBattleTop:has(#gmwwGMAdminDock){grid-template-columns:revert!important}
 
+#start #gmwwGMAdminDock button[data-gm-admin="open-chat"]{left:calc(100vw - 202px);font-size:32px!important}
 
 /* PR follow-up: ⭐ and 🔥 orbit the CHARACTER, not the label/ground.
    Individual emoji follow a horizontal ellipse with front/back scale, as the

@@ -7406,6 +7406,19 @@ function gmwwGMAdminTargetAt(x,y,type){
 function gmwwGMAdminMount(){
   const top=document.getElementById('playBattleTop');if(!top)return;
   let bar=document.getElementById('gmwwGMAdminDock');
+  if(!document.getElementById('gmwwGMAdminDockV3305')){
+    // V3.305 top-right GM menu: Cứu · Giết · Cấm Chat · Auto GM (game action icons). Overrides older left offsets.
+    const st=document.createElement('style');st.id='gmwwGMAdminDockV3305';
+    st.textContent='#start #gmwwGMAdminDock button[data-gm-admin="revive"]{left:calc(100vw - 202px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="dead"]{left:calc(100vw - 152px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="mute-chat"]{left:calc(100vw - 102px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"]{left:calc(100vw - 52px)!important}'+
+      '#start #gmwwGMAdminDock button{border:0!important;background:transparent!important;border-radius:12px!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"]::after{content:"AUTO";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);padding:1px 4px;border-radius:6px;font:800 8px/1.2 system-ui;letter-spacing:.04em;color:#3d0b05;background:#ff9b8f;pointer-events:none}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"][data-state="on"]::after{color:#0c3317;background:#7ee08a}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"][data-state="off"] img{filter:grayscale(.75) brightness(.8)}';
+    document.head.appendChild(st);
+  }
   if(!bar){
     bar=document.createElement('div');bar.id='gmwwGMAdminDock';
     bar.setAttribute('role','group');bar.setAttribute('aria-label','Hành động riêng của GM');

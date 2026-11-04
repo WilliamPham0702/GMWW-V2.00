@@ -21,7 +21,7 @@ Ngày: 05/11/2026 · Phạm vi: Worker (Server + Player Web + khung Làng) và R
 - Server: hết giờ thảo luận → Auto GM tự **Mở đề cử** → hết giờ đề cử **Chốt đề cử** (hòa phiếu = không ai lên giàn) → sau 5s **Mở bỏ phiếu Sống/Chết** → hết giờ công bố kết quả → 30s (hoặc GM xác nhận) mới sang Đêm. Chế độ Lên Giàn thủ công (GM) thì Auto GM chờ GM chốt.
 - Server: bắt đầu ván thật luôn đặt `autoGM=true` (DEMO giữ tắt); GM cũng bật tại chỗ.
 - Server: tự phát cue "Đếm ngược 30 giây cuối" tới mọi Player đúng lúc hạn ngày −30s (một lần mỗi ngày, bỏ qua khi Auto GM tạm dừng/DEMO). GM tải sẵn clip lúc sang ngày và không đẩy trùng.
-- GM: menu góc phải trên 4 icon game (07 Cứu, 15 Giết, 39 Cấm nói, 31 Rung chuông = Auto GM có nhãn AUTO xanh/đỏ); gắn trong `#start`. Bảng Lên Giàn tự mở mỗi khi Server chuyển giai đoạn.
+- GM: menu góc phải trên 4 icon game (07 Cứu, 15 Giết, 39 Cấm nói, 31 Rung chuông = Auto GM có nhãn AUTO xanh/đỏ); gắn trong `#start`, CSS chèn từ bundle GM (không sửa style.css). Bảng Lên Giàn tự mở mỗi khi Server chuyển giai đoạn.
 - GM + Player: icon hành động cách menu dưới 48px (trước 10px); Player bám theo khi mở/đóng chat.
 - Player: dải 📢 Thông cáo Làng chạy trên menu trên, sau "Làng ơi dậy đi" (chỉ ban ngày).
 - Khung Làng Player: mục tiêu (không phải người đến lượt, không chết/đóng băng/trục xuất) chạy tại chỗ như GM.

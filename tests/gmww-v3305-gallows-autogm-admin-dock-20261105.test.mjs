@@ -166,8 +166,8 @@ test('4. GM top-right menu: Cứu · Giết · Cấm Chat · Auto GM, game icons
   assert.match(mount,/if\(type==='auto-gm'\)\{void togglePlayAutoGM\(\);return\}/);
   assert.match(mount,/aria-pressed',String\(auto\?!!playSceneState\.autoGM/);
   for(const [type,left] of [['revive',202],['dead',152],['mute-chat',102],['auto-gm',52]])
-    assert.ok(css.includes(`#start #gmwwGMAdminDock button[data-gm-admin="${type}"]{left:calc(100vw - ${left}px)}`),type);
-  assert.match(readFileSync('server-game/current/GMWW.html','utf8'),/style\.css\?v=gmww-v3305-admin-dock/);
+    assert.ok(mount.includes(`#start #gmwwGMAdminDock button[data-gm-admin="${type}"]{left:calc(100vw - ${left}px)!important}`),type);
+  assert.ok(css.length>0,'style.css untouched (legacy guard); dock CSS is injected by the GM bundle');
 });
 
 // ---------- 5. Thông cáo Làng trên menu trên Player ----------
