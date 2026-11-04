@@ -2004,8 +2004,63 @@ jobs:
           test -s docs/releases/GMWW-RUNTIME-V3.299-GATHER-ONLINE-20261104.md
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'V3.299: exact 18-file gather Runtime, source/OTA/orbit/audio safety gates PASS.' >> "$GITHUB_STEP_SUMMARY"
+      # PR793 V3.300: fail-closed gate for room mode switching after gather/seat lock.
+      - name: V3.300 room mode — verify exact Runtime delta and focused safety
+        id: room_mode_v3300
+        if: steps.scope.outputs.mode == 'full' && ((github.event_name == 'pull_request' && github.event.pull_request.number == 793) || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+        env:
+          GMWW_RM_EVENT: ${{ github.event_name }}
+          GMWW_RM_BASE: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {execFileSync} from 'node:child_process';
+          import {readFileSync} from 'node:fs';
+          const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
+          const base=process.env.GMWW_RM_EVENT==='pull_request' ? process.env.GMWW_RM_BASE : git('rev-parse','HEAD^1');
+          if(!/^[0-9a-f]{40}$/.test(base))process.exit(1);
+          const spec=new Map([
+            ['.github/scripts/prepare-update-channel.mjs','M'],
+            ['.github/workflows/check-player-web.yml','M'],
+            ['docs/releases/GMWW-RUNTIME-V3.300-ROOM-MODE-20261104.md','A'],
+            ['package-lock.json','M'],['package.json','M'],
+            ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+            ['server-game/src/00-core-and-library.part','M'],
+            ['server-game/src/30-village-and-setup.part','M'],
+            ['src/gmww-room-config-rules.js','M'],
+            ['src/index.js','M'],
+            ['tests/runtime-v3299-gather-release.test.mjs','M'],
+            ['tests/runtime-v3300-room-mode-after-gather.test.mjs','A'],
+            ['tests/v3175-post-create-room-mode.test.mjs','M']
+          ]);
+          const changes=git('diff','--name-status','--no-renames',base,'HEAD').split('\n').filter(Boolean).map(x=>x.split('\t'));
+          if(changes.length!==spec.size || changes.some(([status,path])=>spec.get(path)!==status))
+            throw Error('PR793/V3.300 scope mismatch; ordinary full CI stays mandatory.');
+          if(JSON.parse(readFileSync('package.json','utf8')).version!=='3.300.0')throw Error('Runtime version is not V3.300');
+          if(!readFileSync('server-game/current/app.js','utf8').includes("const VERSION='3.300'"))throw Error('GM Runtime does not match V3.300');
+          console.log('V3.300 exact scope verified.');
+          NODE
+          git diff --check "${GMWW_RM_BASE:-HEAD^1}" HEAD
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/runtime-v3300-room-mode-after-gather.test.mjs \
+            tests/v3175-post-create-room-mode.test.mjs \
+            tests/runtime-v3299-gather-release.test.mjs \
+            tests/gather-scroll-flow.test.mjs \
+            tests/lobby-gather-mode-assassin-20261027.test.mjs \
+            tests/v3177-room-mode-glass-dock.test.mjs \
+            tests/demo-transport-677-release.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.300-ROOM-MODE-20261104.md
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'V3.300: exact room-mode Runtime, server rule and bundle gates PASS.' >> "$GITHUB_STEP_SUMMARY"
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -2028,14 +2083,14 @@ jobs:
         if: steps.scope.outputs.mode == 'dual-renderer'
         run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true'
         shell: bash
         run: |
           python3 -m venv /tmp/gmww-avatar-venv
           /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
           /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Kiểm tra nhanh Player Web trên máy thử nghiệm
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true'
         shell: bash
         run: |
           set -euo pipefail
