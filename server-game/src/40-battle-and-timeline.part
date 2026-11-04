@@ -30,6 +30,9 @@ function syncPlayAutoAdvance(){
   playSceneRuntime.autoTurnKey='';
 }
 async function togglePlayAutoGM(){
+  // Must run synchronously inside the user's Auto GM tap, before any await.
+  // This one gesture unlocks the long-lived iOS WebAudio playback transport.
+  battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
   if(demoRunner.running)await demoStop('auto_gm');
   const enabled=!playSceneState.autoGM;
@@ -111,6 +114,8 @@ async function playGatherConfirm(){
   await playFinishSeating();
 }
 async function advancePlayPhase(){
+  if(!battleUnlockedAudioContext||battleUnlockedAudioContext.state!=='running')
+    battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'||playSceneState.step==='room'){await playEnsureGatherRoom();return}
   if(playSceneState.step==='game'){openPlayGameSheet();return}
@@ -896,11 +901,11 @@ function battleTickCountdown(){
     const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
     if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=warningSeconds&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
       battleState.dayCountdownCueKey=cueKey;
-      void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
+      battleQueueDayAudio([['audio_system_countdown','Đếm ngược 30 giây cuối']]);
     }
     if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
       battleState.dayTimeupCueKey=cueKey;
-      void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
+      battleQueueDayAudio([['audio_system_time_up','Hết giờ']]);
     }
   }
   // Edge-triggered: returning from campfire happens exactly when the night turn reaches 0.
@@ -1050,8 +1055,10 @@ function battleShowResultPopup(title,message,scanOnly=false){
 let battleDayAudioQueue=null;
 function battleQueueDayAudio(cues){
   if(playSceneState.phase!=='day'||!Array.isArray(cues)||!cues.length)return;
+  // ONE ordered queue for the whole day; Gallows stage changes must not drop
+  // unfinished morning/nomination/vote/result announcements.
   const key=[playSceneRuntime.room?.matchId||'',playSceneState.night||0,
-    playSceneRuntime.room?.cycleStartedAt||'',playSceneRuntime.gallows?.stage||'ready'].join(':');
+    playSceneRuntime.room?.cycleStartedAt||''].join(':');
   if(!battleDayAudioQueue||battleDayAudioQueue.key!==key)
     battleDayAudioQueue={key,items:[],active:false};
   const queue=battleDayAudioQueue;
@@ -1670,14 +1677,16 @@ function battleGallowsRender(phase){
   const key=[playSceneRuntime.room?.matchId,playSceneState.night,g.candidateId,stage].join(':');
   // Server DEMO advances ballots without invoking the GM button handlers.
   // Emit open/nomination/vote cues on the authoritative stage once, also in DEMO.
-  if(phase==='day'&&['nominating','voting'].includes(stage)){
+  if(phase==='day'&&['nominating','selecting','voting'].includes(stage)){
     const cueKey=[playSceneRuntime.room?.matchId,playSceneState.night,g.id,stage].join(':');
     if(battleState.gallowsStageAudioKey!==cueKey){
       battleState.gallowsStageAudioKey=cueKey;
       battleQueueDayAudio(stage==='nominating'?
         [['audio_system_gallows_day_long','Ngày dài rồi'],
          ['audio_system_gallows_open_nomination','Mở đề cử']]:
-        [['audio_system_gallows_open_vote','Mở bỏ phiếu']]);
+        stage==='selecting'?
+          [['audio_system_gallows_nomination_result','Chốt kết quả đề cử']]:
+          [['audio_system_gallows_open_vote','Mở bỏ phiếu']]);
     }
   }
   if(phase==='day'&&['closed','resolved'].includes(stage)&&battleState.gallowsShowKey!==key){
@@ -1843,12 +1852,8 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     if(data?.ok!==true)throw Error(data?.error||'Server chưa xác nhận.');
     playSceneRuntime.gallows=data.gallows||null;
     // Only play a cue after the Server confirms the phase transition.
-    const cues={
-      // Opening and voting cues come from server-confirmed stage observation,
-      // shared by GM manual controls and unattended DEMO; never duplicate.
-      close_nomination:[['audio_system_gallows_nomination_result','Công bố đề cử']]
-    };
-    if(cues[command])battleQueueDayAudio(cues[command]);
+    // All stage cues are emitted by the confirmed stage observer, including
+    // closing nominations. Do not play the same cue twice for manual GM taps.
     if(['resolve','restore','close_vote'].includes(command))gmHapticFeedback();
     battleState.gallowsClosedShown=false;
     await playSyncRoom(true);
@@ -2565,6 +2570,18 @@ function initBattleDayClockSwipe(){
   });
   button.addEventListener('pointercancel',()=>{start=null});
 }
+function battleEnsureAutoTurnAudio(){
+  if(playSceneState.step!=='battle'||playSceneState.phase!=='night'||
+     playSceneRuntime.room?.autoGM===false||playAudioMuted())return;
+  const turn=battleTurn();
+  if(!turn||turn.kind==='village-wakeup')return;
+  const key=[playSceneRuntime.room?.matchId||'','night',
+    Math.max(1,Number(playSceneState.night)||1),turn.id].join(':');
+  if(battleState.key!==key||battleState.lastAudioTurnKey===key||
+     battleState.audioPendingTurnKey===key||battleConfirmAudioGate||
+     battleState.busy||battleState.syncPending||playSceneRuntime.busy)return;
+  battleAudioForTurn(turn,true);
+}
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
   document.getElementById('battleBack')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleNavigateRelative(-1)});
@@ -2768,7 +2785,16 @@ function initBattleControls(){
   battleSyncLabelVisibility();
   document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){document.getElementById('battleTimeline')?.gmwwCancelScrollNavigation?.();battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});
   initBattleSwipeNavigation();initBattleTimelineScrollNavigation();
-  window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
+  // Socket/UI transitions can be missed while the iPhone view is busy. The
+  // heartbeat rechecks only the CURRENT authoritative turn, never a stale role.
+  window.setInterval(()=>{
+    if(playSceneState.step!=='battle')return;
+    battleTickCountdown();
+    const now=Date.now();
+    if(now-Number(battleState.autoAudioHeartbeatAt||0)<1200)return;
+    battleState.autoAudioHeartbeatAt=now;
+    battleEnsureAutoTurnAudio();
+  },300);
   document.getElementById('battleAudioReplay')?.addEventListener('click',battleReplayAudio);
   document.getElementById('battleActionPrevious')?.addEventListener('click',()=>battleNavigateActions(-1));
   document.getElementById('battleActionNext')?.addEventListener('click',()=>battleNavigateActions(1));
