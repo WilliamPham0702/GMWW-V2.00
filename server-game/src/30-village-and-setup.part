@@ -1888,7 +1888,7 @@ function renderPlayContext(){
       }else if(playSceneState.step==='seats'){
         const st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
         actions.innerHTML='<button class="play-action-chip" data-play-call-members type="button"><span>♧</span><b>GỌI THÀNH VIÊN</b></button><button class="play-action-chip active" data-play-seat-manual type="button"><span>☝</span><b>THỦ CÔNG</b></button><button class="play-action-chip" data-play-random-seats type="button"><span>⚄</span><b>NGẪU NHIÊN</b></button><button class="play-action-chip '+(locked?'active':'')+'" data-play-seat-lock-toggle type="button"><span>'+ (locked?'🔒':'🔓') +'</span><b>'+(locked?'MỞ KHÓA XẾP CHỖ':'CHỐT XẾP CHỖ')+'</b></button><button class="play-action-chip play-seat-total" disabled><span>●</span><b>'+st.occupied+'/'+st.seatCount+'</b></button>';
-        actions.querySelector('[data-play-call-members]')?.addEventListener('click',playCallOnlineMembers);
+        actions.querySelector('[data-play-call-members]')?.addEventListener('click',playGatherCallMembers);
         actions.querySelector('[data-play-random-seats]')?.addEventListener('click',()=>{void playGatherRandomize()});
         actions.querySelector('[data-play-seat-lock-toggle]')?.addEventListener('click',()=>{if(locked)void playSetSeatLock(false);else void playGatherConfirm()});
         actions.querySelector('[data-play-seat-manual]')?.addEventListener('click',playGatherManual)
