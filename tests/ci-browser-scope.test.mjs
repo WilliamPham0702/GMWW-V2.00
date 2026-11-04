@@ -1672,11 +1672,19 @@ test('PR786 scoped voice cancellation stays fail-closed for unreviewed Worker/na
   ['.github/workflows/check-player-web.yml','M'],
   ['tests/ci-browser-scope.test.mjs','M']
  ];
+ let pinnedAvailable=true;
+ try{execFileSync('git',['cat-file','-e',prior+'^{commit}'],{stdio:'ignore'})}catch{pinnedAvailable=false}
  const changes=files.map(([path,status])=>({
   path,status,
-  before:status==='M'?execFileSync('git',['show',prior+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):null,
+  before:status==='M'&&pinnedAvailable?execFileSync('git',['show',prior+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):null,
   after:readFileSync(path,'utf8')
  }));
+ if(!pinnedAvailable){
+  // Shallow runners must fail closed rather than inventing an old blob.
+  assert.equal(classifyBrowserScope(changes),'full');
+  assert.equal(classifyBrowserScope([...changes,{path:'src/index.js',status:'M'}]),'full');
+  return;
+ }
  assert.equal(classifyBrowserScope(changes),'chat-voice-discard-786');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
  assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
