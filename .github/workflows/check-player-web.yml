@@ -46,6 +46,34 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # V3.298 reviewed glyph-only Runtime: exact 19-file fail-closed diff.
+      - name: V3.298 — 🧞‍♂️ replaces ☄️ with original 🐺 orbit unchanged
+        if: steps.scope.outputs.mode == 'genie-orbit-v3298'
+        run: |
+          set -euo pipefail
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-genie-turn-orbit-v3298.test.mjs \
+            tests/gmww-comet-turn-orbit-v3296.test.mjs \
+            tests/gmww-wolf-orbit-reuse-v3295.test.mjs \
+            tests/gmww-character-orbit-visuals-20261103.test.mjs \
+            tests/status-visuals-v1.test.mjs \
+            tests/ci-browser-scope.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/gmww-online-four-fixes-v3293.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/online-chat-authority.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.298-GENIE-TURN-ICON-20261104.md
+
       # V3.296 exact glyph-only release: fail-closed 19-file diff.
       # Preserve required Worker dry-run, version guards, shared wolf orbit, privacy and DOM.
       - name: V3.296 — ☄️ replaces 🫧, original 🐺 animation unchanged

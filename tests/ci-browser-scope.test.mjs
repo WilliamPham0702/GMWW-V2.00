@@ -1565,6 +1565,8 @@ test('V3296_POSTMERGE_RECOVERY recognizes only real verified ancestry, not synth
  else if(current==='3.297.0')
    assert.match(verified,/GMWW browser CI scope: (p0-auto-gm-audio-v3297|full)/,
      'New Runtime may qualify only by its own audited scope or fail closed');
+ else if(current==='3.298.0')
+   assert.match(verified,/GMWW browser CI scope: (genie-orbit-v3298|full)/);
  else assert.match(verified,/GMWW browser CI scope: full/);
 });
 
@@ -1601,8 +1603,58 @@ test('P0 V3.297 Auto GM audio release selects focused Worker safety only for rev
          'UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss"');
    return {path,status,before};
  });
- assert.equal(classifyBrowserScope(exact),'p0-auto-gm-audio-v3297');
+ const current=JSON.parse(readFileSync('package.json','utf8')).version;
+ assert.equal(classifyBrowserScope(exact),current==='3.297.0'?'p0-auto-gm-audio-v3297':'full');
  assert.equal(classifyBrowserScope(exact.slice(1)),'full','missing required file fails closed');
  assert.equal(classifyBrowserScope([...exact,{path:'src/gmww-room-config-rules.js',status:'M'}]),'full','any new Worker logic fails closed');
  assert.equal(classifyBrowserScope(exact.map(c=>c.path==='package.json'?{...c,status:'A'}:c)),'full','version status cannot be forged');
+});
+
+// V3298 exact icon-only scope; unrelated Worker, native, audio or game changes must fail closed.
+test('V3298 exact icon-only scope preserves wolf orbit and refuses extra files',()=>{
+ const expected=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/scripts/prepare-update-channel.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['docs/releases/GMWW-RUNTIME-V3.298-GENIE-TURN-ICON-20261104.md','A'],
+  ['package.json','M'],['package-lock.json','M'],['src/index.js','M'],
+  ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],['src/gmww-members-live.js','M'],
+  ['tests/gmww-wolf-orbit-reuse-v3295.test.mjs','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','M'],
+  ['tests/gmww-online-four-fixes-v3293.test.mjs','M'],
+  ['tests/gmww-comet-turn-orbit-v3296.test.mjs','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/gmww-genie-turn-orbit-v3298.test.mjs','A']
+ ];
+ const changes=expected.map(([path,status])=>{
+  const after=readFileSync(path,'utf8');
+  let before=status==='A'?null:after;
+  if(before){
+   if(['server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
+       'src/player-web-src/35-online-chat.part','src/gmww-members-live.js',
+       'tests/gmww-wolf-orbit-reuse-v3295.test.mjs',
+       'tests/gmww-character-orbit-visuals-20261103.test.mjs',
+       'tests/gmww-online-four-fixes-v3293.test.mjs',
+       'tests/gmww-comet-turn-orbit-v3296.test.mjs'].includes(path))
+    before=before.split('🧞‍♂️').join('☄️');
+   if(['package.json','package-lock.json'].includes(path))before=before.replaceAll('"version": "3.298.0"','"version": "3.297.0"');
+   if(['server-game/current/app.js','server-game/src/00-core-and-library.part'].includes(path))
+    before=before.replace("const VERSION='3.298';","const VERSION='3.297';");
+   if(path==='server-game/current/GMWW.html')before=before.replace('<title>GMWW V3.298</title>','<title>GMWW V3.297</title>');
+   if(path==='src/index.js')before=before.replace('VERSION="V3.298"','VERSION="V3.297"')
+     .replace('UPDATE_CHANNEL_REV="runtime-3298-genie-turn-orbit"','UPDATE_CHANNEL_REV="runtime-3297-auto-gm-audio-continuity"');
+   if(path==='.github/scripts/prepare-update-channel.mjs')
+    before=before.replace(/releaseNotes:\["V3\.298[^"]*",/,'releaseNotes:[');
+  }
+  return {path,status,before,after};
+ });
+ assert.equal(classifyBrowserScope(changes),'genie-orbit-v3298');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/gmww-demo-runner.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='package.json'?{...c,status:'A'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/player-web-src/35-online-chat.part'?
+   {...c,after:c.after.replace('🐦‍🔥','🔥')}:c)),'full');
 });
