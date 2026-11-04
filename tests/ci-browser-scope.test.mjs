@@ -1521,7 +1521,7 @@ test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',
   if(path.endsWith('status-visuals.css'))before=after.replace('V3.296: ☄️','V3.295: 🫧');
   return{path,status:'M',before,after};
  }),...added.map(path=>({path,status:'A',before:null,after:readFileSync(path,'utf8')}))];
- assert.equal(classifyBrowserScope(rows),'comet-orbit-v3296');
+ assert.equal(classifyBrowserScope(rows),JSON.parse(readFileSync('package.json','utf8')).version==='3.296.0'?'comet-orbit-v3296':'full','V3.296 source classifier must fail closed after Runtime is upgraded');
  assert.equal(classifyBrowserScope(rows.slice(1)),'full');
  assert.equal(classifyBrowserScope([...rows,rows[0]]),'full');
  assert.equal(classifyBrowserScope([...rows,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'unsafe IPA'}]),'full');
@@ -1559,7 +1559,12 @@ test('V3296_POSTMERGE_RECOVERY recognizes only real verified ancestry, not synth
  let pinnedAvailable=true;
  try{execFileSync('git',['cat-file','-e','fb3528abfd80b1eee5d96abe34fbb69059692678^{commit}'],{stdio:'ignore'});}
  catch{pinnedAvailable=false;}
- if(pinnedAvailable)assert.match(verified,/GMWW browser CI scope: comet-orbit-v3296/);
+ const current=JSON.parse(readFileSync('package.json','utf8')).version;
+ if(current==='3.296.0'&&pinnedAvailable)
+   assert.match(verified,/GMWW browser CI scope: comet-orbit-v3296/);
+ else if(current==='3.297.0')
+   assert.match(verified,/GMWW browser CI scope: (p0-auto-gm-audio-v3297|full)/,
+     'New Runtime may qualify only by its own audited scope or fail closed');
  else assert.match(verified,/GMWW browser CI scope: full/);
 });
 
