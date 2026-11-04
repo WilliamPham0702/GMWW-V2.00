@@ -251,20 +251,50 @@ function battleUnlockAudioFromGesture(){
     silent.connect(context.destination);silent.start();
   }catch(_){}
 }
+// Reuse the audio context unlocked by the Auto GM gesture. iOS may refuse
+// a newly constructed HTMLAudioElement on later, unattended role transitions.
+const battleDecodedAudioCache=new Map();
 async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAudioRequestId,excerpt=null){
   const ctx=battleUnlockedAudioContext;
-  if(!ctx||ctx.state!=='running')return false;
+  if(!ctx)return false;
+  if(ctx.state!=='running'){
+    try{void ctx.resume().catch(()=>{})}catch(_){}
+    return false; // Never wait indefinitely on a suspended iOS AudioContext.
+  }
   try{
-    const response=await fetch(src);if(!response.ok)return false;
-    const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
-    if(requestId!==battleAudioRequestId){onFinished?.();return true} // Old decode must release its sequence, never play over the new turn.
+    let decoded=battleDecodedAudioCache.get(src);
+    if(!decoded){
+      decoded=(async()=>{
+        const response=await fetch(src);
+        if(!response.ok)throw Error('Audio fetch '+response.status);
+        return ctx.decodeAudioData(await response.arrayBuffer());
+      })();
+      battleDecodedAudioCache.set(src,decoded);
+      // Bounded LRU-ish cache: reuse decoded clips without keeping every Ván file.
+      if(battleDecodedAudioCache.size>12)
+        battleDecodedAudioCache.delete(battleDecodedAudioCache.keys().next().value);
+    }
+    let buffer;
+    try{buffer=await decoded}catch(err){battleDecodedAudioCache.delete(src);return false}
+    if(requestId!==battleAudioRequestId){onFinished?.();return true}
+    if(ctx.state!=='running')return false;
     const source=ctx.createBufferSource();source.buffer=buffer;
-    globalThis.gmwwBattleBufferSource=source;source.onended=()=>{if(globalThis.gmwwBattleBufferSource===source){globalThis.gmwwBattleBufferSource=null;onFinished?.()}};
+    const speed=typeof demoRunner!=='undefined'&&demoRunner.running&&playSceneRuntime.room?.demo===true?
+      Math.max(1,Math.min(2,Number(demoRunner.speed)||1)):1;
+    source.playbackRate.value=excerpt?1:speed;
+    globalThis.gmwwBattleBufferSource=source;
+    source.onended=()=>{
+      if(globalThis.gmwwBattleBufferSource!==source)return;
+      globalThis.gmwwBattleBufferSource=null;onFinished?.();
+    };
     source.connect(ctx.destination);
-    if(excerpt){const start=Math.max(0,Math.min(buffer.duration,Number(excerpt.start)||0)),end=Math.min(buffer.duration,Number(excerpt.end)||buffer.duration);source.start(0,start,Math.max(.02,end-start));}
-    else source.start();
+    if(excerpt){
+      const start=Math.max(0,Math.min(buffer.duration,Number(excerpt.start)||0));
+      const end=Math.min(buffer.duration,Number(excerpt.end)||buffer.duration);
+      source.start(0,start,Math.max(.02,end-start));
+    }else source.start();
     return true;
-  }catch(_){return false}
+  }catch(err){return false}
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
@@ -379,8 +409,9 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     return battleSpeakCue(String(name||'').trim(),showError,onFinished);
   }
   const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:nameEnd}:null;
-  if((requestedCut||targetId==='role_old_witch'||targetId==='source-18'||targetId==='audio_system_day_wakeup')&&
-     battleUnlockedAudioContext?.state==='running'){
+  // Auto GM is unattended after the start gesture: use the already unlocked
+  // WebAudio transport for ALL cue clips, not only the wake-up sound.
+  if(typeof battleUnlockedAudioContext!=='undefined'&&battleUnlockedAudioContext){
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
   }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
@@ -479,28 +510,44 @@ function battleAudioCuesForTurn(turn){
 }
 function battlePlayTurnAudioSequence(cues,expectedKey,showError=false,automatic=false){
   let index=0;
+  const attempts=new Map();
+  const current=()=>battleState.key===expectedKey&&playSceneState.step==='battle'&&playSceneState.phase==='night';
+  const clearPending=()=>{
+    if(automatic&&battleState.audioPendingTurnKey===expectedKey)
+      battleState.audioPendingTurnKey='';
+  };
   const next=()=>{
-    if(battleState.key!==expectedKey||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
-    const cue=cues[index++];if(!cue)return;
-    const first=index===1;
-    void Promise.resolve(battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,showError,next)).then(started=>{
-      if(first&&automatic&&battleState.key===expectedKey){
-        battleState.audioPendingTurnKey='';
-        // A failed iPhone play() is not a played turn. Permit a later reattempt.
-        if(started||playAudioMuted())battleState.lastAudioTurnKey=expectedKey;
-        else {
-          const retries=battleState.audioRetryCount||(battleState.audioRetryCount=new Map());
-          retries.set(expectedKey,(retries.get(expectedKey)||0)+1);
-          if(retries.get(expectedKey)<=2)setTimeout(()=>{
-            if(battleState.key===expectedKey&&battleState.lastAudioTurnKey!==expectedKey)
-              battleAudioForTurn(battleTurn(),true);
-          },850);
-          else playFlashError('Audio '+cue.name+' chưa phát được. Chạm 🔊 để phát lại hoặc kiểm tra file.');
-        }
+    if(!current()){clearPending();return}
+    const cue=cues[index];
+    if(!cue){clearPending();return}
+    let finished=false,started=null;
+    const complete=()=>{
+      finished=true;
+      // A synchronous failed start may call onFinished; do not advance on silence.
+      if(started===true){index++;next()}
+    };
+    const failed=()=>{
+      if(!current()){clearPending();return}
+      const count=(attempts.get(index)||0)+1;attempts.set(index,count);
+      if(automatic&&!playAudioMuted()&&count<=3){
+        setTimeout(()=>{if(current())next();else clearPending()},850);
+      }else{
+        clearPending();
+        // Avoid an endless heartbeat loop after explicit iOS autoplay denial.
+        if(automatic)battleState.failedAudioTurnKey=expectedKey;
+        if(!playAudioMuted())playFlashError('Không phát được audio '+cue.name+'. Chạm 🔊 để thử lại hoặc kiểm tra nguồn âm thanh.');
       }
+    };
+    void Promise.resolve(battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,showError,complete)).then(ok=>{
+      if(!current()){clearPending();return}
+      started=ok===true;
+      // Mark the turn only after playback was scheduled (never on failed play()).
+      if(index===0&&automatic&&started){battleState.failedAudioTurnKey='';battleState.lastAudioTurnKey=expectedKey;}
+      if(!started){failed();return}
+      if(finished){index++;next()}
     }).catch(error=>{
-      if(first&&automatic&&battleState.key===expectedKey)battleState.audioPendingTurnKey='';
-      console.warn('GMWW wake-up cue failed',cue.targetId,error)
+      console.warn('GMWW audio cue failed',cue.targetId,error);
+      failed();
     });
   };
   next();
@@ -550,9 +597,16 @@ function applyPlayAudioState(){
 }
 function togglePlayAudio(){
   const muted=!playAudioMuted();try{localStorage.setItem(PLAY_AUDIO_MUTED_KEY,muted?'1':'0')}catch{}
+  if(!muted)battleUnlockAudioFromGesture();
   applyPlayAudioState();
   // Battle clips are created from local blobs and are not document <audio> tags.
   if(battleActiveAudio)battleActiveAudio.muted=muted;
+  // Turning sound back on during a role should play that CURRENT role, not
+  // wait for the next timeline step (or replay an obsolete one).
+  if(!muted&&playSceneState.step==='battle'&&playSceneState.phase==='night'){
+    battleState.lastAudioTurnKey='';battleState.audioPendingTurnKey='';battleState.failedAudioTurnKey='';
+    battleAudioForTurn(battleTurn(),true);
+  }
 }
 async function refreshPlayServerRealtime(){
   const btn=document.getElementById('playRefreshServer');if(!btn||btn.dataset.syncing==='1')return;

@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.296';
+const VERSION='3.297';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3503,20 +3503,50 @@ function battleUnlockAudioFromGesture(){
     silent.connect(context.destination);silent.start();
   }catch(_){}
 }
+// Reuse the audio context unlocked by the Auto GM gesture. iOS may refuse
+// a newly constructed HTMLAudioElement on later, unattended role transitions.
+const battleDecodedAudioCache=new Map();
 async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAudioRequestId,excerpt=null){
   const ctx=battleUnlockedAudioContext;
-  if(!ctx||ctx.state!=='running')return false;
+  if(!ctx)return false;
+  if(ctx.state!=='running'){
+    try{void ctx.resume().catch(()=>{})}catch(_){}
+    return false; // Never wait indefinitely on a suspended iOS AudioContext.
+  }
   try{
-    const response=await fetch(src);if(!response.ok)return false;
-    const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
-    if(requestId!==battleAudioRequestId){onFinished?.();return true} // Old decode must release its sequence, never play over the new turn.
+    let decoded=battleDecodedAudioCache.get(src);
+    if(!decoded){
+      decoded=(async()=>{
+        const response=await fetch(src);
+        if(!response.ok)throw Error('Audio fetch '+response.status);
+        return ctx.decodeAudioData(await response.arrayBuffer());
+      })();
+      battleDecodedAudioCache.set(src,decoded);
+      // Bounded LRU-ish cache: reuse decoded clips without keeping every Ván file.
+      if(battleDecodedAudioCache.size>12)
+        battleDecodedAudioCache.delete(battleDecodedAudioCache.keys().next().value);
+    }
+    let buffer;
+    try{buffer=await decoded}catch(err){battleDecodedAudioCache.delete(src);return false}
+    if(requestId!==battleAudioRequestId){onFinished?.();return true}
+    if(ctx.state!=='running')return false;
     const source=ctx.createBufferSource();source.buffer=buffer;
-    globalThis.gmwwBattleBufferSource=source;source.onended=()=>{if(globalThis.gmwwBattleBufferSource===source){globalThis.gmwwBattleBufferSource=null;onFinished?.()}};
+    const speed=typeof demoRunner!=='undefined'&&demoRunner.running&&playSceneRuntime.room?.demo===true?
+      Math.max(1,Math.min(2,Number(demoRunner.speed)||1)):1;
+    source.playbackRate.value=excerpt?1:speed;
+    globalThis.gmwwBattleBufferSource=source;
+    source.onended=()=>{
+      if(globalThis.gmwwBattleBufferSource!==source)return;
+      globalThis.gmwwBattleBufferSource=null;onFinished?.();
+    };
     source.connect(ctx.destination);
-    if(excerpt){const start=Math.max(0,Math.min(buffer.duration,Number(excerpt.start)||0)),end=Math.min(buffer.duration,Number(excerpt.end)||buffer.duration);source.start(0,start,Math.max(.02,end-start));}
-    else source.start();
+    if(excerpt){
+      const start=Math.max(0,Math.min(buffer.duration,Number(excerpt.start)||0));
+      const end=Math.min(buffer.duration,Number(excerpt.end)||buffer.duration);
+      source.start(0,start,Math.max(.02,end-start));
+    }else source.start();
     return true;
-  }catch(_){return false}
+  }catch(err){return false}
 }
 async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
   if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
@@ -3631,8 +3661,9 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
     return battleSpeakCue(String(name||'').trim(),showError,onFinished);
   }
   const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:nameEnd}:null;
-  if((requestedCut||targetId==='role_old_witch'||targetId==='source-18'||targetId==='audio_system_day_wakeup')&&
-     battleUnlockedAudioContext?.state==='running'){
+  // Auto GM is unattended after the start gesture: use the already unlocked
+  // WebAudio transport for ALL cue clips, not only the wake-up sound.
+  if(typeof battleUnlockedAudioContext!=='undefined'&&battleUnlockedAudioContext){
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
   }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
@@ -3731,28 +3762,44 @@ function battleAudioCuesForTurn(turn){
 }
 function battlePlayTurnAudioSequence(cues,expectedKey,showError=false,automatic=false){
   let index=0;
+  const attempts=new Map();
+  const current=()=>battleState.key===expectedKey&&playSceneState.step==='battle'&&playSceneState.phase==='night';
+  const clearPending=()=>{
+    if(automatic&&battleState.audioPendingTurnKey===expectedKey)
+      battleState.audioPendingTurnKey='';
+  };
   const next=()=>{
-    if(battleState.key!==expectedKey||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
-    const cue=cues[index++];if(!cue)return;
-    const first=index===1;
-    void Promise.resolve(battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,showError,next)).then(started=>{
-      if(first&&automatic&&battleState.key===expectedKey){
-        battleState.audioPendingTurnKey='';
-        // A failed iPhone play() is not a played turn. Permit a later reattempt.
-        if(started||playAudioMuted())battleState.lastAudioTurnKey=expectedKey;
-        else {
-          const retries=battleState.audioRetryCount||(battleState.audioRetryCount=new Map());
-          retries.set(expectedKey,(retries.get(expectedKey)||0)+1);
-          if(retries.get(expectedKey)<=2)setTimeout(()=>{
-            if(battleState.key===expectedKey&&battleState.lastAudioTurnKey!==expectedKey)
-              battleAudioForTurn(battleTurn(),true);
-          },850);
-          else playFlashError('Audio '+cue.name+' chưa phát được. Chạm 🔊 để phát lại hoặc kiểm tra file.');
-        }
+    if(!current()){clearPending();return}
+    const cue=cues[index];
+    if(!cue){clearPending();return}
+    let finished=false,started=null;
+    const complete=()=>{
+      finished=true;
+      // A synchronous failed start may call onFinished; do not advance on silence.
+      if(started===true){index++;next()}
+    };
+    const failed=()=>{
+      if(!current()){clearPending();return}
+      const count=(attempts.get(index)||0)+1;attempts.set(index,count);
+      if(automatic&&!playAudioMuted()&&count<=3){
+        setTimeout(()=>{if(current())next();else clearPending()},850);
+      }else{
+        clearPending();
+        // Avoid an endless heartbeat loop after explicit iOS autoplay denial.
+        if(automatic)battleState.failedAudioTurnKey=expectedKey;
+        if(!playAudioMuted())playFlashError('Không phát được audio '+cue.name+'. Chạm 🔊 để thử lại hoặc kiểm tra nguồn âm thanh.');
       }
+    };
+    void Promise.resolve(battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,showError,complete)).then(ok=>{
+      if(!current()){clearPending();return}
+      started=ok===true;
+      // Mark the turn only after playback was scheduled (never on failed play()).
+      if(index===0&&automatic&&started){battleState.failedAudioTurnKey='';battleState.lastAudioTurnKey=expectedKey;}
+      if(!started){failed();return}
+      if(finished){index++;next()}
     }).catch(error=>{
-      if(first&&automatic&&battleState.key===expectedKey)battleState.audioPendingTurnKey='';
-      console.warn('GMWW wake-up cue failed',cue.targetId,error)
+      console.warn('GMWW audio cue failed',cue.targetId,error);
+      failed();
     });
   };
   next();
@@ -3802,9 +3849,16 @@ function applyPlayAudioState(){
 }
 function togglePlayAudio(){
   const muted=!playAudioMuted();try{localStorage.setItem(PLAY_AUDIO_MUTED_KEY,muted?'1':'0')}catch{}
+  if(!muted)battleUnlockAudioFromGesture();
   applyPlayAudioState();
   // Battle clips are created from local blobs and are not document <audio> tags.
   if(battleActiveAudio)battleActiveAudio.muted=muted;
+  // Turning sound back on during a role should play that CURRENT role, not
+  // wait for the next timeline step (or replay an obsolete one).
+  if(!muted&&playSceneState.step==='battle'&&playSceneState.phase==='night'){
+    battleState.lastAudioTurnKey='';battleState.audioPendingTurnKey='';battleState.failedAudioTurnKey='';
+    battleAudioForTurn(battleTurn(),true);
+  }
 }
 async function refreshPlayServerRealtime(){
   const btn=document.getElementById('playRefreshServer');if(!btn||btn.dataset.syncing==='1')return;
@@ -5407,6 +5461,9 @@ function syncPlayAutoAdvance(){
   playSceneRuntime.autoTurnKey='';
 }
 async function togglePlayAutoGM(){
+  // Must run synchronously inside the user's Auto GM tap, before any await.
+  // This one gesture unlocks the long-lived iOS WebAudio playback transport.
+  battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
   if(demoRunner.running)await demoStop('auto_gm');
   const enabled=!playSceneState.autoGM;
@@ -5488,6 +5545,8 @@ async function playGatherConfirm(){
   await playFinishSeating();
 }
 async function advancePlayPhase(){
+  if(!battleUnlockedAudioContext||battleUnlockedAudioContext.state!=='running')
+    battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'||playSceneState.step==='room'){await playEnsureGatherRoom();return}
   if(playSceneState.step==='game'){openPlayGameSheet();return}
@@ -6273,11 +6332,13 @@ function battleTickCountdown(){
     const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
     if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=warningSeconds&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
       battleState.dayCountdownCueKey=cueKey;
-      void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
+      if(typeof battleQueueDayAudio==='function')battleQueueDayAudio([['audio_system_countdown','Đếm ngược 30 giây cuối']]);
+      else void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
     }
     if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
       battleState.dayTimeupCueKey=cueKey;
-      void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
+      if(typeof battleQueueDayAudio==='function')battleQueueDayAudio([['audio_system_time_up','Hết giờ']]);
+      else void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
   }
   // Edge-triggered: returning from campfire happens exactly when the night turn reaches 0.
@@ -6427,8 +6488,10 @@ function battleShowResultPopup(title,message,scanOnly=false){
 let battleDayAudioQueue=null;
 function battleQueueDayAudio(cues){
   if(playSceneState.phase!=='day'||!Array.isArray(cues)||!cues.length)return;
+  // ONE ordered queue for the whole day; Gallows stage changes must not drop
+  // unfinished morning/nomination/vote/result announcements.
   const key=[playSceneRuntime.room?.matchId||'',playSceneState.night||0,
-    playSceneRuntime.room?.cycleStartedAt||'',playSceneRuntime.gallows?.stage||'ready'].join(':');
+    playSceneRuntime.room?.cycleStartedAt||''].join(':');
   if(!battleDayAudioQueue||battleDayAudioQueue.key!==key)
     battleDayAudioQueue={key,items:[],active:false};
   const queue=battleDayAudioQueue;
@@ -7047,14 +7110,16 @@ function battleGallowsRender(phase){
   const key=[playSceneRuntime.room?.matchId,playSceneState.night,g.candidateId,stage].join(':');
   // Server DEMO advances ballots without invoking the GM button handlers.
   // Emit open/nomination/vote cues on the authoritative stage once, also in DEMO.
-  if(phase==='day'&&['nominating','voting'].includes(stage)){
+  if(phase==='day'&&['nominating','selecting','voting'].includes(stage)){
     const cueKey=[playSceneRuntime.room?.matchId,playSceneState.night,g.id,stage].join(':');
     if(battleState.gallowsStageAudioKey!==cueKey){
       battleState.gallowsStageAudioKey=cueKey;
       battleQueueDayAudio(stage==='nominating'?
         [['audio_system_gallows_day_long','Ngày dài rồi'],
          ['audio_system_gallows_open_nomination','Mở đề cử']]:
-        [['audio_system_gallows_open_vote','Mở bỏ phiếu']]);
+        stage==='selecting'?
+          [['audio_system_gallows_nomination_result','Chốt kết quả đề cử']]:
+          [['audio_system_gallows_open_vote','Mở bỏ phiếu']]);
     }
   }
   if(phase==='day'&&['closed','resolved'].includes(stage)&&battleState.gallowsShowKey!==key){
@@ -7220,12 +7285,8 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     if(data?.ok!==true)throw Error(data?.error||'Server chưa xác nhận.');
     playSceneRuntime.gallows=data.gallows||null;
     // Only play a cue after the Server confirms the phase transition.
-    const cues={
-      // Opening and voting cues come from server-confirmed stage observation,
-      // shared by GM manual controls and unattended DEMO; never duplicate.
-      close_nomination:[['audio_system_gallows_nomination_result','Công bố đề cử']]
-    };
-    if(cues[command])battleQueueDayAudio(cues[command]);
+    // All stage cues are emitted by the confirmed stage observer, including
+    // closing nominations. Do not play the same cue twice for manual GM taps.
     if(['resolve','restore','close_vote'].includes(command))gmHapticFeedback();
     battleState.gallowsClosedShown=false;
     await playSyncRoom(true);
@@ -7393,7 +7454,7 @@ function renderPlayBattle(){
   // while the GM is navigating. The first stable role of EVERY night must speak.
   if(t&&phase==='night'&&!battleConfirmAudioGate&&!battleState.busy&&!playSceneRuntime.busy&&
      !battleState.syncPending&&battleState.lastAudioTurnKey!==key&&
-     battleState.audioPendingTurnKey!==key){
+     battleState.audioPendingTurnKey!==key&&battleState.failedAudioTurnKey!==key){
     if(t.kind==='village-wakeup'){
       battleState.lastAudioTurnKey=key;battlePlayWakeupAndAdvance(t,key);
     }else battleAudioForTurn(t,true);
@@ -7942,6 +8003,18 @@ function initBattleDayClockSwipe(){
   });
   button.addEventListener('pointercancel',()=>{start=null});
 }
+function battleEnsureAutoTurnAudio(){
+  if(playSceneState.step!=='battle'||playSceneState.phase!=='night'||
+     playSceneRuntime.room?.autoGM===false||playAudioMuted())return;
+  const turn=battleTurn();
+  if(!turn||turn.kind==='village-wakeup')return;
+  const key=[playSceneRuntime.room?.matchId||'','night',
+    Math.max(1,Number(playSceneState.night)||1),turn.id].join(':');
+  if(battleState.key!==key||battleState.lastAudioTurnKey===key||
+     battleState.audioPendingTurnKey===key||battleState.failedAudioTurnKey===key||battleConfirmAudioGate||
+     battleState.busy||battleState.syncPending||playSceneRuntime.busy)return;
+  battleAudioForTurn(turn,true);
+}
 function initBattleControls(){
   const top=document.getElementById('playBattleTop');if(!top||top.dataset.ready)return;top.dataset.ready='1';
   document.getElementById('battleBack')?.addEventListener('click',()=>{battleUnlockAudioFromGesture();battleNavigateRelative(-1)});
@@ -8145,7 +8218,16 @@ function initBattleControls(){
   battleSyncLabelVisibility();
   document.getElementById('battleTimeline')?.addEventListener('click',e=>{const b=e.target.closest('[data-battle-index]');if(b&&!b.disabled){document.getElementById('battleTimeline')?.gmwwCancelScrollNavigation?.();battleUnlockAudioFromGesture();void battleNavigateIndex(Number(b.dataset.battleIndex))}});
   initBattleSwipeNavigation();initBattleTimelineScrollNavigation();
-  window.setInterval(()=>{if(playSceneState.step==='battle')battleTickCountdown()},300);
+  // Socket/UI transitions can be missed while the iPhone view is busy. The
+  // heartbeat rechecks only the CURRENT authoritative turn, never a stale role.
+  window.setInterval(()=>{
+    if(playSceneState.step!=='battle')return;
+    battleTickCountdown();
+    const now=Date.now();
+    if(now-Number(battleState.autoAudioHeartbeatAt||0)<1200)return;
+    battleState.autoAudioHeartbeatAt=now;
+    battleEnsureAutoTurnAudio();
+  },300);
   document.getElementById('battleAudioReplay')?.addEventListener('click',battleReplayAudio);
   document.getElementById('battleActionPrevious')?.addEventListener('click',()=>battleNavigateActions(-1));
   document.getElementById('battleActionNext')?.addEventListener('click',()=>battleNavigateActions(1));
