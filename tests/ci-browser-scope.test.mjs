@@ -1526,3 +1526,45 @@ test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',
  assert.equal(classifyBrowserScope([...rows,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'unsafe IPA'}]),'full');
  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='src/player-web-src/35-online-chat.part'?{...x,after:x.after.replace('☄️','⭐')}:x)),'full');
 });
+
+test('PR786 scoped voice cancellation stays fail-closed for unreviewed Worker/native/audio edits',()=>{
+ const prior='fb3528abfd80b1eee5d96abe34fbb69059692678';
+ const files=[
+  ['server-game/src/45-online-chat.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],
+  ['server-game/current/app.js','M'],
+  ['src/gmww-members-live.js','M'],
+  ['tests/gmww-chat-voice-discard-20261104.test.mjs','A'],
+  ['docs/releases/GMWW-CHAT-VOICE-DISCARD-20261104.md','A'],
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['tests/ci-browser-scope.test.mjs','M']
+ ];
+ const changes=files.map(([path,status])=>({
+  path,status,
+  before:status==='M'?execFileSync('git',['show',prior+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):null,
+  after:readFileSync(path,'utf8')
+ }));
+ assert.equal(classifyBrowserScope(changes),'chat-voice-discard-786');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,changes[0]]),'full');
+ for(const path of ['src/index.js','server-game/GMWW-Server/GameView.swift','wrangler.jsonc','package.json'])
+  assert.equal(classifyBrowserScope([...changes,{path,status:'M',before:'safe',after:'changed'}]),'full',path);
+ for(const path of ['server-game/src/45-online-chat.part','src/player-web-src/35-online-chat.part','server-game/current/app.js','src/gmww-members-live.js']){
+  const changed=changes.map(row=>row.path===path?{...row,after:row.after+'\n// unreviewed voice or privacy edit'}:row);
+  assert.equal(classifyBrowserScope(changed),'full',path);
+ }
+ assert.equal(classifyBrowserScope(changes.map((row,i)=>i===0?{...row,status:'D'}:row)),'full');
+ const workflow=readFileSync('.github/workflows/check-player-web.yml','utf8');
+ for(const required of [
+  "steps.scope.outputs.mode == 'chat-voice-discard-786'",
+  'tests/gmww-chat-voice-discard-20261104.test.mjs',
+  'tests/gmww-chat-voice-send-v3292.test.mjs',
+  'tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs',
+  'tests/online-chat-authority.test.mjs',
+  'tests/online-frozen-chat-day-20261031.test.mjs',
+  'assemble-gm-app.mjs --verify',
+  'assemble-player-web.mjs --verify',
+  'npm run check'
+ ])assert.ok(workflow.includes(required),required);
+});
