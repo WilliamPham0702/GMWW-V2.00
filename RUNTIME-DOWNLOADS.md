@@ -10,7 +10,7 @@
 
 | Phiên bản | Tải .gmwwupdate | Xác minh | Ghi chú |
 |:--|:--|:--|:--|
-| **V3.299** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.299/GMWW-Runtime-V3.299.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.299/GMWW-Runtime-V3.299.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-runtime-v3.299) |
+| **V3.299** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.299/GMWW-Runtime-V3.299.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.299/GMWW-Runtime-V3.299.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.299) |
 | **V3.298** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.298/GMWW-Runtime-V3.298.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.298/GMWW-Runtime-V3.298.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.298) |
 | **V3.297** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.297/GMWW-Runtime-V3.297.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.297/GMWW-Runtime-V3.297.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.297) |
 | **V3.296** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.296/GMWW-Runtime-V3.296.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.296/GMWW-Runtime-V3.296.gmwwupdate.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-runtime-v3.296) |
@@ -35,7 +35,9 @@
 
 > **CẢNH BÁO:** QA là file thử nghiệm chưa phát hành, có thể mới hơn Server và gây lệch phiên bản. ZIP chỉ dành cho kiểm thử độc lập; KHÔNG dùng .gmwwupdate QA để cập nhật ứng dụng đang chơi.
 
-Không có gói QA còn hiệu lực.
+| QA — KHÔNG CÀI | Tệp kiểm thử gốc | SHA-256 ZIP | Trạng thái |
+|:--|:--|:--|:--|
+| **V3.300 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/41793328437/artifacts/13304082910) (chứa .gmwwupdate) | `1cc09b98055ff4e89eddc5485160550a10bbf9abc4b8042d28c90ea110340a49` (ZIP) | Hết hạn: 2027-02-02; **chưa phát hành Production** |
 
 ## 5. LỊCH SỬ VÀ CHÍNH SÁCH
 
