@@ -1,16 +1,8 @@
 name: Deploy Player Web fixed viewport PR631 (Production)
+# 2026-11-04: push-to-main deploy retired (PR631 already shipped; its exact-scope gate only
+# failed on later pushes). Pull-request focused viewport checks are kept.
 on:
   pull_request:
-    branches: [main]
-    paths:
-      - "src/player-web-src/00-bootstrap-and-session.part"
-      - "src/gmww-members-live.js"
-      - "assets/village/village.css"
-      - "assets/village/index.html"
-      - "tests/player-web-fixed-viewport-chrome-edge-20261029.test.mjs"
-      - "docs/releases/GMWW-PLAYER-WEB-VIEWPORT-PR631-20261029.md"
-      - ".github/workflows/deploy-player-web-viewport-631.yml"
-  push:
     branches: [main]
     paths:
       - "src/player-web-src/00-bootstrap-and-session.part"
