@@ -51,8 +51,9 @@ test('Fire action dock fits multiple icons with safe touch drag and is not overs
  assert.match(d,/width:clamp\(28px,calc\(48px \* var\(--online-action-scale,1\)\),72px\)/);
  assert.match(d,/for\(const action of offers\)/);
  assert.match(web,/gmwwOnlineWitchNotice\(\);gmwwOnlinePlaceAtFire\(dock\)/);
- assert.match(web,/querySelector\('\.fire'\)/);
- // pointercancel still never drops; it only puts the lifted icon back on the fire.
+ // V3.304: home anchor is the entrance stairs above the bottom menu.
+ assert.match(web,/getElementById\('gmwwOnlineFooter'\)/);
+ // pointercancel still never drops; it only puts the lifted icon back home.
  assert.match(web,/if\(e\.type==='pointercancel'\)\{settle\(\);return\}/);
 });
 test('Aura reads the GM revelation.message text rather than printing JSON',()=>{

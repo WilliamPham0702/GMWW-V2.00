@@ -33,14 +33,14 @@ test('PACK-01 always offers one authorized Wolf Bite action',()=>{
  assert.equal(scope.globalThis.resolve(action[0])[0].assetId,'05_soi_can.png');
 });
 
-test('Action icons spawn at the real campfire and remain independently movable',()=>{
+test('Action icons spawn at the village entrance above the bottom menu and remain independently movable (V3.304)',()=>{
  const source=slice(gm,'function battleIconEntryPoint(){','function battleIconResetPositions(){');
- const fire={getBoundingClientRect(){return {left:100,top:220,width:50,height:60}}};
- const scope={document:{querySelector(q){return q.includes('play-village-core')?fire:null}},
-   battleIconClamp:(x,y)=>({x,y}),globalThis:{},innerWidth:390,innerHeight:844};
+ const rail={getBoundingClientRect(){return {left:0,top:740,width:390,height:90}}};
+ const scope={document:{getElementById(id){return id==='battleBottomControls'?rail:null},querySelector(){return null}},
+   battleIconClamp:(x,y)=>({x,y}),battleIconSize:()=>({width:92,height:92}),globalThis:{},innerWidth:390,innerHeight:844};
  vm.createContext(scope);
  vm.runInContext(source+'globalThis.entry=battleIconEntryPoint;',scope);
- assert.deepEqual(scope.globalThis.entry(),{x:125,y:250});
+ assert.deepEqual(scope.globalThis.entry(),{x:195,y:740-46-10});
  assert.match(gm,/battleIconPositions\.set\(key,point\)/);
  assert.match(gm,/pointermove/);
  assert.match(gm,/battleIconTargetAt\(e\.clientX,e\.clientY,a\)/);
