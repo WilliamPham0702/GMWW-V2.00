@@ -9,7 +9,7 @@ test('Phase4 art: 40 character IDs yield forty color + hairstyle/accessory combi
   const styles=Array.from({length:40},(_,i)=>atelierPalette('character-'+String(i+1).padStart(2,'0')));
   assert.equal(new Set(styles.map(x=>JSON.stringify(x))).size,40);
   assert.deepEqual([...new Set(styles.map(x=>x.style))].sort((a,b)=>a-b),[0,1,2,3,4]);
-  assert.equal(ARENA_ATELIER_VERSION,'arena-chibi-instanced-v5-casting');
+  assert.equal(ARENA_ATELIER_VERSION,'arena-chibi-instanced-v6-sea-art');
 });
 test('Phase4: 30 actors remain InstancedMesh with fixed draw calls despite 40 styles',()=>{
   const scene=new THREE.Scene(),atlas=createArenaCharacterField(THREE,scene);

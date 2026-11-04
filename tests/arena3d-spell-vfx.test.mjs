@@ -77,7 +77,7 @@ test('Character runtime displays VFX only after approved caster-to-target cue an
 test('Client never fabricates secret effects or persists GM role identities to URL/local storage',()=>{
   const runtime=readFileSync('assets/village/arena-3d/live.mjs','utf8');
   const core=readFileSync('src/arena3d-stage-worker.mjs','utf8');
-  assert.match(runtime,/field\.setCastingTurn\(data\.casting\|\|null\)/);
+  assert.match(runtime,/field\.setCastingTurn\(normalized\)/);
   assert.match(runtime,/field\.setLowPower/);
   assert.match(core,/this\.gmAuthorized\(request\)/);
   assert.doesNotMatch(runtime,/localStorage|sessionStorage/);

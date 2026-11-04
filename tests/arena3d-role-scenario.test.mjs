@@ -35,7 +35,7 @@ test('Stage GM-only private turn state, never in WebSocket public or anonymous p
   assert.match(ui,/gm\('turn'/);
   assert.match(ui,/dashboard\.setNightControl\(data\.nightControl\|\|null\)/);
   assert.match(board,/setNightControl\(next\)/);
-  assert.match(board,/if\(!hasGM\)nightControl=null/);
+  assert.match(board,/if\(!hasGM\)\{nightControl=null/);
   assert.doesNotMatch(ui,/localStorage|sessionStorage/);
   assert.doesNotMatch(board,/innerHTML/);
 });
