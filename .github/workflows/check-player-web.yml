@@ -2120,8 +2120,68 @@ jobs:
           test -s docs/releases/GMWW-RUNTIME-V3.300-ROOM-MODE-20261104.md
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'V3.300: exact room-mode Runtime, server rule and bundle gates PASS.' >> "$GITHUB_STEP_SUMMARY"
+      # V3.301: same validated gameplay binary from #798, version-only OTA metadata.
+      # Fail closed: only the exact version replacements below may use this route.
+      - name: V3.301 — kiểm tra nâng phiên bản Runtime chính xác, không thay đổi logic
+        id: runtime_v3301
+        if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+        env:
+          GMWW_V3301_BASE: 92f2a6a694af57b260b2a5fee5685512f8294a21
+        shell: bash
+        run: |
+          set -euo pipefail
+          rc=0
+          node --input-type=module <<'NODE' || rc=$?
+          import {execFileSync} from 'node:child_process';
+          import {readFileSync} from 'node:fs';
+          const git=(...args)=>execFileSync('git',args,{encoding:'utf8'});
+          const base=process.env.GMWW_V3301_BASE;
+          try{execFileSync('git',['merge-base','--is-ancestor',base,'HEAD'])}catch{process.exit(3)}
+          const replacements=[
+            ['package.json','"version": "3.300.0"','"version": "3.301.0"'],
+            ['package-lock.json','"version": "3.300.0"','"version": "3.301.0"'],
+            ['src/index.js','VERSION="V3.300"','VERSION="V3.301"'],
+            ['server-game/src/00-core-and-library.part',"const VERSION='3.300'","const VERSION='3.301'"],
+            ['server-game/current/app.js',"const VERSION='3.300'","const VERSION='3.301'"],
+            ['server-game/current/GMWW.html','<title>GMWW V3.300</title>','<title>GMWW V3.301</title>']
+          ];
+          const expected=new Map(replacements.map(([path])=>[path,'M']));
+          expected.set('docs/releases/GMWW-V3.301-GALLOWS-ICON-B-20261104.md','A');
+          expected.set('.github/workflows/check-player-web.yml','M');
+          const diff=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').map(s=>s.split('\t'));
+          if(diff.length!==expected.size || diff.some(([mode,path])=>expected.get(path)!==mode)){
+            console.log('V3.301 exact release scope differs; falling back to full CI.');process.exit(3);
+          }
+          for(const [path,from,to] of replacements){
+            const before=git('show',base+':'+path),after=readFileSync(path,'utf8');
+            if(!before.includes(from)||after!==before.split(from).join(to)){
+              console.log('V3.301 unexpected source delta in '+path);process.exit(3);
+            }
+          }
+          const notes=readFileSync('docs/releases/GMWW-V3.301-GALLOWS-ICON-B-20261104.md','utf8');
+          if(!notes.includes('Rollback')||!notes.includes('Lên Giàn'))throw Error('Release notes or rollback missing');
+          console.log('V3.301 exact version-only change verified against merge #798.');
+          NODE
+          if [ "$rc" = 3 ]; then exit 0; fi
+          [ "$rc" = 0 ]
+          git diff --check "$GMWW_V3301_BASE" HEAD
+          node --check src/index.js
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gallows-nomination-icon-b-20261104.test.mjs \
+            tests/gallows-flag-snap-v3206.test.mjs \
+            tests/gallows-pirate-ui-v3205.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/gallows-redesign-live.test.mjs
+          npm run check
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'V3.301: version-only content invariant, source bundles, Worker dry-run and gallows regressions PASS.' >> "$GITHUB_STEP_SUMMARY"
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true' && steps.v3_fire_drag_suction.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true' && steps.runtime_v3301.outputs.scoped != 'true' && steps.v3_fire_drag_suction.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
