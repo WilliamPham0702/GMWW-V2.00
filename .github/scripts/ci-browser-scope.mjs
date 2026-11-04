@@ -4504,7 +4504,41 @@ function isGenieTurnIconV3298Scope(changes){
  }catch{return false}
 }
 
+// PR788: approved native-only WebKit microphone authorization; strict ten-file gate.
+// No runtime, Worker, DNS, IPA publication or other native source may be included.
+const nativeMic788Paths=new Map([
+ ['server-game/GMWW-Server/GameView.swift','M'],
+ ['server-game/GMWW-Server/Info.plist','M'],
+ ['tests/native-ios-microphone-permission-20261104.test.mjs','A'],
+ ['docs/releases/GMWW-IOS-NATIVE-MIC-PERMISSION-20261104.md','A'],
+ ['.github/scripts/ci-browser-scope.mjs','M'],
+ ['.github/workflows/build-server-game-ipa.yml','M'],
+ ['.github/workflows/check-player-web.yml','M'],
+ ['.github/scripts/v3-delivery-plan.mjs','M'],
+ ['tests/v3-delivery-plan.test.mjs','M'],
+ ['tests/ci-browser-scope.test.mjs','M']
+]);
+function isNativeMic788Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==nativeMic788Paths.size)return false;
+ const rows=new Map(changes.map(x=>[x.path,x]));
+ if(rows.size!==nativeMic788Paths.size)return false;
+ for(const [p,status] of nativeMic788Paths)if(rows.get(p)?.status!==status)return false;
+ try{
+  const hash=p=>{
+   const b=fs.readFileSync(p);
+   return createHash('sha1').update('blob '+b.length+'\0').update(b).digest('hex');
+  };
+  if(hash('server-game/GMWW-Server/GameView.swift')!=='37d21b5ebf5a1999a451847019904e011dd30845'||
+     hash('server-game/GMWW-Server/Info.plist')!=='cc6ffa91d3470a97d322cc44f41198f05969cd36')return false;
+  if(!fs.readFileSync('.github/workflows/build-server-game-ipa.yml','utf8').includes("mode }}\" = \"native-mic-788")||
+     !fs.readFileSync('.github/workflows/check-player-web.yml','utf8').includes("steps.scope.outputs.mode == 'native-mic-788'")||
+     !fs.readFileSync('.github/scripts/v3-delivery-plan.mjs','utf8').includes("target:'native-verify'"))return false;
+  return true;
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isNativeMic788Scope(changes))return 'native-mic-788';
   if(isGenieTurnIconV3298Scope(changes))return 'genie-orbit-v3298';
   if(isP0AutoGmAudio3297Scope(changes))return 'p0-auto-gm-audio-v3297';
   // Recovery is validated by detect() against real Git ancestry; never trust synthetic rows.
