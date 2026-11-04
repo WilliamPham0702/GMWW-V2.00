@@ -1651,7 +1651,7 @@ test('V3298 exact icon-only scope preserves wolf orbit and refuses extra files',
   }
   return {path,status,before,after};
  });
- assert.equal(classifyBrowserScope(changes),'genie-orbit-v3298');
+ assert.equal(classifyBrowserScope(changes),JSON.parse(readFileSync('package.json','utf8')).version==='3.298.0'?'genie-orbit-v3298':'full','Historical V3.298 scope fails closed after version advance');
  assert.equal(classifyBrowserScope(changes.slice(1)),'full');
  assert.equal(classifyBrowserScope([...changes,{path:'src/gmww-demo-runner.js',status:'M'}]),'full');
  assert.equal(classifyBrowserScope(changes.map(c=>c.path==='package.json'?{...c,status:'A'}:c)),'full');
