@@ -103,6 +103,12 @@ async function loadGmwwAudio(key){
   return gmwwAudioLoading[key];
 }
 function preloadGmwwAudio(){loadGmwwAudio('victory');loadGmwwAudio('roleOpen');loadGmwwAudio('roleClose')}
+// Taps inside the village iframe never reach this document; bind the same unlock there,
+// so any touch on the scene (not only on menus) enables automatic turn audio.
+function gmwwBindVillageAudioUnlock(){
+  try{const doc=document.getElementById('gmwwVillageFrame')?.contentDocument;if(!doc||doc.__gmwwAudioUnlock)return;doc.__gmwwAudioUnlock=true;
+    for(const t of ['pointerdown','pointerup','touchend','click'])doc.addEventListener(t,unlockGmwwAudio,{passive:true})}catch{}
+}
 function unlockGmwwAudio(){
   const c=gmwwAudio();if(!c)return;
   try{

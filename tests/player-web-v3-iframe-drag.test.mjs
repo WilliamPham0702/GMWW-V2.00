@@ -42,7 +42,7 @@ test('drag keeps a single pointer across the document, chooses player and cleans
  const context={document,window:win,Math,String,Number,
   state:{member:{loginId:'wolf1'}},gmwwOnlinePick:null,gmwwOnlineIconPositions:position,
   gmwwPlayerTopMenuTimer:null,clearTimeout:()=>{},
-  gmwwChatClosePanel:()=>{},revealPlayerTopMenu:()=>{},
+  gmwwChatClosePanel:()=>{},revealPlayerTopMenu:()=>{},requestAnimationFrame:()=>1,cancelAnimationFrame:()=>{},performance:{now:()=>0},gmwwOnlineTargetSnapshot:()=>[],
   gmwwOnlineTargetAt:()=> 'wolf2',gmwwOnlineTarget:(id)=>selected.push(id),
   gmwwOnlinePickAction:()=>selected.push('picker'),toast:()=>{},setTimeout:()=>0,
   gmwwOnlinePlayerCenter:()=>({x:330,y:180}),gmwwOnlineFlyGhost:()=>Promise.resolve()
@@ -77,7 +77,7 @@ test('cancel/blur never performs a drop and self-target is forbidden',()=>{
   const winListeners=new Map(),win={innerWidth:390,innerHeight:800,addEventListener:(t,fn)=>winListeners.set(t,fn),removeEventListener:(t)=>winListeners.delete(t)};
   const node={style:{},getBoundingClientRect:()=>({left:90,top:320,width:70,height:70}),setPointerCapture(){},releasePointerCapture(){}};
   const context={document:doc,window:win,Math,String,Number,state:{member:{loginId:'wolf1'}},gmwwOnlinePick:null,gmwwOnlineIconPositions:new Map(),
-   gmwwPlayerTopMenuTimer:null,clearTimeout(){},gmwwChatClosePanel(){},revealPlayerTopMenu(){},gmwwOnlineTargetAt:()=> 'wolf1',
+   gmwwPlayerTopMenuTimer:null,clearTimeout(){},gmwwChatClosePanel(){},revealPlayerTopMenu(){},requestAnimationFrame:()=>1,cancelAnimationFrame:()=>{},performance:{now:()=>0},gmwwOnlineTargetSnapshot:()=>[],gmwwOnlineTargetAt:()=> 'wolf1',
    gmwwOnlineTarget:(id)=>selected.push(id),gmwwOnlinePickAction:()=>selected.push('picker'),toast(){},
    gmwwOnlinePlayerCenter:()=>null,gmwwOnlineFlyGhost:()=>Promise.resolve()};
   const down=vm.runInNewContext('('+dragSource+')',context);
@@ -111,7 +111,7 @@ test('missed iPhone drop returns the original icon to the campfire instead of le
   setPointerCapture(){},releasePointerCapture(){}};
  const context={document:doc,window:win,Math,String,Number,state:{member:{loginId:'wolf1'}},
   gmwwOnlinePick:null,gmwwOnlineIconPositions:positions,
-  gmwwPlayerTopMenuTimer:null,clearTimeout(){},gmwwChatClosePanel(){},revealPlayerTopMenu(){},
+  gmwwPlayerTopMenuTimer:null,clearTimeout(){},gmwwChatClosePanel(){},revealPlayerTopMenu(){},requestAnimationFrame:()=>1,cancelAnimationFrame:()=>{},performance:{now:()=>0},gmwwOnlineTargetSnapshot:()=>[],
   gmwwOnlineTargetAt:()=>'',gmwwOnlineTarget:id=>targets.push(id),
   gmwwOnlinePickAction:()=>targets.push('picker'),toast(){},
   gmwwOnlinePlayerCenter:()=>null,gmwwOnlineFlyGhost:()=>Promise.resolve()};

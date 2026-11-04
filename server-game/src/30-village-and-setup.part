@@ -710,7 +710,30 @@ function ensurePlayGlobalVillagePoll(){
   playSyncGlobalVillageMotion(true);
   playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy)playSyncGlobalVillageMotion(false)},1500)
 }
-function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN))playSyncRoom(false)},2500)}
+function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN||playRealtimeLooksStale()))playSyncRoom(false)},2500)}
+// V3.301 realtime watchdog: the Durable Object owns the turn clock. If no socket
+// message or REST sync arrived for 8 s, or the current turn deadline passed without
+// the next turn arriving, the socket is silently dead (iPhone app switch) → resync.
+function playRealtimeLooksStale(){
+  const now=Date.now(),seen=Math.max(Number(playSceneRuntime.socketMessageAt||0),Number(playSceneRuntime.restSyncAt||0));
+  if(now-seen>8000)return true;
+  const deadline=Date.parse(playSceneRuntime.nightRuntime?.deadlineAt||'');
+  const serverNow=now+(Number(playSceneRuntime.serverClockOffsetMs)||0);
+  return Number.isFinite(deadline)&&serverNow>deadline+1500&&now-seen>1500;
+}
+// Returning to the GM app (e.g. after checking Player Web on the same iPhone) must
+// show the live Server state at once, not the turn frozen when the app went to background.
+function playResumeRealtime(){
+  if(!isLivePlayRoom()||document.visibilityState!=='visible')return;
+  const ws=playSceneRuntime.socket,quiet=Date.now()-Math.max(Number(playSceneRuntime.socketMessageAt||0),Number(playSceneRuntime.restSyncAt||0))>2500;
+  if(ws&&quiet){playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode='';try{ws.close()}catch{}}
+  if(playSceneRuntime.socketReconnect){clearTimeout(playSceneRuntime.socketReconnect);playSceneRuntime.socketReconnect=0}
+  playSceneRuntime.socketFailures=0;connectPlaySocket();void playSyncRoom(true);
+}
+document.addEventListener('visibilitychange',playResumeRealtime);
+window.addEventListener('pageshow',playResumeRealtime);
+window.addEventListener('focus',playResumeRealtime);
+window.addEventListener('online',playResumeRealtime);
 function playPlayerRenderSignature(players=playSceneRuntime.players){return (Array.isArray(players)?players:[]).map(p=>[String(p?.loginId||p?.participantId||''),Number(p?.seatId||0),String(p?.gameCharacterId||''),String(p?.movementStatus||''),String(p?.villageActivity||''),String(p?.moveId||''),String(p?.characterAnimation?.state||''),String(p?.characterAnimation?.motion||''),String(p?.characterAnimation?.facing||''),p?.online===false?'0':'1',p?.ready?'1':'0'].join(':')).sort().join('|')+':status:'+JSON.stringify((playSceneRuntime.activeEffects||[]).filter(x=>x?.effectActive!==false).map(x=>[x.loginId,x.type,x.statusId,x.expiresAt]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))))}
 function connectPlaySocket(){
   if(!isLivePlayRoom()){disconnectPlaySocket();setPlayRealtimeState('offline');return}
@@ -724,6 +747,7 @@ function connectPlaySocket(){
   playSceneRuntime.socket=ws;playSceneRuntime.socketRoomCode=code;
   ws.onopen=()=>{if(playSceneRuntime.socket===ws){playSceneRuntime.socketFailures=0;setPlayRealtimeState('live');ensurePlayRealtimePoll()}};
   ws.onmessage=e=>{try{
+    if(playSceneRuntime.socket===ws)playSceneRuntime.socketMessageAt=Date.now();
     const d=JSON.parse(e.data||'{}');
     if(d.type==='chat_tick'&&String(playSceneState.roomCode)===code){if(typeof gmwwGMChatRefresh==='function'&&gmwwGMChatOpen)void gmwwGMChatRefresh();return}
     if(['demo_event','demo_control','demo_winner'].includes(d.type)&&String(playSceneState.roomCode)===code){void playSyncRoom(true);return}
@@ -1550,6 +1574,7 @@ async function playSyncRoom(force=false){
   const syncSerial=++playSceneRuntime.syncSerial;
   try{
     const data=await playRoomApi('');
+    playSceneRuntime.restSyncAt=Date.now();
     if(syncSerial!==playSceneRuntime.syncSerial)return data;
     if(Number.isFinite(Number(data?.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(data.serverTime)-Date.now();
     playSceneRuntime.room=data.room||null;playSceneRuntime.players=Array.isArray(data.players)?data.players:[];playSceneRuntime.assignments=Array.isArray(data.assignments)?data.assignments:[];playSceneRuntime.battleActionUsage=Array.isArray(data.battleActionUsage)?data.battleActionUsage:[];playSceneRuntime.demoControl=data.demoControl||null;playSceneRuntime.gameConfig=data.gameConfig||null;playSceneRuntime.artifactCycle=data.artifactCycle||{count:0,max:3};playSceneRuntime.nightRuntime=data.nightRuntime||null;playSceneRuntime.drunkDraws=Array.isArray(data.drunkDraws)?data.drunkDraws:[];playSceneRuntime.battleUndo=data.battleUndo||null;playSceneRuntime.nightIntel=data.nightIntel||null;playSceneRuntime.winProposal=data.winProposal||null;playSceneRuntime.activeEffects=Array.isArray(data.activeEffects)?data.activeEffects:[];playSceneRuntime.recentInteractions=Array.isArray(data.interactions)?data.interactions:[];playSceneRuntime.villageHistory=Array.isArray(data.villageHistory)?data.villageHistory:playSceneRuntime.recentInteractions;playSceneRuntime.gallows=data.gallows||null;playSceneRuntime.dayActionUsage=Array.isArray(data.dayActionUsage)?data.dayActionUsage:[];playSceneRuntime.lastSyncAt=Date.now();playSceneRuntime.lastError='';
