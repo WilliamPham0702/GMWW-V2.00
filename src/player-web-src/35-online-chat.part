@@ -259,6 +259,12 @@ html body #gmwwOnlineFooter #gmwwChatPanel{position:relative!important;inset:aut
 @keyframes gmww-chat-new-message{0%,100%{box-shadow:0 0 0 1px #ffe08b88}50%{box-shadow:0 0 0 3px #ffe08bcc,0 0 16px #ffe08b}}
 @media(prefers-reduced-motion:reduce){#gmwwChatPanel.gmww-chat-unread{animation:none}}
 #gmwwOnlineFooter .gmww-foot-button{height:38px;min-height:38px;padding:3px;border:1px solid #ffffff3d;border-radius:10px;background:#062e4340;color:white;font:800 11px system-ui;backdrop-filter:blur(8px)}
+#gmwwOnlineFooter #gmwwPlayerRestore{display:grid;place-items:center;align-content:center;gap:0;line-height:1;border:1.5px solid #ffd77a;background:#4a3307cc;color:#ffe9b0;box-shadow:0 0 8px #ffd77a55}
+#gmwwOnlineFooter #gmwwPlayerRestore span{font-size:19px;font-weight:900}
+#gmwwOnlineFooter #gmwwPlayerRestore small{font:800 8.5px system-ui;letter-spacing:.2px}
+#gmwwOnlineFooter #gmwwPlayerRestore.gmww-restore-ready{background:#c88a12;color:#fff;border-color:#fff3c4;animation:gmwwRestorePulse 1.1s ease-in-out infinite alternate}
+@keyframes gmwwRestorePulse{from{box-shadow:0 0 0 0 #ffd77a99,0 0 6px #ffd77a}to{box-shadow:0 0 0 5px #ffd77a00,0 0 18px #ffd77a}}
+@media(prefers-reduced-motion:reduce){#gmwwOnlineFooter #gmwwPlayerRestore.gmww-restore-ready{animation:none}}
 #gmwwChatPanel{min-width:0;background:rgba(5,35,49,.25);border:1px solid #b5e6e843;border-radius:12px;color:#fff;overflow:hidden;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 4px 15px #0002}
 #gmwwChatPanel header,#gmwwChatLines,#gmwwChatHelp{display:none}
 #gmwwChatPanel.open header{display:flex;align-items:center;gap:6px;padding:3px 7px}#gmwwChatPanel header b{flex:1;font-size:10px}
@@ -362,10 +368,11 @@ function gmwwChatDockSync(){
   if(!footer){
     footer=document.createElement('div');footer.id='gmwwOnlineFooter';footer.setAttribute('aria-label','Menu dưới Player Web');
     const clock=document.createElement('button');clock.type='button';clock.className='gmww-foot-button';clock.id='gmwwPlayerClock';clock.title='Đồng hồ đồng bộ GM';clock.disabled=true;clock.textContent='--:--';
-    const undo=document.createElement('button');undo.type='button';undo.className='gmww-foot-button';undo.id='gmwwPlayerRestore';undo.textContent='↶';undo.title='Khôi phục lựa chọn hoặc hành động gần nhất của bạn';undo.setAttribute('aria-label','Khôi phục hành động');
+    const undo=document.createElement('button');undo.type='button';undo.className='gmww-foot-button';undo.id='gmwwPlayerRestore';undo.innerHTML='<span aria-hidden="true">↶</span><small>Khôi phục</small>';undo.title='Khôi phục lựa chọn hoặc hành động gần nhất của bạn';undo.setAttribute('aria-label','Khôi phục hành động');
     undo.onclick=()=>{const pending=!!gmwwOnlinePick;gmwwOnlineStop();gmwwOnlineClearPositions();state.gallowsSelectedId='';setGameViewPane('village',{persist:false});renderGallowsWidget();if(pending){toast('Đã khôi phục lựa chọn chưa gửi.');return}void gmwwOnlineRestore()};
     footer.append(clock,panel,undo);document.body.appendChild(footer);
   }
+  gmwwOnlineRestoreHint();
   footer.hidden=!document.getElementById('game')?.classList.contains('active');
   footer.classList.toggle('gmww-chat-day',state.room?.phase==='running'&&
     ['morning','day'].includes(String(state.room?.cyclePhase||'')));
@@ -497,6 +504,41 @@ async function gmwwOnlineRestore(){
 }
 function gmwwOnlinePeople(){return (state.players||[]).filter(p=>p?.loginId).map(p=>({id:String(p.loginId),name:String(p.displayName||p.loginId)}))}
 function gmwwOnlineStop(){gmwwOnlinePick=null;document.getElementById('gmwwOnlinePick')?.remove();gmwwOnlineTurnEffects(state.onlineActions||[])}
+function gmwwOnlinePlayerCenter(id){
+ const frame=document.getElementById('gmwwVillageFrame');id=String(id||'').replace(/^member:/,'');if(!frame||!id)return null;
+ try{
+   const rect=frame.getBoundingClientRect(),inner=frame.contentWindow;
+   const sx=rect.width/Math.max(1,Number(inner?.innerWidth)||frame.clientWidth||rect.width);
+   const sy=rect.height/Math.max(1,Number(inner?.innerHeight)||frame.clientHeight||rect.height);
+   for(const node of frame.contentDocument.querySelectorAll('#players .player[data-player-id]')){
+     if(String(node.dataset.playerId||'').replace(/^member:/,'')!==id)continue;
+     const face=node.querySelector('img,.portrait,canvas')||node,b=face.getBoundingClientRect();
+     if(!b.width||!b.height)continue;
+     return {x:rect.left+(b.left+b.width/2)*sx,y:rect.top+(b.top+b.height/2)*sy};
+   }
+ }catch{}
+ return null;
+}
+function gmwwOnlineFlyGhost(ghost,to,absorb){
+ if(!ghost)return Promise.resolve();
+ const from={x:parseFloat(ghost.style.left)||to.x,y:parseFloat(ghost.style.top)||to.y};
+ ghost.classList?.toggle('is-magnet',!!absorb);
+ ghost.style.left=to.x+'px';ghost.style.top=to.y+'px';
+ if(typeof ghost.animate!=='function'||matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return Promise.resolve();
+ const frames=absorb?
+   [{left:from.x+'px',top:from.y+'px',transform:'translate(-50%,-50%) scale(1)',opacity:1},
+    {left:to.x+'px',top:to.y+'px',transform:'translate(-50%,-50%) scale(1.18) rotate(-8deg)',opacity:1,offset:.45},
+    {left:to.x+'px',top:to.y+'px',transform:'translate(-50%,-50%) scale(.1) rotate(160deg)',opacity:0}]:
+   [{left:from.x+'px',top:from.y+'px',transform:'translate(-50%,-50%) scale(1)'},
+    {left:to.x+'px',top:to.y+'px',transform:'translate(-50%,-50%) scale(1)'}];
+ return ghost.animate(frames,{duration:absorb?360:240,easing:absorb?'cubic-bezier(.5,0,.7,.4)':'cubic-bezier(.2,.8,.3,1)',fill:'forwards'}).finished.catch(()=>{});
+}
+function gmwwOnlineRestoreHint(){
+ const b=document.getElementById('gmwwPlayerRestore');if(!b)return;
+ const ready=!!(gmwwOnlinePick||(gmwwOnlineCanRestore&&state.room?.phase==='running'&&state.room?.cyclePhase==='night'));
+ b.classList.toggle('gmww-restore-ready',ready);
+ b.title=ready?'Bấm ↶ để khôi phục hành động/lựa chọn vừa làm':'Khôi phục lựa chọn hoặc hành động gần nhất của bạn';
+}
 function gmwwOnlineTargetAt(x,y){
  const frame=document.getElementById('gmwwVillageFrame');if(!frame)return '';
  try{
@@ -578,7 +620,7 @@ async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
    const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
    gmwwOnlineConfirmedTargets=pick.targets.slice();gmwwOnlineConfirmedUntil=Date.now()+5500;
    setTimeout(()=>gmwwOnlineTurnEffects(state.onlineActions||[]),5600);
-   gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';toast('Đã thực hiện: '+String(action.name||'Hành động'));
+   gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';gmwwOnlineRestoreHint();toast('Đã thực hiện: '+String(action.name||'Hành động')+(gmwwOnlineCanRestore?' · bấm ↶ Khôi phục ở menu dưới nếu cần làm lại':''));
    if(d.revelation?.message)gmwwOnlineShowRevelation(d.revelation);
  }catch(e){toast('Hành động chưa được chấp nhận: '+String(e.message||e))}
  finally{state.onlineBusy=false;await refreshPrivateRole(true)}
@@ -632,26 +674,52 @@ function gmwwOnlineIconDown(event,action){
  };
  const move=e=>{
    if(e.pointerId!==pointerId||finished)return;
-   if(!ghost&&Math.hypot(e.clientX-startX,e.clientY-startY)>10){
-     ghost=document.createElement('img');ghost.className='gmww-online-ghost';ghost.src=action.iconUrl||'';document.body.appendChild(ghost);
+   if(!ghost&&Math.hypot(e.clientX-startX,e.clientY-startY)>6){
+     // Lift the real icon off the campfire: the original hides and the carried copy follows the finger.
+     const box=node.getBoundingClientRect();
+     ghost=document.createElement('img');ghost.className='gmww-online-ghost';ghost.src=action.iconUrl||'';ghost.alt='';ghost.draggable=false;
+     ghost.style.width=Math.max(44,box.width)+'px';ghost.style.height=Math.max(44,box.height)+'px';
+     ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';
+     document.body.appendChild(ghost);node.classList?.add('gmww-online-lifted');
    }
-   if(ghost){e.preventDefault();ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';const id=targetAt(e.clientX,e.clientY);ghost.style.filter=id?'drop-shadow(0 0 12px #7effba)':'drop-shadow(0 4px 8px #000b)'}
+   if(ghost){
+     e.preventDefault();
+     const id=targetAt(e.clientX,e.clientY),c=id?gmwwOnlinePlayerCenter(id):null;
+     let x=e.clientX,y=e.clientY;
+     // Near a valid player the icon is sucked toward that player's centre.
+     if(c){x+=(c.x-x)*.7;y+=(c.y-y)*.7}
+     ghost.classList?.toggle('is-magnet',!!c);
+     ghost.style.left=x+'px';ghost.style.top=y+'px';
+   }
  };
  const cleanup=()=>{
    document.removeEventListener('pointermove',move,true);document.removeEventListener('pointerup',end,true);document.removeEventListener('pointercancel',end,true);
    window.removeEventListener('blur',cancel);try{node.releasePointerCapture?.(pointerId)}catch{}
-   ghost?.remove();revealPlayerTopMenu(true);
+   revealPlayerTopMenu(true);
  };
- const cancel=()=>{if(finished)return;finished=true;cleanup()};
+ const settle=()=>{ghost?.remove();node.classList?.remove('gmww-online-lifted')};
+ const cancel=()=>{if(finished)return;finished=true;cleanup();settle()};
  const end=e=>{
    if(e.pointerId!==pointerId||finished)return;
    finished=true;const moved=!!ghost;
    cleanup();
-   if(e.type==='pointercancel')return;
-   if(!moved){gmwwOnlinePickAction(action);return}
+   if(e.type==='pointercancel'){settle();return}
+   if(!moved){settle();gmwwOnlinePickAction(action);return}
    const target=targetAt(e.clientX,e.clientY);
-   if(target){if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlinePick={action,targets:[]};gmwwOnlineTarget(target)}
+   if(target){
+     if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlinePick={action,targets:[]};
+     const c=gmwwOnlinePlayerCenter(target)||{x:e.clientX,y:e.clientY};
+     gmwwOnlineFlyGhost(ghost,c,true).then(()=>{
+       ghost.remove();
+       // More targets needed → the icon returns to the campfire for the next drag.
+       if(gmwwOnlinePick?.action.key===action.key&&gmwwOnlinePick.targets.length<Math.max(0,Number(action.targetCount)||0))node.classList?.remove('gmww-online-lifted');
+       else setTimeout(()=>node.classList?.remove('gmww-online-lifted'),2200);
+     });
+     gmwwOnlineTarget(target);
+   }
    else{
+     const home=node.getBoundingClientRect();
+     gmwwOnlineFlyGhost(ghost,{x:home.left+home.width/2,y:home.top+home.height/2},false).then(settle);
      // A missed drop never relocates the action icon: return it to the campfire.
      // Previously the icon stayed at the finger's last position (often off-screen on iPhone).
      gmwwOnlineIconPositions.delete(action.key);
@@ -675,6 +743,7 @@ function gmwwOnlineTurnEffects(offers){
  const chosen=[...(gmwwOnlinePick?.targets||[]),...(Date.now()<gmwwOnlineConfirmedUntil?gmwwOnlineConfirmedTargets:[]),...privateBites];
  const targets=new Set(chosen.map(id=>String(id||'').replace(/^member:/,'')));
  document.getElementById('gmwwPlayerTopMenu')?.classList.toggle('gmww-my-action-turn',active);
+ gmwwOnlineRestoreHint();
  try{
   const doc=document.getElementById('gmwwVillageFrame')?.contentDocument;
   if(!doc)return;
@@ -751,7 +820,9 @@ function renderOnlineActionDock(){
      '#gmwwOnlineDock button{flex:0 0 auto;position:relative;will-change:transform;width:clamp(28px,calc(48px * var(--online-action-scale,1)),72px);height:clamp(28px,calc(48px * var(--online-action-scale,1)),72px);border:0;padding:0;background:transparent;touch-action:none}'+
      '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
      '#game:not(.active)~#gmwwOnlineDock{display:none!important}'+
-     '.gmww-online-ghost{position:fixed;z-index:100060;width:56px;height:56px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 0 9px #f7d58a)}'+
+     '.gmww-online-ghost{position:fixed;z-index:100060;width:56px;height:56px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;filter:drop-shadow(0 6px 10px #000c) drop-shadow(0 0 9px #f7d58a);transition:left .09s ease-out,top .09s ease-out,filter .15s}'+
+     '.gmww-online-ghost.is-magnet{filter:drop-shadow(0 0 14px #7effba) drop-shadow(0 0 28px #7effba)}'+
+     '#gmwwOnlineDock button.gmww-online-lifted{opacity:0!important;pointer-events:none}'+
      '#gmwwOnlinePick{position:fixed;z-index:100050;left:50%;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 140px);transform:translateX(-50%);width:min(92vw,380px);max-height:48dvh;overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid #deb56d;border-radius:15px;background:#092b40f2;color:white;box-shadow:0 12px 35px #000d}'+
      '#gmwwOnlinePick strong{font-size:14px}#gmwwOnlinePick .gmww-online-people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:26dvh;overflow:auto;gap:6px}'+
      '#gmwwOnlinePick button{min-height:36px;background:#16506c;color:white;border:1px solid #7196a9;border-radius:9px;font-weight:700}';

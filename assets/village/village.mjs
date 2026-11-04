@@ -166,6 +166,9 @@ if(game){
     return out
   }
   function screenPoint(p,width=stageElement.clientWidth||864,height=stageElement.clientHeight||1536){return layout.toScreen(p,width,height)}
+  // Same rule as GM Server villageFirePosition(): published marker → centre of an imported image → GP2 landmark.
+  function fireScreenPoint(){const key=night?"night":"day",a=globalThis.GMWW_VILLAGE_FIRE_ANCHORS?.[key];if(a&&[a.x,a.y].every(Number.isFinite))return{x:Math.max(0,Math.min(100,a.x)),y:Math.max(0,Math.min(100,a.y))};if(globalThis.GMWW_VILLAGE_SCENE_IMAGES?.[key])return{x:50,y:50};return screenPoint(layout.fire)}
+  function placeFire(){const f=document.querySelector('.fire'),p=fireScreenPoint();if(f){f.style.left=p.x+'%';f.style.top=p.y+'%';}}
   function walkDirection(data){const dx=Number(data?.moveToX)-Number(data?.moveFromX);return Number.isFinite(dx)&&dx<-.01?"left":"right"}
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?rev=c40-1&dir=left":"?rev=c40-1";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
   function visuallyDeceased(data){return Array.isArray(data?.statusTags)&&data.statusTags.some(x=>x?.statusId==="dead")}
@@ -636,7 +639,7 @@ if(game){
     if(selectedId&&!all.some(p=>p.id===selectedId))selectedId=null;
     if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
-    const fire=document.querySelector('.fire'),point=screenPoint(layout.fire);if(fire){fire.style.left=point.x+'%';fire.style.top=point.y+'%';}
+    placeFire();
     const nextSig=JSON.stringify([nextCount,seatLayout,seatOffset,seatSpacing,room.roomMode,room.playerSceneMode,
       setupState,all.map(x=>[x.id,x.seatId,x.displaySeatId,x.positionX,x.positionY,x.movementStatus,x.moveId,
         x.moveFromX,x.moveFromY,x.moveToX,x.moveToY,x.moveStartedAt,x.moveDurationMs,
@@ -646,7 +649,8 @@ if(game){
   if(embedded){
     const stage=document.querySelector('.stage');stage.addEventListener('click',event=>{if(!setupState.walkEnabled)return;if(event.target.closest('.player,.seat-empty,.hud,.scene-controls,.fire,.gmww-portal,.gmww-portal-notice'))return;const r=stage.getBoundingClientRect(),raw=layout.fromScreen(event.clientX-r.left,event.clientY-r.top,r.width,r.height);if(!layout.inside(raw.x,raw.y))return;const point=layout.clampPoint(raw.x,raw.y);window.parent.postMessage({type:'gmww:ground-click',...point},window.location.origin)});
     document.querySelector('.fire')?.addEventListener('click',()=>window.parent.postMessage({type:'gmww:fire-click'},window.location.origin));
-    window.addEventListener('resize',()=>{render();const f=document.querySelector('.fire'),p=screenPoint(layout.fire);if(f){f.style.left=p.x+'%';f.style.top=p.y+'%';}renderPortal()});
+    window.addEventListener('resize',()=>{render();placeFire();renderPortal()});
+    window.addEventListener('gmww:village-fire-anchor',placeFire);
 
 
     window.addEventListener("message",event=>{
