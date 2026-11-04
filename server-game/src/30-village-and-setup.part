@@ -1889,9 +1889,9 @@ function renderPlayContext(){
         const st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
         actions.innerHTML='<button class="play-action-chip" data-play-call-members type="button"><span>♧</span><b>GỌI THÀNH VIÊN</b></button><button class="play-action-chip active" data-play-seat-manual type="button"><span>☝</span><b>THỦ CÔNG</b></button><button class="play-action-chip" data-play-random-seats type="button"><span>⚄</span><b>NGẪU NHIÊN</b></button><button class="play-action-chip '+(locked?'active':'')+'" data-play-seat-lock-toggle type="button"><span>'+ (locked?'🔒':'🔓') +'</span><b>'+(locked?'MỞ KHÓA XẾP CHỖ':'CHỐT XẾP CHỖ')+'</b></button><button class="play-action-chip play-seat-total" disabled><span>●</span><b>'+st.occupied+'/'+st.seatCount+'</b></button>';
         actions.querySelector('[data-play-call-members]')?.addEventListener('click',playCallOnlineMembers);
-        actions.querySelector('[data-play-random-seats]')?.addEventListener('click',playRandomSeatRemaining);
+        actions.querySelector('[data-play-random-seats]')?.addEventListener('click',()=>{void playGatherRandomize()});
         actions.querySelector('[data-play-seat-lock-toggle]')?.addEventListener('click',()=>playSetSeatLock(!locked));
-        actions.querySelector('[data-play-seat-manual]')?.addEventListener('click',()=>playFlashError('Chạm chiếc lá trên sân rồi chọn người chơi cho vị trí đó.'))
+        actions.querySelector('[data-play-seat-manual]')?.addEventListener('click',playGatherManual)
       }else if(playSceneState.step==='roles'){actions.innerHTML='<button class="play-action-chip" data-play-assign-auto type="button"><b>TỰ ĐỘNG</b></button><button class="play-action-chip" data-play-assign-random type="button"><b>NGẪU NHIÊN</b></button>';actions.querySelector('[data-play-assign-auto]')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(e){playFlashError(e.message)}});actions.querySelector('[data-play-assign-random]')?.addEventListener('click',()=>{try{playBuildAssignments()}catch(e){playFlashError(e.message)}})}else actions.innerHTML='';
     }
   }
@@ -2046,6 +2046,13 @@ function initPlaySeatOffsetControls(){
     suppressClick=false;event.preventDefault();event.stopImmediatePropagation();
   },true);
 }
+function playGatherSequenceStatus(){
+  const members=playLiveMembers(),stats=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
+  const hasMembers=members.length>0;
+  const seatConfigured=locked||(hasMembers&&String(playSceneState.gatherSeatPresetRoom||'')===String(playSceneState.roomCode));
+  const allSeated=hasMembers&&stats.occupied===members.length;
+  return{hasMembers,seatConfigured,allSeated,locked,step:!hasMembers?1:!seatConfigured?2:!allSeated?3:4};
+}
 function renderPlayGatherToolbar(){
   const bar=document.getElementById('playGatherToolbar');if(!bar)return;
   renderPlayRoomModeControl();
@@ -2053,16 +2060,29 @@ function renderPlayGatherToolbar(){
   bar.classList.toggle('hidden',!visible);
   if(!visible){closePlaySeatPresetPanel();return}
   initPlayGatherSpacing();initPlaySeatOffsetControls();
-  const members=playLiveMembers(),st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
+  const members=playLiveMembers(),st=playSeatStats(),progress=playGatherSequenceStatus(),locked=progress.locked,busy=!!playSceneRuntime.busy;
   if(locked)closePlaySeatPresetPanel();
   const count=document.getElementById('playGatherCount');
   if(count)count.textContent=members.length+' người • '+st.occupied+'/'+st.seatCount+' vị trí';
-  for(const id of ['playGatherCall','playGatherSeatPreset','playGatherRandom','playGatherManual']){
-    const el=document.getElementById(id);if(el)el.disabled=locked||playSceneRuntime.busy;
+  bar.dataset.gatherStep=String(progress.step);
+  const steps={playGatherCall:1,playGatherSeatPreset:2,playGatherRandom:3,playGatherManual:3};
+  for(const [id,step] of Object.entries(steps)){
+    const el=document.getElementById(id);if(!el)continue;
+    const ready=step===1||(step===2&&progress.hasMembers)||(step===3&&progress.seatConfigured);
+    el.disabled=locked||busy||!ready;
+    el.classList.toggle('is-sequence-current',!locked&&ready&&progress.step===step);
+    el.classList.toggle('is-sequence-done',step<progress.step);
+    el.setAttribute('aria-label','Bước '+step+': '+(el.querySelector('b')?.textContent||id)+(ready?'':' (chưa mở)'));
   }
   const confirm=document.getElementById('playGatherConfirm');
-  if(confirm){confirm.disabled=!!playSceneRuntime.busy;const b=confirm.querySelector('b');if(b)b.textContent=locked?'MỞ KHÓA':'CHỐT VỊ TRÍ';}
-  const disband=document.getElementById('playGatherDisband');if(disband)disband.disabled=!!playSceneRuntime.busy||!members.length;
+  if(confirm){
+    confirm.disabled=busy||(!locked&&!(progress.seatConfigured&&progress.allSeated));
+    confirm.classList.toggle('is-sequence-current',!locked&&progress.step===4&&progress.seatConfigured&&progress.allSeated);
+    confirm.classList.toggle('is-sequence-done',locked);
+    confirm.setAttribute('aria-label',locked?'Mở khóa vị trí':'Bước 4: Chốt vị trí');
+    const b=confirm.querySelector('b');if(b)b.textContent=locked?'MỞ KHÓA':'CHỐT VỊ TRÍ';
+  }
+  const disband=document.getElementById('playGatherDisband');if(disband)disband.disabled=busy||!members.length;
   bar.classList.remove('is-auto-hidden');bar.dataset.autoHidden='0';
   if(typeof bar.gmwwGatherClampOnscreen==='function')requestAnimationFrame(bar.gmwwGatherClampOnscreen);
 }
@@ -2121,5 +2141,5 @@ async function playApplySeatPreset(count){
   if(count<members.length||count<maxSeat){playFlashError('Mẫu '+count+' chỗ không đủ cho '+members.length+' người hoặc vị trí đã xếp.');return}
   const shape=layout.recommendedSeatShape(count);
   const ok=await playUpdateRoomSettings({seatCount:count,seatLayout:shape});
-  if(ok)closePlaySeatPresetPanel();
+  if(ok){playSceneState.gatherSeatPresetRoom=String(playSceneState.roomCode);savePlayScene();closePlaySeatPresetPanel();renderPlayGatherToolbar();}
 }
