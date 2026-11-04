@@ -1527,21 +1527,31 @@ test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',
  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='src/player-web-src/35-online-chat.part'?{...x,after:x.after.replace('☄️','⭐')}:x)),'full');
 });
 
-test('V3296_POSTMERGE_RECOVERY routes only 2 audited CI files through full safety-focused Worker checks',()=>{
+test('V3296_POSTMERGE_RECOVERY recognizes only real verified ancestry, not synthetic input',()=>{
  const rows=[
   {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
   {path:'tests/ci-browser-scope.test.mjs',status:'M'}
  ];
- assert.equal(classifyBrowserScope(rows),'comet-orbit-v3296');
+ // Synthetic in-memory rows lack a cryptographic diff. They MUST fail closed.
+ assert.equal(classifyBrowserScope(rows),'full');
  assert.equal(classifyBrowserScope(rows.slice(1)),'full');
  assert.equal(classifyBrowserScope([...rows,{path:'src/index.js',status:'M'}]),'full');
  assert.equal(classifyBrowserScope([...rows,{path:'server-game/current/app.js',status:'M'}]),'full');
  assert.equal(classifyBrowserScope([...rows,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
- const source=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
- const start=source.indexOf('function detect(){');
- const gate=source.indexOf('// V3296_POSTMERGE_RECOVERY:',start);
- const historical=source.indexOf('Main contains changes outside the verified scoped lists',start);
- assert.ok(start>=0&&gate>start&&historical>gate,'main push must see signed scope before historic full branch');
- assert.ok(source.includes("git('diff','--quiet',pinned,'HEAD'"),'runtime bytes cannot change in recovery');
- assert.ok(source.includes("parent===pinned"),'unreviewed parent must fail closed');
+ const selector=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ const beginning=selector.indexOf('function detect(){');
+ const earlyGate=selector.indexOf('// V3296_POSTMERGE_RECOVERY:',beginning);
+ const historical=selector.indexOf('Main contains changes outside the verified scoped lists',beginning);
+ assert.ok(beginning>=0&&earlyGate>beginning&&historical>earlyGate);
+ assert.ok(selector.includes("git('diff','--quiet',pinned,'HEAD'"));
+ assert.ok(selector.includes('isPush&&parent===pinned'));
+ assert.ok(selector.includes('!isPush&&base===pinned'));
+ // Real git checks run only inside detect() and require a pinned merge SHA.
+ const verified=execFileSync(process.execPath,['.github/scripts/ci-browser-scope.mjs'],{
+  encoding:'utf8',
+  env:{...process.env,GMWW_CI_EVENT:'pull_request',
+       GMWW_CI_BASE_SHA:'fb3528abfd80b1eee5d96abe34fbb69059692678',
+       GITHUB_REF:'refs/pull/785/merge'}
+ });
+ assert.match(verified,/GMWW browser CI scope: comet-orbit-v3296/);
 });
