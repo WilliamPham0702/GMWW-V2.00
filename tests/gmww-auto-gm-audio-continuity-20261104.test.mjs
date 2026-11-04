@@ -15,7 +15,7 @@ test('Auto GM unlocks a persistent audio context synchronously on its starting t
   const fn=between(battle,'async function togglePlayAutoGM(', 'async function playGatherCallMembers(');
   assert.match(fn,/battleUnlockAudioFromGesture\(\);[\s\S]*if\(playSceneRuntime\.busy\)/);
   assert.match(setup,/const battleDecodedAudioCache=new Map\(\)/);
-  assert.match(setup,/if\(battleUnlockedAudioContext\)\{\s*if\(await battlePlayWebAudioFallback/);
+  assert.match(setup,/if\(typeof battleUnlockedAudioContext!=='undefined'&&battleUnlockedAudioContext\)\{\s*if\(await battlePlayWebAudioFallback/);
   assert.match(setup,/ctx\.decodeAudioData\(await response\.arrayBuffer\(\)\)/);
 });
 
@@ -27,6 +27,7 @@ test('Auto GM day queue persists through Gallows stage transitions',()=>{
   assert.match(battle,/battleQueueDayAudio\(\[\['audio_system_time_up'/);
   assert.match(battle,/\['nominating','selecting','voting'\]/);
   assert.match(battle,/stage==='selecting'\?/);
+  assert.match(setup,/failedAudioTurnKey=expectedKey/);
 });
 
 test('failed role audio retries the SAME cue and does not silently skip later cues',async()=>{
