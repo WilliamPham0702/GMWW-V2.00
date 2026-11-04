@@ -1554,5 +1554,11 @@ test('V3296_POSTMERGE_RECOVERY recognizes only real verified ancestry, not synth
        GMWW_CI_BASE_SHA:'fb3528abfd80b1eee5d96abe34fbb69059692678',
        GITHUB_REF:'refs/pull/785/merge'}
  });
- assert.match(verified,/GMWW browser CI scope: comet-orbit-v3296/);
+ // Independent CI workflows may use checkout depth=1, without the pinned
+ // ancestor. Such a checkout must fail closed (FULL), never claim safe scope.
+ let pinnedAvailable=true;
+ try{execFileSync('git',['cat-file','-e','fb3528abfd80b1eee5d96abe34fbb69059692678^{commit}'],{stdio:'ignore'});}
+ catch{pinnedAvailable=false;}
+ if(pinnedAvailable)assert.match(verified,/GMWW browser CI scope: comet-orbit-v3296/);
+ else assert.match(verified,/GMWW browser CI scope: full/);
 });
