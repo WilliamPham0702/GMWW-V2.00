@@ -38,7 +38,7 @@ test('Player Web nhận tọa độ từ bản bối cảnh chung và phát lạ
   assert.match(village,/gmww:village-gallows-anchor/);
   assert.match(village,/sceneAnchor=globalThis.GMWW_VILLAGE_GALLOWS_ANCHORS/);
   assert.match(village,/configured\?firePoint.y:firePoint.y-15/);
-  assert.match(read('assets/village/index.html'),/scene-manager.mjs\?v=3202-gallows/);
+  assert.match(read('assets/village/index.html'),/scene-manager.mjs\?v=3301-fire/);
 });
 
 test('Chỉ Character treo dùng Walk sẵn có, không dựng dây/cây/nhãn trên đầu',()=>{
