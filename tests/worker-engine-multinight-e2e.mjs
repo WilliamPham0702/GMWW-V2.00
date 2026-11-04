@@ -60,12 +60,8 @@ try{
  const gmEvents=await connect(),playerEvents=await connect('member:'+id('seer'));
  await cycle('night',1);
  let s=await state();
- // Same-order roles must both wake on Night 1. Modern Server may group them into one
- // role-group turn or keep separate turns for non-wolf test-* roles; either is valid.
- const waking=new Set(s.nightRuntime.queue.flatMap(x=>x.loginIds||[]));
- assert.ok(waking.has(id('wolf'))&&waking.has(id('alpha')),'wolf and alpha must both have a Night 1 turn');
  const grouped=s.nightRuntime.queue.find(x=>x.kind==='role-group');
- if(grouped)assert.deepEqual([...grouped.loginIds].sort(),[id('wolf'),id('alpha')].sort());
+ assert.deepEqual([...grouped.loginIds].sort(),[id('wolf'),id('alpha')].sort());
  assert.equal(s.nightRuntime.queue.filter(x=>x.kind==='wolf-introduction').length,1);
  checks.push('same-order roles share actual DO turn');
  // Artifact quota, exact retry, rollback and persisted ownership restoration.

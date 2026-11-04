@@ -265,3 +265,6 @@ Khi sửa một khu vực, hãy cập nhật test tương ứng theo mã hiện 
 | v398-battle-floating-clock-timing.test.mjs | V3.98 battle has one draggable clock, no fixed bottom row, wolf owns GM tools | Chuỗi mã nguồn cũ không còn |
 | village-scene-manager.test.mjs | Player reads lightweight published scene metadata and updates camera layer | Chuỗi mã nguồn cũ không còn |
 | wolf01-private-pack-recognition.test.mjs | WOLF-01 rejects leaking a public runtime queue over WebSocket and renders only authenticated labels | Chuỗi mã nguồn cũ không còn |
+
+## E2E fixture đã ngừng chạy
+- `tests/worker-engine-multinight-e2e.mjs` (fixture 3 đêm dùng vai `test-*`): server hiện không coi `test-wolf` là Sói nên không có lượt giới thiệu Sói. Đã ngừng chạy trong `check-player-web.yml`; E2E đêm thật `worker-night-rules-e2e.mjs` vẫn bắt buộc. Cần viết lại bằng Role ID thật để phủ lại hạn mức Artifact/undo nhiều đêm.
