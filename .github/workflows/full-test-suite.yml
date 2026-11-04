@@ -1,0 +1,58 @@
+name: GMWW Full Test Suite (report only)
+
+# Runs the complete `npm test` on main and nightly so regressions in any area surface,
+# even when a PR's scoped CI did not select those tests. Report only: this workflow is
+# not a required check and never deploys. Legacy snapshot tests are listed in
+# tests/LEGACY-QUARANTINE.md and skipped in place.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-full-test-suite
+  cancel-in-progress: true
+
+jobs:
+  full-suite:
+    name: Full npm test (report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install pinned packages
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Source packaging is byte-identical
+        run: |
+          set -euo pipefail
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/assemble-player-page.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+      - name: Full test suite
+        run: |
+          set -o pipefail
+          node --test --test-reporter=spec --test-reporter-destination=stdout \
+            --test-reporter=tap --test-reporter-destination=full-suite.tap tests/*.test.mjs
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### GMWW full test suite'
+            grep -E '^# (tests|pass|fail|skipped|todo)' full-suite.tap || true
+            echo
+            echo 'Skipped legacy tests: tests/LEGACY-QUARANTINE.md'
+            echo
+            grep -E '^\s*not ok' full-suite.tap | grep -v '# TODO' | head -40 || true
+          } >> "$GITHUB_STEP_SUMMARY"

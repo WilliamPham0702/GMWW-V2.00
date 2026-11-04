@@ -1,12 +1,10 @@
 name: Deploy PR612 Village Player Web (Worker-only)
+# Retired 2026-11-04: one-off deploy for an already-merged PR. Its fail-closed exact-scope
+# gate can no longer match main, so automatic runs only skipped or failed. Kept for history;
+# it no longer runs automatically. Production deploys go through GMWW V3 Worker and Player Web Delivery
+# (Worker-only) and Deploy Production (Runtime), both in concurrency group gmww-production.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'assets/village/index.html'
-      - 'assets/village/village.mjs'
-      - 'assets/village/village.css'
-      - '.github/workflows/deploy-village-legacy-online-pr612.yml'
+  workflow_dispatch:
 concurrency:
   group: gmww-production
   cancel-in-progress: false

@@ -11,7 +11,9 @@ test('PR677 DEMO Online Server remains authoritative and no live rooms are rewri
 });
 test('PR677 release requires same-SHA CI, rollback and immutable Runtime',()=>{
  const w=read('.github/workflows/deploy-demo-transport-677.yml');
- for(const p of ['Check Player Web Worker','pr677-worker-only-release','git ls-remote origin refs/heads/main','git diff --quiet gmww-v3.280','previous_version','Roll back to saved Worker version','npx wrangler deploy','npm run check'])
+ // Retired 2026-11-04: trigger is manual-only; the fail-closed release gates stay intact.
+ assert.match(w,/\non:\n  workflow_dispatch:\n/);assert.ok(!w.includes('workflow_run:'));
+ for(const p of ['pr677-worker-only-release','git ls-remote origin refs/heads/main','git diff --quiet gmww-v3.280','previous_version','Roll back to saved Worker version','npx wrangler deploy','npm run check'])
    assert.ok(w.includes(p),p);
  assert.ok(read('.github/scripts/ci-browser-scope.mjs').includes("mode:'pr677-worker-only-release'"));
  assert.ok(read('.github/workflows/check-player-web.yml').includes("mode == 'pr677-worker-only-release'"));
