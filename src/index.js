@@ -25,6 +25,7 @@ const villageLayout=globalThis.GMWW_VILLAGE_LAYOUT;
 import { DurableObject } from "cloudflare:workers";
 import { shouldSkipMemberHeartbeat, shouldSkipMemberSessionTouch, shouldSkipGmHeartbeat, shouldSkipDirectoryHeartbeat, GMWW_WRITE_OPTIMIZER_VERSION } from "./gmww-do-write-optimizer.js";
 import { authorizedPitr } from "./gr01-pitr-auth.js";
+import { BACKUP_EXPORT_ROUTE, BACKUP_EXPORT_DO_PATH, handleBackupExportInDo, handleBackupExportRoute } from "./gmww-backup-export.js";
 import { combineConfiguredTurns, groupConfiguredRoleTurns, jumpTarget } from "./gmww-night-turn-rules.js";
 import { resolveRoleActionPolicy, checkBattleRoleActionUsage, appendBattleRoleActionUsage } from "./gmww-battle-action-policy.js";
 import { oldWitchActionCheck } from "./gmww-old-witch-rules.js";
@@ -78,6 +79,8 @@ export class RoomDurableObject extends DurableObject {
     if(path==="/gm/announcement"&&request.method==="PUT")return this.ctx.blockConcurrencyWhile(()=>this.handleFetch(request));
     // GR01 recovery marker: internal DO stub requests only, read-only.
     // No Production restore route exists here; unconfigured credentials fail closed.
+    // #773 read-only encrypted export; 404 unless dedicated backup secrets exist.
+    if(path===BACKUP_EXPORT_DO_PATH)return handleBackupExportInDo(this.ctx,this.env,request,authorizedPitr);
     if(path==="/__gr01/pitr/bookmark"){
       if(request.method!=="POST"||!(await authorizedPitr(request,this.env?.GR01_INTERNAL_PITR_TOKEN)))
         return new Response("Not found",{status:404,headers:{"cache-control":"no-store"}});
@@ -3557,6 +3560,7 @@ export class RoomDurableObject extends DurableObject {
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
+  if(url.pathname===BACKUP_EXPORT_ROUTE)return handleBackupExportRoute(request,env,authorizedPitr);
   // The Player's village runs inside an iframe at /village/?embed=1.
   // With Cloudflare Assets html_handling=none, /village/ does not resolve to
   // /village/index.html automatically. Forward this exact entry and its static
