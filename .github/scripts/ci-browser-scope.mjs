@@ -4476,7 +4476,7 @@ function isGatherSix789Scope(changes){
   ]);
   for(const [file,expected] of pinned){
    const blob=fs.readFileSync(file);
-   const actual=createHash('sha1').update('blob '+blob.length+'\\0'.replace('\\0','\0')).update(blob).digest('hex');
+   const actual=createHash('sha1').update('blob '+blob.length+'\0').update(blob).digest('hex');
    if(actual!==expected)return false;
   }
   const parts=['00-core-and-library.part','10-library-and-settings.part',
@@ -4954,8 +4954,8 @@ function detect(){
   // Postmerge also uses exact reviewed PR789 blobs; unknown changes run full CI.
   if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
    try{
-    const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\\n');
-    const changes=rows.filter(Boolean).map(row=>{const [status,path]=row.split('\\t');return{status,path}});
+    const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n');
+    const changes=rows.filter(Boolean).map(row=>{const [status,path]=row.split('\t');return{status,path}});
     if(isGatherSix789Scope(changes))return{mode:'gather-six-789',reason:'Exact pinned GM-only Tập hợp six actions'};
    }catch{} // no exceptions to fail-closed release gate
   }
