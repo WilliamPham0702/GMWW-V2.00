@@ -1562,3 +1562,26 @@ test('V3296_POSTMERGE_RECOVERY recognizes only real verified ancestry, not synth
  if(pinnedAvailable)assert.match(verified,/GMWW browser CI scope: comet-orbit-v3296/);
  else assert.match(verified,/GMWW browser CI scope: full/);
 });
+
+test('P0 V3.297 Auto GM audio release selects focused Worker safety only for reviewed exact files',()=>{
+ const exact=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/scripts/prepare-update-channel.mjs','M'],
+  ['.github/workflows/check-auto-gm-audio-continuity.yml','A'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['docs/releases/GMWW-P0-AUTO-GM-AUDIO-CONTINUITY-20261104.md','A'],
+  ['docs/releases/GMWW-RUNTIME-V3.297-AUTO-GM-AUDIO-20261104.md','A'],
+  ['package-lock.json','M'],['package.json','M'],
+  ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/30-village-and-setup.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/index.js','M'],['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/demo-audio-clock-sync-20261028.test.mjs','M'],
+  ['tests/gmww-auto-gm-audio-continuity-20261104.test.mjs','A']
+ ].map(([path,status])=>({path,status}));
+ assert.equal(classifyBrowserScope(exact),'p0-auto-gm-audio-v3297');
+ assert.equal(classifyBrowserScope(exact.slice(1)),'full','missing required file fails closed');
+ assert.equal(classifyBrowserScope([...exact,{path:'src/gmww-room-config-rules.js',status:'M'}]),'full','any new Worker logic fails closed');
+ assert.equal(classifyBrowserScope(exact.map(c=>c.path==='package.json'?{...c,status:'A'}:c)),'full','version status cannot be forged');
+});
