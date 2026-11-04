@@ -4441,7 +4441,65 @@ function isP0AutoGmAudio3297Scope(changes){
  }catch{return false}
 }
 
+// PR789: strictly reviewed GM-only six-action Gathering UI. Never skip Worker
+// or privacy checks for any changed Worker, Native, audio, version or data files.
+function isGatherSix789Scope(changes){
+ const spec=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['server-game/current/GMWW.html','M'],
+  ['server-game/current/app.js','M'],
+  ['server-game/src/30-village-and-setup.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['server-game/src/50-roles-and-artifacts.part','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/gather-scroll-flow.test.mjs','A'],
+  ['tests/lobby-gather-mode-assassin-20261027.test.mjs','M'],
+  ['tests/v3177-room-mode-glass-dock.test.mjs','M']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==spec.size||
+    new Set(changes.map(c=>c?.path)).size!==spec.size||
+    changes.some(c=>spec.get(c?.path)!==c?.status))return false;
+ try{
+  // Pin every reviewed app and test blob. Git hashes are over the exact bytes,
+  // so an unexpected change reverts to full CI even with the same filenames.
+  const pinned=new Map([
+   ['server-game/current/GMWW.html','08b2b9c07a760916476d2efb04c87408493f77c2'],
+   ['server-game/current/app.js','1cc654f0fd1891d4749fceb66422af357812e05c'],
+   ['server-game/src/30-village-and-setup.part','8c2fc3e821cf54de9960fc952ea52e1b2bb81bc8'],
+   ['server-game/src/40-battle-and-timeline.part','176b60f77d6c113571ed7a78dc363bbe1f728495'],
+   ['server-game/src/50-roles-and-artifacts.part','945c008d4b5b7705ebcf801e4b100416a6d7f37a'],
+   ['tests/ci-browser-scope.test.mjs','22b1de71da3ad60423f4078bd0172d8f9d891ec2'],
+   ['tests/gather-scroll-flow.test.mjs','5e7c4e8fb0be8e2e3b5a17eb0f579df6a8d84f5b'],
+   ['tests/lobby-gather-mode-assassin-20261027.test.mjs','93145d668f203c21a400abce4518e9b96a99eb24'],
+   ['tests/v3177-room-mode-glass-dock.test.mjs','f81f5c0a2cda183761b4b94c48a0c657b5aa5683']
+  ]);
+  for(const [file,expected] of pinned){
+   const blob=fs.readFileSync(file);
+   const actual=createHash('sha1').update('blob '+blob.length+'\\0'.replace('\\0','\0')).update(blob).digest('hex');
+   if(actual!==expected)return false;
+  }
+  const parts=['00-core-and-library.part','10-library-and-settings.part',
+   '20-members-and-roster.part','30-village-and-setup.part',
+   '40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
+  const bundled=Buffer.concat(parts.map(name=>fs.readFileSync('server-game/src/'+name)));
+  if(!bundled.equals(fs.readFileSync('server-game/current/app.js')))return false;
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.297.0')return false;
+  const ci=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  if(!ci.includes("steps.scope.outputs.mode == 'gather-six-789'")||
+    !ci.includes('tests/gather-scroll-flow.test.mjs')||
+    !ci.includes('node .github/scripts/assemble-gm-app.mjs --verify')||
+    !ci.includes('npm run check'))return false;
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  if(!html.includes('id="playGatherDistribute"')||
+     !html.includes('id="playGatherDisband"')||
+     !html.includes('touch-action:pan-x!important'))return false;
+  return true;
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isGatherSix789Scope(changes))return 'gather-six-789';
   if(isP0AutoGmAudio3297Scope(changes))return 'p0-auto-gm-audio-v3297';
   // Recovery is validated by detect() against real Git ancestry; never trust synthetic rows.
   if(isV3296CometOrbitScope(changes))return 'comet-orbit-v3296';
@@ -4893,6 +4951,14 @@ export function publicInteractionReceipt(row){
     notes.includes('Rollback');
 }
 function detect(){
+  // Postmerge also uses exact reviewed PR789 blobs; unknown changes run full CI.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+   try{
+    const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\\n');
+    const changes=rows.filter(Boolean).map(row=>{const [status,path]=row.split('\\t');return{status,path}});
+    if(isGatherSix789Scope(changes))return{mode:'gather-six-789',reason:'Exact pinned GM-only Tập hợp six actions'};
+   }catch{} // no exceptions to fail-closed release gate
+  }
   // Exact V3.297 audio source and Runtime diff before legacy all-tests route.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
