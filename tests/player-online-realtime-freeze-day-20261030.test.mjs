@@ -16,29 +16,20 @@ const gmControls=read('server-game/src/40-battle-and-timeline.part');
 const gmHtml=read('server-game/current/GMWW.html');
 const server=read('src/index.js');
 
-test('Online action dock follows the rendered campfire with a scaled iframe',()=>{
+test('Online action dock rests at the village entrance above the bottom menu (V3.304)',()=>{
   const code=chat.slice(chat.indexOf('function gmwwOnlinePlaceAtFire(dock){'));
-  const fire={getBoundingClientRect:()=>({left:180,top:360,width:40,height:40})};
-  const frame={clientWidth:400,clientHeight:800,
-    contentWindow:{innerWidth:400,innerHeight:800},
-    contentDocument:{querySelector:()=>fire},
-    getBoundingClientRect:()=>({left:20,top:40,width:200,height:400})};
-  const dock={style:{}};
-  const env={document:{getElementById:()=>frame},window:{innerWidth:390,innerHeight:800},Math};
+  const footer={offsetHeight:80,offsetTop:700};
+  const dock={style:{},offsetHeight:48};
+  const env={document:{getElementById:id=>id==='gmwwOnlineFooter'?footer:null},window:{innerWidth:390,innerHeight:800},Math,Number};
   vm.runInNewContext(code+';globalThis.place=gmwwOnlinePlaceAtFire;',env);
   env.place(dock);
-  assert.equal(dock.style.left,'120px');
-  assert.equal(dock.style.top,'230px');
-  frame.contentDocument.querySelector=()=>null;
+  assert.equal(dock.style.left,'195px');
+  assert.equal(dock.style.top,'690px');
+  // Footer missing or idle-hidden off-screen: same safe spot above where the menu sits.
+  env.document.getElementById=()=>null;
   env.place(dock);
-  assert.equal(dock.style.left,'120px');
-  assert.equal(dock.style.top,'260px');
-  // iPhone screenshot regression: invisible/scaled fire hotspots outside the scene
-  // previously clamped the action to the bottom-left corner instead of the fire.
-  frame.contentDocument.querySelector=()=>({getBoundingClientRect:()=>({left:-780,top:880,width:60,height:60})});
-  env.place(dock);
-  assert.equal(dock.style.left,'120px','invalid fire hotspot falls back to the visible courtyard center');
-  assert.equal(dock.style.top,'260px');
+  assert.equal(dock.style.left,'195px');
+  assert.equal(dock.style.top,String(800-88-10)+'px');
   assert.match(player,/gmww:village-ready'\)\{syncVillageFrame\(true\);gmwwOnlinePlaceAtFire/);
 });
 

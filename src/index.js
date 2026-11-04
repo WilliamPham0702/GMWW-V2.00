@@ -50,7 +50,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.303",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3303-turn-audio-sync",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.304",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3304-entrance-icons-day-audio",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -1203,7 +1203,8 @@ export class RoomDurableObject extends DurableObject {
   }
   async currentAnnouncement(meta,runtime){
     if(runtime===undefined)runtime=meta?.cyclePhase==='night'?await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
-    return announcementCue(meta,runtime);
+    const day=meta&&meta.cyclePhase!=='night'?await this.ctx.storage.get('annDay'):null;
+    return announcementCue(meta,runtime,day);
   }
   // Public cue for Players: label, Server start time and opaque clip URLs only.
   async announcementWithAudio(meta,runtime){
@@ -1227,7 +1228,10 @@ export class RoomDurableObject extends DurableObject {
   }
   async gmAnnouncement(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const meta=auth.meta;let target=String(body?.target||'');
+    const meta=auth.meta;
+    // V3.304: daytime GM audio queue (wake-up, deaths, Lên Giàn results...) as one public cue.
+    if(Array.isArray(body?.day))return this.gmDayAnnouncement(meta,body);
+    let target=String(body?.target||'');
     if(!target){
       // Runtime <=V3.302 uploads the current turn's first clip by turn key.
       const cue=await this.currentAnnouncement(meta);
@@ -1237,6 +1241,20 @@ export class RoomDurableObject extends DurableObject {
     const saved=await saveAnnouncementTarget(this.ctx.storage,target,decodeRecording(body));
     if(saved.ok&&meta?.phase==='running')await this.syncAnnouncementCue(false);
     return saved;
+  }
+  async gmDayAnnouncement(meta,body){
+    const targets=dayAnnouncementTargets(body.day);
+    if(meta?.phase!=='running'||!['morning','day'].includes(String(meta?.cyclePhase||'')))return j({ok:false,error:'DAY_AUDIO_NOT_ACTIVE'},409);
+    if(!targets.length)return j({ok:false,error:'INVALID_AUDIO_TARGET'},400);
+    const lib=await announcementLibrary(this.ctx.storage);
+    if(!targets.some(t=>lib[t]))return j({ok:false,error:'DAY_AUDIO_NOT_UPLOADED'},409);
+    const prev=await this.ctx.storage.get('annDay'),same=prev&&prev.matchId===String(meta.matchId||'')&&prev.cycleKey===String(meta.cycleKey||'');
+    // GM reports how long ago its local queue started; no device clock is trusted.
+    const lag=Math.max(0,Math.min(20000,Number(body?.elapsedMs)||0)),now=Date.now();
+    const day={matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),seq:same?Number(prev.seq||0)+1:1,targets,startedAt:now-lag};
+    await this.ctx.storage.put('annDay',day);
+    await this.syncAnnouncementCue(false);
+    return j({ok:true,seq:day.seq});
   }
   async gmAnnouncementLibrary(request){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -3158,7 +3176,8 @@ export class RoomDurableObject extends DurableObject {
             status:index<Number(wolfRuntime.cursor)?"done":index===Number(wolfRuntime.cursor)?"active":"upcoming"
           }))}:
         {phase:String(meta.cyclePhase||"morning"),activeIndex:0,
-          steps:[{label:"Làng ơi dậy đi",status:"active"},{label:"Thông cáo Làng",status:"upcoming"},{label:"Lên Giàn",status:"upcoming"}]}
+          // V3.304: Player top menu in daytime shows only the wake-up step (village notice and gallows boxes removed).
+          steps:[{label:"Làng ơi dậy đi",status:"active"}]}
       :null;
     // Public role call only. Never reveal the actor, role owner or hidden target.
     const audioCue=await this.announcementWithAudio(meta,wolfRuntime);
@@ -4328,8 +4347,19 @@ function announcementTargetsForTurn(turn){
   if(ANNOUNCE_WOLF_ROLES.includes(rid(turn)))return ['cards:audio_group_wolves'];
   return rid(turn)?['cards:'+rid(turn)]:[];
 }
-function announcementCue(meta,runtime){
+// Daytime clips are public system announcements only (never role cards/artifacts).
+const ANNOUNCE_DAY_MAX=12;
+function dayAnnouncementTargets(list){
+  const out=[];for(const t of Array.isArray(list)?list:[]){const v=String(t||'');
+    if(/^system:audio_system_[A-Za-z0-9_]{1,100}$/.test(v)&&!out.includes(v))out.push(v);if(out.length>=ANNOUNCE_DAY_MAX)break}
+  return out;
+}
+function announcementCue(meta,runtime,day){
   if(meta?.phase!=='running')return null;
+  if(meta.cyclePhase!=='night'&&day&&day.matchId===String(meta.matchId||'')&&day.cycleKey===String(meta.cycleKey||'')&&Array.isArray(day.targets)&&day.targets.length)
+    return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':day:'+Number(day.seq||1),
+      label:day.targets[0]==='system:audio_system_day_wakeup'?'Làng ơi dậy đi':'Thông báo Làng',
+      targets:dayAnnouncementTargets(day.targets),startedAt:Number(day.startedAt)||0};
   const turn=runtime?.queue?.[runtime.cursor];
   if(meta.cyclePhase==='night'&&turn)return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':'+String(turn.id),label:String(turn.label||'Đến lượt Vai Trò').slice(0,120),
     targets:announcementTargetsForTurn(turn),startedAt:Date.parse(turn.startedAt||runtime.startedAt||'')||0};

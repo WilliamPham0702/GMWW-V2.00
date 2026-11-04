@@ -40,5 +40,5 @@ test('drag-and-drop keeps targets private and never bypasses Server authorizatio
  assert.match(chat,/if\(action\.blocked\)/);
  assert.match(chat,/actionKey:action\.key,targetIds:pick\.targets/);
  assert.match(chat,/function gmwwOnlinePlaceAtFire\(dock\)/);
- assert.match(chat,/frame\.contentDocument\?\.querySelector\('\.fire'\)/);
+ assert.match(chat,/dock\.style\.transform='translate\(-50%,-100%\)'/,'V3.304: anchored above the bottom menu');
 });

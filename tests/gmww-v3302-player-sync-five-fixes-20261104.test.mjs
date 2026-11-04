@@ -10,11 +10,10 @@ const gm=readFileSync('server-game/current/app.js','utf8');
 const slice=(src,a,b)=>{const i=src.indexOf(a);assert.ok(i>=0,a+' missing');const j=src.indexOf(b,i+a.length);return src.slice(i,j<0?undefined:j)};
 
 // Lỗi 1: một rule !important ghim icon hành động xuống đáy màn hình, bỏ qua vị trí đống lửa.
-test('1. action icons sit on the village campfire, not pinned to the bottom',()=>{
-  assert.doesNotMatch(live,/#gmwwOnlineDock\{top:calc\(var\(--gmww-player-visible-top/,'bottom pin removed');
-  assert.match(live,/#gmwwOnlineDock\{position:fixed;z-index:100010;left:50%;top:50%;transform:translate\(-50%,-50%\)/);
+test('1. action icons have one fixed home (V3.304: entrance stairs above the bottom menu), not a stale drag offset',()=>{
+  assert.doesNotMatch(live,/#gmwwOnlineDock\{top:calc\(var\(--gmww-player-visible-top/,'no !important bottom pin');
   const place=slice(live,'function gmwwOnlinePlaceAtFire(dock)','\nfunction ');
-  assert.match(place,/querySelector\('\.fire'\)/);
+  assert.match(place,/getElementById\('gmwwOnlineFooter'\)/);
   assert.match(place,/dock\.style\.left=.*dock\.style\.top=/s);
   assert.match(live,/window\.addEventListener\('resize',replace/,'re-anchored when the viewport changes');
 });

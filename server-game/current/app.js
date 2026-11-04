@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.303';
+const VERSION='3.304';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -6000,7 +6000,7 @@ function battleIconResolve(action){
  return [];
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
-// V3.231: start above the fixed footer at the village entrance stairs, not GM fire.
+// V3.231/V3.304: start above the fixed footer at the village entrance stairs, not GM fire.
 function battleIconScaleRatio(){
  const n=Number(document.documentElement?.style?.getPropertyValue?.('--gmww-action-icon-scale'));
  return Number.isFinite(n)&&n>=.25&&n<=1.5?n:1;
@@ -6024,18 +6024,15 @@ function battleIconClamp(x,y,isFairy=false){
  return {x:Math.min(Math.max(px,x),Math.max(px,vw-px)),y:Math.min(Math.max(py,y),Math.max(py,vh-py))};
 }
 function battleIconEntryPoint(){
- // Spawn by the actual rendered campfire, not the bottom menu/entrance.
- const fire=document.querySelector('.play-village-core .play-core-pearl')||
-   document.querySelector('.play-village-core')?.querySelector('.play-core-pearl');
- const rect=fire?.getBoundingClientRect?.();
- if(rect&&rect.width>0&&rect.height>0)
-  return battleIconClamp(rect.left+rect.width/2,rect.top+rect.height/2);
- // Keep controls usable until the village/scene image has finished mounting.
+ // V3.304: icons rest at the village entrance stairs, just above the bottom menu
+ // (same spot as Player Web). Extra rows stack upward from here.
+ const vw=globalThis.visualViewport?.width||innerWidth,vh=globalThis.visualViewport?.height||innerHeight;
+ const size=battleIconSize(false);
  const rail=document.getElementById('battleBottomControls');
  const backup=rail?.getBoundingClientRect?.();
- if(backup&&backup.width>0&&backup.height>0)
-  return battleIconClamp(backup.left+backup.width/2,backup.top-60);
- return battleIconClamp((globalThis.visualViewport?.width||innerWidth)/2,(globalThis.visualViewport?.height||innerHeight)-150);
+ if(backup&&backup.width>0&&backup.height>0&&backup.top>vh*.5)
+  return battleIconClamp(vw/2,backup.top-size.height/2-10);
+ return battleIconClamp(vw/2,vh-Math.max(84,vh*.11)-size.height/2-10);
 }
 function battleIconResetPositions(){
  battleIconPositions.clear();battleIconClearDrag();
@@ -8993,6 +8990,26 @@ function gmwwPublishAnnouncement(turn){
 const gmwwLocalTurnAudio=battleAudioForTurn,gmwwLocalMorningAudio=battleMorningPlayAudio;
 battleAudioForTurn=function(turn,auto=false){void gmwwPublishAnnouncement(turn);return gmwwLocalTurnAudio(turn,auto)};
 battleMorningPlayAudio=function(){void gmwwPublishAnnouncement(null);return gmwwLocalMorningAudio()};
+// V3.304: every daytime GM announcement (wake-up, deaths, Lên Giàn, time-up...) is mirrored
+// to all Player Web through the Server: upload the clips, then publish one public day cue.
+const gmwwLocalDayAudio=battleQueueDayAudio;
+function gmwwPublishDayAnnouncement(cues){
+  const code=String(playSceneState.roomCode||''),room=playSceneRuntime.room||{};
+  if(!code||room.phase!=='running'||room.demo===true||!Array.isArray(cues))return;
+  const list=cues.filter(c=>Array.isArray(c)&&c[0]&&c[0]!=='__tts__'&&/^audio_system_[A-Za-z0-9_]{1,100}$/.test(String(c[0]))).slice(0,12)
+    .map(([id,label])=>({kind:'system',targetId:String(id),name:String(label||id)}));
+  if(!list.length)return;
+  const queuedAt=Date.now(),path='/api/gm/rooms/'+encodeURIComponent(code)+'/announcement-audio';
+  gmwwAnnouncementQueue=gmwwAnnouncementQueue.then(async()=>{
+    await gmwwUploadAnnouncementCues(list);
+    const day=list.map(c=>'system:'+c.targetId).filter(t=>gmwwAnnouncementLib?.[t]);
+    if(day.length)await gmApi(path,{method:'PUT',body:JSON.stringify({day,elapsedMs:Date.now()-queuedAt}),timeoutMs:15000});
+  }).catch(error=>console.warn('Player day audio pending',String(error?.message||error)));
+}
+battleQueueDayAudio=function(cues){
+  if(playSceneState.phase==='day')gmwwPublishDayAnnouncement(cues);
+  return gmwwLocalDayAudio(cues);
+};
 
 /* GM Chat monitor: available only with GM-authorized room API. No public history path. */
 let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';

@@ -72,11 +72,10 @@ test('Clock left/right swipe retains one-minute day adjustment, not a cosmetic t
  assert.match(app,/playRoomApi\('\/day-clock'/);
 });
 
-test('Initial action icons anchor to the rendered campfire with a safe footer fallback',()=>{
+test('Initial action icons anchor above the bottom controls at the village entrance (V3.304)',()=>{
  const source=piece(app,'function battleIconEntryPoint(){','function battleIconResetPositions(){');
- assert.ok(source.includes("play-village-core .play-core-pearl"));
- assert.ok(source.includes('getBoundingClientRect'));
- assert.ok(source.includes('rect.left+rect.width/2,rect.top+rect.height/2'));
+ assert.ok(!source.includes('play-core-pearl'),'no longer spawned on the campfire');
  assert.ok(source.includes("getElementById('battleBottomControls')"));
+ assert.ok(source.includes('backup.top-size.height/2-10'));
  assert.ok(app.includes('const entry=battleIconEntryPoint()'));
 });
