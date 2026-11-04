@@ -219,7 +219,7 @@ if(game){
       const hint=document.createElement('span');hint.id='gmwwPirateSnapHint';hint.hidden=true;
       hint.setAttribute('role','status');hint.setAttribute('aria-live','polite');document.body.append(hint);
       const atFire=()=>{
-        const point=fireScreenPoint(),r=stageElement.getBoundingClientRect();
+        const point=screenPoint(layout.fire),r=stageElement.getBoundingClientRect();
         flag.style.left=Math.round(r.left+r.width*point.x/100)+'px';
         flag.style.top=Math.round(r.top+r.height*point.y/100)+'px';
       };
