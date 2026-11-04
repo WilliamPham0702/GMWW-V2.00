@@ -1579,7 +1579,23 @@ test('P0 V3.297 Auto GM audio release selects focused Worker safety only for rev
   ['src/index.js','M'],['tests/ci-browser-scope.test.mjs','M'],
   ['tests/demo-audio-clock-sync-20261028.test.mjs','M'],
   ['tests/gmww-auto-gm-audio-continuity-20261104.test.mjs','A']
- ].map(([path,status])=>({path,status}));
+ ].map(([path,status])=>{
+   // The classifier receives before/after file bytes from the real PR diff.
+   // Build a synthetic V3.296 baseline without a network fetch or git history.
+   let before='';
+   if(path==='package.json'||path==='package-lock.json')
+     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replaceAll('3.297.0','3.296.0');
+   else if(path==='server-game/src/00-core-and-library.part')
+     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replace("const VERSION='3.297';","const VERSION='3.296';");
+   else if(path==='server-game/current/GMWW.html')
+     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replace('GMWW V3.297','GMWW V3.296');
+   else if(path==='src/index.js')
+     before=readFileSync(new URL('../'+path,import.meta.url),'utf8')
+       .replace('VERSION="V3.297"','VERSION="V3.296"')
+       .replace('UPDATE_CHANNEL_REV="runtime-3297-auto-gm-audio-continuity"',
+         'UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss"');
+   return {path,status,before};
+ });
  assert.equal(classifyBrowserScope(exact),'p0-auto-gm-audio-v3297');
  assert.equal(classifyBrowserScope(exact.slice(1)),'full','missing required file fails closed');
  assert.equal(classifyBrowserScope([...exact,{path:'src/gmww-room-config-rules.js',status:'M'}]),'full','any new Worker logic fails closed');
