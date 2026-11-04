@@ -451,21 +451,8 @@ async function moveSelectedPlayerToSeat(seatId,occupant){
 }
 async function releaseSelectedPlayerSeat(){const selected=selectedPlayPlayer();if(!selected?.seatId)return;if(!confirm('Giải phóng Seat '+selected.seatId+' của '+selected.displayName+'?'))return;await updateSelectedPlayerSeat({seatId:null})}
 async function playCallOnlineMembers(){
-  if(!isLivePlayRoom()||playSceneRuntime.busy)return;
-  playSetBusy(true);
-  try{
-    await playLoadFreshRosterMembers();
-    const existing=playLiveMembers(),byId=new Map(existing.map(m=>[String(m.loginId),m]));
-    const online=(memberAdminState.members||[]).filter(m=>m?.online===true&&(!m.currentRoomCode||String(m.currentRoomCode)===String(playSceneState.roomCode)));
-    const ids=new Set([...byId.keys(),...online.map(m=>String(m.loginId))]);
-    if(ids.size>30)throw new Error('Phòng hỗ trợ tối đa 30 thành viên.');
-    const source=new Map((memberAdminState.members||[]).map(m=>[String(m.loginId),m]));
-    const chosen=[...ids].map(id=>{const m=source.get(id)||byId.get(id);return {loginId:id,displayName:m?.displayName||id,avatarId:m?.avatarId,gameCharacterId:m?.gameCharacterId||byId.get(id)?.gameCharacterId||null,seatId:byId.get(id)?.seatId||null}});
-    if(!chosen.length){playFlashError('Chưa có thành viên online trong sảnh chờ.');return}
-    const data=await playRoomApi('/participants',{method:'POST',body:JSON.stringify({members:chosen,replace:true})});
-    playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;
-    playSceneState.selectedMemberIds=[...ids];savePlayScene();renderPlayScene();
-  }catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
+  // Legacy callers must never implicitly enroll everyone who happens to be online.
+  return openPlayRosterSheet();
 }
 async function playRandomSeatRemaining(){
   if(!isLivePlayRoom())return;const remaining=playLiveMembers().filter(m=>!Number(m?.seatId||0));if(!remaining.length){playFlashError('Tất cả Người Chơi đã có vị trí.');return}
@@ -789,7 +776,7 @@ async function openPlayRosterSheet(){
     b.onclick=()=>{b.classList.toggle('selected');updatePlayRosterCount()};list.appendChild(b);
   }
   if(!rows.length)list.innerHTML='<div class="member-empty">Chưa có Thành Viên trong danh bạ.</div>';
-  sheet.classList.remove('hidden');updatePlayRosterCount();setPlayRosterFilter('all');
+  sheet.classList.remove('hidden');updatePlayRosterCount();setPlayRosterFilter(playSceneState.roomMode==='online'&&playSceneRuntime.room?.demo!==true?'online':'all');
   if(playRosterPresenceTimer)clearInterval(playRosterPresenceTimer);
   playRosterPresenceTimer=setInterval(()=>{if(!document.hidden)void playRefreshRosterPresence()},10000);
 }
@@ -811,6 +798,7 @@ async function savePlayRosterIds(ids){
   ids=[...new Set((ids||[]).map(String).filter(Boolean))];
   if(!ids.length){playRosterSaveFeedback('Hãy chọn ít nhất 1 Người Chơi.',true);playFlashError('Hãy chọn ít nhất 1 Người Chơi.');return}
   const existing=new Map(playLiveMembers().map(p=>[String(p.loginId),p])),source=memberAdminState.members||[],selected=new Set(ids);
+  const rosterChanged=ids.length!==existing.size||ids.some(id=>!existing.has(id));
   const chosen=source.filter(m=>selected.has(String(m.loginId))).map(m=>({
     loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,
     gameCharacterId:m.gameCharacterId||existing.get(String(m.loginId))?.gameCharacterId||null,
@@ -834,7 +822,8 @@ async function savePlayRosterIds(ids){
     if(roomCode!==String(playSceneState.roomCode))throw new Error('Phòng đã thay đổi. Vui lòng mở lại Gọi Người.');
     playSceneRuntime.room=data.room||playSceneRuntime.room;
     playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;
-    playSceneState.selectedMemberIds=ids;playSceneState.step='seats';savePlayScene();
+    playSceneState.selectedMemberIds=ids;if(rosterChanged)playSceneState.gatherSeatPresetRoom='';
+    playSceneState.step='seats';savePlayScene();
     // Release the sheet on POST acknowledgement, not after the much heavier
     // follow-up GET/status-display sync/character redraw.
     playRosterSaving=false;closePlayRosterSheet();
