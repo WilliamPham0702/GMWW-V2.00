@@ -132,6 +132,7 @@ function renderPlayerTimeline(timeline){
  }
  for(const id of ['battleBack','battleAdvance']){const button=root.querySelector('#'+id);button.disabled=true;button.querySelector('b').textContent=(id==='battleBack'?'<Đêm ':'Ngày ')+Math.max(1,Number(room.cycleNight)||1)+(id==='battleAdvance'?'>':'')}
  menu.querySelector('.gmww-player-menu-info')?.setAttribute('hidden','');
+ if(typeof gmwwTopTickerRender==='function')gmwwTopTickerRender();
 }
 
 function hidePlayerTopMenu(){

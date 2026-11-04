@@ -50,14 +50,19 @@ function gmwwPublishAnnouncement(turn){
 // Share the approved public call independently of GM local playback/mute.
 const gmwwLocalTurnAudio=battleAudioForTurn,gmwwLocalMorningAudio=battleMorningPlayAudio;
 battleAudioForTurn=function(turn,auto=false){void gmwwPublishAnnouncement(turn);return gmwwLocalTurnAudio(turn,auto)};
-battleMorningPlayAudio=function(){void gmwwPublishAnnouncement(null);return gmwwLocalMorningAudio()};
+// V3.305: the Server starts the 30s countdown for Player Web itself; keep its clip ready from day start.
+const gmwwServerDayCues=[{kind:'system',targetId:'audio_system_countdown',name:'Đếm ngược 30 giây cuối'}];
+battleMorningPlayAudio=function(){void gmwwPublishAnnouncement(null);
+  gmwwAnnouncementQueue=gmwwAnnouncementQueue.then(()=>gmwwUploadAnnouncementCues(gmwwServerDayCues)).catch(()=>{});
+  return gmwwLocalMorningAudio()};
 // V3.304: every daytime GM announcement (wake-up, deaths, Lên Giàn, time-up...) is mirrored
 // to all Player Web through the Server: upload the clips, then publish one public day cue.
 const gmwwLocalDayAudio=battleQueueDayAudio;
 function gmwwPublishDayAnnouncement(cues){
   const code=String(playSceneState.roomCode||''),room=playSceneRuntime.room||{};
   if(!code||room.phase!=='running'||room.demo===true||!Array.isArray(cues))return;
-  const list=cues.filter(c=>Array.isArray(c)&&c[0]&&c[0]!=='__tts__'&&/^audio_system_[A-Za-z0-9_]{1,100}$/.test(String(c[0]))).slice(0,12)
+  // Countdown is published by the Server at deadline-30s (V3.305): never twice.
+  const list=cues.filter(c=>Array.isArray(c)&&c[0]&&c[0]!=='__tts__'&&c[0]!=='audio_system_countdown'&&/^audio_system_[A-Za-z0-9_]{1,100}$/.test(String(c[0]))).slice(0,12)
     .map(([id,label])=>({kind:'system',targetId:String(id),name:String(label||id)}));
   if(!list.length)return;
   const queuedAt=Date.now(),path='/api/gm/rooms/'+encodeURIComponent(code)+'/announcement-audio';

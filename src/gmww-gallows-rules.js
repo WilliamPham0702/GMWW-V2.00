@@ -212,3 +212,17 @@ export function gallowsManualResolve(ballot,candidate,outcome,now=Date.now()){
     deadlineAt:null,nominationDeadlineAt:null,nominationStartedAt:null,
     resolvedAt:now,updatedAt:now,nominations:{},votes:{}}};
 }
+
+export const AUTO_GALLOWS_LOCK_PAUSE_MS=5000;
+// Auto GM day clock: after discussion, drive the Gallows by its own Server deadlines.
+export function autoGallowsDue(ballot,meta,discussionDue,now=Date.now()){
+  if(!discussionDue||now<discussionDue)return discussionDue;
+  const own=ballot&&ballot.matchId===String(meta?.matchId||"")&&ballot.cycleKey===String(meta?.cycleKey||"");
+  const stage=own?String(ballot.stage||"ready"):"ready",auto=!own||String(ballot.mode||"auto")==="auto";
+  if(stage==="resolved"){const at=Number(ballot.resolvedAt||0);return ballot.acknowledgedAt||!at?discussionDue:Math.max(discussionDue,at+30000)}
+  if(!auto)return 0;
+  if(stage==="nominating")return Math.max(discussionDue,Number(ballot.nominationDeadlineAt)||now);
+  if(stage==="selecting")return Math.max(discussionDue,Number(ballot.hangingStartedAt||0)+AUTO_GALLOWS_LOCK_PAUSE_MS);
+  if(stage==="voting")return Math.max(discussionDue,Number(ballot.deadlineAt)||now);
+  return Math.max(discussionDue,now);
+}
