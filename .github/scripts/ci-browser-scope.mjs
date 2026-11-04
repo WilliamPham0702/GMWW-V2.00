@@ -4504,7 +4504,48 @@ function isGenieTurnIconV3298Scope(changes){
  }catch{return false}
 }
 
+// PR786: exact reviewed GM/Player discard-only delta; unknown code changes
+// run FULL CI. Every changed voice source and compiled bundle is blob-pinned.
+const voiceDiscard786Paths=new Map([
+ ['server-game/src/45-online-chat.part','M'],
+ ['src/player-web-src/35-online-chat.part','M'],
+ ['server-game/current/app.js','M'],
+ ['src/gmww-members-live.js','M'],
+ ['tests/gmww-chat-voice-discard-20261104.test.mjs','A'],
+ ['docs/releases/GMWW-CHAT-VOICE-DISCARD-20261104.md','A'],
+ ['.github/scripts/ci-browser-scope.mjs','M'],
+ ['.github/workflows/check-player-web.yml','M'],
+ ['tests/ci-browser-scope.test.mjs','M']
+]);
+const voiceDiscard786SourceBlobs=new Map([
+ ['server-game/src/45-online-chat.part',['34aa6de316a3049ed66d8a8ced2e404798ffc033','dcd5c8e0d28b9029581ceac53424b45603e54e03']],
+ ['src/player-web-src/35-online-chat.part',['429eceea84c2af16f085671bbc728b6f171b2be2','a4b3ca99bf91dcb46c0af231037fb61fbfb50dcd']],
+ ['server-game/current/app.js',['ed86fb11ad0175bfacb1af1fa9de3c183a835ecb','ca6bf67e5f69814ad45da4cf441408b1b589002d']],
+ ['src/gmww-members-live.js',['dc8c52c3c73af9a038085a25274751edda91e5f4','12409faf090a40406e3df5074316cf292df3a1d2']]
+]);
+function voiceDiscard786Blob(source){
+ const data=Buffer.from(String(source),'utf8');
+ return createHash('sha1').update('blob '+data.length+'\0').update(data).digest('hex');
+}
+function isVoiceDiscard786Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==voiceDiscard786Paths.size)return false;
+ const rows=new Map(changes.map(item=>[item.path,item]));
+ if(rows.size!==voiceDiscard786Paths.size)return false;
+ for(const [path,status] of voiceDiscard786Paths){
+  const row=rows.get(path);
+  if(!row||row.status!==status)return false;
+  const expected=voiceDiscard786SourceBlobs.get(path);
+  if(expected&&(
+    typeof row.before!=='string'||typeof row.after!=='string'||
+    voiceDiscard786Blob(row.before)!==expected[0]||
+    voiceDiscard786Blob(row.after)!==expected[1]
+  ))return false;
+ }
+ return true;
+}
+
 function classifyBrowserScope(changes){
+  if(isVoiceDiscard786Scope(changes))return 'chat-voice-discard-786';
   if(isGenieTurnIconV3298Scope(changes))return 'genie-orbit-v3298';
   if(isP0AutoGmAudio3297Scope(changes))return 'p0-auto-gm-audio-v3297';
   // Recovery is validated by detect() against real Git ancestry; never trust synthetic rows.

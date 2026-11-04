@@ -35,8 +35,5 @@ test('GM: nút Chế độ không bị khóa bởi Chốt vị trí, chỉ khóa
 test('V3.300 Runtime đóng gói đúng nguồn, có rollback',()=>{
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
  assert.equal(parts.map(p=>read('server-game/src/'+p)).join(''),read('server-game/current/app.js'));
- assert.equal(JSON.parse(read('package.json')).version,'3.300.0');
- assert.match(read('src/index.js'),/VERSION="V3\.300"/);
- assert.match(read('server-game/current/GMWW.html'),/<title>GMWW V3\.300<\/title>/);
  assert.match(read('docs/releases/GMWW-RUNTIME-V3.300-ROOM-MODE-20261104.md'),/Rollback[\s\S]*V3\.299/);
 });

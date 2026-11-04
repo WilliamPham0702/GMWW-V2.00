@@ -263,6 +263,32 @@ jobs:
           test -s docs/releases/GMWW-V3293-AUTO-GM-HOTFIX-20261103.md
           echo 'PASS PR766: authoritative Auto GM, Worker, Online and privacy checks.' >> "$GITHUB_STEP_SUMMARY"
 
+      # PR786: exact source-pinned voice discard, immutable Worker/runtime and privacy tests.
+      - name: PR786 — GM and Player Web safely discard unsent Chat voice
+        if: steps.scope.outputs.mode == 'chat-voice-discard-786'
+        run: |
+          set -euo pipefail
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node --check src/gmww-members-live.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-chat-voice-discard-20261104.test.mjs \
+            tests/gmww-chat-live-meter-fast-send-v3294.test.mjs \
+            tests/gmww-chat-voice-send-v3292.test.mjs \
+            tests/gmww-chat-voice-gm-broadcast-20261102.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/online-frozen-chat-day-20261031.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-CHAT-VOICE-DISCARD-20261104.md
+          echo 'PASS PR786: local audio discard, private Chat, exact bundles and Worker dry-run' >> "$GITHUB_STEP_SUMMARY"
+
       # PR767: exact V3.294 voice recording/meter and storage scoped CI-LITE.
       # Still verifies packaging, private audio access, replay, Worker dry-run and rollback notes.
       - name: PR767 — live microphone waveform and fast private Chat voice V3.294
