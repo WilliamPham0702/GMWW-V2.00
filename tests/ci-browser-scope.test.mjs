@@ -1617,3 +1617,23 @@ test('P0 V3.297 Auto GM audio release selects focused Worker safety only for rev
  assert.equal(classifyBrowserScope([...exact,{path:'src/gmww-room-config-rules.js',status:'M'}]),'full','any new Worker logic fails closed');
  assert.equal(classifyBrowserScope(exact.map(c=>c.path==='package.json'?{...c,status:'A'}:c)),'full','version status cannot be forged');
 });
+
+test('PR789 six-action gathering menu only selects focused Worker checks when exact source is pinned',()=>{
+  const spec=[
+    ['.github/scripts/ci-browser-scope.mjs','M'],
+    ['.github/workflows/check-player-web.yml','M'],
+    ['server-game/current/GMWW.html','M'],
+    ['server-game/current/app.js','M'],
+    ['server-game/src/30-village-and-setup.part','M'],
+    ['server-game/src/40-battle-and-timeline.part','M'],
+    ['server-game/src/50-roles-and-artifacts.part','M'],
+    ['tests/ci-browser-scope.test.mjs','M'],
+    ['tests/gather-scroll-flow.test.mjs','A'],
+    ['tests/lobby-gather-mode-assassin-20261027.test.mjs','M'],
+    ['tests/v3177-room-mode-glass-dock.test.mjs','M']
+  ].map(([path,status])=>({path,status}));
+  assert.equal(classifyBrowserScope(spec),'gather-six-789');
+  assert.equal(classifyBrowserScope(spec.slice(1)),'full','missing security check must fail closed');
+  assert.equal(classifyBrowserScope([...spec,{path:'src/index.js',status:'M'}]),'full','Worker changes must use full CI');
+  assert.equal(classifyBrowserScope(spec.map(p=>p.path==='server-game/current/app.js'?{...p,status:'A'}:p)),'full','bundle replacement must fail closed');
+});
