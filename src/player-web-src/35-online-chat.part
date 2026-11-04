@@ -49,7 +49,7 @@ function gmwwStopAnnouncement(){
 function gmwwAnnouncementUrls(pending){
   const base='/api/rooms/'+encodeURIComponent(pending?.room||'')+'/announcement-audio?a=',cue=pending?.cue||{};
   const list=Array.isArray(cue.audio)?cue.audio:(cue.audioUrl?[cue.audioUrl]:[]);
-  return list.filter(u=>typeof u==='string'&&u.startsWith(base)&&/^[a-f0-9]{32}$/.test(u.slice(base.length))).slice(0,6);
+  return list.filter(u=>typeof u==='string'&&u.startsWith(base)&&/^[a-f0-9]{32}$/.test(u.slice(base.length))).slice(0,12);
 }
 // Seconds since the Server started this turn: every device joins the clip at the same point.
 function gmwwAnnouncementOffset(cue){
@@ -963,7 +963,7 @@ function renderOnlineActionDock(){
    if(action.blocked){btn.dataset.blocked='true';btn.dataset.effectIcon=action.blockedType==='frozen'?'❄️':action.blockedType==='expelled'?'🚪':'⛔';}
    btn.setAttribute('aria-label',btn.title);
    const img=document.createElement('img');img.src=String(action.iconUrl||'/action-icons/v3/49_sang_tao_artifact.webp');img.alt='';img.draggable=false;btn.appendChild(img);
-   // The campfire is the only home of each action icon; never restore old drag offsets.
+   // The entrance stairs are the only home of each action icon; never restore old drag offsets.
     btn.onpointerdown=e=>gmwwOnlineIconDown(e,action);
    btn.onclick=e=>{if(action.blocked){toast(String(action.blockedReason||'Bạn không thể thực hiện hành động ở lượt này.'));return}if(e.detail===0)gmwwOnlinePickAction(action)};
    dock.appendChild(btn);
@@ -973,23 +973,14 @@ function renderOnlineActionDock(){
 {const replace=()=>requestAnimationFrame(()=>gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock')));window.addEventListener('resize',replace,{passive:true});window.visualViewport?.addEventListener?.('resize',replace,{passive:true})}
 function gmwwOnlinePlaceAtFire(dock){
  if(!dock)return;
- const frame=document.getElementById('gmwwVillageFrame');if(!frame)return;
- const r=frame.getBoundingClientRect();if(!r.width||!r.height)return;
- // Village uses an iframe with its own CSS viewport. The visible fire is centered
- // in its scene; never anchor actions to an invisible/off-screen camera hotspot.
- let x=r.left+r.width*.5,y=r.top+r.height*.55;
- try{
-  const fire=frame.contentDocument?.querySelector('.fire');
-  if(fire){const f=fire.getBoundingClientRect(),inner=frame.contentWindow;
-    const sx=r.width/Math.max(1,Number(inner?.innerWidth)||frame.clientWidth||r.width),sy=r.height/Math.max(1,Number(inner?.innerHeight)||frame.clientHeight||r.height);
-    const fx=r.left+(f.left+f.width/2)*sx,fy=r.top+(f.top+f.height/2)*sy;
-    const margin=Math.min(24,r.width*.1,r.height*.1);
-    if(f.width>0&&f.height>0&&Number.isFinite(fx)&&Number.isFinite(fy)&&
-       fx>=r.left+margin&&fx<=r.left+r.width-margin&&fy>=r.top+margin&&fy<=r.top+r.height-margin){x=fx;y=fy}
-  }
- }catch{}
- // Fixed-position buttons must be fully inside the iPhone visual scene.
- dock.style.left=Math.max(32,Math.min(window.innerWidth-32,x))+'px';
- dock.style.top=Math.max(75,Math.min(window.innerHeight-90,y))+'px';
- const intel=document.getElementById('gmwwOnlineWitchIntel');if(intel?.style){intel.style.left=dock.style.left;intel.style.top=Math.max(105,Math.min(window.innerHeight-160,y-70))+'px'}
+ // V3.304: action icons rest at the village entrance stairs, just above the bottom menu
+ // (same spot on GM and Player). Rows grow upward so nothing covers the footer.
+ const vw=window.innerWidth,vh=window.innerHeight,footer=document.getElementById('gmwwOnlineFooter');
+ // offsetTop ignores the idle-hide transform, so the icon does not jump when the menu hides.
+ const footerTop=footer&&footer.offsetHeight>0&&Number.isFinite(footer.offsetTop)&&footer.offsetTop>vh*.5?footer.offsetTop:vh-Math.max(84,vh*.11);
+ const x=vw/2,bottom=Math.max(140,Math.min(vh-24,footerTop-10));
+ dock.style.transform='translate(-50%,-100%)';
+ dock.style.left=Math.max(32,Math.min(vw-32,x))+'px';
+ dock.style.top=bottom+'px';
+ const intel=document.getElementById('gmwwOnlineWitchIntel');if(intel?.style){intel.style.left=dock.style.left;intel.style.top=Math.max(105,bottom-dock.offsetHeight-30)+'px'}
 }

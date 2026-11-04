@@ -524,7 +524,7 @@ function battleIconResolve(action){
  return [];
 }
 function battleIconPositionKey(actionId,iconId){return String(actionId)+'|'+String(iconId)}
-// V3.231: start above the fixed footer at the village entrance stairs, not GM fire.
+// V3.231/V3.304: start above the fixed footer at the village entrance stairs, not GM fire.
 function battleIconScaleRatio(){
  const n=Number(document.documentElement?.style?.getPropertyValue?.('--gmww-action-icon-scale'));
  return Number.isFinite(n)&&n>=.25&&n<=1.5?n:1;
@@ -548,18 +548,15 @@ function battleIconClamp(x,y,isFairy=false){
  return {x:Math.min(Math.max(px,x),Math.max(px,vw-px)),y:Math.min(Math.max(py,y),Math.max(py,vh-py))};
 }
 function battleIconEntryPoint(){
- // Spawn by the actual rendered campfire, not the bottom menu/entrance.
- const fire=document.querySelector('.play-village-core .play-core-pearl')||
-   document.querySelector('.play-village-core')?.querySelector('.play-core-pearl');
- const rect=fire?.getBoundingClientRect?.();
- if(rect&&rect.width>0&&rect.height>0)
-  return battleIconClamp(rect.left+rect.width/2,rect.top+rect.height/2);
- // Keep controls usable until the village/scene image has finished mounting.
+ // V3.304: icons rest at the village entrance stairs, just above the bottom menu
+ // (same spot as Player Web). Extra rows stack upward from here.
+ const vw=globalThis.visualViewport?.width||innerWidth,vh=globalThis.visualViewport?.height||innerHeight;
+ const size=battleIconSize(false);
  const rail=document.getElementById('battleBottomControls');
  const backup=rail?.getBoundingClientRect?.();
- if(backup&&backup.width>0&&backup.height>0)
-  return battleIconClamp(backup.left+backup.width/2,backup.top-60);
- return battleIconClamp((globalThis.visualViewport?.width||innerWidth)/2,(globalThis.visualViewport?.height||innerHeight)-150);
+ if(backup&&backup.width>0&&backup.height>0&&backup.top>vh*.5)
+  return battleIconClamp(vw/2,backup.top-size.height/2-10);
+ return battleIconClamp(vw/2,vh-Math.max(84,vh*.11)-size.height/2-10);
 }
 function battleIconResetPositions(){
  battleIconPositions.clear();battleIconClearDrag();
