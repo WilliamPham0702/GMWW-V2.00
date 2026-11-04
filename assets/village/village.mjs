@@ -186,6 +186,7 @@ if(game){
       const style=document.createElement('style');style.id='gmwwPirateSnapCss';
       style.textContent=`
         #gmwwPirateNominate{transition:filter .12s ease,scale .12s ease;cursor:grab}
+        #gmwwPirateNominate .gmww-gallows-nominate-art{display:block;width:36px;height:36px;margin:auto;object-fit:contain;pointer-events:none;user-select:none}
         #gmwwPirateNominate.gmww-snap-near{filter:drop-shadow(0 0 14px #ffe77b) drop-shadow(0 4px 7px #000b)!important;scale:1.14}
         #gmwwPirateNominate.gmww-snap-picked{filter:drop-shadow(0 0 16px #ffe77b) drop-shadow(0 6px 8px #000d)!important}
         #players .player.gmww-gallows-snap-target .portrait,
@@ -207,11 +208,13 @@ if(game){
       `;
       document.head.append(style);
       flag=document.createElement('button');flag.id='gmwwPirateNominate';flag.type='button';
-      flag.setAttribute('aria-label','Kéo cờ đỏ gần Character để hút; thả để chọn tạm, OK để gửi đề cử hoặc Khôi Phục');
-      flag.title='Cờ đỏ: kéo tới người chơi · thả chọn tạm · OK hoặc Khôi Phục';
-      // Use the native red-flag emoji at its regular icon scale, without a box.
-      flag.textContent='🚩';
-      flag.style.cssText='position:fixed;z-index:1008;width:48px;height:48px;font-size:38px;line-height:48px;text-align:center;padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
+      flag.setAttribute('aria-label','Kéo biểu tượng Lên Giàn đến người nghi thuộc phe xấu; thả để chọn tạm, OK để gửi đề cử hoặc Khôi Phục');
+      flag.title='Đề cử Lên Giàn: kéo tới người chơi · thả chọn tạm · OK hoặc Khôi Phục';
+      // Keep the 48px drag/touch target; render the approved transparent B icon at 36px.
+      const icon=document.createElement('img');icon.className='gmww-gallows-nominate-art';
+      icon.src=new URL('./gmww-gallows-nominate-b.png',import.meta.url).href;
+      icon.alt='';icon.draggable=false;flag.replaceChildren(icon);
+      flag.style.cssText='position:fixed;z-index:1008;width:48px;height:48px;display:flex;align-items:center;justify-content:center;padding:0;background:transparent;border:0;box-shadow:none;touch-action:none;user-select:none;transform:translate(-50%,-50%)';
       flag.hidden=true;document.body.append(flag);
       const controls=document.createElement('div');controls.id='gmwwPirateConfirm';controls.hidden=true;
       controls.innerHTML='<button type="button" data-gallows-ok>✓ OK</button><button type="button" data-gallows-reset>↶ KHÔI PHỤC</button>';

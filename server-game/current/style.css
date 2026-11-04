@@ -8877,3 +8877,9 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 @media(prefers-reduced-motion:reduce){
   #start .play-player-token .play-player-avatar>.battle-orbit i{animation:none!important}
 }
+
+/* GMWW icon B: visual identity of the nomination command, without changing gallows rules. */
+#battleGallowsPanel [data-gallows-command="open"]::before{
+  content:"";display:inline-block;width:28px;height:28px;vertical-align:middle;margin-right:5px;
+  background:url("./action-icons/gmww-gallows-nominate-b.png") center/contain no-repeat;
+}
