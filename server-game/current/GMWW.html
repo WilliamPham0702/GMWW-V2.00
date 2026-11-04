@@ -63,7 +63,7 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
 })();
 </script>
 
-<title>GMWW V3.298</title>
+<title>GMWW V3.299</title>
 <link rel="stylesheet" href="style.css?v=gmww-v3268-template-dock">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
@@ -111,6 +111,32 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
 @media(max-width:390px){#gmwwPlayerWebShareSettings{padding:10px;gap:6px}#gmwwPlayerWebShareSettings .gmww-share-head h3{font-size:15px}#gmwwPlayerWebShareSettings .gmww-share-actions button b{font-size:11px}}
 </style>
 <!-- END GMWW_PLAYER_SHARE_STYLE -->
+<style id="gmwwGatherFlowStyle">
+/* Six-step Gathering menu: exactly one horizontal, swipeable row. */
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions{
+  display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;
+  touch-action:pan-x!important;scrollbar-width:none;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;gap:6px!important;
+}
+body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>button{
+  flex:0 0 auto!important;white-space:nowrap!important;min-height:43px!important;
+}
+#playGatherToolbar .play-gather-toolbar-actions>button:disabled{opacity:.36!important;filter:saturate(.55)}
+#playGatherToolbar .play-gather-toolbar-actions>button.is-current:not(:disabled){
+  border-color:#ffe39b!important;background:rgba(161,112,31,.35)!important;color:#fff7cf!important;
+}
+#playGatherToolbar .play-gather-toolbar-actions>button.is-complete:not(:disabled){
+  border-color:rgba(125,230,207,.7)!important;
+}
+#playGatherToolbar #playRoomModeToggle[data-mode="online"]{border-color:rgba(91,223,220,.8)!important}
+#playGatherToolbar #playRoomModeToggle[data-mode="offline"]{border-color:rgba(255,211,133,.75)!important}
+#playGatherToolbar #playRoomModeToggle[data-mode="demo"]{border-color:rgba(204,155,255,.85)!important}
+#playSeatPresetPanel .play-seat-preset-tools{display:flex;align-items:center;gap:6px}
+#playSeatPresetPanel .play-seat-preset-tools>button{
+  flex:0 0 30px;height:30px;border-radius:10px;border:1px solid #7cc9d5;
+  background:#13516c;color:#fff;font-size:19px;line-height:1;
+}
+</style>
 </head>
 <body>
 <div id="app">
@@ -220,24 +246,20 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
             <span id="playGatherCount" aria-live="polite">0 người</span>
             <button id="playGatherClose" type="button" aria-label="Thu gọn công cụ Tập hợp" title="Thu gọn">×</button>
           </div>
-          <div class="play-gather-mode-row" aria-label="Hình thức chơi">
-            <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Chuyển Online, Offline, Demo"><b>CHẾ ĐỘ</b></button>
-            <div class="play-seat-shift-buttons"><button type="button" data-seat-shift="reset" aria-label="Khôi phục vị trí và giãn cách Seat mặc định" title="Khôi phục mặc định">🔄</button></div>
-          </div>
-          <div class="play-gather-toolbar-actions">
-            <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>GỌI NGƯỜI</b></button>
+          <div class="play-gather-toolbar-actions" role="toolbar" aria-label="Menu Tập hợp; vuốt ngang để xem đủ sáu mục">
+            <button id="playGatherCall" type="button"><span aria-hidden="true">♧</span><b>TẬP HỢP</b></button>
             <button id="playGatherSeatPreset" type="button" aria-haspopup="dialog" aria-controls="playSeatPresetPanel" aria-expanded="false"><span aria-hidden="true">◉</span><b>SEAT</b></button>
-            <button id="playGatherRandom" type="button"><span aria-hidden="true">⚄</span><b>NGẪU NHIÊN</b></button>
-            <button id="playGatherManual" type="button"><span aria-hidden="true">☝</span><b>THỦ CÔNG</b></button>
-            <button id="playGatherConfirm" type="button"><span aria-hidden="true">✓</span><b>CHỐT VỊ TRÍ</b></button>
+            <button id="playGatherDistribute" type="button" data-mode="choose" aria-label="Phân bố: lần đầu ngẫu nhiên, lần thứ hai thủ công"><span aria-hidden="true">⚄</span><b>PHÂN BỐ</b></button>
+            <button id="playGatherConfirm" type="button"><span aria-hidden="true">✓</span><b>CHỐT</b></button>
             <button id="playGatherDisband" type="button"><span aria-hidden="true">↩</span><b>GIẢI TÁN</b></button>
+            <button id="playRoomModeToggle" type="button" data-mode="choose" aria-pressed="false" aria-label="Chuyển chế độ Online, Offline, Demo"><span aria-hidden="true">🌐</span><b>CHẾ ĐỘ</b></button>
           </div>
         </section>
 
         <section class="play-seat-preset-panel" id="playSeatPresetPanel" role="dialog" aria-label="Chọn Seat Mẫu" aria-modal="false" hidden>
           <div class="play-seat-preset-heading">
             <div><b>SEAT MẪU</b><small>Chạm vào sơ đồ dấu chấm để chọn vị trí</small></div>
-            <button type="button" id="playSeatPresetClose" aria-label="Đóng Seat Mẫu">×</button>
+            <div class="play-seat-preset-tools"><button type="button" data-seat-shift="reset" aria-label="Khôi phục vị trí và giãn cách Seat mặc định" title="Khôi phục Seat">🔄</button><button type="button" id="playSeatPresetClose" aria-label="Đóng Seat Mẫu">×</button></div>
           </div>
           <p class="play-seat-preset-auto" id="playSeatPresetAutoHint">Một vòng tròn 360° quanh lửa • Mẫu 6, 8…30 người</p>
           <div id="playSeatPresetGrid" class="play-seat-preset-grid" aria-label="Sơ đồ các Seat Mẫu"></div>

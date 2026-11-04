@@ -33,11 +33,13 @@ test('V3.298 keeps same 🐺 orbit and existing public/private target rules',()=
  assert.ok(web.includes("const actor=active&&id===me,target=targets.has(id)"));
  assert.ok(gm.includes('playSceneRuntime.battleUndo?.turnId===t?.id'));
 });
-test('V3.298 exact release version and safe rollback marker',()=>{
- assert.equal(JSON.parse(read('package.json')).version,'3.298.0');
- assert.equal(JSON.parse(read('package-lock.json')).version,'3.298.0');
- assert.ok(read('src/index.js').includes('VERSION="V3.298"'));
- assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V3.298</title>'));
- assert.ok(compiled.includes("const VERSION='3.298'"));
+test('V3.298 orbit remains correct across safe Runtime upgrades',()=>{
+ const version=JSON.parse(read('package.json')).version;
+ assert.match(version,/^3\.(298|299)\.0$/);
+ assert.equal(JSON.parse(read('package-lock.json')).version,version);
+ const minor=version.replace(/\.0$/,'');
+ assert.ok(read('src/index.js').includes('VERSION="V'+minor+'"'));
+ assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+minor+'</title>'));
+ assert.ok(compiled.includes("const VERSION='"+minor+"'"));
  assert.ok(read('docs/releases/GMWW-RUNTIME-V3.298-GENIE-TURN-ICON-20261104.md').includes('Rollback'));
 });
