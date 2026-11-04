@@ -46,6 +46,34 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # V3.298 reviewed glyph-only Runtime: exact 19-file fail-closed diff.
+      - name: V3.298 — 🧞‍♂️ replaces ☄️ with original 🐺 orbit unchanged
+        if: steps.scope.outputs.mode == 'genie-orbit-v3298'
+        run: |
+          set -euo pipefail
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-genie-turn-orbit-v3298.test.mjs \
+            tests/gmww-comet-turn-orbit-v3296.test.mjs \
+            tests/gmww-wolf-orbit-reuse-v3295.test.mjs \
+            tests/gmww-character-orbit-visuals-20261103.test.mjs \
+            tests/status-visuals-v1.test.mjs \
+            tests/ci-browser-scope.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/gmww-online-four-fixes-v3293.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/online-chat-authority.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.298-GENIE-TURN-ICON-20261104.md
+
       # V3.296 exact glyph-only release: fail-closed 19-file diff.
       # Preserve required Worker dry-run, version guards, shared wolf orbit, privacy and DOM.
       - name: V3.296 — ☄️ replaces 🫧, original 🐺 animation unchanged
@@ -73,6 +101,35 @@ jobs:
             tests/online-chat-authority.test.mjs
           npm run check
           test -s docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md
+
+      # P0 #790: pin reviewed audio source and version-only Worker, with
+      # full Player Web dry-run, privacy, OTA and scoped GM/audio regressions.
+      - name: P0 V3.297 — Auto GM audio continuity and Runtime integrity
+        if: steps.scope.outputs.mode == 'p0-auto-gm-audio-v3297'
+        run: |
+          set -euo pipefail
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-auto-gm-audio-continuity-20261104.test.mjs \
+            tests/audio-binding-integrity-20261027.test.mjs \
+            tests/audio-role-day-flow-20261027.test.mjs \
+            tests/demo-audio-clock-sync-20261028.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/gmww-auto-gm-alarm-recovery.test.mjs \
+            tests/gmww-public-turn-clock-v3292.test.mjs \
+            tests/gmww-online-four-fixes-v3293.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/ci-browser-scope.test.mjs \
+            tests/v3-delivery-plan.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.297-AUTO-GM-AUDIO-20261104.md
 
       # V3.295 reviewed Runtime-only: strict 17-file diff plus scoped safety checks.
       - name: V3.295 — original 🐺 orbit reused for 🫧 and 🐦‍🔥
@@ -1809,6 +1866,63 @@ jobs:
           npm run check
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'PASS: exact campfire UI diff, drag/iPhone/role/privacy tests, compiled Worker; unrelated full gameplay suite excluded.' >> "$GITHUB_STEP_SUMMARY"
+      # 04/11/2026: Player Web fire marker, drag-follow suction and restore highlight — exact files only.
+      - name: V3 Player Web fire marker + drag suction — exact scope and focused tests
+        id: v3_fire_drag_suction
+        if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || github.event_name == 'push')
+        shell: bash
+        env:
+          FDS_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = 'pull_request' ]; then
+            [[ "$FDS_BASE" =~ ^[0-9a-f]{40}$ ]] || exit 0
+            BASE="$FDS_BASE"
+          else
+            [ "$GITHUB_REF" = 'refs/heads/main' ] || exit 0
+            BASE='HEAD^1'
+          fi
+          ACTUAL=$(git diff --name-only --no-renames "$BASE" HEAD | sort)
+          EXPECTED=$(printf '%s\n' \
+            .github/workflows/check-player-web.yml \
+            assets/village/index.html \
+            assets/village/scene-manager.mjs \
+            assets/village/village.mjs \
+            docs/releases/GMWW-PLAYER-FIRE-DRAG-SUCTION-20261104.md \
+            src/gmww-members-live.js \
+            src/player-web-src/35-online-chat.part \
+            tests/character-renderer.test.mjs \
+            tests/gallows-hanging-anchor-walk.test.mjs \
+            tests/player-village-freeze-status.test.mjs \
+            tests/player-web-fire-anchor-drag-suction-20261104.test.mjs \
+            tests/player-web-lobby-scene.test.mjs \
+            tests/player-web-render-budget.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/player-web-v3-iframe-drag.test.mjs | sort)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo 'Unexpected scope: retain full Worker CI.'
+            exit 0
+          fi
+          node .github/scripts/assemble-player-web.mjs --verify
+          node --check src/index.js
+          node --check src/gmww-members-live.js
+          node --check assets/village/village.mjs
+          node --check assets/village/scene-manager.mjs
+          node --test \
+            tests/player-web-fire-anchor-drag-suction-20261104.test.mjs \
+            tests/player-web-v3-iframe-drag.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/online-player-fire-turn-dead-ui-20261031.test.mjs \
+            tests/player-web-online-actions-20261028.test.mjs \
+            tests/player-online-realtime-freeze-day-20261030.test.mjs \
+            tests/player-web-online-village-20261028.test.mjs \
+            tests/gallows-hanging-anchor-walk.test.mjs \
+            tests/gallows-pirate-ui-v3205.test.mjs \
+            tests/character-renderer.test.mjs \
+            tests/online-chat-authority.test.mjs
+          npm run check
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'PASS: exact Player Web fire marker/drag suction diff, focused drag/privacy/village tests, Worker dry-run.' >> "$GITHUB_STEP_SUMMARY"
       # PR746: only seven exact files can use focused template-artwork CI.
       - name: PR746 Ván Mẫu artwork — direct packaging and local Worker HTTP smoke
         id: template_role_artwork
@@ -1914,8 +2028,126 @@ jobs:
           test -s docs/releases/GMWW-PLAYER-STATUS-CHAT-20261102.md
           echo 'scoped=true' >> "$GITHUB_OUTPUT"
           echo 'PR751 status/chat, privacy, version and Worker checks PASS.' >> "$GITHUB_STEP_SUMMARY"
+      # PR789 V3.299: fail-closed release gate for the reviewed gathering UI;
+      # validate exact changed paths before selecting focused tests, for PR and merge-to-main.
+      - name: V3.299 gather — verify exact Runtime delta and focused safety
+        id: gather_v3299
+        if: steps.scope.outputs.mode == 'full' && ((github.event_name == 'pull_request' && github.event.pull_request.number == 789) || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+        env:
+          GMWW_GATHER_EVENT: ${{ github.event_name }}
+          GMWW_GATHER_BASE: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rc=0; node --input-type=module <<'NODE' || rc=$?
+          import {execFileSync} from 'node:child_process';
+          import {readFileSync} from 'node:fs';
+          const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
+          const base=process.env.GMWW_GATHER_EVENT==='pull_request' ? process.env.GMWW_GATHER_BASE : git('rev-parse','HEAD^1');
+          if(!/^[0-9a-f]{40}$/.test(base))process.exit(1);
+          const spec=new Map([
+            ['.github/scripts/prepare-update-channel.mjs','M'],
+            ['.github/workflows/check-player-web.yml','M'],
+            ['docs/releases/GMWW-RUNTIME-V3.299-GATHER-ONLINE-20261104.md','A'],
+            ['package-lock.json','M'],['package.json','M'],
+            ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+            ['server-game/src/00-core-and-library.part','M'],
+            ['server-game/src/30-village-and-setup.part','M'],
+            ['server-game/src/40-battle-and-timeline.part','M'],
+            ['server-game/src/50-roles-and-artifacts.part','M'],
+            ['src/index.js','M'],
+            ['tests/ci-browser-scope.test.mjs','M'],
+            ['tests/gather-scroll-flow.test.mjs','A'],
+            ['tests/gmww-genie-turn-orbit-v3298.test.mjs','M'],
+            ['tests/lobby-gather-mode-assassin-20261027.test.mjs','M'],
+            ['tests/runtime-v3299-gather-release.test.mjs','A'],
+            ['tests/v3177-room-mode-glass-dock.test.mjs','M']
+          ]);
+          const changes=git('diff','--name-status','--no-renames',base,'HEAD').split('\n').filter(Boolean).map(x=>x.split('\t'));
+          if(changes.length!==spec.size || changes.some(([status,path])=>spec.get(path)!==status)){
+            console.log('PR789/V3.299 scope mismatch; ordinary full CI stays mandatory.');process.exit(3);}
+          if(JSON.parse(readFileSync('package.json','utf8')).version!=='3.299.0')throw Error('Runtime version is not V3.299');
+          if(!readFileSync('server-game/current/app.js','utf8').includes("kind==='actor'?'🧞‍♂️':'🐦‍🔥'"))throw Error('V3.298 orbit not preserved');
+          if(!readFileSync('server-game/current/app.js','utf8').includes('const VERSION=\'3.299\''))throw Error('GM Runtime does not match V3.299');
+          console.log('V3.299 exact scope verified; preserve V3.297 audio and V3.298 orbit via dedicated regression.');
+          NODE
+          if [ "$rc" = 3 ]; then exit 0; fi
+          [ "$rc" = 0 ]
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gather-scroll-flow.test.mjs \
+            tests/runtime-v3299-gather-release.test.mjs \
+            tests/gmww-genie-turn-orbit-v3298.test.mjs \
+            tests/lobby-gather-mode-assassin-20261027.test.mjs \
+            tests/v3177-room-mode-glass-dock.test.mjs \
+            tests/ci-browser-scope.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.299-GATHER-ONLINE-20261104.md
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'V3.299: exact 18-file gather Runtime, source/OTA/orbit/audio safety gates PASS.' >> "$GITHUB_STEP_SUMMARY"
+      # PR793 V3.300: fail-closed gate for room mode switching after gather/seat lock.
+      - name: V3.300 room mode — verify exact Runtime delta and focused safety
+        id: room_mode_v3300
+        if: steps.scope.outputs.mode == 'full' && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+        env:
+          # Fixed pre-V3.300 main; any later unrelated change falls back to full CI.
+          GMWW_RM_BASE: 8ce21f80835f5fff6a09a412d5b4ec916bc1f11b
+        shell: bash
+        run: |
+          set -euo pipefail
+          rc=0; node --input-type=module <<'NODE' || rc=$?
+          import {execFileSync} from 'node:child_process';
+          import {readFileSync} from 'node:fs';
+          const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
+          const base=process.env.GMWW_RM_BASE;
+          try{execFileSync('git',['merge-base','--is-ancestor',base,'HEAD'])}catch{process.exit(3)}
+          const spec=new Map([
+            ['.github/scripts/prepare-update-channel.mjs','M'],
+            ['.github/workflows/check-player-web.yml','M'],
+            ['docs/releases/GMWW-RUNTIME-V3.300-ROOM-MODE-20261104.md','A'],
+            ['package-lock.json','M'],['package.json','M'],
+            ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+            ['server-game/src/00-core-and-library.part','M'],
+            ['server-game/src/30-village-and-setup.part','M'],
+            ['src/gmww-room-config-rules.js','M'],
+            ['src/index.js','M'],
+            ['tests/runtime-v3299-gather-release.test.mjs','M'],
+            ['tests/runtime-v3300-room-mode-after-gather.test.mjs','A'],
+            ['tests/v3175-post-create-room-mode.test.mjs','M']
+          ]);
+          const changes=git('diff','--name-status','--no-renames',base,'HEAD').split('\n').filter(Boolean).map(x=>x.split('\t'));
+          if(changes.length!==spec.size || changes.some(([status,path])=>spec.get(path)!==status)){
+            console.log('PR793/V3.300 scope mismatch; ordinary full CI stays mandatory.');process.exit(3);}
+          if(JSON.parse(readFileSync('package.json','utf8')).version!=='3.300.0')throw Error('Runtime version is not V3.300');
+          if(!readFileSync('server-game/current/app.js','utf8').includes("const VERSION='3.300'"))throw Error('GM Runtime does not match V3.300');
+          console.log('V3.300 exact scope verified.');
+          NODE
+          if [ "$rc" = 3 ]; then exit 0; fi
+          [ "$rc" = 0 ]
+          git diff --check "$GMWW_RM_BASE" HEAD
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/runtime-v3300-room-mode-after-gather.test.mjs \
+            tests/v3175-post-create-room-mode.test.mjs \
+            tests/runtime-v3299-gather-release.test.mjs \
+            tests/gather-scroll-flow.test.mjs \
+            tests/lobby-gather-mode-assassin-20261027.test.mjs \
+            tests/v3177-room-mode-glass-dock.test.mjs \
+            tests/demo-transport-677-release.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.300-ROOM-MODE-20261104.md
+          echo 'scoped=true' >> "$GITHUB_OUTPUT"
+          echo 'V3.300: exact room-mode Runtime, server rule and bundle gates PASS.' >> "$GITHUB_STEP_SUMMARY"
       - name: Chạy toàn bộ kiểm thử tự động khi code ngoài phạm vi task hoặc phát hành
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.v3_parity.outputs.scoped != 'true' && steps.v3_fire_anchor.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true' && steps.v3_fire_drag_suction.outputs.scoped != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.number != 645)
         run: npm test
       - name: PR532 — kiểm thử kết thúc ván, Seat, DEMO và chốt an toàn Runtime
         if: steps.scope.outputs.mode == 'post-match-room-532'
@@ -1938,14 +2170,14 @@ jobs:
         if: steps.scope.outputs.mode == 'dual-renderer'
         run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true'
         shell: bash
         run: |
           python3 -m venv /tmp/gmww-avatar-venv
           /tmp/gmww-avatar-venv/bin/python -m pip install --disable-pip-version-check Pillow==11.3.0
           /tmp/gmww-avatar-venv/bin/python tools/generate-character40-portraits.py --verify
       - name: Kiểm tra nhanh Player Web trên máy thử nghiệm
-        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true'
+        if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -2017,7 +2249,7 @@ jobs:
           # modern Server does not auto-group arbitrary test-* roles. V3 exact-scope
           # verifies actual Night/Wolf/Witch targeting and authentication separately.
           # Keep real Worker night-rules E2E, portrait, delivery and WebSocket checks.
-          if [ "${{ steps.v3_parity.outputs.scoped }}" != 'true' ] && [ "${{ steps.v3_fire_anchor.outputs.scoped }}" != 'true' ] && {
+          if [ "${{ steps.v3_parity.outputs.scoped }}" != 'true' ] && [ "${{ steps.v3_fire_anchor.outputs.scoped }}" != 'true' ] && [ "${{ steps.v3_fire_drag_suction.outputs.scoped }}" != 'true' ] && {
                [ "${{ github.event_name }}" != 'pull_request' ] || [ "${{ github.event.pull_request.number }}" != '645' ]; }; then
             node tests/worker-engine-multinight-e2e.mjs
           else

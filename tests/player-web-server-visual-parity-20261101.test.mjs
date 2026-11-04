@@ -52,7 +52,8 @@ test('Fire action dock fits multiple icons with safe touch drag and is not overs
  assert.match(d,/for\(const action of offers\)/);
  assert.match(web,/gmwwOnlineWitchNotice\(\);gmwwOnlinePlaceAtFire\(dock\)/);
  assert.match(web,/querySelector\('\.fire'\)/);
- assert.match(web,/if\(e\.type==='pointercancel'\)return/);
+ // pointercancel still never drops; it only puts the lifted icon back on the fire.
+ assert.match(web,/if\(e\.type==='pointercancel'\)\{settle\(\);return\}/);
 });
 test('Aura reads the GM revelation.message text rather than printing JSON',()=>{
  const r=section(web,'function gmwwOnlineShowRevelation(revelation){','function gmwwOnlineWitchNotice(){');

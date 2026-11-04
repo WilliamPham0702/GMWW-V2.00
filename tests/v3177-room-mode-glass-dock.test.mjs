@@ -26,11 +26,11 @@ test('Mode tap repaints immediately, with no second concurrent server write',asy
     extract(setup,'async function flushPlayRoomMode(){','function bindPlaySeatMoveButtons(')+
     ';bindPlayRoomModeButtons()',context);
   assert.equal(handlers.click(),undefined);
-  assert.equal(ui.pendingMode,'offline');assert.equal(renders[0],'offline');
+  assert.equal(ui.pendingMode,'online');assert.equal(renders[0],'online');
   handlers.click();handlers.click();
   assert.equal(ui.pendingMode,'demo');
   assert.equal(writes.length,1,'no overlapping writes');
-  resolveWrite({room:{demo:false,roomMode:'offline',phase:'lobby'},players:[]});
+  resolveWrite({room:{demo:false,roomMode:'online',phase:'lobby'},players:[]});
   await new Promise(r=>setImmediate(r));
   assert.equal(writes.length,2);
   assert.equal(writes[1].demo,true);

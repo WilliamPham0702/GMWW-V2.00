@@ -26,7 +26,7 @@ test('iPhone drag hit-testing maps screen pixels into a scaled iframe and prefer
  assert.equal(fn(100,50),'','unrelated background touch is rejected');
 });
 
-test('drag keeps a single pointer across the document, chooses player and cleans up',()=>{
+test('drag keeps a single pointer across the document, chooses player and cleans up',async()=>{
  const listeners=new Map(),windowListeners=new Map(),selected=[],position=new Map(),ghosts=[];
  const document={
   addEventListener:(t,fn)=>listeners.set(t,fn),
@@ -44,7 +44,8 @@ test('drag keeps a single pointer across the document, chooses player and cleans
   gmwwPlayerTopMenuTimer:null,clearTimeout:()=>{},
   gmwwChatClosePanel:()=>{},revealPlayerTopMenu:()=>{},
   gmwwOnlineTargetAt:()=> 'wolf2',gmwwOnlineTarget:(id)=>selected.push(id),
-  gmwwOnlinePickAction:()=>selected.push('picker'),toast:()=>{}
+  gmwwOnlinePickAction:()=>selected.push('picker'),toast:()=>{},setTimeout:()=>0,
+  gmwwOnlinePlayerCenter:()=>({x:330,y:180}),gmwwOnlineFlyGhost:()=>Promise.resolve()
  };
  const down=vm.runInNewContext('('+dragSource+')',context);
  const initial={button:0,pointerId:7,clientX:110,clientY:340,currentTarget:node,
@@ -62,7 +63,8 @@ test('drag keeps a single pointer across the document, chooses player and cleans
  assert.equal(releases,1);
  assert.equal(listeners.size,0);
  assert.equal(windowListeners.size,0);
- assert.ok(ghosts.includes('removed'));
+ await Promise.resolve();await Promise.resolve();
+ assert.ok(ghosts.includes('removed'),'carried icon is absorbed then removed');
  assert.equal(context.gmwwOnlinePick.action.key,'wolf-bite');
 });
 
@@ -76,7 +78,8 @@ test('cancel/blur never performs a drop and self-target is forbidden',()=>{
   const node={style:{},getBoundingClientRect:()=>({left:90,top:320,width:70,height:70}),setPointerCapture(){},releasePointerCapture(){}};
   const context={document:doc,window:win,Math,String,Number,state:{member:{loginId:'wolf1'}},gmwwOnlinePick:null,gmwwOnlineIconPositions:new Map(),
    gmwwPlayerTopMenuTimer:null,clearTimeout(){},gmwwChatClosePanel(){},revealPlayerTopMenu(){},gmwwOnlineTargetAt:()=> 'wolf1',
-   gmwwOnlineTarget:(id)=>selected.push(id),gmwwOnlinePickAction:()=>selected.push('picker'),toast(){}};
+   gmwwOnlineTarget:(id)=>selected.push(id),gmwwOnlinePickAction:()=>selected.push('picker'),toast(){},
+   gmwwOnlinePlayerCenter:()=>null,gmwwOnlineFlyGhost:()=>Promise.resolve()};
   const down=vm.runInNewContext('('+dragSource+')',context);
   down({button:0,pointerId:2,clientX:100,clientY:330,currentTarget:node,preventDefault(){},stopPropagation(){}},{key:'guard',noSelf:true});
   listeners.get('pointermove')({pointerId:2,clientX:200,clientY:170,preventDefault(){}});
@@ -110,7 +113,8 @@ test('missed iPhone drop returns the original icon to the campfire instead of le
   gmwwOnlinePick:null,gmwwOnlineIconPositions:positions,
   gmwwPlayerTopMenuTimer:null,clearTimeout(){},gmwwChatClosePanel(){},revealPlayerTopMenu(){},
   gmwwOnlineTargetAt:()=>'',gmwwOnlineTarget:id=>targets.push(id),
-  gmwwOnlinePickAction:()=>targets.push('picker'),toast(){}};
+  gmwwOnlinePickAction:()=>targets.push('picker'),toast(){},
+  gmwwOnlinePlayerCenter:()=>null,gmwwOnlineFlyGhost:()=>Promise.resolve()};
  const down=vm.runInNewContext('('+dragSource+')',context);
  down({button:0,pointerId:2,clientX:23,clientY:654,currentTarget:node,preventDefault(){},stopPropagation(){}},{key:'wolf-bite',iconUrl:'/action-icons/v3/05_soi_can.webp'});
  listeners.get('pointermove')({pointerId:2,clientX:10,clientY:700,preventDefault(){}});
