@@ -46,6 +46,28 @@ jobs:
           GMWW_CI_EVENT: ${{ github.event_name }}
           GMWW_CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: node .github/scripts/ci-browser-scope.mjs
+      # PR789: GM-only swipe toolbar. Exact source/test blob pins and assembly
+      # are enforced by ci-browser-scope; unrelated changes use full Worker CI.
+      - name: PR789 — Tập hợp sáu mục, chọn người và Seat an toàn
+        if: steps.scope.outputs.mode == 'gather-six-789'
+        run: |
+          set -euo pipefail
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gather-scroll-flow.test.mjs \
+            tests/lobby-gather-mode-assassin-20261027.test.mjs \
+            tests/v3177-room-mode-glass-dock.test.mjs \
+            tests/ci-browser-scope.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-auto-gm-audio-continuity-20261104.test.mjs \
+            tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs
+          npm run check
+
       # V3.296 exact glyph-only release: fail-closed 19-file diff.
       # Preserve required Worker dry-run, version guards, shared wolf orbit, privacy and DOM.
       - name: V3.296 — ☄️ replaces 🫧, original 🐺 animation unchanged
