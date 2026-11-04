@@ -1601,7 +1601,18 @@ test('P0 V3.297 Auto GM audio release selects focused Worker safety only for rev
          'UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss"');
    return {path,status,before};
  });
- assert.equal(classifyBrowserScope(exact),'p0-auto-gm-audio-v3297');
+ // The V3.297 release scope is pinned to immutable audio bytes. Once this
+ // Gathering PR changes the GM parts, that historic release must fail closed
+ // to full Worker CI; never widen the pinned audio-only allowlist.
+ const pinnedAudioBytes=[
+   ['server-game/src/30-village-and-setup.part','c293bb05a6f6dae8b3445829551fcf9cebe26c3d'],
+   ['server-game/src/40-battle-and-timeline.part','d509b3b6195554b26eac38595e9bdb16fbb86015']
+ ];
+ const pristine=pinnedAudioBytes.every(([path,sha])=>
+   execFileSync('git',['hash-object',path],{encoding:'utf8'}).trim()===sha);
+ assert.equal(classifyBrowserScope(exact),
+   pristine?'p0-auto-gm-audio-v3297':'full',
+   'Audio-only scope is forbidden when gameplay bytes differ from the reviewed release');
  assert.equal(classifyBrowserScope(exact.slice(1)),'full','missing required file fails closed');
  assert.equal(classifyBrowserScope([...exact,{path:'src/gmww-room-config-rules.js',status:'M'}]),'full','any new Worker logic fails closed');
  assert.equal(classifyBrowserScope(exact.map(c=>c.path==='package.json'?{...c,status:'A'}:c)),'full','version status cannot be forged');
