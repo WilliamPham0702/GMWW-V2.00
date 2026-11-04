@@ -901,11 +901,13 @@ function battleTickCountdown(){
     const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
     if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=warningSeconds&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
       battleState.dayCountdownCueKey=cueKey;
-      battleQueueDayAudio([['audio_system_countdown','Đếm ngược 30 giây cuối']]);
+      if(typeof battleQueueDayAudio==='function')battleQueueDayAudio([['audio_system_countdown','Đếm ngược 30 giây cuối']]);
+      else void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
     }
     if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
       battleState.dayTimeupCueKey=cueKey;
-      battleQueueDayAudio([['audio_system_time_up','Hết giờ']]);
+      if(typeof battleQueueDayAudio==='function')battleQueueDayAudio([['audio_system_time_up','Hết giờ']]);
+      else void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
   }
   // Edge-triggered: returning from campfire happens exactly when the night turn reaches 0.
@@ -2021,7 +2023,7 @@ function renderPlayBattle(){
   // while the GM is navigating. The first stable role of EVERY night must speak.
   if(t&&phase==='night'&&!battleConfirmAudioGate&&!battleState.busy&&!playSceneRuntime.busy&&
      !battleState.syncPending&&battleState.lastAudioTurnKey!==key&&
-     battleState.audioPendingTurnKey!==key){
+     battleState.audioPendingTurnKey!==key&&battleState.failedAudioTurnKey!==key){
     if(t.kind==='village-wakeup'){
       battleState.lastAudioTurnKey=key;battlePlayWakeupAndAdvance(t,key);
     }else battleAudioForTurn(t,true);
@@ -2578,7 +2580,7 @@ function battleEnsureAutoTurnAudio(){
   const key=[playSceneRuntime.room?.matchId||'','night',
     Math.max(1,Number(playSceneState.night)||1),turn.id].join(':');
   if(battleState.key!==key||battleState.lastAudioTurnKey===key||
-     battleState.audioPendingTurnKey===key||battleConfirmAudioGate||
+     battleState.audioPendingTurnKey===key||battleState.failedAudioTurnKey===key||battleConfirmAudioGate||
      battleState.busy||battleState.syncPending||playSceneRuntime.busy)return;
   battleAudioForTurn(turn,true);
 }
