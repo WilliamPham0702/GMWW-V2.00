@@ -1672,12 +1672,14 @@ test('PR786 scoped voice cancellation stays fail-closed for unreviewed Worker/na
   ['.github/workflows/check-player-web.yml','M'],
   ['tests/ci-browser-scope.test.mjs','M']
  ];
+ // Reviewed PR786 head: later releases (e.g. V3.301 version bump) legitimately change these files.
+ const reviewed='097e50680be44e0dd2911a6584016c51f24e66b1';
  let pinnedAvailable=true;
- try{execFileSync('git',['cat-file','-e',prior+'^{commit}'],{stdio:'ignore'})}catch{pinnedAvailable=false}
+ try{execFileSync('git',['cat-file','-e',prior+'^{commit}'],{stdio:'ignore'});execFileSync('git',['cat-file','-e',reviewed+'^{commit}'],{stdio:'ignore'})}catch{pinnedAvailable=false}
  const changes=files.map(([path,status])=>({
   path,status,
   before:status==='M'&&pinnedAvailable?execFileSync('git',['show',prior+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):null,
-  after:readFileSync(path,'utf8')
+  after:pinnedAvailable?execFileSync('git',['show',reviewed+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):readFileSync(path,'utf8')
  }));
  if(!pinnedAvailable){
   // Shallow runners must fail closed rather than inventing an old blob.
