@@ -71,7 +71,7 @@ permissions:
 jobs:
   verify-stage14:
     name: "GĐ14–34: kiểm toán Core, Player 3D, animation"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
@@ -138,7 +138,7 @@ jobs:
       github.ref == 'refs/heads/feature/arena3d-g39-main-first-candidate') &&
       ((github.event_name == 'workflow_dispatch' && inputs.deploy_stage14 == true) ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[deploy-arena3d-staging]')))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -214,7 +214,7 @@ jobs:
   staging-runtime:
     name: "PR #581: Runtime OTA STAGING 3D (prerelease, cài tay)"
     needs: deploy-stage14-preview
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
       contents: write
