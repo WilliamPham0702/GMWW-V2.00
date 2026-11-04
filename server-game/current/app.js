@@ -3663,7 +3663,7 @@ async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFi
   const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:nameEnd}:null;
   // Auto GM is unattended after the start gesture: use the already unlocked
   // WebAudio transport for ALL cue clips, not only the wake-up sound.
-  if(battleUnlockedAudioContext){
+  if(typeof battleUnlockedAudioContext!=='undefined'&&battleUnlockedAudioContext){
     if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
   }
   if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
@@ -3785,6 +3785,8 @@ function battlePlayTurnAudioSequence(cues,expectedKey,showError=false,automatic=
         setTimeout(()=>{if(current())next();else clearPending()},850);
       }else{
         clearPending();
+        // Avoid an endless heartbeat loop after explicit iOS autoplay denial.
+        if(automatic)battleState.failedAudioTurnKey=expectedKey;
         if(!playAudioMuted())playFlashError('Không phát được audio '+cue.name+'. Chạm 🔊 để thử lại hoặc kiểm tra nguồn âm thanh.');
       }
     };
@@ -3792,7 +3794,7 @@ function battlePlayTurnAudioSequence(cues,expectedKey,showError=false,automatic=
       if(!current()){clearPending();return}
       started=ok===true;
       // Mark the turn only after playback was scheduled (never on failed play()).
-      if(index===0&&automatic&&started)battleState.lastAudioTurnKey=expectedKey;
+      if(index===0&&automatic&&started){battleState.failedAudioTurnKey='';battleState.lastAudioTurnKey=expectedKey;}
       if(!started){failed();return}
       if(finished){index++;next()}
     }).catch(error=>{
@@ -3854,7 +3856,7 @@ function togglePlayAudio(){
   // Turning sound back on during a role should play that CURRENT role, not
   // wait for the next timeline step (or replay an obsolete one).
   if(!muted&&playSceneState.step==='battle'&&playSceneState.phase==='night'){
-    battleState.lastAudioTurnKey='';battleState.audioPendingTurnKey='';
+    battleState.lastAudioTurnKey='';battleState.audioPendingTurnKey='';battleState.failedAudioTurnKey='';
     battleAudioForTurn(battleTurn(),true);
   }
 }
@@ -6330,11 +6332,13 @@ function battleTickCountdown(){
     const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
     if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=warningSeconds&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
       battleState.dayCountdownCueKey=cueKey;
-      battleQueueDayAudio([['audio_system_countdown','Đếm ngược 30 giây cuối']]);
+      if(typeof battleQueueDayAudio==='function')battleQueueDayAudio([['audio_system_countdown','Đếm ngược 30 giây cuối']]);
+      else void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
     }
     if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
       battleState.dayTimeupCueKey=cueKey;
-      battleQueueDayAudio([['audio_system_time_up','Hết giờ']]);
+      if(typeof battleQueueDayAudio==='function')battleQueueDayAudio([['audio_system_time_up','Hết giờ']]);
+      else void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
     }
   }
   // Edge-triggered: returning from campfire happens exactly when the night turn reaches 0.
@@ -7450,7 +7454,7 @@ function renderPlayBattle(){
   // while the GM is navigating. The first stable role of EVERY night must speak.
   if(t&&phase==='night'&&!battleConfirmAudioGate&&!battleState.busy&&!playSceneRuntime.busy&&
      !battleState.syncPending&&battleState.lastAudioTurnKey!==key&&
-     battleState.audioPendingTurnKey!==key){
+     battleState.audioPendingTurnKey!==key&&battleState.failedAudioTurnKey!==key){
     if(t.kind==='village-wakeup'){
       battleState.lastAudioTurnKey=key;battlePlayWakeupAndAdvance(t,key);
     }else battleAudioForTurn(t,true);
@@ -8007,7 +8011,7 @@ function battleEnsureAutoTurnAudio(){
   const key=[playSceneRuntime.room?.matchId||'','night',
     Math.max(1,Number(playSceneState.night)||1),turn.id].join(':');
   if(battleState.key!==key||battleState.lastAudioTurnKey===key||
-     battleState.audioPendingTurnKey===key||battleConfirmAudioGate||
+     battleState.audioPendingTurnKey===key||battleState.failedAudioTurnKey===key||battleConfirmAudioGate||
      battleState.busy||battleState.syncPending||playSceneRuntime.busy)return;
   battleAudioForTurn(turn,true);
 }
