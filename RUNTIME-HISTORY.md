@@ -4,6 +4,7 @@
 
 | Phiên bản | Tải file gốc | SHA-256 |
 |:--|:--|:--|
+| **V3.296** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.296/GMWW-Runtime-V3.296.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.296/GMWW-Runtime-V3.296.gmwwupdate.sha256) |
 | **V3.295** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.295/GMWW-Runtime-V3.295.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-runtime-v3.295/GMWW-Runtime-V3.295.gmwwupdate.sha256) |
 | **V3.294** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.294/GMWW-Runtime-V3.294.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.294/GMWW-Runtime-V3.294.gmwwupdate.sha256) |
 | **V3.293** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.293/GMWW-Runtime-V3.293.gmwwupdate) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.293/GMWW-Runtime-V3.293.gmwwupdate.sha256) |
