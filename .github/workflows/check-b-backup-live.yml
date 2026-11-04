@@ -1,0 +1,56 @@
+name: GMWW Cloudflare B backup archive read-only live smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/check-b-backup-live.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/check-b-backup-live.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-b-backup-readonly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  b-archive-fail-closed:
+    name: B archive health, disabled ingest and no failover
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Confirm Cloudflare B archive is isolated and has no Production backup enabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          HOST='https://gmww-b-backup-archive.gmww-stage-b-0702-2026.workers.dev'
+          # GET health is read-only and discloses no user data or secrets.
+          curl --retry 6 --retry-delay 3 --retry-all-errors --fail-with-body --silent --show-error \
+            --max-time 15 --output /tmp/b-archive-health.json "$HOST/health"
+          node -e '
+            const fs=require("node:fs");
+            const h=JSON.parse(fs.readFileSync("/tmp/b-archive-health.json","utf8"));
+            if(h.ok!==true||h.environment!=="cloudflare-b"||
+              h.mode!=="backup-archive-isolated"||
+              h.productionSwitchAllowed!==false||h.failoverReady!==false||
+              h.productionBackupVerified!==false)process.exit(1);
+            console.log("PASS: isolated B archive health; failover and real backup disabled");
+          '
+          # Do not send an archive chunk, ciphertext, credential or real data.
+          HTTP_CODE="$(curl --silent --show-error --max-time 15 -o /tmp/b-archive-denial.json \
+            -w '%{http_code}' -H 'Content-Type: application/json' -d '{}' "$HOST/v1/chunk")"
+          test "$HTTP_CODE" = 503
+          node -e '
+            const fs=require("node:fs");
+            const x=JSON.parse(fs.readFileSync("/tmp/b-archive-denial.json","utf8"));
+            if(x.ok!==false||x.error!=="BACKUP_NOT_CONFIGURED")process.exit(1);
+            console.log("PASS: ingest refuses requests while backup secrets are absent");
+          '
+          CODE="$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' "$HOST/not-found")"
+          test "$CODE" = 404
+          echo "PASS: no source data, no private secrets, no DNS/IPA/Runtime/failover changes" >> "$GITHUB_STEP_SUMMARY"
