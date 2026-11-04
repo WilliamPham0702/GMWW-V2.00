@@ -4377,7 +4377,69 @@ function isV3296CiOnlyRecoveryScope(changes){
  }catch{return false}
 }
 
+// V3.297: strictly pinned GM gathering selection + 4-step Runtime patch.
+// Every changed path and compiled blob must match the approved candidate.
+// Unrecognized source, Native, Worker logic or changed bytes => full CI.
+function isV3297OnlineGatherScope(changes){
+ const expected=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/workflows/check-lobby-gather-assassin.yml','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['docs/releases/GMWW-V3.297-online-gather-20261104.md','A'],
+  ['package-lock.json','M'],['package.json','M'],
+  ['server-game/current/GMWW.html','M'],
+  ['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/20-members-and-roster.part','M'],
+  ['server-game/src/30-village-and-setup.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['server-game/src/50-roles-and-artifacts.part','M'],
+  ['src/index.js','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/online-gather-wizard-20261104.test.mjs','A']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==expected.size||
+    new Set(changes.map(c=>c?.path)).size!==expected.size||
+    changes.some(c=>expected.get(c?.path)!==c?.status))return false;
+ // Git blob SHA pins the full contents, not just a filename or a version label.
+ const pinned=new Map([
+  ['package.json','5cd3cd07c86d365f7b7a4ae8440a1e824b6a8083'],
+  ['package-lock.json','c7da90830f1451d781b5b981e176b6a47a236a90'],
+  ['src/index.js','b9808cca7cdbc40e8a67693c8b62e74b452440b8'],
+  ['server-game/src/00-core-and-library.part','68c228559cb321f98f53b41f970c92713fb6393d'],
+  ['server-game/src/20-members-and-roster.part','a1e0238328991148585b791fdd262d99e0bd460d'],
+  ['server-game/src/30-village-and-setup.part','7b270f077b9389728ce59f87677797a4859dfaf9'],
+  ['server-game/src/40-battle-and-timeline.part','c382eb1cac036650d32ce2a60e1095e8b88b711b'],
+  ['server-game/src/50-roles-and-artifacts.part','eafaad9f4725e6c6a2c029bd47fad19136cb0fe2'],
+  ['server-game/current/app.js','ed7c599d17ffb1602b5f5ec012ebf910f0915dd1'],
+  ['server-game/current/GMWW.html','748872d0fc0db5361ef195ab6741ffdbb837f05d'],
+  ['tests/online-gather-wizard-20261104.test.mjs','a8a22fcd809225024dfab1a72e5ba0af7611b572'],
+  ['.github/workflows/check-lobby-gather-assassin.yml','6a1572dd8ae2069b17d552cf623fcedb07b3b6c0'],
+  ['docs/releases/GMWW-V3.297-online-gather-20261104.md','4e0096b4a6e5a0036304b15c9be286590b6de588']
+ ]);
+ try{
+  for(const [file,sha] of pinned){
+   const blob=fs.readFileSync(file);
+   const actual=createHash('sha1').update('blob '+blob.length+'\\0').update(blob).digest('hex');
+   if(actual!==sha)return false;
+  }
+  const modules=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
+   '30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
+  const assembled=Buffer.concat(modules.map(n=>fs.readFileSync('server-game/src/'+n)));
+  if(!assembled.equals(fs.readFileSync('server-game/current/app.js')))return false;
+  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.297.0')return false;
+  const workflow=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
+  const scopeTests=fs.readFileSync('tests/ci-browser-scope.test.mjs','utf8');
+  if(!workflow.includes("steps.scope.outputs.mode == 'online-gather-v3297'")||
+     !workflow.includes('tests/online-gather-wizard-20261104.test.mjs')||
+     !workflow.includes('npm run check')||
+     !scopeTests.includes('V3.297 pinned gathering flow rejects unrelated changes'))return false;
+  return true;
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isV3297OnlineGatherScope(changes))return 'online-gather-v3297';
   // Recovery is validated by detect() against real Git ancestry; never trust synthetic rows.
   if(isV3296CometOrbitScope(changes))return 'comet-orbit-v3296';
   if(isPR778FinalMainScope(changes))return 'pr778-postmerge-worker';
@@ -4828,6 +4890,16 @@ export function publicInteractionReceipt(row){
     notes.includes('Rollback');
 }
 function detect(){
+  // V3.297: also check the actual postmerge main diff BEFORE the historic
+  // main-push full-suite fallback. Only the pinned, reviewed set is eligible.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+   try{
+    const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\\n').filter(Boolean);
+    const changes=rows.map(line=>{const [status,path]=line.split('\\t');return{status,path}});
+    if(isV3297OnlineGatherScope(changes))
+      return{mode:'online-gather-v3297',reason:'V3.297 exact pinned GM Tập hợp Runtime scope on main'};
+   }catch{} // Fail closed to normal main checks.
+  }
   // V3296_POSTMERGE_RECOVERY: exact 2-file CI fix can certify *existing*
   // reviewed Runtime #784 only when SHA ancestry and all runtime bytes match.
   // Keep all required security, assembly, focused privacy and Worker dry-run tests.
