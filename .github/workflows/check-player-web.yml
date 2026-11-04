@@ -74,6 +74,35 @@ jobs:
           npm run check
           test -s docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md
 
+      # P0 #790: pin reviewed audio source and version-only Worker, with
+      # full Player Web dry-run, privacy, OTA and scoped GM/audio regressions.
+      - name: P0 V3.297 — Auto GM audio continuity and Runtime integrity
+        if: steps.scope.outputs.mode == 'p0-auto-gm-audio-v3297'
+        run: |
+          set -euo pipefail
+          node --check .github/scripts/ci-browser-scope.mjs
+          node --check server-game/current/app.js
+          node --check src/index.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+          node .github/scripts/assemble-player-web.mjs --verify
+          node .github/scripts/verify-gmww-versions.mjs
+          node --test \
+            tests/gmww-auto-gm-audio-continuity-20261104.test.mjs \
+            tests/audio-binding-integrity-20261027.test.mjs \
+            tests/audio-role-day-flow-20261027.test.mjs \
+            tests/demo-audio-clock-sync-20261028.test.mjs \
+            tests/gmww-gm-app-source-modules.test.mjs \
+            tests/gmww-player-web-source-modules.test.mjs \
+            tests/gmww-auto-gm-alarm-recovery.test.mjs \
+            tests/gmww-public-turn-clock-v3292.test.mjs \
+            tests/gmww-online-four-fixes-v3293.test.mjs \
+            tests/player-web-server-visual-parity-20261101.test.mjs \
+            tests/online-chat-authority.test.mjs \
+            tests/ci-browser-scope.test.mjs \
+            tests/v3-delivery-plan.test.mjs
+          npm run check
+          test -s docs/releases/GMWW-RUNTIME-V3.297-AUTO-GM-AUDIO-20261104.md
+
       # V3.295 reviewed Runtime-only: strict 17-file diff plus scoped safety checks.
       - name: V3.295 — original 🐺 orbit reused for 🫧 and 🐦‍🔥
         if: steps.scope.outputs.mode == 'wolf-orbit-v3295'

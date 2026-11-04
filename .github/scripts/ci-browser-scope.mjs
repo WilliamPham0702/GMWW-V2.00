@@ -4377,7 +4377,72 @@ function isV3296CiOnlyRecoveryScope(changes){
  }catch{return false}
 }
 
+
+/* P0 #790 V3.297: fail-closed audio/OTA scope. A filename allowlist is NOT
+ * sufficient: pin the actual reviewed role/day bytes and diff every version.
+ * Same contract works on PR head and on the eventual main merge commit. */
+function isP0AutoGmAudio3297Scope(changes){
+ const spec=new Map([
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/scripts/prepare-update-channel.mjs','M'],
+  ['.github/workflows/check-auto-gm-audio-continuity.yml','A'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['docs/releases/GMWW-P0-AUTO-GM-AUDIO-CONTINUITY-20261104.md','A'],
+  ['docs/releases/GMWW-RUNTIME-V3.297-AUTO-GM-AUDIO-20261104.md','A'],
+  ['package-lock.json','M'],['package.json','M'],
+  ['server-game/current/GMWW.html','M'],
+  ['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/30-village-and-setup.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/index.js','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/demo-audio-clock-sync-20261028.test.mjs','M'],
+  ['tests/gmww-auto-gm-audio-continuity-20261104.test.mjs','A']
+ ]);
+ if(!Array.isArray(changes)||changes.length!==spec.size||
+    new Set(changes.map(c=>c.path)).size!==spec.size||
+    changes.some(c=>spec.get(c.path)!==c.status))return false;
+ try{
+  const files=new Map(changes.map(c=>[c.path,c]));
+  const read=p=>fs.readFileSync(p,'utf8');
+  const before=p=>files.get(p)?.before;
+  if(JSON.parse(read('package.json')).version!=='3.297.0')return false;
+  const lock=JSON.parse(read('package-lock.json'));
+  if(lock.version!=='3.297.0'||lock.packages?.['']?.version!=='3.297.0')return false;
+  if(read('package.json')!==String(before('package.json')).replace('"version": "3.296.0"','"version": "3.297.0"'))return false;
+  if(read('package-lock.json')!==String(before('package-lock.json')).replaceAll('"version": "3.296.0"','"version": "3.297.0"'))return false;
+  if(read('server-game/src/00-core-and-library.part')!==String(before('server-game/src/00-core-and-library.part')).replace("const VERSION='3.296';","const VERSION='3.297';"))return false;
+  if(read('server-game/current/GMWW.html')!==String(before('server-game/current/GMWW.html')).replace('<title>GMWW V3.296</title>','<title>GMWW V3.297</title>'))return false;
+  if(read('src/index.js')!==String(before('src/index.js')).replace('VERSION="V3.296"','VERSION="V3.297"').replace(
+      'UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss"',
+      'UPDATE_CHANNEL_REV="runtime-3297-auto-gm-audio-continuity"'))return false;
+  // Pin the exact reviewed gameplay repair. Not a generic permission to edit GM.
+  const hashes={
+   'server-game/src/30-village-and-setup.part':'c293bb05a6f6dae8b3445829551fcf9cebe26c3d',
+   'server-game/src/40-battle-and-timeline.part':'d509b3b6195554b26eac38595e9bdb16fbb86015',
+   'tests/demo-audio-clock-sync-20261028.test.mjs':'9c7ec6c0c7909da5d8d59d2dd8d9bda5d8cfbf3c',
+   'tests/gmww-auto-gm-audio-continuity-20261104.test.mjs':'ad8221c353f1b39bbe56e248af0fc0acf8dfe24b',
+   '.github/workflows/check-auto-gm-audio-continuity.yml':'4141c1f9ed35a6e7b815d4884ca24a8fb78755e6'
+  };
+  for(const [file,expected] of Object.entries(hashes)){
+    if(git('hash-object',file).trim()!==expected)return false;
+  }
+  const parts=['00-core-and-library.part','10-library-and-settings.part',
+   '20-members-and-roster.part','30-village-and-setup.part',
+   '40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
+  const joined=parts.map(p=>read('server-game/src/'+p)).join('');
+  if(joined!==read('server-game/current/app.js')||!joined.startsWith("(()=>{'use strict';\n\nconst VERSION='3.297';"))return false;
+  const ota=read('.github/scripts/prepare-update-channel.mjs');
+  if(!ota.includes('releaseNotes:["V3.297 – P0 Auto GM:')||
+     !ota.includes('rollback Runtime V3.296'))return false;
+  if(!read('docs/releases/GMWW-RUNTIME-V3.297-AUTO-GM-AUDIO-20261104.md').includes('rollback'))return false;
+  return true;
+ }catch{return false}
+}
+
 function classifyBrowserScope(changes){
+  if(isP0AutoGmAudio3297Scope(changes))return 'p0-auto-gm-audio-v3297';
   // Recovery is validated by detect() against real Git ancestry; never trust synthetic rows.
   if(isV3296CometOrbitScope(changes))return 'comet-orbit-v3296';
   if(isPR778FinalMainScope(changes))return 'pr778-postmerge-worker';
@@ -4828,6 +4893,22 @@ export function publicInteractionReceipt(row){
     notes.includes('Rollback');
 }
 function detect(){
+  // Exact V3.297 audio source and Runtime diff before legacy all-tests route.
+  if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+    try{
+      const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+      if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+        const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+        const changes=rows.map(row=>{
+          const [status,path]=row.split('\t');
+          return {status,path,before:status==='M'?git('show',base+':'+path):null};
+        });
+        if(isP0AutoGmAudio3297Scope(changes))
+          return {mode:'p0-auto-gm-audio-v3297',
+            reason:'P0 V3.297 exact reviewed audio, sequential day queue and versioned Runtime; IPA/DO data unchanged'};
+      }
+    }catch{} // Unverified or changed HEAD runs full Worker CI.
+  }
   // V3296_POSTMERGE_RECOVERY: exact 2-file CI fix can certify *existing*
   // reviewed Runtime #784 only when SHA ancestry and all runtime bytes match.
   // Keep all required security, assembly, focused privacy and Worker dry-run tests.
