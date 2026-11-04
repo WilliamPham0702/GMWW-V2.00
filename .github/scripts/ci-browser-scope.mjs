@@ -4352,7 +4352,48 @@ function isV3296CometOrbitScope(changes){
  }catch{return false}
 }
 
+// PR786: exact reviewed GM/Player discard-only delta; unknown code changes
+// run FULL CI. Every changed voice source and compiled bundle is blob-pinned.
+const voiceDiscard786Paths=new Map([
+ ['server-game/src/45-online-chat.part','M'],
+ ['src/player-web-src/35-online-chat.part','M'],
+ ['server-game/current/app.js','M'],
+ ['src/gmww-members-live.js','M'],
+ ['tests/gmww-chat-voice-discard-20261104.test.mjs','A'],
+ ['docs/releases/GMWW-CHAT-VOICE-DISCARD-20261104.md','A'],
+ ['.github/scripts/ci-browser-scope.mjs','M'],
+ ['.github/workflows/check-player-web.yml','M'],
+ ['tests/ci-browser-scope.test.mjs','M']
+]);
+const voiceDiscard786SourceBlobs=new Map([
+ ['server-game/src/45-online-chat.part',['34aa6de316a3049ed66d8a8ced2e404798ffc033','dcd5c8e0d28b9029581ceac53424b45603e54e03']],
+ ['src/player-web-src/35-online-chat.part',['deb21059dfcf438e3fddef608bb66fe27052eb90','1922b0386669c547ef0571302dae9c8a24888254']],
+ ['server-game/current/app.js',['774d26baf590a9cf7f3ff877a164f18f76314de6','27467a18c387c63f0f5ccd51a6965db9fe72d871']],
+ ['src/gmww-members-live.js',['6073be803c85853aba81e5fceaf95a5c9074d66f','854c4120ef7f1d7d5d02e2a427e9106c7b7130d2']]
+]);
+function voiceDiscard786Blob(source){
+ const data=Buffer.from(String(source),'utf8');
+ return createHash('sha1').update('blob '+data.length+'\0').update(data).digest('hex');
+}
+function isVoiceDiscard786Scope(changes){
+ if(!Array.isArray(changes)||changes.length!==voiceDiscard786Paths.size)return false;
+ const rows=new Map(changes.map(item=>[item.path,item]));
+ if(rows.size!==voiceDiscard786Paths.size)return false;
+ for(const [path,status] of voiceDiscard786Paths){
+  const row=rows.get(path);
+  if(!row||row.status!==status)return false;
+  const expected=voiceDiscard786SourceBlobs.get(path);
+  if(expected&&(
+    typeof row.before!=='string'||typeof row.after!=='string'||
+    voiceDiscard786Blob(row.before)!==expected[0]||
+    voiceDiscard786Blob(row.after)!==expected[1]
+  ))return false;
+ }
+ return true;
+}
+
 function classifyBrowserScope(changes){
+  if(isVoiceDiscard786Scope(changes))return 'chat-voice-discard-786';
   if(isV3296CometOrbitScope(changes))return 'comet-orbit-v3296';
   if(isPR778FinalMainScope(changes))return 'pr778-postmerge-worker';
   if(isPR778PostmergeWorkerScope(changes))return 'pr778-postmerge-worker';
@@ -5831,6 +5872,19 @@ function detect(){
       if(isPR778PostmergeWorkerScope(changes))
         return {mode:'pr778-postmerge-worker',reason:'Immutable PR778 reviewed Worker source and exactly eight public-bulletin recovery files'};
     }catch{} // Fall back to all tests if ancestry/diff proof fails.
+  }
+  // After merge, keep the SAME source-pinned Chat privacy gate on main.
+  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
+    try{
+      const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n').filter(Boolean);
+      const changes=rows.map(row=>{
+        const [status,file]=row.split('\t');
+        return{status,path:file,before:status==='M'?git('show','HEAD^1:'+file):null,
+          after:['M','A'].includes(status)?fs.readFileSync(file,'utf8'):null};
+      });
+      if(isVoiceDiscard786Scope(changes))
+        return{mode:'chat-voice-discard-786',reason:'Reviewed PR786 audio discard; privacy + Worker dry-run on main'};
+    }catch{}
   }
   if(process.env.GMWW_CI_EVENT!=='pull_request')return {mode:'full',reason:'Manual/other release requires full checks'};
   const base=String(process.env.GMWW_CI_BASE_SHA||'').trim();
