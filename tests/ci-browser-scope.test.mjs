@@ -1526,3 +1526,22 @@ test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',
  assert.equal(classifyBrowserScope([...rows,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'unsafe IPA'}]),'full');
  assert.equal(classifyBrowserScope(rows.map(x=>x.path==='src/player-web-src/35-online-chat.part'?{...x,after:x.after.replace('☄️','⭐')}:x)),'full');
 });
+
+test('V3296_POSTMERGE_RECOVERY routes only 2 audited CI files through full safety-focused Worker checks',()=>{
+ const rows=[
+  {path:'.github/scripts/ci-browser-scope.mjs',status:'M'},
+  {path:'tests/ci-browser-scope.test.mjs',status:'M'}
+ ];
+ assert.equal(classifyBrowserScope(rows),'comet-orbit-v3296');
+ assert.equal(classifyBrowserScope(rows.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...rows,{path:'src/index.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...rows,{path:'server-game/current/app.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope([...rows,{path:'server-game/GMWW-Server/GameView.swift',status:'M'}]),'full');
+ const source=readFileSync('.github/scripts/ci-browser-scope.mjs','utf8');
+ const start=source.indexOf('function detect(){');
+ const gate=source.indexOf('// V3296_POSTMERGE_RECOVERY:',start);
+ const historical=source.indexOf('Main contains changes outside the verified scoped lists',start);
+ assert.ok(start>=0&&gate>start&&historical>gate,'main push must see signed scope before historic full branch');
+ assert.ok(source.includes("git('diff','--quiet',pinned,'HEAD'"),'runtime bytes cannot change in recovery');
+ assert.ok(source.includes("parent===pinned"),'unreviewed parent must fail closed');
+});
