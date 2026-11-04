@@ -40,6 +40,8 @@ function makeRoom(phase){
   const instance={
     ...methods,ctx:{storage,getWebSockets:()=>[{close(_code,reason){closed.push(reason)}}]},
     async gmAuthorized(){return {ok:true,meta}},
+    // PR #744 voice notes live in DO SQLite; reset clears them (covered by voice-chat tests).
+    voiceCleared:0,async chatVoiceClear(){this.voiceCleared++},
     broadcast:event=>events.push(event)
   };
   return {meta,records,events,closed,instance};
@@ -56,6 +58,7 @@ for(const phase of ['lobby','role_delivery','running','ended']){
     assert.equal(result.hardReset,true);
     assert.equal(result.forcedEnd,true);
     assert.equal(result.playersCount,0);
+    assert.ok(instance.voiceCleared>=1,'forced End must also clear private voice notes');
     assert.equal(meta.phase,'lobby');
     assert.equal(meta.status,'waiting');
     assert.equal(meta.seatsLocked,false);
