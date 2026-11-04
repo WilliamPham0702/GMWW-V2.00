@@ -8,7 +8,7 @@ const player=read('src/player-web-src/35-online-chat.part');
 const bundle=read('src/gmww-members-live.js');
 const wolf=read('server-game/current/status-visuals.css');
 const webWolf=read('assets/village/status-visuals.css');
-const exact="kind==='actor'?'☄️':'🐦‍🔥'";
+const exact="kind==='actor'?'🧞‍♂️':'🐦‍🔥'";
 test('Comet marks acting player on Server and Player Web, phoenix remains target',()=>{
  for(const s of [gm,live,player]){assert.ok(s.includes(exact)); assert.ok(!s.includes("kind==='actor'?'🫧':'🐦‍🔥'"));}
  const p="export const gmwwMembersLiveScript = ";

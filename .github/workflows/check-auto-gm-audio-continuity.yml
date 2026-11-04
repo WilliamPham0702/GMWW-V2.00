@@ -1,0 +1,42 @@
+name: Check P0 Auto GM Audio Continuity (focused)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "server-game/src/30-village-and-setup.part"
+      - "server-game/src/40-battle-and-timeline.part"
+      - "server-game/current/app.js"
+      - "tests/gmww-auto-gm-audio-continuity-20261104.test.mjs"
+      - "tests/audio-binding-integrity-20261027.test.mjs"
+      - "tests/audio-role-day-flow-20261027.test.mjs"
+      - "tests/demo-audio-clock-sync-20261028.test.mjs"
+      - ".github/workflows/check-auto-gm-audio-continuity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audio:
+    name: P0 Auto GM Audio role/day continuity
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Validate source and JS syntax
+        run: |
+          node --check server-game/current/app.js
+          node .github/scripts/assemble-gm-app.mjs --verify
+      - name: Run focused role, system, morning, gallows and DEMO regression
+        run: |
+          node --test \
+            tests/gmww-auto-gm-audio-continuity-20261104.test.mjs \
+            tests/audio-binding-integrity-20261027.test.mjs \
+            tests/audio-role-day-flow-20261027.test.mjs \
+            tests/demo-audio-clock-sync-20261028.test.mjs

@@ -16,8 +16,8 @@ test('room creation step is not exposed and gathering follows lobby',()=>{
 });
 test('one mode toggle in gathering with existing server protection',()=>{
   assert.equal((html.match(/id="playRoomModeToggle"/g)||[]).length,1);
-  assert.match(html,/<div class="play-gather-mode-row"[\s\S]*?id="playRoomModeToggle"/);
-  assert.match(gm,/PLAY_ROOM_MODE_CYCLE=\['offline','online','demo'\]/);
+  assert.match(html,/<div class="play-gather-toolbar-actions"[^>]*>[\s\S]*?id="playRoomModeToggle"/);
+  assert.match(gm,/PLAY_ROOM_MODE_CYCLE=\['online','offline','demo'\]/);
   assert.match(gm,/async function flushPlayRoomMode/);
   assert.match(gm,/ROOM_MODE_REQUIRES_EMPTY_RESET/);
 });

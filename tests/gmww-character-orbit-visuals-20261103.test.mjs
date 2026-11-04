@@ -8,9 +8,9 @@ const webStatus=readFileSync('assets/village/status-visuals.css','utf8');
 const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
 const bundled=readFileSync('src/gmww-members-live.js','utf8');
 
-test('PR765 superseded: GM ☄️ and 🐦‍🔥 orbit uses original wolf status animation',()=>{
+test('PR765 superseded: GM 🧞‍♂️ and 🐦‍🔥 orbit uses original wolf status animation',()=>{
   assert.ok(gm.includes("className='battle-orbit gmww-sv-orbit'"));
-  assert.ok(gm.includes("kind==='actor'?'☄️':'🐦‍🔥'"));
+  assert.ok(gm.includes("kind==='actor'?'🧞‍♂️':'🐦‍🔥'"));
   assert.ok(status.includes('animation:gmwwSvVerticalOrbit 6s linear infinite!important'));
   assert.ok(webStatus.startsWith(status),'GM and Player status shared CSS must remain identical');
 });
@@ -19,7 +19,7 @@ test('Player Web attaches the exact wolf orbit to character portrait',()=>{
   assert.ok(player.includes('portrait.appendChild(orbit)'));
   assert.ok(player.includes("item.className='gmww-sv-orbit-item'"));
   assert.ok(player.includes("@keyframes gmwwSvVerticalOrbit"));
-  assert.ok(player.includes("kind==='actor'?'☄️':'🐦‍🔥'"));
+  assert.ok(player.includes("kind==='actor'?'🧞‍♂️':'🐦‍🔥'"));
   assert.ok(!player.includes('gmww-player-character-orbit'));
 });
 test('Compiled Player Web contains exact authored source',()=>{

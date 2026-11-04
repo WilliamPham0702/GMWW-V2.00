@@ -1521,7 +1521,7 @@ test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',
   if(path.endsWith('status-visuals.css'))before=after.replace('V3.296: ☄️','V3.295: 🫧');
   return{path,status:'M',before,after};
  }),...added.map(path=>({path,status:'A',before:null,after:readFileSync(path,'utf8')}))];
- assert.equal(classifyBrowserScope(rows),'comet-orbit-v3296');
+ assert.equal(classifyBrowserScope(rows),JSON.parse(readFileSync('package.json','utf8')).version==='3.296.0'?'comet-orbit-v3296':'full','V3.296 source classifier must fail closed after Runtime is upgraded');
  assert.equal(classifyBrowserScope(rows.slice(1)),'full');
  assert.equal(classifyBrowserScope([...rows,rows[0]]),'full');
  assert.equal(classifyBrowserScope([...rows,{path:'server-game/GMWW-Server/GameView.swift',status:'M',after:'unsafe IPA'}]),'full');
@@ -1559,6 +1559,102 @@ test('V3296_POSTMERGE_RECOVERY recognizes only real verified ancestry, not synth
  let pinnedAvailable=true;
  try{execFileSync('git',['cat-file','-e','fb3528abfd80b1eee5d96abe34fbb69059692678^{commit}'],{stdio:'ignore'});}
  catch{pinnedAvailable=false;}
- if(pinnedAvailable)assert.match(verified,/GMWW browser CI scope: comet-orbit-v3296/);
+ const current=JSON.parse(readFileSync('package.json','utf8')).version;
+ if(current==='3.296.0'&&pinnedAvailable)
+   assert.match(verified,/GMWW browser CI scope: comet-orbit-v3296/);
+ else if(current==='3.297.0')
+   assert.match(verified,/GMWW browser CI scope: (p0-auto-gm-audio-v3297|full)/,
+     'New Runtime may qualify only by its own audited scope or fail closed');
+ else if(current==='3.298.0')
+   assert.match(verified,/GMWW browser CI scope: (genie-orbit-v3298|full)/);
  else assert.match(verified,/GMWW browser CI scope: full/);
+});
+
+test('P0 V3.297 Auto GM audio release selects focused Worker safety only for reviewed exact files',()=>{
+ const exact=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/scripts/prepare-update-channel.mjs','M'],
+  ['.github/workflows/check-auto-gm-audio-continuity.yml','A'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['docs/releases/GMWW-P0-AUTO-GM-AUDIO-CONTINUITY-20261104.md','A'],
+  ['docs/releases/GMWW-RUNTIME-V3.297-AUTO-GM-AUDIO-20261104.md','A'],
+  ['package-lock.json','M'],['package.json','M'],
+  ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/30-village-and-setup.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/index.js','M'],['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/demo-audio-clock-sync-20261028.test.mjs','M'],
+  ['tests/gmww-auto-gm-audio-continuity-20261104.test.mjs','A']
+ ].map(([path,status])=>{
+   // The classifier receives before/after file bytes from the real PR diff.
+   // Build a synthetic V3.296 baseline without a network fetch or git history.
+   let before='';
+   if(path==='package.json'||path==='package-lock.json')
+     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replaceAll('3.297.0','3.296.0');
+   else if(path==='server-game/src/00-core-and-library.part')
+     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replace("const VERSION='3.297';","const VERSION='3.296';");
+   else if(path==='server-game/current/GMWW.html')
+     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replace('GMWW V3.297','GMWW V3.296');
+   else if(path==='src/index.js')
+     before=readFileSync(new URL('../'+path,import.meta.url),'utf8')
+       .replace('VERSION="V3.297"','VERSION="V3.296"')
+       .replace('UPDATE_CHANNEL_REV="runtime-3297-auto-gm-audio-continuity"',
+         'UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss"');
+   return {path,status,before};
+ });
+ const current=JSON.parse(readFileSync('package.json','utf8')).version;
+ assert.equal(classifyBrowserScope(exact),current==='3.297.0'?'p0-auto-gm-audio-v3297':'full');
+ assert.equal(classifyBrowserScope(exact.slice(1)),'full','missing required file fails closed');
+ assert.equal(classifyBrowserScope([...exact,{path:'src/gmww-room-config-rules.js',status:'M'}]),'full','any new Worker logic fails closed');
+ assert.equal(classifyBrowserScope(exact.map(c=>c.path==='package.json'?{...c,status:'A'}:c)),'full','version status cannot be forged');
+});
+
+// V3298 exact icon-only scope; unrelated Worker, native, audio or game changes must fail closed.
+test('V3298 exact icon-only scope preserves wolf orbit and refuses extra files',()=>{
+ const expected=[
+  ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/scripts/prepare-update-channel.mjs','M'],
+  ['.github/workflows/check-player-web.yml','M'],
+  ['docs/releases/GMWW-RUNTIME-V3.298-GENIE-TURN-ICON-20261104.md','A'],
+  ['package.json','M'],['package-lock.json','M'],['src/index.js','M'],
+  ['server-game/current/GMWW.html','M'],['server-game/current/app.js','M'],
+  ['server-game/src/00-core-and-library.part','M'],
+  ['server-game/src/40-battle-and-timeline.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],['src/gmww-members-live.js','M'],
+  ['tests/gmww-wolf-orbit-reuse-v3295.test.mjs','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','M'],
+  ['tests/gmww-online-four-fixes-v3293.test.mjs','M'],
+  ['tests/gmww-comet-turn-orbit-v3296.test.mjs','M'],
+  ['tests/ci-browser-scope.test.mjs','M'],
+  ['tests/gmww-genie-turn-orbit-v3298.test.mjs','A']
+ ];
+ const changes=expected.map(([path,status])=>{
+  const after=readFileSync(path,'utf8');
+  let before=status==='A'?null:after;
+  if(before){
+   if(['server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
+       'src/player-web-src/35-online-chat.part','src/gmww-members-live.js',
+       'tests/gmww-wolf-orbit-reuse-v3295.test.mjs',
+       'tests/gmww-character-orbit-visuals-20261103.test.mjs',
+       'tests/gmww-online-four-fixes-v3293.test.mjs',
+       'tests/gmww-comet-turn-orbit-v3296.test.mjs'].includes(path))
+    before=before.split('🧞‍♂️').join('☄️');
+   if(['package.json','package-lock.json'].includes(path))before=before.replaceAll('"version": "3.298.0"','"version": "3.297.0"');
+   if(['server-game/current/app.js','server-game/src/00-core-and-library.part'].includes(path))
+    before=before.replace("const VERSION='3.298';","const VERSION='3.297';");
+   if(path==='server-game/current/GMWW.html')before=before.replace('<title>GMWW V3.298</title>','<title>GMWW V3.297</title>');
+   if(path==='src/index.js')before=before.replace('VERSION="V3.298"','VERSION="V3.297"')
+     .replace('UPDATE_CHANNEL_REV="runtime-3298-genie-turn-orbit"','UPDATE_CHANNEL_REV="runtime-3297-auto-gm-audio-continuity"');
+   if(path==='.github/scripts/prepare-update-channel.mjs')
+    before=before.replace(/releaseNotes:\["V3\.298[^"]*",/,'releaseNotes:[');
+  }
+  return {path,status,before,after};
+ });
+ assert.equal(classifyBrowserScope(changes),JSON.parse(readFileSync('package.json','utf8')).version==='3.298.0'?'genie-orbit-v3298':'full','Historical V3.298 scope fails closed after version advance');
+ assert.equal(classifyBrowserScope(changes.slice(1)),'full');
+ assert.equal(classifyBrowserScope([...changes,{path:'src/gmww-demo-runner.js',status:'M'}]),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='package.json'?{...c,status:'A'}:c)),'full');
+ assert.equal(classifyBrowserScope(changes.map(c=>c.path==='src/player-web-src/35-online-chat.part'?
+   {...c,after:c.after.replace('🐦‍🔥','🔥')}:c)),'full');
 });
