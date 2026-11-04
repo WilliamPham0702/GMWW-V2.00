@@ -50,7 +50,7 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
-const PROJECT="GMWW-V2.00",VERSION="V3.302",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3302-player-sync-five",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.303",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3303-turn-audio-sync",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -124,6 +124,7 @@ export class RoomDurableObject extends DurableObject {
   async handleFetch(request){
     const url=new URL(request.url);
     if(url.pathname==="/gm/announcement"&&request.method==="PUT")return this.gmAnnouncement(request,await safeJson(request));
+    if(url.pathname==="/gm/announcement"&&request.method==="GET")return this.gmAnnouncementLibrary(request);
     if(url.pathname==="/player/announcement"&&request.method==="POST")return this.playerAnnouncement(await safeJson(request));
     if(url.pathname==="/security/rate-limit"&&request.method==="POST")return this.securityRateLimit(await safeJson(request));
     if(url.pathname==="/storage-optimizer/stats"&&request.method==="GET")return j(this.gmwwWriteOptimizerStatus());
@@ -1200,23 +1201,54 @@ export class RoomDurableObject extends DurableObject {
       villageHistory:await this.villageHistoryForMatch(meta,interactions),
       interactionResponses,activeEffects,drunkDraws,artifactCycle:{cycleKey:artifactCycleKeyValue,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3))),accepted:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.slice(-30):[]},nightRuntime,battleUndo,battleActionUsage,nightIntel,winProposal,dayActionUsage:await this.ctx.storage.get("dayRoleUsage:"+String(meta.matchId||""))||[],gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,connections:this.ctx.getWebSockets().length,kicked:pruned.removed.map(p=>p.participantId)})
   }
-  async currentAnnouncement(meta){
-    const runtime=meta?.cyclePhase==='night'?await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
+  async currentAnnouncement(meta,runtime){
+    if(runtime===undefined)runtime=meta?.cyclePhase==='night'?await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
     return announcementCue(meta,runtime);
+  }
+  // Public cue for Players: label, Server start time and opaque clip URLs only.
+  async announcementWithAudio(meta,runtime){
+    const cue=await this.currentAnnouncement(meta,runtime);if(!cue)return null;
+    const lib=await announcementLibrary(this.ctx.storage),hashes=cue.targets.map(t=>lib[t]).filter(Boolean);
+    const out={key:cue.key,label:cue.label,startedAt:cue.startedAt};
+    if(hashes.length){out.audio=hashes.map(h=>'/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a='+h);out.audioUrl=out.audio[0]}
+    return out;
+  }
+  scheduleAnnouncementSync(){
+    if(this.announcementSyncTimer)return;
+    this.announcementSyncTimer=setTimeout(()=>{this.announcementSyncTimer=null;this.syncAnnouncementCue(false).catch(()=>{})},60);
+  }
+  // Push the cue to every socket whenever the current turn or its clips change.
+  async syncAnnouncementCue(force){
+    const meta=await this.ctx.storage.get('meta'),cue=meta?await this.announcementWithAudio(meta):null;
+    const sig=cue?cue.key+'|'+(cue.audio||[]).join(','):'';
+    if(!force&&sig===this.lastAnnouncementSig)return;
+    this.lastAnnouncementSig=sig;
+    if(cue)this.broadcast({type:'announcement_ready',audioCue:cue,serverTime:Date.now()});
   }
   async gmAnnouncement(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
-    const cue=await this.currentAnnouncement(auth.meta),saved=await saveAnnouncement(this.ctx.storage,body,cue?.key);
-    // Push the recorded turn audio to every Player at once (not only on their next
-    // /me poll), so the whole village hears each role's turn in sync with the GM.
-    if(saved.ok&&cue?.key)this.broadcast({type:"announcement_ready",audioCue:{key:cue.key,label:cue.label,
-      audioUrl:'/api/rooms/'+encodeURIComponent(auth.meta.code)+'/announcement-audio?key='+encodeURIComponent(cue.key)},serverTime:Date.now()});
+    const meta=auth.meta;let target=String(body?.target||'');
+    if(!target){
+      // Runtime <=V3.302 uploads the current turn's first clip by turn key.
+      const cue=await this.currentAnnouncement(meta);
+      if(!cue||body?.key!==cue.key||!cue.targets[0])return j({ok:false,error:'STALE_AUDIO_CUE'},409);
+      target=cue.targets[0];
+    }
+    const saved=await saveAnnouncementTarget(this.ctx.storage,target,decodeRecording(body));
+    if(saved.ok&&meta?.phase==='running')await this.syncAnnouncementCue(false);
     return saved;
+  }
+  async gmAnnouncementLibrary(request){
+    const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    return j({ok:true,targets:await announcementLibrary(this.ctx.storage)});
   }
   async playerAnnouncement(body){
     const meta=await this.ctx.storage.get('meta'),players=await this.ctx.storage.get('players')||{};
     if(!meta||meta.enabled===false||!players['member:'+normalizeLoginId(body?.loginId)])return j({ok:false,error:'PLAYER_NOT_IN_ROOM'},403);
-    return readAnnouncement(this.ctx.storage,String(body?.key||''),(await this.currentAnnouncement(meta))?.key);
+    // Only clips of the turn that is live right now are readable by Players.
+    const cue=await this.announcementWithAudio(meta),hash=String(body?.a||'');
+    if(!cue?.audio?.some(u=>u.endsWith('?a='+hash)))return new Response(null,{status:404});
+    return readAnnouncementBlob(this.ctx.storage,hash);
   }
   async gmRoleAssets(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -3129,9 +3161,7 @@ export class RoomDurableObject extends DurableObject {
           steps:[{label:"Làng ơi dậy đi",status:"active"},{label:"Thông cáo Làng",status:"upcoming"},{label:"Lên Giàn",status:"upcoming"}]}
       :null;
     // Public role call only. Never reveal the actor, role owner or hidden target.
-    const audioCue=announcementCue(meta,wolfRuntime);
-    const recorded=audioCue?await this.ctx.storage.get('announcement:meta'):null;
-    if(audioCue&&recorded?.key===audioCue.key)audioCue.audioUrl='/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?key='+encodeURIComponent(audioCue.key);
+    const audioCue=await this.announcementWithAudio(meta,wolfRuntime);
     const drawn=Number(meta.cycleNight)===3&&String(meta.cyclePhase)==='night'?
       await this.ctx.storage.get('drunkDeck:'+String(meta.matchId)+':3:'+loginId):null;
     const drunkDraw=drawn&&(drawn.selectedId||
@@ -3555,6 +3585,8 @@ export class RoomDurableObject extends DurableObject {
       Object.fromEntries(Object.entries(payload).filter(([key])=>key!=='runtime'&&key!=='nightRuntime')):payload;
     if(this.demoBroadcastBuffer){this.demoBroadcastBuffer.push(safe);return}
     const e=JSON.stringify(safe);for(const s of this.ctx.getWebSockets())try{s.send(e)}catch{}
+    // Any turn/phase change re-resolves the public turn audio for every device.
+    if(safe&&['night_turn','room_cycle','room_state','auto_gm','demo_control','room_reset','room_hard_reset','game_result'].includes(safe.type))this.scheduleAnnouncementSync();
   }
 }
 
@@ -3845,14 +3877,14 @@ export default {async fetch(request,env){
   const drunkDraw=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/drunk\/draw$/);
   if(drunkDraw&&request.method==='POST')return playerDrunkDrawApi(env,drunkDraw[1],request);
   const gmAnnouncement=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
-  if(gmAnnouncement&&request.method==='PUT')return roomProxy(env,gmAnnouncement[1],'/gm/announcement',request);
+  if(gmAnnouncement&&(request.method==='PUT'||request.method==='GET'))return roomProxy(env,gmAnnouncement[1],'/gm/announcement',request);
   const playerAnnouncement=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
   if(playerAnnouncement&&request.method==='GET'){
     const code=normalizeRoomCode(playerAnnouncement[1]);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
     const session=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));
     if(!session.ok)return session;
     const data=await session.json();
-    return roomStub(env,code).fetch('https://room.internal/player/announcement',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({loginId:data.member.loginId,key:url.searchParams.get('key')})});
+    return roomStub(env,code).fetch('https://room.internal/player/announcement',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({loginId:data.member.loginId,a:url.searchParams.get('a')})});
   }
   const playerAudio=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/chat\/audio\/([a-f0-9-]{36})$/);
   if(playerAudio&&request.method==="GET")return playerRoomChatAudioApi(env,playerAudio[1],playerAudio[2],request);
@@ -4275,15 +4307,37 @@ function timingSafeEqual(a,b){if(a.length!==b.length)return false;let x=0;for(le
 async function playerSeatSwapApi(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);const me=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));if(!me.ok)return me;const data=await me.json(),body=await safeJson(request)||{};return roomStub(env,code).fetch('https://room.internal/player/seat-swap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...body,loginId:data.member.loginId})})}
 
 // BEGIN RECORDED PUBLIC ANNOUNCEMENTS
-// Only the current public wake-up cue is eligible. Never publish action/result audio.
+// V3.303: public turn audio is server-driven. The GM uploads each configured clip once
+// per room (library keyed by audio target, stored by content hash). Every turn change
+// resolves the clips on the Server and pushes an opaque URL + Server start time to all
+// devices, so Players hear the same point even if the GM app is in background.
+const ANNOUNCE_WOLF_ROLES=['role_wolf','role_alpha_wolf'];
+function announcementTargetsForTurn(turn){
+  if(!turn)return [];
+  const rid=r=>String(r?.roleId||'');
+  if(turn.kind==='village-wakeup')return ['system:audio_system_day_wakeup'];
+  if(turn.kind==='early-artifact-window')return ['system:audio_system_early_artifacts'];
+  if(turn.kind==='wolf-introduction'||turn.kind==='wolf-pack-bite')return ['cards:audio_group_wolves'];
+  if(['artifact-main','early-artifact'].includes(turn.kind))return turn.artifactId?['artifacts:'+String(turn.artifactId)]:[];
+  if(turn.kind==='role-group'){
+    const roles=Array.isArray(turn.roles)?turn.roles:[],out=[],seen=new Set(),wolves=roles.some(r=>ANNOUNCE_WOLF_ROLES.includes(rid(r)));
+    if(wolves)out.push('cards:audio_group_wolves');
+    for(const r of roles){const id=rid(r);if(!id||seen.has(id)||wolves&&ANNOUNCE_WOLF_ROLES.includes(id))continue;seen.add(id);out.push('cards:'+id)}
+    return out.slice(0,6);
+  }
+  if(ANNOUNCE_WOLF_ROLES.includes(rid(turn)))return ['cards:audio_group_wolves'];
+  return rid(turn)?['cards:'+rid(turn)]:[];
+}
 function announcementCue(meta,runtime){
   if(meta?.phase!=='running')return null;
   const turn=runtime?.queue?.[runtime.cursor];
-  if(meta.cyclePhase==='night'&&turn)return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':'+String(turn.id),label:String(turn.label||'Đến lượt Vai Trò').slice(0,120)};
-  if(meta.cyclePhase==='morning')return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':wakeup',label:'Làng ơi dậy đi'};
+  if(meta.cyclePhase==='night'&&turn)return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':'+String(turn.id),label:String(turn.label||'Đến lượt Vai Trò').slice(0,120),
+    targets:announcementTargetsForTurn(turn),startedAt:Date.parse(turn.startedAt||runtime.startedAt||'')||0};
+  if(meta.cyclePhase==='morning')return {key:String(meta.matchId)+':'+String(meta.cycleKey)+':wakeup',label:'Làng ơi dậy đi',
+    targets:['system:audio_system_day_wakeup'],startedAt:Date.parse(meta.cycleStartedAt||'')||0};
   return null;
 }
-const chunkSize=60000,maxBytes=2*1024*1024;
+const chunkSize=60000,maxBytes=2*1024*1024,ANNOUNCE_TARGET_RE=/^(cards|system|artifacts):[A-Za-z0-9_.:-]{1,120}$/,ANNOUNCE_HASH_RE=/^[a-f0-9]{32}$/,ANNOUNCE_MAX_TARGETS=200;
 function decodeRecording(body){
   if(typeof body?.base64!=='string'||body.base64.length>Math.ceil(maxBytes/3)*4||!body.base64.length||!/^[-A-Za-z0-9+/]*={0,2}$/.test(body.base64))return null;
   try{
@@ -4297,30 +4351,43 @@ function decodeRecording(body){
     return valid?{bytes,mime}:null;
   }catch{return null}
 }
-async function saveAnnouncement(storage,body,currentKey){
-  if(!currentKey||body?.key!==currentKey)return Response.json({ok:false,error:'STALE_AUDIO_CUE'},{status:409});
-  const recording=decodeRecording(body);
-  if(!recording)return Response.json({ok:false,error:'INVALID_RECORDED_AUDIO'},{status:400});
-  await storage.transaction(async tx=>{
-    const previous=await tx.get('announcement:meta'),count=Math.ceil(recording.bytes.length/chunkSize);
-    for(let i=0;i<count;i++)await tx.put('announcement:chunk:'+i,recording.bytes.slice(i*chunkSize,(i+1)*chunkSize));
-    for(let i=count;i<Number(previous?.count||0);i++)await tx.delete('announcement:chunk:'+i);
-    await tx.put('announcement:meta',{key:currentKey,mime:recording.mime,count,size:recording.bytes.length});
-  });
-  return Response.json({ok:true,key:currentKey});
+async function announcementHash(bytes){
+  const d=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  return [...d.slice(0,16)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-async function readAnnouncement(storage,key,currentKey){
-  if(!key||key!==currentKey)return new Response(null,{status:404});
-  return storage.transaction(async tx=>{
-    const meta=await tx.get('announcement:meta');
-    if(meta?.key!==key)return new Response(null,{status:404});
-    const bytes=new Uint8Array(meta.size);let offset=0;
-    for(let i=0;i<meta.count;i++){
-      const chunk=await tx.get('announcement:chunk:'+i);
-      if(!chunk)return new Response(null,{status:404});
-      bytes.set(chunk,offset);offset+=chunk.length;
+async function announcementLibrary(storage){
+  const out={};for(const [k,v] of await storage.list({prefix:'annTarget:'}))if(v?.hash)out[k.slice(10)]=v.hash;return out;
+}
+// Store one clip for a target; old bytes are removed once no target references them.
+async function saveAnnouncementTarget(storage,target,recording){
+  if(!ANNOUNCE_TARGET_RE.test(String(target||'')))return Response.json({ok:false,error:'INVALID_AUDIO_TARGET'},{status:400});
+  if(!recording)return Response.json({ok:false,error:'INVALID_RECORDED_AUDIO'},{status:400});
+  const hash=await announcementHash(recording.bytes),lib=await announcementLibrary(storage),old=lib[target];
+  if(old===hash)return Response.json({ok:true,target,hash,unchanged:true});
+  if(!old&&Object.keys(lib).length>=ANNOUNCE_MAX_TARGETS)return Response.json({ok:false,error:'AUDIO_LIBRARY_FULL'},{status:409});
+  await storage.transaction(async tx=>{
+    if(!await tx.get('annBlob:'+hash)){
+      const count=Math.ceil(recording.bytes.length/chunkSize);
+      for(let i=0;i<count;i++)await tx.put('annBlob:'+hash+':'+i,recording.bytes.slice(i*chunkSize,(i+1)*chunkSize));
+      await tx.put('annBlob:'+hash,{mime:recording.mime,count,size:recording.bytes.length});
     }
-    return new Response(bytes,{headers:{'content-type':meta.mime,'cache-control':'no-store','x-content-type-options':'nosniff'}});
+    await tx.put('annTarget:'+target,{hash,updatedAt:Date.now()});
+    if(old&&!Object.entries(lib).some(([t,h])=>t!==target&&h===old)){
+      const prev=await tx.get('annBlob:'+old);
+      for(let i=0;i<Number(prev?.count||0);i++)await tx.delete('annBlob:'+old+':'+i);
+      await tx.delete('annBlob:'+old);
+    }
+  });
+  return Response.json({ok:true,target,hash});
+}
+async function readAnnouncementBlob(storage,hash){
+  if(!ANNOUNCE_HASH_RE.test(String(hash||'')))return new Response(null,{status:404});
+  return storage.transaction(async tx=>{
+    const meta=await tx.get('annBlob:'+hash);if(!meta)return new Response(null,{status:404});
+    const bytes=new Uint8Array(meta.size);let offset=0;
+    for(let i=0;i<meta.count;i++){const chunk=await tx.get('annBlob:'+hash+':'+i);if(!chunk)return new Response(null,{status:404});bytes.set(chunk,offset);offset+=chunk.length}
+    // Content-addressed: the URL changes when the GM changes the clip.
+    return new Response(bytes,{headers:{'content-type':meta.mime,'cache-control':'private, max-age=86400, immutable','x-content-type-options':'nosniff'}});
   });
 }
 // END RECORDED PUBLIC ANNOUNCEMENTS
