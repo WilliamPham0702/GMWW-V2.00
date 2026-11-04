@@ -1512,8 +1512,16 @@ test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',
   'tests/ci-browser-scope.test.mjs'
  ];
  const added=['docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md','tests/gmww-comet-turn-orbit-v3296.test.mjs'];
+ // Replay the V3.296 historical release fixture even after Runtime advances:
+ // scope authorization must still require the exact older version and 19 files.
+ const currentVersion=JSON.parse(readFileSync('package.json','utf8')).version.replace(/\\.0$/,'');
+ const historicalVersionPaths=new Set([
+  'server-game/src/00-core-and-library.part','server-game/current/app.js',
+  'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json'
+ ]);
  const rows=[...modifiedPaths.map(path=>{
-  const after=readFileSync(path,'utf8');
+  const current=readFileSync(path,'utf8');
+  const after=historicalVersionPaths.has(path)?current.replaceAll(currentVersion,'3.296'):current;
   let before=after;
   if(path==='server-game/src/40-battle-and-timeline.part'||path==='src/player-web-src/35-online-chat.part')
     before=after.replace("kind==='actor'?'☄️':'🐦‍🔥'","kind==='actor'?'🫧':'🐦‍🔥'");
