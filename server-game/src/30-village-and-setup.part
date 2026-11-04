@@ -751,9 +751,9 @@ function renderPlayRealtimeHeader(){
 function clearStalePlayRoom(){disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;playSceneState.selectedMemberIds=[];playSceneState.step='lobby';playSceneState.phase='lobby';playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;savePlayScene();gmwwSendGmPresence(true);renderPlayScene()}
 const PLAY_ROOM_REGISTRY_KEY='gmww_v306_room_registry';
 const playRoomUiState={stage:'rooms',selectedCode:'',editorMode:'',lastTapCode:'',lastTapAt:0,modeTouched:false,pendingMode:'',modeSaving:false};
-const PLAY_ROOM_MODE_CYCLE=['offline','online','demo'];
+const PLAY_ROOM_MODE_CYCLE=['online','offline','demo'];
 function nextPlayRoomMode(current,hasSelected=true){
-  if(!hasSelected)return 'offline'; // First touch explicitly selects Offline.
+  if(!hasSelected)return 'online'; // First touch in Tập hợp explicitly selects Online.
   const at=PLAY_ROOM_MODE_CYCLE.indexOf(current);
   return PLAY_ROOM_MODE_CYCLE[(at+1)%PLAY_ROOM_MODE_CYCLE.length];
 }
@@ -1888,7 +1888,7 @@ function renderPlayContext(){
       }else if(playSceneState.step==='seats'){
         const st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
         actions.innerHTML='<button class="play-action-chip" data-play-call-members type="button"><span>♧</span><b>GỌI THÀNH VIÊN</b></button><button class="play-action-chip active" data-play-seat-manual type="button"><span>☝</span><b>THỦ CÔNG</b></button><button class="play-action-chip" data-play-random-seats type="button"><span>⚄</span><b>NGẪU NHIÊN</b></button><button class="play-action-chip '+(locked?'active':'')+'" data-play-seat-lock-toggle type="button"><span>'+ (locked?'🔒':'🔓') +'</span><b>'+(locked?'MỞ KHÓA XẾP CHỖ':'CHỐT XẾP CHỖ')+'</b></button><button class="play-action-chip play-seat-total" disabled><span>●</span><b>'+st.occupied+'/'+st.seatCount+'</b></button>';
-        actions.querySelector('[data-play-call-members]')?.addEventListener('click',playCallOnlineMembers);
+        actions.querySelector('[data-play-call-members]')?.addEventListener('click',()=>{void openPlayRosterSheet()});
         actions.querySelector('[data-play-random-seats]')?.addEventListener('click',playRandomSeatRemaining);
         actions.querySelector('[data-play-seat-lock-toggle]')?.addEventListener('click',()=>playSetSeatLock(!locked));
         actions.querySelector('[data-play-seat-manual]')?.addEventListener('click',()=>playFlashError('Chạm chiếc lá trên sân rồi chọn người chơi cho vị trí đó.'))
@@ -2046,6 +2046,7 @@ function initPlaySeatOffsetControls(){
     suppressClick=false;event.preventDefault();event.stopImmediatePropagation();
   },true);
 }
+const playGatherFlow={roomCode:'',seatChosen:false,distributeMode:''};
 function renderPlayGatherToolbar(){
   const bar=document.getElementById('playGatherToolbar');if(!bar)return;
   renderPlayRoomModeControl();
@@ -2055,14 +2056,33 @@ function renderPlayGatherToolbar(){
   initPlayGatherSpacing();initPlaySeatOffsetControls();
   const members=playLiveMembers(),st=playSeatStats(),locked=!!playSceneRuntime.room?.seatsLocked;
   if(locked)closePlaySeatPresetPanel();
+  if(playGatherFlow.roomCode!==String(playSceneState.roomCode)){
+    playGatherFlow.roomCode=String(playSceneState.roomCode);playGatherFlow.seatChosen=false;playGatherFlow.distributeMode='';
+  }
+  if(!members.length){playGatherFlow.seatChosen=false;playGatherFlow.distributeMode=''}
+  else if(members.some(m=>Number(m?.seatId||0)>0))playGatherFlow.seatChosen=true;
+  const hasMembers=members.length>0,hasSeat=hasMembers&&playGatherFlow.seatChosen;
+  const allPlaced=hasSeat&&st.occupied===members.length&&members.every(m=>Number(m?.seatId||0)>0);
+  const blocked=locked||!!playSceneRuntime.busy;
   const count=document.getElementById('playGatherCount');
   if(count)count.textContent=members.length+' người • '+st.occupied+'/'+st.seatCount+' vị trí';
-  for(const id of ['playGatherCall','playGatherSeatPreset','playGatherRandom','playGatherManual']){
-    const el=document.getElementById(id);if(el)el.disabled=locked||playSceneRuntime.busy;
+  const call=document.getElementById('playGatherCall'),seat=document.getElementById('playGatherSeatPreset');
+  const distribute=document.getElementById('playGatherDistribute'),confirm=document.getElementById('playGatherConfirm');
+  const disband=document.getElementById('playGatherDisband');
+  if(call)call.disabled=blocked;
+  if(seat)seat.disabled=blocked||!hasMembers;
+  if(distribute){
+    distribute.disabled=blocked||!hasSeat;distribute.dataset.mode=playGatherFlow.distributeMode||'choose';
+    const symbol=distribute.querySelector('span');if(symbol)symbol.textContent=playGatherFlow.distributeMode==='random'?'☝':'⚄';
+    distribute.setAttribute('aria-label',playGatherFlow.distributeMode==='random'?'Phân bố: chạm để chuyển sang thủ công':'Phân bố: chạm để xếp ngẫu nhiên');
   }
-  const confirm=document.getElementById('playGatherConfirm');
-  if(confirm){confirm.disabled=!!playSceneRuntime.busy;const b=confirm.querySelector('b');if(b)b.textContent=locked?'MỞ KHÓA':'CHỐT VỊ TRÍ';}
-  const disband=document.getElementById('playGatherDisband');if(disband)disband.disabled=!!playSceneRuntime.busy||!members.length;
+  if(confirm){confirm.disabled=!!playSceneRuntime.busy||(!locked&&!allPlaced);const b=confirm.querySelector('b');if(b)b.textContent=locked?'MỞ KHÓA':'CHỐT';}
+  if(disband)disband.disabled=!!playSceneRuntime.busy||!hasMembers;
+  const next=!hasMembers?'call':!hasSeat?'seat':!allPlaced?'distribute':'confirm';
+  for(const [id,done,current] of [
+    ['playGatherCall',hasMembers,next==='call'],['playGatherSeatPreset',hasSeat,next==='seat'],
+    ['playGatherDistribute',allPlaced,next==='distribute'],['playGatherConfirm',locked,next==='confirm']
+  ]){const el=document.getElementById(id);if(el){el.classList.toggle('is-complete',done);el.classList.toggle('is-current',current&&!el.disabled)}}
   bar.classList.remove('is-auto-hidden');bar.dataset.autoHidden='0';
   if(typeof bar.gmwwGatherClampOnscreen==='function')requestAnimationFrame(bar.gmwwGatherClampOnscreen);
 }
@@ -2121,5 +2141,5 @@ async function playApplySeatPreset(count){
   if(count<members.length||count<maxSeat){playFlashError('Mẫu '+count+' chỗ không đủ cho '+members.length+' người hoặc vị trí đã xếp.');return}
   const shape=layout.recommendedSeatShape(count);
   const ok=await playUpdateRoomSettings({seatCount:count,seatLayout:shape});
-  if(ok)closePlaySeatPresetPanel();
+  if(ok){playGatherFlow.seatChosen=true;playGatherFlow.distributeMode='';closePlaySeatPresetPanel();renderPlayGatherToolbar();}
 }
