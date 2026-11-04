@@ -1514,7 +1514,7 @@ test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',
  const added=['docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md','tests/gmww-comet-turn-orbit-v3296.test.mjs'];
  // Replay the V3.296 historical release fixture even after Runtime advances:
  // scope authorization must still require the exact older version and 19 files.
- const currentVersion=JSON.parse(readFileSync('package.json','utf8')).version.replace(/\\.0$/,'');
+ const currentVersion=JSON.parse(readFileSync('package.json','utf8')).version.replace(/\.0$/,'');
  const historicalVersionPaths=new Set([
   'server-game/src/00-core-and-library.part','server-game/current/app.js',
   'server-game/current/GMWW.html','src/index.js','package.json','package-lock.json'
