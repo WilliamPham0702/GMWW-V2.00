@@ -4441,65 +4441,71 @@ function isP0AutoGmAudio3297Scope(changes){
  }catch{return false}
 }
 
-// PR789: strictly reviewed GM-only six-action Gathering UI. Never skip Worker
-// or privacy checks for any changed Worker, Native, audio, version or data files.
-function isGatherSix789Scope(changes){
+// V3.298: exact glyph-only Runtime delta, never authorize other game/Worker or native changes.
+function isGenieTurnIconV3298Scope(changes){
  const spec=new Map([
   ['.github/scripts/ci-browser-scope.mjs','M'],
+  ['.github/scripts/prepare-update-channel.mjs','M'],
   ['.github/workflows/check-player-web.yml','M'],
-  ['server-game/current/GMWW.html','M'],
-  ['server-game/current/app.js','M'],
-  ['server-game/src/30-village-and-setup.part','M'],
+  ['docs/releases/GMWW-RUNTIME-V3.298-GENIE-TURN-ICON-20261104.md','A'],
+  ['package.json','M'],['package-lock.json','M'],
+  ['src/index.js','M'],['server-game/current/GMWW.html','M'],
+  ['server-game/current/app.js','M'],['server-game/src/00-core-and-library.part','M'],
   ['server-game/src/40-battle-and-timeline.part','M'],
-  ['server-game/src/50-roles-and-artifacts.part','M'],
+  ['src/player-web-src/35-online-chat.part','M'],['src/gmww-members-live.js','M'],
+  ['tests/gmww-wolf-orbit-reuse-v3295.test.mjs','M'],
+  ['tests/gmww-character-orbit-visuals-20261103.test.mjs','M'],
+  ['tests/gmww-online-four-fixes-v3293.test.mjs','M'],
+  ['tests/gmww-comet-turn-orbit-v3296.test.mjs','M'],
   ['tests/ci-browser-scope.test.mjs','M'],
-  ['tests/gather-scroll-flow.test.mjs','A'],
-  ['tests/lobby-gather-mode-assassin-20261027.test.mjs','M'],
-  ['tests/v3177-room-mode-glass-dock.test.mjs','M']
+  ['tests/gmww-genie-turn-orbit-v3298.test.mjs','A']
  ]);
  if(!Array.isArray(changes)||changes.length!==spec.size||
-    new Set(changes.map(c=>c?.path)).size!==spec.size||
-    changes.some(c=>spec.get(c?.path)!==c?.status))return false;
+    new Set(changes.map(c=>c.path)).size!==spec.size||
+    changes.some(c=>spec.get(c.path)!==c.status))return false;
  try{
-  // Pin every reviewed app and test blob. Git hashes are over the exact bytes,
-  // so an unexpected change reverts to full CI even with the same filenames.
-  const pinned=new Map([
-   ['server-game/current/GMWW.html','08b2b9c07a760916476d2efb04c87408493f77c2'],
-   ['server-game/current/app.js','1cc654f0fd1891d4749fceb66422af357812e05c'],
-   ['server-game/src/30-village-and-setup.part','8c2fc3e821cf54de9960fc952ea52e1b2bb81bc8'],
-   ['server-game/src/40-battle-and-timeline.part','176b60f77d6c113571ed7a78dc363bbe1f728495'],
-   ['server-game/src/50-roles-and-artifacts.part','945c008d4b5b7705ebcf801e4b100416a6d7f37a'],
-   ['tests/ci-browser-scope.test.mjs','22b1de71da3ad60423f4078bd0172d8f9d891ec2'],
-   ['tests/gather-scroll-flow.test.mjs','5e7c4e8fb0be8e2e3b5a17eb0f579df6a8d84f5b'],
-   ['tests/lobby-gather-mode-assassin-20261027.test.mjs','93145d668f203c21a400abce4518e9b96a99eb24'],
-   ['tests/v3177-room-mode-glass-dock.test.mjs','f81f5c0a2cda183761b4b94c48a0c657b5aa5683']
-  ]);
-  for(const [file,expected] of pinned){
-   const blob=fs.readFileSync(file);
-   const actual=createHash('sha1').update('blob '+blob.length+'\0').update(blob).digest('hex');
-   if(actual!==expected)return false;
-  }
-  const parts=['00-core-and-library.part','10-library-and-settings.part',
-   '20-members-and-roster.part','30-village-and-setup.part',
-   '40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
-  const bundled=Buffer.concat(parts.map(name=>fs.readFileSync('server-game/src/'+name)));
-  if(!bundled.equals(fs.readFileSync('server-game/current/app.js')))return false;
-  if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.297.0')return false;
-  const ci=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
-  if(!ci.includes("steps.scope.outputs.mode == 'gather-six-789'")||
-    !ci.includes('tests/gather-scroll-flow.test.mjs')||
-    !ci.includes('node .github/scripts/assemble-gm-app.mjs --verify')||
-    !ci.includes('npm run check'))return false;
-  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  if(!html.includes('id="playGatherDistribute"')||
-     !html.includes('id="playGatherDisband"')||
-     !html.includes('touch-action:pan-x!important'))return false;
-  return true;
+  const rows=new Map(changes.map(c=>[c.path,c]));
+  const before=p=>String(rows.get(p)?.before??'');
+  const after=p=>String(rows.get(p)?.after??fs.readFileSync(p,'utf8'));
+  const strictly=(p,a,b)=>before(p).includes(a)&&before(p).split(a).length===2&&before(p).replace(a,b)===after(p);
+  const oldGlyph="kind==='actor'?'☄️':'🐦‍🔥'",newGlyph="kind==='actor'?'🧞‍♂️':'🐦‍🔥'";
+  for(const p of ['server-game/src/40-battle-and-timeline.part','src/player-web-src/35-online-chat.part'])
+   if(!strictly(p,oldGlyph,newGlyph))return false;
+  for(const p of ['tests/gmww-wolf-orbit-reuse-v3295.test.mjs',
+   'tests/gmww-character-orbit-visuals-20261103.test.mjs','tests/gmww-online-four-fixes-v3293.test.mjs',
+   'tests/gmww-comet-turn-orbit-v3296.test.mjs'])
+   if(!before(p).includes('☄️')||before(p).split('☄️').join('🧞‍♂️')!==after(p))return false;
+  for(const p of ['package.json','package-lock.json'])
+   if(before(p).replaceAll('"version": "3.297.0"','"version": "3.298.0"')!==after(p))return false;
+  if(!strictly('server-game/src/00-core-and-library.part',"const VERSION='3.297';","const VERSION='3.298';")||
+     !strictly('server-game/current/GMWW.html','<title>GMWW V3.297</title>','<title>GMWW V3.298</title>'))return false;
+  const oldRev=before('src/index.js').match(/UPDATE_CHANNEL_REV="[^"]+"/)?.[0];
+  if(!oldRev||before('src/index.js').replace('VERSION="V3.297"','VERSION="V3.298"')
+    .replace(oldRev,'UPDATE_CHANNEL_REV="runtime-3298-genie-turn-orbit"')!==after('src/index.js'))return false;
+  if(before('server-game/current/app.js').replace("const VERSION='3.297';","const VERSION='3.298';")
+    .replace(oldGlyph,newGlyph)!==after('server-game/current/app.js'))return false;
+  if(before('src/gmww-members-live.js').replace(oldGlyph,newGlyph)!==after('src/gmww-members-live.js'))return false;
+  const oldNotes=before('.github/scripts/prepare-update-channel.mjs');
+  const newNotes=after('.github/scripts/prepare-update-channel.mjs');
+  const match=newNotes.match(/releaseNotes:\[("V3\.298[^"]*"),/);
+  if(!match||oldNotes.replace('releaseNotes:[','releaseNotes:['+match[1]+',')!==newNotes)return false;
+  if(!after('src/player-web-src/35-online-chat.part').includes('gmwwSvVerticalOrbit 6s linear infinite')||
+     !after('server-game/src/40-battle-and-timeline.part').includes("item.className='gmww-sv-orbit-item'")||
+     !fs.readFileSync('assets/status-visuals.js','utf8').includes("wolf_bitten:['🐺']")||
+     !fs.readFileSync('server-game/current/status-visuals.css','utf8').includes('animation:gmwwSvVerticalOrbit 6s linear infinite!important'))return false;
+  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
+    '30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
+  if(parts.map(p=>fs.readFileSync('server-game/src/'+p,'utf8')).join('')!==after('server-game/current/app.js'))return false;
+  if(JSON.parse(after('package.json')).version!=='3.298.0'||JSON.parse(after('package-lock.json')).version!=='3.298.0')return false;
+  return after('.github/workflows/check-player-web.yml').includes("steps.scope.outputs.mode == 'genie-orbit-v3298'")&&
+    after('tests/ci-browser-scope.test.mjs').includes('V3298 exact icon-only scope')&&
+    after('tests/gmww-genie-turn-orbit-v3298.test.mjs').includes('🧞‍♂️')&&
+    after('docs/releases/GMWW-RUNTIME-V3.298-GENIE-TURN-ICON-20261104.md').includes('Rollback');
  }catch{return false}
 }
 
 function classifyBrowserScope(changes){
-  if(isGatherSix789Scope(changes))return 'gather-six-789';
+  if(isGenieTurnIconV3298Scope(changes))return 'genie-orbit-v3298';
   if(isP0AutoGmAudio3297Scope(changes))return 'p0-auto-gm-audio-v3297';
   // Recovery is validated by detect() against real Git ancestry; never trust synthetic rows.
   if(isV3296CometOrbitScope(changes))return 'comet-orbit-v3296';
@@ -4951,14 +4957,20 @@ export function publicInteractionReceipt(row){
     notes.includes('Rollback');
 }
 function detect(){
-  // Postmerge also uses exact reviewed PR789 blobs; unknown changes run full CI.
-  if(process.env.GMWW_CI_EVENT==='push'&&process.env.GITHUB_REF==='refs/heads/main'){
-   try{
-    const rows=git('diff','--name-status','--no-renames','HEAD^1','HEAD').trim().split('\n');
-    const changes=rows.filter(Boolean).map(row=>{const [status,path]=row.split('\t');return{status,path}});
-    if(isGatherSix789Scope(changes))return{mode:'gather-six-789',reason:'Exact pinned GM-only Tập hợp six actions'};
-   }catch{} // no exceptions to fail-closed release gate
-  }
+ // Same strict reviewer gate on PR HEAD and main push; unreviewed files fall back to FULL.
+ if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
+  try{
+   const base=process.env.GMWW_CI_EVENT==='push'?'HEAD^1':String(process.env.GMWW_CI_BASE_SHA||'');
+   if(base==='HEAD^1'||/^[a-f0-9]{40}$/i.test(base)){
+    const rows=git('diff','--name-status','--no-renames',base,'HEAD').trim().split('\n').filter(Boolean);
+    const changes=rows.map(row=>{const [status,path]=row.split('\t');
+      return {status,path,before:status==='M'?git('show',base+':'+path):null};});
+    if(isGenieTurnIconV3298Scope(changes))
+      return {mode:'genie-orbit-v3298',reason:'V3.298 exact 🧞‍♂️ icon only; original 🐺 orbit, Phoenix, Auto GM and IPA unchanged'};
+   }
+  }catch{} // never skip CI on ambiguous or altered diff
+ }
+
   // Exact V3.297 audio source and Runtime diff before legacy all-tests route.
   if(['push','pull_request'].includes(process.env.GMWW_CI_EVENT||'')){
     try{
