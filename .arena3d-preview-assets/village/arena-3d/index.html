@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>GMWW Arena 3D — Bản mẫu độc lập</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif}
+    *{box-sizing:border-box}body{margin:0;background:#081e29;color:#e8f5ec}
+    header{padding:12px 16px;background:#102b36;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+    h1{font-size:16px;margin:0}small{color:#b3ced0}main{position:relative;min-height:60vh;height:calc(100dvh - 170px);overflow:hidden}
+    canvas{display:block;width:100%;height:100%;touch-action:none}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#102b36;align-items:center}
+    button{background:#256c76;color:white;border:1px solid #7baba9;border-radius:10px;padding:9px 12px;cursor:pointer}
+    button[aria-pressed=true]{background:#ba9950;color:#071b23;font-weight:700}
+    #metrics{position:absolute;left:12px;top:12px;background:#091921cc;padding:7px 10px;border-radius:10px;font-size:12px}
+    #notice{position:absolute;right:12px;top:12px;max-width:240px;background:#091921bb;padding:8px;border-radius:10px;font-size:12px}
+    footer{padding:0 12px 12px;background:#102b36;color:#b3ced0;font-size:11px}
+  </style>
+</head>
+<body>
+  <header><div><h1>GMWW Arena 3D — Thử nghiệm tách biệt</h1><small>Không kết nối Server, không dùng dữ liệu thật, không thay đổi Production</small></div><small>Core DTO → 3D renderer · Camera kéo để xoay</small></header>
+  <main><canvas id="stage" aria-label="Sân làng 3D thử nghiệm"></canvas><div id="metrics">Đang khởi tạo GPU…</div><div id="notice">Chạm một Character để xoay 360°. Kéo sân để đổi góc nhìn; cuộn để phóng to.</div></main>
+  <div class="controls">
+    <span>Số Character:</span>
+    <button data-count="6">6</button><button data-count="12" aria-pressed="true">12</button>
+    <button data-count="20">20</button><button data-count="30">30</button>
+    <button id="day" aria-pressed="true">☀️ Ngày</button><button id="night">🌙 Đêm</button>
+    <button id="effect-protect">🛡️ Bảo vệ (công khai)</button>
+    <button id="effect-vote">👍 Vote (công khai)</button>
+    <button id="effect-reset">Xóa hiệu ứng</button>
+  </div>
+  <footer>Character hình học kỹ thuật, chưa phải model nghệ thuật được duyệt. Chỉ mô phỏng sự kiện đã công khai. Sự kiện bí mật phải do Server kiểm quyền trước khi truyền cho người xem. Không dùng kết quả này để tuyên bố hiệu năng iPhone thực tế.</footer>
+  <script type="module" src="./main.mjs"></script>
+</body>
+</html>
