@@ -95,3 +95,21 @@ export function artifactDayPlan({artifactId='',actionId='',actorId='',targets=[]
     default:return null;
   }
 }
+
+/* ---- Đợt B: Artifact cần kho dữ liệu (chọn lá mới, đổi chủ, hàng xóm) ---- */
+/* Artifact chưa phát = có trong kho cấu hình nhưng chưa từng gán/phát trong ván. */
+export function unissuedArtifactIds({catalogIds=[],assignments=[],issued=[]}={}){
+  const taken=new Set([...list(assignments).map(a=>String(a?.artifactId||'')),...list(issued).map(String)].filter(Boolean));
+  return [...new Set(list(catalogIds).map(String))].filter(id=>id&&!taken.has(id)).sort();
+}
+export function pickRandom(ids,rng=Math.random){const a=list(ids);return a.length?a[Math.min(a.length-1,Math.floor(rng()*a.length))]:null}
+/* Hàng xóm: hai người còn sống sát chỗ ngồi (trái/phải, vòng tròn). */
+export function aliveNeighbors({players={},interactions=[],matchId='',actorId=''}={}){
+  const me=login(actorId),seated=Object.values(players).filter(p=>p&&p.kind==='member'&&login(p.loginId)&&Number(p.seatId)>0)
+    .map(p=>({id:login(p.loginId),seat:Number(p.seatId)})).filter(p=>p.id===me||!isDead(interactions,matchId,p.id)&&!list(interactions).some(r=>same(r,matchId)&&r.type==='expelled'&&live(r)&&login(r.loginId)===p.id))
+    .sort((a,b)=>a.seat-b.seat);
+  const i=seated.findIndex(p=>p.id===me);if(i<0||seated.length<3)return {left:null,right:null};
+  return {left:seated[(i-1+seated.length)%seated.length].id,right:seated[(i+1)%seated.length].id};
+}
+export const awakeLastNight=({usage=[],matchId='',night=1,loginId=''}={})=>list(usage).some(u=>String(u?.matchId||'')===String(matchId)&&u.undone!==true&&Number(u.night)===Number(night)&&login(u.actorId)===login(loginId));
+export const needsStorageArtifact=id=>['artifact_01','artifact_03','artifact_10','artifact_16','artifact_17','artifact_25'].includes(String(id));
