@@ -2,6 +2,7 @@ import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlay
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
 import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,mergePublicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
+import {thiefPool,thiefCanChoose,thiefDeckView,thiefPlan} from "./gmww-thief-rules.js";
 import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-night-cult-rules.js";
 import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
 import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths} from "./gmww-swap-info-rules.js";
@@ -252,6 +253,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/gm/delete"&&request.method==="POST")return this.gmDelete(request);
     if(url.pathname==="/player/state"&&request.method==="POST")return this.playerState(await safeJson(request));
     if(url.pathname==="/player/drunk/draw"&&request.method==="POST")return this.playerDrunkDraw(await safeJson(request));
+    if(url.pathname==="/player/thief/choose"&&request.method==="POST")return this.playerThiefChoose(await safeJson(request));
     if(url.pathname==="/player/delivery-received"&&request.method==="POST")return this.playerDeliveryReceived(await safeJson(request));
     if(url.pathname==="/player/role-viewed"&&request.method==="POST")return this.playerRoleViewed(await safeJson(request));
     if(url.pathname==="/player/artifact-viewed"&&request.method==="POST")return this.playerArtifactViewed(await safeJson(request));
@@ -1870,17 +1872,18 @@ export class RoomDurableObject extends DurableObject {
   }
   // Called only while constructing a new authoritative Night. Converted roles
   // keep each owner's membership, seat, artifact and player identity unchanged.
-  async applyNightRoleInheritance(meta,night,assignments,{drunkChoice=null}={}){
+  async applyNightRoleInheritance(meta,night,assignments,{drunkChoice=null,thiefChoice=null}={}){
     const n=Math.max(1,Number(night)||1),matchId=String(meta?.matchId||'');
     if(!matchId||n<1)return {assignments,drunkNotices:[]};
     const key='roleInheritanceNight:'+matchId+':'+n;
     const past=await this.ctx.storage.get(key);
-    if(past&&!drunkChoice)return {assignments:(await this.ctx.storage.get('assignments'))||assignments,
+    if(past&&!drunkChoice&&!thiefChoice)return {assignments:(await this.ctx.storage.get('assignments'))||assignments,
       drunkNotices:Array.isArray(past.drunkNotices)?past.drunkNotices:[]};
     const events=await this.ctx.storage.get('interactions')||[];
     let plans=inheritedRolePlans({assignments,interactions:events,matchId,night:n,drunkChoice});
     if(!drunkChoice)plans=[...plans,...(typeof maidSuccession==="function"?maidSuccession:()=>[])({assignments,interactions:events,matchId,night:n}),...(typeof apprenticeSuccession==="function"?apprenticeSuccession:()=>[])({assignments,interactions:events,matchId,night:n})];
     if(drunkChoice)plans=plans.filter(x=>x.kind==='drunk'&&x.actorId===normalizeLoginId(drunkChoice.actorId));
+    if(thiefChoice)plans=[thiefPlan({actorId:thiefChoice.actorId,roleId:thiefChoice.roleId,night:n})];
     if(!plans.length)return {assignments,drunkNotices:[],applied:0};
     let updated=assignments.map(x=>({...x})),drunkNotices=[],applied=0;
     const changed=new Map(),publishedAt=new Date().toISOString();
@@ -1952,7 +1955,7 @@ export class RoomDurableObject extends DurableObject {
       await this.ctx.storage.put('meta',meta);
       this.broadcast({type:'room_state',room:publicRoom(meta),serverTime:Date.now()});
     }
-    if(!drunkChoice)await this.ctx.storage.put(key,{drunkNotices,applied});
+    if(!drunkChoice&&!thiefChoice)await this.ctx.storage.put(key,{drunkNotices,applied});
     return {assignments:updated,drunkNotices,applied};
   }
   async buildNightRuntime(meta,night){
@@ -3341,6 +3344,11 @@ export class RoomDurableObject extends DurableObject {
     const drunkDraw=drawn&&(drawn.selectedId||
       turn?.roleId==='role_drunk'&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId))?
       drunkDeckView(drawn,false):null;
+    let thiefDraw=null;
+    if(String(meta.cyclePhase)==='night'&&Number(meta.cycleNight)>=3&&turn?.roleId==='role_thief'&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId)){
+      const choice=await this.ctx.storage.get('thiefChoice:'+String(meta.matchId)+':'+loginId);
+      thiefDraw=thiefDeckView(thiefPool([...(await this.ctx.storage.list({prefix:'roleCatalog:'})).values()]),choice,{matchId:meta.matchId,night:Number(meta.cycleNight)});
+    }
     const demoActions=meta.demo===true?await demoPlayerActions(this,meta,loginId):[];
     const onlineActions=meta.demo!==true&&String(meta.roomMode||"").toLowerCase()==="online"?await playerOfferedActions(this,meta,loginId):[];
     // GM battleMarkPlayers uses this same resolver to illuminate the confirmed
@@ -3360,7 +3368,58 @@ export class RoomDurableObject extends DurableObject {
       targetIds:witchNightIntel.packDisabled?[]:(witchNightIntel.attacked||[]).map(x=>normalizeLoginId(x.to)).filter(Boolean),
       packDisabled:!!witchNightIntel.packDisabled
     }:null;
-    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,demoActions,onlineActions,witchBite,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+    return j({ok:true,swapRequests,room:publicRoom(meta),player:publicPlayer(p),role,roles,wolfRecognition,audioCue,publicTimeline,drunkDraw,thiefDraw,demoActions,onlineActions,witchBite,artifact,artifactExpected:deliveryManifest.artifactExpected,deliveryManifest,gallows:String(meta.cyclePhase)==="morning"?gallowsSnapshot((await this.gallowsState(meta)).ballot,meta):null,artifactCycle:{cycleKey:artifactCycleKey,count:Array.isArray(artifactCycle.accepted)?artifactCycle.accepted.length:0,max:Math.max(0,Math.min(30,Number((await this.ctx.storage.get("gameConfig"))?.artifactLimitPerCycle??3)))},multiAssign:!!meta.multiAssign,cardBackImage,interactions,effects,resumed:!!p.restoredAt})
+  }
+  async playerThiefChoose(body){
+    return this.ctx.blockConcurrencyWhile(async()=>{
+      const meta=await this.ctx.storage.get('meta'),actorId=normalizeLoginId(body?.loginId);
+      const matchId=String(meta?.matchId||''),night=Number(meta?.cycleNight||0);
+      if(!actorId||String(meta?.phase)!=='running'||String(meta?.cyclePhase)!=='night'||night<3)
+        return j({ok:false,error:'THIEF_NOT_ACTIVE'},409);
+      const players=await this.ctx.storage.get('players')||{};
+      if(!players['member:'+actorId])return j({ok:false,error:'PLAYER_NOT_IN_ROOM'},403);
+      const runtime=await this.getNightRuntime(meta,night,false),turn=runtime?.queue?.[runtime.cursor];
+      if(turn?.roleId!=='role_thief'||!(turn.loginIds||[]).map(normalizeLoginId).includes(actorId))
+        return j({ok:false,error:'THIEF_WRONG_TURN'},409);
+      const choiceKey='thiefChoice:'+matchId+':'+actorId,existing=await this.ctx.storage.get(choiceKey);
+      const assignments=await this.ctx.storage.get('assignments')||[];
+      const can=thiefCanChoose({assignments,actorId,night,existingChoice:existing});
+      if(!can.ok)return j({ok:false,error:can.error},409);
+      const effects=await this.ctx.storage.get('interactions')||[];
+      if(isBattleActorBlocked(effects,{actorId,matchId,statusDefs:STATUS_DEFS})||
+        effects.some(x=>String(x?.matchId||'')===matchId&&normalizeLoginId(x?.loginId)===actorId&&x?.type==='expelled'&&x.effectActive!==false))
+        return j({ok:false,error:'THIEF_ACTOR_BLOCKED'},409);
+      const now=new Date().toISOString();
+      if(body?.keep===true||!String(body?.roleId||'')){
+        await this.ctx.storage.put(choiceKey,{matchId,actorId,night,kind:'keep',createdAt:now});
+        return j({ok:true,kept:true,deliveryVersion:meta.deliveryVersion});
+      }
+      const roleId=String(body.roleId),pool=thiefPool([...(await this.ctx.storage.list({prefix:'roleCatalog:'})).values()]);
+      if(!pool.some(c=>c.roleId===roleId))return j({ok:false,error:'THIEF_ROLE_INVALID'},400);
+      const outcome=await this.applyNightRoleInheritance(meta,night,assignments,{thiefChoice:{actorId,roleId}});
+      if(outcome.applied!==1)return j({ok:false,error:'THIEF_ROLE_TRANSFER_FAILED'},409);
+      await this.ctx.storage.put(choiceKey,{matchId,actorId,night,kind:'change',roleId,createdAt:now});
+      const summary=outcome.assignments.find(x=>normalizeLoginId(x.loginId)===actorId);
+      const own=await this.ctx.storage.get('roles:'+actorId)||[];
+      const picked=own.find(x=>x.inheritedFromRoleId==='role_thief');
+      const wolf=summary&&isWolfRole(summary),pack=runtime.queue.find(x=>x.kind==='wolf-pack-bite');
+      if(wolf&&pack){
+        if(!pack.loginIds.includes(actorId))pack.loginIds.push(actorId);
+        if(!pack.playerIds.includes('member:'+actorId))pack.playerIds.push('member:'+actorId);
+        if(!pack.roles.some(x=>(x.loginIds||[]).includes(actorId)))pack.roles.push({roleId:summary.roleId,loginIds:[actorId]});
+        if(summary.roleId!=='role_snow_wolf'&&!pack.biteActorIds.includes(actorId))pack.biteActorIds.push(actorId);
+      }
+      const fns=Array.isArray(picked?.roleCard?.functions)?picked.roleCard.functions:[];
+      const hasPower=fns.some(fn=>fn&&!fn.passive&&fn.actionId!=='action_wolf_bite'&&['night','any',''].includes(String(fn.phase||''))&&
+        Number(fn.fromNight||1)<=night&&(fn.toNight==null||Number(fn.toNight)>=night));
+      if(summary&&(!wolf||hasPower)&&summary.roleId!=='role_villager'){
+        runtime.queue.splice(runtime.cursor+1,0,{id:'role:thief-inherited:'+actorId,kind:'role',roleId:summary.roleId,label:summary.roleName||'Vai Trò',
+          loginIds:[actorId],playerIds:['member:'+actorId],order:99,durationSec:Number(turn.durationSec||45),status:'pending'});
+      }
+      await this.ctx.storage.put(this.nightRuntimeKey(meta,night),runtime);
+      this.broadcast({type:'role_progress',matchId,serverTime:Date.now()});
+      return j({ok:true,roleName:summary?.roleName||'',deliveryVersion:meta.deliveryVersion});
+    });
   }
   async playerDrunkDraw(body){
     // One trusted choice per match; Client cannot specify another account's actor.
@@ -4050,6 +4109,8 @@ export default {async fetch(request,env){
   const readyApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/ready$/);if(readyApi&&request.method==="POST")return readyRoom(env,readyApi[1],request);
   const heartbeatApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/heartbeat$/);if(heartbeatApi&&request.method==="POST")return heartbeatRoom(env,heartbeatApi[1],request);
   const leaveApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/leave$/);if(leaveApi&&request.method==="POST")return leaveRoomApi(env,leaveApi[1],request);
+  const thiefChoose=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/thief\/choose$/);
+  if(thiefChoose&&request.method==='POST')return playerThiefChooseApi(env,thiefChoose[1],request);
   const drunkDraw=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/drunk\/draw$/);
   if(drunkDraw&&request.method==='POST')return playerDrunkDrawApi(env,drunkDraw[1],request);
   const gmAnnouncement=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/announcement-audio$/);
@@ -4165,6 +4226,16 @@ async function joinRoom(env,raw,request){const code=normalizeRoomCode(raw);if(!i
 async function readyRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/ready",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function heartbeatRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/heartbeat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function leaveRoomApi(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/leave",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:null,ready:false})});if(res.ok)await syncRoomDirectory(env,code);return res}
+async function playerThiefChooseApi(env,raw,request){
+  const code=normalizeRoomCode(raw);
+  if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
+  const session=await memberStore(env).fetch(new Request('https://member.internal/members/session',{headers:request.headers}));
+  if(!session.ok)return session;
+  const me=await session.json(),body=await safeJson(request)||{};
+  return roomStub(env,code).fetch('https://room.internal/player/thief/choose',{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({loginId:me.member.loginId,roleId:body.keep===true?'':String(body.roleId||''),keep:body.keep===true})});
+}
 async function playerDrunkDrawApi(env,raw,request){
   const code=normalizeRoomCode(raw);
   if(!isValidRoomCode(code))return j({ok:false,error:'INVALID_ROOM_CODE'},400);
