@@ -2,6 +2,7 @@ import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlay
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
 import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,mergePublicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
+import {stoneSkinFilter,fireSpreadDeaths,convertNotices} from "./gmww-wolf-variant-rules.js";
 import {strongmanDawn,oldManLifespanDeaths,newsBearerNotices,diseasedLoginIds,crowExtraVotes,blackWomanLeaving,avengerFactions,dayStabOutcome,apprenticeSuccession} from "./gmww-card-rules-quick.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
@@ -2161,6 +2162,17 @@ export class RoomDurableObject extends DurableObject {
       const sm=(typeof strongmanDawn==="function"?strongmanDawn:a=>({victims:a.victims,rows:[]}))({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,victims:dawnVictims,now});
       dawnVictims=sm.victims;
       for(const row of sm.rows){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
+    }
+    // Da Đá (Sói Đá) chặn 1 lần tác động chết từ Sói Cắn; Lửa Lan chết sáng 2 ngày sau; thông báo riêng đêm chuyển phe.
+    if(wolfResolution?.ok){
+      const st=(typeof stoneSkinFilter==="function"?stoneSkinFilter:a=>({victims:a.victims,rows:[]}))({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,victims:dawnVictims,now});
+      dawnVictims=st.victims;
+      for(const row of st.rows){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
+    }
+    if((p==="morning"||p==="night")&&n>0){
+      const wv=p==="morning"?(typeof fireSpreadDeaths==="function"?fireSpreadDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,players:(await this.ctx.storage.get("players"))||{},matchId:String(meta.matchId||""),night:n,cycleKey:key,now}):
+        (typeof convertNotices==="function"?convertNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now});
+      for(const row of wv){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
     }
     if(wolfResolution?.ok)for(const loginId of dawnVictims){
       const id="wolf-bite:"+String(meta.matchId)+":"+n+":"+loginId;
