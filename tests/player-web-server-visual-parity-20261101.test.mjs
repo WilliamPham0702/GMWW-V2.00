@@ -32,7 +32,7 @@ test('Use GM wolf resolution for protected private Witch target, no fabricated b
  const r=resolveWolfNight({matchId:'m1',night:1,players,assignments,interactions:[
   {type:'effect_notice',actionId:'action_wolf_bite',actorId:'alpha',loginId:'target',matchId:'m1',night:1}]});
  assert.equal(r.attacked.map(x=>x.to).join(','),'target');
- assert.match(worker,/witchActor\?resolveWolfNight\(\{/);
+ assert.match(worker,/witchActor&&!witchSaveUsed\?resolveWolfNight\(\{/);
  assert.match(worker,/privateAssignments\.some\(a=>normalizeLoginId\(a\.loginId\)===loginId&&a\.roleId==="role_witch"\)/);
  assert.match(worker,/witchBite,artifact,artifactExpected:/);
  assert.equal((refresh.match(/gmwwOnlineWitchBite=d\?\.witchBite\|\|null/g)||[]).length,2);
@@ -59,7 +59,7 @@ test('Fire action dock fits multiple icons with safe touch drag and is not overs
 test('Aura reads the GM revelation.message text rather than printing JSON',()=>{
  const r=section(web,'function gmwwOnlineShowRevelation(revelation){','function gmwwOnlineWitchNotice(){');
  assert.match(r,/String\(revelation\?\.message\|\|''\)/);
- assert.match(r,/value\.textContent=message/);
+ assert.match(r,/toast\('Kết quả: '\+message\)/);
  assert.doesNotMatch(r,/JSON\.stringify/);
  assert.match(web,/if\(d\.revelation\?\.message\)gmwwOnlineShowRevelation\(d\.revelation\)/);
  assert.doesNotMatch(web,/if\(d\.revelation\)toast\('Kết quả: '\+JSON\.stringify/);

@@ -449,7 +449,7 @@ if(game){
     if(count>0){
       if(!pearl){pearl=document.createElement('span');pearl.className='gmww-nomination-pearl';
         pearl.setAttribute('aria-label','Số phiếu đề cử')}
-      pearl.textContent='✦ '+count;pearl.title=count+' phiếu đề cử';
+      pearl.textContent=String(count);pearl.title=count+' phiếu đề cử';
       if(host.firstElementChild!==pearl)host.prepend(pearl);
     }else pearl?.remove();
     const vote=(Array.isArray(data?.statusTags)?data.statusTags:[]).find(x=>x?.statusId==='gallows_vote')?.icon;
@@ -463,7 +463,7 @@ if(game){
   function ensureNominationPearlStyle(){
     if(document.getElementById('gmwwNominationPearlCss'))return;
     const css=document.createElement('style');css.id='gmwwNominationPearlCss';
-    css.textContent='#players .player .gmww-nomination-pearl{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:32px;padding:2px 9px;margin:0 auto 3px;border-radius:999px;border:2px solid #ffe3a5;color:#fffae3;font-weight:1000;font-size:16px;background:radial-gradient(circle at 20% 15%,#70e7e7,#116478 72%,#062f48);box-shadow:0 4px 16px #001a3188;text-shadow:0 1px 3px #002838;pointer-events:none}';
+    css.textContent='#players .player .gmww-nomination-pearl{display:inline-block;width:auto;min-width:0;height:auto;padding:0 2px;margin:0 auto 3px;background:transparent;border:0;border-radius:0;box-shadow:none;color:#ff3045;font-size:21px;font-weight:1000;line-height:1.1;font-variant-numeric:tabular-nums;text-shadow:0 1px 1px #fff7d5,0 2px 4px #32020a;animation:gmwwNominationVoteBounce 1.85s ease-out infinite;pointer-events:none}@keyframes gmwwNominationVoteBounce{0%,29%,48%,100%{transform:translateY(0)}13%{transform:translateY(-10px)}22%{transform:translateY(-2px)}38%{transform:translateY(-5px)}}@media(prefers-reduced-motion:reduce){#players .player .gmww-nomination-pearl{animation:none}}';
     document.head.appendChild(css);
   }
   ensureNominationPearlStyle();
@@ -645,7 +645,7 @@ if(game){
     document.body.classList.toggle("player-prep",room.playerSceneMode==="lobby");
     document.body.classList.toggle("player-battle",battleStatic);
     if(selectedId&&!all.some(p=>p.id===selectedId))selectedId=null;
-    if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
+    if(phase==="night"||phase==="day"||phase==="morning"||phase==="lobby")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
     placeFire();
     const nextSig=JSON.stringify([nextCount,seatLayout,seatOffset,seatSpacing,room.roomMode,room.playerSceneMode,

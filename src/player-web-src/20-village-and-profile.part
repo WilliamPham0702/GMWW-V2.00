@@ -309,7 +309,8 @@ async function releaseMySeat(){
 let roomListRefreshBusy=false;
 
 function go(id,opts={}){
-  if(id==='rooms'&&!state.roomNavigationAuthorized&&!opts.fromHistory)return false;
+  // V2.00 has no room-picker page: every legacy route to it lands in the village (lobby / gather stage set by the GM).
+  if(id==='rooms'){if(state.member&&!opts.fromRooms)enterVillage();return false}
   if(id==='profile'&&!opts.fromHistory)state.roomNavigationAuthorized=false;
   $$('.screen').forEach(x=>x.classList.remove('active'));if(state.member&&['profile','rooms'].includes(id))$('#game')?.classList.add('active');
   const el=$('#'+id);if(!el)return false;
@@ -345,7 +346,8 @@ function toast(text){
     document.body.appendChild(t);
   }
   t.style.top=gmwwToastTop()+'px';
-  t.textContent=text||'';t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',2400);
+  // One notice centre for the whole Player Web: always under the top menu, replaced by the next notice, auto-closes after 15 s.
+  t.textContent=text||'';t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',15000);
 }
 window.toast=toast;
 

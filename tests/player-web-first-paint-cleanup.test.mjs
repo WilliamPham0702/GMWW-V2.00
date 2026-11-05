@@ -18,8 +18,8 @@ test('first paint is gated in the HTML head before any screen markup',()=>{
 });
 
 test('no old static Online sample rooms or fake players are rendered',()=>{
-  assert.match(page,/<section id="rooms" class="screen">/);
-  assert.match(page,/<div class="room-list" aria-live="polite"><\/div>/);
+  // V2.00: the room-picker page was removed; players are routed to the village instead.
+  assert.doesNotMatch(page,/<section id="rooms" class="screen">/);
   assert.doesNotMatch(page,/id="roomA"|Mã Z3ZAPP|Mã WOLF88|Thành Phố Sói/);
   assert.doesNotMatch(page,/onclick="joinRoom\('roomA'\)"/);
   assert.match(gmwwMembersLiveScript,/function renderRooms\(\)/);

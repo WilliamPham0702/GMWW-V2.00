@@ -50,6 +50,13 @@ import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
+// ASSASSIN-01: a target killed THIS night (wolf bite, etc.) is still woken for the 👍👎 choice.
+// A correct pick only cancels the Assassin's effect; any other death already recorded stays in force.
+// Earlier deaths and expulsions still block the prompt.
+const assassinPromptBlocked=(rows,loginId,matchId,night)=>(Array.isArray(rows)?rows:[]).some(y=>normalizeLoginId(y?.loginId)===loginId&&
+  ["expelled","dead"].includes(String(y?.type||""))&&y?.effectActive!==false&&(!y?.matchId||!matchId||String(y.matchId)===String(matchId))&&
+  (String(y.type)==="expelled"||String(y?.source||"")==="assassin"||Number(y?.night)!==Number(night)));
+
 const PROJECT="GMWW-V2.00",VERSION="V3.305",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3305-gallows-autogm-admin-dock",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
@@ -1182,6 +1189,7 @@ export class RoomDurableObject extends DurableObject {
     const battleUndo=lastBattleAction&&!lastBattleAction.undone&&lastBattleAction.cycleKey===String(meta.cycleKey||"")&&String(meta.cyclePhase||"").toLowerCase()==="night"?{token:lastBattleAction.token,label:lastBattleAction.label,targets:lastBattleAction.targetIds,turnId:lastBattleAction.turnId}:null;
     const assignments=(await this.ctx.storage.get("assignments"))||[],nightRuntime=String(meta.cyclePhase||"").toLowerCase()==="night"&&Number(meta.cycleNight||0)>0?await this.getNightRuntime(meta,Number(meta.cycleNight),true):null,winProposal=this.computeWinProposal(meta,assignments,interactions);
     const nightIntel=String(meta.cyclePhase||"")==="night"?resolveWolfNight({interactions,players,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
+    if(nightIntel)nightIntel.witchSaveUsed=battleActionUsage.some(x=>String(x?.matchId||"")===String(meta.matchId||"")&&x?.actionId==="action_witch_save"&&x?.undone!==true);
     const drunkDraws=[];
     if(Number(meta.cycleNight)===3&&String(meta.cyclePhase)==='night'){
       const entries=await this.ctx.storage.list({prefix:'drunkDeck:'+String(meta.matchId)+':3:'});
@@ -3046,9 +3054,7 @@ export class RoomDurableObject extends DurableObject {
         return j({ok:false,error:"ASSASSIN_RESPONSE_NOT_YET_OPEN"},409);
       if(!["👍","👎"].includes(String(row.gmChoice||"")))
         return j({ok:false,error:"ASSASSIN_CHOICE_NOT_RECORDED"},409);
-      if(rows.some(x=>normalizeLoginId(x?.loginId)===loginId&&
-         ["dead","expelled"].includes(String(x.type))&&x.effectActive!==false&&
-         (!x.matchId||String(x.matchId)===String(meta.matchId))))
+      if(assassinPromptBlocked(rows,loginId,meta.matchId,row.night))
         return j({ok:false,error:"ASSASSIN_TARGET_NO_LONGER_ELIGIBLE"},409);
     }
     const allowed=Array.isArray(row.options)&&row.options.length?new Set(row.options.map(String)):
@@ -3058,7 +3064,9 @@ export class RoomDurableObject extends DurableObject {
       (row.gmChoice===response?"survived":"dead"):null;
     row.response=response;row.status="responded";row.respondedAt=now;
     if(isAssassin)row.effectActive=false;row.responseVersion=1;
-    if(assassinOutcome==="dead"){
+    const alreadyDeadSameNight=assassinOutcome==="dead"&&rows.some(x=>normalizeLoginId(x?.loginId)===loginId&&x?.type==="dead"&&x.effectActive!==false&&
+      (!x.matchId||String(x.matchId)===String(meta.matchId))&&Number(x.night)===Number(row.night));
+    if(assassinOutcome==="dead"&&!alreadyDeadSameNight){
       const fatal={id:"ix-"+Date.now().toString(36)+"-"+crypto.randomUUID().slice(0,8),
         type:"dead",loginId,matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0),
         cycleKey:String(meta.cycleKey||""),actionId:"action_assassin_mark",
@@ -3067,7 +3075,7 @@ export class RoomDurableObject extends DurableObject {
       rows.push(fatal);
       await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+fatal.id,fatal);
     }
-    if(assassinOutcome==="dead"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
+    if(assassinOutcome==="dead"&&!alreadyDeadSameNight&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const logId="ev-"+crypto.randomUUID();
     await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+logId,
@@ -3082,7 +3090,7 @@ export class RoomDurableObject extends DurableObject {
     const socketResponse=publicInteractionReceipt(row);
     if(meta.demo!==true)this.broadcast({type:"player_interaction_response",interaction:socketResponse,
       serverTime:Date.now()});
-    if(assassinOutcome==="dead")this.broadcast({type:"player_status_changed",loginId,
+    if(assassinOutcome==="dead"&&!alreadyDeadSameNight)this.broadcast({type:"player_status_changed",loginId,
       statusId:"dead",active:true,serverTime:Date.now()});
     return j({ok:true,interaction:safeResponse,assassinOutcome});
   }
@@ -3183,7 +3191,7 @@ export class RoomDurableObject extends DurableObject {
     p.lastSeenAt=new Date().toISOString();p.lastHeartbeatAt=Date.now();if(member){p.displayName=normalizeDisplayName(member.displayName||p.displayName||loginId);p.avatarId=String(member.avatarId||p.avatarId||"");p.gameCharacterId=normalizeGameCharacterId(member.gameCharacterId)||normalizeGameCharacterId(p.gameCharacterId)||null}players[key]=p;await this.ctx.storage.put("players",players);
     const legacyRole=await this.ctx.storage.get("role:"+loginId),storedRoles=await this.ctx.storage.get("roles:"+loginId),legacyRows=Array.isArray(storedRoles)&&storedRoles.length?storedRoles:(legacyRole?[legacyRole]:[]),activeSnapshot=currentPrivateDeliverySnapshot(await this.ctx.storage.get("deliverySnapshot:"+loginId),meta),roleRows=privateDeliveryRoles(activeSnapshot,legacyRows),roles=roleRows.map(privateRole),role=roles[0]||null,cardBackImage=(await this.ctx.storage.get("cardBackImage"))||null,rows=(await this.ctx.storage.get("interactions"))||[],sameMatch=x=>(!x?.matchId||!meta.matchId||String(x.matchId)===String(meta.matchId)),interactions=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&x?.status==="pending"&&sameMatch(x)&&
       (x.type!=="assassin_mark"||(String(meta?.cyclePhase||"")==="morning"&&Number(x.night)===Number(meta.cycleNight)&&
-       !rows.some(y=>normalizeLoginId(y?.loginId)===loginId&&["expelled","dead"].includes(String(y.type))&&y.effectActive!==false&&sameMatch(y)))))
+       !assassinPromptBlocked(rows,loginId,meta.matchId,x.night))))
       .slice(-10).map(playerSafeInteraction),effectTypes=new Set(["frozen","expelled","dead","assassin_mark"]),effectRows=rows.filter(x=>normalizeLoginId(x?.loginId)===loginId&&effectTypes.has(String(x?.type||""))&&x?.effectActive!==false&&sameMatch(x)&&
       (x.type!=="assassin_mark"||String(meta?.cyclePhase||"")==="morning")&&
       (!x?.expiresAt||Date.parse(x.expiresAt)>Date.now())),latest={};for(const x of effectRows)latest[x.type]=x;const effects=Object.values(latest).map(playerSafeInteraction);
@@ -3237,7 +3245,9 @@ export class RoomDurableObject extends DurableObject {
       privateAssignments.some(a=>normalizeLoginId(a.loginId)===loginId&&a.roleId==="role_witch")&&
       ((turn.roleId==="role_witch"&&(turn.loginIds||[]).map(normalizeLoginId).includes(loginId))||
        (turn.roles||[]).some(r=>r.roleId==="role_witch"&&(r.loginIds||[]).map(normalizeLoginId).includes(loginId)));
-    const witchNightIntel=witchActor?resolveWolfNight({
+    // Once the Witch has spent her save potion this match she is never shown a bite again.
+    const witchSaveUsed=witchActor?(await this.ctx.storage.get("battleRoleUsage:"+String(meta.matchId||""))||[]).some(x=>String(x?.matchId||"")===String(meta.matchId||"")&&x?.actionId==="action_witch_save"&&x?.undone!==true):false;
+    const witchNightIntel=witchActor&&!witchSaveUsed?resolveWolfNight({
       interactions:rows,players,assignments:await readNightAssignments(this.ctx.storage,meta.matchId),
       matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)}):null;
     const witchBite=witchActor&&witchNightIntel?.ok?{

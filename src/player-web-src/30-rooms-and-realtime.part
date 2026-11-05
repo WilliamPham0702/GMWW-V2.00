@@ -246,10 +246,10 @@ function gallowsWidget(){
 #gmwwGallowsPlayer .gmww-gallows-candidate span{font-size:11px;color:#84d2d0;max-width:98%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #gmwwGallowsPlayer .gmww-gallows-candidate[aria-pressed="true"]{border:2px solid #f8d489;background:rgba(13,119,112,.85);box-shadow:inset 0 0 0 1px #baf4de}
 #gmwwGallowsPlayer .gallows-helper{margin:0;text-align:center;font-size:11px;color:#b6e3e8}
-#gmwwGallowsDock{position:fixed;z-index:989;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:center;max-width:95vw;padding:8px 10px;background:#103344ee;border:1px solid #9edcde;border-radius:16px;box-shadow:0 7px 22px #0008}
+#gmwwGallowsDock{position:fixed;z-index:100010;left:50%;top:60%;transform:translate(-50%,-100%);display:flex;flex-wrap:nowrap;gap:9px;align-items:center;justify-content:center;max-width:95vw;padding:8px 10px;background:#103344ee;border:1px solid #9edcde;border-radius:16px;box-shadow:0 7px 22px #0008;touch-action:none;user-select:none;cursor:grab}
 #gmwwGallowsDock button{min-width:58px;min-height:45px;border:1px solid #a4ced8;border-radius:11px;background:#16556b;color:#fff;font-size:18px}
 #gmwwGallowsDock button:disabled{opacity:.42}
-#gmwwGallowsPublicStage{flex:0 0 100%;text-align:center;font-size:12px;color:#ffe3ae;line-height:1.4}
+#gmwwGallowsPublicStage{display:none!important}
 `;
   document.head.append(style);
   el=document.createElement('section');el.id='gmwwGallowsPlayer';el.hidden=true;
@@ -284,9 +284,35 @@ function gallowsDock(){
     '<button type="button" data-gallows-vote="👍" aria-label="Bỏ phiếu cứu">👍</button>'+
     '<button type="button" data-gallows-vote="👎" aria-label="Bỏ phiếu giết">👎</button>';
   document.body.append(dock);
+  let drag=null,suppressClick=false;
   dock.querySelectorAll('[data-gallows-vote]').forEach(button=>button.addEventListener('click',()=>{
+    if(suppressClick){suppressClick=false;return}
     if(!button.disabled)void sendGallowsChoice('vote','',button.dataset.gallowsVote);
   }));
+  // The vote box can be dragged anywhere; it stays where the player drops it for this round.
+  dock.addEventListener('pointerdown',event=>{
+    if(event.button!==undefined&&event.button!==0)return;
+    const r=dock.getBoundingClientRect();
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,cx:r.left+r.width/2,bottom:r.bottom,moved:false};
+    try{dock.setPointerCapture(event.pointerId)}catch{}
+  });
+  dock.addEventListener('pointermove',event=>{
+    if(!drag||event.pointerId!==drag.id)return;
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if(!drag.moved&&Math.hypot(dx,dy)<8)return;
+    drag.moved=true;dock.classList.add('is-dragging');
+    const w=dock.offsetWidth,h=dock.offsetHeight,vw=window.innerWidth,vh=window.innerHeight;
+    dock.style.transform='translate(-50%,-100%)';
+    dock.style.left=Math.max(w/2+4,Math.min(vw-w/2-4,drag.cx+dx))+'px';
+    dock.style.top=Math.max(h+4,Math.min(vh-4,drag.bottom+dy))+'px';
+    dock.dataset.userMoved='1';event.preventDefault();
+  });
+  const finishDrag=event=>{
+    if(!drag||(event&&event.pointerId!==drag.id))return;
+    suppressClick=drag.moved;drag=null;dock.classList.remove('is-dragging');
+    if(suppressClick)setTimeout(()=>{suppressClick=false},350);
+  };
+  dock.addEventListener('pointerup',finishDrag);dock.addEventListener('pointercancel',finishDrag);
   return dock;
 }
 function gallowsTick(){
@@ -325,13 +351,19 @@ function renderGallowsWidget(){
       !(g.blockedVotes||g.blocked||[]).includes(me)&&!g.votes?.[me];
   // While nominations are open the map displays ONLY the red pirate flag.
   // The bottom dock is reserved for Save/Kill voting and finalized outcomes.
-  dock.hidden=!(['voting','closed','resolved'].includes(stage));
+  const wasHidden=dock.hidden;dock.hidden=!(stage==='voting'&&canVote);
+  if(dock.hidden)delete dock.dataset.userMoved;
+  else if(!dock.dataset.userMoved&&typeof gmwwOnlinePlaceAtFire==='function'){gmwwOnlinePlaceAtFire(dock);if(wasHidden)requestAnimationFrame(()=>{if(!dock.dataset.userMoved)gmwwOnlinePlaceAtFire(dock)})}
   const candidate=(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===String(g.candidateId||''));
   const candidateName=String(candidate?.displayName||g.candidateId||'').slice(0,48),totals=g.voteTotals||{save:0,kill:0,cast:0,eligible:0};
   const status=dock.querySelector('#gmwwGallowsPublicStage');
-  if(status)status.textContent=stage==='voting'?'⚖️ BỎ PHIẾU CHO '+candidateName+' · '+totals.cast+'/'+totals.eligible:
+  const stageText=stage==='voting'?'⚖️ BỎ PHIẾU CHO '+candidateName+' · '+totals.cast+'/'+totals.eligible:
     stage==='closed'||stage==='resolved'?'⚖️ '+candidateName+' · 👍 '+totals.save+' 👎 '+totals.kill+' · '+
     (stage==='resolved'?(g.outcome==='dead'?'KẾT LUẬN: CHẾT':'KẾT LUẬN: SỐNG'):'ĐANG CHỐT KẾT QUẢ'):'';
+  if(status)status.textContent='';
+  // Vote progress and results use the one shared notice box under the top menu.
+  if(stageText&&state.gallowsNoticeLast!==stageText){state.gallowsNoticeLast=stageText;toast(stageText)}
+  else if(!stageText)state.gallowsNoticeLast='';
   dock.querySelectorAll('[data-gallows-vote]').forEach(b=>{b.hidden=!canVote;b.disabled=!canVote});
   const round=String(g.id||state.room?.matchId||'')+'|'+stage+'|'+me;
   if(state.gallowsSelectionRound!==round){state.gallowsSelectedId='';state.gallowsSelectionRound=round}

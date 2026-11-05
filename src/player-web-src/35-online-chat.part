@@ -748,37 +748,23 @@ function gmwwOnlineShowRevelation(revelation){
  // GM uses revelation.message in battlePresentRevelation; never expose its raw JSON.
  const message=String(revelation?.message||'').trim();
  if(!message)return;
- let note=document.getElementById('gmwwOnlineRevelation');
- if(!note){note=document.createElement('section');note.id='gmwwOnlineRevelation';note.setAttribute('role','status');
-   const style=document.createElement('style');style.id='gmwwOnlineRevelationCss';
-   style.textContent='#gmwwOnlineRevelation{position:fixed;z-index:100065;top:calc(env(safe-area-inset-top) + 115px);left:50%;transform:translateX(-50%);width:min(90vw,420px);padding:14px 12px;text-align:center;background:#091a30f2;color:#fff6d3;border:1px solid #eac071;border-radius:15px;box-shadow:0 7px 25px #000b;font:800 15px/1.5 system-ui;pointer-events:auto}#gmwwOnlineRevelation button{display:block;margin:8px auto 0;background:#195a6d;color:#fff;border:1px solid #a9d3d1;border-radius:7px;padding:5px 12px}';
-   if(!document.getElementById(style.id))document.head.appendChild(style);
-   document.body.appendChild(note);
- }
- note.replaceChildren();
- const title=document.createElement('strong');title.textContent='Kết quả';note.appendChild(title);
- const value=document.createElement('div');value.textContent=message;note.appendChild(value);
- const close=document.createElement('button');close.type='button';close.textContent='Đóng';close.onclick=()=>note.remove();note.appendChild(close);
- clearTimeout(gmwwOnlineRevealTimer);gmwwOnlineRevealTimer=setTimeout(()=>note.remove(),8000);
+ document.getElementById('gmwwOnlineRevelation')?.remove();
+ toast('Kết quả: '+message);
 }
+let gmwwWitchNoticeLast='';
 function gmwwOnlineWitchNotice(){
- // Bite information is provided by the authenticated /me response ONLY for active Witch.
+ // Bite information is provided by the authenticated /me response ONLY for active Witch,
+ // and never again after her save potion is spent. Shown through the shared notice centre.
+ document.getElementById('gmwwOnlineWitchIntel')?.remove();
  const intel=gmwwOnlineWitchBite;
- let panel=document.getElementById('gmwwOnlineWitchIntel');
- if(!intel||state.room?.phase!=='running'||String(state.room?.cyclePhase||'')!=='night'){
-   panel?.remove();return;
- }
- if(!panel){
-   panel=document.createElement('div');panel.id='gmwwOnlineWitchIntel';panel.setAttribute('role','status');
-   const css=document.createElement('style');css.id='gmwwOnlineWitchCss';
-   css.textContent='#gmwwOnlineWitchIntel{position:fixed;z-index:100012;left:50%;top:43%;transform:translate(-50%,-50%);max-width:86vw;padding:6px 11px;border:1px solid #f7ce88;border-radius:10px;background:#092439ed;color:#fff5c9;font:850 12px/1.3 system-ui;text-align:center;box-shadow:0 4px 16px #001522b8;pointer-events:none}';
-   if(!document.getElementById(css.id))document.head.appendChild(css);
-   document.body.appendChild(panel);
- }
+ if(!intel||state.room?.phase!=='running'||String(state.room?.cyclePhase||'')!=='night'){gmwwWitchNoticeLast='';return}
  const ids=Array.isArray(intel.targetIds)?intel.targetIds:[],
-       names=ids.map(id=>gmwwOnlinePeople().find(p=>p.id===String(id))?.name||String(id)).filter(Boolean);
- panel.textContent=intel.packDisabled?'🐺 Bầy Sói không thể cắn đêm nay.':names.length?
-   '🐺 Người bị Sói cắn: '+names.join(', '):'🐺 Chưa có người bị Sói cắn.';
+       names=ids.map(id=>gmwwOnlinePeople().find(p=>p.id===String(id))?.name||String(id)).filter(Boolean),
+       text=intel.packDisabled?'🐺 Bầy Sói không thể cắn đêm nay.':names.length?
+   '🐺 Người bị Sói cắn: '+names.join(', '):'🐺 Chưa có người bị Sói cắn.',
+       key=String(state.room?.cycleNight||'')+'|'+text;
+ if(key===gmwwWitchNoticeLast)return;
+ gmwwWitchNoticeLast=key;toast(text);
 }
 function gmwwOnlineIconDown(event,action){
  if(event.button!==undefined&&event.button!==0)return;
