@@ -101,7 +101,7 @@ export function artifactDayPlan({designatedId='',artifactId='',actionId='',actor
         message:'Khiên Bảo Hộ: mục tiêu được bảo vệ khỏi Sói Cắn đêm kế tiếp.'};
     case 'artifact_13':{
       if(!aa)return fail('ACTOR_NOT_FOUND','Không tìm thấy Vai Trò chủ sở hữu.');
-      return {ok:true,changes:[{kind:'public_role',loginId:actor,type:'effect_notice',extra:{publicReveal:true,revealedRoleName:roleLabel(aa),rowMessage:'Đồng Xu Tuổi Trẻ: chủ sở hữu công bố Vai Trò thật là '+roleLabel(aa)+'.'}}],
+      return {ok:true,changes:[{kind:'public_role',loginId:actor,type:'effect_notice',extra:{forceActive:true,publicReveal:true,revealedRoleName:roleLabel(aa),rowMessage:'Đồng Xu Tuổi Trẻ: chủ sở hữu công bố Vai Trò thật là '+roleLabel(aa)+'.'}}],
         message:'Đồng Xu Tuổi Trẻ: đã công bố Vai Trò thật của chủ.'};
     }
     case 'artifact_05':{
@@ -110,6 +110,11 @@ export function artifactDayPlan({designatedId='',artifactId='',actionId='',actor
       if(!v)return fail('DESIGNATED_REQUIRED','Nhập người mà mục tiêu chỉ định bị loại (designatedId); chưa trừ lượt.');
       if(v===t0||!roleOf(assignments,v)||isDead(interactions,matchId,v))return fail('DESIGNATED_INVALID','Người được chỉ định phải khác mục tiêu và còn sống; chưa trừ lượt.');
       return {ok:true,kill:[v],changes:[],message:'Cung Săn Mệnh: người bị buộc đã chỉ định, người đó bị loại.',result:{designatedId:v}};
+    }
+    case 'artifact_02':{
+      if(!talismanHolders({assignments,interactions,matchId}).includes(actor))return fail('NOT_TALISMAN_HOLDER','Bạn không giữ bùa lúc này; chưa trừ lượt.');
+      if(!t0||isDead(interactions,matchId,t0))return fail('TALISMAN_TARGET_INVALID','Cần một người còn sống; chưa trừ lượt.');
+      return {ok:true,changes:[{kind:'talisman',loginId:t0,type:'effect_notice',extra:{actionIdOverride:'artifact-talisman-pass',forceActive:true,rowMessage:'Bùa Hộ Mệnh: bạn đang giữ bùa và được bảo vệ khỏi Sói Cắn.'}}],message:'Bùa Hộ Mệnh: bùa chuyển sang người được chọn.'};
     }
     case 'artifact_04':
       return {ok:true,changes:[{kind:'status',loginId:t0,type:'status',statusId:'infected',extra:{actionIdOverride:'artifact-plague-infect'}}],
@@ -193,5 +198,21 @@ export function clawWolfIds({assignments=[],interactions=[],matchId='',night=1}=
     &&String(roleOf(assignments,login(r.actorId))?.artifactId||'')==='artifact_11').map(r=>login(r.actorId)))];
 }
 
-/* Bùa Hộ Mệnh: người giữ bùa được bảo vệ khỏi Sói Cắn. */
-export const talismanHolders=({assignments=[]}={})=>holders(assignments,'artifact_02');
+/* Bùa Hộ Mệnh: người giữ bùa (chủ gốc hoặc người nhận gần nhất) được bảo vệ khỏi Sói Cắn. */
+export function talismanHolders({assignments=[],interactions=[],matchId=''}={}){
+  const owner=holders(assignments,'artifact_02');if(!owner.length)return [];
+  const pass=list(interactions).filter(r=>same(r,matchId)&&r.actionId==='artifact-talisman-pass'&&live(r)).sort((a,b)=>Number(a.night)-Number(b.night)).pop();
+  return pass?[login(pass.loginId)]:owner;
+}
+/* Đồng Xu Tuổi Trẻ: không công bố Vai Trò trong ngày hôm trước thì chết vào bình minh. */
+export function coinDeaths({assignments=[],interactions=[],matchId='',night=1,cycleKey='',now=''}={}){
+  if(Number(night)<2)return [];
+  const rows=list(interactions),out=[];
+  for(const id of holders(assignments,'artifact_13')){
+    if(isDead(rows,matchId,id))continue;
+    const done=rows.some(r=>same(r,matchId)&&r.actionId==='artifact_action_reveal_role'&&live(r)&&login(r.actorId)===id&&Number(r.night)===Number(night)-1);
+    const rid='artifact-coin:'+matchId+':'+night+':'+id;
+    if(!done&&!rows.some(r=>r?.id===rid))out.push(nrow(rid,'dead',id,matchId,night,cycleKey,now,'artifact-coin-death','Đồng Xu Tuổi Trẻ: bạn không công bố Vai Trò hôm trước nên đã chết.'));
+  }
+  return out;
+}

@@ -117,7 +117,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       target=candidate.loginId;
       transfers.push({from:origin,to:target,direction});
     }
-    const protectedTarget=guards.has(target)||talismanHolders({assignments}).includes(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
+    const protectedTarget=guards.has(target)||talismanHolders({assignments,interactions:rows,matchId:match}).includes(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
     attacked.push({from:origin,to:target,direction:direction||'none',protected:protectedTarget});
     if(protectedTarget){protectedTargets.push(target);continue}
     if(rows.some(row=>String(row?.matchId||'')===match&&login(row?.loginId)===target&&

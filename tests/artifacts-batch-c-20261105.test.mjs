@@ -87,3 +87,17 @@ test('Cung Săn Mệnh: cần người được chỉ định hợp lệ rồi n
   assert.equal(p('').error,'DESIGNATED_REQUIRED');assert.equal(p('b').error,'DESIGNATED_INVALID');
   assert.deepEqual(p('c').kill,['c']);
 });
+import {coinDeaths,talismanHolders} from '../src/gmww-artifact-rules.js';
+test('Đồng Xu: không công bố hôm trước thì chết; Bùa chuyển người giữ',()=>{
+  const B=[{loginId:'a',roleId:'role_villager',artifactId:'artifact_13'},{loginId:'b',roleId:'role_villager',artifactId:'artifact_02'},{loginId:'c',roleId:'role_villager'}];
+  assert.equal(coinDeaths({assignments:B,interactions:[],matchId:'m',night:1}).length,0);
+  assert.equal(coinDeaths({assignments:B,interactions:[],matchId:'m',night:2})[0].loginId,'a');
+  const rv=artifactDayPlan({artifactId:'artifact_13',actorId:'a',targets:[],assignments:B,interactions:[],matchId:'m',day:1}).changes[0].extra;
+  assert.equal(rv.forceActive,true);
+  assert.equal(coinDeaths({assignments:B,interactions:[{actionId:'artifact_action_reveal_role',actorId:'a',matchId:'m',night:1,effectActive:true}],matchId:'m',night:2}).length,0);
+  assert.deepEqual(talismanHolders({assignments:B,interactions:[],matchId:'m'}),['b']);
+  const p=artifactDayPlan({artifactId:'artifact_02',actorId:'b',targets:['c'],assignments:B,interactions:[],matchId:'m',day:1});
+  const row={...p.changes[0].extra,actionId:'artifact-talisman-pass',loginId:'c',actorId:'b',type:'effect_notice',matchId:'m',night:1,effectActive:true};
+  assert.deepEqual(talismanHolders({assignments:B,interactions:[row],matchId:'m'}),['c']);
+  assert.equal(artifactDayPlan({artifactId:'artifact_02',actorId:'a',targets:['c'],assignments:B,interactions:[row],matchId:'m',day:2}).ok,false);
+});

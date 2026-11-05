@@ -5,6 +5,7 @@ import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {loverLinkedDeaths} from "./gmww-lovers-rules.js";
 import {thiefPool,thiefCanChoose,thiefDeckView,thiefPlan} from "./gmww-thief-rules.js";
 import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-night-cult-rules.js";
+import {coinDeaths} from "./gmww-artifact-rules.js";
 import {seerShareNotices} from "./gmww-artifact-seer.js";
 import {swapRolePlans,artifactBiteDawn,needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
 import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
@@ -2244,6 +2245,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if((p==="morning"||p==="night")&&n>0){
       const wv=p==="morning"?[...(typeof fireSpreadDeaths==="function"?fireSpreadDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,players:(await this.ctx.storage.get("players"))||{},matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
+          ...(typeof coinDeaths==="function"?coinDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
           ...(typeof seerShareNotices==="function"?seerShareNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
           ...(bell.active||typeof peekDeaths!=="function"?()=>[]:peekDeaths)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})]:
         [...(typeof convertNotices==="function"?convertNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
