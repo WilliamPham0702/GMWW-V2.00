@@ -13,6 +13,11 @@ button,a{font:inherit;text-decoration:none;color:#fff;background:#19546bdc;borde
 #card{position:absolute;inset:0;background:#061e2b;z-index:5;display:none;flex-direction:column;padding-top:env(safe-area-inset-top)}
 #card.open{display:flex}#card-header{display:flex;align-items:center;justify-content:space-between;background:#103646;padding:9px 12px;font-size:14px}
 #player-core{width:100%;height:100%;border:0;flex:1;background:white}
+#dock{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 62px);max-width:560px;margin:auto;z-index:3;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#dock[hidden]{display:none}#dock-hint{background:#092b3be6;border:1px solid #57949a96;border-radius:12px;padding:7px 10px;font-size:12px;text-align:center}
+#dock-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;pointer-events:auto}
+#dock-actions button,#dock-cancel{pointer-events:auto;background:#7a3b1fe0;border-color:#f0b97ab0;font-size:13px}
+#dock-cancel[hidden]{display:none}
 #hint{position:absolute;right:10px;top:90px;font-size:11px;color:#e6fdffb8}
 @media(max-width:420px){#toolbar{gap:5px;padding-left:7px;padding-right:7px}button,a{padding:7px;font-size:12px}}
 </style></head><body>
@@ -20,6 +25,7 @@ button,a{font:inherit;text-decoration:none;color:#fff;background:#19546bdc;borde
 <canvas id="stage" aria-label="Cảnh làng 3D công khai, kéo để xoay"></canvas>
 <div id="toolbar"><strong>🌊 Arena 3D</strong><span id="state" aria-live="polite">Chưa kết nối phòng</span><button type="button" id="open-card">Lá Vai / Hành động</button><a id="to-2d" href="/" aria-label="Về giao diện Player 2D">2D</a></div>
 <div id="hint">Kéo xoay · Chụm phóng · Mở Lá Vai để thao tác</div>
+<div id="dock" hidden aria-label="Hành động của bạn"><div id="dock-hint" aria-live="polite"></div><div id="dock-actions"></div><button type="button" id="dock-cancel" hidden>✕ Hủy chọn</button></div>
 <div id="status" aria-live="polite">Đang tải làng…</div>
 <section id="card" aria-label="Tương tác Player Web qua Core">
 <div id="card-header"><strong>🎴 Player Web · Tương tác theo luật Core</strong><button type="button" id="close-card">‹ Quay lại 3D</button></div>

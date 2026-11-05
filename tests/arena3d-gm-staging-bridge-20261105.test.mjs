@@ -123,7 +123,7 @@ test('Player entry: injected once on Player pages, inert inside the 3D sheet',()
 });
 
 test('Player entry script only reads public room membership and redirects once per room',()=>{
-  const script=injectArena3dPlayerEntry('<body></body>').match(/<script[^>]*>([\s\S]*)<\/script>/)[1];
+  const script=injectArena3dPlayerEntry('<body></body>').match(/<script id="gmww-arena3d-player-entry">([\s\S]*?)<\/script>/)[1];
   const nav=[],store={};let tick=null;
   const body={appendChild(){}};
   const ctx={state:{roomCode:'abcdef',participantId:'p1'},

@@ -8,6 +8,7 @@ import {createArenaCharacterField} from './character-atelier.mjs';
 import {createCoastalVillage} from './coastal-village.mjs';
 import {arenaSceneSignature,arenaTargetFrameHz,createArenaPaintScheduler,arenaPlayerPixelRatio} from './render-optimization.mjs';
 import {gallowsCandidateActorId} from './stage38-public-gallows.mjs';
+import {installDirectActions} from './player-actions.mjs';
 
 const $=id=>document.getElementById(id);
 const code=String(new URL(location.href).searchParams.get('room')||'').trim().toUpperCase();
@@ -118,7 +119,12 @@ canvas.addEventListener('pointermove',event=>{
   activePointer.x=event.clientX;activePointer.y=event.clientY;activePointer.moved=true;
 });
 const endPointer=event=>{pointers.delete(event.pointerId);if(pointers.size<2)pinchSize=0;activePointer=null};
-canvas.addEventListener('pointerup',endPointer);
+// GD46: a short tap (no drag, single finger) picks the target while a Core action is being chosen.
+canvas.addEventListener('pointerup',event=>{
+  const tap=Boolean(activePointer&&!activePointer.moved&&pointers.size===1);
+  endPointer(event);
+  if(tap)directActions?.handleTap(event);
+});
 canvas.addEventListener('pointercancel',endPointer);
 canvas.addEventListener('wheel',event=>{
   event.preventDefault();radius=Math.max(9,Math.min(31,radius+Math.sign(event.deltaY)));
@@ -128,18 +134,25 @@ canvas.addEventListener('webglcontextrestored',()=>{contextLost=false;lastSize='
 document.addEventListener('visibilitychange',()=>{scheduler.reset();frameCount=0;fpsSince=performance.now()});
 
 let privateLoaded=false;
+// Same-origin Core Player Web controls its own identity and secret cards. It is loaded once
+// (hidden) so the 3D dock can drive its existing action flow. No credential, hidden role or
+// card is transmitted via postMessage/query; the bridge only relays this player's own action menu.
+function loadPlayerCore(){
+  if(!validCode||privateLoaded)return;
+  $('player-core').src='/join/'+encodeURIComponent(code);
+  privateLoaded=true;
+}
 $('open-card').onclick=()=>{
   if(!validCode){message('Thiếu mã phòng hợp lệ.');return}
   const modal=$('card');
-  if(!privateLoaded){
-    // Same-origin Core Player Web controls its own identity and secret cards.
-    // No token, hidden role or credential is transmitted via postMessage/query.
-    $('player-core').src='/join/'+encodeURIComponent(code);
-    privateLoaded=true;
-  }
+  loadPlayerCore();
   modal.classList.add('open');
   $('close-card').focus();
 };
+// GD46: separate module owns every message to the framed Player Web (this file stays render-only).
+const directActions=installDirectActions({THREE,canvas,camera,field,frameEl:$('player-core'),cardEl:$('card'),
+  dockEl:$('dock'),hintEl:$('dock-hint'),listEl:$('dock-actions'),cancelEl:$('dock-cancel'),
+  isRenderPaused:()=>renderPaused,notice:message});
 $('close-card').onclick=()=>{
   $('card').classList.remove('open');
   $('open-card').focus();
@@ -154,6 +167,7 @@ window.__GMWW_ARENA_PLAYER_READONLY=()=>({
 requestAnimationFrame(frame);
 if(!validCode){$('state').textContent='Thiếu mã phòng';message('Mở trang từ liên kết phòng của GM, hoặc thêm ?room=MÃPHÒNG.');}
 else{
+  loadPlayerCore();
   message('Đang kết nối Core của phòng '+code+'…');
   connectStagingRoom({roomCode:code,loadPublicGallows:false,onFrame:drawFrame,
     onGallows:ballot=>{

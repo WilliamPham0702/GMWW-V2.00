@@ -34,11 +34,15 @@ export const ARENA3D_PLAYER_ENTRY_SCRIPT=`<script id="${ARENA3D_PLAYER_ENTRY_ID}
   },1200);
 })();
 </script>`;
+// GD46: classic external script, active only inside the framed 3D sheet (see player-bridge.js).
+export const ARENA3D_PLAYER_BRIDGE_ID='gmww-arena3d-player-bridge';
+export const ARENA3D_PLAYER_BRIDGE_TAG=`<script id="${ARENA3D_PLAYER_BRIDGE_ID}" src="/village/arena-3d/player-bridge.js" defer></script>`;
 export function injectArena3dPlayerEntry(html){
   html=String(html);
   if(html.includes('id="'+ARENA3D_PLAYER_ENTRY_ID+'"'))return html;
+  const add=ARENA3D_PLAYER_ENTRY_SCRIPT+ARENA3D_PLAYER_BRIDGE_TAG;
   const at=html.lastIndexOf('</body>');
-  return at<0?html+ARENA3D_PLAYER_ENTRY_SCRIPT:html.slice(0,at)+ARENA3D_PLAYER_ENTRY_SCRIPT+html.slice(at);
+  return at<0?html+add:html.slice(0,at)+add+html.slice(at);
 }
 export function isPlayerPagePath(pathname){
   return pathname==='/'||/^\/join\/[A-Za-z0-9]+$/.test(pathname);
