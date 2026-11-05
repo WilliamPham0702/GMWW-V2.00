@@ -2,6 +2,7 @@ import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlay
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
 import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,mergePublicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
+import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
 import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths} from "./gmww-swap-info-rules.js";
 import {stoneSkinFilter,fireSpreadDeaths,convertNotices} from "./gmww-wolf-variant-rules.js";
 import {strongmanDawn,oldManLifespanDeaths,newsBearerNotices,diseasedLoginIds,crowExtraVotes,blackWomanLeaving,avengerFactions,dayStabOutcome,apprenticeSuccession} from "./gmww-card-rules-quick.js";
@@ -940,7 +941,9 @@ export class RoomDurableObject extends DurableObject {
       extraKillVotes=(typeof crowExtraVotes==="function"?crowExtraVotes:()=>({}))({interactions,matchId:gMatch,day:gDay});
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow.filter(id=>!leavingToday.includes(id));
-    let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:gallowsBlockedNomination(ballot),blockedVotes:ballot.blockedVotes||[],artifactVoteBans,extraKillVotes,leavingToday,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+    const foolBans=(typeof foolVoteBans==="function"?foolVoteBans:()=>[])({interactions,matchId:gMatch}),
+      saveOnlyVoters=(typeof peaceLoverIds==="function"?peaceLoverIds:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[]});
+    let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:[...new Set([...gallowsBlockedNomination(ballot),...foolBans])],saveOnlyVoters,blockedVotes:ballot.blockedVotes||[],artifactVoteBans:[...new Set([...artifactVoteBans,...foolBans])],extraKillVotes,leavingToday,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
     const now=Date.now();
@@ -956,7 +959,12 @@ export class RoomDurableObject extends DurableObject {
           current=done.value;changed=true;
           if(decision==="dead"){
             const rows=await this.ctx.storage.get("interactions")||[],loginId=current.candidateId;
-            if(!rows.some(row=>normalizeLoginId(row.loginId)===loginId&&row.effectActive!==false&&
+            const fool=(typeof foolEscapes==="function"?foolEscapes:()=>false)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),candidateId:loginId});
+            if(fool){
+              const er=foolEscapeRow({matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),night:Number(meta.cycleNight),candidateId:loginId,gallowsId:current.id,now:new Date(now).toISOString()});
+              rows.push(er);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+              await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+er.id,er);
+            }else if(!rows.some(row=>normalizeLoginId(row.loginId)===loginId&&row.effectActive!==false&&
                 String(row.type)==="dead"&&(!row.matchId||String(row.matchId)===String(meta.matchId)))){
               const createdAt=new Date(now).toISOString(),fatal={id:"ix-"+crypto.randomUUID(),
                 type:"dead",loginId,matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),
@@ -1027,7 +1035,12 @@ export class RoomDurableObject extends DurableObject {
           gallowsResolve(ballot,String(body?.outcome||''),now);
       if(result.ok&&result.value.outcome==="dead"){
         const rows=await this.ctx.storage.get("interactions")||[],loginId=result.value.candidateId;
-        if(!rows.some(x=>normalizeLoginId(x.loginId)===loginId&&x.effectActive!==false&&
+        const foolGm=(typeof foolEscapes==="function"?foolEscapes:()=>false)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),candidateId:loginId});
+        if(foolGm){
+          const er=foolEscapeRow({matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),night:Number(meta.cycleNight),candidateId:loginId,gallowsId:ballot.id,now:new Date(now).toISOString()});
+          rows.push(er);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+          await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+er.id,er);
+        }else if(!rows.some(x=>normalizeLoginId(x.loginId)===loginId&&x.effectActive!==false&&
            String(x.type)==="dead"&&(!x.matchId||String(x.matchId)===String(meta.matchId)))){
           const createdAt=new Date(now).toISOString(),fatal={id:"ix-"+crypto.randomUUID(),
             type:"dead",loginId,matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),
@@ -1040,10 +1053,19 @@ export class RoomDurableObject extends DurableObject {
           this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
         }
       }
+    }else if(command==="judge_second"){
+      const rowsJ=await this.ctx.storage.get("interactions")||[];
+      if(ballot.stage!=="resolved"||ballot.round===2||!(typeof judgeDoubleActive==="function"?judgeDoubleActive:()=>false)({interactions:rowsJ,matchId:String(meta.matchId||""),day:Number(meta.cycleNight||0)}))
+        return j({ok:false,error:"JUDGE_SECOND_NOT_AVAILABLE"},409);
+      result={ok:true,value:{...ballot,id:"gallows-"+crypto.randomUUID(),round:2,stage:"ready",
+        nominationDeadlineAt:null,nominationStartedAt:null,hangingStartedAt:null,
+        candidateId:null,deadlineAt:null,startedAt:null,nominations:{},votes:{},eligible:[],
+        outcome:null,resolvedAt:null,updatedAt:now}};
     }else if(command==="restore"){
       // Undo only the gallows-owned consequence; never erase deaths from other roles.
       const rows=await this.ctx.storage.get("interactions")||[];
       const owned=rows.filter(x=>x.gallowsId===ballot.id&&String(x.type)==="dead"&&x.effectActive!==false);
+      for(const x of rows)if(x.gallowsId===ballot.id&&x.actionId==="action-fool-escape"){x.undone=true;x.effectActive=false}
       for(const row of owned){row.effectActive=false;row.expiredAt=new Date(now).toISOString();row.expiredReason="GM_GALLOWS_RESTORE"}
       if(owned.length){
         for(const followup of rows){
@@ -2454,6 +2476,11 @@ export class RoomDurableObject extends DurableObject {
     if(targets.length&&effectiveTargets.length===0){
       message="Mục tiêu đã bị đuổi khỏi làng; hành động không có tác dụng.";
       result={message,noEffect:true};
+    }else if(!artifactId&&roleId==="role_judge"&&actionId==="action-judge-double"){
+      const g=(await this.gallowsState(meta)).ballot;
+      if(!["ready","nominating","selecting"].includes(String(g.stage||"ready")))return j({ok:false,error:"JUDGE_TOO_LATE",message:"Phải kích hoạt trước phiên Treo Cổ đầu tiên."},409);
+      changes.push({kind:"judge",type:"effect_notice",loginId:actorId});
+      message="Thẩm Phán kích hoạt Phán Quyết Kép: sau phiên đầu sẽ có thêm một phiên Treo Cổ.";result={message};
     }else if(ghostAct){
       const chk=(typeof ghostCheck==="function"?ghostCheck:()=>({ok:false,error:"GHOST_UNAVAILABLE"}))({word:body?.word,actorId,assignments,players:(await this.ctx.storage.get("players"))||{},interactions,matchId,day});
       if(!chk.ok){
