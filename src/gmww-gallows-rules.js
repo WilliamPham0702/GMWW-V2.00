@@ -67,12 +67,14 @@ export function gallowsAutomaticNominee(ballot){
   return totals[0]&&(!totals[1]||totals[0].votes>totals[1].votes)?totals[0].loginId:null;
 }
 export function gallowsVoteTotals(ballot){
-  const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedVotes(ballot));
-  const saveOnly=new Set(ballot?.saveOnlyVoters||[]);
-  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&voter!==String(ballot?.candidateId||'')&&!blocked.has(voter)&&['👍','👎'].includes(choice)&&!(saveOnly.has(voter)&&choice==='👎'));
+  const dead=new Set(ballot?.deadVoters||[]),eligible=new Set([...(ballot?.eligible||[]),...dead]),blocked=new Set(gallowsBlockedVotes(ballot));
+  const saveOnly=new Set(ballot?.saveOnlyVoters||[]),forced=new Set(ballot?.forcedKillVoters||[]),dbl=new Set(ballot?.doubleVoters||[]);
+  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&voter!==String(ballot?.candidateId||'')&&!blocked.has(voter)&&['👍','👎'].includes(choice)&&!(saveOnly.has(voter)&&choice==='👎'))
+    .map(([voter,choice])=>[voter,forced.has(voter)?'👎':choice]);
   // Con Quạ: phiếu bất lợi cộng thêm cho người đang bị đưa lên giàn (không tính là phiếu đã bỏ).
   const extraKill=Math.max(0,Number(ballot?.extraKillVotes?.[String(ballot?.candidateId||'')])||0);
-  return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length+extraKill,cast:votes.length,
+  const w=([voter])=>dbl.has(voter)?2:1,sum=a=>a.reduce((n,x)=>n+w(x),0);
+  return {save:sum(votes.filter(([,choice])=>choice==='👍')),kill:sum(votes.filter(([,choice])=>choice==='👎'))+extraKill,cast:votes.length,
     eligible:[...eligible].filter(id=>id!==String(ballot?.candidateId||'')&&!blocked.has(id)).length};
 }
 export function gallowsAutomaticOutcome(ballot){
@@ -145,11 +147,12 @@ export function gallowsBegin(ballot,candidate,now=Date.now()){
 }
 export function gallowsCast(ballot,voter,choice,now=Date.now()){
   if(!validId(voter)||!['👍','👎'].includes(choice))return {ok:false,error:'INVALID_VOTE'};
+  if((ballot?.forcedKillVoters||[]).includes(voter))choice='👎';
   if(gallowsMode(ballot)!=='auto')return {ok:false,error:'GM_MANUAL_MODE'};
   if(ballot.stage!=='voting'||now>=ballot.deadlineAt)return {ok:false,error:'VOTE_DEADLINE_PASSED'};
   if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(gallowsBlockedVotes(ballot).includes(voter))return {ok:false,error:'VOTER_BANNED'};
-  if(!(ballot.eligible||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
+  if(!(ballot.eligible||[]).includes(voter)&&!(ballot.deadVoters||[]).includes(voter))return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(ballot.votes?.[voter])return ballot.votes[voter]===choice?{ok:true,idempotent:true,value:ballot}:{ok:false,error:'VOTE_ALREADY_USED'};
   return {ok:true,value:{...ballot,votes:{...(ballot.votes||{}),[voter]:choice},updatedAt:now}};
 }
@@ -192,10 +195,11 @@ export function gallowsSetMode(ballot,mode,now=Date.now()){
 export function gallowsManualVote(ballot,voter,choice,now=Date.now()){
   if(gallowsMode(ballot)!=='gm'||!['voting','closed'].includes(gallowsStage(ballot,now)))
     return {ok:false,error:'GM_MANUAL_MODE_REQUIRED'};
-  if(!validId(voter)||!(ballot.eligible||[]).includes(voter)||gallowsBlockedVotes(ballot).includes(voter))
+  if(!validId(voter)||(!(ballot.eligible||[]).includes(voter)&&!(ballot.deadVoters||[]).includes(voter))||gallowsBlockedVotes(ballot).includes(voter))
     return {ok:false,error:'VOTER_NOT_ELIGIBLE'};
   if(voter===String(ballot.candidateId||''))return {ok:false,error:'GALLOWS_CANDIDATE_CANNOT_VOTE'};
   if(!['👍','👎',null].includes(choice))return {ok:false,error:'INVALID_VOTE'};
+  if(choice==='👍'&&(ballot.forcedKillVoters||[]).includes(voter))choice='👎';
   const votes={...(ballot.votes||{})};
   if(choice===null)delete votes[voter];else votes[voter]=choice;
   return {ok:true,value:{...ballot,votes,updatedAt:now}};

@@ -3,6 +3,7 @@
  * The result is intentionally deterministic so Durable Object retries cannot
  * select a different victim; saved matches and arbitrary death causes are untouched.
  */
+import {plaguePackLost,prismTargetsFor,talismanHolders} from './gmww-artifact-rules.js';
 import {isWolfRole} from './gmww-pack-night-rules.js';
 import {effectiveAssignments,validConversions,cubExtraBite} from './gmww-wolf-variant-rules.js';
 const login=value=>String(value??'').trim().toLowerCase().replace(/^member:/,'');
@@ -64,6 +65,9 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
     const second=[...tally].filter(([t])=>t!==selected).sort((a,b)=>b[1]-a[1])[0];
     if(second)bites=[selected,second[0]];
   }
+  if(plaguePackLost({interactions:rows,matchId:match,night:cycle}))return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount,packDisabled:true,reason:'ARTIFACT_PLAGUE'};
+  const prism=prismTargetsFor({interactions:rows,matchId:match,night:cycle});
+  if(prism)bites=bites.filter(id=>prism.includes(id));
   if(!selected&&!bites.length)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount,tied:true};
   // NIGHT-02: an Alpha Wolf frozen by Snow Wolf or expelled from the village
   // disables the lethal pack bite. Frozen Alpha does not reveal bitten targets
@@ -113,7 +117,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       target=candidate.loginId;
       transfers.push({from:origin,to:target,direction});
     }
-    const protectedTarget=guards.has(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
+    const protectedTarget=guards.has(target)||talismanHolders({assignments,interactions:rows,matchId:match}).includes(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
     attacked.push({from:origin,to:target,direction:direction||'none',protected:protectedTarget});
     if(protectedTarget){protectedTargets.push(target);continue}
     if(rows.some(row=>String(row?.matchId||'')===match&&login(row?.loginId)===target&&

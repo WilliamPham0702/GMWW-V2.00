@@ -4,6 +4,7 @@ const same=(r,m)=>r&&String(r.matchId||'')===String(m||'');
 const live=r=>r&&r.undone!==true&&r.noEffect!==true&&r.status!=='skipped';
 const list=a=>Array.isArray(a)?a:[];
 import {cultMembers} from './gmww-night-cult-rules.js';
+import {clawWolfIds} from './gmww-artifact-rules.js';
 const roleOf=(as,id)=>list(as).find(a=>login(a?.loginId)===id)||null;
 const deadBefore=(rows,m,id,night)=>list(rows).some(r=>same(r,m)&&r.type==='dead'&&r.effectActive!==false&&login(r.loginId)===id&&Number(r.night)<Number(night));
 const deadAny=(rows,m,id)=>list(rows).some(r=>same(r,m)&&r.type==='dead'&&r.effectActive!==false&&login(r.loginId)===id);
@@ -45,6 +46,8 @@ export function effectiveAssignments({assignments=[],interactions=[],matchId='',
   const pairRows=list(interactions).filter(r=>same(r,matchId)&&r.actionId==='action-cupid-pair'&&live(r)),byActor=new Map();
   for(const r of pairRows){const k=login(r.actorId),l=byActor.get(k)||[];if(!l.includes(login(r.loginId)))l.push(login(r.loginId));byActor.set(k,l)}
   const cult=new Set([...cultMembers({assignments,interactions,matchId,night:Number(night)-1}).values()].flatMap(x=>[...x]));
+  const cursed=new Set(list(interactions).filter(r=>same(r,matchId)&&r.actionId==='artifact-curse-convert'&&live(r)&&Number(r.night)<Number(night)).map(r=>login(r.loginId)));
+  const claw=new Set(clawWolfIds({assignments,interactions,matchId,night}));
   const lovers=new Set([...byActor.values()].filter(l=>l.length===2).flat());
   return list(assignments).map(a=>{
     const id=login(a?.loginId);let out=a;
@@ -54,6 +57,7 @@ export function effectiveAssignments({assignments=[],interactions=[],matchId='',
     if(!skipPack&&a?.roleId==='role_lone_wolf'&&Number(night)<3)out={...out,packExcluded:true};
     const idol=list(interactions).find(r=>same(r,matchId)&&r.actionId==='action-wild-child-idol'&&live(r)&&login(r.actorId)===id);
     if(a?.roleId==='role_wild_child'&&idol&&deadBefore(interactions,matchId,login(idol.loginId),night))out=setFaction(out,'wolf');
+    if(cursed.has(id)||claw.has(id))out=setFaction(out,'wolf');
     if(lovers.has(id)||cult.has(id))out=setFaction(out,'third');
     return out;
   });

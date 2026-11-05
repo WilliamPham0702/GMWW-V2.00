@@ -5,6 +5,9 @@ import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {loverLinkedDeaths} from "./gmww-lovers-rules.js";
 import {thiefPool,thiefCanChoose,thiefDeckView,thiefPlan} from "./gmww-thief-rules.js";
 import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-night-cult-rules.js";
+import {coinDeaths} from "./gmww-artifact-rules.js";
+import {seerShareNotices} from "./gmww-artifact-seer.js";
+import {swapRolePlans,artifactBiteDawn,needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
 import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
 import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths,peekPending,peekDecisionRows} from "./gmww-swap-info-rules.js";
 import {effectiveAssignments,stoneSkinFilter,fireSpreadDeaths,convertNotices} from "./gmww-wolf-variant-rules.js";
@@ -845,6 +848,7 @@ export class RoomDurableObject extends DurableObject {
     if(String(meta?.phase||"").toLowerCase()!=="running")return null;
     const dead=new Set((Array.isArray(interactions)?interactions:[]).filter(x=>String(x?.type||"")==="dead"&&x?.effectActive!==false&&(!x?.matchId||!meta?.matchId||String(x.matchId)===String(meta.matchId))).map(x=>normalizeLoginId(x?.loginId)).filter(Boolean)),byPlayer=new Map();
     for(const a of Array.isArray(assignments)?assignments:[]){const lid=normalizeLoginId(a?.loginId);if(!lid||dead.has(lid))continue;const row=byPlayer.get(lid)||{loginId:lid,factions:new Set()};row.factions.add(normalizeWinnerFaction(a?.faction||""));byPlayer.set(lid,row)}
+    if(typeof orbVillageWin==="function"&&orbVillageWin({interactions,matchId:String(meta?.matchId||"")}))return{winnerFaction:"Phe Dân",winnerLabel:"Phe Dân",reason:"Quả Cầu Phán Đoán chỉ ra đúng hai Sói.",confidence:"artifact-rule"};
     const alive=[...byPlayer.values()];if(!alive.length)return null;
     const wolves=alive.filter(p=>p.factions.has("Phe Sói")).length,third=alive.filter(p=>p.factions.has("Phe Ba")).length,others=alive.length-wolves;
     if(alive.length===1&&third===1)return{winnerFaction:"Phe Ba",winnerLabel:"Phe Ba",reason:"Chỉ còn một Người Chơi Phe Ba còn sống.",confidence:"basic-rule"};
@@ -961,8 +965,9 @@ export class RoomDurableObject extends DurableObject {
     const eligible=ballot.stage==="resolved"&&Array.isArray(ballot.eligible)&&ballot.eligible.length?
       ballot.eligible:aliveNow.filter(id=>!leavingToday.includes(id));
     const foolBans=(typeof foolVoteBans==="function"?foolVoteBans:()=>[])({interactions,matchId:gMatch}),
-      saveOnlyVoters=(typeof peaceLoverIds==="function"?peaceLoverIds:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[]});
-    let current={...ballot,eligible,mode:gallowsMode(ballot),blockedNomination:[...new Set([...gallowsBlockedNomination(ballot),...foolBans])],saveOnlyVoters,blockedVotes:ballot.blockedVotes||[],artifactVoteBans:[...new Set([...artifactVoteBans,...foolBans])],extraKillVotes,leavingToday,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
+      aFlags=(typeof gallowsArtifactFlags==="function"?gallowsArtifactFlags:()=>({forcedKill:[],doubleVoters:[],saveOnly:[],deadVoters:[]}))({assignments:(await this.ctx.storage.get("assignments"))||[],interactions,matchId:gMatch}),
+      saveOnlyVoters=[...new Set([...(typeof peaceLoverIds==="function"?peaceLoverIds:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[]}),...aFlags.saveOnly])];
+    let current={...ballot,forcedKillVoters:aFlags.forcedKill,doubleVoters:aFlags.doubleVoters,deadVoters:aFlags.deadVoters,eligible,mode:gallowsMode(ballot),blockedNomination:[...new Set([...gallowsBlockedNomination(ballot),...foolBans])],saveOnlyVoters,blockedVotes:ballot.blockedVotes||[],artifactVoteBans:[...new Set([...artifactVoteBans,...foolBans])],extraKillVotes,leavingToday,nominationDurationSec:ballot.nominationDurationSec??nominationDurationSec,voteDurationSec:ballot.voteDurationSec??voteDurationSec};
     // The room's Durable Object is authoritative. Real auto mode advances when
     // any GM or Player polls state; demos retain their scripted GM-driven clock.
     const now=Date.now();
@@ -979,7 +984,10 @@ export class RoomDurableObject extends DurableObject {
           if(decision==="dead"){
             const rows=await this.ctx.storage.get("interactions")||[],loginId=current.candidateId;
             const fool=(typeof foolEscapes==="function"?foolEscapes:()=>false)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),candidateId:loginId});
-            if(fool){
+            if(typeof princeCloakActive==="function"&&princeCloakActive({assignments:(await this.ctx.storage.get("assignments"))||[],candidateId:loginId})){
+              const cr=princeCloakRow({matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),night:Number(meta.cycleNight),candidateId:loginId,gallowsId:current.id,now:new Date(now).toISOString()});
+              if(!rows.some(x=>x.id===cr.id)){rows.push(cr);await this.ctx.storage.put("interactions",pruneInteractions(rows));await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+cr.id,cr)}
+            }else if(fool){
               const er=foolEscapeRow({matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),night:Number(meta.cycleNight),candidateId:loginId,gallowsId:current.id,now:new Date(now).toISOString()});
               rows.push(er);await this.ctx.storage.put("interactions",pruneInteractions(rows));
               await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+er.id,er);
@@ -1065,7 +1073,10 @@ export class RoomDurableObject extends DurableObject {
       if(result.ok&&result.value.outcome==="dead"){
         const rows=await this.ctx.storage.get("interactions")||[],loginId=result.value.candidateId;
         const foolGm=(typeof foolEscapes==="function"?foolEscapes:()=>false)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),candidateId:loginId});
-        if(foolGm){
+        if(typeof princeCloakActive==="function"&&princeCloakActive({assignments:(await this.ctx.storage.get("assignments"))||[],candidateId:loginId})){
+          const cr=princeCloakRow({matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),night:Number(meta.cycleNight),candidateId:loginId,gallowsId:ballot.id,now:new Date(now).toISOString()});
+          if(!rows.some(x=>x.id===cr.id)){rows.push(cr);await this.ctx.storage.put("interactions",pruneInteractions(rows));await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+cr.id,cr)}
+        }else if(foolGm){
           const er=foolEscapeRow({matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),night:Number(meta.cycleNight),candidateId:loginId,gallowsId:ballot.id,now:new Date(now).toISOString()});
           rows.push(er);await this.ctx.storage.put("interactions",pruneInteractions(rows));
           await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+er.id,er);
@@ -1205,7 +1216,7 @@ export class RoomDurableObject extends DurableObject {
     if(!meta||String(meta.phase)!=="running"||String(meta.cyclePhase)!=="morning")
       return j({ok:false,error:"GALLOWS_DAY_ONLY"},409);
     const {key,ballot,eligible}=await this.gallowsState(meta);
-    if(!loginId||!eligible.includes(loginId))return j({ok:false,error:"VOTER_NOT_ELIGIBLE"},403);
+    if(!loginId||(!eligible.includes(loginId)&&!(String(body?.command||"")==="vote"&&(ballot.deadVoters||[]).includes(loginId))))return j({ok:false,error:"VOTER_NOT_ELIGIBLE"},403);
     if(gallowsMode(ballot)==="gm")return j({ok:false,error:"GM_MANUAL_MODE"},403);
     const command=String(body?.command||""),now=Date.now();
     let result;
@@ -1901,6 +1912,7 @@ export class RoomDurableObject extends DurableObject {
     const events=await this.ctx.storage.get('interactions')||[];
     let plans=inheritedRolePlans({assignments,interactions:events,matchId,night:n,drunkChoice});
     if(!drunkChoice)plans=[...plans,...(typeof maidSuccession==="function"?maidSuccession:()=>[])({assignments,interactions:events,matchId,night:n}),...(typeof apprenticeSuccession==="function"?apprenticeSuccession:()=>[])({assignments,interactions:events,matchId,night:n})];
+    if(!drunkChoice&&!thiefChoice&&typeof swapRolePlans==="function")plans=[...plans,...swapRolePlans({assignments,interactions:events,matchId,night:n})];
     if(drunkChoice)plans=plans.filter(x=>x.kind==='drunk'&&x.actorId===normalizeLoginId(drunkChoice.actorId));
     if(thiefChoice)plans=[thiefPlan({actorId:thiefChoice.actorId,roleId:thiefChoice.roleId,night:n})];
     if(!plans.length)return {assignments,drunkNotices:[],applied:0};
@@ -2226,8 +2238,15 @@ export class RoomDurableObject extends DurableObject {
       dawnVictims=st.victims;
       for(const row of st.rows){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
     }
+    if(wolfResolution?.ok&&typeof artifactBiteDawn==="function"){
+      const ab=artifactBiteDawn({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,victims:dawnVictims,now});
+      dawnVictims=ab.victims;
+      for(const row of ab.rows){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
+    }
     if((p==="morning"||p==="night")&&n>0){
       const wv=p==="morning"?[...(typeof fireSpreadDeaths==="function"?fireSpreadDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,players:(await this.ctx.storage.get("players"))||{},matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
+          ...(typeof coinDeaths==="function"?coinDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
+          ...(typeof seerShareNotices==="function"?seerShareNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
           ...(bell.active||typeof peekDeaths!=="function"?()=>[]:peekDeaths)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})]:
         [...(typeof convertNotices==="function"?convertNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
           ...(typeof threeBrothersNotices==="function"?threeBrothersNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})];
@@ -2398,6 +2417,106 @@ export class RoomDurableObject extends DurableObject {
 
   /* V3.148: server-authoritative day powers. No night turn is forged to
    * bypass the phase gate. Every function must be explicitly tagged day/any. */
+  /* Đợt B: Artifact đổi chủ / phát lá mới / hàng xóm. Kiểm tra trước, chỉ ghi khi đã hợp lệ. */
+  async artifactUnflipped(loginId){
+    const art=loginId?await this.ctx.storage.get("artifact:"+loginId):null;
+    if(!art||art.removedFromMatch===true||art.usedAt)return null;
+    if(await this.ctx.storage.get("artifactUse:"+loginId+":"+String(art.artifactId)))return null;
+    return art;
+  }
+  async artifactPickNew(matchId,assignments){
+    const keys=[...(await this.ctx.storage.list({prefix:"roleCatalog:artifact:"})).keys()].map(k=>k.slice("roleCatalog:artifact:".length));
+    const issued=(await this.ctx.storage.get("artifactIssued:"+matchId))||[];
+    const id=pickRandom(unissuedArtifactIds({catalogIds:keys,assignments,issued}));
+    if(!id)return null;
+    const rec=await this.ctx.storage.get("roleCatalog:artifact:"+id);
+    return {id,rec,card:sanitizePlayerArtifactCard(rec?.roleCard||{}),issued};
+  }
+  async artifactIssue(loginId,pick,meta,matchId,assignments){
+    const {id,card,rec}=pick,aid=String(rec?.artworkAssetId||card.artworkAssetId||("artifact:"+id));
+    const art={loginId,matchId,matchRevision:Number(meta.matchRevision||0),artifactId:id,artifactName:String(card.name||rec?.roleName||"Artifact").slice(0,120),
+      description:String(card.information||"").slice(0,6000),artifactImage:"/api/rooms/"+encodeURIComponent(meta.code)+"/role-assets/"+encodeURIComponent(aid)+"/image",
+      artworkAssetId:aid,artworkId:aid,artworkAvailable:true,artifactCard:{...card,artworkAssetId:aid,artworkId:aid},
+      singleUse:card.singleUse===true,priorityFirst:card.priorityFirst===true,deliveredAt:new Date().toISOString(),viewedAt:null,usedAt:null};
+    await this.ctx.storage.put("artifact:"+loginId,art);
+    await this.ctx.storage.delete("artifactUse:"+loginId+":"+id);
+    const row=assignments.find(x=>normalizeLoginId(x?.loginId)===loginId);
+    if(row){row.artifactId=id;row.artifactName=art.artifactName;row.artifactUsedAt=null;row.artifactViewedAt=null;row.artifactSingleUse=art.singleUse;row.artifactPriorityFirst=art.priorityFirst}
+    await this.ctx.storage.put("assignments",assignments);
+    pick.issued=[...pick.issued,id];await this.ctx.storage.put("artifactIssued:"+matchId,pick.issued);
+    return art;
+  }
+  async artifactStoragePlan({artifactId,actorId,targetId,targets=[],meta,matchId,day,assignments,interactions,members,requestFlip}){
+    const bad=(error,message)=>({ok:false,error,message});
+    const noPool=()=>bad("NO_UNISSUED_ARTIFACT","Không còn Artifact chưa phát; không thay đổi, chưa trừ lượt.");
+    if(artifactId==="artifact_16"){
+      const players=await this.ctx.storage.get("players")||{},usage=(await this.ctx.storage.get("battleRoleUsage:"+matchId))||[];
+      const nb=aliveNeighbors({players,interactions,matchId,actorId});
+      if(!nb.left||!nb.right)return bad("NO_NEIGHBORS","Không xác định được hai hàng xóm; chưa trừ lượt.");
+      const awake=id=>awakeLastNight({usage,matchId,night:day,loginId:id}),name=id=>members["member:"+id]?.displayName||id,L=awake(nb.left),R=awake(nb.right);
+      return {ok:true,changes:[],message:"Nhật Ký Mất Ngủ: "+name(nb.left)+(L?" ĐÃ thức":" KHÔNG thức")+"; "+name(nb.right)+(R?" ĐÃ thức":" KHÔNG thức")+" đêm trước.",result:{left:{id:nb.left,awake:L},right:{id:nb.right,awake:R}}};
+    }
+    if(artifactId==="artifact_10"){
+      const pick=await this.artifactPickNew(matchId,assignments);if(!pick)return noPool();
+      const art=await this.artifactIssue(actorId,pick,meta,matchId,assignments);
+      return {ok:true,replacedOwn:true,changes:[],message:"Ngọc May Mắn: chủ nhận Artifact mới ("+art.artifactName+").",result:{newArtifactId:art.artifactId}};
+    }
+    if(artifactId==="artifact_23"){
+      if(!targetId)return bad("TARGET_REQUIRED","Cần một mục tiêu.");
+      const tr=((await this.ctx.storage.get("roles:"+targetId))||[])[0],ar=((await this.ctx.storage.get("roles:"+actorId))||[]);
+      const own=ar[0];
+      if(!tr||!own)return bad("ROLE_NOT_FOUND","Không tìm thấy Vai Trò; chưa trừ lượt.");
+      const have=new Set((own.roleCard?.functions||[]).map(f=>String(f.actionId||f.id)));
+      const copied=(tr.roleCard?.functions||[]).filter(f=>f&&f.passive!==true&&!have.has(String(f.actionId||f.id))).map(f=>({...f,copiedFromLoginId:targetId,copiedByArtifact:"artifact_23"}));
+      if(!copied.length)return bad("NOTHING_TO_COPY","Mục tiêu không có chức năng chủ động để sao chép; chưa trừ lượt.");
+      const next=[{...own,roleCard:{...own.roleCard,functions:[...(own.roleCard?.functions||[]),...copied]}},...ar.slice(1)];
+      await this.ctx.storage.put("roles:"+actorId,next);await this.ctx.storage.put("role:"+actorId,next[0]);
+      meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
+      await this.ctx.storage.put("deliverySnapshot:"+actorId,buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),deliveryVersion:meta.deliveryVersion,publishedAt:new Date().toISOString(),roles:next}));
+      await this.ctx.storage.put("meta",meta);
+      return {ok:true,changes:[],message:"Tráng Gương: đã sao chép "+copied.length+" chức năng thành chức năng số 2 với lượt dùng mới.",result:{copied:copied.map(f=>f.actionId||f.id)}};
+    }
+    if(artifactId==="artifact_31"){
+      if(targets.length!==2)return bad("RUBY_NEEDS_TWO","Cần đúng hai người; chưa trừ lượt.");
+      const arts=[];for(const id of targets){const a=await this.artifactUnflipped(id);if(!a)return bad("TARGET_ARTIFACT_NOT_ELIGIBLE","Cả hai phải có Artifact chưa lật; chưa trừ lượt.");arts.push(a)}
+      return {ok:true,changes:targets.map((id,i)=>({kind:"ruby_turn",loginId:id,type:"effect_notice",extra:{rowMessage:"Hồng Ngọc Cơ Duyên: bạn là người thứ "+(i+1)+" lật và dùng Artifact của mình."}})),
+        message:"Hồng Ngọc Cơ Duyên: lần lượt "+arts.map(a=>a.artifactName).join(" → ")+" (GM giải quyết theo thứ tự).",result:{order:targets}};
+    }
+    if(!targetId)return bad("TARGET_REQUIRED","Cần một mục tiêu.");
+    if(artifactId==="artifact_01"){
+      const t=await this.ctx.storage.get("artifact:"+targetId);
+      const used=t&&t.removedFromMatch!==true&&t.singleUse===true&&(!!t.usedAt||!!(await this.ctx.storage.get("artifactUse:"+targetId+":"+String(t.artifactId))));
+      if(!used)return bad("TARGET_ARTIFACT_NOT_USED","Mục tiêu không có Artifact một lần đã sử dụng; chưa trừ lượt.");
+      const pick=await this.artifactPickNew(matchId,assignments);if(!pick)return noPool();
+      const art=await this.artifactIssue(targetId,pick,meta,matchId,assignments);
+      return {ok:true,changes:[],message:"Hổ Phách Bình Minh: thu hồi Artifact đã dùng và phát lá mới cho mục tiêu.",result:{newArtifactId:art.artifactId}};
+    }
+    if(artifactId==="artifact_32"){
+      const t=await this.ctx.storage.get("artifact:"+targetId);
+      if(!t||t.removedFromMatch===true)return bad("TARGET_NO_ARTIFACT","Mục tiêu không có Artifact để sao chép; chưa trừ lượt.");
+      if(await this.ctx.storage.get("artifactLinked:"+actorId))return bad("ALREADY_LINKED","Đã sao chép một Artifact; chưa trừ lượt.");
+      await this.ctx.storage.put("artifactLinked:"+actorId,{...t,loginId:actorId,usedAt:null,viewedAt:null,linkedFromLoginId:targetId});
+      await this.ctx.storage.delete("artifactUse:"+actorId+":"+String(t.artifactId));
+      return {ok:true,changes:[],message:"Lam Ngọc Định Mệnh: chủ nhận bản sao "+t.artifactName+" (dùng riêng một lần).",result:{linkedArtifactId:t.artifactId}};
+    }
+    const target=await this.artifactUnflipped(targetId);
+    if(!target)return bad("TARGET_ARTIFACT_NOT_ELIGIBLE","Mục tiêu không có Artifact chưa lật; chưa trừ lượt.");
+    if(artifactId==="artifact_03"){
+      const changes=requestFlip?[{kind:"flip_request",loginId:targetId,type:"effect_notice",extra:{rowMessage:"Thạch Anh Tri Thức: bạn được yêu cầu lật Artifact của mình."}}]:[];
+      return {ok:true,changes,message:"Artifact chưa lật của mục tiêu: "+target.artifactName+(requestFlip?" (đã yêu cầu chủ lật).":"."),result:{artifactId:target.artifactId,artifactName:target.artifactName}};
+    }
+    if(artifactId==="artifact_25")
+      return {ok:true,changes:[{kind:"remove_artifact",loginId:targetId,artifactId:String(target.artifactId)}],message:"Hắc Ngọc Hủy Diệt: đã loại bí mật Artifact chưa lật của mục tiêu."};
+    if(artifactId==="artifact_17"){
+      const pick=await this.artifactPickNew(matchId,assignments);if(!pick)return noPool();
+      await this.ctx.storage.put("artifact:"+actorId,{...target,loginId:actorId,usedAt:null,viewedAt:null});
+      const mine=assignments.find(x=>normalizeLoginId(x?.loginId)===actorId);
+      if(mine){mine.artifactId=target.artifactId;mine.artifactName=target.artifactName;mine.artifactUsedAt=null;mine.artifactViewedAt=null;mine.artifactSingleUse=target.singleUse===true}
+      await this.artifactIssue(targetId,pick,meta,matchId,assignments);
+      return {ok:true,replacedOwn:true,changes:[],message:"Ngọc Ghen Tuông: chủ lấy Artifact chưa lật của mục tiêu; mục tiêu nhận lá mới.",result:{stolenArtifactId:target.artifactId}};
+    }
+    return bad("UNKNOWN","Artifact không hỗ trợ.");
+  }
   async gmDayAction(request,body){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,matchId=String(meta.matchId||""),cycleKey=String(meta.cycleKey||""),
@@ -2424,9 +2543,13 @@ export class RoomDurableObject extends DurableObject {
         sameMatch(x)&&x.effectActive!==false&&String(x.type)===kind);
     if(!members["member:"+actorId]||targets.some(id=>!members["member:"+id]))
       return j({ok:false,error:"DAY_PLAYER_NOT_IN_ROOM"},400);
-    let card=null,fn=null,owned=null;
+    let card=null,fn=null,owned=null,ownedKey="artifact:"+actorId;
     if(artifactId){
       owned=await this.ctx.storage.get("artifact:"+actorId);
+      if(!owned||String(owned.artifactId)!==artifactId){
+        const linked=await this.ctx.storage.get("artifactLinked:"+actorId);
+        if(linked&&String(linked.artifactId)===artifactId&&linked.removedFromMatch!==true){owned=linked;ownedKey="artifactLinked:"+actorId}
+      }
       if(!owned||String(owned.artifactId)!==artifactId||
         (owned.matchId&&String(owned.matchId)!==matchId))
         return j({ok:false,error:"DAY_ARTIFACT_NOT_OWNED"},403);
@@ -2451,7 +2574,7 @@ export class RoomDurableObject extends DurableObject {
       (fn.toNight!=null&&Number(fn.toNight)<day))
       return j({ok:false,error:"DAY_ACTION_NOT_CONFIGURED"},403);
     const ghostAct=!artifactId&&roleId==="role_ghost"&&actionId==="action-ghost-message";
-    const count=(fn.noTarget===true||ghostAct)?0:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0)));
+    const count=(fn.noTarget===true||ghostAct||artifactId==="artifact_10")?0:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0)));
     if(targets.length!==count)return j({ok:false,error:"DAY_TARGET_COUNT_INVALID",expected:count},400);
     if(fn.noSelf!==false&&targets.includes(actorId))
       return j({ok:false,error:"DAY_SELF_TARGET_FORBIDDEN"},403);
@@ -2505,7 +2628,7 @@ export class RoomDurableObject extends DurableObject {
     }
     const time=new Date().toISOString(),changes=[],kind=artifactId?"artifact":"role",
       effectiveTargets=targets.filter(id=>!affected(id,"expelled"));
-    let message="",deadVictims=[],result=null;
+    let message="",deadVictims=[],result=null,skipOwnedWrite=false;
     const isWolf=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
       return f.includes("soi")||f==="wolf"||f==="wolves"};
     const isThird=x=>{const f=gameLabelKey(x?.faction||x?.factionId||"");
@@ -2556,7 +2679,27 @@ export class RoomDurableObject extends DurableObject {
       result={message};
     }else if(artifactId){
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
-      if(actionId==='action_revive'||effects.includes('effect_revive')){
+      let storagePlan=null;
+      if(typeof needsStorageArtifact==="function"&&needsStorageArtifact(artifactId)){
+        storagePlan=await this.artifactStoragePlan({artifactId,actorId,targetId:effectiveTargets[0]||"",targets:effectiveTargets,meta,matchId,day,assignments,interactions,members,requestFlip:body?.requestFlip===true});
+        if(!storagePlan.ok)return j({ok:false,error:storagePlan.error,message:storagePlan.message},409);
+      }
+      const aplan=storagePlan?{ok:true,changes:storagePlan.changes||[],message:storagePlan.message,result:storagePlan.result||{}}:typeof artifactDayPlan==="function"?artifactDayPlan({designatedId:normalizeLoginId(body?.designatedId),artifactId,actionId,actorId,targets:effectiveTargets,assignments,interactions,matchId,day}):null;
+      if(aplan){
+        if(!aplan.ok)return j({ok:false,error:aplan.error,message:aplan.message},409);
+        if(aplan.needsGallowsBeforeFirst){
+          const g=(await this.gallowsState(meta)).ballot;
+          if(!["ready","nominating","selecting"].includes(String(g.stage||"ready")))return j({ok:false,error:"JUDGE_TOO_LATE",message:"Phải kích hoạt trước phiên Treo Cổ đầu tiên."},409);
+        }
+        if(storagePlan?.replacedOwn)skipOwnedWrite=true;
+        for(const rid of aplan.revive||[]){
+          for(const x of interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===rid&&String(x.type)==="dead"&&x.effectActive!==false)){x.effectActive=false;x.expiredAt=time;x.expiredReason="DAY_ARTIFACT_REVIVE"}
+          changes.push({kind:"revived",loginId:rid});
+        }
+        for(const c of aplan.changes)changes.push(c);
+        deadVictims=aplan.kill||[];message=aplan.message;
+        result={message,...(aplan.result||{})};
+      }else if(actionId==='action_revive'||effects.includes('effect_revive')){
         for(const id of effectiveTargets){
           const changed=interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===id&&
             String(x.type)==="dead"&&x.effectActive!==false);
@@ -2667,9 +2810,12 @@ export class RoomDurableObject extends DurableObject {
         }:{}),
         ...(effect.extra||{}),
         loginId:effect.loginId,matchId,cycleKey,
-        night:effect.kind==="grudge_schedule"?day+1:day,actorId,artifactId,roleId,actionId,
+        night:effect.kind==="grudge_schedule"?day+1:(effect.extra?.nightOverride||day),actorId,artifactId,roleId,actionId,
         source:"day-action",effectActive:effect.type!=="effect_notice",
-        message:message||"Hành động Ban ngày",createdAt:time};
+        message:message||"Hành động Ban ngày",createdAt:time,
+        ...(effect.extra?.forceActive?{effectActive:true}:{}),
+        ...(effect.extra?.actionIdOverride?{actionId:effect.extra.actionIdOverride}:{}),
+        ...(effect.extra?.rowMessage?{message:effect.extra.rowMessage}:{})};
       interactions.push(log);
       await this.ctx.storage.put("actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+log.id,log);
       if(log.effectActive)this.broadcast({type:"player_status_changed",loginId:log.loginId,
@@ -2684,7 +2830,7 @@ export class RoomDurableObject extends DurableObject {
       const ckey="artifactCycle:"+artifactCycleKey;
       await this.ctx.storage.put(ckey,artifactReservation.state);
       await this.ctx.storage.put(useKey,{requestId:token,cycleKey:artifactCycleKey,usedAt:time,artifactId,actorId});
-      owned.usedAt=time;await this.ctx.storage.put("artifact:"+actorId,owned);
+      if(!skipOwnedWrite){owned.usedAt=time;await this.ctx.storage.put(ownedKey,owned)}
     }else{
       await this.ctx.storage.put(usageKey,[...priorUsage,{matchId,day,actorId,roleId,
         artifactId:"",actionId,requestId:token,createdAt:time}].slice(-1000));
