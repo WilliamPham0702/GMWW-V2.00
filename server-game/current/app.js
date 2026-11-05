@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.307';
+const VERSION='3.308';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -7126,10 +7126,10 @@ function battleRenderGallowsVerdict(g,stage,phase){
   if(battleState.gallowsVerdictKey!==key){
     battleState.gallowsVerdictKey=key;battleState.gallowsVerdictAcknowledged=false;
     if(battleVerdictTimer)clearTimeout(battleVerdictTimer);
-    // Timestamp belongs to the Server ballot: reconnect cannot restart 30s.
+    // Timestamp belongs to the Server ballot: reconnect cannot restart the 5s auto-advance.
     const start=Number(g.resolvedAt||Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0));
     const elapsed=Math.max(0,Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0)-start);
-    battleVerdictTimer=setTimeout(()=>battleGallowsAcceptVerdict(key),Math.max(0,30000-elapsed));
+    battleVerdictTimer=setTimeout(()=>battleGallowsAcceptVerdict(key),Math.max(0,5000-elapsed));
     const noLynch=g.outcome==='no_lynch';
     const name=noLynch?'Không ai lên giàn':(battleMember(g.candidateId)?.displayName||g.candidateId);
     const cue=g.outcome==='dead'?'audio_system_gallows_result_dead':'audio_system_gallows_result_saved';

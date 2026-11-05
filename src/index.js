@@ -57,7 +57,7 @@ const assassinPromptBlocked=(rows,loginId,matchId,night)=>(Array.isArray(rows)?r
   ["expelled","dead"].includes(String(y?.type||""))&&y?.effectActive!==false&&(!y?.matchId||!matchId||String(y.matchId)===String(matchId))&&
   (String(y.type)==="expelled"||String(y?.source||"")==="assassin"||Number(y?.night)!==Number(night)));
 
-const PROJECT="GMWW-V2.00",VERSION="V3.307",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3307-minicard-error-gallows-center",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.308",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3308-verdict-auto-5s",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
