@@ -199,7 +199,7 @@ function gallowsCurrentStage(){
 
 function renderPublicGallowsVerdict(){
   const g=state.gallows||{},phase=String(state.room?.cyclePhase||''),
-    stamp=Number(g.resolvedAt||0),remaining=30000-(Date.now()+Number(state.serverClockOffsetMs||0)-stamp);
+    stamp=Number(g.resolvedAt||0),remaining=5000-(Date.now()+Number(state.serverClockOffsetMs||0)-stamp);
   let panel=document.getElementById('gmwwGallowsPublicVerdict');
   const visible=!!state.roomCode&&phase==='morning'&&g.stage==='resolved'&&
     ['dead','alive','no_lynch'].includes(g.outcome)&&stamp>0&&remaining>0;
@@ -209,7 +209,7 @@ function renderPublicGallowsVerdict(){
     document.head.append(style);
     panel=document.createElement('section');panel.id='gmwwGallowsPublicVerdict';
     panel.setAttribute('aria-label','Phán quyết Lên Giàn');
-    panel.innerHTML='<span class="gmww-verdict-pearls">✦ 🐚 ✦</span><small>⚖ PHÁN QUYẾT CỦA ĐẠI DƯƠNG</small><b></b><strong></strong><p></p><small>Tự đóng sau 30 giây</small>';
+    panel.innerHTML='<span class="gmww-verdict-pearls">✦ 🐚 ✦</span><small>⚖ PHÁN QUYẾT CỦA ĐẠI DƯƠNG</small><b></b><strong></strong><p></p><small>Tự đóng sau 5 giây</small>';
     document.body.append(panel);
   }
   const target=(state.players||[]).find(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')===String(g.candidateId||''));
