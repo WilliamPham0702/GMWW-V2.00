@@ -5,7 +5,7 @@ import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {loverLinkedDeaths} from "./gmww-lovers-rules.js";
 import {thiefPool,thiefCanChoose,thiefDeckView,thiefPlan} from "./gmww-thief-rules.js";
 import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-night-cult-rules.js";
-import {needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
+import {artifactBiteDawn,needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
 import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
 import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths,peekPending,peekDecisionRows} from "./gmww-swap-info-rules.js";
 import {effectiveAssignments,stoneSkinFilter,fireSpreadDeaths,convertNotices} from "./gmww-wolf-variant-rules.js";
@@ -2235,6 +2235,11 @@ export class RoomDurableObject extends DurableObject {
       dawnVictims=st.victims;
       for(const row of st.rows){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
     }
+    if(wolfResolution?.ok&&typeof artifactBiteDawn==="function"){
+      const ab=artifactBiteDawn({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,victims:dawnVictims,now});
+      dawnVictims=ab.victims;
+      for(const row of ab.rows){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
+    }
     if((p==="morning"||p==="night")&&n>0){
       const wv=p==="morning"?[...(typeof fireSpreadDeaths==="function"?fireSpreadDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,players:(await this.ctx.storage.get("players"))||{},matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
           ...(bell.active||typeof peekDeaths!=="function"?()=>[]:peekDeaths)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})]:
@@ -2649,6 +2654,10 @@ export class RoomDurableObject extends DurableObject {
           if(!["ready","nominating","selecting"].includes(String(g.stage||"ready")))return j({ok:false,error:"JUDGE_TOO_LATE",message:"Phải kích hoạt trước phiên Treo Cổ đầu tiên."},409);
         }
         if(storagePlan?.replacedOwn)skipOwnedWrite=true;
+        for(const rid of aplan.revive||[]){
+          for(const x of interactions.filter(x=>sameMatch(x)&&normalizeLoginId(x.loginId)===rid&&String(x.type)==="dead"&&x.effectActive!==false)){x.effectActive=false;x.expiredAt=time;x.expiredReason="DAY_ARTIFACT_REVIVE"}
+          changes.push({kind:"revived",loginId:rid});
+        }
         for(const c of aplan.changes)changes.push(c);
         deadVictims=aplan.kill||[];message=aplan.message;
         result={message,...(aplan.result||{})};

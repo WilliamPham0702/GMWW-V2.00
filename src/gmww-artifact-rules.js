@@ -90,6 +90,18 @@ export function artifactDayPlan({artifactId='',actionId='',actorId='',targets=[]
         message:'Quả Cầu Phán Đoán đúng: cả hai là Sói. Đề xuất Phe Dân thắng ngay.',result:{correct:true}};
       return {ok:true,kill:[actor],changes:[],message:'Quả Cầu Phán Đoán sai: chủ sở hữu bị loại.',result:{correct:false}};
     }
+    case 'artifact_04':
+      return {ok:true,changes:[{kind:'status',loginId:t0,type:'status',statusId:'infected',extra:{actionIdOverride:'artifact-plague-infect'}}],
+        message:'Máu Dịch Bệnh: mục tiêu bị nhiễm bệnh. Nếu Sói Cắn chết người này, Bầy Sói mất lượt Cắn đêm sau.'};
+    case 'artifact_28':{
+      if(ts.length!==3||new Set(ts).size!==3)return fail('PRISM_NEEDS_THREE','Cần đúng ba người khác nhau; chưa trừ lượt.');
+      return {ok:true,changes:[{kind:'prism',loginId:actor,type:'effect_notice',extra:{actionIdOverride:'artifact-prism-limit',forceActive:true,prismTargets:ts,appliesNight:Number(day)+1}}],
+        message:'Lăng Kính Quyền Năng: đêm kế tiếp Sói chỉ được Cắn trong ba người đã chỉ định.'};
+    }
+    case 'artifact_30':case 'artifact_33':{
+      if(!isDead(interactions,matchId,actor))return fail('OWNER_NOT_DEAD','Chủ sở hữu chưa chết; chưa trừ lượt.');
+      return {ok:true,revive:[actor],changes:[],message:(artifactId==='artifact_30'?'Trượng Luân Hồi':'Quyền Trượng Phục Sinh')+': chủ sở hữu hồi sinh, giữ nguyên Vai Trò.'};
+    }
     case 'artifact_41':
       return {ok:true,changes:[{kind:'judge',loginId:actor,type:'effect_notice',extra:{actionIdOverride:'action-judge-double'}}],message:'Bùa Tai Ương: sau phiên Treo Cổ đầu sẽ có thêm một phiên.',needsGallowsBeforeFirst:true};
     default:return null;
@@ -113,3 +125,30 @@ export function aliveNeighbors({players={},interactions=[],matchId='',actorId=''
 }
 export const awakeLastNight=({usage=[],matchId='',night=1,loginId=''}={})=>list(usage).some(u=>String(u?.matchId||'')===String(matchId)&&u.undone!==true&&Number(u.night)===Number(night)&&login(u.actorId)===login(loginId));
 export const needsStorageArtifact=id=>['artifact_01','artifact_03','artifact_10','artifact_16','artifact_17','artifact_25'].includes(String(id));
+
+/* ---- Đợt C: Sói / bình minh ---- */
+const nrow=(id,type,loginId,matchId,night,cycleKey,now,actionId,message,extra={})=>({id,type,loginId,actorId:loginId,matchId:String(matchId),night:Number(night),cycleKey:String(cycleKey),
+  effectActive:true,actionId,source:'artifact-rules',createdAt:now,message,...extra});
+/* Bình minh: Khăn Nguyền Rủa (Cắn → thành Sói thay vì chết, 1 lần) và Máu Dịch Bệnh (người nhiễm bị Cắn chết → Sói mất lượt Cắn đêm sau). */
+export function artifactBiteDawn({assignments=[],interactions=[],matchId='',night=1,cycleKey='',victims=[],now=''}={}){
+  const rows=list(interactions),out=[],remaining=[];
+  for(const v of list(victims)){
+    const id=login(v),a=list(assignments).find(x=>login(x?.loginId)===id);
+    const cursedUsed=rows.some(r=>same(r,matchId)&&r.actionId==='artifact-curse-convert'&&live(r)&&login(r.loginId)===id)||out.some(r=>r.actionId==='artifact-curse-convert'&&login(r.loginId)===id);
+    if(String(a?.artifactId||'')==='artifact_37'&&!cursedUsed){
+      out.push(nrow('artifact-curse:'+matchId+':'+night+':'+id,'effect_notice',id,matchId,night,cycleKey,now,'artifact-curse-convert','Khăn Choàng Nguyền Rủa: bạn bị Sói Cắn nhưng không chết, từ đêm sau bạn là Sói.'));
+      continue;
+    }
+    remaining.push(v);
+    const infected=rows.some(r=>same(r,matchId)&&r.actionId==='artifact-plague-infect'&&live(r)&&login(r.loginId)===id);
+    if(infected&&!out.some(r=>r.actionId==='artifact-plague-pack-lost'))
+      out.push(nrow('artifact-plague:'+matchId+':'+night,'effect_notice',id,matchId,night,cycleKey,now,'artifact-plague-pack-lost','Máu Dịch Bệnh: Bầy Sói mất lượt Cắn đêm sau.'));
+  }
+  return {victims:remaining,rows:out};
+}
+export const plaguePackLost=({interactions=[],matchId='',night=1}={})=>list(interactions).some(r=>same(r,matchId)&&r.actionId==='artifact-plague-pack-lost'&&live(r)&&Number(r.night)+1===Number(night));
+export function prismTargetsFor({interactions=[],matchId='',night=1}={}){
+  const r=list(interactions).filter(x=>same(x,matchId)&&x.actionId==='artifact-prism-limit'&&live(x)&&Number(x.appliesNight)===Number(night)).pop();
+  return r?list(r.prismTargets).map(login):null;
+}
+export const cursedWolfIds=({interactions=[],matchId='',night=1}={})=>list(interactions).filter(r=>same(r,matchId)&&r.actionId==='artifact-curse-convert'&&live(r)&&Number(r.night)<Number(night)).map(r=>login(r.loginId));
