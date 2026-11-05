@@ -76,3 +76,18 @@ export function peekDeaths({assignments=[],interactions=[],matchId='',night=1,cy
   }
   return out;
 }
+
+/* Ti Hí: những người đang hí mắt trong đêm mà Bầy Sói CHƯA quyết định phát hiện hay không. */
+export function peekPending({assignments=[],interactions=[],matchId='',night=1}={}){
+  const rows=list(interactions);
+  return [...new Set(rows.filter(r=>same(r,matchId)&&r.type==='effect_notice'&&r.actionId==='action-peek'&&live(r)&&Number(r.night)===Number(night))
+    .map(r=>login(r.actorId)))].filter(p=>list(assignments).some(a=>login(a?.loginId)===p&&a.roleId==='role_peeking_girl')&&!isDead(rows,matchId,p)&&
+    !rows.some(d=>same(d,matchId)&&d.actionId==='action-peek-detect'&&live(d)&&Number(d.night)===Number(night)&&login(d.loginId)===p));
+}
+export function peekDecisionRows({assignments=[],interactions=[],matchId='',night=1,cycleKey='',wolfId='',detected=false,now=''}={}){
+  const wolf=list(assignments).find(a=>login(a?.loginId)===login(wolfId));
+  if(!wolf||String(wolf.faction||wolf.factionId||wolf.roleCard?.factionId||'').toLowerCase()!=='wolf'||isDead(interactions,matchId,login(wolfId)))return [];
+  return peekPending({assignments,interactions,matchId,night}).map(p=>({id:'peek-decision:'+matchId+':'+night+':'+p,type:'effect_notice',loginId:p,actorId:login(wolfId),
+    matchId:String(matchId),night:Number(night),cycleKey:String(cycleKey),effectActive:false,actionId:'action-peek-detect',detected:detected===true,
+    effectName:'Ti Hí',source:'swap-info-engine',createdAt:now,message:detected===true?'Bầy Sói đã phát hiện Ti Hí.':'Bầy Sói không phát hiện Ti Hí.'}));
+}
