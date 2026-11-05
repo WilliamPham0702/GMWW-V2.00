@@ -888,35 +888,6 @@ function gmwwOnlineIconDown(event,action,card){
    revealPlayerTopMenu(true);
  };
  const settle=()=>{ghost?.remove();node.classList?.remove('gmww-online-lifted');if(card)gmwwCardLifted.delete(node)};
- const cardDrop=e=>{
-   let pool=gmwwOnlineCardActions(card.type);
-   const pk=gmwwOnlinePick,continuing=!!(pk&&pk.targets.length>0);
-   if(continuing){const same=pool.find(a=>a.key===pk.action.key);if(same)pool=[same]}
-   const target=targetAt(e.clientX,e.clientY);
-   const fr=document.getElementById('gmwwVillageFrame')?.getBoundingClientRect();
-   const inVillage=!!fr&&e.clientX>=fr.left&&e.clientX<=fr.right&&e.clientY>=fr.top&&e.clientY<=fr.bottom;
-   const valid=target?gmwwCardTargetActions(pool,target):(inVillage?gmwwCardTargetActions(pool,''):[]);
-   const goHome=()=>{const h=node.getBoundingClientRect();gmwwOnlineFlyGhost(ghost,{x:h.left+h.width/2,y:h.top+h.height/2},false).then(settle)};
-   if(!valid.length){
-     if(!pool.length||!(target||inVillage)){goHome();return}
-     toast(pool.every(a=>a.blocked)?String(pool[0].blockedReason||'Bạn đang bị hiệu ứng, không thể thực hiện hành động.'):'Không có hành động hợp lệ cho vị trí vừa thả.');
-     goHome();return;
-   }
-   const c=target?(gmwwOnlinePlayerCenter(target)||{x:e.clientX,y:e.clientY}):{x:e.clientX,y:e.clientY};
-   const run=a=>{
-     if(Number(a.targetCount)>0&&target){gmwwOnlinePick={action:a,targets:[]};gmwwOnlineTarget(target)}
-     else gmwwOnlinePickAction(a);
-     // Still collecting targets: the card comes back for the next drag.
-     const now=gmwwOnlinePick;
-     if(now&&now.targets.length<Math.max(0,Number(now.action.targetCount)||0))gmwwCardRestore();
-   };
-   gmwwOnlineFlyGhost(ghost,c,true).then(()=>{
-     ghost.remove();
-     // Role/Artifact with 2+ actions (e.g. Witch save/poison): always confirm which one.
-     if(pool.length>1&&!continuing)gmwwCardChoose(valid,target,run,()=>{gmwwOnlineStop();gmwwCardRestore()});
-     else run(valid[0]);
-   });
- };
  const cancel=()=>{if(finished)return;finished=true;cleanup();settle()};
  const end=e=>{
    if(e.pointerId!==pointerId||finished)return;
@@ -950,6 +921,35 @@ function gmwwOnlineIconDown(event,action,card){
      gmwwOnlineIconPositions.delete(action.key);
      node.style.transform='';
    }
+ };
+ const cardDrop=e=>{
+   let pool=gmwwOnlineCardActions(card.type);
+   const pk=gmwwOnlinePick,continuing=!!(pk&&pk.targets.length>0);
+   if(continuing){const same=pool.find(a=>a.key===pk.action.key);if(same)pool=[same]}
+   const target=targetAt(e.clientX,e.clientY);
+   const fr=document.getElementById('gmwwVillageFrame')?.getBoundingClientRect();
+   const inVillage=!!fr&&e.clientX>=fr.left&&e.clientX<=fr.right&&e.clientY>=fr.top&&e.clientY<=fr.bottom;
+   const valid=target?gmwwCardTargetActions(pool,target):(inVillage?gmwwCardTargetActions(pool,''):[]);
+   const goHome=()=>{const h=node.getBoundingClientRect();gmwwOnlineFlyGhost(ghost,{x:h.left+h.width/2,y:h.top+h.height/2},false).then(settle)};
+   if(!valid.length){
+     if(!pool.length||!(target||inVillage)){goHome();return}
+     toast(pool.every(a=>a.blocked)?String(pool[0].blockedReason||'Bạn đang bị hiệu ứng, không thể thực hiện hành động.'):'Không có hành động hợp lệ cho vị trí vừa thả.');
+     goHome();return;
+   }
+   const c=target?(gmwwOnlinePlayerCenter(target)||{x:e.clientX,y:e.clientY}):{x:e.clientX,y:e.clientY};
+   const run=a=>{
+     if(Number(a.targetCount)>0&&target){gmwwOnlinePick={action:a,targets:[]};gmwwOnlineTarget(target)}
+     else gmwwOnlinePickAction(a);
+     // Still collecting targets: the card comes back for the next drag.
+     const now=gmwwOnlinePick;
+     if(now&&now.targets.length<Math.max(0,Number(now.action.targetCount)||0))gmwwCardRestore();
+   };
+   gmwwOnlineFlyGhost(ghost,c,true).then(()=>{
+     ghost.remove();
+     // Role/Artifact with 2+ actions (e.g. Witch save/poison): always confirm which one.
+     if(pool.length>1&&!continuing)gmwwCardChoose(valid,target,run,()=>{gmwwOnlineStop();gmwwCardRestore()});
+     else run(valid[0]);
+   });
  };
  // Capture on the source AND listen on the parent document: iOS may move over the iframe.
  try{node.setPointerCapture?.(event.pointerId)}catch{}
