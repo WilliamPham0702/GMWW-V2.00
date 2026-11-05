@@ -1007,7 +1007,7 @@ export class RoomDurableObject extends DurableObject {
       current={...current,id:"gallows-"+crypto.randomUUID(),round:2,stage:"ready",nominationDeadlineAt:null,nominationStartedAt:null,hangingStartedAt:null,
         candidateId:null,deadlineAt:null,startedAt:null,nominations:{},votes:{},eligible:[],outcome:null,resolvedAt:null,updatedAt:t};
       await this.ctx.storage.put(key,current);
-      this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:gallowsSnapshot(current,meta,t),serverTime:t});
+      this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(current,meta,t),room:publicRoom(meta),serverTime:t});
     }
     return {key,ballot:current,eligible};
   }
