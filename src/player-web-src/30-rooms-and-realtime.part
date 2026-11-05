@@ -294,12 +294,13 @@ function gallowsDock(){
     if(event.button!==undefined&&event.button!==0)return;
     const r=dock.getBoundingClientRect();
     drag={id:event.pointerId,x:event.clientX,y:event.clientY,cx:r.left+r.width/2,bottom:r.bottom,moved:false};
-    try{dock.setPointerCapture(event.pointerId)}catch{}
+    // Capture only once a real drag starts, otherwise the capture would swallow the 👍/👎 button click.
   });
   dock.addEventListener('pointermove',event=>{
     if(!drag||event.pointerId!==drag.id)return;
     const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
     if(!drag.moved&&Math.hypot(dx,dy)<8)return;
+    if(!drag.moved)try{dock.setPointerCapture(event.pointerId)}catch{}
     drag.moved=true;dock.classList.add('is-dragging');
     const w=dock.offsetWidth,h=dock.offsetHeight,vw=window.innerWidth,vh=window.innerHeight;
     dock.style.transform='translate(-50%,-100%)';
