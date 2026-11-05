@@ -24,12 +24,12 @@ test('Online action dock rests at the village entrance above the bottom menu (V3
   vm.runInNewContext(code+';globalThis.place=gmwwOnlinePlaceAtFire;',env);
   env.place(dock);
   assert.equal(dock.style.left,'195px');
-  assert.equal(dock.style.top,'690px');
+  assert.equal(dock.style.top,'652px'); // V3.305: 48px above the footer
   // Footer missing or idle-hidden off-screen: same safe spot above where the menu sits.
   env.document.getElementById=()=>null;
   env.place(dock);
   assert.equal(dock.style.left,'195px');
-  assert.equal(dock.style.top,String(800-88-10)+'px');
+  assert.equal(dock.style.top,String(800-88-48)+'px');
   assert.match(player,/gmww:village-ready'\)\{syncVillageFrame\(true\);gmwwOnlinePlaceAtFire/);
 });
 

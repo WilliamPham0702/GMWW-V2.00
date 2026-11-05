@@ -593,16 +593,6 @@ html[data-gmww-boot="pending"] body::before{content:"Đang tải GMWW…";positi
 
 </section>
 
-<!-- 4. CHỌN PHÒNG -->
-<section id="rooms" class="screen">
-  <div class="topbar"><button class="back" onclick="go('profile')">← QUAY VỀ</button><div class="game-state">● ONLINE</div></div>
-  <div class="kicker">PHÒNG ĐANG HOẠT ĐỘNG</div>
-  <h1 class="page-title">Chọn Phòng</h1>
-  <p class="page-sub">Chỉ hiển thị các phòng GM đang mở tại thời điểm hiện tại.</p>
-
-  <div class="room-list" aria-live="polite"></div>
-</section>
-
 <!-- 5. VÀO GAME -->
 <section id="game" class="screen">
   <div class="game-top"><div><div class="kicker" style="text-align:left">GAME ĐANG DIỄN RA</div><h1 class="page-title" style="text-align:left;margin-bottom:0">Làng Trăng Máu</h1></div><span id="gameStatePill" class="game-state">ĐANG SỐNG</span></div>

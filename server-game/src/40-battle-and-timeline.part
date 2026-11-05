@@ -143,6 +143,7 @@ async function advancePlayPhase(){
     if(!['running','started','game','playing'].includes(serverPhase)){
       if(!playSceneRuntime.assignments.length)throw new Error('Hãy Phân Vai và Phát Vai trước khi Bắt Đầu Đêm 1.');
       await playRoomApi('/start',{method:'POST',body:JSON.stringify({matchId:playSceneRuntime.room?.matchId||('match-'+Date.now()),matchRevision:Number(playSceneRuntime.room?.matchRevision||0)+1})});
+      if(playSceneRuntime.room?.demo!==true){playSceneState.autoGM=true;savePlayScene()}
       await playSetServerCycle('night',1);return;
     }
     if(playSceneState.phase==='lobby'){await playSetServerCycle('night',Math.max(1,playSceneState.night||1))}
@@ -554,9 +555,10 @@ function battleIconEntryPoint(){
  const size=battleIconSize(false);
  const rail=document.getElementById('battleBottomControls');
  const backup=rail?.getBoundingClientRect?.();
+ // V3.305: one notch higher (48px) so icons do not cover the chat above the bottom menu.
  if(backup&&backup.width>0&&backup.height>0&&backup.top>vh*.5)
-  return battleIconClamp(vw/2,backup.top-size.height/2-10);
- return battleIconClamp(vw/2,vh-Math.max(84,vh*.11)-size.height/2-10);
+  return battleIconClamp(vw/2,backup.top-size.height/2-48);
+ return battleIconClamp(vw/2,vh-Math.max(84,vh*.11)-size.height/2-48);
 }
 function battleIconResetPositions(){
  battleIconPositions.clear();battleIconClearDrag();
@@ -1523,7 +1525,7 @@ function battleMarkPlayers(){
   const witchAwake=playSceneState.phase==='night'&&
     (t?.roleId==='role_witch'||(t?.roles||[]).some(row=>row.roleId==='role_witch'));
   const intel=playSceneRuntime.nightIntel;
-  const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled?
+  const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled&&!intel.witchSaveUsed?
     (intel.attacked||[]).map(row=>String(row?.to||'').replace(/^member:/,'')).filter(Boolean):[];
   // GM-only battleUndo is taken from /gm/state, never from a public socket.
   // The confirmed target flame applies only during the current night turn.
@@ -1696,7 +1698,8 @@ function battleGallowsRender(phase){
           [['audio_system_gallows_open_vote','Mở bỏ phiếu']]);
     }
   }
-  if(phase==='day'&&['closed','resolved'].includes(stage)&&battleState.gallowsShowKey!==key){
+  // V3.305: Auto GM opens the Gallows on its own at discussion end; show each new stage once.
+  if(phase==='day'&&['nominating','voting','closed','resolved'].includes(stage)&&battleState.gallowsShowKey!==key){
     battleState.gallowsShowKey=key;battleState.gallowsOpen=true;
   }
   battleRenderGallowsVerdict(g,stage,phase);
@@ -1927,16 +1930,31 @@ function gmwwGMAdminTargetAt(x,y,type){
 function gmwwGMAdminMount(){
   const top=document.getElementById('playBattleTop');if(!top)return;
   let bar=document.getElementById('gmwwGMAdminDock');
+  if(!document.getElementById('gmwwGMAdminDockV3305')){
+    // V3.305 top-right GM menu: Cứu · Giết · Cấm Chat · Auto GM (game action icons). Overrides older left offsets.
+    const st=document.createElement('style');st.id='gmwwGMAdminDockV3305';
+    st.textContent='#start #gmwwGMAdminDock button[data-gm-admin="revive"]{left:calc(100vw - 202px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="dead"]{left:calc(100vw - 152px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="mute-chat"]{left:calc(100vw - 102px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"]{left:calc(100vw - 52px)!important}'+
+      '#start #gmwwGMAdminDock button{border:0!important;background:transparent!important;border-radius:12px!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"]::after{content:"AUTO";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);padding:1px 4px;border-radius:6px;font:800 8px/1.2 system-ui;letter-spacing:.04em;color:#3d0b05;background:#ff9b8f;pointer-events:none}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"][data-state="on"]::after{color:#0c3317;background:#7ee08a}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"][data-state="off"] img{filter:grayscale(.75) brightness(.8)}';
+    document.head.appendChild(st);
+  }
   if(!bar){
     bar=document.createElement('div');bar.id='gmwwGMAdminDock';
     bar.setAttribute('role','group');bar.setAttribute('aria-label','Hành động riêng của GM');
-    bar.innerHTML='<button type="button" data-gm-admin="dead" aria-label="GM Giết" title="GM • Giết"><img src="/assets/action-icons/v3/15_san_giet.webp" alt=""></button>'+
-      '<button type="button" data-gm-admin="revive" aria-label="GM Cứu" title="GM • Cứu / Hồi Sinh"><img src="/assets/action-icons/v3/13_hoi_sinh.webp" alt=""></button>'+
-      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat"><img src="/assets/action-icons/v3/39_cam_noi.webp" alt=""></button>'+ 
-      '<button type="button" data-gm-admin="open-chat" aria-label="GM Mở Chat" title="GM • Mở Chat">🦩</button>';
-    document.body.appendChild(bar);
+    // V3.305: top-right GM menu = the fire GM menu functions, reusing the game's action icons.
+    bar.innerHTML='<button type="button" data-gm-admin="revive" aria-label="GM Cứu" title="GM • Cứu / Hồi Sinh"><img src="action-icons/v3/07_cuu.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="dead" aria-label="GM Giết" title="GM • Giết"><img src="action-icons/v3/15_san_giet.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat"><img src="action-icons/v3/39_cam_noi.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="auto-gm" aria-label="Auto GM" title="GM • Auto GM"><img src="action-icons/v3/31_rung_chuong.webp" alt=""></button>';
+    // The stylesheet scopes this dock under #start; mounting on <body> left it unstyled/invisible.
+    (document.getElementById('start')||document.body).appendChild(bar);
     for(const button of bar.querySelectorAll('[data-gm-admin]')){
-      try{const saved=JSON.parse(localStorage.getItem('gmww-admin-icon-'+button.dataset.gmAdmin)||'null');if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){button.style.left=Math.max(0,Math.min(window.innerWidth-44,saved.x))+'px';button.style.top=Math.max(0,Math.min(window.innerHeight-44,saved.y))+'px'}}catch{}
+      try{const saved=JSON.parse(localStorage.getItem(GMWW_ADMIN_POS_KEY+button.dataset.gmAdmin)||'null');if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){button.style.left=Math.max(0,Math.min(window.innerWidth-44,saved.x))+'px';button.style.top=Math.max(0,Math.min(window.innerHeight-44,saved.y))+'px'}}catch{}
     }
     bar.addEventListener('pointerdown',event=>{
       const button=event.target.closest('[data-gm-admin]');
@@ -1955,7 +1973,7 @@ function gmwwGMAdminMount(){
         drag.ghost.innerHTML=drag.button.innerHTML;document.body.appendChild(drag.ghost);
       }
       drag.ghost.style.left=event.clientX+'px';drag.ghost.style.top=event.clientY+'px';
-      const target=gmwwGMAdminTargetAt(event.clientX,event.clientY,drag.type);
+      const target=GMWW_ADMIN_TOGGLES.has(drag.type)?null:gmwwGMAdminTargetAt(event.clientX,event.clientY,drag.type);
       if(!target){drag.button.style.left=Math.max(0,Math.min(window.innerWidth-44,event.clientX-22))+'px';drag.button.style.top=Math.max(0,Math.min(window.innerHeight-44,event.clientY-22))+'px'}
       if(target!==drag.target){drag.target?.classList.remove('gmww-battle-icon-snap');
         drag.target=target;target?.classList.add('gmww-battle-icon-snap')}
@@ -1968,9 +1986,8 @@ function gmwwGMAdminMount(){
       drag.target?.classList.remove('gmww-battle-icon-snap');drag.ghost?.remove();
       gmwwGMAdminPointer=null;
       if(event.type==='pointerup'&&!drag.button.disabled){
-        if(drag.moved){if(target&&drag.type!=='open-chat')void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type);else{try{localStorage.setItem('gmww-admin-icon-'+drag.type,JSON.stringify({x:parseFloat(drag.button.style.left),y:parseFloat(drag.button.style.top)}))}catch{}}}
-        else if(drag.type==='open-chat')document.getElementById('gmwwGMChatLaunch')?.click();
-        else battleQuickSelect(drag.type);
+        if(drag.moved){if(target&&!GMWW_ADMIN_TOGGLES.has(drag.type))void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type);else{try{localStorage.setItem(GMWW_ADMIN_POS_KEY+drag.type,JSON.stringify({x:parseFloat(drag.button.style.left),y:parseFloat(drag.button.style.top)}))}catch{}}}
+        else gmwwGMAdminTap(drag.type);
       }
       event.preventDefault();event.stopPropagation();
     };
@@ -1980,14 +1997,22 @@ function gmwwGMAdminMount(){
       // Keyboard activation has detail=0. Touch/mouse activation is handled on pointerup.
       if(event.detail!==0)return;
       const button=event.target.closest('[data-gm-admin]');
-      if(button&&!button.disabled){if(button.dataset.gmAdmin==='open-chat')document.getElementById('gmwwGMChatLaunch')?.click();else battleQuickSelect(button.dataset.gmAdmin)}
+      if(button&&!button.disabled)gmwwGMAdminTap(button.dataset.gmAdmin);
     });
   }
   bar.hidden=playSceneState.step!=='battle';
   for(const b of bar.querySelectorAll('[data-gm-admin]')){
-    b.disabled=battleState.busy||battleState.syncPending||playSceneRuntime.busy||!isLivePlayRoom();
-    b.setAttribute('aria-pressed',String(battleState.quickType===b.dataset.gmAdmin));
+    const auto=b.dataset.gmAdmin==='auto-gm';
+    b.disabled=auto?playSceneRuntime.busy||playSceneRuntime.room?.demo===true:battleState.busy||battleState.syncPending||playSceneRuntime.busy||!isLivePlayRoom();
+    b.setAttribute('aria-pressed',String(auto?!!playSceneState.autoGM:battleState.quickType===b.dataset.gmAdmin));
+    if(auto){b.dataset.state=playSceneState.autoGM?'on':'off';b.setAttribute('aria-label',playSceneState.autoGM?'Auto GM đang bật':'Auto GM đang tắt')}
   }
+}
+// Mute-chat and Auto GM are toggles; Cứu/Giết keep drag-onto-player or tap-then-pick.
+const GMWW_ADMIN_TOGGLES=new Set(['auto-gm']),GMWW_ADMIN_POS_KEY='gmww-admin-icon-v3305-';
+function gmwwGMAdminTap(type){
+  if(type==='auto-gm'){void togglePlayAutoGM();return}
+  battleQuickSelect(type);
 }
 function renderPlayBattle(){
   demoSyncScreenAwake();gmwwGMChatMount();

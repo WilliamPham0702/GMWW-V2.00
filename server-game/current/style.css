@@ -8879,7 +8879,10 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 }
 
 /* GMWW icon B: visual identity of the nomination command, without changing gallows rules. */
+#battleGallowsPanel [data-gallows-command="open"]{
+  position:relative;display:flex;align-items:center;justify-content:center;text-align:center;
+}
 #battleGallowsPanel [data-gallows-command="open"]::before{
-  content:"";display:inline-block;width:28px;height:28px;vertical-align:middle;margin-right:5px;
+  content:"";position:absolute;left:6px;top:50%;width:26px;height:26px;transform:translateY(-50%);pointer-events:none;
   background:url("./action-icons/gmww-gallows-nominate-b.png") center/contain no-repeat;
 }

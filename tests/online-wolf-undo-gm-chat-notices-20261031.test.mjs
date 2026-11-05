@@ -40,7 +40,7 @@ test('Action icons spawn at the village entrance above the bottom menu and remai
    battleIconClamp:(x,y)=>({x,y}),battleIconSize:()=>({width:92,height:92}),globalThis:{},innerWidth:390,innerHeight:844};
  vm.createContext(scope);
  vm.runInContext(source+'globalThis.entry=battleIconEntryPoint;',scope);
- assert.deepEqual(scope.globalThis.entry(),{x:195,y:740-46-10});
+ assert.deepEqual(scope.globalThis.entry(),{x:195,y:740-46-48});
  assert.match(gm,/battleIconPositions\.set\(key,point\)/);
  assert.match(gm,/pointermove/);
  assert.match(gm,/battleIconTargetAt\(e\.clientX,e\.clientY,a\)/);

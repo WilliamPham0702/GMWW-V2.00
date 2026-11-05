@@ -69,7 +69,7 @@ test('P0: a missed initial team snapshot in Edge is independently repaired durin
 
 test('P0: server gallows pushes authoritative phase, and private replies never roll back newer vote broadcasts',()=>{
  const events=(worker.match(/this\.broadcast\(\{type:"gallows_updated",room:publicRoom\(meta\),gallows:/g)||[]).length;
- assert.equal(events,3,'automatic timer, GM command and Player vote broadcast the full phase');
+ assert.equal(events,4,'automatic timer, GM command, Player vote and V3.305 Auto GM gallows step broadcast the full phase');
  assert.match(player,/if\(d\.type==='gallows_updated'\)\{gmwwLastGallowsBroadcastAt=Date\.now\(\);if\(d\.room\)state\.room=d\.room;/);
  assert.match(player,/__gmwwFetchedAt:requestedAt/);
  assert.match(player,/Number\(d\.__gmwwFetchedAt\|\|0\)>=gmwwLastGallowsBroadcastAt/);

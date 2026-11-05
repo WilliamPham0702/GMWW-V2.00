@@ -173,7 +173,12 @@ if(game){
   function walkFrameUrl(characterId,frame=1,direction="right"){const f=Math.max(1,Math.min(6,Number(frame)||1)),dir=direction==="left"?"?rev=c40-1&dir=left":"?rev=c40-1";return "/api/game-characters/"+encodeURIComponent(characterId)+"/frame/"+f+dir}
   function visuallyDeceased(data){return Array.isArray(data?.statusTags)&&data.statusTags.some(x=>x?.statusId==="dead")}
   function walkFrameFor(data,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(visuallyDeceased(data)||data?.movementStatus!=="moving"||!data?.moveStartedAt)return 1;return (Math.floor(Math.max(0,now-Number(data.moveStartedAt))/95)%6)+1}
-  function animationCommandFor(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),hanging=battleStatic&&!dead&&data?.isGM!==true&&data?.kind!=="gm"&&setupState?.gallowsHanging?.active===true&&String(data?.id||"").replace(/^member:/,"")===String(setupState.gallowsHanging.candidateId||""),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=hanging?"walking":sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":hanging?"walk":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:hanging?"walk":data?.villageActivity||base.activity||"idle",paused:battleStatic&&!hanging?true:hanging?false:base.paused},data?.gameCharacterId||"character-01")}
+  function animationCommandFor(data,position){const command=animationCommandBase(data,position);return battleStatic&&command.state!=="dead"&&!(command.motion==="walk"&&!command.paused)&&battleTargetRunning(data)?normalizeRendererCommand({...command,state:"running",motion:"run",activity:"run",paused:false},data?.gameCharacterId||"character-01"):command}
+  function animationCommandBase(data,position){const base=data?.characterAnimation&&typeof data.characterAnimation==="object"?data.characterAnimation:{};const dead=visuallyDeceased(data),hanging=battleStatic&&!dead&&data?.isGM!==true&&data?.kind!=="gm"&&setupState?.gallowsHanging?.active===true&&String(data?.id||"").replace(/^member:/,"")===String(setupState.gallowsHanging.candidateId||""),moving=!battleStatic&&!dead&&!!position?.moving,sitting=!battleStatic&&!dead&&!!position?.sitting,state=hanging?"walking":sitting?"sitting":moving?(base.state==="running"?"running":"walking"):(data?.ready?"ready":"idle"),motion=dead?"dead":state==="sitting"?"sit":hanging?"walk":moving?(state==="running"?"run":"walk"):(state==="ready"?"ready":"idle-breathe");return normalizeRendererCommand({...base,characterId:data?.gameCharacterId||base.characterId,state:dead?"dead":state,motion,facing:moving?walkDirection(data):(base.facing||"right"),activity:hanging?"walk":data?.villageActivity||base.activity||"idle",paused:battleStatic&&!hanging?true:hanging?false:base.paused},data?.gameCharacterId||"character-01")}
+  /* V3.305: like the GM Server, a chosen target (MỤC TIÊU) runs in place on Player Web. Dead/frozen/expelled stay still. */
+  function battleTargetRunning(data){const el=mountedPlayerNodes.get(String(data?.id||""));if(!el||!el.classList.contains("is-battle-target")||el.classList.contains("is-battle-actor"))return false;const status=String(data?.statusId||data?.status||"").toLowerCase();return !["dead","expelled","frozen"].includes(status)&&!visuallyDeceased(data)&&!(Array.isArray(data?.statusTags)&&data.statusTags.some(x=>["frozen","expelled"].includes(String(x?.statusId||""))))}
+  function refreshBattleTargetRig(el){if(!battleStatic||!el?.isConnected)return;let id="";for(const [key,node] of mountedPlayerNodes)if(node===el){id=key;break}const data=id&&all.find(x=>String(x?.id)===id);if(!data||data?.isGM===true||data?.kind==="gm")return;const avatar=el.querySelector(".portrait.game-character"),rig=avatar?.querySelector("[data-character-renderer]");if(!rig)return;const command=animationCommandFor({...data,gameCharacterId:rig.dataset.characterId||data.gameCharacterId},null),key=[command.characterId,command.state,command.motion,command.rigId,command.facing,command.activity,command.paused].join("|");if(el.dataset.gmwwMotion!==key){updateCharacterRenderer(avatar,command);el.dataset.gmwwMotion=key}}
+  try{const targetOn=c=>/(^|\s)is-battle-target(\s|$)/.test(c||"")&&!/(^|\s)is-battle-actor(\s|$)/.test(c||"");new MutationObserver(list=>{for(const m of list){const el=m.target;if(el?.classList?.contains("player")&&targetOn(el.className)!==targetOn(m.oldValue))refreshBattleTargetRig(el)}}).observe(document.getElementById("players")||document.body,{subtree:true,attributes:true,attributeFilter:["class"],attributeOldValue:true})}catch{}
   function gmActionFor(data,position,now=Date.now()+Number(setupState.clockOffsetMs||0)){if(!(data?.isGM===true||data?.kind==="gm"))return"";if(position?.moving)return String(data?.villageActivity||"")==="gm_manual"?"run":"walk";const phase=Math.floor(Number(now||0)/2200)%12;return phase===8?"shake":phase===10?"howl":"idle"}
   /* Pirate nomination gesture lives INSIDE the village iframe so pointerup
      can hit a Character. The parent sends a signed member request to the DO. */
@@ -444,7 +449,7 @@ if(game){
     if(count>0){
       if(!pearl){pearl=document.createElement('span');pearl.className='gmww-nomination-pearl';
         pearl.setAttribute('aria-label','Số phiếu đề cử')}
-      pearl.textContent='✦ '+count;pearl.title=count+' phiếu đề cử';
+      pearl.textContent=String(count);pearl.title=count+' phiếu đề cử';
       if(host.firstElementChild!==pearl)host.prepend(pearl);
     }else pearl?.remove();
     const vote=(Array.isArray(data?.statusTags)?data.statusTags:[]).find(x=>x?.statusId==='gallows_vote')?.icon;
@@ -458,7 +463,7 @@ if(game){
   function ensureNominationPearlStyle(){
     if(document.getElementById('gmwwNominationPearlCss'))return;
     const css=document.createElement('style');css.id='gmwwNominationPearlCss';
-    css.textContent='#players .player .gmww-nomination-pearl{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:32px;padding:2px 9px;margin:0 auto 3px;border-radius:999px;border:2px solid #ffe3a5;color:#fffae3;font-weight:1000;font-size:16px;background:radial-gradient(circle at 20% 15%,#70e7e7,#116478 72%,#062f48);box-shadow:0 4px 16px #001a3188;text-shadow:0 1px 3px #002838;pointer-events:none}';
+    css.textContent='#players .player .gmww-nomination-pearl{display:inline-block;width:auto;min-width:0;height:auto;padding:0 2px;margin:0 auto 3px;background:transparent;border:0;border-radius:0;box-shadow:none;color:#ff3045;font-size:21px;font-weight:1000;line-height:1.1;font-variant-numeric:tabular-nums;text-shadow:0 1px 1px #fff7d5,0 2px 4px #32020a;animation:gmwwNominationVoteBounce 1.85s ease-out infinite;pointer-events:none}@keyframes gmwwNominationVoteBounce{0%,29%,48%,100%{transform:translateY(0)}13%{transform:translateY(-10px)}22%{transform:translateY(-2px)}38%{transform:translateY(-5px)}}@media(prefers-reduced-motion:reduce){#players .player .gmww-nomination-pearl{animation:none}}';
     document.head.appendChild(css);
   }
   ensureNominationPearlStyle();
@@ -640,7 +645,7 @@ if(game){
     document.body.classList.toggle("player-prep",room.playerSceneMode==="lobby");
     document.body.classList.toggle("player-battle",battleStatic);
     if(selectedId&&!all.some(p=>p.id===selectedId))selectedId=null;
-    if(phase==="night"||phase==="day"||phase==="morning")applyPhase(phase==="night",cycle);
+    if(phase==="night"||phase==="day"||phase==="morning"||phase==="lobby")applyPhase(phase==="night",cycle);
     if(room.roomName)document.title="GMWW · "+safeText(room.roomName);
     placeFire();
     const nextSig=JSON.stringify([nextCount,seatLayout,seatOffset,seatSpacing,room.roomMode,room.playerSceneMode,

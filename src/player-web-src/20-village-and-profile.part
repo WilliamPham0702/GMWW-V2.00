@@ -71,7 +71,7 @@ function syncPlayerMiniCards(){
   }
   if(!host){
     host=document.createElement('div');host.id='gmwwPlayerMiniCards';
-    host.innerHTML='<button type="button" data-mini="role" title="Xem Vai Trò của bạn"><img alt=""><span class="mini-label">Vai Trò</span></button><button type="button" data-mini="artifact" title="Xem Artifact của bạn"><img alt=""><span class="mini-label">Artifact</span></button>';
+    host.innerHTML='<button type="button" data-mini="role" title="Xem Vai Trò của bạn"><img alt="" src="/card-backs/role-card-back-v1.png" data-back="/card-backs/role-card-back-v1.png"><span class="mini-label">Vai Trò</span></button><button type="button" data-mini="artifact" title="Xem Artifact của bạn"><img alt="" src="/card-backs/artifact-card-back-v1.png" data-back="/card-backs/artifact-card-back-v1.png"><span class="mini-label">Artifact</span></button>';
     document.getElementById('game')?.appendChild(host);
     for(const type of ['role','artifact']){
       const button=host.querySelector('[data-mini="'+type+'"]');gmwwMiniPosition(button,type);gmwwMiniDrag(button,type);
@@ -87,10 +87,10 @@ function syncPlayerMiniCards(){
   const base='/api/rooms/'+encodeURIComponent(state.roomCode)+'/role-assets/';
   const roleAsset=String(role.artworkAssetId||role.artworkId||pc.artworkAssetId||pc.artworkId||role.roleId||'');
   const artAsset=String(artifact.artworkAssetId||artifact.artworkId||ac.artworkAssetId||ac.artworkId||'');
-  const setImage=(selector,url)=>{const img=host?.querySelector(selector);if(img&&url&&img.getAttribute('src')!==url)img.src=url};
+  const setImage=(selector,url)=>{const img=host?.querySelector(selector);if(!img)return;const back=img.dataset.back||'';if(!img.dataset.gmwwBackFallback){img.dataset.gmwwBackFallback='1';img.addEventListener('error',()=>{if(back&&img.getAttribute('src')!==back)img.src=back})}const next=url||back;if(next&&img.getAttribute('src')!==next)img.src=next};
   setImage('[data-mini="role"] img',String(role.roleImage||(roleAsset?base+encodeURIComponent(roleAsset)+'/image':'')||''));
   const artButton=host.querySelector('[data-mini="artifact"]');artButton.hidden=!state.artifact;
-  if(state.artifact)setImage('[data-mini="artifact"] img',String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''));
+  setImage('[data-mini="artifact"] img',state.artifact?String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''):'');
 }
 
 let gmwwSharedTimeline=null,gmwwSharedTimelineKey='',gmwwSharedTimelineReceivedAt=0;
@@ -132,6 +132,7 @@ function renderPlayerTimeline(timeline){
  }
  for(const id of ['battleBack','battleAdvance']){const button=root.querySelector('#'+id);button.disabled=true;button.querySelector('b').textContent=(id==='battleBack'?'<Đêm ':'Ngày ')+Math.max(1,Number(room.cycleNight)||1)+(id==='battleAdvance'?'>':'')}
  menu.querySelector('.gmww-player-menu-info')?.setAttribute('hidden','');
+ if(typeof gmwwTopTickerRender==='function')gmwwTopTickerRender();
 }
 
 function hidePlayerTopMenu(){
@@ -308,7 +309,8 @@ async function releaseMySeat(){
 let roomListRefreshBusy=false;
 
 function go(id,opts={}){
-  if(id==='rooms'&&!state.roomNavigationAuthorized&&!opts.fromHistory)return false;
+  // V2.00 has no room-picker page: every legacy route to it lands in the village (lobby / gather stage set by the GM).
+  if(id==='rooms'){if(state.member&&!opts.fromRooms)enterVillage();return false}
   if(id==='profile'&&!opts.fromHistory)state.roomNavigationAuthorized=false;
   $$('.screen').forEach(x=>x.classList.remove('active'));if(state.member&&['profile','rooms'].includes(id))$('#game')?.classList.add('active');
   const el=$('#'+id);if(!el)return false;
@@ -344,7 +346,8 @@ function toast(text){
     document.body.appendChild(t);
   }
   t.style.top=gmwwToastTop()+'px';
-  t.textContent=text||'';t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',2400);
+  // One notice centre for the whole Player Web: always under the top menu, replaced by the next notice, auto-closes after 15 s.
+  t.textContent=text||'';t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',15000);
 }
 window.toast=toast;
 

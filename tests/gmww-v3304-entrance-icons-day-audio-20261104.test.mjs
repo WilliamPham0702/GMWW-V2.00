@@ -17,7 +17,7 @@ test('1a. Player: action icons rest centred just above the bottom menu, not on t
   const ctx={window:{innerWidth:400,innerHeight:800},document:{getElementById:id=>id==='gmwwOnlineFooter'?footer:null}};
   vm.runInNewContext(code+';gmwwOnlinePlaceAtFire(dock)',{...ctx,dock,Math,Number});
   assert.equal(dock.style.left,'200px');
-  assert.equal(dock.style.top,'720px','bottom edge 10px above the footer');
+  assert.equal(dock.style.top,'682px','V3.305: bottom edge 48px above the footer (clear of chat)');
   assert.equal(dock.style.transform,'translate(-50%,-100%)','rows grow upward, never over the footer');
   assert.doesNotMatch(code,/querySelector\('\.fire'\)/);
 });
@@ -29,7 +29,7 @@ test('1b. GM: action icons spawn above battleBottomControls (entrance stairs)',(
   ctx.globalThis=ctx;
   const p=vm.runInNewContext(code+';battleIconEntryPoint()',ctx);
   assert.equal(p.x,200);
-  assert.equal(p.y,700-46-10);
+  assert.equal(p.y,700-46-48);
 });
 
 test('2. Player daytime top menu only shows Làng ơi dậy đi',()=>{
