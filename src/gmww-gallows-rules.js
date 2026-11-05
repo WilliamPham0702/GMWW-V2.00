@@ -68,8 +68,11 @@ export function gallowsAutomaticNominee(ballot){
 }
 export function gallowsVoteTotals(ballot){
   const eligible=new Set(ballot?.eligible||[]),blocked=new Set(gallowsBlockedVotes(ballot));
-  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&voter!==String(ballot?.candidateId||'')&&!blocked.has(voter)&&['👍','👎'].includes(choice));
-  return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length,cast:votes.length,
+  const saveOnly=new Set(ballot?.saveOnlyVoters||[]);
+  const votes=Object.entries(ballot?.votes||{}).filter(([voter,choice])=>eligible.has(voter)&&voter!==String(ballot?.candidateId||'')&&!blocked.has(voter)&&['👍','👎'].includes(choice)&&!(saveOnly.has(voter)&&choice==='👎'));
+  // Con Quạ: phiếu bất lợi cộng thêm cho người đang bị đưa lên giàn (không tính là phiếu đã bỏ).
+  const extraKill=Math.max(0,Number(ballot?.extraKillVotes?.[String(ballot?.candidateId||'')])||0);
+  return {save:votes.filter(([,choice])=>choice==='👍').length,kill:votes.filter(([,choice])=>choice==='👎').length+extraKill,cast:votes.length,
     eligible:[...eligible].filter(id=>id!==String(ballot?.candidateId||'')&&!blocked.has(id)).length};
 }
 export function gallowsAutomaticOutcome(ballot){
