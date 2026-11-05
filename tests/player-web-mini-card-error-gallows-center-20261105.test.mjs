@@ -6,8 +6,8 @@ import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 
 test('Lá bài mini luôn có mặt lưng đã duyệt, không hiện ảnh vỡ (?)',()=>{
  assert.doesNotThrow(()=>new vm.Script(gmwwMembersLiveScript));
- assert.match(gmwwMembersLiveScript,/data-mini=\\"role\\"[^`]{0,160}src=\\"\/card-backs\/role-card-back-v1\.png\\"/);
- assert.match(gmwwMembersLiveScript,/data-mini=\\"artifact\\"[^`]{0,160}src=\\"\/card-backs\/artifact-card-back-v1\.png\\"/);
+ assert.match(gmwwMembersLiveScript,/data-mini="role"[^>]{0,40}><img alt="" src="\/card-backs\/role-card-back-v1\.png"/);
+ assert.match(gmwwMembersLiveScript,/data-mini="artifact"[^>]{0,40}><img alt="" src="\/card-backs\/artifact-card-back-v1\.png"/);
  assert.match(gmwwMembersLiveScript,/addEventListener\('error',\(\)=>\{if\(back&&img\.getAttribute\('src'\)!==back\)img\.src=back\}\)/);
 });
 
