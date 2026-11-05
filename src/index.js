@@ -2,6 +2,7 @@ import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlay
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
 import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,mergePublicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
+import {loverLinkedDeaths} from "./gmww-lovers-rules.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
 import {character40Catalog,character40Image} from "./gmww-character40-catalog.js";
 import { pruneInteractions } from "./gmww-interaction-retention.js";
@@ -852,8 +853,12 @@ export class RoomDurableObject extends DurableObject {
   async applyHunterDeathConsequences(meta,rows,now=new Date().toISOString()){
     const assignments=(await this.ctx.storage.get("assignments"))||[];
     const history=await this.villageHistoryForMatch(meta,rows);
-    const linked=hunterLinkedDeaths({assignments,interactions:history,
-      matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0)});
+    const mid=String(meta.matchId||""),nightNo=Number(meta.cycleNight||0);
+    // Tình nhân (Cupid) -> Thợ Săn -> Tình nhân: chuỗi chết theo cùng lúc, không vòng lặp vô hạn.
+    const lovers1=loverLinkedDeaths({interactions:history,matchId:mid,night:nightNo});
+    const hunters=hunterLinkedDeaths({assignments,interactions:[...history,...lovers1],matchId:mid,night:nightNo});
+    const lovers2=loverLinkedDeaths({interactions:[...history,...lovers1,...hunters],matchId:mid,night:nightNo});
+    const linked=[...lovers1,...hunters,...lovers2];
     for(const outcome of linked){
       if(rows.some(r=>String(r.id||"")===outcome.id))continue;
       const death={...outcome,createdAt:now,night:Math.max(1,Number(outcome.night)||Number(meta.cycleNight)||1)};
