@@ -1525,7 +1525,7 @@ function battleMarkPlayers(){
   const witchAwake=playSceneState.phase==='night'&&
     (t?.roleId==='role_witch'||(t?.roles||[]).some(row=>row.roleId==='role_witch'));
   const intel=playSceneRuntime.nightIntel;
-  const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled?
+  const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled&&!intel.witchSaveUsed?
     (intel.attacked||[]).map(row=>String(row?.to||'').replace(/^member:/,'')).filter(Boolean):[];
   // GM-only battleUndo is taken from /gm/state, never from a public socket.
   // The confirmed target flame applies only during the current night turn.
