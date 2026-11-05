@@ -2731,7 +2731,9 @@ export class RoomDurableObject extends DurableObject {
       }
       const ruleTargets=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three','action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check'].includes(actionId)?inspectIds:targets;
       const decision=checkBattleRoleActionUsage(currentUsage,{matchId,
-        night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:ruleTargets,policy});
+        night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:ruleTargets,policy,
+        deadLoginIds:actionId==="action_hunter_mark"?interactions.filter(x=>x?.type==="dead"&&x.effectActive!==false&&
+          String(x.matchId||"")===matchId).map(x=>normalizeLoginId(x.loginId)):undefined});
       if(!decision.ok)return j({ok:false,error:decision.error,
         message:decision.message||"Hành động không được phép theo luật vai trò."},409);
       roleUse={matchId,night:Number(meta.cycleNight||1),actorId,roleId,actionId,targetIds:ruleTargets,
