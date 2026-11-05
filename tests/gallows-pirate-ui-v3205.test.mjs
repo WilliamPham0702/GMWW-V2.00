@@ -29,7 +29,8 @@ test('Player village shows ONLY one red pirate flag anchored at fire during nomi
  assert.match(village,/gmww:gallows-confirm-nominate/);
  assert.match(village,/gmww:gallows-reset-nominate/);
  assert.match(village,/gmww:gallows-open-nominations/);
- assert.match(player,/dock\.hidden=!\(\['voting','closed','resolved'\]\.includes\(stage\)\)/);
+ // 20261105: the vote box shows only to eligible voters while voting; progress and results go to the shared notice box.
+ assert.match(player,/dock\.hidden=!\(stage==='voting'&&canVote\)/);
  assert.doesNotMatch(player,/id="gmwwGallowsOpenNomination"/);
 });
 
