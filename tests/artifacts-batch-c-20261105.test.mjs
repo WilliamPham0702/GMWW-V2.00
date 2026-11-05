@@ -61,3 +61,15 @@ test('Vuốt Sói: sang Phe Sói từ đêm sau, giữ vai gốc',()=>{
   assert.equal(eff.roleId,'role_seer');assert.equal(eff.faction,'wolf');
   assert.equal(needsStorageArtifact('artifact_31')&&needsStorageArtifact('artifact_32'),true);
 });
+test('Khiên Bảo Hộ / Bùa Hộ Mệnh bảo vệ khỏi Sói Cắn; Đồng Xu công bố vai',()=>{
+  const B=[{loginId:'w',roleId:'role_wolf',faction:'Phe Sói'},{loginId:'v1',roleId:'role_villager',faction:'Phe Dân',artifactId:'artifact_35'},{loginId:'v2',roleId:'role_villager',faction:'Phe Dân',artifactId:'artifact_02'},{loginId:'v3',roleId:'role_villager',faction:'Phe Dân'}];
+  const pl=Object.fromEntries(B.map((a,i)=>['member:'+a.loginId,{loginId:a.loginId,seatId:i+1}]));
+  const sh=artifactDayPlan({artifactId:'artifact_35',actorId:'v1',targets:['v3'],assignments:B,interactions:[],matchId:'m',day:1}).changes[0];
+  assert.equal(sh.extra.nightOverride,2);
+  const row={type:'effect_notice',actionId:'action_protect',actorId:'v1',loginId:'v3',matchId:'m',night:2};
+  const bt=t=>({type:'effect_notice',actionId:'action_wolf_bite',actorId:'w',loginId:t,matchId:'m',night:2});
+  assert.deepEqual(resolveWolfNight({assignments:B,interactions:[bt('v3'),row],players:pl,matchId:'m',night:2}).victims,[]);
+  assert.deepEqual(resolveWolfNight({assignments:B,interactions:[bt('v2')],players:pl,matchId:'m',night:2}).victims,[]);
+  assert.deepEqual(resolveWolfNight({assignments:B,interactions:[bt('v3')],players:pl,matchId:'m',night:2}).victims,['v3']);
+  assert.equal(artifactDayPlan({artifactId:'artifact_13',actorId:'v1',targets:[],assignments:B,interactions:[],matchId:'m',day:1}).changes[0].extra.publicReveal,true);
+});

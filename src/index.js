@@ -2791,7 +2791,7 @@ export class RoomDurableObject extends DurableObject {
         }:{}),
         ...(effect.extra||{}),
         loginId:effect.loginId,matchId,cycleKey,
-        night:effect.kind==="grudge_schedule"?day+1:day,actorId,artifactId,roleId,actionId,
+        night:effect.kind==="grudge_schedule"?day+1:(effect.extra?.nightOverride||day),actorId,artifactId,roleId,actionId,
         source:"day-action",effectActive:effect.type!=="effect_notice",
         message:message||"Hành động Ban ngày",createdAt:time,
         ...(effect.extra?.forceActive?{effectActive:true}:{}),

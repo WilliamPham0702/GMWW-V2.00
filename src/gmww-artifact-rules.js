@@ -96,6 +96,14 @@ export function artifactDayPlan({artifactId='',actionId='',actorId='',targets=[]
       return {ok:true,changes:[{kind:'swap',loginId:t0,type:'effect_notice',extra:{actionIdOverride:'artifact-swap-role',forceActive:true,rowMessage:'Đá Hoán Đổi: Vai Trò hoán đổi từ đêm kế tiếp.'}}],
         message:'Đá Hoán Đổi: '+roleLabel(aa)+' ⇄ '+roleLabel(ta)+' (có hiệu lực từ đầu đêm kế tiếp, cấp lại lượt dùng mới).'};
     }
+    case 'artifact_35':
+      return {ok:true,changes:[{kind:'shield',loginId:t0,type:'effect_notice',extra:{actionIdOverride:'action_protect',forceActive:true,nightOverride:Number(day)+1,rowMessage:'Khiên Bảo Hộ: được bảo vệ khỏi Sói Cắn đêm kế tiếp.'}}],
+        message:'Khiên Bảo Hộ: mục tiêu được bảo vệ khỏi Sói Cắn đêm kế tiếp.'};
+    case 'artifact_13':{
+      if(!aa)return fail('ACTOR_NOT_FOUND','Không tìm thấy Vai Trò chủ sở hữu.');
+      return {ok:true,changes:[{kind:'public_role',loginId:actor,type:'effect_notice',extra:{publicReveal:true,revealedRoleName:roleLabel(aa),rowMessage:'Đồng Xu Tuổi Trẻ: chủ sở hữu công bố Vai Trò thật là '+roleLabel(aa)+'.'}}],
+        message:'Đồng Xu Tuổi Trẻ: đã công bố Vai Trò thật của chủ.'};
+    }
     case 'artifact_04':
       return {ok:true,changes:[{kind:'status',loginId:t0,type:'status',statusId:'infected',extra:{actionIdOverride:'artifact-plague-infect'}}],
         message:'Máu Dịch Bệnh: mục tiêu bị nhiễm bệnh. Nếu Sói Cắn chết người này, Bầy Sói mất lượt Cắn đêm sau.'};
@@ -177,3 +185,6 @@ export function clawWolfIds({assignments=[],interactions=[],matchId='',night=1}=
   return [...new Set(list(interactions).filter(r=>same(r,matchId)&&r.actionId==='action-lone-wolf-join'&&r.undone!==true&&r.noEffect!==true&&Number(r.night)<Number(night)
     &&String(roleOf(assignments,login(r.actorId))?.artifactId||'')==='artifact_11').map(r=>login(r.actorId)))];
 }
+
+/* Bùa Hộ Mệnh: người giữ bùa được bảo vệ khỏi Sói Cắn. */
+export const talismanHolders=({assignments=[]}={})=>holders(assignments,'artifact_02');

@@ -3,7 +3,7 @@
  * The result is intentionally deterministic so Durable Object retries cannot
  * select a different victim; saved matches and arbitrary death causes are untouched.
  */
-import {plaguePackLost,prismTargetsFor} from './gmww-artifact-rules.js';
+import {plaguePackLost,prismTargetsFor,talismanHolders} from './gmww-artifact-rules.js';
 import {isWolfRole} from './gmww-pack-night-rules.js';
 import {effectiveAssignments,validConversions,cubExtraBite} from './gmww-wolf-variant-rules.js';
 const login=value=>String(value??'').trim().toLowerCase().replace(/^member:/,'');
@@ -117,7 +117,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       target=candidate.loginId;
       transfers.push({from:origin,to:target,direction});
     }
-    const protectedTarget=guards.has(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
+    const protectedTarget=guards.has(target)||talismanHolders({assignments}).includes(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
     attacked.push({from:origin,to:target,direction:direction||'none',protected:protectedTarget});
     if(protectedTarget){protectedTargets.push(target);continue}
     if(rows.some(row=>String(row?.matchId||'')===match&&login(row?.loginId)===target&&
