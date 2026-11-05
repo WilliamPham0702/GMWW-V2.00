@@ -41,7 +41,7 @@ export function lastHangedRole({assignments=[],interactions=[],matchId='',day=1}
 }
 
 /* Kế hoạch hành động ban ngày của Artifact nhóm A. Trả null nếu không thuộc nhóm. */
-export function artifactDayPlan({artifactId='',actionId='',actorId='',targets=[],assignments=[],interactions=[],matchId='',day=1}={}){
+export function artifactDayPlan({designatedId='',artifactId='',actionId='',actorId='',targets=[],assignments=[],interactions=[],matchId='',day=1}={}){
   const actor=login(actorId),ts=list(targets).map(login),t0=ts[0];
   const ta=roleOf(assignments,t0),aa=roleOf(assignments,actor);
   const status=(id,statusId,extra)=>({kind:'status',loginId:id,type:'status',statusId,...(extra?{extra}:{})});
@@ -104,6 +104,13 @@ export function artifactDayPlan({artifactId='',actionId='',actorId='',targets=[]
       return {ok:true,changes:[{kind:'public_role',loginId:actor,type:'effect_notice',extra:{publicReveal:true,revealedRoleName:roleLabel(aa),rowMessage:'Đồng Xu Tuổi Trẻ: chủ sở hữu công bố Vai Trò thật là '+roleLabel(aa)+'.'}}],
         message:'Đồng Xu Tuổi Trẻ: đã công bố Vai Trò thật của chủ.'};
     }
+    case 'artifact_05':{
+      const v=login(designatedId);
+      if(!t0)return fail('BOW_TARGET_REQUIRED','Cần chọn người bị buộc chỉ định.');
+      if(!v)return fail('DESIGNATED_REQUIRED','Nhập người mà mục tiêu chỉ định bị loại (designatedId); chưa trừ lượt.');
+      if(v===t0||!roleOf(assignments,v)||isDead(interactions,matchId,v))return fail('DESIGNATED_INVALID','Người được chỉ định phải khác mục tiêu và còn sống; chưa trừ lượt.');
+      return {ok:true,kill:[v],changes:[],message:'Cung Săn Mệnh: người bị buộc đã chỉ định, người đó bị loại.',result:{designatedId:v}};
+    }
     case 'artifact_04':
       return {ok:true,changes:[{kind:'status',loginId:t0,type:'status',statusId:'infected',extra:{actionIdOverride:'artifact-plague-infect'}}],
         message:'Máu Dịch Bệnh: mục tiêu bị nhiễm bệnh. Nếu Sói Cắn chết người này, Bầy Sói mất lượt Cắn đêm sau.'};
@@ -138,7 +145,7 @@ export function aliveNeighbors({players={},interactions=[],matchId='',actorId=''
   return {left:seated[(i-1+seated.length)%seated.length].id,right:seated[(i+1)%seated.length].id};
 }
 export const awakeLastNight=({usage=[],matchId='',night=1,loginId=''}={})=>list(usage).some(u=>String(u?.matchId||'')===String(matchId)&&u.undone!==true&&Number(u.night)===Number(night)&&login(u.actorId)===login(loginId));
-export const needsStorageArtifact=id=>['artifact_01','artifact_03','artifact_10','artifact_16','artifact_17','artifact_25','artifact_31','artifact_32'].includes(String(id));
+export const needsStorageArtifact=id=>['artifact_01','artifact_03','artifact_10','artifact_16','artifact_17','artifact_23','artifact_25','artifact_31','artifact_32'].includes(String(id));
 
 /* ---- Đợt C: Sói / bình minh ---- */
 const nrow=(id,type,loginId,matchId,night,cycleKey,now,actionId,message,extra={})=>({id,type,loginId,actorId:loginId,matchId:String(matchId),night:Number(night),cycleKey:String(cycleKey),

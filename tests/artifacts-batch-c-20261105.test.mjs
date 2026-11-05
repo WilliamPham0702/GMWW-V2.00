@@ -73,3 +73,17 @@ test('Khiên Bảo Hộ / Bùa Hộ Mệnh bảo vệ khỏi Sói Cắn; Đồng
   assert.deepEqual(resolveWolfNight({assignments:B,interactions:[bt('v3')],players:pl,matchId:'m',night:2}).victims,['v3']);
   assert.equal(artifactDayPlan({artifactId:'artifact_13',actorId:'v1',targets:[],assignments:B,interactions:[],matchId:'m',day:1}).changes[0].extra.publicReveal,true);
 });
+import {seerShareNotices} from '../src/gmww-artifact-seer.js';
+test('Mắt Tiên Tri: người giữ nhận chung kết quả soi của Tiên Tri',()=>{
+  const B=[{loginId:'s',roleId:'role_seer',faction:'Phe Dân'},{loginId:'e',roleId:'role_villager',faction:'Phe Dân',artifactId:'artifact_18'},{loginId:'w',roleId:'role_wolf',faction:'Phe Sói'}];
+  const rows=[{type:'effect_notice',actionId:'action_seer',actorId:'s',loginId:'w',matchId:'m',night:1}];
+  const n=seerShareNotices({assignments:B,interactions:rows,matchId:'m',night:1,cycleKey:'k',now:'t'});
+  assert.equal(n.length,1);assert.equal(n[0].loginId,'e');assert.match(n[0].message,/w/);
+  assert.equal(seerShareNotices({assignments:B,interactions:[...rows,{type:'dead',loginId:'e',matchId:'m'}],matchId:'m',night:1}).length,0);
+});
+test('Cung Săn Mệnh: cần người được chỉ định hợp lệ rồi người đó bị loại',()=>{
+  const B=[{loginId:'a',roleId:'role_villager'},{loginId:'b',roleId:'role_villager'},{loginId:'c',roleId:'role_villager'}];
+  const p=d=>artifactDayPlan({artifactId:'artifact_05',actorId:'a',targets:['b'],designatedId:d,assignments:B,interactions:[],matchId:'m',day:1});
+  assert.equal(p('').error,'DESIGNATED_REQUIRED');assert.equal(p('b').error,'DESIGNATED_INVALID');
+  assert.deepEqual(p('c').kill,['c']);
+});

@@ -5,6 +5,7 @@ import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {loverLinkedDeaths} from "./gmww-lovers-rules.js";
 import {thiefPool,thiefCanChoose,thiefDeckView,thiefPlan} from "./gmww-thief-rules.js";
 import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-night-cult-rules.js";
+import {seerShareNotices} from "./gmww-artifact-seer.js";
 import {swapRolePlans,artifactBiteDawn,needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
 import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
 import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths,peekPending,peekDecisionRows} from "./gmww-swap-info-rules.js";
@@ -2243,6 +2244,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if((p==="morning"||p==="night")&&n>0){
       const wv=p==="morning"?[...(typeof fireSpreadDeaths==="function"?fireSpreadDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,players:(await this.ctx.storage.get("players"))||{},matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
+          ...(typeof seerShareNotices==="function"?seerShareNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
           ...(bell.active||typeof peekDeaths!=="function"?()=>[]:peekDeaths)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})]:
         [...(typeof convertNotices==="function"?convertNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
           ...(typeof threeBrothersNotices==="function"?threeBrothersNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})];
@@ -2457,6 +2459,21 @@ export class RoomDurableObject extends DurableObject {
       const art=await this.artifactIssue(actorId,pick,meta,matchId,assignments);
       return {ok:true,replacedOwn:true,changes:[],message:"Ngọc May Mắn: chủ nhận Artifact mới ("+art.artifactName+").",result:{newArtifactId:art.artifactId}};
     }
+    if(artifactId==="artifact_23"){
+      if(!targetId)return bad("TARGET_REQUIRED","Cần một mục tiêu.");
+      const tr=((await this.ctx.storage.get("roles:"+targetId))||[])[0],ar=((await this.ctx.storage.get("roles:"+actorId))||[]);
+      const own=ar[0];
+      if(!tr||!own)return bad("ROLE_NOT_FOUND","Không tìm thấy Vai Trò; chưa trừ lượt.");
+      const have=new Set((own.roleCard?.functions||[]).map(f=>String(f.actionId||f.id)));
+      const copied=(tr.roleCard?.functions||[]).filter(f=>f&&f.passive!==true&&!have.has(String(f.actionId||f.id))).map(f=>({...f,copiedFromLoginId:targetId,copiedByArtifact:"artifact_23"}));
+      if(!copied.length)return bad("NOTHING_TO_COPY","Mục tiêu không có chức năng chủ động để sao chép; chưa trừ lượt.");
+      const next=[{...own,roleCard:{...own.roleCard,functions:[...(own.roleCard?.functions||[]),...copied]}},...ar.slice(1)];
+      await this.ctx.storage.put("roles:"+actorId,next);await this.ctx.storage.put("role:"+actorId,next[0]);
+      meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
+      await this.ctx.storage.put("deliverySnapshot:"+actorId,buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),deliveryVersion:meta.deliveryVersion,publishedAt:new Date().toISOString(),roles:next}));
+      await this.ctx.storage.put("meta",meta);
+      return {ok:true,changes:[],message:"Tráng Gương: đã sao chép "+copied.length+" chức năng thành chức năng số 2 với lượt dùng mới.",result:{copied:copied.map(f=>f.actionId||f.id)}};
+    }
     if(artifactId==="artifact_31"){
       if(targets.length!==2)return bad("RUBY_NEEDS_TWO","Cần đúng hai người; chưa trừ lượt.");
       const arts=[];for(const id of targets){const a=await this.artifactUnflipped(id);if(!a)return bad("TARGET_ARTIFACT_NOT_ELIGIBLE","Cả hai phải có Artifact chưa lật; chưa trừ lượt.");arts.push(a)}
@@ -2665,7 +2682,7 @@ export class RoomDurableObject extends DurableObject {
         storagePlan=await this.artifactStoragePlan({artifactId,actorId,targetId:effectiveTargets[0]||"",targets:effectiveTargets,meta,matchId,day,assignments,interactions,members,requestFlip:body?.requestFlip===true});
         if(!storagePlan.ok)return j({ok:false,error:storagePlan.error,message:storagePlan.message},409);
       }
-      const aplan=storagePlan?{ok:true,changes:storagePlan.changes||[],message:storagePlan.message,result:storagePlan.result||{}}:typeof artifactDayPlan==="function"?artifactDayPlan({artifactId,actionId,actorId,targets:effectiveTargets,assignments,interactions,matchId,day}):null;
+      const aplan=storagePlan?{ok:true,changes:storagePlan.changes||[],message:storagePlan.message,result:storagePlan.result||{}}:typeof artifactDayPlan==="function"?artifactDayPlan({designatedId:normalizeLoginId(body?.designatedId),artifactId,actionId,actorId,targets:effectiveTargets,assignments,interactions,matchId,day}):null;
       if(aplan){
         if(!aplan.ok)return j({ok:false,error:aplan.error,message:aplan.message},409);
         if(aplan.needsGallowsBeforeFirst){
