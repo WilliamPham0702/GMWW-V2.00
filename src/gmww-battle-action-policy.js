@@ -39,6 +39,13 @@ export function checkBattleRoleActionUsage(rows,detail){
     if(!rule.noTarget&&rule.allowConsecutive===false&&targets.some(id=>actionUses.some(x=>Number(x.night)===night-1&&(x.targetIds||[]).map(normalized).includes(id))))return{ok:false,error:'CONSECUTIVE_NIGHT_TARGET_FORBIDDEN'};
     if(!rule.noTarget&&rule.perUserLimit>0&&targets.some(id=>actionUses.filter(x=>(x.targetIds||[]).map(normalized).includes(id)).length>=rule.perUserLimit))return{ok:false,error:'ACTION_TARGET_GAME_LIMIT_REACHED'};
   }
+  // Sói Thợ Săn: chỉ được đánh dấu lần đầu, hoặc chọn lại khi mục tiêu đã đánh dấu trước đó đã chết.
+  if(action==='action_hunter_mark'&&Array.isArray(detail?.deadLoginIds)&&actionUses.length){
+    const last=[...actionUses].sort((x,y)=>Number(x.night)-Number(y.night)).at(-1),
+      lastTarget=normalized((last.targetIds||[])[0]),dead=detail.deadLoginIds.map(normalized);
+    if(lastTarget&&!dead.includes(lastTarget))
+      return{ok:false,error:'HUNTER_MARK_TARGET_STILL_ALIVE',message:'Mục tiêu đã đánh dấu còn sống; chỉ được chọn lại khi người đó đã chết.'};
+  }
   // NIGHT-02: a shared Pack Bite is separate from each wolf role's own
   // night power. Never make a Wolf Seer's private action unavailable because
   // that same member already participated in the pack bite.
