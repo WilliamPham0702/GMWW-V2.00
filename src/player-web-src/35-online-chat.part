@@ -741,8 +741,22 @@ async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
    setTimeout(()=>gmwwOnlineTurnEffects(state.onlineActions||[]),5600);
    gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';gmwwOnlineRestoreHint();toast('Đã thực hiện: '+String(action.name||'Hành động')+(gmwwOnlineCanRestore?' · bấm Khôi phục ở menu dưới nếu cần làm lại':''));
    if(d.revelation?.message)gmwwOnlineShowRevelation(d.revelation);
- }catch(e){toast('Hành động chưa được chấp nhận: '+String(e.message||e))}
+ }catch(e){toast(gmwwOnlineActionErrorText(e))}
  finally{state.onlineBusy=false;await refreshPrivateRole(true)}
+}
+function gmwwOnlineActionErrorText(e){
+ const raw=String(e?.message||e||'').trim();
+ const map={
+  DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN:'Bạn đã dùng hành động này hoặc chưa đến lượt của bạn.',
+  ACTION_ALREADY_USED:'Bạn đã dùng hành động này rồi.',
+  NOT_YOUR_TURN:'Chưa đến lượt của bạn.',
+  UNAUTHORIZED:'Phiên đăng nhập đã hết hạn, hãy vào lại phòng.',
+  ROOM_NOT_FOUND:'Không tìm thấy phòng.',
+  NETWORK_ERROR:'Mất kết nối, hãy thử lại.'
+ };
+ if(map[raw])return map[raw];
+ if(/^[A-Z0-9_]{4,}$/.test(raw))return 'Hành động chưa được chấp nhận. Hãy thử lại hoặc hỏi Quản trò.';
+ return 'Hành động chưa được chấp nhận'+(raw?': '+raw:'.');
 }
 function gmwwOnlineShowRevelation(revelation){
  // GM uses revelation.message in battlePresentRevelation; never expose its raw JSON.
