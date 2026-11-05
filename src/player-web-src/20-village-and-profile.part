@@ -71,7 +71,7 @@ function syncPlayerMiniCards(){
   }
   if(!host){
     host=document.createElement('div');host.id='gmwwPlayerMiniCards';
-    host.innerHTML='<button type="button" data-mini="role" title="Xem Vai Trò của bạn"><img alt=""><span class="mini-label">Vai Trò</span></button><button type="button" data-mini="artifact" title="Xem Artifact của bạn"><img alt=""><span class="mini-label">Artifact</span></button>';
+    host.innerHTML='<button type="button" data-mini="role" title="Xem Vai Trò của bạn"><img alt="" src="/card-backs/role-card-back-v1.png" data-back="/card-backs/role-card-back-v1.png"><span class="mini-label">Vai Trò</span></button><button type="button" data-mini="artifact" title="Xem Artifact của bạn"><img alt="" src="/card-backs/artifact-card-back-v1.png" data-back="/card-backs/artifact-card-back-v1.png"><span class="mini-label">Artifact</span></button>';
     document.getElementById('game')?.appendChild(host);
     for(const type of ['role','artifact']){
       const button=host.querySelector('[data-mini="'+type+'"]');gmwwMiniPosition(button,type);gmwwMiniDrag(button,type);
@@ -87,10 +87,10 @@ function syncPlayerMiniCards(){
   const base='/api/rooms/'+encodeURIComponent(state.roomCode)+'/role-assets/';
   const roleAsset=String(role.artworkAssetId||role.artworkId||pc.artworkAssetId||pc.artworkId||role.roleId||'');
   const artAsset=String(artifact.artworkAssetId||artifact.artworkId||ac.artworkAssetId||ac.artworkId||'');
-  const setImage=(selector,url)=>{const img=host?.querySelector(selector);if(img&&url&&img.getAttribute('src')!==url)img.src=url};
+  const setImage=(selector,url)=>{const img=host?.querySelector(selector);if(!img)return;const back=img.dataset.back||'';if(!img.dataset.gmwwBackFallback){img.dataset.gmwwBackFallback='1';img.addEventListener('error',()=>{if(back&&img.getAttribute('src')!==back)img.src=back})}const next=url||back;if(next&&img.getAttribute('src')!==next)img.src=next};
   setImage('[data-mini="role"] img',String(role.roleImage||(roleAsset?base+encodeURIComponent(roleAsset)+'/image':'')||''));
   const artButton=host.querySelector('[data-mini="artifact"]');artButton.hidden=!state.artifact;
-  if(state.artifact)setImage('[data-mini="artifact"] img',String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''));
+  setImage('[data-mini="artifact"] img',state.artifact?String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''):'');
 }
 
 let gmwwSharedTimeline=null,gmwwSharedTimelineKey='',gmwwSharedTimelineReceivedAt=0;
