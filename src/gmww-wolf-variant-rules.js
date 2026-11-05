@@ -40,12 +40,19 @@ export function validConversions({assignments=[],interactions=[],matchId='',nigh
 /* Phe hiệu lực của từng người ở đêm `night`: bị chuyển hóa -> Sói (từ đêm sau); Sói Lai -> Dân từ Đêm 5; Sói Lạc Bầy đánh dấu chưa vào đàn trước Đêm 3. */
 export function effectiveAssignments({assignments=[],interactions=[],matchId='',night=1,skipPack=false,convs=null}={}){
   const conv=convs||validConversions({assignments,interactions,matchId,night});
+  // Cupid: hai người được ghép thuộc Phe Ba.
+  const pairRows=list(interactions).filter(r=>same(r,matchId)&&r.actionId==='action-cupid-pair'&&live(r)),byActor=new Map();
+  for(const r of pairRows){const k=login(r.actorId),l=byActor.get(k)||[];if(!l.includes(login(r.loginId)))l.push(login(r.loginId));byActor.set(k,l)}
+  const lovers=new Set([...byActor.values()].filter(l=>l.length===2).flat());
   return list(assignments).map(a=>{
     const id=login(a?.loginId);let out=a;
     const c=conv.find(x=>x.target===id&&x.night<Number(night));
     if(c&&String(a.faction||a.factionId||a.roleCard?.factionId||'').toLowerCase()!=='wolf')out=setFaction(a,'wolf');
     if(a?.roleId==='role_hybrid_wolf'&&Number(night)>=5)out=setFaction(a,'village');
     if(!skipPack&&a?.roleId==='role_lone_wolf'&&Number(night)<3)out={...out,packExcluded:true};
+    const idol=list(interactions).find(r=>same(r,matchId)&&r.actionId==='action-wild-child-idol'&&live(r)&&login(r.actorId)===id);
+    if(a?.roleId==='role_wild_child'&&idol&&deadBefore(interactions,matchId,login(idol.loginId),night))out=setFaction(out,'wolf');
+    if(lovers.has(id))out=setFaction(out,'third');
     return out;
   });
 }

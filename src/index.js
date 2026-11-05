@@ -2,6 +2,7 @@ import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlay
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
 import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,mergePublicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
+import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths} from "./gmww-swap-info-rules.js";
 import {stoneSkinFilter,fireSpreadDeaths,convertNotices} from "./gmww-wolf-variant-rules.js";
 import {strongmanDawn,oldManLifespanDeaths,newsBearerNotices,diseasedLoginIds,crowExtraVotes,blackWomanLeaving,avengerFactions,dayStabOutcome,apprenticeSuccession} from "./gmww-card-rules-quick.js";
 import {projectDemoClock,nextDemoClock} from "./gmww-demo-clock.js";
@@ -1846,7 +1847,7 @@ export class RoomDurableObject extends DurableObject {
       drunkNotices:Array.isArray(past.drunkNotices)?past.drunkNotices:[]};
     const events=await this.ctx.storage.get('interactions')||[];
     let plans=inheritedRolePlans({assignments,interactions:events,matchId,night:n,drunkChoice});
-    if(!drunkChoice)plans=[...plans,...(typeof apprenticeSuccession==="function"?apprenticeSuccession:()=>[])({assignments,interactions:events,matchId,night:n})];
+    if(!drunkChoice)plans=[...plans,...(typeof maidSuccession==="function"?maidSuccession:()=>[])({assignments,interactions:events,matchId,night:n}),...(typeof apprenticeSuccession==="function"?apprenticeSuccession:()=>[])({assignments,interactions:events,matchId,night:n})];
     if(drunkChoice)plans=plans.filter(x=>x.kind==='drunk'&&x.actorId===normalizeLoginId(drunkChoice.actorId));
     if(!plans.length)return {assignments,drunkNotices:[],applied:0};
     let updated=assignments.map(x=>({...x})),drunkNotices=[],applied=0;
@@ -2170,8 +2171,10 @@ export class RoomDurableObject extends DurableObject {
       for(const row of st.rows){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
     }
     if((p==="morning"||p==="night")&&n>0){
-      const wv=p==="morning"?(typeof fireSpreadDeaths==="function"?fireSpreadDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,players:(await this.ctx.storage.get("players"))||{},matchId:String(meta.matchId||""),night:n,cycleKey:key,now}):
-        (typeof convertNotices==="function"?convertNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now});
+      const wv=p==="morning"?[...(typeof fireSpreadDeaths==="function"?fireSpreadDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,players:(await this.ctx.storage.get("players"))||{},matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
+          ...(typeof peekDeaths==="function"?peekDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})]:
+        [...(typeof convertNotices==="function"?convertNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
+          ...(typeof threeBrothersNotices==="function"?threeBrothersNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})];
       for(const row of wv){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
     }
     if(wolfResolution?.ok)for(const loginId of dawnVictims){
@@ -2388,7 +2391,8 @@ export class RoomDurableObject extends DurableObject {
       (fn.fromNight!=null&&Number(fn.fromNight)>day)||
       (fn.toNight!=null&&Number(fn.toNight)<day))
       return j({ok:false,error:"DAY_ACTION_NOT_CONFIGURED"},403);
-    const count=fn.noTarget===true?0:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0)));
+    const ghostAct=!artifactId&&roleId==="role_ghost"&&actionId==="action-ghost-message";
+    const count=(fn.noTarget===true||ghostAct)?0:Math.max(0,Math.min(30,Math.trunc(Number(fn.targetCount??1)||0)));
     if(targets.length!==count)return j({ok:false,error:"DAY_TARGET_COUNT_INVALID",expected:count},400);
     if(fn.noSelf!==false&&targets.includes(actorId))
       return j({ok:false,error:"DAY_SELF_TARGET_FORBIDDEN"},403);
@@ -2400,7 +2404,7 @@ export class RoomDurableObject extends DurableObject {
     {const leaving=(typeof blackWomanLeaving==="function"?blackWomanLeaving:()=>[])({interactions,matchId,day});
       if(leaving.includes(actorId))return j({ok:false,error:"DAY_ACTOR_LEFT_VILLAGE"},409);
       if(targets.some(id=>leaving.includes(id)))return j({ok:false,error:"DAY_TARGET_LEFT_VILLAGE"},409)}
-    if((affected(actorId,"dead")&&!fn.actorMayBeDead&&!lynched)||
+    if((affected(actorId,"dead")&&!fn.actorMayBeDead&&!lynched&&!ghostAct)||
       affected(actorId,"expelled")||affected(actorId,"frozen")||
       interactions.some(x=>normalizeLoginId(x?.loginId)===actorId&&sameMatch(x)&&
         x?.effectActive!==false&&x?.type==="status"&&STATUS_DEFS[x.statusId]?.blocks===true))
@@ -2450,6 +2454,18 @@ export class RoomDurableObject extends DurableObject {
     if(targets.length&&effectiveTargets.length===0){
       message="Mục tiêu đã bị đuổi khỏi làng; hành động không có tác dụng.";
       result={message,noEffect:true};
+    }else if(ghostAct){
+      const chk=(typeof ghostCheck==="function"?ghostCheck:()=>({ok:false,error:"GHOST_UNAVAILABLE"}))({word:body?.word,actorId,assignments,players:(await this.ctx.storage.get("players"))||{},interactions,matchId,day});
+      if(!chk.ok){
+        if(chk.violation){
+          const vrow={id:"ghost-violation:"+matchId+":"+actorId,type:"effect_notice",loginId:actorId,actorId,matchId,cycleKey,night:day,effectActive:false,
+            actionId:"action-ghost-violation",effectName:"Hồn Ma vi phạm",source:"swap-info-engine",createdAt:time,message:"Hồn Ma nhắc tên người chơi, mất quyền gửi thông điệp."};
+          if(!interactions.some(x=>x?.id===vrow.id)){interactions.push(vrow);await this.ctx.storage.put("interactions",pruneInteractions(interactions));await this.ctx.storage.put("actionLog:"+String(Date.parse(time)).padStart(13,"0")+":"+vrow.id,vrow)}
+        }
+        return j({ok:false,error:chk.error},chk.violation?403:409);
+      }
+      changes.push({kind:"ghost",type:"effect_notice",loginId:actorId,extra:{ghostWord:chk.word,publicReveal:true,revealedRoleId:"role_ghost"}});
+      message="Hồn Ma: "+chk.word;result={message,word:chk.word};
     }else if(!artifactId&&actionId==="action_stab"&&roleId==="role_thug"){
       const chosen=assignments.filter(x=>normalizeLoginId(x.loginId)===effectiveTargets[0]);
       const correctlyStabbed=chosen.some(x=>isWolf(x)||isThird(x));
@@ -2585,6 +2601,7 @@ export class RoomDurableObject extends DurableObject {
           pendingDeath:true,deferredArtifact:"artifact_07",scheduledFromNight:day,
           effectName:"Hơi Thở Lão Già"
         }:{}),
+        ...(effect.extra||{}),
         loginId:effect.loginId,matchId,cycleKey,
         night:effect.kind==="grudge_schedule"?day+1:day,actorId,artifactId,roleId,actionId,
         source:"day-action",effectActive:effect.type!=="effect_notice",
