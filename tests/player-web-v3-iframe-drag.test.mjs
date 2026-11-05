@@ -10,7 +10,7 @@ function extract(start,end){
  return source.slice(a,b);
 }
 const hitSource=extract('function gmwwOnlineTargetAt(x,y){','function gmwwOnlinePickAction(action){');
-const dragSource=extract('function gmwwOnlineIconDown(event,action){','// Only authenticated action offers trigger this local effect;');
+const dragSource=extract('function gmwwOnlineIconDown(event,action,card){','// Only authenticated action offers trigger this local effect;');
 
 test('iPhone drag hit-testing maps screen pixels into a scaled iframe and prefers actual avatar',()=>{
  const player={dataset:{playerId:'member:wolf2'},getBoundingClientRect:()=>({left:500,top:250,width:90,height:100})};
