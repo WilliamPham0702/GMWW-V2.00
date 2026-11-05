@@ -2,6 +2,7 @@ import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo,demoPlay
 import {fetchCanonicalRoleArtwork} from "./gmww-template-artwork-source.js";
 import {chatPolicy,chatNormalizeText,chatStorageScope,publicChatNotices,mergePublicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";
 import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
+import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-night-cult-rules.js";
 import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
 import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths} from "./gmww-swap-info-rules.js";
 import {stoneSkinFilter,fireSpreadDeaths,convertNotices} from "./gmww-wolf-variant-rules.js";
@@ -864,6 +865,15 @@ export class RoomDurableObject extends DurableObject {
       rows.push(death);await this.ctx.storage.put(this.actionLogKey(death),death);
       this.broadcast({type:"player_status_changed",loginId:death.loginId,
         statusId:"dead",active:true,serverTime:Date.now()});
+    }
+    if(typeof groupLinkedDeaths==="function")for(let pass=0;pass<2;pass++){
+      const more=groupLinkedDeaths({assignments,interactions:[...history,...rows],matchId:String(meta.matchId||""),night:Number(meta.cycleNight||0),now});
+      for(const death of more){
+        if(rows.some(r=>String(r.id||"")===death.id))continue;
+        rows.push(death);await this.ctx.storage.put(this.actionLogKey(death),death);
+        this.broadcast({type:"player_status_changed",loginId:death.loginId,statusId:"dead",active:true,serverTime:Date.now()});
+        linked.push(death);
+      }
     }
     return linked;
   }
@@ -2151,7 +2161,9 @@ export class RoomDurableObject extends DurableObject {
     const expired=expireCycleEffects(rows,{phase:p,night:n,cycleKey:key,matchId:meta.matchId,statusDefs:STATUS_DEFS,now});
     // Night powers record intent; only dawn activates lethal outcomes. Keep the
     // original receipt so undo, usage and retry handling remain transactional.
+    const bell=p==="morning"&&n>0&&typeof elderBell==="function"?elderBell({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}):{active:false,rows:[]};
     if(p==="morning"&&n>0)for(const row of rows){
+      if(bell.active&&row.pendingDeath===true&&String(row.matchId)===String(meta.matchId)&&Number(row.night)===n){row.pendingDeath=false;row.effectActive=false;row.resolvedAt=now;row.expiredReason="ELDER_BELL";continue}
       if(row.pendingDeath!==true||String(row.matchId)!==String(meta.matchId)||Number(row.night)!==n)continue;
       // Hơi Thở Lão Già is marked in cycle N and becomes lethal after
       // NIGHT N+1. Resolve exactly once; respect existing night immunity,
@@ -2180,7 +2192,7 @@ export class RoomDurableObject extends DurableObject {
       resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,players:(await this.ctx.storage.get("players"))||{},
         matchId:String(meta.matchId||""),night:n}):null;
     // Lực Sỹ chịu được 1 lần Sói Cắn có thể gây chết (Bảo Vệ chặn thì không tiêu hao).
-    let dawnVictims=wolfResolution?.ok?wolfResolution.victims:[];
+    let dawnVictims=wolfResolution?.ok&&!bell.active?wolfResolution.victims:[];
     if(wolfResolution?.ok){
       const sm=(typeof strongmanDawn==="function"?strongmanDawn:a=>({victims:a.victims,rows:[]}))({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,victims:dawnVictims,now});
       dawnVictims=sm.victims;
@@ -2194,7 +2206,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if((p==="morning"||p==="night")&&n>0){
       const wv=p==="morning"?[...(typeof fireSpreadDeaths==="function"?fireSpreadDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,players:(await this.ctx.storage.get("players"))||{},matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
-          ...(typeof peekDeaths==="function"?peekDeaths:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})]:
+          ...(bell.active||typeof peekDeaths!=="function"?()=>[]:peekDeaths)({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})]:
         [...(typeof convertNotices==="function"?convertNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
           ...(typeof threeBrothersNotices==="function"?threeBrothersNotices:()=>[])({assignments:(await this.ctx.storage.get("assignments"))||[],interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})];
       for(const row of wv){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
@@ -2211,7 +2223,7 @@ export class RoomDurableObject extends DurableObject {
     // Resolve Maiden only at dawn after all confirmed night attacks and wolf deaths.
     // Retain the same idempotent death event contract used by wolf-night-engine.
     if(p==="morning"&&n>0){
-      const maidenVictims=resolveMaidenNight({assignments:(await this.ctx.storage.get("assignments"))||[],
+      const maidenVictims=bell.active?[]:resolveMaidenNight({assignments:(await this.ctx.storage.get("assignments"))||[],
         interactions:rows,matchId:String(meta.matchId||""),night:n});
       for(const loginId of maidenVictims){
         const visit=rows.find(row=>String(row?.actionId||"")==="action_visit_house"&&
@@ -2235,7 +2247,10 @@ export class RoomDurableObject extends DurableObject {
     // Ông Già (tuổi thọ) và Người Loan Tin (công bố vai trò) xử lý sau mọi tác động đêm.
     if(p==="morning"&&n>0){
       const assignedNow=(await this.ctx.storage.get("assignments"))||[];
-      const extra=[...(typeof oldManLifespanDeaths==="function"?oldManLifespanDeaths:()=>[])({assignments:assignedNow,interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
+      const guardIds=rows.filter(x=>String(x?.matchId||"")===String(meta.matchId||"")&&Number(x?.night)===n&&x?.type==="effect_notice"&&x.undone!==true&&["action_protect","action_witch_save"].includes(x.actionId)).map(x=>normalizeLoginId(x.loginId)),
+        immuneIds=assignedNow.filter(a=>a?.roleCard?.flags?.nightImmune===true).map(a=>normalizeLoginId(a.loginId));
+      const cultRows=bell.active||typeof cultKillDeaths!=="function"?[]:cultKillDeaths({assignments:assignedNow,interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now,protectedIds:[...guardIds,...immuneIds]});
+      const extra=[...bell.rows,...cultRows,...(typeof oldManLifespanDeaths==="function"?oldManLifespanDeaths:()=>[])({assignments:assignedNow,interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now}),
         ...(typeof newsBearerNotices==="function"?newsBearerNotices:()=>[])({assignments:assignedNow,interactions:rows,matchId:String(meta.matchId||""),night:n,cycleKey:key,now})];
       for(const row of extra){if(rows.some(x=>String(x?.id||"")===row.id))continue;rows.push(row);await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row)}
     }
@@ -2724,6 +2739,8 @@ export class RoomDurableObject extends DurableObject {
     }
     if(isBattleActorBlocked(interactions,{actorId,matchId,statusDefs:STATUS_DEFS}))
       return j({ok:false,error:"ACTOR_CANNOT_ACT",message:"Người thực hiện bị đóng băng hoặc đã chết."},409);
+    if(typeof isCultMember==="function"&&isCultMember({assignments:await this.ctx.storage.get("assignments")||[],interactions,matchId,loginId:actorId,night:Number(meta.cycleNight||0)-1}))
+      return j({ok:false,error:"ACTOR_CULT_MEMBER",message:"Thành viên Tà Đạo mất chức năng hiện tại."},409);
     const receiptKey="battleActionReceipt:"+matchId+":"+token;
     const fingerprint=JSON.stringify([turnId,actorId,artifactId,type,targets,String(body?.actionId||""),String(body?.effectId||""),String(body?.direction||""),body?.revealTargetIds||[],String(body?.assassinChoice||"")]);
     const prior=await this.ctx.storage.get(receiptKey);
