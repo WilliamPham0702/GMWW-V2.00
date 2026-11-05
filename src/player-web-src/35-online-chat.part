@@ -730,6 +730,11 @@ async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
    if(direction===null)return;direction=direction.toLowerCase().trim();
    if(!['left','none','right'].includes(direction)){toast('Hướng không hợp lệ');return}
  }
+ if(action.actionId==='action-fire-wolf-bite'){
+   direction=prompt('Lửa Lan sang người bên nào? left / right','left');
+   if(direction===null)return;direction=direction.toLowerCase().trim();
+   if(!['left','right'].includes(direction)){toast('Hướng không hợp lệ');return}
+ }
  if(action.actionId==='action_assassin_mark'){
    if(!['👍','👎'].includes(confirmedAssassinChoice)){gmwwOnlineAssassinChoice();return}
    assassinChoice=confirmedAssassinChoice;
