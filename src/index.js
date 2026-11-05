@@ -5,7 +5,7 @@ import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {loverLinkedDeaths} from "./gmww-lovers-rules.js";
 import {thiefPool,thiefCanChoose,thiefDeckView,thiefPlan} from "./gmww-thief-rules.js";
 import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-night-cult-rules.js";
-import {artifactBiteDawn,needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
+import {swapRolePlans,artifactBiteDawn,needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
 import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
 import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths,peekPending,peekDecisionRows} from "./gmww-swap-info-rules.js";
 import {effectiveAssignments,stoneSkinFilter,fireSpreadDeaths,convertNotices} from "./gmww-wolf-variant-rules.js";
@@ -1910,6 +1910,7 @@ export class RoomDurableObject extends DurableObject {
     const events=await this.ctx.storage.get('interactions')||[];
     let plans=inheritedRolePlans({assignments,interactions:events,matchId,night:n,drunkChoice});
     if(!drunkChoice)plans=[...plans,...(typeof maidSuccession==="function"?maidSuccession:()=>[])({assignments,interactions:events,matchId,night:n}),...(typeof apprenticeSuccession==="function"?apprenticeSuccession:()=>[])({assignments,interactions:events,matchId,night:n})];
+    if(!drunkChoice&&!thiefChoice&&typeof swapRolePlans==="function")plans=[...plans,...swapRolePlans({assignments,interactions:events,matchId,night:n})];
     if(drunkChoice)plans=plans.filter(x=>x.kind==='drunk'&&x.actorId===normalizeLoginId(drunkChoice.actorId));
     if(thiefChoice)plans=[thiefPlan({actorId:thiefChoice.actorId,roleId:thiefChoice.roleId,night:n})];
     if(!plans.length)return {assignments,drunkNotices:[],applied:0};
@@ -2441,7 +2442,7 @@ export class RoomDurableObject extends DurableObject {
     pick.issued=[...pick.issued,id];await this.ctx.storage.put("artifactIssued:"+matchId,pick.issued);
     return art;
   }
-  async artifactStoragePlan({artifactId,actorId,targetId,meta,matchId,day,assignments,interactions,members,requestFlip}){
+  async artifactStoragePlan({artifactId,actorId,targetId,targets=[],meta,matchId,day,assignments,interactions,members,requestFlip}){
     const bad=(error,message)=>({ok:false,error,message});
     const noPool=()=>bad("NO_UNISSUED_ARTIFACT","Không còn Artifact chưa phát; không thay đổi, chưa trừ lượt.");
     if(artifactId==="artifact_16"){
@@ -2456,6 +2457,12 @@ export class RoomDurableObject extends DurableObject {
       const art=await this.artifactIssue(actorId,pick,meta,matchId,assignments);
       return {ok:true,replacedOwn:true,changes:[],message:"Ngọc May Mắn: chủ nhận Artifact mới ("+art.artifactName+").",result:{newArtifactId:art.artifactId}};
     }
+    if(artifactId==="artifact_31"){
+      if(targets.length!==2)return bad("RUBY_NEEDS_TWO","Cần đúng hai người; chưa trừ lượt.");
+      const arts=[];for(const id of targets){const a=await this.artifactUnflipped(id);if(!a)return bad("TARGET_ARTIFACT_NOT_ELIGIBLE","Cả hai phải có Artifact chưa lật; chưa trừ lượt.");arts.push(a)}
+      return {ok:true,changes:targets.map((id,i)=>({kind:"ruby_turn",loginId:id,type:"effect_notice",extra:{rowMessage:"Hồng Ngọc Cơ Duyên: bạn là người thứ "+(i+1)+" lật và dùng Artifact của mình."}})),
+        message:"Hồng Ngọc Cơ Duyên: lần lượt "+arts.map(a=>a.artifactName).join(" → ")+" (GM giải quyết theo thứ tự).",result:{order:targets}};
+    }
     if(!targetId)return bad("TARGET_REQUIRED","Cần một mục tiêu.");
     if(artifactId==="artifact_01"){
       const t=await this.ctx.storage.get("artifact:"+targetId);
@@ -2464,6 +2471,14 @@ export class RoomDurableObject extends DurableObject {
       const pick=await this.artifactPickNew(matchId,assignments);if(!pick)return noPool();
       const art=await this.artifactIssue(targetId,pick,meta,matchId,assignments);
       return {ok:true,changes:[],message:"Hổ Phách Bình Minh: thu hồi Artifact đã dùng và phát lá mới cho mục tiêu.",result:{newArtifactId:art.artifactId}};
+    }
+    if(artifactId==="artifact_32"){
+      const t=await this.ctx.storage.get("artifact:"+targetId);
+      if(!t||t.removedFromMatch===true)return bad("TARGET_NO_ARTIFACT","Mục tiêu không có Artifact để sao chép; chưa trừ lượt.");
+      if(await this.ctx.storage.get("artifactLinked:"+actorId))return bad("ALREADY_LINKED","Đã sao chép một Artifact; chưa trừ lượt.");
+      await this.ctx.storage.put("artifactLinked:"+actorId,{...t,loginId:actorId,usedAt:null,viewedAt:null,linkedFromLoginId:targetId});
+      await this.ctx.storage.delete("artifactUse:"+actorId+":"+String(t.artifactId));
+      return {ok:true,changes:[],message:"Lam Ngọc Định Mệnh: chủ nhận bản sao "+t.artifactName+" (dùng riêng một lần).",result:{linkedArtifactId:t.artifactId}};
     }
     const target=await this.artifactUnflipped(targetId);
     if(!target)return bad("TARGET_ARTIFACT_NOT_ELIGIBLE","Mục tiêu không có Artifact chưa lật; chưa trừ lượt.");
@@ -2509,9 +2524,13 @@ export class RoomDurableObject extends DurableObject {
         sameMatch(x)&&x.effectActive!==false&&String(x.type)===kind);
     if(!members["member:"+actorId]||targets.some(id=>!members["member:"+id]))
       return j({ok:false,error:"DAY_PLAYER_NOT_IN_ROOM"},400);
-    let card=null,fn=null,owned=null;
+    let card=null,fn=null,owned=null,ownedKey="artifact:"+actorId;
     if(artifactId){
       owned=await this.ctx.storage.get("artifact:"+actorId);
+      if(!owned||String(owned.artifactId)!==artifactId){
+        const linked=await this.ctx.storage.get("artifactLinked:"+actorId);
+        if(linked&&String(linked.artifactId)===artifactId&&linked.removedFromMatch!==true){owned=linked;ownedKey="artifactLinked:"+actorId}
+      }
       if(!owned||String(owned.artifactId)!==artifactId||
         (owned.matchId&&String(owned.matchId)!==matchId))
         return j({ok:false,error:"DAY_ARTIFACT_NOT_OWNED"},403);
@@ -2643,7 +2662,7 @@ export class RoomDurableObject extends DurableObject {
       const effects=Array.isArray(fn.effectIds)?fn.effectIds.map(String):[];
       let storagePlan=null;
       if(typeof needsStorageArtifact==="function"&&needsStorageArtifact(artifactId)){
-        storagePlan=await this.artifactStoragePlan({artifactId,actorId,targetId:effectiveTargets[0]||"",meta,matchId,day,assignments,interactions,members,requestFlip:body?.requestFlip===true});
+        storagePlan=await this.artifactStoragePlan({artifactId,actorId,targetId:effectiveTargets[0]||"",targets:effectiveTargets,meta,matchId,day,assignments,interactions,members,requestFlip:body?.requestFlip===true});
         if(!storagePlan.ok)return j({ok:false,error:storagePlan.error,message:storagePlan.message},409);
       }
       const aplan=storagePlan?{ok:true,changes:storagePlan.changes||[],message:storagePlan.message,result:storagePlan.result||{}}:typeof artifactDayPlan==="function"?artifactDayPlan({artifactId,actionId,actorId,targets:effectiveTargets,assignments,interactions,matchId,day}):null;
@@ -2792,7 +2811,7 @@ export class RoomDurableObject extends DurableObject {
       const ckey="artifactCycle:"+artifactCycleKey;
       await this.ctx.storage.put(ckey,artifactReservation.state);
       await this.ctx.storage.put(useKey,{requestId:token,cycleKey:artifactCycleKey,usedAt:time,artifactId,actorId});
-      if(!skipOwnedWrite){owned.usedAt=time;await this.ctx.storage.put("artifact:"+actorId,owned)}
+      if(!skipOwnedWrite){owned.usedAt=time;await this.ctx.storage.put(ownedKey,owned)}
     }else{
       await this.ctx.storage.put(usageKey,[...priorUsage,{matchId,day,actorId,roleId,
         artifactId:"",actionId,requestId:token,createdAt:time}].slice(-1000));

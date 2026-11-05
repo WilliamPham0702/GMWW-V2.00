@@ -90,6 +90,12 @@ export function artifactDayPlan({artifactId='',actionId='',actorId='',targets=[]
         message:'Quả Cầu Phán Đoán đúng: cả hai là Sói. Đề xuất Phe Dân thắng ngay.',result:{correct:true}};
       return {ok:true,kill:[actor],changes:[],message:'Quả Cầu Phán Đoán sai: chủ sở hữu bị loại.',result:{correct:false}};
     }
+    case 'artifact_40':{
+      if(!t0||t0===actor||!aa||!ta)return fail('SWAP_TARGET_INVALID','Mục tiêu không hợp lệ; chưa trừ lượt.');
+      if(isDead(interactions,matchId,actor)||isDead(interactions,matchId,t0))return fail('SWAP_TARGET_DEAD','Cả hai phải còn sống; chưa trừ lượt.');
+      return {ok:true,changes:[{kind:'swap',loginId:t0,type:'effect_notice',extra:{actionIdOverride:'artifact-swap-role',forceActive:true,rowMessage:'Đá Hoán Đổi: Vai Trò hoán đổi từ đêm kế tiếp.'}}],
+        message:'Đá Hoán Đổi: '+roleLabel(aa)+' ⇄ '+roleLabel(ta)+' (có hiệu lực từ đầu đêm kế tiếp, cấp lại lượt dùng mới).'};
+    }
     case 'artifact_04':
       return {ok:true,changes:[{kind:'status',loginId:t0,type:'status',statusId:'infected',extra:{actionIdOverride:'artifact-plague-infect'}}],
         message:'Máu Dịch Bệnh: mục tiêu bị nhiễm bệnh. Nếu Sói Cắn chết người này, Bầy Sói mất lượt Cắn đêm sau.'};
@@ -124,7 +130,7 @@ export function aliveNeighbors({players={},interactions=[],matchId='',actorId=''
   return {left:seated[(i-1+seated.length)%seated.length].id,right:seated[(i+1)%seated.length].id};
 }
 export const awakeLastNight=({usage=[],matchId='',night=1,loginId=''}={})=>list(usage).some(u=>String(u?.matchId||'')===String(matchId)&&u.undone!==true&&Number(u.night)===Number(night)&&login(u.actorId)===login(loginId));
-export const needsStorageArtifact=id=>['artifact_01','artifact_03','artifact_10','artifact_16','artifact_17','artifact_25'].includes(String(id));
+export const needsStorageArtifact=id=>['artifact_01','artifact_03','artifact_10','artifact_16','artifact_17','artifact_25','artifact_31','artifact_32'].includes(String(id));
 
 /* ---- Đợt C: Sói / bình minh ---- */
 const nrow=(id,type,loginId,matchId,night,cycleKey,now,actionId,message,extra={})=>({id,type,loginId,actorId:loginId,matchId:String(matchId),night:Number(night),cycleKey:String(cycleKey),
@@ -152,3 +158,22 @@ export function prismTargetsFor({interactions=[],matchId='',night=1}={}){
   return r?list(r.prismTargets).map(login):null;
 }
 export const cursedWolfIds=({interactions=[],matchId='',night=1}={})=>list(interactions).filter(r=>same(r,matchId)&&r.actionId==='artifact-curse-convert'&&live(r)&&Number(r.night)<Number(night)).map(r=>login(r.loginId));
+
+/* Đá Hoán Đổi: hoán đổi Vai Trò (kèm phe, chức năng, lượt dùng mới) ở đầu đêm kế tiếp. */
+export function swapRolePlans({assignments=[],interactions=[],matchId='',night=1}={}){
+  const out=[],done=new Set();
+  for(const r of list(interactions)){
+    if(!same(r,matchId)||r.actionId!=='artifact-swap-role'||!live(r)||Number(r.night)+1!==Number(night))continue;
+    const a=login(r.actorId),b=login(r.loginId),key=a+'>'+b;
+    if(done.has(key)||isDead(interactions,matchId,a)||isDead(interactions,matchId,b))continue;done.add(key);
+    const A=roleOf(assignments,a),B=roleOf(assignments,b);if(!A?.roleId||!B?.roleId||A.roleId===B.roleId)continue;
+    out.push({kind:'swap',actorId:a,fromRoleId:A.roleId,sourceId:b,sourceRoleId:B.roleId,night:Number(night)},
+             {kind:'swap',actorId:b,fromRoleId:B.roleId,sourceId:a,sourceRoleId:A.roleId,night:Number(night)});
+  }
+  return out;
+}
+/* Vuốt Sói: vào Bầy Sói từ đêm kế tiếp, giữ chức năng gốc (chỉ đổi phe). */
+export function clawWolfIds({assignments=[],interactions=[],matchId='',night=1}={}){
+  return [...new Set(list(interactions).filter(r=>same(r,matchId)&&r.actionId==='action-lone-wolf-join'&&r.undone!==true&&r.noEffect!==true&&Number(r.night)<Number(night)
+    &&String(roleOf(assignments,login(r.actorId))?.artifactId||'')==='artifact_11').map(r=>login(r.actorId)))];
+}

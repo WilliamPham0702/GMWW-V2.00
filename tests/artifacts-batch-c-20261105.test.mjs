@@ -41,3 +41,23 @@ test('Trượng Luân Hồi / Quyền Trượng: chỉ hồi sinh khi chủ đã
   assert.deepEqual(artifactDayPlan({artifactId:'artifact_30',actorId:'v1',targets:[],assignments:A,interactions:dead,matchId:'m',day:2}).revive,['v1']);
   assert.deepEqual(artifactDayPlan({artifactId:'artifact_33',actorId:'v1',targets:[],assignments:A,interactions:dead,matchId:'m',day:2}).revive,['v1']);
 });
+import {swapRolePlans,clawWolfIds,needsStorageArtifact} from '../src/gmww-artifact-rules.js';
+test('Đá Hoán Đổi: hai kế hoạch đổi vai đầu đêm kế tiếp, chỉ khi cả hai sống',()=>{
+  const B=[{loginId:'a',roleId:'role_seer'},{loginId:'b',roleId:'role_guard'}];
+  const p=artifactDayPlan({artifactId:'artifact_40',actorId:'a',targets:['b'],assignments:B,interactions:[],matchId:'m',day:1});
+  const row={...p.changes[0].extra,actionId:'artifact-swap-role',actorId:'a',loginId:'b',type:'effect_notice',matchId:'m',night:1,effectActive:true};
+  const plans=swapRolePlans({assignments:B,interactions:[row],matchId:'m',night:2});
+  assert.equal(plans.length,2);assert.deepEqual(plans.map(x=>[x.actorId,x.sourceRoleId]),[['a','role_guard'],['b','role_seer']]);
+  assert.equal(swapRolePlans({assignments:B,interactions:[row],matchId:'m',night:3}).length,0);
+  assert.equal(swapRolePlans({assignments:B,interactions:[row,{type:'dead',loginId:'b',matchId:'m'}],matchId:'m',night:2}).length,0);
+  assert.equal(artifactDayPlan({artifactId:'artifact_40',actorId:'a',targets:['a'],assignments:B,interactions:[],matchId:'m',day:1}).ok,false);
+});
+test('Vuốt Sói: sang Phe Sói từ đêm sau, giữ vai gốc',()=>{
+  const B=[{loginId:'a',roleId:'role_seer',faction:'Phe Dân',artifactId:'artifact_11'}];
+  const rows=[{type:'effect_notice',actionId:'action-lone-wolf-join',actorId:'a',loginId:'a',matchId:'m',night:2}];
+  assert.deepEqual(clawWolfIds({assignments:B,interactions:rows,matchId:'m',night:3}),['a']);
+  assert.deepEqual(clawWolfIds({assignments:B,interactions:rows,matchId:'m',night:2}),[]);
+  const eff=effectiveAssignments({assignments:B,interactions:rows,matchId:'m',night:3})[0];
+  assert.equal(eff.roleId,'role_seer');assert.equal(eff.faction,'wolf');
+  assert.equal(needsStorageArtifact('artifact_31')&&needsStorageArtifact('artifact_32'),true);
+});
