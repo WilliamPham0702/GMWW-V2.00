@@ -629,7 +629,9 @@ canvas.addEventListener('pointerup',e=>{
     const r=canvas.getBoundingClientRect(),ray=new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);
     const id=field.pick(ray);
-    if(id){focusId=id;dashboard.setSelection(id);field.turnActor(id,Math.PI/2);notice(id+' xoay 90° — chạm tiếp để quay 360°.');}
+    if(id){focusId=id;
+      if(dashboard.tapTarget(id))notice('Mục tiêu lượt đêm: đã chọn '+dashboard.targetCount+' (chạm lại để bỏ chọn).');
+      else{dashboard.setSelection(id);field.turnActor(id,Math.PI/2);notice(id+' xoay 90° — chạm tiếp để quay 360°.');}}
   }
   drag=null;
 });

@@ -23,6 +23,13 @@ export function publicVoteSummary(ballot){
   const decision=ballot.outcome==='dead'?'Bị xử tử':ballot.outcome==='alive'?'Được cứu':'Chưa kết luận';
   return stage+' · 👍 '+save+' / 👎 '+kill+' · '+decision;
 }
+// GD47: toggle a target in the GM's multi-target selection (pure; Core still validates count/self rules).
+export function toggleTargetSelection(list,id,max=5){
+  const cur=Array.isArray(list)?list:[];
+  if(typeof id!=='string'||!id)return cur;
+  if(cur.includes(id))return cur.filter(x=>x!==id);
+  return cur.length<max?[...cur,id]:cur;
+}
 export function createGmDashboard({container,onSelect,onAction,onToggleQuality}){
   if(!container||typeof container.replaceChildren!=='function')throw new TypeError('DASHBOARD_CONTAINER_REQUIRED');
   let frame=null,ballot=null,nightControl=null,selectedId=null,hasGM=false,activeTab='room',lowPower=false,lastNotice='';
@@ -163,6 +170,14 @@ export function createGmDashboard({container,onSelect,onAction,onToggleQuality})
       nightControl=hasGM?next:null;render()},
     setGM(next){hasGM=next===true;if(!hasGM){nightControl=null;selectedTargets=[]}render()},
     setSelection(next){selectedId=typeof next==='string'?next:null;render()},
+    // GD47: a tap on a 3D character toggles a night-turn target ONLY while the GM is on the turn tab
+    // and Core has supplied actions; otherwise the caller keeps the normal selection behaviour.
+    tapTarget(id){
+      const live=hasGM&&activeTab==='turn'&&Array.isArray(nightControl?.availableActions)&&nightControl.availableActions.length>0;
+      if(!live||!publicGMRows(frame).some(p=>p.id===id))return false;
+      selectedTargets=toggleTargetSelection(selectedTargets,id,5);render();return true;
+    },
+    get targetCount(){return selectedTargets.length},
     notify(message){lastNotice=String(message||'').slice(0,200);render()},
     get selectedId(){return selectedId},get authorized(){return hasGM},
     destroy(){container.replaceChildren()}
