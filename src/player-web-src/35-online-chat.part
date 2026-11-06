@@ -57,10 +57,22 @@ function gmwwAnnouncementOffset(cue){
   const lag=(Date.now()+(Number(state.serverClockOffsetMs)||0)-at)/1000;
   return lag<0.3?0:lag;
 }
+// The cue reached this device after the clip had already ended on the Server (slow poll, sleeping
+// socket) but the turn is still current: play the role's clip from the start instead of staying
+// silent. Beyond this grace the clip is genuinely old (e.g. rejoin) and is not replayed.
+const GMWW_ANNOUNCE_LATE_GRACE_S=8;
+function gmwwAnnouncementStart(skip,total){
+  if(skip<total-0.15)return skip;
+  return skip>total+GMWW_ANNOUNCE_LATE_GRACE_S?-1:0;
+}
 function gmwwChatAnnounce(cue){
+  const key=cue?.key&&state.roomCode&&state.participantId?state.roomCode+':'+cue.key:'';
+  // A slow /me poll can land after the realtime push of the next turn. Never let that older cue
+  // replace the newer one (it would cut the new role's audio and lose its pending clip).
+  const cur=gmwwAnnouncementPending,at=Number(cue?.startedAt)||0;
+  if(key&&cur&&cur.key!==key&&cur.room===state.roomCode&&at&&Number(cur.cue?.startedAt)>at)return;
   state.audioCue=cue?.key&&cue?.label?{key:String(cue.key),label:String(cue.label).slice(0,120)}:null;
   updatePlayerTopMenu();
-  const key=cue?.key&&state.roomCode&&state.participantId?state.roomCode+':'+cue.key:'';
   if(gmwwAnnouncementPending?.key!==key){gmwwStopAnnouncement();gmwwAnnouncementPending=key?{key,cue,room:state.roomCode}:null}
   else if(gmwwAnnouncementPending)gmwwAnnouncementPending.cue={...gmwwAnnouncementPending.cue,...cue};
   if(!key||key===gmwwPlayerCueKey||gmwwChatAudioOff())return;
@@ -107,7 +119,8 @@ async function gmwwPlayAnnouncementBuffers(blobs,generation,pending){
     let skip=gmwwAnnouncementOffset(pending.cue),at=c.currentTime+0.02;
     const total=buffers.reduce((n,b)=>n+b.duration,0);
     gmwwStopAnnouncementSources();gmwwPlayerCueKey=pending.key;
-    if(skip>=total-0.15)return true; // already finished on every other device
+    skip=gmwwAnnouncementStart(skip,total);
+    if(skip<0)return true; // finished long ago on every other device
     for(const buf of buffers){
       if(skip>=buf.duration){skip-=buf.duration;continue}
       const src=c.createBufferSource(),g=c.createGain();src.buffer=buf;g.gain.value=.85;src.connect(g);g.connect(gmwwAudioMaster);
@@ -120,7 +133,7 @@ async function gmwwPlayAnnouncementBuffers(blobs,generation,pending){
 async function gmwwPlayAnnouncementHtml(blobs,generation,pending){
   const audio=gmwwAnnouncementAudio||(gmwwAnnouncementAudio=new Audio());let index=0;
   const load=i=>{if(gmwwAnnouncementUrl)URL.revokeObjectURL(gmwwAnnouncementUrl);gmwwAnnouncementUrl=URL.createObjectURL(blobs[i]);audio.src=gmwwAnnouncementUrl;audio.volume=.85};
-  const seek=()=>{const skip=gmwwAnnouncementOffset(pending.cue);if(skip>0&&Number.isFinite(audio.duration))try{audio.currentTime=Math.min(skip,Math.max(0,audio.duration-0.05))}catch{}};
+  const seek=()=>{const skip=gmwwAnnouncementOffset(pending.cue);if(skip>0&&Number.isFinite(audio.duration)){const at=gmwwAnnouncementStart(skip,audio.duration);if(at<0){try{audio.pause()}catch{}}else if(at>0)try{audio.currentTime=at}catch{}}};
   audio.onended=()=>{if(generation!==gmwwAnnouncementGeneration||++index>=blobs.length)return;load(index);audio.play().catch(()=>{})};
   load(0);
   try{audio.addEventListener?.('loadedmetadata',seek,{once:true})}catch{}
