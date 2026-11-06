@@ -7,6 +7,7 @@ import {rendererCommands} from '../dual-renderer-core.mjs';
 import {connectStagingRoom} from './room-realtime.mjs';
 import {createArenaCharacterField} from './character-atelier.mjs';
 import {createCoastalVillage} from './coastal-village.mjs';
+import {installVillageProps} from './village-props.mjs';
 import {arenaSceneSignature,arenaTargetFrameHz,createArenaPaintScheduler,arenaPlayerPixelRatio} from './render-optimization.mjs';
 import {gallowsCandidateActorId} from './stage38-public-gallows.mjs';
 import {installDirectActions} from './player-actions.mjs';
@@ -22,6 +23,8 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.1));
 const camera=new THREE.PerspectiveCamera(42,1,.1,90);
 const field=createArenaCharacterField(THREE,scene);
 const village=createCoastalVillage(THREE,scene);
+// GĐ50: model GLB thật thay các khối dựng bằng code; lỗi tải thì giữ nguyên làng cũ.
+void installVillageProps(THREE,village).catch(()=>null);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 field.setReducedMotion(reducedMotion);
 const scheduler=createArenaPaintScheduler();

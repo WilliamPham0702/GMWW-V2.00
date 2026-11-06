@@ -92,6 +92,9 @@ export function createCoastalVillage(THREE,scene){
     if(colors&&inst.instanceColor)inst.instanceColor.needsUpdate=true;
     root.add(inst);meshes.push(inst);return inst;
   };
+  // Named groups of procedural props, so GLB props (village-props.mjs) can replace them when loaded.
+  const groups={},nightHooks=[];
+  const tag=(name,...items)=>{(groups[name]=groups[name]||[]).push(...items);return items[0]};
   const useTex=canvasOk();
   const plazaMap=useTex?tex(plazaCanvas()):null,bannerMap=useTex?tex(bannerCanvas()):null,awningMap=useTex?tex(awningCanvas()):null;
   const daySky=useTex?tex(skyCanvas('#3f9be6','#8fd0f5','#e6f6ff')):null,nightSky=useTex?tex(skyCanvas('#070f26','#13294f','#2b4a76')):null;
@@ -116,10 +119,10 @@ export function createCoastalVillage(THREE,scene){
   rocks.push([-14,-.2,-20,3.4,3.4,2.8,0],[17,-.3,-26,5.6,4.8,3.6,.5]);
   batch(new THREE.IcosahedronGeometry(1,0),cliff,rocks);
   // Stone fire pit (fire stays at the same coordinates in Day/Night).
-  batch(new THREE.SphereGeometry(.4,6,5),stone,
-    Array.from({length:17},(_,i)=>{const a=TAU*i/17;return [1.7*Math.cos(a),.05,1.8*Math.sin(a),1,.55,1,a]}));
+  tag('campfire',batch(new THREE.SphereGeometry(.4,6,5),stone,
+    Array.from({length:17},(_,i)=>{const a=TAU*i/17;return [1.7*Math.cos(a),.05,1.8*Math.sin(a),1,.55,1,a]})));
   const fire=add(new THREE.ConeGeometry(.34,.88,7),fireMat,0,.47,1.8);
-  batch(new THREE.CylinderGeometry(.11,.14,1.18,5),wood,[[-.24,.09,1.8,1,1,1,1.2],[.24,.09,1.8,1,1,1,-1.1]]);
+  tag('campfire',fire,batch(new THREE.CylinderGeometry(.11,.14,1.18,5),wood,[[-.24,.09,1.8,1,1,1,1.2],[.24,.09,1.8,1,1,1,-1.1]]));
   // Low stone wall around the plaza with gaps for the pier (north) and the stairs (south).
   const wallSeg=[],pillars=[];
   for(let i=0;i<54;i++){
@@ -138,8 +141,8 @@ export function createCoastalVillage(THREE,scene){
   // Timber houses (white walls, dark beams, blue roofs) behind the plaza.
   const houses=[[-12.6,-5.2,2.3,.55],[12.8,-4.4,2.5,-.55],[-9.4,-11.2,2,.25],[9.8,-10.8,2.1,-.25],
     [-13.6,3.6,2.1,1.25],[13.7,4.4,2.2,-1.25],[-14.4,-11.5,1.8,.4],[14.8,-11,1.9,-.4]];
-  batch(new THREE.BoxGeometry(1,1,1),wall,houses.map(([x,z,w,a])=>[x,1.1,z,w,2.2,w*.8,a]));
-  batch(new THREE.ConeGeometry(1,1,4),roof,houses.map(([x,z,w,a])=>[x,2.75,z,w*1.12,.95,w*.9,PI/4+a]));
+  tag('houses',batch(new THREE.BoxGeometry(1,1,1),wall,houses.map(([x,z,w,a])=>[x,1.1,z,w,2.2,w*.8,a])));
+  tag('houses',batch(new THREE.ConeGeometry(1,1,4),roof,houses.map(([x,z,w,a])=>[x,2.75,z,w*1.12,.95,w*.9,PI/4+a])));
   const beams=[];
   for(const [x,z,w,a] of houses){
     const c=Math.cos(a),s=Math.sin(a);
@@ -148,7 +151,7 @@ export function createCoastalVillage(THREE,scene){
     }
     beams.push([x,1.8,z,w*1.02,.1,w*.82,a]);
   }
-  batch(new THREE.BoxGeometry(1,1,1),beam,beams);
+  tag('houses',batch(new THREE.BoxGeometry(1,1,1),beam,beams));
   // Pier.
   const planks=[],posts=[];
   for(let i=0;i<11;i++){
@@ -167,9 +170,7 @@ export function createCoastalVillage(THREE,scene){
     for(const [dx,dz] of [[-1.15,-.65],[1.15,-.65],[-1.15,.65],[1.15,.65]])
       stallPosts.push([x+dx*c+dz*s,.88,z-dx*s+dz*c,.1,1.76,.1,a]);
   }
-  batch(new THREE.BoxGeometry(1,1,1),awning,awn);
-  batch(new THREE.BoxGeometry(1,1,1),wood,counter);
-  batch(new THREE.BoxGeometry(1,1,1),beam,stallPosts);
+  tag('stalls',batch(new THREE.BoxGeometry(1,1,1),awning,awn),batch(new THREE.BoxGeometry(1,1,1),wood,counter),batch(new THREE.BoxGeometry(1,1,1),beam,stallPosts));
   // Planters: barrels with flowers near houses and stalls.
   const barrels=[],bloom=[];
   const planterSpots=[[-8.6,-8],[8.8,-7.6],[-11.6,-8.6],[11.8,-8.2],[-10.6,9],[10.4,9.6],[-4.8,11.6],[4.8,11.8],[-12.2,0.8],[12.6,1.2],[-7.8,-11.8],[7.8,-12]];
@@ -178,8 +179,7 @@ export function createCoastalVillage(THREE,scene){
     barrels.push([x,.3,z,.4,.6,.4,0]);
     for(let k=0;k<5;k++){const a=k*TAU/5+i;bloom.push([x+Math.cos(a)*.26,.72+(k%2)*.08,z+Math.sin(a)*.26,.15,.15,.15,0])}
   });
-  batch(new THREE.CylinderGeometry(1,.85,1,8),wood,barrels);
-  batch(new THREE.SphereGeometry(1,6,5),flowers,bloom,palette);
+  tag('planters',batch(new THREE.CylinderGeometry(1,.85,1,8),wood,barrels),batch(new THREE.SphereGeometry(1,6,5),flowers,bloom,palette));
   // Lantern posts around the plaza.
   const lampPositions=[],lampPosts=[];
   for(let i=0;i<10;i++){
@@ -187,19 +187,17 @@ export function createCoastalVillage(THREE,scene){
     if(z<-7.5&&Math.abs(x+2.8)<3.6)continue;
     lampPosts.push([x,1.05,z,.08,2.1,.08,0]);lampPositions.push([x,2.15,z]);
   }
-  batch(new THREE.CylinderGeometry(1,1.3,1,6),wood,lampPosts);
-  batch(new THREE.SphereGeometry(.22,7,5),lantern,lampPositions.map(([x,y,z])=>[x,y,z]));
+  tag('lamps',batch(new THREE.CylinderGeometry(1,1.3,1,6),wood,lampPosts),batch(new THREE.SphereGeometry(.22,7,5),lantern,lampPositions.map(([x,y,z])=>[x,y,z])));
   // Compass banners at four posts.
   const banners=[[0,-10.8],[0,11.4],[-11.4,.6],[11.4,.6]].map(([x,z])=>[x,2.5,z,1,1,1,Math.atan2(-x,-z)]);
-  batch(new THREE.BoxGeometry(.85,1.5,.04),banner,banners);
-  batch(new THREE.CylinderGeometry(.05,.05,1,5),wood,banners.map(([x,,z])=>[x,1.8,z,1,3.1,1,0]));
+  tag('banners',batch(new THREE.BoxGeometry(.85,1.5,.04),banner,banners),batch(new THREE.CylinderGeometry(.05,.05,1,5),wood,banners.map(([x,,z])=>[x,1.8,z,1,3.1,1,0])));
   // Palms: tall trunks and fan leaves (cone leaves pointing outward from the crown).
   const palms=[[-14.2,-1.6,3.4],[14.6,-.4,3.7],[-12.6,9,3],[12.8,8.8,3.4],[-9.2,-14,2.8],[10.6,-14.5,3.2],[-5.4,13.6,3],[5.8,13.8,3.2]];
-  batch(new THREE.CylinderGeometry(.11,.22,1,6),trunk,palms.map(([x,z,h])=>[x,h/2,z,1,h,1,.1]));
+  tag('palms',batch(new THREE.CylinderGeometry(.11,.22,1,6),trunk,palms.map(([x,z,h])=>[x,h/2,z,1,h,1,.1])));
   const leaves=[];
   for(const [x,z,h] of palms){for(let j=0;j<7;j++){const a=TAU*j/7+x;leaves.push([x,h,z,.55,.12,1.9,a])}}
   const leafGeo=new THREE.ConeGeometry(.5,1,4);leafGeo.rotateX(PI/2);leafGeo.translate(0,0,.5);
-  batch(leafGeo,foliage,leaves);
+  tag('palms',batch(leafGeo,foliage,leaves));
   // Distant hills and a small town with blue roofs and a lighthouse tower (never inside the seat ring).
   batch(new THREE.SphereGeometry(1,10,6),hillGreen,[[-30,-1,-44,16,8,9,0],[26,-1,-48,18,9,10,0],[-6,-2,-60,22,7,9,0]]);
   const farHouses=[[-30,-38,2.2],[-26,-40,1.8],[-22,-37,2],[24,-42,2.1],[28,-44,2.4],[21,-45,1.8],[-8,-54,2.2],[-3,-56,2.5]];
@@ -239,10 +237,12 @@ export function createCoastalVillage(THREE,scene){
     fireMat.emissiveIntensity=night?1.6:.8;
     const sky=night?nightSky:daySky;
     scene.background=sky||new THREE.Color(night?'#10233f':'#8bd5f0');
+    for(const hook of nightHooks)hook(night);
   }
   function setQuality(reduced){lowPower=reduced===true;starMesh.visible=night&&!lowPower}
   function animate(now){
     if(lowPower)return;
+    if(!fire.visible)return;
     fire.scale.y=.91+.08*Math.sin(now*.004);
     fire.rotation.y=now*.0005;
     ocean.position.y=-.43+Math.sin(now*.0011)*.012;
@@ -255,7 +255,10 @@ export function createCoastalVillage(THREE,scene){
     for(const t of textures)t.dispose();
   }
   setNight(false);
-  return {setNight,setQuality,animate,dispose,get night(){return night},
+  // GLB props: hide the procedural stand-ins by group name and follow Day/Night.
+  function hideGroups(names){let hidden=0;for(const n of names)for(const o of groups[n]||[]){if(o.visible){o.visible=false;hidden++}}return hidden}
+  function onNight(hook){nightHooks.push(hook);if(night!==null)hook(night)}
+  return {setNight,setQuality,animate,dispose,hideGroups,onNight,root,groupNames:Object.keys(groups),get night(){return night},
     get staticDrawBudget(){return meshes.length},get lanternCount(){return lampPositions.length},
     get sky(){return night?'night':'day'},get nightLightCount(){return fireLight?1:0},
     get textured(){return useTex}};
