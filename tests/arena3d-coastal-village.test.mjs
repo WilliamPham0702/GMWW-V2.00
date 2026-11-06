@@ -7,11 +7,11 @@ import {createArenaCharacterField} from '../assets/village/arena-3d/character-at
 test('One coastal village scene is reused for day and night with fire/lantern/moon and stable seat positions',()=>{
   const scene=new THREE.Scene();
   const village=createCoastalVillage(THREE,scene);
-  assert.equal(COASTAL_VILLAGE_VERSION,'coastal-day-night-v1');
+  assert.equal(COASTAL_VILLAGE_VERSION,'coastal-day-night-v2-painted');
   assert.equal(village.sky,'day');
   assert.equal(village.night,false);
   assert.ok(village.lanternCount>=4);
-  assert.ok(village.staticDrawBudget<=18,'instanced foliage/huts/pier must stay cheap');
+  assert.ok(village.staticDrawBudget<=36,'instanced village (plaza, houses, stalls, palms, far town) must stay cheap: '+village.staticDrawBudget);
   const root=scene.getObjectByName('arena-tropical-village');
   assert.ok(root);
   const sceneObjects=root.children.length;

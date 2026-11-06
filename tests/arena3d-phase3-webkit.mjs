@@ -13,7 +13,7 @@ try{
   const six=await page.evaluate(()=>window.__GMWW_ARENA_STAGE_READONLY());
   assert.equal(six.count,6);
   assert.equal(six.sky,'day');
-  assert.equal(six.village,'coastal-day-night-v1');
+  assert.equal(six.village,'coastal-day-night-v2-painted');
   assert.ok(six.drawCalls>0&&six.drawCalls<=55,'instanced chibi budget');
   await page.locator('[data-fx="shield"]').click();
   assert.match(await page.locator('#log').innerText(),/Mẫu.*Bảo vệ/);
