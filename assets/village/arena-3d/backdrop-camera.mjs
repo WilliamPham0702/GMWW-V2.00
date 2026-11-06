@@ -18,3 +18,12 @@ export function framePctToFloor(xPct,yPct,tiltDeg=BACKDROP_TILT_DEG,fire=BACKDRO
   const sin=Math.sin(tiltDeg*Math.PI/180),width=ring.worldRadius/(ring.halfWidthPct/100),height=ring.worldRadius*sin/(ring.halfHeightPct/100);
   return {x:(xPct-fire.x)/100*width,z:(yPct-fire.y)/100*height/sin};
 }
+// Camera trực giao cho trang Arena 3D "kiểu tranh": đặt nhân vật 3D lên đúng sàn quảng trường của tranh làng.
+// Tỉ lệ điểm ảnh 1:1 (không méo): độ nghiêng suy ra từ elip quảng trường trong tranh theo kích thước khung thực.
+export const PAINTED_PLAZA={fire:{x:50.3,y:49.2},worldRadius:8.6,halfWidthPct:44,halfHeightPct:13.5};
+export function paintedFit(w,h,plaza=PAINTED_PLAZA){
+  const sin=Math.min(.9,Math.max(.35,(plaza.halfHeightPct/100*h)/(plaza.halfWidthPct/100*w)));
+  const tiltDeg=Math.asin(sin)*180/Math.PI,width=plaza.worldRadius/(plaza.halfWidthPct/100),height=width*h/w;
+  const fy=plaza.fire.y/100,fx=plaza.fire.x/100;
+  return {tiltDeg,left:-width*fx,right:width*(1-fx),top:height*fy,bottom:-height*(1-fy),position:backdropCameraPosition(tiltDeg)};
+}

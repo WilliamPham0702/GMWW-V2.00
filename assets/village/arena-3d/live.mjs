@@ -16,6 +16,8 @@ import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {installVillageProps} from './village-props.mjs';
 import {immersiveWanted,installImmersive} from './immersive.mjs';
+import {installPaintedBackdrop} from './painted-look.mjs';
+import {paintedFit} from './backdrop-camera.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
 import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_STAGE18_VERSION,createArenaPaintScheduler,ARENA_STAGE22_VERSION} from './render-optimization.mjs';
@@ -52,11 +54,13 @@ if(productionCoreView){
   $('note').textContent='Arena 3D điều khiển phòng thật bằng Core GMWW V2.00: chỉ Thành Viên thật; Vai Trò và Artifact theo ván đã cấu hình. Không tạo dữ liệu DEMO.';
 
 }
-const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
+const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power',alpha:immersiveWanted()});
 render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devicePixelRatio||1,innerWidth<460?1.15:1.35));
-const camera=new THREE.PerspectiveCamera(42,1,.1,90);
+// GĐ53: trong app (immersive) cảnh làng là TRANH thật phía sau + nhân vật 3D đứng trên sàn tranh bằng camera trực giao.
+const paintedLook=immersiveWanted();
+const camera=paintedLook?new THREE.OrthographicCamera(-1,1,1,-1,.1,200):new THREE.PerspectiveCamera(42,1,.1,90);
 let orbit=.5,elevation=.75,radius=20,drag=null,focusId=null,rosterSize=6,code='',gmToken='',feed=null,current=null;
-let followCaster=true,pinchDistance=0;
+let followCaster=true,pinchDistance=0,paintedPose=null;
 const trackedPointers=new Map(),cameraAim=new THREE.Vector3(0,0,1.2),
   desiredAim=new THREE.Vector3(0,0,1.2);
 const field=createArenaCharacterField(THREE,scene);
@@ -172,6 +176,7 @@ const village=createCoastalVillage(THREE,scene);
 void installVillageProps(THREE,village).catch(()=>null);
 // GĐ51: trong app, làng chiếm toàn màn hình; nút điều hành nằm trong ngăn kéo.
 if(immersiveWanted())installImmersive();
+if(paintedLook)installPaintedBackdrop(scene,village,render);
 // Single village: lanterns/moon/sea and fire switch lighting; seats never move at dusk.
 // Chibi 3D + animation are render-only: the same authoritative V2 DTO feeds 2D and 3D.
 function drawFrame(frame){
@@ -613,7 +618,9 @@ for(const b of document.querySelectorAll('[data-fx],[data-role-fx]'))b.addEventL
 function resize(){
   const rect=canvas.getBoundingClientRect(),key=rect.width+'x'+rect.height;
   if(key!==lastResize){lastResize=key;render.setSize(Math.max(1,rect.width),Math.max(1,rect.height),false);
-    camera.aspect=Math.max(1,rect.width)/Math.max(1,rect.height);camera.updateProjectionMatrix()}
+    camera.aspect=Math.max(1,rect.width)/Math.max(1,rect.height);camera.updateProjectionMatrix();
+    if(paintedLook){paintedPose=paintedFit(Math.max(1,rect.width),Math.max(1,rect.height));
+      Object.assign(camera,{left:paintedPose.left,right:paintedPose.right,top:paintedPose.top,bottom:paintedPose.bottom});camera.updateProjectionMatrix()}}
 }
 canvas.addEventListener('pointerdown',e=>{
   trackedPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -706,7 +713,7 @@ function loop(now){
     desiredAim.set(caster?Math.max(-3.7,Math.min(3.7,caster.x*.37)):0,
       0,caster?1.2+Math.max(-3.2,Math.min(3.2,(caster.z-1.2)*.37)):1.2);
     cameraAim.lerp(desiredAim,reducedMotion?.35:.12);
-    camera.lookAt(cameraAim);
+    camera.lookAt(cameraAim);if(paintedLook&&paintedPose){camera.position.set(paintedPose.position.x,paintedPose.position.y,paintedPose.position.z);camera.lookAt(0,0,0)}
     if(!reducedMotion)village.animate(now);
     field.draw(now);
     render.render(scene,camera);frames++;

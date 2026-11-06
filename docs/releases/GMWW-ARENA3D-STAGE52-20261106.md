@@ -11,3 +11,7 @@
 - Thêm chiều sâu: camera phối cảnh lắc nhẹ, ánh lửa nhấp nháy, cánh hoa bay, chuyển Ngày/Đêm mượt.
 - `?style=village` vẫn là làng dựng bằng code/GLB (xoay trực giao). Xoay 360° thật chưa có ở chế độ tranh.
 - Giới hạn: dùng tranh mặc định v260; tranh GM tự đăng tải riêng chưa nạp vào nền 3D.
+
+## GĐ53 — Kiểu tranh cho trang "VÀO LÀNG" (KHÔNG đụng Runtime/2D)
+- Trang Arena 3D (STAGING) khi chạy trong app: tranh làng thật làm nền, nhân vật 3D đứng trên sàn tranh (camera trực giao, không méo).
+- Không còn cần Runtime STAGING; app giữ nguyên V3.309. Trang CI/QA đứng riêng giữ cảnh cũ.
