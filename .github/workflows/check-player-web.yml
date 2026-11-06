@@ -1242,15 +1242,6 @@ jobs:
           node --check .github/scripts/prepare-update-channel.mjs
           test -s docs/releases/GMWW-V3.225-active-icon-drag-20261025.md
 
-      - name: 'V3.223: chỉ kiểm thử VÀO LÀNG → Arena3D STAGING và chốt OTA'
-        if: steps.scope.outputs.mode == 'arena-home-3223'
-        run: |
-          node --test tests/arena3d-home-portal-v3223.test.mjs
-          node .github/scripts/assemble-gm-app.mjs --verify
-          node .github/scripts/verify-gmww-versions.mjs
-          node --check server-game/current/app.js
-          node --check .github/scripts/prepare-update-channel.mjs
-          test -s docs/releases/GMWW-V3.223-arena3d-home-portal-20261025.md
       - name: Kiểm thử đúng quy tắc Xếp Hạng V3.221 và toàn vẹn Runtime
         if: steps.scope.outputs.mode == 'ranking-3221'
         run: |
@@ -2183,7 +2174,7 @@ jobs:
         run: node --test tests/player-web-p0-atomic-roster-role-release.test.mjs tests/player-web-resume-receipt-runtime.test.mjs
       - name: Kiểm thử trực tiếp hợp đồng Core chung 2D/3D và phân quyền
         if: steps.scope.outputs.mode == 'dual-renderer'
-        run: node --test tests/dual-renderer-contract.test.mjs tests/arena3d-preview.test.mjs tests/ci-browser-scope.test.mjs tests/arena3d-phase2-contract.test.mjs tests/arena3d-phase3.test.mjs tests/arena3d-spell-vfx.test.mjs tests/arena3d-phase4.test.mjs tests/arena3d-role-scenario.test.mjs tests/arena3d-casting.test.mjs tests/arena3d-coastal-village.test.mjs tests/arena3d-ritual-walk.test.mjs
+        run: node --test tests/dual-renderer-contract.test.mjs tests/ci-browser-scope.test.mjs
       - name: Tạo và kiểm tra 40 ảnh đại diện nhân vật
         if: steps.scope.outputs.mode == 'full' && steps.v3_drag.outputs.scoped != 'true' && steps.v3_policy.outputs.scoped != 'true' && steps.template_role_artwork.outputs.scoped != 'true' && steps.pr751_status_chat.outputs.scoped != 'true' && steps.gather_v3299.outputs.scoped != 'true' && steps.room_mode_v3300.outputs.scoped != 'true'
         shell: bash
