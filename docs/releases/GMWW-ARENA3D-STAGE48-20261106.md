@@ -13,8 +13,15 @@ Phạm vi: chỉ STAGING `gmww-arena3d-stage14-staging`. Production, IPA, Player
 - `tests/arena3d-stage48-view-mode.test.mjs` 7/7. Cập nhật test cũ `arena3d-gm-staging-bridge` cho đúng yêu cầu mới (vào 3D theo lựa chọn GM).
 - Toàn bộ `arena3d-*.test.mjs`: 200 PASS, 0 FAIL.
 
+## Đã kiểm chứng trên STAGING thật (Chrome, 06/11/2026)
+- GET chế độ phòng mới: `2d`. POST không có quyền GM: 401. GM đổi 3D rồi 2D bằng ô "Chế độ chơi": server lưu và trả đúng.
+- Lấp 30 người thử vẫn chạy (30/30).
+
+## CI
+- Workflow STAGING chạy 3 lần: job kiểm toán PASS cả 3. Job E2E: 1 lần FAIL và 1 lần FAIL ở bước "GM 3D 30 người" (timeout 240s khi lấp 30 người trong Chrome headless CI), 1 lần bị hủy do hết 20 phút ở bước cài trình duyệt. Cùng thao tác chạy tay trên STAGING không lỗi. Chưa có lần CI xanh đầy đủ cho GĐ48.
+
 ## CHƯA kiểm chứng
-- Chưa chạy trên STAGING bằng trình duyệt thật sau deploy.
+- Phía Player 0702 trong trình duyệt thật (phòng 2D ở lại Player Web, GM chọn 3D thì vào làng): chỉ mới kiểm bằng test mô phỏng, cần đăng nhập 0702.
 - Chưa nối nút set-up của app GM (Runtime) để chọn 2D/3D ngay lúc set-up; hiện chọn ở trang GM Arena 3D. Mục này cần bản Runtime mới.
 
 ## Rollback
