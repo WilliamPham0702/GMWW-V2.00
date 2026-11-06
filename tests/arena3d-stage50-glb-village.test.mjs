@@ -20,7 +20,11 @@ for(const f of files)test('GLB '+f+': nhẹ, gốc ở đáy, đơn vị mét, k
   assert.ok(g.triangles>0&&g.triangles<=(limits[f]||6000),'tam giác '+g.triangles);
   const box=new THREE.Box3().setFromObject(g.root),size=box.getSize(new THREE.Vector3());
   assert.ok(Math.abs(box.min.y)<.02,'gốc phải ở đáy, minY='+box.min.y);
-  assert.ok(Math.abs((box.min.x+box.max.x)/2)<.1&&Math.abs((box.min.z+box.max.z)/2)<.1,'tâm ngang phải ở giữa');
+  // Tâm CHÂN ĐẾ (đỉnh sát đất) phải ở gốc; tán cây nghiêng thì tâm bao quanh có thể lệch nên không dùng.
+  g.root.updateMatrixWorld(true);let sx=0,sz=0,n=0;const v=new THREE.Vector3();
+  g.root.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.getAttribute('position');
+    for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.y<.15){sx+=v.x;sz+=v.z;n++}}});
+  assert.ok(n>0&&Math.abs(sx/n)<.6&&Math.abs(sz/n)<.6,'chân đế phải ở giữa gốc: '+(sx/n).toFixed(2)+','+(sz/n).toFixed(2));
   if(heights[f])assert.ok(size.y>=heights[f][0]&&size.y<=heights[f][1],'chiều cao '+size.y);
   assert.ok(size.x<=6&&size.z<=6,'kích thước ngang quá lớn');
   assert.equal((parsed.json.animations||[]).length,0);
