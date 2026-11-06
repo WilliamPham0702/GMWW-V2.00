@@ -1,4 +1,5 @@
 name: Check Native GitHub-first OTA Stage 2
+# 06/11/2026: IPA V3.309 cần kiểm tra Stage 2 chạy lại trên đúng SHA của main trước khi xuất bản.
 
 on:
   pull_request:
