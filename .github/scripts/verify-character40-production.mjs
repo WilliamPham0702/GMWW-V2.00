@@ -49,7 +49,10 @@ if(published.releaseType==='native'){
  const nativeShell=nativeProject.match(/MARKETING_VERSION = ([^;]+);/)?.[1]?.trim();
  assert.ok(nativeShell,'Native version missing');
  assert.equal(published.shellVersion,nativeShell,'Runtime shell must match the unchanged signed IPA');
- assert.equal(published.ipa?.version,nativeShell,'Runtime IPA metadata must stay aligned with native project');
+ // IPA metadata comes from update-system/published-ipa.json (a verified, attached
+ // release IPA) and may be newer than the unchanged native project version.
+ const pubIpa=JSON.parse(await readFile('update-system/published-ipa.json','utf8'));
+ assert.equal(published.ipa?.version,String(pubIpa.version||nativeShell),'Runtime IPA metadata must match published-ipa.json');
  assert.equal(published.minimumShellVersion,nativeShell,'Never install OTA on unsupported old shell');
 }
 const accepted=JSON.parse(await readFile('prototype/character40/catalog.json','utf8')).characters;
