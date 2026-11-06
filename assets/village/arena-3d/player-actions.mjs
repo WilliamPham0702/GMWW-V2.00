@@ -9,6 +9,18 @@ export function actionNeedsDirection(a){return DIRECTION_ACTIONS.has(a?.actionId
 export function actionNeedsChoice(a){return a?.actionId===ASSASSIN_ACTION}
 export function targetsRequired(a){return a?.noTarget||actionNeedsDirection(a)&&a.actionId==='action_transfer_bite'?0:Math.max(0,Number(a?.targetCount)||0)}
 
+// Pending private prompts the Server asked THIS player to acknowledge/answer (generic interactions).
+export function pendingPrompts(list){
+  return (Array.isArray(list)?list:[]).filter(x=>x&&x.id&&x.status!=='responded'&&x.effectActive!==false&&
+    (x.requireResponse||x.requireAck||(Array.isArray(x.options)&&x.options.length))).slice(-3);
+}
+export function promptOptions(p){return Array.isArray(p?.options)&&p.options.length?p.options.map(String):['OK']}
+export function buildRespondBody(p,response){
+  if(!p?.id)throw Error('Thiếu tương tác');
+  if(!promptOptions(p).includes(String(response)))throw Error('Lựa chọn không hợp lệ');
+  return {interactionId:String(p.id),response:String(response)};
+}
+
 export function buildActionBody({me,action,targets,direction,choice,clientEventId}){
   if(!me?.room?.matchId||!me?.room?.cycleKey)throw Error('Chưa vào ván');
   const need=targetsRequired(action);
@@ -30,7 +42,7 @@ export function buildActionBody({me,action,targets,direction,choice,clientEventI
 const memberToken=()=>{try{return globalThis.localStorage?.getItem('gmww_token')||''}catch{return''}};
 
 export function createPlayerActionHud({container,roomCode,getToken=memberToken,fetchImpl=globalThis.fetch,notice=()=>{}}){
-  const state={me:null,actions:[],role:null,action:null,targets:[],direction:'',choice:'',busy:false,timer:0};
+  const state={me:null,prompts:[],actions:[],role:null,action:null,targets:[],direction:'',choice:'',busy:false,timer:0};
   container.hidden=false;
   const h=(tag,props={},...kids)=>{const el=document.createElement(tag);Object.assign(el,props);el.append(...kids);return el};
   function authHeaders(){const t=getToken();return t?{Authorization:'Bearer '+t}:{}}
@@ -46,6 +58,15 @@ export function createPlayerActionHud({container,roomCode,getToken=memberToken,f
     container.replaceChildren();
     if(!getToken()){container.append(h('div',{className:'pa-note',textContent:'Đăng nhập Player Web để nhận vai và thao tác trong 3D.'}));return}
     const role=state.role;
+    for(const p of state.prompts){
+      const box=h('div',{className:'pa-prompt'},h('div',{className:'pa-note',textContent:String(p.message||'Thông báo riêng từ Server')}));
+      const row=h('div',{className:'pa-actions'});
+      for(const o of promptOptions(p)){
+        const b=h('button',{type:'button',textContent:o,disabled:state.busy});
+        b.onclick=()=>respond(p,o);row.append(b);
+      }
+      box.append(row);container.append(box);
+    }
     container.append(h('div',{className:'pa-role',textContent:role?('Vai: '+(role.roleName||role.roleId)):'Chưa có vai'}));
     if(!state.actions.length){container.append(h('div',{className:'pa-note',textContent:'Chưa đến lượt bạn.'}));return}
     const row=h('div',{className:'pa-actions'});
@@ -90,6 +111,13 @@ export function createPlayerActionHud({container,roomCode,getToken=memberToken,f
     }catch(error){notice(String(error.message||error))}
     finally{state.busy=false;await refresh();}
   }
+  async function respond(p,response){
+    try{
+      state.busy=true;render();
+      await call('/interaction/respond',{method:'POST',body:JSON.stringify(buildRespondBody(p,response))});
+    }catch(error){notice(String(error.message||error))}
+    finally{state.busy=false;await refresh();}
+  }
   async function refresh(){
     if(!getToken()){render();return}
     try{
@@ -97,8 +125,9 @@ export function createPlayerActionHud({container,roomCode,getToken=memberToken,f
       state.me={room:data.room||null};
       state.role=data.role||(Array.isArray(data.roles)?data.roles[0]:null)||null;
       state.actions=Array.isArray(data.onlineActions)?data.onlineActions:[];
+      state.prompts=pendingPrompts(data.interactions);
       if(state.action&&!state.actions.some(a=>a.key===state.action.key))reset();
-    }catch(error){state.actions=[];notice(String(error.message||error))}
+    }catch(error){state.actions=[];state.prompts=[];notice(String(error.message||error))}
     render();
   }
   // Debounced: driven by the existing room WebSocket frames, no extra polling timer.

@@ -36,3 +36,14 @@ test('3D Player UI uses only the player /me and /action APIs, never GM endpoints
   assert.match(live,/playerHud\?\.handlePick\(id\)/);
   assert.match(live,/playerHud\?\.scheduleRefresh\(\)/);
 });
+import {pendingPrompts,promptOptions,buildRespondBody} from '../assets/village/arena-3d/player-actions.mjs';
+test('pending private prompts: only unanswered, active, answerable ones; respond body validated',()=>{
+  const list=[{id:'a',status:'responded',options:['OK']},{id:'b',effectActive:false,requireAck:true},
+    {id:'c',type:'assassin_mark',options:['👍','👎'],requireResponse:true},{id:'d',requireAck:true},{id:'e',message:'x'}];
+  const p=pendingPrompts(list);
+  assert.deepEqual(p.map(x=>x.id),['c','d']);
+  assert.deepEqual(promptOptions(p[1]),['OK']);
+  assert.deepEqual(buildRespondBody(p[0],'👎'),{interactionId:'c',response:'👎'});
+  assert.throws(()=>buildRespondBody(p[0],'OK'),/không hợp lệ/);
+  assert.match(read('../assets/village/arena-3d/player-actions.mjs'),/'\/interaction\/respond'/);
+});
