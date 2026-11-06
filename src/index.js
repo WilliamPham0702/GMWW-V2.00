@@ -21,7 +21,7 @@ import {gallowsSnapshot,gallowsNominate,gallowsBegin,gallowsCast,gallowsBan,gall
 import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisuals,statusTagsFor,publicVillageStatusTagsFor,roomUiStage,publicRoom} from "./gmww-public-room-contract.js";
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
-import { sanitizeGameConfig, roomModeSwitchBlocked, normalizeRoomMode, normalizeSeatMoveMode, normalizeSeatCount } from "./gmww-room-config-rules.js";
+import { sanitizeGameConfig, roomModeSwitchBlocked, normalizeRoomMode, normalizeSeatMoveMode, normalizeRenderMode, normalizeSeatCount } from "./gmww-room-config-rules.js";
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
@@ -1799,6 +1799,7 @@ export class RoomDurableObject extends DurableObject {
     }
     const roomMode=desiredDemo?"online":body&&Object.prototype.hasOwnProperty.call(body,"roomMode")?normalizeRoomMode(body.roomMode):normalizeRoomMode(meta.roomMode);
     const seatMoveMode=body&&Object.prototype.hasOwnProperty.call(body,"seatMoveMode")?normalizeSeatMoveMode(body.seatMoveMode):normalizeSeatMoveMode(meta.seatMoveMode);
+    const renderMode=body&&Object.prototype.hasOwnProperty.call(body,"renderMode")?normalizeRenderMode(body.renderMode):normalizeRenderMode(meta.renderMode);
     const requested=body&&Object.prototype.hasOwnProperty.call(body,"seatCount")?normalizeSeatCount(body.seatCount,meta.seatCount):normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12);
     const hasSeatLayout=!!body&&Object.prototype.hasOwnProperty.call(body,"seatLayout"),changedCount=requested!==normalizeSeatCount(meta.seatCount),seatLayout=hasSeatLayout?normalizeSeatLayout(body.seatLayout):changedCount?villageLayout.recommendedSeatShape(requested):normalizeSeatLayout(meta.seatLayout);
     const hasSeatOffset=!!body&&Object.prototype.hasOwnProperty.call(body,"seatOffset"),
@@ -1821,7 +1822,7 @@ export class RoomDurableObject extends DurableObject {
         clearPlayerMovement(p);p.positionX=point.x;p.positionY=point.y;
       }
     }
-    meta.roomMode=roomMode;meta.seatMoveMode=seatMoveMode;meta.seatCount=requested;meta.seatLayout=seatLayout;meta.seatOffset=seatOffset;meta.seatSpacing=seatSpacing;
+    meta.roomMode=roomMode;meta.seatMoveMode=seatMoveMode;meta.renderMode=renderMode;meta.seatCount=requested;meta.seatLayout=seatLayout;meta.seatOffset=seatOffset;meta.seatSpacing=seatSpacing;
     if(demoChanging){
       meta.demo=desiredDemo;meta.autoGM=desiredDemo?false:true;
       // Retain historical room data; only clear stale demonstration lease/timer.

@@ -24,5 +24,6 @@ export function roomModeSwitchBlocked(meta,assignments){
   return !!(meta?.startedAt||meta?.roleDeliveredAt||(Array.isArray(assignments)&&assignments.length));
 }
 export function normalizeRoomMode(v){return String(v||"").trim().toLowerCase()==="offline"?"offline":"online"}
+export function normalizeRenderMode(v){return String(v||"").trim().toLowerCase()==="3d"?"3d":"2d"}
 export function normalizeSeatMoveMode(v){return String(v||"").trim().toLowerCase()==="walk"?"walk":"instant"}
 export function normalizeSeatCount(v,fallback=12){const n=Math.trunc(Number(v));return Math.max(1,Math.min(30,Number.isFinite(n)&&n>0?n:(Math.trunc(Number(fallback))||12)))}
