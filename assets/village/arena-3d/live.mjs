@@ -6,6 +6,7 @@ import {connectStagingRoom,publicGallowsScene} from './room-realtime.mjs';
 import {createArenaCharacterField,ARENA_ATELIER_VERSION} from './character-atelier.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
+import {createPlayerActionHud} from './player-actions.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
 const $=id=>document.getElementById(id);
 const canvas=$('stage'),scene=new THREE.Scene(),render=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});
@@ -45,7 +46,7 @@ const dashboard=createGmDashboard({container:$('gm-console'),onSelect:id=>{focus
   },
   onToggleQuality:value=>{lowPower=value;field.setLowPower(lowPower);village.setQuality(lowPower);render.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?.78:(innerWidth<460?1.15:1.35)));lastResize='';}
 });
-let chosenCandidate=null;
+let chosenCandidate=null,playerHud=null;
 $('camera-follow').onclick=()=>{
   followCaster=!followCaster;
   $('camera-follow').textContent='🎥 Theo lượt: '+(followCaster?'Bật':'Tắt');
@@ -135,7 +136,7 @@ async function attach(room){
   $('joinlink').href='/join/'+encodeURIComponent(code);
   const query=new URL(location.href);query.searchParams.set('room',code);history.replaceState(null,'',query);
   drawFrame(createPublicRendererFrame(state));
-  feed=connectStagingRoom({roomCode:code,onFrame:frame=>{drawFrame(frame);if(gmToken)void refreshPrivateGmEffects();},
+  feed=connectStagingRoom({roomCode:code,onFrame:frame=>{drawFrame(frame);if(gmToken)void refreshPrivateGmEffects();playerHud?.scheduleRefresh();},
     onGallows:updated=>{ballot=updated;showBallot(updated);},onStatus:s=>$('connection').textContent=s,
     onError:e=>notice('Lỗi kết nối '+String(e.message||e))});
   notice('Đã kết nối phòng thật '+code+' trên Core V2 STAGING. Mở Player Web 2D tại liên kết phía trên.');
@@ -332,7 +333,8 @@ canvas.addEventListener('pointerup',e=>{
     const r=canvas.getBoundingClientRect(),ray=new THREE.Raycaster();
     ray.setFromCamera(new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),camera);
     const id=field.pick(ray);
-    if(id){focusId=id;dashboard.setSelection(id);field.turnActor(id,Math.PI/2);notice(id+' xoay 90° — chạm tiếp để quay 360°.');}
+    if(id&&playerHud?.handlePick(id)){notice('Đã chọn mục tiêu: '+id.replace(/^member:/,''));}
+    else if(id){focusId=id;dashboard.setSelection(id);field.turnActor(id,Math.PI/2);notice(id+' xoay 90° — chạm tiếp để quay 360°.');}
   }
   drag=null;
 });
@@ -381,5 +383,10 @@ if(pageParams.get('view')==='player'){
   document.body.dataset.gmwwView='player';
   document.body.classList.add('player-view');
   for(const el of document.querySelectorAll('.toolbar,#gm-console,#sample-vfx,#ballot'))el.hidden=true;
+  const panel=document.createElement('section');panel.id='player-actions';
+  document.getElementById('scene').after(panel);
+  playerHud=createPlayerActionHud({container:panel,roomCode:(param||'').toUpperCase(),
+    notice});
+  void playerHud.refresh();
 }
 if(param)void guarded('Khôi phục trạng thái phòng',()=>attach(param));
