@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync, existsSync} from 'node:fs';
 import {createPublicRendererFrame,rendererCommands,shouldAcceptRendererFrame,projectAuthorizedVisualEvents,DUAL_RENDERER_SCHEMA} from '../assets/village/dual-renderer-core.mjs';
 import {fromAuthoritativePublicRoom,pairedRendererCommands} from '../src/gmww-dual-renderer-projection.js';
 
@@ -70,10 +70,8 @@ test('Dual Renderer: unreleased/private effects require server-side authorizatio
   assert.equal(projectAuthorizedVisualEvents(events,{matchId:'wrong'}).length,0);
 });
 
-test('Dual Renderer: production 2D files are untouched; 3D preview cannot call live APIs or store state',()=>{
-  const preview=readFileSync('assets/village/arena-3d/main.mjs','utf8');
-  assert.match(preview,/dual-renderer-core\.mjs/);
-  assert.doesNotMatch(preview,/fetch\s*\(|\/api\/rooms|new WebSocket|localStorage|sessionStorage/);
+test('Dual Renderer: production 2D files are untouched (Arena 3D removed)',()=>{
+  assert.equal(existsSync('assets/village/arena-3d'),false);
   const projection=readFileSync('src/gmww-dual-renderer-projection.js','utf8');
   assert.match(projection,/gmww-public-room-contract\.js/);
   assert.doesNotMatch(readFileSync('src/index.js','utf8'),/gmww-dual-renderer-projection\.js/);

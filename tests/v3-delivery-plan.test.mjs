@@ -62,3 +62,10 @@ test('V3: reviewed PR788 native mic validation passes only within its approved a
  // Core native files remain mandatory.
  for(const core of files.slice(0,4))assert.equal(v3DeliveryPlan(actual.filter(f=>f!==core)).target,'blocked',core);
 });
+
+test('V3: Arena 3D deletions pass only with the approved removal marker and an absent 3D tree',()=>{
+ const del=['assets/village/arena-3d/live.mjs','wrangler.arena3d-preview.jsonc','src/arena3d-stage-worker.mjs','tests/arena3d-stage51.test.mjs'];
+ assert.equal(v3DeliveryPlan(del).target,'blocked');
+ const ok=v3DeliveryPlan([...del,'docs/releases/GMWW-RUNTIME-V3.310-REMOVE-ARENA3D-20261106.md','server-game/current/app.js','package.json','src/index.js']);
+ assert.equal(ok.hold,false);assert.equal(ok.target,'runtime');
+});
