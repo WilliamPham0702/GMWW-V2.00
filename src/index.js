@@ -2110,15 +2110,14 @@ export class RoomDurableObject extends DurableObject {
        "<Vai Trò B> ơi dậy đi" rồi "Tráng Gương ơi". Chỉ khi chủ còn sống, còn giữ Artifact và có lượt của vai B trong đêm. */
     const mirrorLinks=[...(await this.ctx.storage.list({prefix:"mirrorLink:"+String(meta.matchId)+":"})).values()];
     if(mirrorLinks.length){
-      const ix=await this.ctx.storage.get("interactions")||[],deadIds=new Set((Array.isArray(ix)?ix:[]).filter(x=>String(x?.type||"")==="dead"&&x?.effectActive!==false&&(!x?.matchId||String(x.matchId)===String(meta.matchId))).map(x=>normalizeLoginId(x?.loginId)).filter(Boolean));
+      /* Luôn gọi dù chủ đã chết/mất Artifact, để người chơi không suy ra ai đã chết (giống lượt Vai Trò đã chết). */
       for(const link of mirrorLinks){
         const actorId=normalizeLoginId(link.actorId),own=await this.ctx.storage.get("artifact:"+actorId);
-        if(deadIds.has(actorId)||!own||own.removedFromMatch===true||String(own.artifactId)!=="artifact_23")continue;
         const at=queue.findIndex(s=>(s.kind==="role"||s.kind==="role-group")&&String(s.roleId||"")===String(link.targetRoleId)&&(s.loginIds||[]).includes(normalizeLoginId(link.targetId)));
         if(at<0)continue;
         const roleStep={id:"mirror-role:"+actorId+":"+link.targetRoleId,kind:"role",mirrorWake:true,label:String(link.targetRoleName),roleId:String(link.targetRoleId),
           loginIds:[actorId],playerIds:["member:"+actorId],durationSec:roleDuration.get(String(link.targetRoleId))??defaultActionSec,status:"pending"};
-        const artStep={id:"mirror-artifact:"+actorId,kind:"artifact-main",mirrorWake:true,label:String(own.artifactName||"Tráng Gương"),artifactId:"artifact_23",artifactName:String(own.artifactName||"Tráng Gương"),
+        const artStep={id:"mirror-artifact:"+actorId,kind:"artifact-main",mirrorWake:true,label:String(own?.artifactName||"Tráng Gương"),artifactId:"artifact_23",artifactName:String(own?.artifactName||"Tráng Gương"),
           loginId:actorId,playerId:"member:"+actorId,order:9999,durationSec:artifactActionSec,status:"pending"};
         queue.splice(at+1,0,roleStep,artStep);
       }

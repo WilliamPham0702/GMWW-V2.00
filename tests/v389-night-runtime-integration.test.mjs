@@ -1062,11 +1062,11 @@ test('Tráng Gương: sau lượt Vai Trò của người bị tráng, chủ đ�
   assert.ok(i>=0);
   assert.equal(q[i+1].mirrorWake,true);assert.equal(q[i+1].roleId,'seer');assert.deepEqual(Array.from(q[i+1].loginIds),['alice']);
   assert.equal(q[i+2].kind,'artifact-main');assert.equal(q[i+2].artifactId,'artifact_23');assert.equal(q[i+2].loginId,'alice');
-  // Chủ đã chết: không gọi thêm.
+  // Chủ đã chết: vẫn gọi để không lộ người chết.
   const h2=harness({artifact:false});
   h2.data.set('assignments',[{loginId:'alice',roleId:'role_villager',artifactId:'artifact_23',artifactName:'Tráng Gương'},{loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
   h2.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_23',artifactName:'Tráng Gương',artifactCard:{}});
   h2.data.set('mirrorLink:test-match:alice',{actorId:'alice',targetId:'bob',targetRoleId:'seer',targetRoleName:'Tiên Tri'});
   h2.data.set('interactions',[{type:'dead',loginId:'alice',matchId:'test-match'}]);
-  assert.equal((await h2.runtime()).queue.some(x=>x.mirrorWake),false);
+  assert.equal((await h2.runtime()).queue.filter(x=>x.mirrorWake).length,2);
 });
