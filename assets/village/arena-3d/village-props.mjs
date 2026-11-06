@@ -1,6 +1,6 @@
 // GMWW Arena 3D - GĐ50: gắn model GLB (ChatGPT dựng) vào làng.
 // Mỗi loại model được "nướng" thành 1 geometry (màu vật liệu -> vertex color) + 1 geometry phát sáng,
-// rồi vẽ bằng InstancedMesh: mọi bản sao của một loại chỉ tốn 1-2 draw call. Nếu tải lỗi, làng dựng bằng code vẫn giữ nguyên.
+// rồi gộp mọi bản sao thành 1 geometry đặc + 1 geometry phát sáng: cả làng chỉ tốn 2 draw call. Nếu tải lỗi, làng dựng bằng code vẫn giữ nguyên.
 import {loadGlb} from './glb-lite.mjs';
 export const VILLAGE_PROPS_VERSION='gmww.village-props.1';
 const PI=Math.PI,TAU=PI*2;
@@ -91,17 +91,34 @@ export async function installVillageProps(THREE,village,{base=new URL('./models/
   const matrix=new THREE.Matrix4(),pos=new THREE.Vector3(),quat=new THREE.Quaternion(),scl=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
   const holder=new THREE.Group();holder.name='arena-village-glb-props';village.root.add(holder);
   let glowSeen=null;
-  for(const type of types){
-    const list=items.filter(i=>i.type===type),baked=loaded[type];
-    for(const [geo,mat] of [[baked.solid,solidMat],[baked.glow,glowMat]]){
-      if(!geo)continue;geos.push(geo);
-      const inst=new THREE.InstancedMesh(geo,mat,list.length);inst.frustumCulled=false;inst.name='props-'+type;
-      list.forEach((it,k)=>{pos.set(it.x,it.y,it.z);quat.setFromAxisAngle(up,it.rot);scl.setScalar(it.scale);
-        matrix.compose(pos,quat,scl);inst.setMatrixAt(k,matrix)});
-      inst.instanceMatrix.needsUpdate=true;holder.add(inst);instances.push(inst);
+  // Draw-call budget: every placement is merged into ONE solid geometry and ONE glow geometry (2 draw calls total).
+  const merged={solid:{p:[],n:[],c:[],i:[],count:0},glow:{p:[],n:[],c:[],i:[],count:0}};
+  const normalMatrix=new THREE.Matrix3(),v=new THREE.Vector3();
+  for(const it of items){
+    pos.set(it.x,it.y,it.z);quat.setFromAxisAngle(up,it.rot);scl.setScalar(it.scale);matrix.compose(pos,quat,scl);
+    normalMatrix.getNormalMatrix(matrix);
+    for(const key of ['solid','glow']){
+      const geo=loaded[it.type][key];if(!geo)continue;
+      const P=geo.getAttribute('position'),N=geo.getAttribute('normal'),C=geo.getAttribute('color'),I=geo.getIndex(),m=merged[key];
+      for(let k=0;k<P.count;k++){
+        v.set(P.getX(k),P.getY(k),P.getZ(k)).applyMatrix4(matrix);m.p.push(v.x,v.y,v.z);
+        v.set(N.getX(k),N.getY(k),N.getZ(k)).applyMatrix3(normalMatrix).normalize();m.n.push(v.x,v.y,v.z);
+        m.c.push(C.getX(k),C.getY(k),C.getZ(k));
+      }
+      for(let k=0;k<I.count;k++)m.i.push(I.getX(k)+m.count);
+      m.count+=P.count;
     }
-    if(baked.emissive&&!glowSeen)glowSeen=baked.emissive;
   }
+  for(const type of types)if(loaded[type].emissive&&!glowSeen)glowSeen=loaded[type].emissive;
+  for(const [key,mat] of [['solid',solidMat],['glow',glowMat]]){
+    const m=merged[key];if(!m.count)continue;
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(m.p,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(m.n,3));
+    g.setAttribute('color',new THREE.Float32BufferAttribute(m.c,3));g.setIndex(new THREE.Uint32BufferAttribute(m.i,1));
+    g.computeBoundingSphere();geos.push(g);
+    const mesh=new THREE.Mesh(g,mat);mesh.name='props-'+key;holder.add(mesh);instances.push(mesh);
+  }
+  for(const t of Object.values(loaded)){t.solid?.dispose();t.glow?.dispose()}
   if(glowSeen)glowMat.emissive.copy(glowSeen);
   // Replace the procedural stand-ins that now have real models.
   village.hideGroups(['houses','stalls','planters','lamps','banners','palms','campfire']);
