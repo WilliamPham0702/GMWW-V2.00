@@ -26,10 +26,22 @@ export const ARENA3D_PLAYER_ENTRY_SCRIPT=`<script id="${ARENA3D_PLAYER_ENTRY_ID}
     'border-radius:999px;padding:7px 12px;box-shadow:0 4px 14px rgba(0,0,0,.3)';
   btn.addEventListener('click',function(){var c=joinedRoom();if(c)go(c)});
   document.body.appendChild(btn);
+  // GĐ48: GM chọn 2D hoặc 3D cho từng phòng (mặc định 2D). Player chỉ đi theo lựa chọn đó.
+  var mode='2d',asked=0,pending=false;
+  function ask(code){
+    if(pending)return;pending=true;
+    fetch('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/view-mode',{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null})
+      .then(function(d){mode=d&&d.mode==='3d'?'3d':'2d'})
+      .catch(function(){}).then(function(){pending=false});
+  }
   setInterval(function(){
-    var code=joinedRoom();btn.hidden=!code;
-    if(!code)return;
+    var code=joinedRoom();
+    if(!code){btn.hidden=true;return}
+    var now=Date.now();if(now-asked>2000){asked=now;ask(code)}
+    btn.hidden=mode!=='3d';
     var seen='';try{seen=sessionStorage.getItem(KEY)||''}catch(e){}
+    if(mode!=='3d'){if(seen){try{sessionStorage.removeItem(KEY)}catch(e){}}return}
     if(seen!==code){try{sessionStorage.setItem(KEY,code)}catch(e){}go(code)}
   },1200);
 })();

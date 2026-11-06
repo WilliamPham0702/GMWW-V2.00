@@ -7,6 +7,7 @@ import {stageCastingCue,classifyCastingAction} from '../assets/village/arena-3d/
 import {stageAuthorizedRoleId,verifiedPrivateCard,familyForConfirmedAction,artifactVisualSnapshot,shouldRevokeVisualAfterUndo} from '../assets/village/arena-3d/stage14-dynamic-actions.mjs';
 import {privateTurnActionOptions} from '../assets/village/arena-3d/stage29-gm-actions.mjs';
 import {injectArena3dPlayerEntry,isPlayerPagePath} from './arena3d-player-entry.mjs';
+import {VIEW_MODE_KEY,parseViewModeInput,viewModePayload} from './arena3d-view-mode.mjs';
 function aggregateGallowsOnly(raw){
   if(!raw)return null;
   return {stage:String(raw.stage||'ready'),mode:String(raw.mode||'auto'),
@@ -209,6 +210,23 @@ export class RoomDurableObject extends GameRoomDurableObject{
         nightControl:await this.gmNightControls(meta)},
         {headers:{'cache-control':'no-store'}});
     }
+    if(path==='/arena/view-mode'){
+      const meta=await this.ctx.storage.get('meta');
+      if(!meta)return Response.json({ok:false,error:'ROOM_NOT_FOUND'},{status:404});
+      const headers={'cache-control':'no-store'};
+      if(request.method==='GET')
+        return Response.json(viewModePayload(await this.ctx.storage.get(VIEW_MODE_KEY)),{headers});
+      if(request.method!=='POST')return new Response('Method not allowed',{status:405});
+      // Chỉ GM đã được Core xác thực mới đổi được chế độ.
+      const auth=await this.gmAuthorized(request);
+      if(!auth.ok)return auth.response;
+      const body=await request.json().catch(()=>null);
+      const mode=parseViewModeInput(body?.mode);
+      if(!mode)return Response.json({ok:false,error:'INVALID_VIEW_MODE'},{status:400,headers});
+      const saved={mode,updatedAt:Date.now()};
+      await this.ctx.storage.put(VIEW_MODE_KEY,saved);
+      return Response.json(viewModePayload(saved),{headers});
+    }
     if(path!=='/arena/public-gallows')return super.fetch(request);
     if(request.method!=='GET')return new Response('Method not allowed',{status:405});
     const meta=await this.ctx.storage.get('meta');
@@ -262,6 +280,15 @@ export default {
     if(publicGallows&&request.method==='GET'){
       const roomCode=publicGallows[1].toUpperCase();
       return env.ROOMS.get(env.ROOMS.idFromName(roomCode)).fetch('https://room.internal/arena/public-gallows');
+    }
+    // GĐ48: chế độ 2D/3D của phòng. GET công khai (chỉ trả '2d'|'3d'); POST cần quyền GM của Core.
+    const viewMode=url.pathname.match(/^\/api\/arena-staging\/rooms\/([A-Za-z0-9]{4,12})\/view-mode$/);
+    if(viewMode&&(request.method==='GET'||request.method==='POST')){
+      const code=viewMode[1].toUpperCase();
+      const init={method:request.method,headers:{authorization:request.headers.get('authorization')||'',
+        'content-type':'application/json'}};
+      if(request.method==='POST')init.body=await request.text();
+      return env.ROOMS.get(env.ROOMS.idFromName(code)).fetch(new Request('https://room.internal/arena/view-mode',init));
     }
     // Only Core V2 gmAuthorized may grant temporary secret visual overlays.
     const gmFx=url.pathname.match(/^\/api\/arena-staging\/rooms\/([A-Za-z0-9]{4,12})\/gm-visuals$/);

@@ -321,7 +321,8 @@ function roomUrl(path=''){return '/api/rooms/'+encodeURIComponent(code)+path;}
 async function gm(path,body){if(!gmToken)throw Error('Chưa có quyền GM ở tab này. Hãy tạo phòng thử mới.');return json('/api/gm/rooms/'+encodeURIComponent(code)+'/'+path,{method:'POST',body,gm:true});}
 function enableGm(){if(!gmToken){privateGmRefreshGate.reset();field.setCastingTurn(null);dashboard.setNightControl(null);document.body.dataset.gmwwGmTurnActive='false';arenaAudio.stop();localVoice.clear();}
   for(const id of ['seed','lock','deal','start','night','day','nominate','vote','end-match','winner-faction'])$(id).disabled=!gmToken||(productionCoreView&&['seed','deal'].includes(id));
-  $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));}
+  $('gm-copy').disabled=!gmToken;dashboard.setGM(Boolean(gmToken));
+  $('view-mode').disabled=!gmToken||productionCoreView;}
 async function attach(room){
   privateGmRefreshGate.reset();field.clearEffects();syntheticCastSeq++;matchSync.reset();
   if(feed)feed.close();
@@ -339,9 +340,22 @@ async function attach(room){
   },
     onGallows:updated=>{ballot=updated;showBallot(updated);},onStatus:s=>$('connection').textContent=s,
     onError:e=>notice('Lỗi kết nối '+String(e.message||e))});
+  void loadViewMode();
   notice('Đã kết nối phòng '+code+' trên Core V2'+(productionCoreView?' chính thức.':' STAGING.')+' Mở Player Web tại liên kết phía trên.');
   enableGm();
 }
+// GĐ48: GM chọn 2D/3D cho phòng. Player đi theo lựa chọn này; Core vẫn xác thực quyền GM.
+async function loadViewMode(){
+  if(productionCoreView)return;
+  try{const v=await json('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/view-mode');
+    $('view-mode').value=v.mode==='3d'?'3d':'2d'}catch{}
+}
+$('view-mode').onchange=()=>guarded('Đổi chế độ chơi',async()=>{
+  const mode=$('view-mode').value==='3d'?'3d':'2d';
+  const v=await json('/api/arena-staging/rooms/'+encodeURIComponent(code)+'/view-mode',{method:'POST',body:{mode},gm:true});
+  $('view-mode').value=v.mode;
+  notice(v.mode==='3d'?'Đã chọn chơi 3D: Player đang ở phòng sẽ được đưa vào làng 3D.':'Đã chọn chơi 2D: Player dùng Player Web như cũ.');
+});
 function showBallot(x){
   const previous=ballot;
   ballot=x||null;

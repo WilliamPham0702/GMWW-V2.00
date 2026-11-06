@@ -122,7 +122,7 @@ test('Player entry: injected once on Player pages, inert inside the 3D sheet',()
   assert.match(worker,/isPlayerPagePath\(url\.pathname\)/);
 });
 
-test('Player entry script only reads public room membership and redirects once per room',()=>{
+test('Player entry script only reads public room membership and redirects once per room (GM chọn 3D)',async()=>{
   const script=injectArena3dPlayerEntry('<body></body>').match(/<script id="gmww-arena3d-player-entry">([\s\S]*?)<\/script>/)[1];
   const nav=[],store={};let tick=null;
   const body={appendChild(){}};
@@ -130,10 +130,11 @@ test('Player entry script only reads public room membership and redirects once p
     location:{set href(v){nav.push(v)}},
     document:{createElement:()=>({style:{},setAttribute(){},addEventListener(){}}),body},
     sessionStorage:{getItem:k=>store[k]||null,setItem:(k,v)=>{store[k]=v}},
+    fetch:async()=>({ok:true,json:async()=>({mode:'3d'})}),
     setInterval:fn=>{tick=fn}};
   ctx.window=ctx;ctx.top=ctx; // top-level Player page
   vm.runInNewContext(script,ctx);
-  tick();tick();
+  tick();await new Promise(r=>setTimeout(r,5));tick();tick();
   assert.deepEqual(nav,['/village/arena-3d/player.html?room=ABCDEF']);
   const framed={...ctx,top:{}};framed.window=framed;let ran=false;framed.setInterval=()=>{ran=true};
   vm.runInNewContext(script,framed);

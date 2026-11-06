@@ -1,6 +1,7 @@
 // Player Arena 3D: public-only read projection from the SAME authoritative GMWW V2 Core.
 // Private role cards, voting, and gameplay actions stay inside the existing Player Web iframe.
 // This module never requests GM endpoints, holds GM tokens, or locally infers hidden actions.
+import {watchViewMode} from './view-mode-watch.mjs';
 import * as THREE from '../../characters/v5/vendor/three.module.min.js';
 import {rendererCommands} from '../dual-renderer-core.mjs';
 import {connectStagingRoom} from './room-realtime.mjs';
@@ -178,4 +179,10 @@ else{
     },
     onStatus:s=>{connection=s;if(s==='reconnecting')message('Mất kết nối, đang tự đồng bộ lại…');},
     onError:e=>message('Chưa đồng bộ được phòng: '+String(e?.message||e))});
+  // GM có thể chuyển phòng về 2D: báo cho người chơi và cho đường quay về Player Web.
+  watchViewMode({code,onMode:mode=>{
+    $('mode-2d').href='/join/'+encodeURIComponent(code);
+    $('mode-2d').hidden=mode!=='2d';
+    if(mode==='2d')message('GM đã chọn chế độ 2D cho phòng này. Bạn có thể về Player Web.');
+  }});
 }
