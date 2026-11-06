@@ -1052,3 +1052,21 @@ test('Kim Cương Phủ Nhận: only artifact_15 is executor; snapshot still sho
     roleId:'seer',artifact:{matchId:'test-match',artifactId:'artifact_20'}}]});
   assert.equal(privateDeliveryArtifact(snap,h.data.get('artifact:bob')).artifactId,'artifact_20');
 });
+
+test('Tráng Gương: sau lượt Vai Trò của người bị tráng, chủ được gọi dậy theo vai đó rồi đến Tráng Gương',async()=>{
+  const h=harness({artifact:false});
+  h.data.set('assignments',[{loginId:'alice',roleId:'role_villager',roleName:'Dân',artifactId:'artifact_23',artifactName:'Tráng Gương'},{loginId:'bob',roleId:'seer',roleName:'Tiên Tri'},{loginId:'carol',roleId:'wolf',roleName:'Sói'}]);
+  h.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_23',artifactName:'Tráng Gương',artifactCard:{}});
+  h.data.set('mirrorLink:test-match:alice',{actorId:'alice',targetId:'bob',targetRoleId:'seer',targetRoleName:'Tiên Tri'});
+  const q=(await h.runtime()).queue,i=q.findIndex(x=>x.kind==='role'&&x.roleId==='seer'&&!x.mirrorWake);
+  assert.ok(i>=0);
+  assert.equal(q[i+1].mirrorWake,true);assert.equal(q[i+1].roleId,'seer');assert.deepEqual(Array.from(q[i+1].loginIds),['alice']);
+  assert.equal(q[i+2].kind,'artifact-main');assert.equal(q[i+2].artifactId,'artifact_23');assert.equal(q[i+2].loginId,'alice');
+  // Chủ đã chết: không gọi thêm.
+  const h2=harness({artifact:false});
+  h2.data.set('assignments',[{loginId:'alice',roleId:'role_villager',artifactId:'artifact_23',artifactName:'Tráng Gương'},{loginId:'bob',roleId:'seer',roleName:'Tiên Tri'}]);
+  h2.data.set('artifact:alice',{matchId:'test-match',artifactId:'artifact_23',artifactName:'Tráng Gương',artifactCard:{}});
+  h2.data.set('mirrorLink:test-match:alice',{actorId:'alice',targetId:'bob',targetRoleId:'seer',targetRoleName:'Tiên Tri'});
+  h2.data.set('interactions',[{type:'dead',loginId:'alice',matchId:'test-match'}]);
+  assert.equal((await h2.runtime()).queue.some(x=>x.mirrorWake),false);
+});

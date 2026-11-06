@@ -1501,6 +1501,14 @@ export class RoomDurableObject extends DurableObject {
       }
       clean.push({assignmentIndex:rowIndex,loginId,displayName:p.displayName,matchId:String(body?.matchId||meta.matchId||""),matchRevision:Number(body?.matchRevision||meta.matchRevision||0),roleId:requestedRoleId,roleName,faction,description,order:Number(row?.order??snap.order??0),roleImage,artworkAssetId,artworkId:artworkAssetId,artworkAvailable:!!storedImage,roleCard,playerCardVersion:Number(row?.playerCardVersion||roleCard.version||7),deliveredAt:new Date().toISOString(),viewedAt:null,artifact});
     }
+    /* Mỗi Artifact chỉ có một chủ trong một ván: chặn phát cùng lá cho người thứ hai. */
+    const artifactOwner=new Map();
+    for(const row of clean){
+      const aid=String(row.artifact?.artifactId||"");if(!aid)continue;
+      const owner=artifactOwner.get(aid);
+      if(owner&&owner!==row.loginId)return j({ok:false,error:"DUPLICATE_ARTIFACT",message:"Artifact \""+(row.artifact.artifactName||aid)+"\" đã phát cho người khác. Mỗi Artifact chỉ có một chủ."},400);
+      artifactOwner.set(aid,row.loginId);
+    }
     const nextPublishedAt=new Date().toISOString(),nextMatchId=String(body?.matchId||meta.matchId||""),nextMatchRevision=Number(body?.matchRevision||meta.matchRevision||0),nextDeliveryVersion=Number(body?.deliveryVersion||meta.deliveryVersion||0);
     for(const prefix of ["role:","roles:","artifact:","artifactUse:"]){const old=await this.ctx.storage.list({prefix});if(old.size)await this.ctx.storage.delete([...old.keys()])}
     const grouped=new Map();for(const row of clean){const a=grouped.get(row.loginId)||[];a.push(row);grouped.set(row.loginId,a)}
@@ -2098,6 +2106,23 @@ export class RoomDurableObject extends DurableObject {
     if(arranged.fairy)queue.push(arranged.fairy);
     if(specials.witch)queue.push(specials.witch);
     queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(arranged.rest),arranged.artifactTurns));
+    /* Tráng Gương (artifact_23): sau lượt Vai Trò của người bị tráng, gọi chủ Tráng Gương dậy lần nữa:
+       "<Vai Trò B> ơi dậy đi" rồi "Tráng Gương ơi". Chỉ khi chủ còn sống, còn giữ Artifact và có lượt của vai B trong đêm. */
+    const mirrorLinks=[...(await this.ctx.storage.list({prefix:"mirrorLink:"+String(meta.matchId)+":"})).values()];
+    if(mirrorLinks.length){
+      const ix=await this.ctx.storage.get("interactions")||[],deadIds=new Set((Array.isArray(ix)?ix:[]).filter(x=>String(x?.type||"")==="dead"&&x?.effectActive!==false&&(!x?.matchId||String(x.matchId)===String(meta.matchId))).map(x=>normalizeLoginId(x?.loginId)).filter(Boolean));
+      for(const link of mirrorLinks){
+        const actorId=normalizeLoginId(link.actorId),own=await this.ctx.storage.get("artifact:"+actorId);
+        if(deadIds.has(actorId)||!own||own.removedFromMatch===true||String(own.artifactId)!=="artifact_23")continue;
+        const at=queue.findIndex(s=>(s.kind==="role"||s.kind==="role-group")&&String(s.roleId||"")===String(link.targetRoleId)&&(s.loginIds||[]).includes(normalizeLoginId(link.targetId)));
+        if(at<0)continue;
+        const roleStep={id:"mirror-role:"+actorId+":"+link.targetRoleId,kind:"role",mirrorWake:true,label:String(link.targetRoleName),roleId:String(link.targetRoleId),
+          loginIds:[actorId],playerIds:["member:"+actorId],durationSec:roleDuration.get(String(link.targetRoleId))??defaultActionSec,status:"pending"};
+        const artStep={id:"mirror-artifact:"+actorId,kind:"artifact-main",mirrorWake:true,label:String(own.artifactName||"Tráng Gương"),artifactId:"artifact_23",artifactName:String(own.artifactName||"Tráng Gương"),
+          loginId:actorId,playerId:"member:"+actorId,order:9999,durationSec:artifactActionSec,status:"pending"};
+        queue.splice(at+1,0,roleStep,artStep);
+      }
+    }
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
     const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
@@ -2474,6 +2499,8 @@ export class RoomDurableObject extends DurableObject {
       meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
       await this.ctx.storage.put("deliverySnapshot:"+actorId,buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),deliveryVersion:meta.deliveryVersion,publishedAt:new Date().toISOString(),roles:next}));
       await this.ctx.storage.put("meta",meta);
+      /* Luật Tráng Gương: sau khi lượt Vai Trò của mục tiêu xong, chủ Tráng Gương được gọi dậy thêm (xem buildNightRuntime). */
+      await this.ctx.storage.put("mirrorLink:"+matchId+":"+actorId,{actorId,targetId,targetRoleId:String(tr.roleId||""),targetRoleName:String(tr.roleName||tr.roleCard?.name||"Vai Trò"),createdAt:new Date().toISOString()});
       return {ok:true,changes:[],message:"Tráng Gương: đã sao chép "+copied.length+" chức năng thành chức năng số 2 với lượt dùng mới.",result:{copied:copied.map(f=>f.actionId||f.id)}};
     }
     if(artifactId==="artifact_31"){
