@@ -4,7 +4,12 @@ import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 const playerTests=['tests/player-web-v3-iframe-drag.test.mjs','tests/player-web-online-actions-20261028.test.mjs','tests/online-player-fire-turn-dead-ui-20261031.test.mjs','tests/player-web-wolf-ballots-20261101.test.mjs','tests/player-web-card-drag-action-20261105.test.mjs','tests/verdict-auto-advance-5s-20261105.test.mjs'];
 const sharedTests=['tests/gmww-play-interaction-rules.test.mjs','tests/online-chat-authority.test.mjs'];
+// Owner-approved removal of Arena 3D (06/11/2026): deletions are allowed only when the release note marker
+// is part of the change AND the 3D tree is really gone. Any added/modified 3D file stays frozen.
+let arenaRemoval=false;
+const ARENA_REMOVAL_MARKER='docs/releases/GMWW-RUNTIME-V3.310-REMOVE-ARENA3D-20261106.md';
 function category(path){
+  if(arenaRemoval&&(/^assets\/village\/arena-3d\//.test(path)||/^wrangler\.arena3d-[\w-]+\.jsonc$/.test(path)||/^src\/arena3d-[\w-]+\.mjs$/.test(path))&&!fs.existsSync(path))return 'ci';
   if(!path||path.startsWith('/')||path.includes('\\')||path.split('/').includes('..'))return 'blocked';
   if(/(^|\/)(arena-3d|3d)(\/|$)/i.test(path))return 'frozen';
   if(/^server-game\/(GMWW-Server\/|GMWW-Server\.xcodeproj\/)/.test(path)||/\.swift$|\.entitlements$|Info\.plist$/.test(path))return 'native';
@@ -22,6 +27,7 @@ function category(path){
 export function v3DeliveryPlan(paths){
  const files=[...new Set((paths||[]).map(x=>String(x||'').trim()).filter(Boolean))];
  if(!files.length)return {target:'none',risk:'low',hold:false,files,tests:[],reason:'empty-change'};
+ arenaRemoval=files.includes(ARENA_REMOVAL_MARKER)&&!fs.existsSync('assets/village/arena-3d');
  const types=new Set(files.map(category));
  // PR #788 has explicit owner approval for a native microphone *validation* PR.
  // This target is never a Production/Runtime/IPA publication target.
