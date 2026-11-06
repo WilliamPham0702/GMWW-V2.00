@@ -9,7 +9,7 @@ test('immersive: chỉ bật khi nhúng hoặc ?immersive=1',()=>{
 });
 test('immersive: live.mjs nối đúng và không đổi id điều khiển',()=>{
   const live=readFileSync('assets/village/arena-3d/live.mjs','utf8');
-  assert.match(live,/if\(immersiveWanted\(\)\)installImmersive\(\)/);
+  assert.match(live,/if\(immersiveWanted\(\)\)\{installImmersive\(\)/);
   const src=readFileSync('assets/village/arena-3d/immersive.mjs','utf8');
   for(const id of ['gm-drawer','gm-dock-open','dock-ballot'])assert.ok(src.includes(id));
 });

@@ -16,6 +16,7 @@ import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {installVillageProps} from './village-props.mjs';
 import {immersiveWanted,installImmersive} from './immersive.mjs';
+import {installGmFlow} from './gm-flow.mjs';
 import {installPaintedBackdrop} from './painted-look.mjs';
 import {installCharacterSprites,paintedWorldRadius} from './character-sprites.mjs';
 import {paintedFit,PAINTED_PLAZA} from './backdrop-camera.mjs';
@@ -176,7 +177,8 @@ const village=createCoastalVillage(THREE,scene);
 // GĐ50: model GLB thật thay các khối dựng bằng code; lỗi tải thì giữ nguyên làng cũ.
 void installVillageProps(THREE,village).catch(()=>null);
 // GĐ51: trong app, làng chiếm toàn màn hình; nút điều hành nằm trong ngăn kéo.
-if(immersiveWanted())installImmersive();
+if(immersiveWanted()){installImmersive();
+  installGmFlow({read:()=>({room:current?.room.code||null,phase:current?.room.phase||null,cyclePhase:current?.room.cyclePhase||null,seatsLocked:Boolean(current?.room.seatsLocked)})})}
 if(paintedLook)installPaintedBackdrop(scene,village,render);
 let paintedSprites=null;
 // Single village: lanterns/moon/sea and fire switch lighting; seats never move at dusk.
