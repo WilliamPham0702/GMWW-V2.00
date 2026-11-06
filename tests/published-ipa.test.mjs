@@ -20,19 +20,19 @@ test('the published download proof selects an available compatible IPA',async()=
  assert.match(record.sourceCommit,/^[a-f0-9]{40}$/);
 });
 
-test('official V3.200 release evidence updates the Server download library without changing OTA shell',async()=>{
+test('official V3.309 release evidence updates the Server download library without changing OTA shell',async()=>{
  const fs=await import('node:fs');
  const proof=JSON.parse(fs.readFileSync('update-system/published-ipa.json','utf8'));
  const current=fs.readFileSync('server-game/current/app.js','utf8').match(/const VERSION='([^']+)'/)?.[1];
  const compare=(a,b)=>a.localeCompare(b,undefined,{numeric:true});
  assert.ok(compare(proof.version,'3.179')>=0,'Do not regress the verified V3.179 IPA download');
  assert.ok(compare(proof.version,current)<=0,'Published IPA cannot exceed available Runtime');
- assert.equal(proof.version,'3.200','Server download must match published GMWW V3.200');
- assert.equal(proof.sha256,'974cefca2dbff129d0f6c4bf50505f883814a9b9813b08199238f8bb4a2f4aa6');
- assert.equal(proof.size,136086393);
- assert.equal(proof.sourceCommit,'d2c8135df443d3e7ad00cb44c5b89a525dcb5018');
- assert.equal(proof.buildRun,'https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40070511661');
- assert.equal(proof.releaseUrl,'https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.200');
+ assert.equal(proof.version,'3.309','Server download must match published GMWW V3.309');
+ assert.equal(proof.sha256,'a4b1ba47eec5955843252702f8f30a7c2a0ca1aa8c74d9c706dfe38b2def7b9f');
+ assert.equal(proof.size,143455116);
+ assert.equal(proof.sourceCommit,'39266a0d2ac6151fca254339b641a588a1adb1bb');
+ assert.equal(proof.buildRun,'https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/42174940365');
+ assert.equal(proof.releaseUrl,'https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.309');
  const ipa=selectPublishedIpa(proof,current,'3.110');
  assert.equal(ipa.version,proof.version);
  assert.equal(ipa.fileName,'GMWW-V'+proof.version+'.ipa');
@@ -65,5 +65,5 @@ test('V3.197 release notes describe PR #439 and downloaded IPA V3.197', async()=
  assert.match(source,/handleSeatSwapRequests/);
  assert.match(source,/IPA V3\.197 đã được phát hành chính thức/);
  const record=JSON.parse(fs.readFileSync('update-system/published-ipa.json','utf8'));
- assert.equal(selectPublishedIpa(record,'3.200','3.110').version,'3.200');
+ assert.equal(selectPublishedIpa(record,record.version,'3.110').version,record.version);
 });

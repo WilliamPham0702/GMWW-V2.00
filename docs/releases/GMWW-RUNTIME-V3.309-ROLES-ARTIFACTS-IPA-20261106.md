@@ -14,3 +14,9 @@ Bản IPA đóng gói Runtime V3.309 (shell native V3.264 giữ nguyên). Không
 
 ## Rollback
 Worker: quay về phiên bản `e35aa412-0a89-4eed-8278-6c1c703977ad`. Runtime: khôi phục V3.308 từ GitHub Releases. Không xóa dữ liệu.
+
+## File IPA phát hành (06/11/2026)
+- Release: https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.309
+- Tệp: `GMWW-V3.309.ipa` (143455116 bytes), SHA-256 `a4b1ba47eec5955843252702f8f30a7c2a0ca1aa8c74d9c706dfe38b2def7b9f`
+- Build: https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/42174940365 · source `39266a0d2ac6151fca254339b641a588a1adb1bb`
+- `update-system/published-ipa.json` cập nhật theo file thật để Server hiển thị đúng bản tải IPA.
