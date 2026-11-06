@@ -2,7 +2,7 @@
 // GMWW AUTO-DELIVERY V3.0: deterministic, fail-closed scope classification.
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
-const playerTests=['tests/player-web-v3-iframe-drag.test.mjs','tests/player-web-online-actions-20261028.test.mjs','tests/online-player-fire-turn-dead-ui-20261031.test.mjs','tests/player-web-wolf-ballots-20261101.test.mjs'];
+const playerTests=['tests/player-web-v3-iframe-drag.test.mjs','tests/player-web-online-actions-20261028.test.mjs','tests/online-player-fire-turn-dead-ui-20261031.test.mjs','tests/player-web-wolf-ballots-20261101.test.mjs','tests/player-web-card-drag-action-20261105.test.mjs','tests/verdict-auto-advance-5s-20261105.test.mjs'];
 const sharedTests=['tests/gmww-play-interaction-rules.test.mjs','tests/online-chat-authority.test.mjs'];
 function category(path){
   if(!path||path.startsWith('/')||path.includes('\\')||path.split('/').includes('..'))return 'blocked';

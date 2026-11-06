@@ -9,12 +9,18 @@ export const isHunterRole=assignment=>{
   return ['role hunter','role huntsman','hunter','huntsman'].includes(role)||
     name==='tho san'||name.startsWith('tho san ');
 };
+export const isWolfHunterRole=assignment=>{
+  const role=clean(assignment?.roleId||''),name=clean(assignment?.roleName||assignment?.roleCard?.name||'');
+  return role==='role wolf hunter'||name==='soi tho san'||name.startsWith('soi tho san ');
+};
 export function hunterLinkedDeaths({assignments=[],interactions=[],matchId='',night=Infinity}={}){
   const rows=Array.isArray(interactions)?interactions:[],match=String(matchId||'');
   if(!match)return [];
   const matches=r=>r&&String(r.matchId||'')===match;
   const hunters=new Set((Array.isArray(assignments)?assignments:[])
-    .filter(isHunterRole).map(x=>id(x.loginId)).filter(Boolean));
+    .filter(x=>isHunterRole(x)||isWolfHunterRole(x)).map(x=>id(x.loginId)).filter(Boolean));
+  const wolfHunters=new Set((Array.isArray(assignments)?assignments:[])
+    .filter(isWolfHunterRole).map(x=>id(x.loginId)).filter(Boolean));
   const result=[];
   for(const hunter of hunters){
     const deaths=rows.filter(r=>matches(r)&&r.type==='dead'&&r.effectActive!==false&&
@@ -24,6 +30,7 @@ export function hunterLinkedDeaths({assignments=[],interactions=[],matchId='',ni
       id(r.loginId)&&!r.artifactId&&
       r.type!=='dead'&&r.noEffect!==true&&r.status!=='skipped'&&
       String(r.actionId||r.effectId||r.effectName||'').trim()&&
+      (!wolfHunters.has(hunter)||String(r.actionId||'')==='action_hunter_mark')&&
       Number(r.night||0)>0&&Number(r.night||0)<=night);
     if(!marks.length)continue;
     marks.sort((a,b)=>Number(a.night||0)-Number(b.night||0)||
@@ -33,6 +40,11 @@ export function hunterLinkedDeaths({assignments=[],interactions=[],matchId='',ni
     if(rows.some(r=>matches(r)&&r.type==='dead'&&r.effectActive!==false&&id(r.loginId)===target))continue;
     for(const death of deaths){
       const deathId=String(death.id||'');
+      // Sói Thợ Săn chết ban đêm: mục tiêu đang được Bảo Vệ cùng đêm thì không chết theo. Ban ngày vẫn chết.
+      const nightKey=String(death.cycleKey||'');
+      if(wolfHunters.has(hunter)&&/^night/i.test(nightKey)&&rows.some(r=>matches(r)&&
+        String(r.actionId||'')==='action_protect'&&r.effectActive!==false&&
+        id(r.loginId)===target&&String(r.cycleKey||'')===nightKey))continue;
       const consequenceId='hunter-last-shot:'+match+':'+deathId+':'+target;
       if(rows.some(r=>String(r.id||'')===consequenceId))continue;
       result.push({id:consequenceId,type:'dead',loginId:target,actorId:hunter,

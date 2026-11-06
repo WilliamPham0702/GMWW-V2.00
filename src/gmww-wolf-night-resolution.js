@@ -3,7 +3,9 @@
  * The result is intentionally deterministic so Durable Object retries cannot
  * select a different victim; saved matches and arbitrary death causes are untouched.
  */
+import {plaguePackLost,prismTargetsFor,talismanHolders} from './gmww-artifact-rules.js';
 import {isWolfRole} from './gmww-pack-night-rules.js';
+import {effectiveAssignments,validConversions,cubExtraBite} from './gmww-wolf-variant-rules.js';
 const login=value=>String(value??'').trim().toLowerCase().replace(/^member:/,'');
 const isFrom=(row,matchId,night)=>String(row?.matchId||'')===matchId&&Number(row?.night)===night;
 const distinct=values=>[...new Set(values)];
@@ -26,6 +28,11 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
   const match=String(matchId||''),cycle=Number(night);
   if(!match||!Number.isInteger(cycle)||cycle<1)
     return {ok:false,error:'INVALID_RESOLUTION_CONTEXT',victims:[],blocked:[],transfers:[],attacked:[],biteCount:0};
+  const rawAssignments=Array.isArray(assignments)?assignments:[];
+  const converted=validConversions({assignments:rawAssignments,interactions,matchId:match,night:cycle}).filter(c=>c.night===cycle);
+  // Cắn Chuyển Hóa thay thế Sói Cắn chung: mục tiêu không chết, đổi phe từ đêm kế tiếp.
+  if(converted.length)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount:0,replacedBite:true,converted:converted.map(c=>c.target)};
+  assignments=effectiveAssignments({assignments:rawAssignments,interactions,matchId:match,night:cycle});
   const rows=Array.isArray(interactions)?interactions:[],
     actions=rows.filter(row=>isFrom(row,match,cycle)&&row?.type==='effect_notice'&&row.undone!==true),
     guards=new Set(actions.filter(row=>['action_protect','action_witch_save'].includes(row.actionId)).map(row=>login(row.loginId)).filter(Boolean)),
@@ -33,7 +40,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
   // One authorized, final bite ballot per wolf. Legacy GM notices have no wolf
   // actor; keep them readable without rewriting existing match history.
   const wolves=new Map((Array.isArray(assignments)?assignments:[])
-    .filter(isWolfRole).map(row=>[login(row.loginId),row]));
+    .filter(row=>isWolfRole(row)&&row.packExcluded!==true).map(row=>[login(row.loginId),row]));
   const votes=new Map();
   for(const [index,row] of actions.filter(x=>x.actionId==='action_wolf_bite').entries()){
     const actor=login(row.actorId),target=login(row.loginId);
@@ -51,8 +58,17 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
   // The Alpha's own bite is decisive. Without it, a tied plurality never
   // creates an arbitrary victim.
   const selected=alphaVote?.target||(leaders.length===1?leaders[0]:'');
-  const bites=selected?[selected]:[];
-  if(!selected)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount,tied:true};
+  let bites=selected?[selected]:[];
+  // Sói Con: hai mục tiêu cùng dẫn đầu (hoà 2 người) đều bị Cắn.
+  if(!selected&&leaders.length===2&&cubExtraBite({assignments:rawAssignments,interactions:rows,matchId:match,night:cycle}))bites=[...leaders];
+  else if(selected&&cubExtraBite({assignments:rawAssignments,interactions:rows,matchId:match,night:cycle})){
+    const second=[...tally].filter(([t])=>t!==selected).sort((a,b)=>b[1]-a[1])[0];
+    if(second)bites=[selected,second[0]];
+  }
+  if(plaguePackLost({interactions:rows,matchId:match,night:cycle}))return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount,packDisabled:true,reason:'ARTIFACT_PLAGUE'};
+  const prism=prismTargetsFor({interactions:rows,matchId:match,night:cycle});
+  if(prism)bites=bites.filter(id=>prism.includes(id));
+  if(!selected&&!bites.length)return {ok:true,victims:[],blocked:[],transfers:[],attacked:[],biteCount,tied:true};
   // NIGHT-02: an Alpha Wolf frozen by Snow Wolf or expelled from the village
   // disables the lethal pack bite. Frozen Alpha does not reveal bitten targets
   // to the Witch; the submitted intent may still be recorded for history.
@@ -101,7 +117,7 @@ export function resolveWolfNight({interactions=[],players={},assignments=[],matc
       target=candidate.loginId;
       transfers.push({from:origin,to:target,direction});
     }
-    const protectedTarget=guards.has(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
+    const protectedTarget=guards.has(target)||talismanHolders({assignments,interactions:rows,matchId:match}).includes(target)||isNightImmune(assignments,target)||visitingMaidens.has(target);
     attacked.push({from:origin,to:target,direction:direction||'none',protected:protectedTarget});
     if(protectedTarget){protectedTargets.push(target);continue}
     if(rows.some(row=>String(row?.matchId||'')===match&&login(row?.loginId)===target&&

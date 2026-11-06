@@ -137,6 +137,8 @@ export function publicChatNotices(meta,players,rows){
       }
       continue;
     }
+    // Công bố công khai do luật lá bài (Loan Tin, Lực Sỹ, Hồn Ma...) tạo ra; chỉ dùng câu chữ đã được server soạn sẵn.
+    if(row.publicReveal===true&&row.undone!==true&&typeof row.message==='string'&&row.message){add(row,row.loginId,row.message.slice(0,200),row.createdAt,'public-reveal');continue}
     if(row.effectActive===false)continue;
     if(row.type==='dead'&&row.source==='assassin'&&all.some(mark=>
        mark.type==='assassin_mark'&&normalize(mark.loginId)===normalize(row.loginId)&&

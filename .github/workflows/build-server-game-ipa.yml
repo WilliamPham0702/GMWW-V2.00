@@ -596,6 +596,10 @@ jobs:
           shasum -a 256 -c "$IPA.sha256"
           if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release create "$TAG" "$IPA" "$IPA.sha256" --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" --title "GMWW V$VERSION — NATIVE GITHUB-FIRST OTA" --notes-file docs/releases/GMWW-NATIVE-GITHUB-OTA-STAGE2-20261029.md
+          elif ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qi '\.ipa$'; then
+            # The OTA runtime release already owns this tag but has no IPA yet: ADD the verified IPA.
+            # Never --clobber: existing assets (including any IPA) are never overwritten.
+            gh release upload "$TAG" "$IPA" "$IPA.sha256" --repo "$GITHUB_REPOSITORY"
           else
             echo "::error::IPA tag $TAG already exists. Do not overwrite a published IPA.";
             exit 1
