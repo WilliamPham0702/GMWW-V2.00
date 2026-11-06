@@ -15,3 +15,9 @@ test('Player Web follows the server renderMode and has no player-side switch',()
   assert.match(live,/state\.room\?\.renderMode\|\|'2d'\)==='3d'/);
   assert.doesNotMatch(page3d,/player-2d/);
 });
+test('GM app has the 2D/3D toggle that saves renderMode via room-settings',()=>{
+  const html=read('../server-game/current/GMWW.html'),app=read('../server-game/current/app.js');
+  assert.match(html,/id="playRenderModeToggle"/);
+  assert.match(app,/playUpdateRoomSettings\(\{renderMode:next\}\)/);
+  assert.match(app,/renderPlayRenderModeControl\(\);\n\s*const enabled=/);
+});

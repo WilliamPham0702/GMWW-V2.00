@@ -4683,7 +4683,7 @@ function renderPlayCreateRoomSheet(){
   const name=document.getElementById('playCreateRoomName'),seatCount=document.getElementById('playCreateRoomSeatCount'),toggle=document.getElementById('playCreateRoomEnabled'),reset=document.getElementById('playCreateRoomReset'),del=document.getElementById('playCreateRoomDelete');
   if(seatCount&&document.activeElement!==seatCount)seatCount.value=String(playSceneState.seatCount||12);
   if(name&&live&&playRoomUiState.editorMode!=='new'&&document.activeElement!==name)name.value=String(room.roomName||name.value||'Làng Asahi');
-  renderPlayRoomModeControl();
+  renderPlayRoomModeControl();renderPlayRenderModeControl();
   const enabled=playSceneState.roomEnabled===true;if(toggle){toggle.classList.toggle('is-on',enabled);toggle.setAttribute('aria-pressed',String(enabled));const b=toggle.querySelector('b');if(b)b.textContent=enabled?'ON':'OFF'}
   document.getElementById('playRoomModeStep')?.classList.toggle('hidden',!(['mode','settings'].includes(stage)&&!!playRoomUiState.selectedCode));
   document.getElementById('playRoomSettingsStep')?.classList.add('hidden');
@@ -5154,7 +5154,25 @@ async function flushPlayRoomMode(){
     if(playRoomUiState.pendingMode)void flushPlayRoomMode();
   }
 }
+function renderPlayRenderModeControl(){
+  const b=document.getElementById('playRenderModeToggle');if(!b)return;
+  const room=playSceneRuntime.room||{},roomReady=isLivePlayRoom()&&String(playRoomUiState.selectedCode)===String(playSceneState.roomCode);
+  const mode=room.renderMode==='3d'?'3d':'2d';
+  b.dataset.mode=mode;b.disabled=!roomReady||!!playSceneRuntime.busy;
+  const l=b.querySelector('b');if(l)l.textContent=mode==='3d'?'3D':'2D';
+  b.setAttribute('aria-pressed',String(mode==='3d'));
+}
+function bindPlayRenderModeButton(){
+  const b=document.getElementById('playRenderModeToggle');if(!b||b.dataset.renderBound==='1')return;
+  b.dataset.renderBound='1';
+  b.addEventListener('click',async()=>{
+    if(playSceneRuntime.busy||!isLivePlayRoom()||String(playRoomUiState.selectedCode)!==String(playSceneState.roomCode))return;
+    const next=(playSceneRuntime.room?.renderMode==='3d')?'2d':'3d';
+    await playUpdateRoomSettings({renderMode:next});renderPlayRenderModeControl();
+  });
+}
 function bindPlayRoomModeButtons(){
+  bindPlayRenderModeButton();
   const button=document.getElementById('playRoomModeToggle');if(!button||button.dataset.modeBound==='1')return;
   button.dataset.modeBound='1';
   button.addEventListener('click',()=>{
