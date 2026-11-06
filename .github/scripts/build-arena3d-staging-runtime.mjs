@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL,fileURLToPath} from 'node:url';
 import {writeManualPackage} from './build-manual-runtime.mjs';
 
 export const PRODUCTION_BASE='https://gmww-v2-00.williampham0702.workers.dev';
@@ -31,6 +31,8 @@ export function stagingHtml(html){
     'style="position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 2px);'+
     'z-index:2147483001;pointer-events:none;font:700 10px system-ui,-apple-system,sans-serif;letter-spacing:.06em;'+
     'color:#082633;background:#7ee8d8;border-radius:999px;padding:2px 9px;opacity:.92">3D · STAGING</div>';
+  html=html.replace(/(<script src="app\.js(?:\?v=[^"]*)?"><\/script>)/,'$1\n<script src="gmww-play3d.js"></script>');
+  if(!html.includes('gmww-play3d.js'))throw Error('play3d script tag: app.js script not found');
   return replaceOnce(html,'</body>',badge+'\n</body>','body end');
 }
 export function buildStagingRuntime(srcDir,outDir,version){
@@ -41,6 +43,9 @@ export function buildStagingRuntime(srcDir,outDir,version){
   const patch=(rel,fn)=>{const f=path.join(outDir,rel);fs.writeFileSync(f,fn(fs.readFileSync(f,'utf8')))};
   patch('app.js',a=>stagingAppJs(a,version));
   patch('GMWW.html',stagingHtml);
+  const play3d=path.join(path.dirname(fileURLToPath(import.meta.url)),'../runtime-staging/gmww-play3d.js');
+  fs.copyFileSync(play3d,path.join(outDir,'gmww-play3d.js'));
+  manifest.runtime.files.push({...manifest.runtime.files.find(f=>f.path==='app.js'),path:'gmww-play3d.js'});
   const sha=rel=>createHash('sha256').update(fs.readFileSync(path.join(outDir,rel))).digest('hex');
   // Same nominal URL scheme the native verifier expects (bytes come from the package itself).
   manifest.runtime.files=manifest.runtime.files.map(f=>({...f,
