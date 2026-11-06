@@ -1,8 +1,8 @@
 {
-  "version": "3.200",
-  "sha256": "974cefca2dbff129d0f6c4bf50505f883814a9b9813b08199238f8bb4a2f4aa6",
-  "size": 136086393,
-  "sourceCommit": "d2c8135df443d3e7ad00cb44c5b89a525dcb5018",
-  "buildRun": "https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/40070511661",
-  "releaseUrl": "https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.200"
+  "version": "3.309",
+  "sha256": "a4b1ba47eec5955843252702f8f30a7c2a0ca1aa8c74d9c706dfe38b2def7b9f",
+  "size": 143455116,
+  "sourceCommit": "39266a0d2ac6151fca254339b641a588a1adb1bb",
+  "buildRun": "https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/42174940365",
+  "releaseUrl": "https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.309"
 }
