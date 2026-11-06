@@ -375,5 +375,15 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 demo(rosterSize);requestAnimationFrame(loop);
-const param=new URL(location.href).searchParams.get('room');
+const pageParams=new URL(location.href).searchParams,param=pageParams.get('room');
+// Player 3D view: public projection only (no GM controls, no GM polling). Same room/Core as Player Web 2D.
+if(pageParams.get('view')==='player'){
+  document.body.dataset.gmwwView='player';
+  document.body.classList.add('player-view');
+  for(const el of document.querySelectorAll('.toolbar,#gm-console,#sample-vfx,#ballot'))el.hidden=true;
+  const bar=document.createElement('div');bar.className='toolbar';
+  const back=document.createElement('a');back.id='player-2d';back.textContent='‹ Chơi 2D (Player Web)';
+  back.href=param?'/join/'+encodeURIComponent(param.toUpperCase()):'/';
+  bar.append(back);document.querySelector('header').after(bar);
+}
 if(param)void guarded('Khôi phục trạng thái phòng',()=>attach(param));
