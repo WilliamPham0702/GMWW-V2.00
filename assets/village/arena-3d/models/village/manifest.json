@@ -1,0 +1,128 @@
+[
+  {
+    "file": "gate-arch.glb",
+    "triangles": 1556,
+    "width_m": 4.326,
+    "height_m": 3.5,
+    "depth_m": 0.925,
+    "materials": 11,
+    "size_bytes": 38064
+  },
+  {
+    "file": "stairs-white.glb",
+    "triangles": 1248,
+    "width_m": 4.26,
+    "height_m": 0.99,
+    "depth_m": 2.245,
+    "materials": 6,
+    "size_bytes": 30312
+  },
+  {
+    "file": "house-white-orange-roof.glb",
+    "triangles": 1986,
+    "width_m": 4.04,
+    "height_m": 3.75,
+    "depth_m": 3.85,
+    "materials": 12,
+    "size_bytes": 50492
+  },
+  {
+    "file": "dome-blue.glb",
+    "triangles": 1008,
+    "width_m": 3.02,
+    "height_m": 3.67,
+    "depth_m": 3.02,
+    "materials": 7,
+    "size_bytes": 25840
+  },
+  {
+    "file": "umbrella-table.glb",
+    "triangles": 620,
+    "width_m": 3.11,
+    "height_m": 2.957,
+    "depth_m": 3.113,
+    "materials": 7,
+    "size_bytes": 18188
+  },
+  {
+    "file": "stall-striped.glb",
+    "triangles": 1684,
+    "width_m": 3.42,
+    "height_m": 2.2,
+    "depth_m": 2.446,
+    "materials": 10,
+    "size_bytes": 42200
+  },
+  {
+    "file": "lantern-post.glb",
+    "triangles": 468,
+    "width_m": 1.008,
+    "height_m": 2.4,
+    "depth_m": 0.5,
+    "materials": 8,
+    "size_bytes": 14800
+  },
+  {
+    "file": "banner-compass.glb",
+    "triangles": 208,
+    "width_m": 0.942,
+    "height_m": 2.6,
+    "depth_m": 0.445,
+    "materials": 6,
+    "size_bytes": 8996
+  },
+  {
+    "file": "planter-flowers.glb",
+    "triangles": 1510,
+    "width_m": 1.9,
+    "height_m": 1.359,
+    "depth_m": 0.89,
+    "materials": 9,
+    "size_bytes": 38188
+  },
+  {
+    "file": "barrel-flowers.glb",
+    "triangles": 1344,
+    "width_m": 0.9,
+    "height_m": 1.534,
+    "depth_m": 0.9,
+    "materials": 9,
+    "size_bytes": 35156
+  },
+  {
+    "file": "campfire-stone.glb",
+    "triangles": 1016,
+    "width_m": 1.82,
+    "height_m": 0.777,
+    "depth_m": 1.848,
+    "materials": 7,
+    "size_bytes": 25432
+  },
+  {
+    "file": "sailboat.glb",
+    "triangles": 904,
+    "width_m": 2.28,
+    "height_m": 3.835,
+    "depth_m": 3.4,
+    "materials": 8,
+    "size_bytes": 25208
+  },
+  {
+    "file": "tree-cypress.glb",
+    "triangles": 976,
+    "width_m": 1.34,
+    "height_m": 5.0,
+    "depth_m": 1.18,
+    "materials": 4,
+    "size_bytes": 21420
+  },
+  {
+    "file": "tree-palm.glb",
+    "triangles": 594,
+    "width_m": 3.507,
+    "height_m": 4.0,
+    "depth_m": 3.472,
+    "materials": 5,
+    "size_bytes": 21700
+  }
+]
