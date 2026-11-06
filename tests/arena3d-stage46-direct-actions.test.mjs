@@ -155,3 +155,11 @@ test('player.mjs vẫn chỉ-đọc; chỉ player-actions.mjs được nói chuy
   const diag=playerSrc.slice(playerSrc.indexOf('window.__GMWW_ARENA_PLAYER_READONLY'));
   assert.doesNotMatch(diag.slice(0,500),/bridgeState|directActions|actions|picking/);
 });
+
+test('khung Player Web riêng tư KHÔNG được tải sẵn: chỉ tải khi người chơi chủ động mở',()=>{
+  const calls=[...playerSrc.matchAll(/loadPlayerCore\(\)/g)].length;
+  assert.equal(calls,2,'một định nghĩa + một lần gọi duy nhất');
+  const openIdx=playerSrc.indexOf("$('open-card').onclick");
+  const callIdx=playerSrc.lastIndexOf('loadPlayerCore();');
+  assert.ok(callIdx>openIdx&&callIdx<playerSrc.indexOf('};',openIdx),'chỉ gọi trong onclick của nút mở lá');
+});

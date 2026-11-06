@@ -134,8 +134,8 @@ canvas.addEventListener('webglcontextrestored',()=>{contextLost=false;lastSize='
 document.addEventListener('visibilitychange',()=>{scheduler.reset();frameCount=0;fpsSince=performance.now()});
 
 let privateLoaded=false;
-// Same-origin Core Player Web controls its own identity and secret cards. It is loaded once
-// (hidden) so the 3D dock can drive its existing action flow. No credential, hidden role or
+// Same-origin Core Player Web controls its own identity and secret cards. It is loaded only after the
+// player explicitly opens it (never preloaded); from then on the 3D dock can drive its existing action flow. No credential, hidden role or
 // card is transmitted via postMessage/query; the bridge only relays this player's own action menu.
 function loadPlayerCore(){
   if(!validCode||privateLoaded)return;
@@ -167,7 +167,6 @@ window.__GMWW_ARENA_PLAYER_READONLY=()=>({
 requestAnimationFrame(frame);
 if(!validCode){$('state').textContent='Thiếu mã phòng';message('Mở trang từ liên kết phòng của GM, hoặc thêm ?room=MÃPHÒNG.');}
 else{
-  loadPlayerCore();
   message('Đang kết nối Core của phòng '+code+'…');
   connectStagingRoom({roomCode:code,loadPublicGallows:false,onFrame:drawFrame,
     onGallows:ballot=>{
