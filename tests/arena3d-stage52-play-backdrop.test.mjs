@@ -48,7 +48,7 @@ test('Không có quyền GM thì không gọi server',()=>{
 });
 test('Pha Đêm được gửi cho nền 3D (không kèm dữ liệu game)',()=>{
   const {byId}=run({phase:'night'});const f=byId.gmww3dBackdrop;f.listeners.load[0]();
-  assert.equal(JSON.stringify(f.contentWindow.post.at(-1)),JSON.stringify([{kind:'gmww-backdrop-phase',night:true},STAGING_BASE]));
+  assert.equal(JSON.stringify(f.contentWindow.post.at(-1)),JSON.stringify([{kind:'gmww-backdrop-phase',night:true,fire:null},STAGING_BASE]));
 });
 test('Gói Runtime STAGING nạp script 3D sau app.js; Production html không đổi',()=>{
   const h=stagingHtml(portal);assert.match(h,/<script src="app\.js[^"]*"><\/script>\s*<script src="gmww-play3d\.js"><\/script>/);
@@ -61,4 +61,15 @@ test('Camera trực giao: ghế 2D (%) rơi đúng vòng sàn 3D, lửa ở tâm
   assert.ok(Math.max(...rs)<9.6&&Math.min(...rs)>4,'bán kính sàn '+Math.min(...rs).toFixed(1)+'–'+Math.max(...rs).toFixed(1));
   const f=backdropFrustum();assert.ok(f.right>f.left&&f.top>f.bottom&&f.top>0&&f.bottom<0);
   assert.ok(backdropCameraPosition().y>0);
+});
+
+test('Nền tranh 2.5D: phủ kín khung như 2D (ghế khớp 100%), mặc định là tranh làng v260, lửa đúng vị trí tranh',()=>{
+  const src=fs.readFileSync('assets/village/arena-3d/backdrop-painted.mjs','utf8');
+  assert.match(src,/gmww-village-day-v260\.webp/);assert.match(src,/gmww-village-night-v260\.webp/);
+  assert.match(src,/PAINTED_FIRE=\{x:50\.3,y:49\.2\}/);
+  const bd=fs.readFileSync('assets/village/arena-3d/backdrop.mjs','utf8');
+  assert.match(bd,/style'\)!=='village'/); // mặc định tranh; ?style=village giữ cảnh dựng bằng code
+  // Fire in the shipped painting (px): ~ (435,755) of 864x1536.
+  assert.ok(Math.abs(435/864*100-50.3)<.5&&Math.abs(755/1536*100-49.2)<.5);
+  assert.match(SRC,/villageFirePosition/); // dùng đúng mốc lửa đã hiệu chỉnh của app
 });

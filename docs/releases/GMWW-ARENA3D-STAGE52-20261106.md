@@ -5,3 +5,9 @@
 - Nút nhỏ "3D/2D" trong sân chơi: GM chọn chế độ; lựa chọn được gửi lên STAGING (cần token GM) để Player đi theo.
 - Chỉ có trong Runtime STAGING (`.github/runtime-staging/gmww-play3d.js`, gắn bởi build-arena3d-staging-runtime). Production Runtime không đổi.
 - Chưa làm: xoay 360° (ghế 2D cần theo phép chiếu), nhân vật GLB 3D (chờ file ChatGPT), đo iPhone thật.
+
+## GĐ52b — Nền tranh 2.5D (giống làng 2D nhất)
+- Nền mặc định = chính tranh làng GMWW (ngày/đêm) phủ kín khung như 2D → ghế 2D khớp 100%.
+- Thêm chiều sâu: camera phối cảnh lắc nhẹ, ánh lửa nhấp nháy, cánh hoa bay, chuyển Ngày/Đêm mượt.
+- `?style=village` vẫn là làng dựng bằng code/GLB (xoay trực giao). Xoay 360° thật chưa có ở chế độ tranh.
+- Giới hạn: dùng tranh mặc định v260; tranh GM tự đăng tải riêng chưa nạp vào nền 3D.

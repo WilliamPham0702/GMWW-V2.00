@@ -15,8 +15,9 @@
   function save(m){try{localStorage.setItem(KEY,m)}catch(e){}}
   function world(){return document.getElementById('playWorld')}
   function night(){var s=document.getElementById('playShell');return !!s&&s.dataset.phase==='night'}
+  function fire(){try{if(typeof villageFirePosition==='function'){var p=villageFirePosition();if(p&&isFinite(p[0])&&isFinite(p[1]))return{x:+p[0],y:+p[1]}}}catch(e){}return null}
   function send(){var f=document.getElementById('gmww3dBackdrop');
-    if(f&&f.contentWindow)try{f.contentWindow.postMessage({kind:'gmww-backdrop-phase',night:night()},BASE)}catch(e){}}
+    if(f&&f.contentWindow)try{f.contentWindow.postMessage({kind:'gmww-backdrop-phase',night:night(),fire:fire()},BASE)}catch(e){}}
   function announce(m){ // Player Web STAGING đi theo lựa chọn của GM (chỉ khi có phòng + quyền GM)
     try{var s=(typeof playSceneState!=='undefined'&&playSceneState)||{},code=String(s.roomCode||''),tok=String(s.gmToken||'');
       if(!/^[A-Za-z0-9]{4,12}$/.test(code)||!tok)return;
