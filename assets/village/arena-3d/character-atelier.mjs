@@ -446,7 +446,9 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     wand.geometry.dispose();wand.material.dispose();spellVfx.dispose();
     actors.length=0;byId.clear();gallowsTravel.clear();gallowsActorId=null;
   }
-  return {setActors,setGallowsCandidate,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,hasActiveMotion,pick,dispose,
+  // GĐ54: kiểu tranh vẽ nhân vật bằng ảnh GMWW (billboard) nên ẩn thân hình khối; luật/vị trí không đổi.
+  function setBodiesVisible(value){for(const part of meshes)part.mesh.material.visible=value!==false}
+  return {setBodiesVisible,setActors,setGallowsCandidate,turnActor,performGesture,interact,setServerEffects,setCastingTurn,clearEffects,setReducedMotion,setLowPower,setQualityFps,draw,hasActiveMotion,pick,dispose,
     artVersion:CHARACTER_ART_VERSION,expressionVersion:STAGE7_VERSION,
     get gallowsActorId(){return gallowsActorId},get actorCount(){return actors.length},get crowdTier(){return crowdTier},get drawUpdates(){return updates},get drawBudget(){return meshes.length+effects.length+1+spellVfx.drawBudget},
     get peakVfxDrawBudget(){return spellBeams.length+wolfHeads.length*4+shieldDomes.length+impactRings.length+1},
@@ -458,7 +460,7 @@ export function createArenaCharacterField(THREE,scene,{capacity=MAX}={}){
     get visibleShieldDomes(){return shieldDomes.filter(dome=>dome.visible).length},
     get visibleImpactRings(){return impactRings.filter(ring=>ring.visible).length},
     get wandVisible(){return wand.visible},
-    get actors(){const now=performance.now();return actors.map(a=>({id:a.id,position:a.position,
+    get actors(){const now=performance.now();return actors.map(a=>({id:a.id,characterId:a.characterId,position:a.position,
       renderPosition:renderWalkPosition(a.position,a.approach,a.travel,now),
       progress:travelProgress(a.travel,now),yaw:a.yaw,statusIds:[...a.statusIds],
       standing:a.standUntil>now,casting:a.castUntil>now&&a.castStartedAt<=now}))},

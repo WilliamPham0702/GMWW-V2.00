@@ -17,7 +17,8 @@ import {createGmDashboard} from './gm-dashboard.mjs';
 import {installVillageProps} from './village-props.mjs';
 import {immersiveWanted,installImmersive} from './immersive.mjs';
 import {installPaintedBackdrop} from './painted-look.mjs';
-import {paintedFit} from './backdrop-camera.mjs';
+import {installCharacterSprites,paintedWorldRadius} from './character-sprites.mjs';
+import {paintedFit,PAINTED_PLAZA} from './backdrop-camera.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
 import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_STAGE18_VERSION,createArenaPaintScheduler,ARENA_STAGE22_VERSION} from './render-optimization.mjs';
@@ -60,7 +61,7 @@ render.outputColorSpace=THREE.SRGBColorSpace;render.setPixelRatio(Math.min(devic
 const paintedLook=immersiveWanted();
 const camera=paintedLook?new THREE.OrthographicCamera(-1,1,1,-1,.1,200):new THREE.PerspectiveCamera(42,1,.1,90);
 let orbit=.5,elevation=.75,radius=20,drag=null,focusId=null,rosterSize=6,code='',gmToken='',feed=null,current=null;
-let followCaster=true,pinchDistance=0,paintedPose=null;
+let followCaster=true,pinchDistance=0,paintedPose=null,paintedSize=[390,844],paintedRadius=PAINTED_PLAZA.worldRadius;
 const trackedPointers=new Map(),cameraAim=new THREE.Vector3(0,0,1.2),
   desiredAim=new THREE.Vector3(0,0,1.2);
 const field=createArenaCharacterField(THREE,scene);
@@ -177,6 +178,7 @@ void installVillageProps(THREE,village).catch(()=>null);
 // GĐ51: trong app, làng chiếm toàn màn hình; nút điều hành nằm trong ngăn kéo.
 if(immersiveWanted())installImmersive();
 if(paintedLook)installPaintedBackdrop(scene,village,render);
+let paintedSprites=null;
 // Single village: lanterns/moon/sea and fire switch lighting; seats never move at dusk.
 // Chibi 3D + animation are render-only: the same authoritative V2 DTO feeds 2D and 3D.
 function drawFrame(frame){
@@ -615,12 +617,15 @@ for(const b of document.querySelectorAll('[data-fx],[data-role-fx]'))b.addEventL
   if(!synthetic){notice('Chế độ phòng thật chỉ hiển thị hiệu ứng do Server cho phép, không kích hoạt bằng nút xem mẫu.');return;}
   playSyntheticRitual(b.dataset.fx||b.dataset.roleKind,{roleId:b.dataset.roleFx||'',actionId:b.dataset.roleAction||''});
 });
+function applyPaintedFit(){
+  paintedPose=paintedFit(paintedSize[0],paintedSize[1],{...PAINTED_PLAZA,worldRadius:paintedRadius});
+  Object.assign(camera,{left:paintedPose.left,right:paintedPose.right,top:paintedPose.top,bottom:paintedPose.bottom});camera.updateProjectionMatrix();
+}
 function resize(){
   const rect=canvas.getBoundingClientRect(),key=rect.width+'x'+rect.height;
   if(key!==lastResize){lastResize=key;render.setSize(Math.max(1,rect.width),Math.max(1,rect.height),false);
     camera.aspect=Math.max(1,rect.width)/Math.max(1,rect.height);camera.updateProjectionMatrix();
-    if(paintedLook){paintedPose=paintedFit(Math.max(1,rect.width),Math.max(1,rect.height));
-      Object.assign(camera,{left:paintedPose.left,right:paintedPose.right,top:paintedPose.top,bottom:paintedPose.bottom});camera.updateProjectionMatrix()}}
+    if(paintedLook){paintedSize=[Math.max(1,rect.width),Math.max(1,rect.height)];applyPaintedFit()}}
 }
 canvas.addEventListener('pointerdown',e=>{
   trackedPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -715,7 +720,9 @@ function loop(now){
     cameraAim.lerp(desiredAim,reducedMotion?.35:.12);
     camera.lookAt(cameraAim);if(paintedLook&&paintedPose){camera.position.set(paintedPose.position.x,paintedPose.position.y,paintedPose.position.z);camera.lookAt(0,0,0)}
     if(!reducedMotion)village.animate(now);
-    field.draw(now);
+    field.draw(now);if(paintedLook){paintedSprites??=installCharacterSprites(THREE,scene,field);
+      const wr=paintedWorldRadius(Math.max(6,field.actorCount));if(Math.abs(wr-paintedRadius)>.01){paintedRadius=wr;applyPaintedFit()}
+      paintedSprites.update(now)}
     render.render(scene,camera);frames++;
     mobileQa.sample({at:now,paintCpuMs:performance.now()-cpuStart,
       drawCalls:render.info.render.calls,targetHz:frameHz,

@@ -30,3 +30,17 @@ test('installPaintedBackdrop: ẩn làng, giữ đèn, thêm iframe tranh không
   assert.equal(r.frame.src,'http://x/backdrop.html');
   hooks[0](true);r.frame.listeners.load();assert.equal(posted.at(-1).night,true);
 });
+
+import {characterImageId,seatRadius,paintedWorldRadius,spriteHeight} from '../assets/village/arena-3d/character-sprites.mjs';
+test('GĐ54: nhân vật GMWW thật — ánh xạ ảnh, bán kính ghế khớp atelier, kích thước theo số người',()=>{
+  assert.equal(characterImageId('character-07'),'character-07');assert.equal(characterImageId('character-41'),'character-39');
+  assert.equal(characterImageId('character-42'),'character-40');assert.equal(characterImageId('x'),'character-01');
+  assert.equal(characterImageId('character-45'),'character-05');
+  for(const [n,r] of [[6,4.15],[12,5.1],[18,6.15],[24,7.2],[30,8.35]])assert.equal(seatRadius(n),r);
+  assert.ok(paintedWorldRadius(6)<paintedWorldRadius(30));
+  for(const n of [6,12,20,30])assert.ok(fs.existsSync('assets/characters/gmww40/originals/'+characterImageId('character-'+n)+'.webp'));
+  assert.ok(spriteHeight(30)>0&&spriteHeight(6)>0);
+  const atelier=fs.readFileSync('assets/village/arena-3d/character-atelier.mjs','utf8');
+  assert.match(atelier,/radius=count<=8\?4\.15:count<=12\?5\.1:count<=18\?6\.15:count<=24\?7\.2:8\.35/);
+  assert.match(atelier,/setBodiesVisible/);
+});

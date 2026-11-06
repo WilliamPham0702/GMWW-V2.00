@@ -15,3 +15,8 @@
 ## GĐ53 — Kiểu tranh cho trang "VÀO LÀNG" (KHÔNG đụng Runtime/2D)
 - Trang Arena 3D (STAGING) khi chạy trong app: tranh làng thật làm nền, nhân vật 3D đứng trên sàn tranh (camera trực giao, không méo).
 - Không còn cần Runtime STAGING; app giữ nguyên V3.309. Trang CI/QA đứng riêng giữ cảnh cũ.
+
+## GĐ54 — Nhân vật GMWW thật trên sàn tranh
+- Kiểu tranh dùng ảnh 40 nhân vật GMWW (billboard) đứng tại đúng vị trí ghế do Core/adapter cấp; thân hình khối tạm bị ẩn.
+- Số người ít thì cảnh phóng to (vòng ghế = 90% quảng trường) để nhân vật không lọt thỏm.
+- Chưa có: hoạt ảnh đi/đứng/cast riêng cho sprite (chỉ nhún nhẹ), nhân vật GLB 3D thật.
