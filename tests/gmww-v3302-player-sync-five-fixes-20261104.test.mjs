@@ -58,7 +58,7 @@ test('4. footer row: clock, collapsed chat and text-only Khôi phục share one 
 
 // Lỗi 5: GM app quay lại từ nền vẫn hiện lượt cũ cho tới khi socket tự nối lại (backoff tới 10 s).
 test('5. GM Runtime resyncs at once on resume and when the turn deadline passes silently',()=>{
-  assert.match(gm,/const VERSION='3\.30[2-9]'/);
+  assert.match(gm,/const VERSION='3\.(?:30[2-9]|31[0-9])'/);
   for(const ev of ["document.addEventListener('visibilitychange',playResumeRealtime)","window.addEventListener('pageshow',playResumeRealtime)","window.addEventListener('focus',playResumeRealtime)"])
     assert.ok(gm.includes(ev),ev);
   const resume=slice(gm,'function playResumeRealtime()','\ndocument.addEventListener');
