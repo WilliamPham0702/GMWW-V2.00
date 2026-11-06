@@ -381,9 +381,5 @@ if(pageParams.get('view')==='player'){
   document.body.dataset.gmwwView='player';
   document.body.classList.add('player-view');
   for(const el of document.querySelectorAll('.toolbar,#gm-console,#sample-vfx,#ballot'))el.hidden=true;
-  const bar=document.createElement('div');bar.className='toolbar';
-  const back=document.createElement('a');back.id='player-2d';back.textContent='‹ Chơi 2D (Player Web)';
-  back.href=param?'/join/'+encodeURIComponent(param.toUpperCase()):'/';
-  bar.append(back);document.querySelector('header').after(bar);
 }
 if(param)void guarded('Khôi phục trạng thái phòng',()=>attach(param));
