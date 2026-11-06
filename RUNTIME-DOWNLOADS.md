@@ -18,13 +18,13 @@
 
 ## 2. IPA — CÀI ỨNG DỤNG
 
-**IPA mới nhất đã xác minh trên GitHub: V3.275.** Cập nhật Runtime bình thường không cần cài lại IPA.
+**IPA mới nhất đã xác minh trên GitHub: V3.309.** Cập nhật Runtime bình thường không cần cài lại IPA.
 
 | Phiên bản | Tải .ipa | Xác minh | Ghi chú |
 |:--|:--|:--|:--|
+| **V3.309** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.309/GMWW-V3.309.ipa) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.309/GMWW-V3.309.ipa.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.309) |
 | **V3.275** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.275/GMWW-V3.275.ipa) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.275/GMWW-V3.275.ipa.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.275) |
 | **V3.264** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.264/GMWW-V3.264.ipa) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.264/GMWW-V3.264.ipa.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.264) |
-| **V3.257** | [⬇️ Tải gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.257/GMWW-V3.257.ipa) | [SHA-256](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-v3.257/GMWW-V3.257.ipa.sha256) | [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-v3.257) |
 
 ## 3. BACKUP THÁNG
 
