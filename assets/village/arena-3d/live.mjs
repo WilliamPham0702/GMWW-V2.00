@@ -15,6 +15,7 @@ import {CORE_ACTION_CATALOG} from './stage11-core-catalog.mjs';
 import {ritualArt,RITUAL_ART_VERSION} from './role-ritual-art.mjs';
 import {createGmDashboard} from './gm-dashboard.mjs';
 import {installVillageProps} from './village-props.mjs';
+import {immersiveWanted,installImmersive} from './immersive.mjs';
 import {createCoastalVillage,COASTAL_VILLAGE_VERSION} from './coastal-village.mjs';
 import {createArenaTrialConfig,createArenaTrialAssignments,stagingRoleAction} from './arena-acceptance-scenario.mjs';
 import {arenaSceneSignature,createArenaAdaptiveQuality,arenaTargetFrameHz,ARENA_STAGE18_VERSION,createArenaPaintScheduler,ARENA_STAGE22_VERSION} from './render-optimization.mjs';
@@ -169,6 +170,8 @@ $('camera-reset').onclick=()=>{
 const village=createCoastalVillage(THREE,scene);
 // GĐ50: model GLB thật thay các khối dựng bằng code; lỗi tải thì giữ nguyên làng cũ.
 void installVillageProps(THREE,village).catch(()=>null);
+// GĐ51: trong app, làng chiếm toàn màn hình; nút điều hành nằm trong ngăn kéo.
+if(immersiveWanted())installImmersive();
 // Single village: lanterns/moon/sea and fire switch lighting; seats never move at dusk.
 // Chibi 3D + animation are render-only: the same authoritative V2 DTO feeds 2D and 3D.
 function drawFrame(frame){
