@@ -46,7 +46,7 @@ function artifactArtworkSideMargins(data,width,height){
   if(right<=left)return null;
   const l=left/width,r=(width-1-right)/width;
   // Be conservative: real dark artwork must not be auto-cropped.
-  if(l+r>.14||Math.max(l,r)>.12||Math.abs(l-r)<.025)return null;
+  if(l+r>.24||Math.max(l,r)>.22||Math.abs(l-r)<.025)return null;
   return{left:l,right:r};
 }
 function alignArtifactPreviewArtwork(img){
