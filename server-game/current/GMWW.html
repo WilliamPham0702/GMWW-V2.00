@@ -893,6 +893,14 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
           <label class="gmww-perf-toggle"><input type="checkbox" id="gmwwPerfGuard" checked disabled><span>Chống vòng lặp thừa <small>Luôn bật, không cho phép tạo lịch render trùng</small></span></label>
           <label class="gmww-perf-toggle"><input type="checkbox" id="gmwwPerfEffects" checked><span>Giảm hiệu ứng khi tải cao <small>Giữ icon và trạng thái; giảm chuyển động trang trí</small></span></label>
           <label class="gmww-perf-toggle"><input type="checkbox" id="gmwwPerfIdle" checked><span>Tạm nghỉ khi không hoạt động <small>Dừng vẽ nhân vật đứng yên và khi rời sân chơi</small></span></label>
+          <div class="ops-status-grid" aria-live="off">
+            <div><small>TỐC ĐỘ VẼ GM</small><b id="gmwwPerfFps">—</b></div>
+            <div><small>KHUNG TRỄ</small><b id="gmwwPerfSlow">—</b></div>
+            <div><small>BỘ ĐẾM ĐANG CHẠY</small><b id="gmwwPerfTimers">—</b></div>
+            <div><small>TÁC VỤ NẶNG</small><b id="gmwwPerfLong">—</b></div>
+            <div><small>BỘ NHỚ JS</small><b id="gmwwPerfHeap">—</b></div>
+          </div>
+          <button class="settings-action settings-action-server" id="gmwwPerfLite" type="button"><span>❄</span><b>CHẾ ĐỘ NHẸ 1 CHẠM</b></button>
           <div id="gmwwPerfStatus" class="gmww-perf-status" role="status">Tự động • đang giám sát tải đồ họa</div>
           <small class="gmww-perf-note">Ước lượng tải bằng độ trễ khung hình, không phải số đo nhiệt độ iOS. Đồng hồ, âm thanh và đồng bộ ván game vẫn hoạt động.</small>
         </div>
