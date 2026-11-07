@@ -421,6 +421,11 @@ function ensureOnline2DStyle(){
     #gmwwSetupTop3 .top3-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center}
     #gmwwSetupTop3 .top3-char{height:31px;width:100%;display:flex;align-items:flex-end;justify-content:center}
     #gmwwSetupTop3 .top3-char img{max-height:31px;max-width:100%;object-fit:contain;filter:drop-shadow(0 2px 2px #00141c99)}
+    #gmwwSetupTop3 .top3-char img{transform-origin:50% 100%;animation:gmwwTop3Idle 2.8s ease-in-out infinite;will-change:transform}
+    #gmwwSetupTop3 .place2 .top3-char img{animation-delay:-.9s}
+    #gmwwSetupTop3 .place3 .top3-char img{animation-delay:-1.8s}
+    @keyframes gmwwTop3Idle{0%,100%{transform:translateY(0) scale(1,1) rotate(-1deg)}25%{transform:translateY(-1px) scale(1.01,1.035) rotate(0deg)}50%{transform:translateY(0) scale(1,1) rotate(1deg)}75%{transform:translateY(-1px) scale(1.01,1.035) rotate(0deg)}}
+    @media(prefers-reduced-motion:reduce){#gmwwSetupTop3 .top3-char img{animation:none}}
     #gmwwSetupTop3 .top3-podium{width:100%;box-sizing:border-box;padding:2px 1px;border-radius:5px 5px 2px 2px;border:1px solid rgba(255,255,255,.4);text-align:center;color:#fff;text-shadow:0 1px 2px #00141ccc;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;box-shadow:0 3px 7px #00141c66}
     #gmwwSetupTop3 .place1 .top3-podium{height:29px;background:linear-gradient(180deg,#f6d676,#b98a1f)}
     #gmwwSetupTop3 .place2 .top3-podium{height:23px;background:linear-gradient(180deg,#e3ebef,#8d9ba3)}
