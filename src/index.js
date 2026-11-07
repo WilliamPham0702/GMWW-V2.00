@@ -170,6 +170,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/village/move"&&request.method==="POST")return this.villageMove(request,await safeJson(request));
     if(url.pathname==="/player/seat-swap"&&request.method==="POST")return this.playerSeatSwap(await safeJson(request));
     if(url.pathname==="/members/directory"&&request.method==="GET")return this.memberDirectory();
+    if(url.pathname==="/members/top3"&&request.method==="GET")return this.memberTop3();
     if(url.pathname==="/artifacts/shared/status"&&request.method==="GET")return this.sharedArtifactStatus();
     if(url.pathname==="/artifacts/shared"&&request.method==="PUT")return this.sharedArtifactPut(await safeJson(request));
     if(url.pathname==="/artifacts/shared/get"&&request.method==="GET")return this.sharedArtifactGet(url.searchParams.get("assetId"));
@@ -460,6 +461,15 @@ export class RoomDurableObject extends DurableObject {
   async memberDirectory(){
     const rows=await this.ctx.storage.list({prefix:"member:"}),members=[...rows.values()].map(directoryMember).sort((a,b)=>String(a.displayName||a.loginId).localeCompare(String(b.displayName||b.loginId),"vi"));
     return j({ok:true,count:members.length,serverTime:Date.now(),members});
+  }
+  async memberTop3(){
+    // Top 3 cho màn setup của Player Web: cùng thứ tự với GM (nhiều ván trước, rồi tỷ lệ thắng, rồi tên); chỉ trả tên, Character, thắng/thua.
+    const rows=await this.ctx.storage.list({prefix:"member:"});
+    const top=[...rows.values()].map(m=>{const st=m?.stats||{},w=Math.max(0,Number(st.wins||0)),l=Math.max(0,Number(st.losses||0));return{displayName:String(m?.displayName||m?.loginId||"Thành viên"),gameCharacterId:activeGameCharacterId(m?.gameCharacterId,m?.loginId),wins:w,losses:l,games:w+l}})
+      .filter(x=>x.games>0)
+      .sort((a,b)=>b.games-a.games||b.wins*a.games-a.wins*b.games||a.displayName.localeCompare(b.displayName,"vi"))
+      .slice(0,3).map((x,i)=>({rank:i+1,displayName:x.displayName,gameCharacterId:x.gameCharacterId,wins:x.wins,losses:x.losses,games:x.games,rate:Math.round(100*x.wins/x.games)}));
+    return j({ok:true,top});
   }
   async gameTemplateList(){
     const rows=await this.ctx.storage.list({prefix:"gameTemplate:"}),templates=[...rows.values()].filter(Boolean).map(x=>({id:x.id,name:x.name,playerCount:Number(x.playerCount||0),updatedAt:x.updatedAt||null,preloadedAt:x.preloadedAt||null,revision:Number(x.revision||1)})).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
@@ -4285,6 +4295,15 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/gm/members/reset-password"&&request.method==="POST"){if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/admin-reset",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
   if(url.pathname==="/api/members/profile"&&request.method==="POST"){const body=await safeJson(request);return memberStore(env).fetch(new Request("https://member.internal/members/profile",{method:"POST",headers:request.headers,body:JSON.stringify(body||{})}));}
   if(url.pathname==="/api/members/me"&&request.method==="GET")return memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(url.pathname==="/api/members/top3"&&request.method==="GET"){
+    const cacheKey=new Request(url.origin+"/api/members/top3",{method:"GET"});
+    try{const hit=await caches.default.match(cacheKey);if(hit)return hit}catch{}
+    const res=await memberStore(env).fetch("https://member.internal/members/top3");
+    if(!res.ok)return res;
+    const out=new Response(await res.text(),{status:200,headers:{...corsHeaders(),"content-type":"application/json","cache-control":"public, max-age=60"}});
+    try{await caches.default.put(cacheKey,out.clone())}catch{}
+    return out;
+  }
   if(url.pathname==="/api/members/logout"&&request.method==="POST")return memberStore(env).fetch(new Request("https://member.internal/members/logout",{method:"POST",headers:request.headers}));
   if(url.pathname==="/api/members/presence"&&request.method==="POST"){
     const body=await safeJson(request)||{},code=normalizeRoomCode(body.roomCode||"");let revoked=false;
