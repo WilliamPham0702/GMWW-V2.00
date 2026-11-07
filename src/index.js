@@ -2091,7 +2091,18 @@ export class RoomDurableObject extends DurableObject {
     if(assignments.some(isWolfRole)){
       const snowCanBite=canSnowWolfBite({assignments,interactions:packInteractions,matchId:meta.matchId});
       const packOwners=eligiblePack.filter(x=>x.roleId!=="role_snow_wolf"||snowCanBite);
-      queue.push({id:"wolf-pack-bite",kind:"wolf-pack-bite",label:"Bầy Sói Cắn",
+      // WOLF-02: the label depends on the wolf count dealt at match start, never on
+      // how many are alive, so deaths cannot reveal which wolf died. A match dealt a
+      // single wolf has no "Bầy Sói" turn: that wolf is called once under its own name.
+      const initialWolfKey="initialWolfCount:"+String(meta.matchId||"");
+      let initialWolfCount=Number(await this.ctx.storage.get(initialWolfKey));
+      if(!Number.isFinite(initialWolfCount)||initialWolfCount<1){
+        initialWolfCount=assignments.filter(isWolfRole).length;
+        if(n===1)await this.ctx.storage.put(initialWolfKey,initialWolfCount);
+      }
+      const soloWolf=initialWolfCount<2,
+        soloLabel=String((assignments.find(isWolfRole)||{}).roleName||"Sói").slice(0,80);
+      queue.push({id:"wolf-pack-bite",kind:"wolf-pack-bite",label:soloWolf?soloLabel:"Bầy Sói Cắn",soloWolf,
         // Every living Wolf wakes; Snow Wolf observes but cannot submit Bite
         // while another wolf survives.
         loginIds:eligiblePack.map(x=>normalizeLoginId(x.loginId)),playerIds:eligiblePack.map(x=>"member:"+normalizeLoginId(x.loginId)),
