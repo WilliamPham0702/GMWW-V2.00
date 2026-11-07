@@ -3282,7 +3282,7 @@ async function exportGmwwSave(){
       try{
         const file=new File([text],name,{type:'application/json'});
         if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:name});return}
-        const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+        alert('Thiết bị này không hỗ trợ chia sẻ file. Hãy dùng SAO CHÉP (nếu có) hoặc xuất trên iPhone/iPad.');
       }catch(err){if(err?.name!=='AbortError')alert('Không chia sẻ được: '+String(err?.message||err))}
     });
     if(text.length<=3*1048576)sheet.mk('SAO CHÉP',async()=>{
