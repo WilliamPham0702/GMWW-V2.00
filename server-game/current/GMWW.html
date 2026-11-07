@@ -63,7 +63,7 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
 })();
 </script>
 
-<title>GMWW V3.312</title>
+<title>GMWW V3.313</title>
 <link rel="stylesheet" href="style.css?v=gmww-v3268-template-dock">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
@@ -1295,7 +1295,7 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
     if(title)new MutationObserver(syncLobbyState).observe(title,{childList:true,subtree:true,characterData:true});
     window.addEventListener('focus',syncLobbyState);
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncLobbyState()});
-    setInterval(syncLobbyState,1000);
+    setInterval(()=>{if(document.visibilityState!=='hidden')syncLobbyState()},1000);
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

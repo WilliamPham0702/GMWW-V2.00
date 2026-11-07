@@ -2820,7 +2820,7 @@ function initBattleControls(){
   // Socket/UI transitions can be missed while the iPhone view is busy. The
   // heartbeat rechecks only the CURRENT authoritative turn, never a stale role.
   window.setInterval(()=>{
-    if(playSceneState.step!=='battle')return;
+    if(playSceneState.step!=='battle'||document.visibilityState==='hidden')return;
     battleTickCountdown();
     const now=Date.now();
     if(now-Number(battleState.autoAudioHeartbeatAt||0)<1200)return;

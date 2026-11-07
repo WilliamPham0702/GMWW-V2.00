@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.312';
+const VERSION='3.313';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -287,7 +287,7 @@ function initVillageSceneManager(){
   finally{rollback.disabled=false}
  });
   refreshVillageScenePublished().then(data=>villageSceneStatus(data.scene?.day||data.scene?.night?'Đang sử dụng bối cảnh tùy chỉnh.':'Đang sử dụng bối cảnh mặc định ban đầu.')).catch(error=>villageSceneStatus('Không nạp được bối cảnh: '+error.message));
- setInterval(()=>{void refreshVillageScenePublished().catch(()=>{})},5000);
+ setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active'))void refreshVillageScenePublished().catch(()=>{})},5000);
 }
 document.addEventListener('DOMContentLoaded',initVillageSceneManager);
 
@@ -3960,7 +3960,7 @@ function ensurePlayGlobalVillagePoll(){
   if(isLivePlayRoom()){stopPlayGlobalVillagePoll();return}
   if(playSceneRuntime.villagePollTimer)return;
   playSyncGlobalVillageMotion(true);
-  playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy)playSyncGlobalVillageMotion(false)},1500)
+  playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState!=='visible'||playSceneRuntime.busy)return;const anyMoving=(playSceneRuntime.players||[]).some(p=>p?.movementStatus==='moving');if(!anyMoving&&Date.now()-Number(playSceneRuntime.lastSyncAt||0)<5000)return;playSyncGlobalVillageMotion(false)},1500)
 }
 function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN||playRealtimeLooksStale()))playSyncRoom(false)},2500)}
 // V3.301 realtime watchdog: the Durable Object owns the turn clock. If no socket
@@ -8296,7 +8296,7 @@ function initBattleControls(){
   // Socket/UI transitions can be missed while the iPhone view is busy. The
   // heartbeat rechecks only the CURRENT authoritative turn, never a stale role.
   window.setInterval(()=>{
-    if(playSceneState.step!=='battle')return;
+    if(playSceneState.step!=='battle'||document.visibilityState==='hidden')return;
     battleTickCountdown();
     const now=Date.now();
     if(now-Number(battleState.autoAudioHeartbeatAt||0)<1200)return;

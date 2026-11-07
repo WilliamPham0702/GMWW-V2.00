@@ -708,7 +708,7 @@ function ensurePlayGlobalVillagePoll(){
   if(isLivePlayRoom()){stopPlayGlobalVillagePoll();return}
   if(playSceneRuntime.villagePollTimer)return;
   playSyncGlobalVillageMotion(true);
-  playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy)playSyncGlobalVillageMotion(false)},1500)
+  playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState!=='visible'||playSceneRuntime.busy)return;const anyMoving=(playSceneRuntime.players||[]).some(p=>p?.movementStatus==='moving');if(!anyMoving&&Date.now()-Number(playSceneRuntime.lastSyncAt||0)<5000)return;playSyncGlobalVillageMotion(false)},1500)
 }
 function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN||playRealtimeLooksStale()))playSyncRoom(false)},2500)}
 // V3.301 realtime watchdog: the Durable Object owns the turn clock. If no socket
