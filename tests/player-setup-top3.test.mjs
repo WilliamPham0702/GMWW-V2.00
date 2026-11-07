@@ -29,7 +29,8 @@ test('Player Web: bục Top 3 nằm trong làng (#game), thứ tự 02 – 01 �
 
 test('Player Web: chỉ hiện ở các bước setup (lobby), vào trận thì ẩn', () => {
   assert.match(part, /#game:not\(\[data-gmww-player-scene="lobby"\]\) #gmwwSetupTop3[^{]*\{display:none!important\}/);
-  assert.match(game, /game\.dataset\.gmwwPlayerScene=policy\.mode;\s*syncSetupTop3\(policy\.mode==='lobby'\)/);
+  assert.match(game, /game\.dataset\.gmwwPlayerScene=policy\.mode;\n  bar\.hidden=true;/); // giữ nguyên neo của bộ vá private-card
+  assert.match(game, /bar\.hidden=true;[^\n]*\n  syncSetupTop3\(policy\.mode==='lobby'\);/);
   assert.match(part, /function syncSetupTop3\(active\)\{\s*if\(!active\|\|!state\.member\)return;/);
 });
 
