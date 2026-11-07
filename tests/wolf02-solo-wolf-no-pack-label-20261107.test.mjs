@@ -12,3 +12,7 @@ test('WOLF-02 pack label follows the wolf count dealt at match start, not living
   assert.match(block,/label:soloWolf\?soloLabel:"Bầy Sói Cắn"/,'two or more dealt wolves keep the pack label');
   assert.doesNotMatch(block,/eligiblePack\.length\s*[<>=]/,'living wolf count must never pick the label');
 });
+
+test('WOLF-02 plain Sói Thường never gets a second wake from extra card functions',()=>{
+  assert.match(src,/row\.roleId!=="role_wolf"&&privateAssignments\.filter\(/);
+});

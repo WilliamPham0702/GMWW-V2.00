@@ -2113,8 +2113,10 @@ export class RoomDurableObject extends DurableObject {
     // Data-driven: only Wolfs with a configured non-Bite power need a second
     // private wake-up. A Wolf with only the shared Bite never wakes twice.
     const privateAssignments=await readNightAssignments(this.ctx.storage,meta.matchId);
+    // WOLF-02: plain Sói Thường has no power beyond the shared bite (card text), so a
+    // stray extra function on its stored card must never wake it a second time.
     const distinctWolf=arranged.wolves.filter(row=>row.artifacts?.length||
-      privateAssignments.filter(a=>String(a.roleId||"")===String(row.roleId||"")).some(a=>
+      row.roleId!=="role_wolf"&&privateAssignments.filter(a=>String(a.roleId||"")===String(row.roleId||"")).some(a=>
         (Array.isArray(a.roleCard?.functions)?a.roleCard.functions:[]).some(fn=>
           fn&&!fn.passive&&String(fn.actionId||fn.id||"")!=="action_wolf_bite"&&
           (!fn.phase||["night","any"].includes(fn.phase))&&
