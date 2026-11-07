@@ -416,7 +416,7 @@ function ensureOnline2DStyle(){
     #gmwwRoomSetup .setup-top b{display:block;color:#fff0a7;font-size:13px}.setup-top small{font-size:9px;color:#c9edf5}
     #gmwwRoomSetup .character-tray{position:absolute;left:8px;right:8px;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 68px);z-index:2;display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,minmax(82px,1fr));grid-auto-columns:72px;gap:7px;max-height:190px;overflow-x:auto;overflow-y:hidden;padding:9px;border:1px solid rgba(225,241,255,.34);border-radius:18px;background:rgba(2,25,40,.78);backdrop-filter:blur(10px);pointer-events:auto;scroll-snap-type:x proximity}
     #gmwwRoomSetup.choose-seat .character-tray{display:none}
-    #gmwwSetupTop3{position:fixed;left:50%;top:calc(max(122px,env(safe-area-inset-top) + 114px));transform:translateX(-50%);width:min(46vw,165px);display:flex;align-items:flex-end;justify-content:center;gap:3px;pointer-events:none;z-index:64}
+    #gmwwSetupTop3{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 14px);transform:translateX(-50%);width:min(46vw,165px);display:flex;align-items:flex-end;justify-content:center;gap:3px;pointer-events:none;z-index:64}
     #game:not([data-gmww-player-scene="lobby"]) #gmwwSetupTop3,#gmwwSetupTop3[hidden]{display:none!important}
     #gmwwSetupTop3 .top3-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center}
     #gmwwSetupTop3 .top3-char{height:31px;width:100%;display:flex;align-items:flex-end;justify-content:center}
