@@ -47,7 +47,7 @@ test('GM editor supports image apply and reset without iPhone preview',()=>{
  assert.doesNotMatch(gm,/gmww:village-preview/);
  assert.match(gm,/function applyGMVillageScene\(/);
  assert.match(gm,/function refreshVillageScenePublished\(/);
- assert.match(gm,/setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'[^}]*void refreshVillageScenePublished\(\)/); // PR #849: chỉ làm mới khi tab đang hiện
+ assert.match(gm,/setInterval\(\(\)=>\{if\(document\.visibilityState==='visible'&&document\.getElementById\('settings'\)\?\.classList\.contains\('active'\)\)void refreshVillageScenePublished\(\)/);
  assert.match(gmStyle,/#start #playWorld\.has-custom-scene/);
  assert.match(gmPlaySource,/shell\.dataset\.step=playSceneState\.step;applyGMVillageScene\(\)/);
  assert.equal(gm.slice(gm.indexOf('const villageSceneDraft='),gm.indexOf('const STATE_KEY=')),
