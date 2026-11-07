@@ -3256,6 +3256,72 @@ async function exportLocalGameData(){
   }catch(err){alert('Xuất dữ liệu thất bại: '+String(err?.message||err))}
   finally{if(btn){btn.disabled=false;if(label)label.textContent='XUẤT DỮ LIỆU CHƯA ĐỒNG BỘ'}}
 }
+// ---- Xuất / Nhập SAVE (chuyển dữ liệu local sang máy khác) ----
+function gmwwSaveFileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');return 'gmww-save-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+'.json'}
+function gmwwSaveSheet(id,title){
+  document.getElementById(id)?.remove();
+  const wrap=document.createElement('div');wrap.id=id;
+  wrap.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);display:flex;flex-direction:column;padding:16px;gap:12px;box-sizing:border-box;color:#fff;overflow:auto';
+  const h=document.createElement('div');h.style.cssText='font-size:18px;font-weight:800';h.textContent=title;
+  const body=document.createElement('div');body.style.cssText='font-size:14px;line-height:1.5;white-space:pre-wrap';
+  const row=document.createElement('div');row.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+  wrap.append(h,body,row);document.body.appendChild(wrap);
+  const mk=(label,fn)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='flex:1;min-width:120px;padding:14px;border-radius:10px;border:0;font-weight:700;font-size:15px';b.onclick=fn;row.appendChild(b);return b};
+  return {wrap,body,row,mk};
+}
+async function exportGmwwSave(){
+  const btn=document.getElementById('exportSaveData'),label=btn?.querySelector('b');
+  try{
+    if(btn){btn.disabled=true;if(label)label.textContent='ĐANG ĐÓNG GÓI…'}
+    const snap=await globalThis.gmwwBuildSaveSnapshot('GMWW '+VERSION);
+    const text=JSON.stringify(snap),name=gmwwSaveFileName(),s=snap.summary;
+    const mb=(text.length/1048576).toFixed(1);
+    const sheet=gmwwSaveSheet('gmwwSaveExportOverlay','XUẤT SAVE');
+    sheet.body.textContent='Đã đóng gói: '+s.localStorageKeys+' khóa local, '+s.indexedDbDatabases+' kho IndexedDB ('+s.indexedDbRecords+' bản ghi, '+s.binaryFiles+' tệp nhị phân) • '+mb+' MB.'+(s.errors.length?'\nCó '+s.errors.length+' lỗi đọc: '+s.errors.join('; '):'')+'\n\nNhấn LƯU / CHIA SẺ rồi chọn "Lưu vào Tệp" hoặc AirDrop để chuyển sang máy mới. Trên máy mới: Cài đặt → NHẬP SAVE.';
+    sheet.mk('LƯU / CHIA SẺ',async()=>{
+      try{
+        const file=new File([text],name,{type:'application/json'});
+        if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:name});return}
+        const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+      }catch(err){if(err?.name!=='AbortError')alert('Không chia sẻ được: '+String(err?.message||err))}
+    });
+    if(text.length<=3*1048576)sheet.mk('SAO CHÉP',async()=>{
+      try{await navigator.clipboard.writeText(text);alert('Đã sao chép. Trên máy mới: NHẬP SAVE → dán vào ô nội dung.')}catch{alert('Không sao chép được. Hãy dùng LƯU / CHIA SẺ.')}
+    });
+    sheet.mk('ĐÓNG',()=>sheet.wrap.remove());
+  }catch(err){alert('Xuất save thất bại: '+String(err?.message||err))}
+  finally{if(btn){btn.disabled=false;if(label)label.textContent='XUẤT SAVE'}}
+}
+function importGmwwSave(){
+  const sheet=gmwwSaveSheet('gmwwSaveImportOverlay','NHẬP SAVE');
+  let snap=null;
+  sheet.body.textContent='Chọn file save (.json) đã xuất từ máy cũ. Dữ liệu cùng tên trên máy này sẽ bị GHI ĐÈ; dữ liệu khác được giữ nguyên.';
+  const file=document.createElement('input');file.type='file';file.accept='.json,application/json,text/plain';file.style.cssText='color:#fff;font-size:14px';
+  const paste=document.createElement('textarea');paste.placeholder='…hoặc dán nội dung file save vào đây';paste.style.cssText='width:100%;min-height:90px;font:11px/1.35 monospace;background:#111;color:#eee;border:1px solid #444;border-radius:8px;padding:8px;box-sizing:border-box';
+  const info=document.createElement('div');info.style.cssText='font-size:14px;line-height:1.5;white-space:pre-wrap;color:#fff1a5';
+  sheet.wrap.insertBefore(file,sheet.row);sheet.wrap.insertBefore(paste,sheet.row);sheet.wrap.insertBefore(info,sheet.row);
+  const doImport=sheet.mk('NHẬP VÀO MÁY NÀY',async()=>{
+    if(!snap)return;
+    if(!confirm('Ghi đè dữ liệu cùng tên trên máy này bằng file save? Ứng dụng sẽ tự khởi động lại sau khi nhập.'))return;
+    doImport.disabled=true;doImport.textContent='ĐANG NHẬP…';
+    try{
+      const r=await globalThis.gmwwRestoreSave(snap);
+      info.textContent='Đã nhập: '+r.localStorageWritten+' khóa local, '+r.indexedDbRecords+' bản ghi IndexedDB ('+r.indexedDbDatabases+' kho).'+(r.missingStores.length?'\nBỏ qua kho chưa có trên máy: '+r.missingStores.join(', '):'')+(r.errors.length?'\nLỗi: '+r.errors.join('; '):'')+'\nĐang khởi động lại…';
+      const snapRef=snap;
+      setTimeout(()=>{try{globalThis.gmwwReapplySaveLocalStorage(snapRef)}catch{}location.reload()},r.errors.length?4000:1500);
+    }catch(err){info.textContent='Nhập thất bại: '+String(err?.message||err);doImport.disabled=false;doImport.textContent='NHẬP VÀO MÁY NÀY'}
+  });
+  doImport.disabled=true;
+  sheet.mk('ĐÓNG',()=>sheet.wrap.remove());
+  const load=text=>{
+    const parsed=globalThis.gmwwParseSave(text);snap=parsed.ok?parsed.snap:null;doImport.disabled=!snap;
+    if(!snap){info.textContent=parsed.error;return}
+    const s=snap.summary||{};
+    info.textContent='File hợp lệ • xuất lúc '+String(snap.exportedAt||'?').replace('T',' ').slice(0,16)+' • từ '+String(snap.app||'?')+'\n'+Object.keys(snap.localStorage).length+' khóa local, '+snap.indexedDB.length+' kho IndexedDB ('+(s.indexedDbRecords??'?')+' bản ghi).'+(String(snap.app||'')&&String(snap.app)!=='GMWW '+VERSION?'\nLưu ý: file từ phiên bản khác ('+snap.app+'), máy này đang chạy GMWW '+VERSION+'. Nên cập nhật hai máy cùng phiên bản trước khi nhập.':'');
+  };
+  file.onchange=async()=>{const f=file.files&&file.files[0];if(!f)return;info.textContent='Đang đọc file…';try{load(await f.text())}catch(err){snap=null;doImport.disabled=true;info.textContent='Không đọc được file: '+String(err?.message||err)}};
+  paste.oninput=()=>{const t=paste.value.trim();if(t)load(t)};
+}
 function renderGameTemplateLibrary(){
   const box=document.getElementById('gameTemplateLibraryList');if(!box)return;box.innerHTML='';
   if(!playSceneRuntime.gameTemplates.length){box.innerHTML='<div class="member-empty">Chưa có Ván Mẫu. Nhấn + để tạo trước khi chơi.</div>';return}
