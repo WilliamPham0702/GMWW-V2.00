@@ -658,6 +658,10 @@ if(game){
     const stage=document.querySelector('.stage');stage.addEventListener('click',event=>{if(!setupState.walkEnabled)return;if(event.target.closest('.player,.seat-empty,.hud,.scene-controls,.fire,.gmww-portal,.gmww-portal-notice'))return;const r=stage.getBoundingClientRect(),raw=layout.fromScreen(event.clientX-r.left,event.clientY-r.top,r.width,r.height);if(!layout.inside(raw.x,raw.y))return;const point=layout.clampPoint(raw.x,raw.y);window.parent.postMessage({type:'gmww:ground-click',...point},window.location.origin)});
     document.querySelector('.fire')?.addEventListener('click',()=>window.parent.postMessage({type:'gmww:fire-click'},window.location.origin));
     window.addEventListener('resize',()=>{render();placeFire();renderPortal()});
+    // First open on iOS Safari: the stage height settles after the toolbar moves,
+    // often without a window resize. Re-run layout whenever the stage is measured
+    // again, so names and sprites are placed from the same real size.
+    if(typeof ResizeObserver==='function'&&stageElement)new ResizeObserver(()=>{render();placeFire();renderPortal()}).observe(stageElement);
     window.addEventListener('gmww:village-fire-anchor',placeFire);
 
 
