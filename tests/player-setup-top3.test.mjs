@@ -39,6 +39,12 @@ test('Player Web: tải Top 3 có cache 60s và không gọi dồn', () => {
   assert.match(part, /<60000/);
 });
 
+test('Player Web: Character trên bục có chuyển động nhẹ (CSS, không timer), tôn trọng giảm chuyển động', () => {
+  assert.match(part, /@keyframes gmwwTop3Idle/);
+  assert.match(part, /\.top3-char img\{transform-origin:50% 100%;animation:gmwwTop3Idle/);
+  assert.match(part, /prefers-reduced-motion:reduce\)\{#gmwwSetupTop3 \.top3-char img\{animation:none\}/);
+});
+
 test('Player Web: bản đóng gói khớp nguồn', async () => {
   const packaged = read('src/gmww-members-live.js');
   assert.match(packaged, /renderSetupTop3/);
