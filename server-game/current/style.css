@@ -8886,3 +8886,4 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
   content:"";position:absolute;left:6px;top:50%;width:26px;height:26px;transform:translateY(-50%);pointer-events:none;
   background:url("./action-icons/gmww-gallows-nominate-b.png") center/contain no-repeat;
 }
+#gmwwCfQuotaNote[data-status="warn"]{color:#ffe19c}#gmwwCfQuotaNote[data-status="over"]{color:#ffb8c0;font-weight:700}#gmwwCfQuotaNote[data-status="ok"]{color:#a5ffd1}

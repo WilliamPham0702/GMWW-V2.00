@@ -103,3 +103,37 @@ for(const schema of [0,3]) test(`public status rejects unknown report schema ${s
   assert.equal(response.status,503);
  }finally{globalThis.fetch=original}
 });
+
+/* Quota meter (GM Server Settings): aggregate usage only, no secrets. */
+import { summarizeUsage, usageStatus } from "../tools/cloudflare-admin/worker.mjs";
+test("usage status thresholds: ok <80, warn >=80, over >=100",()=>{
+ assert.equal(usageStatus(79.9),"ok");assert.equal(usageStatus(80),"warn");assert.equal(usageStatus(100),"over");
+});
+test("summarizeUsage computes day percent against free limits and uses the worst metric",()=>{
+ const out=summarizeUsage({day:[{sum:{requests:85000,errors:3}}],doDay:[{sum:{requests:10000}}],
+  month:[{sum:{requests:900000}}],doMonth:[{sum:{requests:50000}}]},new Date("2026-11-07T03:00:00Z"));
+ assert.equal(out.percent.workers,85);assert.equal(out.percent.durableObjects,10);
+ assert.equal(out.status,"warn");assert.equal(out.month.workers,900000);
+ assert.equal(JSON.stringify(out).includes("token"),false);
+});
+test("public usage route answers aggregate JSON with CORS and never leaks the token",async()=>{
+ const original=globalThis.fetch;let seenAuth="";
+ try{
+  globalThis.fetch=async(url,init)=>{seenAuth=init.headers.authorization;
+   return new Response(JSON.stringify({data:{viewer:{accounts:[{day:[{sum:{requests:100,errors:0}}],doDay:[{sum:{requests:5}}],month:[{sum:{requests:100}}],doMonth:[{sum:{requests:5}}]}]}}}),{status:200})};
+  const env={CLOUDFLARE_ACCOUNT_ID:"a".repeat(32),CF_MANAGEMENT_API_TOKEN:"t".repeat(30)};
+  const r=await worker.fetch(new Request("https://admin.test/api/public-usage"),env);
+  assert.equal(r.status,200);assert.equal(r.headers.get("access-control-allow-origin"),"*");
+  const data=await r.json();assert.equal(data.status,"ok");assert.equal(seenAuth,"Bearer "+env.CF_MANAGEMENT_API_TOKEN);
+  assert.equal(JSON.stringify(data).includes(env.CF_MANAGEMENT_API_TOKEN),false);
+ }finally{globalThis.fetch=original}
+});
+test("public usage route reports missing permission instead of fake numbers",async()=>{
+ const original=globalThis.fetch;
+ try{
+  globalThis.fetch=async()=>new Response(JSON.stringify({data:null,errors:[{message:"not authorized"}]}),{status:200});
+  const env={CLOUDFLARE_ACCOUNT_ID:"a".repeat(32),CF_MANAGEMENT_API_TOKEN:"t".repeat(30)};
+  const r=await worker.fetch(new Request("https://admin.test/api/public-usage"),env);
+  assert.equal(r.status,503);assert.match((await r.json()).error,/Account Analytics Read/);
+ }finally{globalThis.fetch=original}
+});
