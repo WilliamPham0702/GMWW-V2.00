@@ -29,6 +29,7 @@ function syncPlayerPresentation(){
   const policy=playerScenePolicy(state.room),previous=gmwwLastPlayerSceneMode;
   const me=currentRoomPlayer(),seat=Number(me?.seatId||0),joined=!!(state.roomCode&&state.participantId),hasRole=!!state.role&&policy.rolesReleased;
   game.dataset.gmwwPlayerScene=policy.mode;
+  syncSetupTop3(policy.mode==='lobby');
   bar.hidden=true; // Existing top menu and bottom status are the only information surfaces.
   const key=[policy.mode,policy.phase,joined,seat,hasRole,state.room?.seatsLocked].join('|');
   if(key!==gmwwPlayerPresentationSignature){

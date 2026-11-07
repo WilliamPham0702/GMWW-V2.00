@@ -17,19 +17,25 @@ test('Worker: /api/members/top3 công khai, cache 60s, chỉ trả dữ liệu t
   assert.match(body, /b\.games-a\.games/); // cùng thứ tự xếp hạng với GM
 });
 
-test('Player Web: bục Top 3 chỉ nằm trong màn setup (#gmwwRoomSetup)', () => {
+const game = read('src/player-web-src/40-cards-and-game.part');
+
+test('Player Web: bục Top 3 nằm trong làng (#game), thứ tự 02 – 01 – 03, Character thật', () => {
   assert.match(part, /function renderSetupTop3\(\)/);
-  assert.match(part, /for\(const idx of \[1,0,2\]\)/);       // thứ tự 02 – 01 – 03
-  assert.match(part, /el\.appendChild\(box\)/);               // gắn vào overlay setup, không gắn vào game
-  assert.match(part, /renderSetupTop3\(\);el\.classList\.toggle\('open'/);
-  assert.match(part, /gameCharacterImageUrl\(cid\)/);         // Character thật
+  assert.match(part, /for\(const idx of \[1,0,2\]\)/);
+  assert.match(part, /game\.appendChild\(box\)/);
+  assert.match(part, /gameCharacterImageUrl\(cid\)/);
   assert.match(part, /\.place1 \.top3-podium/);
 });
 
-test('Player Web: không còn Top 3 khi vào ván', () => {
-  const closeFn = part.slice(part.indexOf('function closeRoomSetup()'));
-  assert.match(closeFn.slice(0, 200), /classList\.remove\('open'\)/);
-  assert.match(part, /#gmwwRoomSetup\{position:fixed;inset:0;z-index:82;display:none/);
+test('Player Web: chỉ hiện ở các bước setup (lobby), vào trận thì ẩn', () => {
+  assert.match(part, /#game:not\(\[data-gmww-player-scene="lobby"\]\) #gmwwSetupTop3[^{]*\{display:none!important\}/);
+  assert.match(game, /game\.dataset\.gmwwPlayerScene=policy\.mode;\s*syncSetupTop3\(policy\.mode==='lobby'\)/);
+  assert.match(part, /function syncSetupTop3\(active\)\{\s*if\(!active\|\|!state\.member\)return;/);
+});
+
+test('Player Web: tải Top 3 có cache 60s và không gọi dồn', () => {
+  assert.match(part, /state\.setupTop3Busy/);
+  assert.match(part, /<60000/);
 });
 
 test('Player Web: bản đóng gói khớp nguồn', async () => {
