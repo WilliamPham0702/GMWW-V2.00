@@ -416,7 +416,8 @@ function ensureOnline2DStyle(){
     #gmwwRoomSetup .setup-top b{display:block;color:#fff0a7;font-size:13px}.setup-top small{font-size:9px;color:#c9edf5}
     #gmwwRoomSetup .character-tray{position:absolute;left:8px;right:8px;bottom:calc(max(8px,env(safe-area-inset-bottom)) + 68px);z-index:2;display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,minmax(82px,1fr));grid-auto-columns:72px;gap:7px;max-height:190px;overflow-x:auto;overflow-y:hidden;padding:9px;border:1px solid rgba(225,241,255,.34);border-radius:18px;background:rgba(2,25,40,.78);backdrop-filter:blur(10px);pointer-events:auto;scroll-snap-type:x proximity}
     #gmwwRoomSetup.choose-seat .character-tray{display:none}
-    #gmwwSetupTop3{position:absolute;left:50%;top:calc(max(58px,env(safe-area-inset-top) + 52px) + 56px);transform:translateX(-50%);width:min(92vw,330px);display:flex;align-items:flex-end;justify-content:center;gap:6px;pointer-events:none;z-index:1}
+    #gmwwSetupTop3{position:fixed;left:50%;top:calc(max(122px,env(safe-area-inset-top) + 114px));transform:translateX(-50%);width:min(92vw,330px);display:flex;align-items:flex-end;justify-content:center;gap:6px;pointer-events:none;z-index:64}
+    #game:not([data-gmww-player-scene="lobby"]) #gmwwSetupTop3,#gmwwSetupTop3[hidden]{display:none!important}
     #gmwwSetupTop3 .top3-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center}
     #gmwwSetupTop3 .top3-char{height:62px;width:100%;display:flex;align-items:flex-end;justify-content:center}
     #gmwwSetupTop3 .top3-char img{max-height:62px;max-width:100%;object-fit:contain;filter:drop-shadow(0 3px 4px #00141c99)}
@@ -539,20 +540,26 @@ function renderRoomSetup(){
     else hint.textContent='Chạm dấu + để chọn vị trí trực tiếp.'+(state.selectedSeatId?' • Đã chọn vị trí '+state.selectedSeatId:'');
   }
   const confirm=$('#gmwwSetupConfirm');if(confirm){confirm.hidden=walk;confirm.disabled=!hasCharacter||!state.selectedSeatId;confirm.textContent=state.selectedSeatId?'XÁC NHẬN VỊ TRÍ '+state.selectedSeatId:'CHỌN VỊ TRÍ TRÊN LÀNG'}
-  renderSetupTop3();el.classList.toggle('open',!!state.roomSetupOpen)
+  el.classList.toggle('open',!!state.roomSetupOpen)
 }
 async function loadSetupTop3(force){
   const now=Date.now();
+  if(state.setupTop3Busy)return state.setupTop3;
   if(!force&&Array.isArray(state.setupTop3)&&now-Number(state.setupTop3At||0)<60000)return state.setupTop3;
-  try{const d=await api('/api/members/top3');state.setupTop3=Array.isArray(d?.top)?d.top.slice(0,3):[];state.setupTop3At=now}catch(e){state.setupTop3=Array.isArray(state.setupTop3)?state.setupTop3:[]}
+  state.setupTop3Busy=true;state.setupTop3At=now; // lỗi cũng chờ đủ 60s mới thử lại, tránh gọi dồn
+  try{const d=await api('/api/members/top3');state.setupTop3=Array.isArray(d?.top)?d.top.slice(0,3):[]}catch(e){state.setupTop3=Array.isArray(state.setupTop3)?state.setupTop3:[]}
+  finally{state.setupTop3Busy=false}
   return state.setupTop3
 }
 function renderSetupTop3(){
-  const el=$('#gmwwRoomSetup');if(!el)return;
+  const game=$('#game');if(!game)return;
   const top=Array.isArray(state.setupTop3)?state.setupTop3.slice(0,3):[];let box=$('#gmwwSetupTop3');
-  if(!top.length){box?.remove();return}
-  if(!box){box=document.createElement('div');box.id='gmwwSetupTop3';box.setAttribute('aria-label','Top 3 tỷ lệ thắng');el.appendChild(box)}
-  box.replaceChildren();
+  if(!top.length){if(box){box.hidden=true;box.dataset.sig=''}return}
+  ensureOnline2DStyle();
+  if(!box){box=document.createElement('div');box.id='gmwwSetupTop3';box.setAttribute('aria-label','Top 3 tỷ lệ thắng');game.appendChild(box)}
+  const sig=JSON.stringify(top.map(m=>[m.displayName,m.gameCharacterId,m.rate]));
+  box.hidden=false;if(box.dataset.sig===sig)return;
+  box.dataset.sig=sig;box.replaceChildren();
   for(const idx of [1,0,2]){
     const m=top[idx];if(!m)continue;
     const col=document.createElement('div');col.className='top3-col place'+(idx+1);
@@ -566,8 +573,14 @@ function renderSetupTop3(){
     pod.append(num,nm,pc);col.append(ch,pod);box.appendChild(col)
   }
 }
+// Top 3 chỉ ở các bước setup (Sảnh chờ → Phát Vai); vào trận thì CSS ẩn theo data-gmww-player-scene.
+function syncSetupTop3(active){
+  if(!active||!state.member)return;
+  renderSetupTop3();
+  void loadSetupTop3().then(renderSetupTop3)
+}
 async function openRoomSetup(){
-  state.roomSetupOpen=true;void loadSetupTop3().then(renderSetupTop3);await loadGameCharacters();const me=currentRoomPlayer();state.selectedGameCharacterId=String(me?.gameCharacterId||state.member?.gameCharacterId||'');state.selectedSeatId=Number(me?.seatId||0)||Number(me?.moveTargetSeatId||0)||null;renderRoomSetup();syncVillageFrame();scheduleMovementCompletion(me)
+  state.roomSetupOpen=true;await loadGameCharacters();const me=currentRoomPlayer();state.selectedGameCharacterId=String(me?.gameCharacterId||state.member?.gameCharacterId||'');state.selectedSeatId=Number(me?.seatId||0)||Number(me?.moveTargetSeatId||0)||null;renderRoomSetup();syncVillageFrame();scheduleMovementCompletion(me)
 }
 function closeRoomSetup(){state.roomSetupOpen=false;$('#gmwwRoomSetup')?.classList.remove('open');syncVillageFrame()}
 async function saveRoomSetup(){
