@@ -824,7 +824,10 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
               <div><small>PREVIEW ĐƯỢC BẢO VỆ</small><b id="gmwwCfProtected">—</b></div>
               <div><small>CHƯA ĐỐI CHIẾU</small><b id="gmwwCfUnlinked">—</b></div>
               <div><small>ĐÃ DỌN LƯỢT GẦN NHẤT</small><b id="gmwwCfDeleted">—</b></div>
+              <div><small>QUOTA WORKER HÔM NAY</small><b id="gmwwCfQuotaWorkers">—</b></div>
+              <div><small>QUOTA DO HÔM NAY</small><b id="gmwwCfQuotaDo">—</b></div>
             </div>
+            <small class="maintenance-detail" id="gmwwCfQuotaNote" role="status">Chưa tải mức dùng quota.</small>
             <small class="maintenance-detail" id="gmwwCfLastRun" role="status">Chưa tải được báo cáo kiểm toán.</small>
             <div class="health-v236-actions" id="gmwwCfActions">
               <button class="settings-action settings-action-server" id="gmwwCfRefresh" type="button"><span>↻</span><b>LÀM MỚI</b></button>
@@ -1291,7 +1294,26 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
   const actions='https://github.com/WilliamPham0702/GMWW-V2.00/actions/workflows/cloudflare-maintenance.yml';
   const get=id=>document.getElementById(id);
   const set=(id,value)=>{const el=get(id);if(el)el.textContent=String(value)};
+  const usageUrl='https://gmww-cloudflare-admin.williampham0702.workers.dev/api/public-usage';
+  const fmt=n=>Number.isFinite(n)?n.toLocaleString('vi-VN'):'—';
+  async function refreshUsage(){
+    try{
+      const response=await fetch(usageUrl,{cache:'no-store'});
+      const data=await response.json().catch(()=>null);
+      if(!response.ok||!data)throw new Error(data&&data.error?data.error:'HTTP '+response.status);
+      const cell=(id,used,limit,percent)=>set(id,Number.isFinite(percent)?fmt(used)+' / '+fmt(limit)+' ('+percent+'%)':'—');
+      cell('gmwwCfQuotaWorkers',data.day.workers,data.limits.workersDay,data.percent.workers);
+      cell('gmwwCfQuotaDo',data.day.durableObjects,data.limits.durableObjectsDay,data.percent.durableObjects);
+      const msg={ok:'Quota còn an toàn.',warn:'⚠ Quota trên 80% — chuẩn bị Server B.',over:'⛔ Quota đã hết hoặc vượt — cần chuyển Server B.'}[data.status]||'';
+      set('gmwwCfQuotaNote',msg+' Tháng này: '+fmt(data.month.workers)+' request Worker, '+fmt(data.month.durableObjects)+' request DO.');
+      const note=get('gmwwCfQuotaNote');if(note){note.dataset.status=data.status;note.style.color={ok:'#a5ffd1',warn:'#ffe19c',over:'#ffb8c0'}[data.status]||'';note.style.fontWeight=data.status==='over'?'700':''}
+    }catch(error){
+      set('gmwwCfQuotaWorkers','—');set('gmwwCfQuotaDo','—');
+      set('gmwwCfQuotaNote','Không đọc được quota: '+String(error.message||error).slice(0,110));
+    }
+  }
   async function refresh(){
+    refreshUsage();
     set('gmwwCfState','ĐANG QUÉT');
     try{
       const response=await fetch(report,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
