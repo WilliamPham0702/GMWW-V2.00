@@ -1306,7 +1306,7 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
       cell('gmwwCfQuotaDo',data.day.durableObjects,data.limits.durableObjectsDay,data.percent.durableObjects);
       const msg={ok:'Quota còn an toàn.',warn:'⚠ Quota trên 80% — chuẩn bị Server B.',over:'⛔ Quota đã hết hoặc vượt — cần chuyển Server B.'}[data.status]||'';
       set('gmwwCfQuotaNote',msg+' Tháng này: '+fmt(data.month.workers)+' request Worker, '+fmt(data.month.durableObjects)+' request DO.');
-      const note=get('gmwwCfQuotaNote');if(note)note.dataset.status=data.status;
+      const note=get('gmwwCfQuotaNote');if(note){note.dataset.status=data.status;note.style.color={ok:'#a5ffd1',warn:'#ffe19c',over:'#ffb8c0'}[data.status]||'';note.style.fontWeight=data.status==='over'?'700':''}
     }catch(error){
       set('gmwwCfQuotaWorkers','—');set('gmwwCfQuotaDo','—');
       set('gmwwCfQuotaNote','Không đọc được quota: '+String(error.message||error).slice(0,110));
