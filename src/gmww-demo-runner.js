@@ -28,6 +28,9 @@ async function context(room,meta){
   if(!cards.some(c=>c.id===a.roleId))cards.push({...catalog?.roleCard,...a.roleCard,...owned?.roleCard,id:a.roleId,name:a.roleName});
   if(a.artifactId&&!artifacts.some(c=>c.id===a.artifactId)){const art=await store.get('artifact:'+a.loginId);artifacts.push({...art?.artifactCard,id:a.artifactId,name:a.artifactName})}
  }
+ // Tráng Gương: the copied role's card must be offered to its owner even if no player holds that role now.
+ for(const link of (await store.list({prefix:'mirrorLink:'+String(meta.matchId||'')+':'})).values())
+  if(link?.roleId&&!cards.some(c=>c.id===link.roleId))cards.push({...link.roleCard,id:link.roleId,name:link.roleName});
  const cycle=(await store.get('artifactCycle:'+(meta.cyclePhase==='morning'?meta.matchId+':day:'+meta.cycleNight:artifactCycleKey(meta.matchId,meta.cycleNight))))||{accepted:[]};
  return {store,assignments,players,rows,cfg,cards,artifacts,cycle};
 }
