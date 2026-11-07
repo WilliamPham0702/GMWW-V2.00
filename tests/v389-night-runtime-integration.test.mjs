@@ -22,6 +22,7 @@ import {drunkDeadCards,drunkDeckView,isPassiveInformationAction} from '../src/gm
 import {buildPrivateDeliverySnapshot,privateDeliveryArtifact} from '../src/gmww-delivery-snapshot.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
+import {insertMirrorSteps,mirrorLinkKey,mirrorLinkPrefix,buildMirrorLink,mirrorFunctions} from '../src/gmww-mirror-rules.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
 // or production credentials; method bodies are not copied into the fixture.
@@ -46,6 +47,7 @@ const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMetho
   partitionNightSpecialRoles,witchSaveTargetAllowed,inheritedRolePlans,buildPrivateDeliverySnapshot,
   drunkDeadCards,drunkDeckView,isPassiveInformationAction,
   gameLabelKey:vm.runInNewContext(source.match(/function gameLabelKey\(v\)\{[^\n]+/)[0]+";gameLabelKey"),
+  insertMirrorSteps,mirrorLinkKey,mirrorLinkPrefix,buildMirrorLink,mirrorFunctions,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);

@@ -741,7 +741,7 @@ async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
  }
  state.onlineBusy=true;
  try{
-   const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
+   const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),signal:AbortSignal.timeout(20000),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
    gmwwOnlineConfirmedTargets=pick.targets.slice();gmwwOnlineConfirmedUntil=Date.now()+5500;
    setTimeout(()=>gmwwOnlineTurnEffects(state.onlineActions||[]),5600);
    gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';gmwwOnlineRestoreHint();toast('Đã thực hiện: '+String(action.name||'Hành động')+(gmwwOnlineCanRestore?' · bấm Khôi phục ở menu dưới nếu cần làm lại':''));
@@ -750,6 +750,7 @@ async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
  finally{state.onlineBusy=false;gmwwCardRestore(700);await refreshPrivateRole(true)}
 }
 function gmwwOnlineActionErrorText(e){
+ if(e?.name==='TimeoutError'||e?.name==='AbortError')return 'Máy chủ phản hồi chậm, hãy thử lại.';
  const raw=String(e?.message||e||'').trim();
  const map={
   DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN:'Bạn đã dùng hành động này hoặc chưa đến lượt của bạn.',
