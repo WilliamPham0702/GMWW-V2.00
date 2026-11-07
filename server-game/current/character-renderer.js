@@ -21,7 +21,7 @@
     return local<duration?motion:'idle-breathe';
   }
   function tickLiveIdle(now=Date.now()){for(const root of [...LIVE_IDLE_ROOTS]){if(!root?.isConnected){LIVE_IDLE_ROOTS.delete(root);continue}if(root.dataset.state==='idle'){const action=liveActionMotionAt(root.dataset.characterId,now);root.dataset.motion=action||liveIdleMotionAt(root.dataset.characterId,now)}}return LIVE_IDLE_ROOTS.size}
-  function ensureLiveIdleTicker(){if(liveIdleTimer||typeof setInterval!=='function')return;liveIdleTimer=setInterval(()=>tickLiveIdle(Date.now()),240)}
+  function ensureLiveIdleTicker(){if(liveIdleTimer||typeof setInterval!=='function')return;liveIdleTimer=setInterval(()=>{if(typeof document!=='undefined'&&document.hidden)return;if(!LIVE_IDLE_ROOTS.size){clearInterval(liveIdleTimer);liveIdleTimer=0;return}tickLiveIdle(Date.now())},240)}
   function idlePhaseMsFor(characterId){const m=String(characterId||'').match(/(\d{1,2})$/),n=m?Number(m[1]):1;return -((n*431+137)%6800)}
   function motionProfileFor(state='idle',rigId='rig-male-muscular-v1'){
     const normal=String(rigId)==='rig-male-normal-v1';

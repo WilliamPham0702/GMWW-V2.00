@@ -1295,7 +1295,7 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
     if(title)new MutationObserver(syncLobbyState).observe(title,{childList:true,subtree:true,characterData:true});
     window.addEventListener('focus',syncLobbyState);
     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncLobbyState()});
-    setInterval(syncLobbyState,1000);
+    setInterval(()=>{if(document.visibilityState!=='hidden')syncLobbyState()},1000);
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
