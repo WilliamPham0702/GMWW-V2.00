@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.312';
+const VERSION='3.313';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -287,7 +287,7 @@ function initVillageSceneManager(){
   finally{rollback.disabled=false}
  });
   refreshVillageScenePublished().then(data=>villageSceneStatus(data.scene?.day||data.scene?.night?'Đang sử dụng bối cảnh tùy chỉnh.':'Đang sử dụng bối cảnh mặc định ban đầu.')).catch(error=>villageSceneStatus('Không nạp được bối cảnh: '+error.message));
- setInterval(()=>{void refreshVillageScenePublished().catch(()=>{})},5000);
+ setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active'))void refreshVillageScenePublished().catch(()=>{})},5000);
 }
 document.addEventListener('DOMContentLoaded',initVillageSceneManager);
 
