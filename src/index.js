@@ -58,6 +58,7 @@ import { PUBLIC_ENTRY_LIMITS, publicEntryPolicy, stepPublicEntryWindow } from ".
 import { recoverLegacyRuntimeManifest } from "./gmww-runtime-recovery.js";
 import { isRuntimePackageReady } from "./gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "./gmww-update-release-notes.js";
+import { normalizeClientError, appendClientError, formatClientErrorReport } from "./gmww-client-error-log.js";
 import { selectLegacyV350RuntimeDelta, selectVerifiedRuntimeV352Delta, selectVerifiedRuntimeV353Delta, selectVerifiedRuntimeV354Delta, selectVerifiedRuntimeV358Delta, selectVerifiedRuntimeV359Delta, selectVerifiedRuntimeV360Delta, selectVerifiedRuntimeV361Delta, selectVerifiedRuntimeV362Delta, selectVerifiedRuntimeV363Delta, selectVerifiedRuntimeV364Delta, selectVerifiedRuntimeV365Delta, selectVerifiedRuntimeV366Delta, selectVerifiedRuntimeV367Delta, selectVerifiedRuntimeV368Delta, selectVerifiedRuntimeV369Delta, selectVerifiedRuntimeV370Delta, selectVerifiedRuntimeV371Delta, selectVerifiedRuntimeV372Delta, selectVerifiedRuntimeV373Delta, selectVerifiedRuntimeV375Delta, selectVerifiedRuntimeV376Delta, selectVerifiedRuntimeV377Delta, selectVerifiedRuntimeV378Delta, selectVerifiedRuntimeV381Delta, selectVerifiedRuntimeV382Delta, selectVerifiedRuntimeV383Delta, selectVerifiedRuntimeV385Delta, selectVerifiedRuntimeV386Delta, selectVerifiedRuntimeV387Delta, selectVerifiedRuntimeV388Delta, selectVerifiedRuntimeV389Delta, selectVerifiedRuntimeV390Delta, selectVerifiedRuntimeV391Delta, selectVerifiedRuntimeV392Delta, selectVerifiedRuntimeV393Delta, selectVerifiedRuntimeV394Delta, selectVerifiedRuntimeV395Delta, selectVerifiedRuntimeV396Delta, selectVerifiedRuntimeV397Delta, selectVerifiedRuntimeV398Delta, selectVerifiedRuntimeV399Delta, selectVerifiedRuntimeV3100Delta, selectVerifiedRuntimeV3101Delta, selectVerifiedRuntimeV3103Delta, selectVerifiedRuntimeV3104Delta } from "./gmww-ota-delta.js";
 
 // ASSASSIN-01: a target killed THIS night (wolf bite, etc.) is still woken for the 👍👎 choice.
@@ -67,7 +68,7 @@ const assassinPromptBlocked=(rows,loginId,matchId,night)=>(Array.isArray(rows)?r
   ["expelled","dead"].includes(String(y?.type||""))&&y?.effectActive!==false&&(!y?.matchId||!matchId||String(y.matchId)===String(matchId))&&
   (String(y.type)==="expelled"||String(y?.source||"")==="assassin"||Number(y?.night)!==Number(night)));
 
-const PROJECT="GMWW-V2.00",VERSION="V3.310",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3310-remove-arena3d",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
+const PROJECT="GMWW-V2.00",VERSION="V3.311",NATIVE_SHELL_VERSION="3.264",UPDATE_CHANNEL_REV="runtime-3311-error-log-perf",ROOM_IDLE_TTL=72*60*60*1000,ROOM_RESULT_REOPEN_DELAY=10000,ROOM_DIRECTORY_LEASE=180*1000,ROOM_ALPHABET="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",ROOM_CODE_LENGTH=6;
 const LOGIN_RE=/^[A-Za-z0-9._]{4,20}$/,SESSION_TTL=30*24*60*60*1000,PBKDF2_ITERATIONS=100000,MEMBER_STORE_NAME="__GMWW_MEMBERS__",PRESENCE_TTL=90000;
 const GM_SYNC_TOKEN="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
 const GM_PRESENCE_TTL=75000;
@@ -206,6 +207,9 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-settings/gm-presence"&&request.method==="GET")return this.globalGmPresenceGet();
     if(url.pathname==="/global-settings/lobby-reset"&&request.method==="POST")return this.globalLobbyResetBump(await safeJson(request));
     if(url.pathname==="/global-settings/gm-presence"&&request.method==="POST")return this.globalGmPresencePut(await safeJson(request));
+    if(url.pathname==="/client-errors"&&request.method==="POST")return this.clientErrorAppend(await safeJson(request));
+    if(url.pathname==="/client-errors"&&request.method==="GET")return this.clientErrorList();
+    if(url.pathname==="/client-errors"&&request.method==="DELETE"){await this.ctx.storage.delete("clientErrorLog");return j({ok:true,items:[]})}
     if(url.pathname==="/global-settings/gm-move"&&request.method==="POST")return this.globalGmMovePut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
       if(await this.ctx.storage.get("meta"))return j({ok:false,error:"ROOM_EXISTS"},409);
@@ -764,6 +768,16 @@ export class RoomDurableObject extends DurableObject {
     const rec={generation:Math.max(0,Number(old?.generation||0))+1,updatedAt:new Date().toISOString(),source:String(body?.source||"GM_LOBBY").slice(0,40)};
     await this.ctx.storage.put("globalSetting:lobbyReset",rec);
     return j({ok:true,...rec});
+  }
+  async clientErrorAppend(body){
+    const entry=normalizeClientError(body);if(!entry)return j({ok:false,error:"INVALID_ERROR"},400);
+    const r=appendClientError(await this.ctx.storage.get("clientErrorLog"),entry);
+    if(r.changed)await this.ctx.storage.put("clientErrorLog",r.state);
+    return j({ok:true,stored:r.changed,reason:r.reason});
+  }
+  async clientErrorList(){
+    const st=await this.ctx.storage.get("clientErrorLog")||{items:[],dropped:0};
+    return j({ok:true,items:st.items,dropped:st.dropped||0,report:formatClientErrorReport(st.items,VERSION)});
   }
   async globalGmPresenceGet(){
     const rec=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),lastSeenAt=Math.max(0,Number(rec?.lastSeenAt||0));
@@ -4181,6 +4195,16 @@ export default {async fetch(request,env){
     const rr=await memberStore(env).fetch(new Request("https://member.internal/global-settings/web-sync",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({version:VERSION,source:body?.source||"GM_APP"})}));
     if(!rr.ok)return rr;
     const data=await rr.json();return j({ok:true,...data,version:VERSION,serverVersion:VERSION,webVersion:VERSION});
+  }
+  if(url.pathname==="/api/client-error"&&request.method==="POST"){
+    const text=await request.text();if(text.length>3000)return j({ok:false,error:"TOO_LARGE"},413);
+    let body=null;try{body=JSON.parse(text)}catch(_){}
+    if(!body)return j({ok:false,error:"INVALID_JSON"},400);
+    return memberStore(env).fetch(new Request("https://member.internal/client-errors",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}));
+  }
+  if(url.pathname==="/api/gm/client-errors"&&(request.method==="GET"||request.method==="DELETE")){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return memberStore(env).fetch(new Request("https://member.internal/client-errors",{method:request.method}));
   }
   if(url.pathname==="/api/gm/storage-optimizer"&&request.method==="GET"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
