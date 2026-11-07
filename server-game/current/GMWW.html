@@ -815,6 +815,16 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
             <p class="settings-notice-empty" id="settingsNoticeEmpty">Chọn một công cụ phía trên để xem kết quả tại đây.</p>
             <ol id="settingsNoticeList" class="settings-notice-list" aria-live="polite" aria-relevant="additions"></ol>
           </section>
+          <div class="settings-operation-console" id="gmwwErrorLogPanel" aria-label="Nhật ký lỗi tập trung" role="region">
+            <div class="settings-operation-console-heading"><span class="ops-dot"></span><b>NHẬT KÝ LỖI · GM + PLAYER WEB</b><span class="ops-pill" id="gmwwErrLogState">CHƯA TẢI</span></div>
+            <ol class="settings-notice-list" id="gmwwErrLogList" aria-live="polite"></ol>
+            <small class="maintenance-detail" id="gmwwErrLogNote" role="status">Nhấn LÀM MỚI để xem lỗi mới nhất.</small>
+            <div class="health-v236-actions">
+              <button class="settings-action settings-action-server" id="gmwwErrLogRefresh" type="button"><span>↻</span><b>LÀM MỚI</b></button>
+              <button class="settings-action settings-action-server" id="gmwwErrLogCopy" type="button"><span>⧉</span><b>SAO CHÉP BÁO LỖI</b></button>
+              <button class="settings-action settings-action-server" id="gmwwErrLogClear" type="button"><span>✕</span><b>XÓA NHẬT KÝ</b></button>
+            </div>
+          </div>
           <div class="settings-operation-console" id="gmwwCloudflarePanel" aria-label="Quản lý Cloudflare ngay trong Server" role="region" hidden>
             <div class="settings-operation-console-heading"><span class="ops-dot"></span><b>CLOUDFLARE · TÀI NGUYÊN &amp; BẢO TRÌ</b><span class="ops-pill" id="gmwwCfState">CHƯA TẢI</span></div>
             <div class="ops-status-grid" aria-live="polite">
@@ -1353,6 +1363,72 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
+})();
+</script>
+<script>
+/* GMWW central error log: GM reports its own errors and lists GM + Player Web errors (read via GM token). */
+(function(){
+  'use strict';
+  const get=id=>document.getElementById(id);
+  const sent=new Set();let last=0,count=0,report='';
+  function send(kind,message,stack){
+    try{
+      const text=String(message||'').slice(0,200);
+      if(!text||/AbortError|ResizeObserver loop|Script error\.?$/i.test(text))return;
+      const key=kind+'|'+text.slice(0,80);
+      if(sent.has(key)||count>=5||Date.now()-last<20000)return;
+      sent.add(key);count++;last=Date.now();
+      fetch(GMWW_SERVER_BASE+'/api/client-error',{method:'POST',headers:{'content-type':'application/json'},keepalive:true,
+        body:JSON.stringify({source:'gm',kind,message:text,stack:String(stack||'').slice(0,600),page:'gm',device:(navigator.userAgent||'').slice(0,80)})}).catch(()=>{});
+    }catch(_){}
+  }
+  window.addEventListener('error',e=>{if(e&&e.message)send('javascript',e.message,e.error&&e.error.stack)});
+  window.addEventListener('unhandledrejection',e=>{const r=e&&e.reason;send('promise',typeof r==='string'?r:(r&&r.message)||'',r&&r.stack)});
+  async function call(method){
+    const r=await fetch(GMWW_SERVER_BASE+'/api/gm/client-errors',{method,headers:{Authorization:'Bearer '+GMWW_GM_AUTH},cache:'no-store'});
+    const data=await r.json().catch(()=>null);
+    if(!r.ok||!data||!data.ok)throw new Error('HTTP '+r.status);
+    return data;
+  }
+  function render(data){
+    const list=get('gmwwErrLogList');if(!list)return;
+    list.replaceChildren();
+    for(const row of data.items.slice(0,15)){
+      const li=document.createElement('li');
+      li.textContent='['+row.source+'] x'+(row.count||1)+' · '+new Date(row.lastAt).toLocaleString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh'})+(row.room?' · phòng '+row.room:'')+' — '+row.message;
+      list.appendChild(li);
+    }
+    report=String(data.report||'');
+    const st=get('gmwwErrLogState');if(st)st.textContent=data.items.length?data.items.length+' LỖI':'KHÔNG LỖI';
+    const note=get('gmwwErrLogNote');
+    if(note)note.textContent=data.items.length?'Hiển thị tối đa 15 lỗi mới nhất.'+(data.dropped?' Đã bỏ '+data.dropped+' lỗi dồn dập để tiết kiệm quota.':''):'Chưa ghi nhận lỗi từ GM hoặc Player Web.';
+  }
+  async function refresh(){
+    const st=get('gmwwErrLogState');if(st)st.textContent='ĐANG TẢI';
+    try{render(await call('GET'))}
+    catch(error){if(st)st.textContent='KHÔNG KẾT NỐI';const note=get('gmwwErrLogNote');if(note)note.textContent='Không tải được nhật ký: '+String(error.message||error).slice(0,80)}
+  }
+  async function copy(){
+    const note=get('gmwwErrLogNote');
+    try{
+      if(!report)await refresh();
+      if(!report)throw new Error('Chưa có nội dung');
+      await navigator.clipboard.writeText(report);
+      if(note)note.textContent='Đã sao chép báo lỗi — dán cho Claude hoặc GPT.';
+    }catch(error){if(note)note.textContent='Không sao chép được: '+String(error.message||error).slice(0,80)}
+  }
+  async function clear(){
+    if(!window.confirm('Xóa toàn bộ nhật ký lỗi trên Server?'))return;
+    try{await call('DELETE');report='';render({items:[],dropped:0,report:''})}
+    catch(error){const note=get('gmwwErrLogNote');if(note)note.textContent='Không xóa được: '+String(error.message||error).slice(0,80)}
+  }
+  function init(){
+    const r=get('gmwwErrLogRefresh');if(!r||r.dataset.bound)return;r.dataset.bound='1';
+    r.addEventListener('click',refresh);
+    get('gmwwErrLogCopy')?.addEventListener('click',copy);
+    get('gmwwErrLogClear')?.addEventListener('click',clear);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 </body>
