@@ -4477,7 +4477,7 @@ export default {async fetch(request,env){
   const gameCharacterImageRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/image$/);if(gameCharacterImageRoute&&request.method==="GET")return character40Image(env,gameCharacterImageRoute[1],request);
   if(url.pathname==="/api/rooms"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/directory/rooms/list");
   if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);
-  const gmObserver=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gm-observer\/(state|action|chat-mute|auto)$/);if(gmObserver)return gmObserverApi(env,gmObserver[1],gmObserver[2],request);
+  const gmObserver=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gm-observer\/(state|action|interaction|day-action|chat-mute|auto)$/);if(gmObserver)return gmObserverApi(env,gmObserver[1],gmObserver[2],request);
   const room=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)$/);if(room&&request.method==="GET")return publicRoomState(env,room[1],request);
   const joinApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/join$/);if(joinApi&&request.method==="POST")return joinRoom(env,joinApi[1],request);
   const readyApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/ready$/);if(readyApi&&request.method==="POST")return readyRoom(env,readyApi[1],request);
@@ -4880,7 +4880,7 @@ async function gmPreloadTemplateAssets(env,raw,request){
   return j({ok:true,ready:true,mode:"reference",templateId:id,revision:status.revision,count:requested.length,assetIds:requested});
 }
 const GM_OBSERVER_LOGIN_ID="gm0702";
-const GM_OBSERVER_ROUTES={state:{path:"/gm/state",method:"GET"},action:{path:"/gm/battle-action",method:"POST"},"chat-mute":{path:"/gm/chat/moderate",method:"POST"},auto:{path:"/gm/auto",method:"POST"}};
+const GM_OBSERVER_ROUTES={state:{path:"/gm/state",method:"GET"},action:{path:"/gm/battle-action",method:"POST"},interaction:{path:"/gm/interaction",method:"POST"},"day-action":{path:"/gm/day-action",method:"POST"},"chat-mute":{path:"/gm/chat/moderate",method:"POST"},auto:{path:"/gm/auto",method:"POST"}};
 // GM0702 observes a live room from Player Web without joining `players` (no role, artifact or headcount impact).
 // Authority is the member session of GM0702; the room is then called with the existing GM sync token.
 async function gmObserverApi(env,rawCode,op,request){
