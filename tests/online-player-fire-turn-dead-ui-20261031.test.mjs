@@ -27,7 +27,7 @@ test('dead chat uses blue notice and frozen day chat uses explicit reason',()=>{
  assert.match(chat,/Bạn đang bị đóng băng nên không chat được\./);
 });
 test('Player packaged script remains exact source and keeps GM menu',()=>{
- const parts=['00-bootstrap-and-session','10-role-card-artwork','20-village-and-profile','30-rooms-and-realtime','35-online-chat','36-gm-observer','40-cards-and-game','50-privacy-and-runtime'];
+ const parts=['00-bootstrap-and-session','10-role-card-artwork','20-village-and-profile','30-rooms-and-realtime','35-online-chat','36-gm-observer','37-player-rooms','40-cards-and-game','50-privacy-and-runtime'];
  const body=parts.map(p=>readFileSync('src/player-web-src/'+p+'.part','utf8')).join('')
   .replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(process.cwd()))+";\n");
  assert.equal(gmwwMembersLiveScript,body);

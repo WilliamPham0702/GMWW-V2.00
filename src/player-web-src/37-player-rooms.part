@@ -1,0 +1,86 @@
+
+/* Player-created online rooms: create a room, then (as owner) set it up with a Ván Mẫu and start.
+   Server routes: POST /api/player-rooms, GET /api/player-rooms/templates, /api/player-rooms/:code/owner/*.
+   The owner only plays under AutoGM; this panel never shows any role. */
+(function gmwwPlayerRooms(){
+  const KEY='gmwwOwnedRoom';
+  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],state:null,msg:''};
+  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
+  const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.code&&v.token?v:null}catch(_){return null}};
+  const save=v=>{try{if(v)localStorage.setItem(KEY,JSON.stringify(v));else localStorage.removeItem(KEY)}catch(_){}};
+  const base=()=>'/api/player-rooms/'+encodeURIComponent(pr.own.code)+'/owner/';
+  const oh=()=>({Authorization:'Bearer '+pr.own.token});
+  const callOwner=(op,method,body)=>api(base()+op,{method,headers:oh(),body:body===undefined?undefined:JSON.stringify(body)});
+  function say(t){pr.msg=t||'';const s=document.getElementById('gmwwPrStatus');if(s)s.textContent=pr.msg}
+  function errText(e){
+    const c=String(e?.data?.error||'');
+    return ({OWNER_ALREADY_HAS_ROOM:'Bạn đang có một phòng rồi.',PLAYER_ROOM_LIMIT:'Đã đủ số phòng người chơi cùng lúc. Hãy thử lại sau.',ROOM_NOT_IN_LOBBY:'Ván đã bắt đầu.',ROOM_NOT_FOUND:'Phòng không còn tồn tại.',UNAUTHORIZED:'Không có quyền chủ phòng.',TEMPLATE_NOT_FOUND:'Không tìm thấy Ván Mẫu.',ROLE_COUNT_MISMATCH:'Số vai không khớp số người ngồi.',SEATS_NOT_LOCKED:'Hãy khoá ghế trước khi bắt đầu.'})[c]||e?.message||'Có lỗi xảy ra.';
+  }
+  async function run(fn){if(pr.busy)return;pr.busy=true;try{await fn()}catch(e){
+    if(e?.status===404||e?.data?.error==='ROOM_NOT_FOUND'){if(pr.own){pr.own=null;save(null);pr.state=null}}
+    say(errText(e))}finally{pr.busy=false;render()}}
+  async function refresh(){
+    if(!pr.own)return;
+    try{pr.state=await api(base()+'state',{headers:oh()})}
+    catch(e){if(e?.status===404||e?.status===401){pr.own=null;pr.state=null;save(null);say('Phòng đã đóng.')}}
+    render();
+  }
+  async function create(){
+    const nameInput=document.getElementById('gmwwPrName');
+    const d=await api('/api/player-rooms',{method:'POST',headers:auth(),body:JSON.stringify({roomName:(nameInput?.value||'').trim()||undefined})});
+    pr.own={code:d.roomCode,token:d.ownerToken};save(pr.own);
+    try{await window.joinRoom(d.roomCode)}catch(_){}
+    say('Đã tạo phòng '+d.roomCode+'.');await refresh();
+  }
+  async function loadTemplates(){
+    const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];
+  }
+  function row(label,fn,cls){const b=el('button',cls||null,label);b.type='button';b.addEventListener('click',()=>run(fn));return b}
+  function render(){
+    const panel=document.getElementById('gmwwPrPanel');if(!panel)return;panel.hidden=!pr.open;if(!pr.open)return;
+    panel.textContent='';
+    if(!pr.own){
+      panel.append(el('b',null,'Tạo phòng của tôi'),el('div','gmww-pr-info','Bạn chơi cùng mọi người, Quản Trò Tự Động điều hành. Tối đa 30 người.'));
+      const name=el('input');name.id='gmwwPrName';name.placeholder='Tên phòng (không bắt buộc)';name.maxLength=60;
+      panel.append(name,row('TẠO PHÒNG',create,'gmww-pr-main'));
+    }else{
+      const st=pr.state,room=st?.room||{},players=Array.isArray(st?.players)?st.players:[],phase=String(room.phase||'lobby').toLowerCase();
+      panel.append(el('b',null,(room.roomName||'Phòng')+' • Mã '+pr.own.code),el('div','gmww-pr-info',(phase==='running'?'Đang chơi':'Sảnh chờ')+' • '+players.length+' người'));
+      if(phase!=='running'){
+        const sel=el('select');sel.id='gmwwPrTpl';sel.append(new Option('— Chọn Ván Mẫu —',''));
+        for(const t of pr.templates)sel.append(new Option(t.name+' ('+t.playerCount+' người)',t.id));
+        const cfg=st?.config;if(cfg?.id)sel.value=cfg.id;
+        panel.append(sel,row('ÁP DỤNG VÁN MẪU',async()=>{const id=document.getElementById('gmwwPrTpl')?.value;if(!id){say('Hãy chọn Ván Mẫu.');return}await callOwner('template','POST',{templateId:id});say('Đã áp dụng Ván Mẫu.');await refresh()}));
+        if(cfg?.roles?.length)panel.append(el('div','gmww-pr-info','Bộ bài: '+cfg.roles.map(r=>r.roleName+' ×'+r.count).join(', ')));
+        const locked=room.seatsLocked===true||room.locked===true;
+        panel.append(row(locked?'MỞ KHOÁ GHẾ':'KHOÁ GHẾ',async()=>{await callOwner('seat-lock','POST',{locked:!locked});await refresh()}),
+          row('CHIA GHẾ NGẪU NHIÊN',async()=>{await callOwner('seats-randomize','POST',{});await refresh()}),
+          row('BẮT ĐẦU VÁN',async()=>{await callOwner('start','POST',{});say('Ván đã bắt đầu.');await refresh()},'gmww-pr-main'));
+        const list=el('div','gmww-pr-list');
+        for(const p of players){
+          const line=el('div','gmww-pr-player');line.append(el('span',null,(p.seatId?('#'+p.seatId+' '):'')+(p.displayName||p.loginId||'?')));
+          if(String(p.loginId||'')!==String(st?.ownerLoginId||'')){const k=el('button',null,'Kick');k.type='button';k.addEventListener('click',()=>run(async()=>{await callOwner('kick','POST',{loginId:p.loginId});await refresh()}));line.append(k)}
+          list.append(line);
+        }
+        panel.append(list);
+      }else{
+        panel.append(el('div','gmww-pr-info','Ván tự động kết thúc khi có phe thắng.'),row('KẾT THÚC SỚM',async()=>{if(!confirm('Kết thúc ván ngay?'))return;await callOwner('end','POST',{});say('Đã kết thúc ván.');await refresh()}));
+      }
+    }
+    const status=el('div','gmww-pr-info');status.id='gmwwPrStatus';status.textContent=pr.msg;panel.append(status);
+  }
+  function mount(){
+    if(pr.mounted||!state?.token||!state?.member?.loginId)return;pr.mounted=true;
+    document.head.appendChild(el('style',null,'.gmww-pr-fab{position:fixed;right:12px;bottom:136px;z-index:9000;width:44px;height:44px;border-radius:50%;border:0;background:#7c3aed;color:#fff;font-size:22px;font-weight:700}'
+      +'.gmww-pr-panel{position:fixed;right:8px;bottom:188px;z-index:9000;width:min(330px,92vw);max-height:62vh;overflow:auto;background:rgba(10,20,40,.95);color:#fff;border-radius:14px;padding:12px;font-size:14px;display:flex;flex-direction:column;gap:8px}'
+      +'.gmww-pr-panel[hidden]{display:none}.gmww-pr-panel input,.gmww-pr-panel select{padding:8px;border-radius:8px;border:0;width:100%}'
+      +'.gmww-pr-panel button{padding:9px;border-radius:10px;border:0;background:#334155;color:#fff;font-weight:600}.gmww-pr-panel button.gmww-pr-main{background:#16a34a}'
+      +'.gmww-pr-info{font-size:12px;opacity:.85}.gmww-pr-list{display:flex;flex-direction:column;gap:4px}.gmww-pr-player{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:4px 6px;border-radius:8px;background:#16233f}.gmww-pr-player button{padding:4px 8px;background:#7f1d1d}'));
+    const fab=el('button','gmww-pr-fab','＋');fab.type='button';fab.setAttribute('aria-label','Phòng của tôi');
+    fab.addEventListener('click',()=>{pr.open=!pr.open;render();if(pr.open){loadTemplates().then(render).catch(()=>{});refresh()}});
+    const panel=el('div','gmww-pr-panel');panel.id='gmwwPrPanel';panel.hidden=true;document.body.append(fab,panel);
+    pr.own=load();
+    clearInterval(pr.timer);pr.timer=setInterval(()=>{if(pr.open&&pr.own&&!document.hidden&&!pr.busy)refresh()},4000);
+  }
+  setInterval(mount,1500);
+})();

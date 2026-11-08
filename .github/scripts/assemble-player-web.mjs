@@ -14,6 +14,7 @@ const parts=[
   '30-rooms-and-realtime.part',
   '35-online-chat.part',
   '36-gm-observer.part',
+  '37-player-rooms.part',
   '40-cards-and-game.part',
   '50-privacy-and-runtime.part'
 ];
