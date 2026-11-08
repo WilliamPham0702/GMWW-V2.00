@@ -2126,7 +2126,13 @@ export class RoomDurableObject extends DurableObject {
     const privateAssignments=await readNightAssignments(this.ctx.storage,meta.matchId);
     // WOLF-02: plain Sói Thường has no power beyond the shared bite (card text), so a
     // stray extra function on its stored card must never wake it a second time.
-    const distinctWolf=arranged.wolves.filter(row=>row.artifacts?.length||
+    const packStep=queue.find(x=>x.kind==="wolf-pack-bite"&&x.soloWolf===true);
+    // WOLF-03: a match dealt one wolf has ONE wolf turn; its Artifacts ride on that turn instead of a second "Sói Thường" turn.
+    const soloMerged=new Set();
+    if(packStep)for(const row of arranged.wolves){
+      if(!row.artifacts?.length||row.roleId!==(assignments.find(isWolfRole)||{}).roleId)continue;
+      packStep.artifacts=[...(packStep.artifacts||[]),...row.artifacts];soloMerged.add(row)}
+    const distinctWolf=arranged.wolves.filter(row=>!soloMerged.has(row)).filter(row=>row.artifacts?.length||
       row.roleId!=="role_wolf"&&privateAssignments.filter(a=>String(a.roleId||"")===String(row.roleId||"")).some(a=>
         (Array.isArray(a.roleCard?.functions)?a.roleCard.functions:[]).some(fn=>
           fn&&!fn.passive&&String(fn.actionId||fn.id||"")!=="action_wolf_bite"&&
@@ -2927,7 +2933,7 @@ export class RoomDurableObject extends DurableObject {
     if(!step||String(step.id)!==turnId)return j({ok:false,error:"STALE_TURN"},409);
     const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
     const owners=step.kind==="role-group"?(step.roles||[]).flatMap(row=>row.artifacts||[]):
-      step.kind==="role"?step.artifacts||[]:step.kind==="early-artifact-window"?step.actions||[]:
+      ["role","wolf-pack-bite"].includes(step.kind)?step.artifacts||[]:step.kind==="early-artifact-window"?step.actions||[]:
       step.kind==="artifact-main"?[step]:[];
     if(artifactId){
       if(!owners.some(a=>String(a.artifactId)===artifactId&&normalizeLoginId(a.loginId)===actorId))
@@ -3266,9 +3272,9 @@ export class RoomDurableObject extends DurableObject {
         return j({ok:false,error:"WITCH_USE_BATTLE_ACTION"},409);
       const actors=(step.loginIds||[step.loginId]).filter(Boolean).map(normalizeLoginId);
       const artifactActions=Array.isArray(step.actions)?step.actions:[];
-      if(step.kind==="early-artifact-window"||(["role","role-group"].includes(step.kind)&&body.artifactId)){
+      if(step.kind==="early-artifact-window"||(["role","role-group","wolf-pack-bite"].includes(step.kind)&&body.artifactId)){
         const artifactId=String(body.artifactId||"");
-        const options=step.kind==="role"?(Array.isArray(step.artifacts)?step.artifacts:[]):step.kind==="role-group"?(step.roles||[]).flatMap(role=>role.artifacts||[]):artifactActions;
+        const options=["role","wolf-pack-bite"].includes(step.kind)?(Array.isArray(step.artifacts)?step.artifacts:[]):step.kind==="role-group"?(step.roles||[]).flatMap(role=>role.artifacts||[]):artifactActions;
         const chosen=options.find(x=>String(x.artifactId)===artifactId&&claimedActor&&normalizeLoginId(x.loginId)===claimedActor);
         if(!chosen)return j({ok:false,error:"INVALID_ARTIFACT_FOR_TURN",message:"Artifact không thuộc lượt hoặc người thực hiện."},403);
         gmArtifactStep={...chosen,id:step.id+":"+chosen.artifactId+":"+chosen.loginId};
