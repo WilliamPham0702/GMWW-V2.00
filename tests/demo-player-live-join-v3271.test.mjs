@@ -25,7 +25,7 @@ test('Player Web joins single live DEMO but never grants another role without an
  assert.match(demo,/!ctx\.assignments\.some\(a=>a\.loginId===loginId\)/);
 });
 test('Source bundles are byte-identical to the released Player Web and GM',()=>{
- const parts=['00-bootstrap-and-session.part','10-role-card-artwork.part','20-village-and-profile.part','30-rooms-and-realtime.part','35-online-chat.part','40-cards-and-game.part','50-privacy-and-runtime.part'];
+ const parts=['00-bootstrap-and-session.part','10-role-card-artwork.part','20-village-and-profile.part','30-rooms-and-realtime.part','35-online-chat.part','36-gm-observer.part','40-cards-and-game.part','50-privacy-and-runtime.part'];
  const playerBody=parts.map(n=>read('src/player-web-src/'+n)).join('').replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(process.cwd()))+";\n");
  assert.equal(read('src/gmww-members-live.js'),'export const gmwwMembersLiveScript = '+JSON.stringify(playerBody)+';\n');
  const gmParts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];

@@ -1,0 +1,76 @@
+
+/* GM0702 observer: watch a live room from Player Web without joining it (no role, artifact or headcount impact).
+   Server routes: /api/rooms/:code/gm-observer/{state,interaction,chat-mute,auto}; only the GM0702 session is accepted. */
+(function gmwwGmObserver(){
+  const GM_LOGIN='gm0702';
+  const obs={open:false,code:'',room:null,players:[],selected:'',timer:0,busy:false,mutedIds:{},autoOn:true,mounted:false};
+  const isGmObserver=()=>String(state?.member?.loginId||'').trim().toLowerCase()===GM_LOGIN;
+  const base=()=>'/api/rooms/'+encodeURIComponent(obs.code)+'/gm-observer/';
+  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
+  async function call(op,method,body){
+    return api(base()+op,{method,headers:auth(),body:body===undefined?undefined:JSON.stringify(body)});
+  }
+  async function refresh(){
+    if(!obs.code)return;
+    try{
+      const d=await call('state','GET');
+      obs.room=d.room||null;obs.players=Array.isArray(d.players)?d.players:[];
+      if(typeof d.room?.autoGM==='boolean')obs.autoOn=d.room.autoGM;
+      render();
+    }catch(err){setStatus(err.message||'Không đọc được phòng.')}
+  }
+  function setStatus(text){const s=document.getElementById('gmwwGmObsStatus');if(s)s.textContent=text||''}
+  async function act(kind){
+    const id=obs.selected;
+    if(kind!=='auto'&&!id){setStatus('Hãy chọn người chơi trước.');return}
+    if(obs.busy)return;obs.busy=true;
+    try{
+      const ctx={matchId:obs.room?.matchId||'',cycleKey:obs.room?.cycleKey||'',night:Number(obs.room?.cycleNight||0)};
+      if(kind==='kill')await call('interaction','POST',{loginId:id,type:'dead',...ctx});
+      else if(kind==='save')await call('interaction','POST',{loginId:id,type:'clear_state',...ctx});
+      else if(kind==='mute'){const next=!obs.mutedIds[id];await call('chat-mute','POST',{loginId:id,muted:next});obs.mutedIds[id]=next}
+      else if(kind==='auto'){const next=!obs.autoOn;await call('auto','POST',{enabled:next});obs.autoOn=next}
+      setStatus('Đã thực hiện.');await refresh();
+    }catch(err){setStatus(err.message||'Có lỗi xảy ra.')}
+    finally{obs.busy=false;render()}
+  }
+  function render(){
+    const panel=document.getElementById('gmwwGmObsPanel');if(!panel)return;
+    panel.hidden=!obs.open;if(!obs.open)return;
+    const list=panel.querySelector('.gmww-gmobs-list');list.textContent='';
+    for(const p of obs.players){
+      const id=String(p.loginId||'').toLowerCase();if(!id)continue;
+      const row=el('button','gmww-gmobs-player'+(id===obs.selected?' is-selected':''),(p.displayName||p.name||id)+(obs.mutedIds[id]?' 🔇':''));
+      row.type='button';row.addEventListener('click',()=>{obs.selected=id;render()});list.appendChild(row);
+    }
+    const auto=panel.querySelector('[data-gmobs="auto"]');if(auto)auto.classList.toggle('is-on',obs.autoOn);
+    const info=panel.querySelector('.gmww-gmobs-info');
+    if(info)info.textContent=obs.room?('Phòng '+obs.code+' · '+(obs.players.length)+' người · '+String(obs.room.cyclePhase||obs.room.phase||'')):'Chưa quan sát phòng.';
+  }
+  function startPolling(){clearInterval(obs.timer);obs.timer=setInterval(()=>{if(obs.open&&!document.hidden)refresh()},4000)}
+  function mount(){
+    if(obs.mounted||!isGmObserver())return;obs.mounted=true;
+    const css=el('style',null,'.gmww-gmobs-fab{position:fixed;right:12px;bottom:84px;z-index:9000;width:44px;height:44px;border-radius:50%;border:0;background:#0f766e;color:#fff;font-weight:700}'
+      +'.gmww-gmobs-panel{position:fixed;right:8px;bottom:136px;z-index:9000;width:min(320px,92vw);max-height:60vh;overflow:auto;background:rgba(10,20,40,.94);color:#fff;border-radius:14px;padding:10px;font-size:14px}'
+      +'.gmww-gmobs-panel[hidden]{display:none}.gmww-gmobs-row{display:flex;gap:6px;margin:6px 0}.gmww-gmobs-row input{flex:1;min-width:0;padding:6px;border-radius:8px;border:0}'
+      +'.gmww-gmobs-list{display:flex;flex-direction:column;gap:4px;max-height:26vh;overflow:auto}.gmww-gmobs-player{text-align:left;padding:6px 8px;border-radius:8px;border:1px solid #334;background:#16233f;color:#fff}'
+      +'.gmww-gmobs-player.is-selected{border-color:#22d3ee;background:#0e4a5a}.gmww-gmobs-actions{display:flex;gap:6px;margin-top:8px}'
+      +'.gmww-gmobs-actions button{flex:1;padding:8px 4px;border-radius:10px;border:0;background:#334155;color:#fff;font-weight:600}.gmww-gmobs-actions button.is-on{background:#16a34a}'
+      +'.gmww-gmobs-info,#gmwwGmObsStatus{font-size:12px;opacity:.85;margin-top:6px}');
+    document.head.appendChild(css);
+    const fab=el('button','gmww-gmobs-fab','GM');fab.type='button';fab.setAttribute('aria-label','Quan sát GM');
+    fab.addEventListener('click',()=>{obs.open=!obs.open;if(obs.open&&!obs.code&&state.roomCode)obs.code=state.roomCode;render();if(obs.open)refresh()});
+    const panel=el('div','gmww-gmobs-panel');panel.id='gmwwGmObsPanel';panel.hidden=true;
+    const row=el('div','gmww-gmobs-row'),input=el('input');input.placeholder='Mã phòng';input.autocapitalize='characters';
+    const go=el('button',null,'Quan sát');go.type='button';
+    go.addEventListener('click',()=>{obs.code=String(input.value||'').trim().toUpperCase();obs.selected='';obs.mutedIds={};refresh()});
+    row.append(input,go);
+    const info=el('div','gmww-gmobs-info'),list=el('div','gmww-gmobs-list'),actions=el('div','gmww-gmobs-actions');
+    for(const [k,label] of [['save','✚ Cứu'],['kill','☠ Giết'],['mute','🔇 Câm'],['auto','🔔 Auto']]){
+      const b=el('button',null,label);b.type='button';b.dataset.gmobs=k;b.addEventListener('click',()=>act(k));actions.appendChild(b);
+    }
+    const status=el('div');status.id='gmwwGmObsStatus';
+    panel.append(row,info,list,actions,status);document.body.append(fab,panel);startPolling();render();
+  }
+  setInterval(mount,1500);
+})();
