@@ -54,9 +54,9 @@
   // A role turn may contain both role and owned Artifact actions.
   function actionsForTurn(turn,night,catalog,used=[]){
     if(!turn||turn.kind==="wolf-introduction"||turn.kind==="village-wakeup")return [];
-    if(turn.kind==="wolf-pack-bite")
-      return [{id:"wolf-pack:action_wolf_bite",roleId:"wolf-pack",actionId:"action_wolf_bite",name:"Sói Cắn",type:"effect_notice",
-        actorIds:[...(turn.biteActorIds||turn.loginIds||[])],targetCount:1,noSelf:false,allowDead:false,noTarget:false,effectIds:["effect_wolf_bite"]}];
+    const packBite=turn.kind==="wolf-pack-bite"?[{id:"wolf-pack:action_wolf_bite",roleId:"wolf-pack",actionId:"action_wolf_bite",name:"Sói Cắn",type:"effect_notice",
+        actorIds:[...(turn.biteActorIds||turn.loginIds||[])],targetCount:1,noSelf:false,allowDead:false,noTarget:false,effectIds:["effect_wolf_bite"]}]:null;
+    if(packBite&&!(turn.soloWolf&&Array.isArray(turn.artifacts)&&turn.artifacts.length))return packBite;
     const roles=Array.isArray(catalog?.cards)?catalog.cards:[],
       artifacts=Array.isArray(catalog?.artifacts)?catalog.artifacts:[],
       definitions=catalog?.actions||[];
@@ -114,6 +114,8 @@
     };
     if(turn.kind==="early-artifact-window")
       return (Array.isArray(turn.actions)?turn.actions:[]).filter(owner=>!alreadyUsed(owner)).flatMap(owner=>build(owner,true));
+    if(packBite)
+      return [...packBite,...turn.artifacts.filter(owner=>!alreadyUsed(owner)).flatMap(owner=>build(owner,true))];
     if(turn.kind==="role")
       return [...build(turn,false),...(Array.isArray(turn.artifacts)?turn.artifacts:[]).filter(owner=>!alreadyUsed(owner)).flatMap(owner=>build(owner,true))];
     if(turn.kind==="role-group"){
