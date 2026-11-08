@@ -8,6 +8,7 @@ import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-ni
 import {coinDeaths} from "./gmww-artifact-rules.js";
 import {seerShareNotices} from "./gmww-artifact-seer.js";
 import {swapRolePlans,artifactBiteDawn,needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
+import {mirrorFunctions,mirrorLinkKey,mirrorLinkPrefix,buildMirrorLink,insertMirrorSteps} from "./gmww-mirror-rules.js";
 import {foolEscapes,foolEscapeRow,foolVoteBans,peaceLoverIds,judgeDoubleActive} from "./gmww-gallows-cards.js";
 import {maidSuccession,threeBrothersNotices,ghostCheck,peekDeaths,peekPending,peekDecisionRows} from "./gmww-swap-info-rules.js";
 import {effectiveAssignments,stoneSkinFilter,fireSpreadDeaths,convertNotices} from "./gmww-wolf-variant-rules.js";
@@ -2135,6 +2136,9 @@ export class RoomDurableObject extends DurableObject {
     if(arranged.fairy)queue.push(arranged.fairy);
     if(specials.witch)queue.push(specials.witch);
     queue.push(...combineConfiguredTurns(groupConfiguredRoleTurns(arranged.rest),arranged.artifactTurns));
+    // Tráng Gương: copied-role owners wake again right after that role, every night after the one they copied on.
+    const mirrorLinks=[...(await this.ctx.storage.list({prefix:mirrorLinkPrefix(meta.matchId)})).values()].filter(link=>Number(link?.createdNight)<n);
+    if(mirrorLinks.length)insertMirrorSteps(queue,mirrorLinks,{minIndex:0,durationFor:id=>roleDuration.get(String(id))??defaultActionSec});
     queue.push({id:"village-wakeup",kind:"village-wakeup",label:"Làng ơi dậy đi",durationSec:0,status:"pending"});
     const first=queue[0]||null;if(first)first.startedAt=now;
     const firstDurationMs=first&&Number(first.durationSec)>0?Number(first.durationSec)*1000:0,autoEnabled=meta?.autoGM!==false;
@@ -2499,19 +2503,29 @@ export class RoomDurableObject extends DurableObject {
       return {ok:true,replacedOwn:true,changes:[],message:"Ngọc May Mắn: chủ nhận Artifact mới ("+art.artifactName+").",result:{newArtifactId:art.artifactId}};
     }
     if(artifactId==="artifact_23"){
+      // Tráng Gương: copy the ACTIVE functions of the target's role. The owner is woken again after
+      // that role's turn (this night if it is still ahead, and every later night). Own role card untouched.
       if(!targetId)return bad("TARGET_REQUIRED","Cần một mục tiêu.");
-      const tr=((await this.ctx.storage.get("roles:"+targetId))||[])[0],ar=((await this.ctx.storage.get("roles:"+actorId))||[]);
-      const own=ar[0];
-      if(!tr||!own)return bad("ROLE_NOT_FOUND","Không tìm thấy Vai Trò; chưa trừ lượt.");
-      const have=new Set((own.roleCard?.functions||[]).map(f=>String(f.actionId||f.id)));
-      const copied=(tr.roleCard?.functions||[]).filter(f=>f&&f.passive!==true&&!have.has(String(f.actionId||f.id))).map(f=>({...f,copiedFromLoginId:targetId,copiedByArtifact:"artifact_23"}));
-      if(!copied.length)return bad("NOTHING_TO_COPY","Mục tiêu không có chức năng chủ động để sao chép; chưa trừ lượt.");
-      const next=[{...own,roleCard:{...own.roleCard,functions:[...(own.roleCard?.functions||[]),...copied]}},...ar.slice(1)];
-      await this.ctx.storage.put("roles:"+actorId,next);await this.ctx.storage.put("role:"+actorId,next[0]);
-      meta.deliveryVersion=Math.max(1,Number(meta.deliveryVersion)||1)+1;
-      await this.ctx.storage.put("deliverySnapshot:"+actorId,buildPrivateDeliverySnapshot({matchId,matchRevision:Number(meta.matchRevision||0),deliveryVersion:meta.deliveryVersion,publishedAt:new Date().toISOString(),roles:next}));
-      await this.ctx.storage.put("meta",meta);
-      return {ok:true,changes:[],message:"Tráng Gương: đã sao chép "+copied.length+" chức năng thành chức năng số 2 với lượt dùng mới.",result:{copied:copied.map(f=>f.actionId||f.id)}};
+      if(targetId===actorId)return bad("MIRROR_SELF","Không thể sao chép chính mình; chưa trừ lượt.");
+      const linkKey=mirrorLinkKey(matchId,actorId);
+      if(await this.ctx.storage.get(linkKey))return bad("ALREADY_LINKED","Tráng Gương đã sao chép một vai trò; chưa trừ lượt.");
+      const roles=(await this.ctx.storage.get("roles:"+targetId))||[],tr=(Array.isArray(roles)?roles:[]).find(r=>r&&(!r.matchId||String(r.matchId)===String(matchId)))||roles[0];
+      if(!tr)return bad("ROLE_NOT_FOUND","Không tìm thấy Vai Trò; chưa trừ lượt.");
+      if(!mirrorFunctions(tr.roleCard).length)return bad("NOTHING_TO_COPY","Mục tiêu không có chức năng chủ động để sao chép; chưa trừ lượt.");
+      const now=new Date().toISOString(),link=buildMirrorLink({matchId,ownerId:actorId,targetId,role:tr,night:day,now});
+      await this.ctx.storage.put(linkKey,link);
+      if(String(meta.cyclePhase||"").toLowerCase()==="night"){
+        const rt=await this.getNightRuntime(meta,day,false);
+        if(rt&&!rt.completed){
+          const cfg=(await this.ctx.storage.get("gameConfig"))||{},fallback=Math.max(0,Number(cfg?.timing?.defaultActionSec??45)||0),
+            durations=new Map((Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>[String(r?.roleId||""),Math.max(0,Number(r?.actionDurationSec??fallback)||0)]));
+          if(insertMirrorSteps(rt.queue,[link],{minIndex:rt.cursor+1,durationFor:id=>durations.get(String(id))??fallback})){
+            rt.updatedAt=now;await this.ctx.storage.put(this.nightRuntimeKey(meta,day),rt);
+            this.broadcast({type:"night_turn",night:day,runtime:rt,source:"mirror",room:publicRoom(meta),serverTime:Date.now()});
+          }
+        }
+      }
+      return {ok:true,changes:[],message:"Tráng Gương: đã sao chép "+link.roleName+" ("+link.roleCard.functions.length+" chức năng). Bạn được gọi lại sau lượt "+link.roleName+" mỗi đêm.",result:{copiedRoleId:link.roleId,copied:link.roleCard.functions.map(f=>f.actionId||f.id)}};
     }
     if(artifactId==="artifact_31"){
       if(targets.length!==2)return bad("RUBY_NEEDS_TWO","Cần đúng hai người; chưa trừ lượt.");
@@ -2885,6 +2899,8 @@ export class RoomDurableObject extends DurableObject {
   async gmBattleAction(request,body){
     const actionStartedAt=Date.now();
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
+    // Storage-backed Artifacts always act as a night notice; the card's configured type is irrelevant.
+    if(body?.artifactId&&typeof needsStorageArtifact==="function"&&needsStorageArtifact(String(body.artifactId))&&String(body?.type||"").toLowerCase()!=="effect_notice")body={...body,type:"effect_notice"};
     const meta=auth.meta,matchId=String(meta.matchId||""),cycleKey=String(meta.cycleKey||""),
       token=String(body?.clientEventId||"").trim().slice(0,120),
       turnId=String(body?.turnId||""),actorId=normalizeLoginId(body?.actorId||""),
@@ -2962,7 +2978,13 @@ export class RoomDurableObject extends DurableObject {
       const roleId=String(roleStep.roleId||"");
       if(assassinAction&&roleId!=="role_assassin")return j({ok:false,error:"INVALID_ASSASSIN_ROLE"},403);
       const assigned=(await this.ctx.storage.get("assignments"))||[];
-      const row=assigned.find(a=>normalizeLoginId(a?.loginId)===actorId&&String(a?.roleId||"")===roleId);
+      let row=assigned.find(a=>normalizeLoginId(a?.loginId)===actorId&&String(a?.roleId||"")===roleId);
+      if(roleStep.mirror===true){
+        // Tráng Gương turn: the owner acts with the copied role's card, never with their own role.
+        const link=await this.ctx.storage.get(mirrorLinkKey(matchId,actorId));
+        if(!link||String(link.roleId)!==roleId)return j({ok:false,error:"INVALID_ROLE_OWNER"},403);
+        row={loginId:actorId,roleId,roleName:link.roleName,faction:"",roleCard:link.roleCard};
+      }
       if(!row)return j({ok:false,error:"INVALID_ROLE_OWNER"},403);
       // assignments is a public summary; limits live in the existing private role records.
       const storedRoles=await this.ctx.storage.get("roles:"+actorId),legacyRole=await this.ctx.storage.get("role:"+actorId);
@@ -3054,7 +3076,9 @@ export class RoomDurableObject extends DurableObject {
       artifactKey=artifactId?"artifact:"+actorId:null,
       useKey=artifactId?"artifactUse:"+actorId+":"+artifactId:null,
       cycleUseKey=artifactId?"artifactCycle:"+currentArtifactCycleKey(meta):null;
-    const keys=["interactions","assignments",...([roleUse?usageKey:null,artifactKey,useKey,cycleUseKey].filter(Boolean))];
+    const storageKeys=artifactId&&typeof needsStorageArtifact==="function"&&needsStorageArtifact(artifactId)?
+      ["artifactIssued:"+matchId,"artifactLinked:"+actorId,mirrorLinkKey(matchId,actorId),this.nightRuntimeKey(meta,Number(meta.cycleNight||1)),...targets.map(id=>"artifact:"+id)]:[];
+    const keys=[...new Set(["interactions","assignments",...([roleUse?usageKey:null,artifactKey,useKey,cycleUseKey].filter(Boolean)),...storageKeys])];
     const snapshot=async()=>{const entries=[];for(const key of keys){
       const value=await this.ctx.storage.get(key);
       entries.push({key,exists:value!==undefined&&value!==null,value:value===undefined?null:value});
@@ -3113,8 +3137,9 @@ export class RoomDurableObject extends DurableObject {
     const wolfOutcome=effectiveTargets.length&&['action_transfer_bite','action_wolf_bite','action_protect','action_witch_save'].includes(String(body?.actionId||''))?
       resolveWolfNight({assignments:await readNightAssignments(this.ctx.storage,meta.matchId),interactions:(await this.ctx.storage.get("interactions"))||[],players,
         matchId,night:Number(meta.cycleNight||0)}):null;
+    const storageResult=results.find(x=>x?.storageArtifact)?.storageArtifact||null;
     const result={ok:true,undoToken,targets,results,turnId,label:record.label,serverProcessingMs:Date.now()-actionStartedAt,
-      ...(revelation?{revelation}:{}),...(wolfOutcome?{wolfOutcome}: {})};
+      ...(storageResult?{revelation:{message:storageResult.message,artifactId:storageResult.artifactId}}:revelation?{revelation}:{}),...(wolfOutcome?{wolfOutcome}: {})};
     await this.ctx.storage.put(receiptKey,{fingerprint,result});
     // Never broadcast a private actor, targets or the undo ledger to member sockets.
     this.broadcast({type:"battle_action_confirmed",matchId,serverTime:Date.now()});
@@ -3166,6 +3191,58 @@ export class RoomDurableObject extends DurableObject {
     if(response.ok)await this.ctx.storage.put(receiptKey,{fingerprint,result:await response.clone().json()});
     return response;
   }
+  /* Storage-backed Artifacts at NIGHT (01,03,10,16,17,23,25,31,32): same server plan as the Day path.
+   * Consumption is taken first, and given back if the plan refuses, so an invalid use never costs a turn. */
+  async nightStorageArtifact(meta,body,step,players){
+    const matchId=String(meta.matchId||""),night=Math.max(1,Number(meta.cycleNight)||1),actorId=normalizeLoginId(body.actorId),
+      artifactId=String(body.artifactId||""),loginId=normalizeLoginId(body.loginId),
+      ids=(Array.isArray(body.targetIds)&&body.targetIds.length?body.targetIds:[loginId]).map(normalizeLoginId).filter(Boolean);
+    if(!ids.length||new Set(ids).size!==ids.length||ids.some(id=>!players["member:"+id]))return j({ok:false,error:"INVALID_ARTIFACT_TARGET"},400);
+    // gmBattleAction invokes this once per target; the plan runs exactly once, on the first.
+    if(loginId!==ids[0])return j({ok:true,secondaryTarget:true});
+    const guarded=["artifact:"+actorId,"artifactUse:"+actorId+":"+artifactId,"artifactCycle:"+currentArtifactCycleKey(meta),"assignments","interactions"],saved=[];
+    for(const key of guarded)saved.push([key,await this.ctx.storage.get(key)]);
+    const giveBack=async()=>{for(const [key,value] of saved){if(value===undefined||value===null)await this.ctx.storage.delete(key);else await this.ctx.storage.put(key,value)}};
+    const useError=await this.markGmArtifactTurnUsed(meta,step,ids[0],body.actionNonce,body);
+    if(useError)return useError;
+    const assignments=(await this.ctx.storage.get("assignments"))||[],interactions=(await this.ctx.storage.get("interactions"))||[];
+    let plan;
+    try{plan=await this.artifactStoragePlan({artifactId,actorId,targetId:ids[0],targets:ids,meta,matchId,day:night,assignments,interactions,members:players,requestFlip:body.requestFlip===true})}
+    catch(error){await giveBack();throw error}
+    if(!plan.ok){await giveBack();return j({ok:false,error:plan.error,message:plan.message},409)}
+    const now=new Date().toISOString(),rows=interactions;
+    for(const change of plan.changes||[]){
+      if(change.kind==="remove_artifact"){
+        const removed=await this.ctx.storage.transaction(async txn=>{
+          const target=await txn.get("artifact:"+change.loginId),all=await txn.get("assignments")||[],
+            assigned=all.find(x=>normalizeLoginId(x.loginId)===change.loginId);
+          if(!target||target.removedFromMatch===true||String(target.artifactId||"")!==change.artifactId||
+            (target.matchId&&String(target.matchId)!==matchId)||!assigned||String(assigned.artifactId||"")!==change.artifactId)return {ok:false};
+          target.removedFromMatch=true;target.removedAt=now;target.removedByArtifactId=artifactId;
+          await txn.put("artifact:"+change.loginId,target);
+          for(const row of all){
+            if(normalizeLoginId(row.loginId)!==change.loginId||String(row.artifactId||"")!==change.artifactId)continue;
+            row.artifactId=null;row.artifactName=null;row.artifactUsedAt=null;row.artifactViewedAt=null;row.artifactPriorityFirst=null;row.artifactSingleUse=null;
+          }
+          await txn.put("assignments",all);
+          return {ok:true};
+        });
+        if(!removed.ok){await giveBack();return j({ok:false,error:"NEGATE_TARGET_CHANGED",message:"Artifact của mục tiêu đã thay đổi; chưa trừ lượt."},409)}
+        continue;
+      }
+      if(change.type!=="effect_notice")continue;
+      const row={id:"ix-"+crypto.randomUUID(),type:"effect_notice",loginId:change.loginId,matchId,cycleKey:String(meta.cycleKey||""),night,
+        actorId,artifactId,actionId:String(body.actionId||""),source:"night-artifact",effectActive:false,status:"pending",
+        message:change.extra?.rowMessage||plan.message||"Artifact",createdAt:now};
+      rows.push(row);
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+row.id,row);
+    }
+    if(plan.replacedOwn||(plan.changes||[]).length){
+      if(plan.replacedOwn)await this.ctx.storage.put("assignments",assignments);
+      await this.ctx.storage.put("interactions",pruneInteractions(rows));
+    }
+    return j({ok:true,storageArtifact:{artifactId,message:plan.message||"",result:plan.result||{}}});
+  }
   async executeGmInteraction(request,body,verifiedAuth=null){
     // Reuse ONLY the same-request verified authorization from gmBattleAction.
     const auth=verifiedAuth||await this.gmAuthorized(request);if(!auth.ok)return auth.response;
@@ -3201,6 +3278,8 @@ export class RoomDurableObject extends DurableObject {
       }
     }
     const players=(await this.ctx.storage.get("players"))||{},loginId=normalizeLoginId(body?.loginId),rawType=String(body?.type||"").trim().toLowerCase().replace(/\s+/g,"_"),alias={like_dislike:"thumb_vote","like-dislike":"thumb_vote",likedislike:"thumb_vote",reaction:"thumb_vote",reactions:"thumb_vote",thumbs:"thumb_vote",thumb:"thumb_vote",vote:"thumb_vote","👍👎":"thumb_vote",mark:"assassin_mark",marked:"assassin_mark",mark_choice:"assassin_mark","assassin-mark":"assassin_mark"},type=alias[rawType]||rawType;
+    if(String(body?.artifactId||"")&&gmArtifactStep&&typeof needsStorageArtifact==="function"&&needsStorageArtifact(String(body.artifactId)))
+      return this.nightStorageArtifact(meta,body,gmArtifactStep,players);
     if(type==="status_display_batch"){
       const items=Array.isArray(body?.items)?body.items:[];
       if(!items.length||items.length>STATUS_VISUAL_IDS.size||

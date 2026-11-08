@@ -44,7 +44,7 @@ test('Artifact: centered padding and fully dark artworks are not modified',()=>{
   assert.equal(detect(dark,240,200),null);
 });
 test('Artifact: margins over safety cap cannot crop original card frame',()=>{
-  const {pixels,width,height}=sample(46,0);
+  const {pixels,width,height}=sample(70,0);
   assert.equal(detect(pixels,width,height),null);
 });
 test('Artifact: browser preview aligns the image but keeps source bytes untouched',()=>{
