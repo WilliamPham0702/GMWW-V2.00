@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.313';
+const VERSION='3.314';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -8730,7 +8730,7 @@ async function exportLocalGameData(){
     const summaryText='Đã xuất: '+s.localStorageKeys+' khóa local, '+s.indexedDbDatabases+' kho IndexedDB, '+s.legacyTemplatesUnsynced+' Ván Mẫu chưa đồng bộ, '+s.errors+' lỗi.';
     showLocalExportViewer(JSON.stringify(payload,null,2),'gmww-local-export-'+new Date().toISOString().slice(0,10)+'.json',summaryText);
   }catch(err){alert('Xuất dữ liệu thất bại: '+String(err?.message||err))}
-  finally{if(btn){btn.disabled=false;if(label)label.textContent='XUẤT DỮ LIỆU CHƯA ĐỒNG BỘ'}}
+  finally{if(btn){btn.disabled=false;if(label)label.innerHTML='XUẤT DỮ LIỆU<br>CHƯA ĐỒNG BỘ'}}
 }
 // ---- Xuất / Nhập SAVE (chuyển dữ liệu local sang máy khác) ----
 function gmwwSaveFileName(){const d=new Date(),p=n=>String(n).padStart(2,'0');return 'gmww-save-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+'.json'}
