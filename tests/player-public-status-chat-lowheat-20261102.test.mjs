@@ -24,6 +24,7 @@ test('confirmed status refresh is debounced and authoritative, including cleared
   setTimeout(fn){pending.push(fn);return pending.length},
   api:async path=>{observed.push(path);return payload},
   syncVillageFrame:()=>observed.push('render'),
+  syncGallowsVoteTags:()=>observed.push('votes'),
   gmwwChatRefresh:()=>observed.push('chat')
  };
  vm.runInNewContext(realtime.slice(begin,end)+'globalThis.refresh=schedulePublicRoomSnapshot;',scope);
@@ -33,6 +34,7 @@ test('confirmed status refresh is debounced and authoritative, including cleared
  assert.deepEqual(Array.from(state.players[1].statusTags,x=>x.statusId),['marked']);
  assert.equal(observed.filter(x=>x==='/api/rooms/ROOM').length,1);
  assert.ok(observed.includes('render')&&observed.includes('chat'));
+ assert.ok(observed.indexOf('votes')>=0&&observed.indexOf('votes')<observed.indexOf('render'),'gallows vote tags re-applied before render');
  payload={room:{matchId:'M'},players:[
   {participantId:'member:a',statusTags:[]},{participantId:'member:b',statusTags:[]}
  ]};
