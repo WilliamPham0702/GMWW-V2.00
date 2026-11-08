@@ -45,7 +45,7 @@ function gmwwPrepareSeaVictory(){
     emblem.setAttribute('aria-hidden','true');emblem.textContent='✦ 🐚 🏆 ✦';heading.before(emblem);
   }
 }
-function showResult(faction,matchId=''){
+function showResult(faction,matchId='',nightSummary=null){
   const roomMatch=String(state.room?.matchId||''),currentMatch=String(state.role?.matchId||roomMatch||''),incoming=String(matchId||'');if(roomMatch&&incoming&&roomMatch!==incoming)return;
   clearDrunkDraw();(typeof clearThiefPanel==='function')&&clearThiefPanel();
   const roleRows=Array.isArray(state.roles)&&state.roles.length?state.roles:(state.role?[state.role]:[]),playerFactions=roleRows.map(x=>{const pc=x?.roleCard||{};return pc.faction??x?.faction??x?.factionName??''}),winner=displayFaction(faction),hasWinner=!!resultFactionKey(faction),isWinner=hasWinner&&playerFactions.some(x=>resultFactionKey(x)===resultFactionKey(faction)),matchKey=resultMatchKey(incoming||currentMatch),key=matchKey+'|'+resultFactionKey(faction);
@@ -54,8 +54,15 @@ function showResult(faction,matchId=''){
   gmwwPrepareSeaVictory();$('#resultOverlay').dataset.gmwwVictory=String(isWinner);
   const layer=$('#confettiLayer');layer.innerHTML='';if(isWinner){const colors=['#ffd66d','#ff6e6e','#7de2ff','#9bff92','#d18aff','#fff'];for(let i=0;i<80;i++){const c=document.createElement('i');c.className='confetti';c.style.left=Math.random()*100+'%';c.style.background=colors[i%colors.length];c.style.animationDuration=(2.2+Math.random()*2.8)+'s';c.style.animationDelay=(-Math.random()*4)+'s';c.style.setProperty('--drift',(-80+Math.random()*160)+'px');layer.appendChild(c)}}
   const resultSoundKey=key;if(resultSoundKey!==gmwwResultSoundKey){gmwwResultSoundKey=resultSoundKey;playVictorySound()}
-  const h=$('#resultOverlay h2'),p=$('#resultOverlay p');if(hasWinner){h.textContent=(isWinner?'CHÚC MỪNG ':'')+winner.toUpperCase()+' THẮNG!';p.textContent=isWinner?'Bạn Đã Thắng':'Bạn Đã Thua'}else{h.textContent='VÁN CHƠI ĐÃ KẾT THÚC';p.textContent='Quản Trò đã kết thúc ván chơi.'}state.ready=true;state.roleEffects={};renderRoleEffects();try{localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{};$('#resultOverlay').classList.add('show');clearTimeout(gmwwResultReturnTimer);gmwwResultReturnTimer=setTimeout(()=>{closeResult().catch(()=>{})},11000);
+  const h=$('#resultOverlay h2'),p=$('#resultOverlay p');if(hasWinner){h.textContent=(isWinner?'CHÚC MỪNG ':'')+winner.toUpperCase()+' THẮNG!';p.textContent=isWinner?'Bạn Đã Thắng':'Bạn Đã Thua'}else{h.textContent='VÁN CHƠI ĐÃ KẾT THÚC';p.textContent='Quản Trò đã kết thúc ván chơi.'}state.ready=true;state.roleEffects={};renderRoleEffects();try{localStorage.removeItem(ACTIVE_ROLE_KEY)}catch{};renderResultNightSummary(nightSummary);$('#resultOverlay').classList.add('show');clearTimeout(gmwwResultReturnTimer);gmwwResultReturnTimer=setTimeout(()=>{closeResult().catch(()=>{})},Array.isArray(nightSummary)&&nightSummary.length?30000:11000);
   if(state.token)api('/api/members/me',{headers:auth()}).then(d=>{if(d?.member){state.member=d.member;localStorage.setItem('gmww_member',JSON.stringify(d.member))}}).catch(()=>{});
+}
+function renderResultNightSummary(lines){
+  const overlay=$('#resultOverlay');if(!overlay)return;let box=$('#resultNightSummary');
+  if(!Array.isArray(lines)||!lines.length){if(box)box.remove();return}
+  if(!box){box=document.createElement('div');box.id='resultNightSummary';box.style.cssText='max-height:34vh;overflow:auto;margin:10px auto 0;padding:8px 10px;max-width:92%;border-radius:10px;background:rgba(7,49,70,.82);color:#fff4da;font-size:11px;line-height:1.5;text-align:left;pointer-events:auto';const p=overlay.querySelector('p');(p?.parentNode||overlay).insertBefore(box,p?p.nextSibling:null)}
+  box.textContent='';const title=document.createElement('b');title.textContent='TÓM TẮT VÁN';title.style.display='block';box.appendChild(title);
+  lines.slice(0,40).forEach(line=>{const row=document.createElement('div');row.textContent=String(line);box.appendChild(row)});
 }
 async function closeResult(){
   clearDrunkDraw();(typeof clearThiefPanel==='function')&&clearThiefPanel();
