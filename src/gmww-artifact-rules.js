@@ -216,3 +216,17 @@ export function coinDeaths({assignments=[],interactions=[],matchId='',night=1,cy
   }
   return out;
 }
+
+/* Trượng Luân Hồi (artifact_30) / Quyền Trượng Phục Sinh (artifact_33): khi chủ sở hữu bị loại (chết), lá được lật tự động
+ * và chủ tiếp tục sống với Vai Trò cũ. Dùng 1 lần; trả các hàng "dead" còn hiệu lực cần vô hiệu hoá. */
+export const REVIVE_ARTIFACT_IDS=['artifact_30','artifact_33'];
+export function reviveOwnerPlans({assignments=[],interactions=[],matchId='',usedLogins=[]}={}){
+  const used=new Set(list(usedLogins).map(login)),out=[];
+  for(const a of list(assignments)){
+    const artifactId=String(a?.artifactId||''),id=login(a?.loginId);
+    if(!id||!REVIVE_ARTIFACT_IDS.includes(artifactId)||used.has(id))continue;
+    const rows=list(interactions).filter(r=>same(r,matchId)&&r.type==='dead'&&live(r)&&login(r.loginId)===id);
+    if(rows.length)out.push({loginId:id,artifactId,name:artifactId==='artifact_30'?'Trượng Luân Hồi':'Quyền Trượng Phục Sinh',rows});
+  }
+  return out;
+}

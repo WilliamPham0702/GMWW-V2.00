@@ -5,7 +5,7 @@ import {hunterLinkedDeaths} from "./gmww-hunter-death-rules.js";
 import {loverLinkedDeaths} from "./gmww-lovers-rules.js";
 import {thiefPool,thiefCanChoose,thiefDeckView,thiefPlan} from "./gmww-thief-rules.js";
 import {elderBell,groupLinkedDeaths,cultKillDeaths,isCultMember} from "./gmww-night-cult-rules.js";
-import {coinDeaths} from "./gmww-artifact-rules.js";
+import {coinDeaths,reviveOwnerPlans} from "./gmww-artifact-rules.js";
 import {seerShareNotices} from "./gmww-artifact-seer.js";
 import {swapRolePlans,artifactBiteDawn,needsStorageArtifact,unissuedArtifactIds,pickRandom,aliveNeighbors,awakeLastNight,artifactDayPlan,gallowsArtifactFlags,princeCloakActive,princeCloakRow,orbVillageWin} from "./gmww-artifact-rules.js";
 import {mirrorFunctions,mirrorLinkKey,mirrorLinkPrefix,buildMirrorLink,insertMirrorSteps} from "./gmww-mirror-rules.js";
@@ -1022,9 +1022,9 @@ export class RoomDurableObject extends DurableObject {
                 type:"dead",loginId,matchId:String(meta.matchId),cycleKey:String(meta.cycleKey),
                 night:Number(meta.cycleNight),source:"gallows",gallowsId:current.id,effectActive:true,
                 message:"Người chơi đã bị hành quyết theo kết quả bỏ phiếu tự động.",createdAt};
-              rows.push(fatal);await this.ctx.storage.put("interactions",pruneInteractions(rows));
+              rows.push(fatal);if(typeof this.reviveArtifactSweep==="function")await this.reviveArtifactSweep(meta,rows,createdAt);await this.ctx.storage.put("interactions",pruneInteractions(rows));
               await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
-              this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
+              this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:!rows.some(x=>x.id===fatal.id&&x.effectActive===false),serverTime:now});
             }
           }
         }
@@ -1113,9 +1113,10 @@ export class RoomDurableObject extends DurableObject {
             message:"Người chơi đã bị hành quyết trên giàn.",createdAt};
           rows.push(fatal);
           await this.ctx.storage.put("actionLog:"+String(now).padStart(13,"0")+":"+fatal.id,fatal);
+          if(typeof this.reviveArtifactSweep==="function")await this.reviveArtifactSweep(meta,rows,createdAt);
           if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,createdAt);
           await this.ctx.storage.put("interactions",pruneInteractions(rows));
-          this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:true,serverTime:now});
+          this.broadcast({type:"player_status_changed",loginId,statusId:"dead",active:fatal.effectActive!==false,serverTime:now});
         }
       }
     }else if(command==="judge_second"){
@@ -2222,6 +2223,28 @@ export class RoomDurableObject extends DurableObject {
     if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     this.broadcast({type:"night_turn",night,runtime,source,room:publicRoom(meta),serverTime:Date.now()});return runtime
   }
+  // Trượng Luân Hồi / Quyền Trượng Phục Sinh: khi chủ chết, lá tự lật và chủ tiếp tục sống (dùng 1 lần, kể cả đã chết).
+  async reviveArtifactSweep(meta,rows,now){
+    if(typeof reviveOwnerPlans!=="function")return 0;
+    const matchId=String(meta?.matchId||""),assignments=(await this.ctx.storage.get("assignments"))||[],usedLogins=[];
+    for(const a of assignments){const id=normalizeLoginId(a?.loginId),aid=String(a?.artifactId||"");
+      if(id&&aid&&await this.ctx.storage.get("artifactUse:"+id+":"+aid))usedLogins.push(id)}
+    const plans=reviveOwnerPlans({assignments,interactions:rows,matchId,usedLogins});
+    for(const plan of plans){
+      for(const row of plan.rows){row.effectActive=false;row.expiredAt=now;row.expiredReason="ARTIFACT_REVIVE"}
+      const id="artifact-revive:"+matchId+":"+plan.loginId,notice={id,clientEventId:id,type:"effect_notice",loginId:plan.loginId,actorId:plan.loginId,matchId,
+        night:Number(meta?.cycleNight||0),cycleKey:String(meta?.cycleKey||""),effectActive:false,actionId:"artifact-revive-on-death",artifactId:plan.artifactId,
+        effectName:plan.name,source:"artifact-rules",createdAt:now,status:"responded",response:"AUTO_ACK",
+        message:plan.name+": chủ sở hữu lật Artifact và tiếp tục sống với Vai Trò cũ."};
+      rows.push(notice);
+      await this.ctx.storage.put("actionLog:"+String(Date.parse(now)).padStart(13,"0")+":"+id,notice);
+      await this.ctx.storage.put("artifactUse:"+plan.loginId+":"+plan.artifactId,{usedAt:now,artifactId:plan.artifactId,actorId:plan.loginId,reason:"ON_DEATH"});
+      const owned=await this.ctx.storage.get("artifact:"+plan.loginId);
+      if(owned&&String(owned.artifactId||"")===plan.artifactId){owned.usedAt=now;await this.ctx.storage.put("artifact:"+plan.loginId,owned)}
+      this.broadcast({type:"player_status_changed",loginId:plan.loginId,statusId:"dead",active:false,serverTime:Date.now()});
+    }
+    return plans.length;
+  }
   async applyCycle(meta,phase,night,cycleKey,source="gm"){
     const now=new Date().toISOString(),p=phase==="day"?"morning":String(phase||"").toLowerCase(),n=Math.max(0,Number(night)||0),key=String(cycleKey||((p&&n)?(p+"-"+n):("cycle-"+Date.now()))).slice(0,160);
     // Hold the adjudicated vote for 30 actual seconds or until explicit GM
@@ -2362,6 +2385,7 @@ export class RoomDurableObject extends DurableObject {
         await this.ctx.storage.delete(storageKey);
       }
     }
+    if(n>0&&typeof this.reviveArtifactSweep==="function")await this.reviveArtifactSweep(meta,rows,now);
     if(p==="morning"&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     const nightRuntime=p==="night"&&n>0?await this.getNightRuntime(meta,n,true):null;
@@ -2878,6 +2902,7 @@ export class RoomDurableObject extends DurableObject {
       if(log.effectActive)this.broadcast({type:"player_status_changed",loginId:log.loginId,
         statusId:log.statusId||log.type,active:true,serverTime:Date.now()});
     }
+    if(typeof this.reviveArtifactSweep==='function')await this.reviveArtifactSweep(meta,interactions,time);
     if(typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,interactions,time);
     await this.ctx.storage.put("interactions",pruneInteractions(interactions));
     const audit={id:"ev-"+crypto.randomUUID(),source:"gm",type:"day_action",actorId,
@@ -3424,7 +3449,8 @@ export class RoomDurableObject extends DurableObject {
     }
     if(gmArtifactStep){const useError=await this.markGmArtifactTurnUsed(meta,gmArtifactStep,loginId,body?.actionNonce,body);if(useError)return useError}
     rows.push(interaction);await this.ctx.storage.put("actionLog:"+String(Date.parse(interaction.createdAt)).padStart(13,"0")+":"+interaction.id,interaction);
-    if(type==="dead"&&!interaction.pendingDeath&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
+    if(type==="dead"&&!interaction.pendingDeath&&typeof this.reviveArtifactSweep==="function")await this.reviveArtifactSweep(meta,rows,now);
+    if(type==="dead"&&!interaction.pendingDeath&&interaction.effectActive!==false&&typeof this.applyHunterDeathConsequences==='function')await this.applyHunterDeathConsequences(meta,rows,now);
     await this.ctx.storage.put("interactions",pruneInteractions(rows));
     // Sát Thủ is secret at night: never broadcast the GM choice or open the player prompt early.
     // The player receives a sanitized private interaction from playerState only in the morning.
@@ -4923,6 +4949,8 @@ function announcementTargetsForTurn(turn){
   if(!turn)return [];
   const rid=r=>String(r?.roleId||'');
   if(turn.kind==='village-wakeup')return ['system:audio_system_day_wakeup'];
+  // Tráng Gương gọi lại chủ sở hữu: phát audio của chính lá Tráng Gương, không phải audio của vai bị sao chép (tránh lộ người đã chết).
+  if(turn.mirror===true)return ['artifacts:artifact_23'];
   if(turn.kind==='early-artifact-window')return ['system:audio_system_early_artifacts'];
   if(turn.kind==='wolf-introduction'||turn.kind==='wolf-pack-bite')return ['cards:audio_group_wolves'];
   if(['artifact-main','early-artifact'].includes(turn.kind))return turn.artifactId?['artifacts:'+String(turn.artifactId)]:[];
