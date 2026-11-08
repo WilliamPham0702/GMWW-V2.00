@@ -15,7 +15,7 @@ test('Player uses GM-equivalent artwork, role name, faction and source informati
  assert.match(player,/function renderGMWWPlayerCardFace\(kind\)/);
  assert.match(player,/const information=String\(pc\.information\?\?data\.description/);
  assert.match(player,/gmwwPlayerUnifiedCard/);
- assert.match(player,/grid-template-rows:8fr 1fr 3fr/);
+ assert.match(player,/grid-template-rows:minmax\(0,8fr\) minmax\(48px,1fr\) minmax\(0,3fr\)/);
  assert.match(player,/object-fit:contain/);
  assert.doesNotMatch(player,/<span class="mini-label"><b>VAI TRÒ<\/b><small>CHẠM ĐỂ XEM<\/small><\/span>/);
  assert.doesNotMatch(player,/<span class="mini-label"><b>ARTIFACT<\/b><small>CHẠM ĐỂ XEM<\/small><\/span>/);
