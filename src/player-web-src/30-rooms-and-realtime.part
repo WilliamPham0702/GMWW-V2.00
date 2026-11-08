@@ -507,6 +507,7 @@ function schedulePublicRoomSnapshot(){
     const row=verified.get(String(p.participantId));
     return row?{...p,statusTags:Array.isArray(row.statusTags)?row.statusTags:[]}:p;
    });
+   syncGallowsVoteTags();
    syncVillageFrame(true);
    void gmwwChatRefresh();
   }catch(e){console.warn('[GMWW public status refresh]',e)}
