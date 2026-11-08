@@ -430,7 +430,10 @@ export class RoomDurableObject extends DurableObject {
     const keepGmCall=body?.preserveGmCall===true&&!requestedRoomCode&&isValidRoomCode(calledRoomCode)&&calledRoomCode===normalizeRoomCode(member.currentRoomCode||"");
     if(body?.calledByGM===true&&isValidRoomCode(requestedRoomCode))member.gmCalledRoomCode=requestedRoomCode;
     else if(!keepGmCall&&(!requestedRoomCode||(calledRoomCode&&calledRoomCode!==requestedRoomCode)))member.gmCalledRoomCode=null;
-    member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString();
+    // GM disband release (expected room, no new room) must not refresh presence:
+    // otherwise offline accounts removed from the room look online in the lobby.
+    const gmRelease=!!expected&&!requestedRoomCode;
+    if(!gmRelease){member.presenceAt=Date.now();member.lastSeenAt=new Date().toISOString()}
     member.currentRoomCode=keepGmCall?calledRoomCode:requestedRoomCode;
     member.ready=keepGmCall?true:!!body?.ready;
     if(shouldSkipMemberHeartbeat(previousPresence,member,member.presenceAt)){
