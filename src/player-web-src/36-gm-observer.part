@@ -3,15 +3,28 @@
    Server routes: /api/rooms/:code/gm-observer/{state,interaction,chat-mute,auto}; only the GM0702 session is accepted. */
 (function gmwwGmObserver(){
   const GM_LOGIN='gm0702';
-  const obs={open:false,code:'',room:null,players:[],selected:'',timer:0,busy:false,mutedIds:{},autoOn:true,mounted:false};
+  const obs={open:false,code:'',room:null,players:[],selected:'',timer:0,busy:false,mutedIds:{},autoOn:true,mounted:false,rooms:[]};
   const isGmObserver=()=>String(state?.member?.loginId||'').trim().toLowerCase()===GM_LOGIN;
   const base=()=>'/api/rooms/'+encodeURIComponent(obs.code)+'/gm-observer/';
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
   async function call(op,method,body){
     return api(base()+op,{method,headers:auth(),body:body===undefined?undefined:JSON.stringify(body)});
   }
+  function roomLabel(r){return r?.roomName||('Phòng '+(r?.code||''))}
+  async function resolveRoom(){
+    try{
+      const d=await api('/api/rooms');const rooms=(d.rooms||[]).filter(r=>r&&r.code);
+      obs.rooms=rooms;
+      if(!rooms.length){obs.code='';obs.room=null;obs.players=[];setStatus('Hiện chưa có phòng nào đang mở.');return false}
+      if(!rooms.some(r=>r.code===obs.code)){
+        const pick=rooms.find(r=>String(r.phase||'').toLowerCase()==='running'&&r.demo!==true)||rooms.find(r=>r.demo!==true)||rooms[0];
+        obs.code=pick.code;obs.selected='';obs.mutedIds={};
+      }
+      return true;
+    }catch(err){setStatus(err.message||'Không đọc được danh sách phòng.');return false}
+  }
   async function refresh(){
-    if(!obs.code)return;
+    if(!(await resolveRoom()))return render();
     try{
       const d=await call('state','GET');
       obs.room=d.room||null;obs.players=Array.isArray(d.players)?d.players:[];
@@ -43,9 +56,11 @@
       const row=el('button','gmww-gmobs-player'+(id===obs.selected?' is-selected':''),(p.displayName||p.name||id)+(obs.mutedIds[id]?' 🔇':''));
       row.type='button';row.addEventListener('click',()=>{obs.selected=id;render()});list.appendChild(row);
     }
+    const picker=panel.querySelector('.gmww-gmobs-rooms');picker.textContent='';
+    if(obs.rooms.length>1){for(const r of obs.rooms){const b=el('button','gmww-gmobs-player'+(r.code===obs.code?' is-selected':''),roomLabel(r));b.type='button';b.addEventListener('click',()=>{obs.code=r.code;obs.selected='';obs.mutedIds={};refresh()});picker.appendChild(b)}}
     const auto=panel.querySelector('[data-gmobs="auto"]');if(auto)auto.classList.toggle('is-on',obs.autoOn);
     const info=panel.querySelector('.gmww-gmobs-info');
-    if(info)info.textContent=obs.room?('Phòng '+obs.code+' · '+(obs.players.length)+' người · '+String(obs.room.cyclePhase||obs.room.phase||'')):'Chưa quan sát phòng.';
+    if(info)info.textContent=obs.room?(roomLabel(obs.rooms.find(r=>r.code===obs.code))+' · '+(obs.players.length)+' người · '+String(obs.room.cyclePhase||obs.room.phase||'')):'Chưa quan sát phòng.';
   }
   function startPolling(){clearInterval(obs.timer);obs.timer=setInterval(()=>{if(obs.open&&!document.hidden)refresh()},4000)}
   function mount(){
@@ -59,18 +74,15 @@
       +'.gmww-gmobs-info,#gmwwGmObsStatus{font-size:12px;opacity:.85;margin-top:6px}');
     document.head.appendChild(css);
     const fab=el('button','gmww-gmobs-fab','GM');fab.type='button';fab.setAttribute('aria-label','Quan sát GM');
-    fab.addEventListener('click',()=>{obs.open=!obs.open;if(obs.open&&!obs.code&&state.roomCode)obs.code=state.roomCode;render();if(obs.open)refresh()});
+    fab.addEventListener('click',()=>{obs.open=!obs.open;render();if(obs.open)refresh()});
     const panel=el('div','gmww-gmobs-panel');panel.id='gmwwGmObsPanel';panel.hidden=true;
-    const row=el('div','gmww-gmobs-row'),input=el('input');input.placeholder='Mã phòng';input.autocapitalize='characters';
-    const go=el('button',null,'Quan sát');go.type='button';
-    go.addEventListener('click',()=>{obs.code=String(input.value||'').trim().toUpperCase();obs.selected='';obs.mutedIds={};refresh()});
-    row.append(input,go);
+    const rooms=el('div','gmww-gmobs-list gmww-gmobs-rooms');
     const info=el('div','gmww-gmobs-info'),list=el('div','gmww-gmobs-list'),actions=el('div','gmww-gmobs-actions');
     for(const [k,label] of [['save','✚ Cứu'],['kill','☠ Giết'],['mute','🔇 Câm'],['auto','🔔 Auto']]){
       const b=el('button',null,label);b.type='button';b.dataset.gmobs=k;b.addEventListener('click',()=>act(k));actions.appendChild(b);
     }
     const status=el('div');status.id='gmwwGmObsStatus';
-    panel.append(row,info,list,actions,status);document.body.append(fab,panel);startPolling();render();
+    panel.append(rooms,info,list,actions,status);document.body.append(fab,panel);startPolling();render();
   }
   setInterval(mount,1500);
 })();

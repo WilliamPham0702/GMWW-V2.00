@@ -45,3 +45,16 @@ test('Player Web bundle contains the GM observer part', () => {
   const live = read('src/gmww-members-live.js');
   assert.ok(live.includes('gmwwGmObserver'));
 });
+
+test('GM0702 can never become a player: join and GM roster setup both refuse it', () => {
+  assert.match(index, /normalizeLoginId\(body\.member\.loginId\)===GM_OBSERVER_LOGIN_ID\)return j\(\{ok:false,error:"GM_OBSERVER_NOT_PLAYER"/);
+  const from = index.indexOf('async gmParticipants');
+  const block = index.slice(from, from + 1800);
+  assert.match(block, /loginId===GM_OBSERVER_LOGIN_ID\)continue/);
+});
+
+test('Player Web GM bar picks the live room itself and has no room-code input', () => {
+  assert.match(part, /api\('\/api\/rooms'\)/);
+  assert.ok(!/createElement\('input'\)|el\('input'\)/.test(part));
+  assert.ok(!/Mã phòng/.test(part));
+});
