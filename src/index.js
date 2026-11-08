@@ -199,7 +199,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/directory/rooms/upsert"&&request.method==="POST")return this.roomDirectoryUpsert(await safeJson(request));
     if(url.pathname==="/directory/rooms/list"&&request.method==="GET")return this.roomDirectoryList(url);
     if(url.pathname==="/directory/rooms/delete"&&request.method==="POST")return this.roomDirectoryDelete(await safeJson(request));
-    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
+    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start|end)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
     if(url.pathname==="/directory/player-rooms/reserve"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(async()=>this.playerRoomReserve(await safeJson(request)));
     if(url.pathname==="/global-assets/victory"&&request.method==="GET")return this.globalAssetGet("globalAsset:victory","audio/mpeg");
     if(url.pathname==="/global-assets/victory"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:victory","audio/mpeg",125000);
@@ -925,6 +925,7 @@ export class RoomDurableObject extends DurableObject {
     }
     if(action==="apply-template")return this.ownerApplyTemplate(gm,meta,body);
     if(action==="start")return this.ownerStart(gm,meta,body);
+    if(action==="end")return this.ownerEnd(gm,meta);
     return j({ok:false,error:"NOT_FOUND"},404)
   }
   async ownerState(request){
@@ -942,6 +943,20 @@ export class RoomDurableObject extends DurableObject {
     const done=await this.gmConfig(gm,{gameConfig:cfg});if(!done.ok)return done;
     if(rows.length){const assets=await this.gmRoleAssets(gm,{roles:rows});if(!assets.ok)return assets}
     return j({ok:true,config:ownerDeckView(await this.ctx.storage.get("gameConfig")),roleCards:rows.length})
+  }
+  // Player rooms end by themselves: when a winner is clear the match closes through gmEnd (no GM needed).
+  async playerRoomAutoEnd(meta){
+    if(meta?.playerRoom!==true||String(meta.phase||"").toLowerCase()!=="running")return false;
+    const win=this.computeWinProposal(meta,(await this.ctx.storage.get("assignments"))||[],(await this.ctx.storage.get("interactions"))||[]);
+    if(!win)return false;
+    const gm=new Request("https://player-room.internal/gm/end",{method:"POST",headers:{authorization:"Bearer "+GM_SYNC_TOKEN}});
+    const res=await this.gmEnd(gm,{matchId:meta.matchId,winnerFaction:win.winnerFaction,winner:win.winnerLabel});
+    return !!res&&res.status<300
+  }
+  // Owner may end the match early (no winner recorded).
+  async ownerEnd(gm,meta){
+    if(String(meta.phase||"").toLowerCase()!=="running")return j({ok:false,error:"ROOM_NOT_RUNNING"},409);
+    return this.gmEnd(gm,{matchId:meta.matchId})
   }
   // Seats must be locked; deals the template's roles at random, starts the match and the first night.
   async ownerStart(gm,meta,body){
@@ -2543,6 +2558,7 @@ export class RoomDurableObject extends DurableObject {
   }
   async runAutoAdvanceIfDue(meta){
     if(!meta||String(meta.phase||"").toLowerCase()!=="running"||meta.autoGM===false)return false;
+    if(meta.playerRoom===true&&await this.playerRoomAutoEnd(meta))return true;
     const due=await this.autoAdvanceDue(meta);if(!due||due>Date.now()+25)return false;
     const phase=String(meta.cyclePhase||"").toLowerCase(),night=Math.max(1,Number(meta.cycleNight||1));
     if(phase==="night"){const runtime=await this.getNightRuntime(meta,night,true);if(runtime&&!runtime.completed)await this.advanceNightRuntime(meta,"next","auto");const fresh=await this.ctx.storage.get("meta"),after=await this.getNightRuntime(fresh,night,true);if(after?.completed)await this.applyCycle(fresh,"morning",night,"morning-"+night,"auto");else await this.scheduleRoomAlarm(fresh);return true}
@@ -4757,7 +4773,7 @@ async function playerRoomTemplates(env,request){
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 async function playerRoomOwnerApi(env,rawCode,action,request){
   const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
-  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","start"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
+  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","start","end"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
   const stub=roomStub(env,code),auth={authorization:request.headers.get("authorization")||""},json={...auth,"content-type":"application/json"};
   if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return stub.fetch("https://room.internal/owner/state",{headers:auth})}
   if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
