@@ -23,6 +23,7 @@ test('confirmed status refresh is debounced and authoritative, including cleared
  const scope={state,console:{warn(){}},encodeURIComponent,
   setTimeout(fn){pending.push(fn);return pending.length},
   api:async path=>{observed.push(path);return payload},
+  syncGallowsVoteTags:()=>{},
   syncVillageFrame:()=>observed.push('render'),
   gmwwChatRefresh:()=>observed.push('chat')
  };
