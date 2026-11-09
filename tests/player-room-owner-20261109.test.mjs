@@ -153,7 +153,7 @@ const wreq=(method,body)=>new Request('https://x/api',{method,headers:{authoriza
 
 test('Worker exposes only the owner actions; apply-template and GM actions are not reachable',async()=>{
   const w=worker();
-  for(const a of ['apply-template','assign','config','end','reset','role-assets','demo'])assert.equal((await w.playerRoomOwnerApi({},'ABCDEF',a,wreq('POST',{}))).status,404,a);
+  for(const a of ['apply-template','assign','config','reset','role-assets','demo'])assert.equal((await w.playerRoomOwnerApi({},'ABCDEF',a,wreq('POST',{}))).status,404,a);
   assert.equal((await w.playerRoomOwnerApi({},'bad','start',wreq('POST',{}))).status,400);
   assert.equal((await w.playerRoomOwnerApi({},'ABCDEF','state',wreq('POST',{}))).status,405);
   assert.equal((await w.playerRoomOwnerApi({},'ABCDEF','start',wreq('GET'))).status,405);
@@ -182,6 +182,6 @@ test('template list needs a member session',async()=>{
 // ---- wiring guards ----
 test('routes: owner API is under /api/player-rooms and the DO route list matches the Worker whitelist',()=>{
   assert.ok(source.includes('const ownerApi=url.pathname.match(/^\\/api\\/player-rooms\\/([A-Za-z0-9]+)\\/owner\\/([a-z-]+)$/);if(ownerApi)return playerRoomOwnerApi('));
-  assert.ok(source.includes('/^\\/owner\\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start)$/'));
+  assert.ok(source.includes('/^\\/owner\\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start|end)$/'));
   assert.ok(source.includes('if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);'),'GM room creation unchanged');
 });
