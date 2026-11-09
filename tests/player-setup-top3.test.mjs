@@ -31,7 +31,7 @@ test('Player Web: chỉ hiện ở các bước setup (lobby), vào trận thì 
   assert.match(part, /#game:not\(\[data-gmww-player-scene="lobby"\]\) #gmwwSetupTop3[^{]*\{display:none!important\}/);
   assert.match(game, /game\.dataset\.gmwwPlayerScene=policy\.mode;\n  bar\.hidden=true;/); // giữ nguyên neo của bộ vá private-card
   assert.match(game, /bar\.hidden=true;[^\n]*\n  syncSetupTop3\(policy\.mode==='lobby'\);/);
-  assert.match(part, /function syncSetupTop3\(active\)\{\s*if\(!active\|\|!state\.member\)return;/);
+  assert.match(part, /function syncSetupTop3\(active\)\{[^}]*gmwwSetupTop3'\)\?\.remove\(\)/); // 09/11/2026: Top 3 gỡ khỏi Player Web, chỉ xoá phần tử còn sót
 });
 
 test('Player Web: tải Top 3 có cache 60s và không gọi dồn', () => {
