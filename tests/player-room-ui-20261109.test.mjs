@@ -41,3 +41,13 @@ test('creating a room enters the village so the bar shows, and players can join 
   assert.match(part,/joinByCode/);assert.match(part,/VÀO BẰNG MÃ/);
   const urls=[...part.matchAll(/'(\/api\/[^']*)'/g)].map(m=>m[1]);for(const u of urls)assert.match(u,/^\/api\/player-rooms/);
 });
+
+test('Phòng Game page sits between Sảnh chờ and Tập hợp and offers send + joined list',()=>{
+  assert.match(part,/\['lobby','Sảnh chờ'\],\['room','Phòng Game'\],\['seats','Tập hợp'\]/);
+  assert.match(part,/GỬI PHÒNG/);assert.match(part,/ĐÃ VÀO PHÒNG/);assert.match(part,/navigator\.share/);
+});
+test('GM Player Web list shows every room with kind and status; players list no longer shares the rooms container',()=>{
+  const gm=readFileSync(new URL('../src/player-web-src/36-gm-observer.part',import.meta.url),'utf8');
+  assert.match(gm,/PHÒNG GAME/);assert.match(gm,/NGƯỜI CHƠI/);assert.match(gm,/gmww-gmobs-players/);
+  assert.match(script,/gmww-gmobs-players/);
+});

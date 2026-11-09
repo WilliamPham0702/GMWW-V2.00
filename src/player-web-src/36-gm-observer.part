@@ -50,14 +50,23 @@
   function render(){
     const panel=document.getElementById('gmwwGmObsPanel');if(!panel)return;
     panel.hidden=!obs.open;if(!obs.open)return;
-    const list=panel.querySelector('.gmww-gmobs-list');list.textContent='';
+    const list=panel.querySelector('.gmww-gmobs-players');list.textContent='';
     for(const p of obs.players){
       const id=String(p.loginId||'').toLowerCase();if(!id)continue;
       const row=el('button','gmww-gmobs-player'+(id===obs.selected?' is-selected':''),(p.displayName||p.name||id)+(obs.mutedIds[id]?' 🔇':''));
       row.type='button';row.addEventListener('click',()=>{obs.selected=id;render()});list.appendChild(row);
     }
     const picker=panel.querySelector('.gmww-gmobs-rooms');picker.textContent='';
-    if(obs.rooms.length>1){for(const r of obs.rooms){const b=el('button','gmww-gmobs-player'+(r.code===obs.code?' is-selected':''),roomLabel(r));b.type='button';b.addEventListener('click',()=>{obs.code=r.code;obs.selected='';obs.mutedIds={};refresh()});picker.appendChild(b)}}
+    const PH={lobby:'Sảnh chờ',waiting:'Sảnh chờ',role_delivery:'Phát vai',running:'Đang chơi',started:'Đang chơi',ended:'Kết thúc'};
+    const ago=iso=>{const t=Date.parse(iso||'');if(!Number.isFinite(t))return '';const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<1?'vừa xong':m<60?m+' phút trước':Math.round(m/60)+' giờ trước'};
+    const sorted=[...obs.rooms].sort((a,b)=>(b.playerRoom===true)-(a.playerRoom===true)||(String(b.phase)==='running')-(String(a.phase)==='running'));
+    if(sorted.length)picker.appendChild(el('div','gmww-gmobs-head','PHÒNG GAME • '+sorted.length+' phòng • '+sorted.filter(r=>r.playerRoom===true).length+' của người chơi'));
+    for(const r of sorted){
+      const b=el('button','gmww-gmobs-room'+(r.code===obs.code?' is-selected':''));b.type='button';
+      const top=el('div','gmww-gmobs-roomtop');top.append(el('b',null,roomLabel(r)),el('span','gmww-gmobs-badge'+(r.playerRoom===true?' is-player':''),r.playerRoom===true?'NGƯỜI CHƠI':'GM'));
+      b.append(top,el('small',null,r.code+' • '+(PH[String(r.phase||'').toLowerCase()]||String(r.phase||''))+' • '+(Number(r.playerCount)||0)+'/'+(Number(r.seatCount)||0)+' người'+(ago(r.updatedAt)?' • '+ago(r.updatedAt):'')));
+      b.addEventListener('click',()=>{obs.code=r.code;obs.selected='';obs.mutedIds={};refresh()});picker.appendChild(b);
+    }
     const auto=panel.querySelector('[data-gmobs="auto"]');if(auto)auto.classList.toggle('is-on',obs.autoOn);
     const info=panel.querySelector('.gmww-gmobs-info');
     if(info)info.textContent=obs.room?(roomLabel(obs.rooms.find(r=>r.code===obs.code))+' · '+(obs.players.length)+' người · '+String(obs.room.cyclePhase||obs.room.phase||'')):'Chưa quan sát phòng.';
@@ -66,18 +75,19 @@
   function mount(){
     if(obs.mounted||!isGmObserver())return;obs.mounted=true;
     const css=el('style',null,'.gmww-gmobs-fab{position:fixed;right:12px;bottom:84px;z-index:9000;width:44px;height:44px;border-radius:50%;border:0;background:#0f766e;color:#fff;font-weight:700}'
-      +'.gmww-gmobs-panel{position:fixed;right:8px;bottom:136px;z-index:9000;width:min(320px,92vw);max-height:60vh;overflow:auto;background:rgba(10,20,40,.94);color:#fff;border-radius:14px;padding:10px;font-size:14px}'
+      +'.gmww-gmobs-panel{position:fixed;right:8px;bottom:136px;z-index:9000;width:min(360px,94vw);max-height:70vh;overflow:auto;background:rgba(10,20,40,.94);color:#fff;border-radius:14px;padding:10px;font-size:14px}'
       +'.gmww-gmobs-panel[hidden]{display:none}.gmww-gmobs-row{display:flex;gap:6px;margin:6px 0}.gmww-gmobs-row input{flex:1;min-width:0;padding:6px;border-radius:8px;border:0}'
       +'.gmww-gmobs-list{display:flex;flex-direction:column;gap:4px;max-height:26vh;overflow:auto}.gmww-gmobs-player{text-align:left;padding:6px 8px;border-radius:8px;border:1px solid #334;background:#16233f;color:#fff}'
       +'.gmww-gmobs-player.is-selected{border-color:#22d3ee;background:#0e4a5a}.gmww-gmobs-actions{display:flex;gap:6px;margin-top:8px}'
       +'.gmww-gmobs-actions button{flex:1;padding:8px 4px;border-radius:10px;border:0;background:#334155;color:#fff;font-weight:600}.gmww-gmobs-actions button.is-on{background:#16a34a}'
+      +'.gmww-gmobs-rooms{max-height:32vh}.gmww-gmobs-head{font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.8;padding:2px 2px 4px}.gmww-gmobs-room{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid #334;background:#16233f;color:#fff}.gmww-gmobs-room.is-selected{border-color:#22d3ee;background:#0e4a5a}.gmww-gmobs-roomtop{display:flex;justify-content:space-between;align-items:center;gap:6px}.gmww-gmobs-room small{opacity:.8}.gmww-gmobs-badge{font-size:10px;padding:2px 6px;border-radius:8px;background:#334155}.gmww-gmobs-badge.is-player{background:#7c3aed}'
       +'.gmww-gmobs-info,#gmwwGmObsStatus{font-size:12px;opacity:.85;margin-top:6px}');
     document.head.appendChild(css);
-    const fab=el('button','gmww-gmobs-fab','GM');fab.type='button';fab.setAttribute('aria-label','Quan sát GM');
+    const fab=el('button','gmww-gmobs-fab','GM');fab.type='button';fab.setAttribute('aria-label','Phòng Game');
     fab.addEventListener('click',()=>{obs.open=!obs.open;render();if(obs.open)refresh()});
     const panel=el('div','gmww-gmobs-panel');panel.id='gmwwGmObsPanel';panel.hidden=true;
     const rooms=el('div','gmww-gmobs-list gmww-gmobs-rooms');
-    const info=el('div','gmww-gmobs-info'),list=el('div','gmww-gmobs-list'),actions=el('div','gmww-gmobs-actions');
+    const info=el('div','gmww-gmobs-info'),list=el('div','gmww-gmobs-list gmww-gmobs-players'),actions=el('div','gmww-gmobs-actions');
     for(const [k,label] of [['save','✚ Cứu'],['kill','☠ Giết'],['mute','🔇 Câm'],['auto','🔔 Auto']]){
       const b=el('button',null,label);b.type='button';b.dataset.gmobs=k;b.addEventListener('click',()=>act(k));actions.appendChild(b);
     }
