@@ -17,8 +17,8 @@ test('panel only talks to the player-room API and never to GM routes or tokens',
 });
 test('owner actions used by the panel are exactly the ones the Worker whitelists',()=>{
   const used=[...part.matchAll(/callOwner\('([a-z-]+)'/g)].map(m=>m[1]);
-  const allowed=['template','seat-lock','seats-randomize','start','kick','end'];
-  assert.ok(used.length>=6);for(const u of used)assert.ok(allowed.includes(u),u);
+  const allowed=['template','seat-lock','seats-randomize','start','kick','end','stage','room-settings'];
+  assert.ok(used.length>=7);for(const u of used)assert.ok(allowed.includes(u),u);
 });
 test('owner token is kept only under its own storage key and cleared when the room closes',()=>{
   assert.match(part,/KEY='gmwwOwnedRoom'/);assert.match(part,/save\(null\)/);
