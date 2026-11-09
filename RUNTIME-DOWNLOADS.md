@@ -35,7 +35,9 @@
 
 > **CẢNH BÁO:** QA là file thử nghiệm chưa phát hành, có thể mới hơn Server và gây lệch phiên bản. ZIP chỉ dành cho kiểm thử độc lập; KHÔNG dùng .gmwwupdate QA để cập nhật ứng dụng đang chơi.
 
-Không có gói QA còn hiệu lực.
+| QA — KHÔNG CÀI | Tệp kiểm thử gốc | SHA-256 ZIP | Trạng thái |
+|:--|:--|:--|:--|
+| **V3.321 — QA / KHÔNG CÀI** | [Tệp ZIP kiểm thử](https://github.com/WilliamPham0702/GMWW-V2.00/actions/runs/42655604049/artifacts/13690644871) (chứa .gmwwupdate) | `e38812783d3cf60806f9934bc72b25aa19db9dfe22bcbbbdf3f7ce52034eef02` (ZIP) | Hết hạn: 2027-02-07; **chưa phát hành Production** |
 
 ## 5. LỊCH SỬ VÀ CHÍNH SÁCH
 
