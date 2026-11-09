@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.317';
+const VERSION='3.318';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5651,7 +5651,7 @@ async function advancePlayPhase(){
     battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'||playSceneState.step==='room'){await playEnsureGatherRoom();return}
-  if(playSceneState.step==='game'){openPlayGameSheet();return}
+  if(playSceneState.step==='game'){void openPlayGameStep();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){playConfirmAssignments();return}
   if(playSceneState.step==='deal'){if(playDeliveryProgress().success){playSceneState.step='battle';savePlayScene();await advancePlayPhase();return}await playDealRoles();return}
@@ -8905,6 +8905,16 @@ async function openPlayGameSheet(){
   sheet.classList.remove('hidden');gmwwGameSheetSetFloating(true);
 }
 let playGameSheetOpenSeq=0;
+// V3.317: entering the Ván Mẫu step shows the template creation form straight away (no ＋ THÊM MỚI tap).
+// Skipped when a template is already chosen for this match, so it never wipes the GM's selection.
+async function openPlayGameStep(){
+  await openPlayGameSheet();
+  const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');
+  if(!sheet||!card||sheet.classList.contains('hidden')||card.dataset.mode!=='play')return;
+  if(String(playSceneState.gameTemplateId||''))return;
+  playGameReturnToSelection=true;
+  await openLibraryGameTemplate('');
+}
 let playGameReturnToSelection=false;
 async function openLibraryGameTemplate(id=''){
   ++playGameSheetOpenSeq;
@@ -10073,7 +10083,7 @@ async function playCompletionNext(choice){
     }else{
       playSceneState.matchId='';playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.step='game';await playPublishStage('game');
     }
-    closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='game')await openPlayGameSheet();
+    closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='game')await openPlayGameStep();
   }catch(err){playFlashError(err?.message||String(err))}
   finally{s.busy=false;renderPlayCompletion()}
 }
@@ -10672,14 +10682,14 @@ async function handlePlayTimelineStep(step){
   if(from<0||target<0)return;
   if(target===from){
     if(step==='seats'){playGatherToolsDismissed=false;renderPlayGatherToolbar();return}
-    if(step==='game')await openPlayGameSheet();
+    if(step==='game')await openPlayGameStep();
     return;
   }
   if(target===from+1){await advancePlayPhase();return}
   if(target<from){
     if(step==='lobby'){await playReturnToLobby();return}
     setPlayStep(step);
-    if(step==='game')await openPlayGameSheet();
+    if(step==='game')await openPlayGameStep();
     return;
   }
   playFlashError('Hãy hoàn tất bước hiện tại trước khi chuyển đến bước này.');
@@ -10695,7 +10705,7 @@ function initPlayScene(){
   document.getElementById('playAssignmentRandom')?.addEventListener('click',()=>{try{playBuildAssignments({random:true})}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentInOrder')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentArtifactShuffle')?.addEventListener('click',()=>{try{playRerollArtifacts()}catch(err){playFlashError(err.message)}});
-  document.getElementById('playAssignmentBack')?.addEventListener('click',()=>{setPlayStep('game');void openPlayGameSheet()});
+  document.getElementById('playAssignmentBack')?.addEventListener('click',()=>{setPlayStep('game');void openPlayGameStep()});
   document.getElementById('playAssignmentConfirm')?.addEventListener('click',playSaveAssignments);
   document.querySelector('[data-play-step="roles"]')?.addEventListener('click',()=>{playSceneRuntime.assignmentPanelDismissed=false;renderPlayRoleAssignmentPanel()});
   document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});

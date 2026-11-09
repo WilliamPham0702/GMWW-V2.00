@@ -570,7 +570,7 @@ async function playCompletionNext(choice){
     }else{
       playSceneState.matchId='';playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.step='game';await playPublishStage('game');
     }
-    closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='game')await openPlayGameSheet();
+    closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='game')await openPlayGameStep();
   }catch(err){playFlashError(err?.message||String(err))}
   finally{s.busy=false;renderPlayCompletion()}
 }
@@ -1169,14 +1169,14 @@ async function handlePlayTimelineStep(step){
   if(from<0||target<0)return;
   if(target===from){
     if(step==='seats'){playGatherToolsDismissed=false;renderPlayGatherToolbar();return}
-    if(step==='game')await openPlayGameSheet();
+    if(step==='game')await openPlayGameStep();
     return;
   }
   if(target===from+1){await advancePlayPhase();return}
   if(target<from){
     if(step==='lobby'){await playReturnToLobby();return}
     setPlayStep(step);
-    if(step==='game')await openPlayGameSheet();
+    if(step==='game')await openPlayGameStep();
     return;
   }
   playFlashError('Hãy hoàn tất bước hiện tại trước khi chuyển đến bước này.');
@@ -1192,7 +1192,7 @@ function initPlayScene(){
   document.getElementById('playAssignmentRandom')?.addEventListener('click',()=>{try{playBuildAssignments({random:true})}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentInOrder')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(err){playFlashError(err.message)}});
   document.getElementById('playAssignmentArtifactShuffle')?.addEventListener('click',()=>{try{playRerollArtifacts()}catch(err){playFlashError(err.message)}});
-  document.getElementById('playAssignmentBack')?.addEventListener('click',()=>{setPlayStep('game');void openPlayGameSheet()});
+  document.getElementById('playAssignmentBack')?.addEventListener('click',()=>{setPlayStep('game');void openPlayGameStep()});
   document.getElementById('playAssignmentConfirm')?.addEventListener('click',playSaveAssignments);
   document.querySelector('[data-play-step="roles"]')?.addEventListener('click',()=>{playSceneRuntime.assignmentPanelDismissed=false;renderPlayRoleAssignmentPanel()});
   document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});
