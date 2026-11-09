@@ -5,7 +5,7 @@
    Routes: POST /api/player-rooms, GET /api/player-rooms/templates, /api/player-rooms/:code/owner/*. */
 (function gmwwPlayerRooms(){
   const KEY='gmwwOwnedRoom',STEPS=[['lobby','Sảnh chờ'],['room','Phòng Game'],['seats','Tập hợp'],['game','Ván Mẫu'],['roles','Phân Vai'],['deal','Phát Vai'],['battle','Vào Trận']];
-  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],state:null,msg:'',view:'',touched:false};
+  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false};
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
   const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.code&&v.token?v:null}catch(_){return null}};
   const save=v=>{try{if(v)localStorage.setItem(KEY,JSON.stringify(v));else localStorage.removeItem(KEY)}catch(_){}};
@@ -37,7 +37,7 @@
   const STAGE={lobby:'room',room:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
   function syncStage(k){if(!pr.own||!STAGE[k]||String(pr.state?.room?.phase||'lobby').toLowerCase()==='running')return;callOwner('stage','POST',{step:STAGE[k]}).then(refresh).catch(()=>{})}
   function goStep(k){pr.view=k;pr.touched=true;syncStage(k);render()}
-  async function loadTemplates(){const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[]}
+  async function loadTemplates(){const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];if(!pr.roles.length){try{const r=await api('/api/player-rooms/roles',{headers:auth()});pr.roles=Array.isArray(r.roles)?r.roles:[]}catch(_){}}}
   const btn=(label,fn,cls,disabled)=>{const b=el('button',cls||null,label);b.type='button';if(disabled||pr.busy)b.disabled=true;b.addEventListener('click',()=>run(fn));return b};
   const stat=(k,v)=>{const d=el('div','gmww-pr-stat');d.append(el('small',null,k),el('b',null,String(v)));return d};
   // Step the server is on, mapped to the six tabs; the owner can still browse the other tabs.
@@ -124,7 +124,31 @@
       const head=el('div');head.append(el('b',null,t.name||'Ván Mẫu'),el('small',null,(t.playerCount||'?')+' người'+(fit?' • vừa đủ':'')));
       card.append(head,btn(cfg?.id===t.id?'ĐANG DÙNG':'CHỌN',async()=>{await callOwner('template','POST',{templateId:t.id});say('Đã áp dụng Ván Mẫu.');await refresh()},null,cfg?.id===t.id));box.append(card)}
     if(cfg)box.append(el('p','gmww-pr-help','Đang chọn: '+(cfg.name||cfg.id)+' • '+need+' lá bài'));
+    deckBuilder(box,players.length);
     box.append(btn('TIẾP: PHÂN VAI →',async()=>goStep('roles'),'gmww-pr-main'));
+  }
+  // Tạo Ván Mẫu ngay trong trang: chọn số lá cho từng vai, đủ bằng số người rồi áp dụng cho phòng.
+  function deckBuilder(box,people){
+    box.append(el('div','gmww-pr-sub','TẠO VÁN MẪU'));
+    if(!pr.roles.length){box.append(el('p','gmww-pr-help','Chưa có danh sách vai để tạo ván.'));return}
+    const name=el('input');name.id='gmwwPrDeckName';name.maxLength=48;name.placeholder='Tên Ván Mẫu';name.value=pr.deckName;name.addEventListener('input',()=>{pr.deckName=name.value});box.append(name);
+    const sum=el('div','gmww-pr-note');sum.id='gmwwPrDeckSum';box.append(sum);
+    const total=()=>[...pr.deck.values()].reduce((a,b)=>a+b,0);
+    const refreshSum=()=>{const t=total(),ok=t>0&&t===people;sum.textContent='Đã chọn '+t+' lá • Số người '+people+(ok?' • Đủ':t>people?' • Thừa '+(t-people):' • Thiếu '+(people-t));const a=document.getElementById('gmwwPrDeckApply');if(a)a.disabled=pr.busy||!ok};
+    const groups=new Map();for(const r of pr.roles){const f=r.faction||'Khác';if(!groups.has(f))groups.set(f,[]);groups.get(f).push(r)}
+    for(const [f,rows] of groups){
+      const sec=el('div','gmww-pr-deck');sec.append(el('small',null,f));
+      for(const r of rows){
+        const line=el('div','gmww-pr-deckrow'),cnt=el('b',null,String(pr.deck.get(r.roleId)||0)),minus=el('button','gmww-pr-step','−'),plus=el('button','gmww-pr-step','+');
+        minus.type=plus.type='button';
+        const set=n=>{n=Math.max(0,Math.min(30,n));if(n)pr.deck.set(r.roleId,n);else pr.deck.delete(r.roleId);cnt.textContent=String(n);refreshSum()};
+        minus.addEventListener('click',()=>set((pr.deck.get(r.roleId)||0)-1));plus.addEventListener('click',()=>set((pr.deck.get(r.roleId)||0)+1));
+        const ctl=el('div','gmww-pr-ctl');ctl.append(minus,cnt,plus);line.append(el('span',null,r.roleName||r.roleId),ctl);sec.append(line)}
+      box.append(sec)}
+    const apply=btn('ÁP DỤNG VÁN NÀY',async()=>{
+      const roles=[...pr.deck].map(([roleId,count])=>({roleId,count}));
+      await callOwner('template','POST',{custom:{name:pr.deckName.trim()||'Ván của tôi',roles}});say('Đã áp dụng Ván Mẫu của bạn.');await refresh()},'gmww-pr-main');apply.id='gmwwPrDeckApply';box.append(apply);
+    refreshSum();
   }
   function viewRoles(box,st,room,players){
     const cfg=st?.config,need=deckSize(cfg),ok=!!cfg&&need===players.length,rounds=Number(st?.dealRound)||0;
@@ -250,9 +274,10 @@
       +'#gmwwOwnerDock{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
       +'#gmwwStageStrip{position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 58px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
+      +'.gmww-pr-ctl{display:flex;align-items:center;gap:8px}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-panel button.gmww-pr-step{padding:0;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1}'
       +'.gmww-pr-roomrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid #e0b84c!important;background:#121a30!important;color:#f6e7c1;text-align:left}.gmww-pr-roomrow div{display:flex;flex-direction:column;gap:2px;min-width:0}.gmww-pr-roomrow small{opacity:.75;font-weight:500}.gmww-pr-roomrow span{font-size:24px}'
       +'.gmww-pr-back{position:fixed;inset:0;z-index:9490;background:rgba(0,0,0,.45)}.gmww-pr-back[hidden]{display:none}'
-      +'.gmww-pr-panel{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:9500;max-height:calc(100vh - 150px - env(safe-area-inset-bottom,0px));background:rgba(7,13,28,.98);color:#f6e7c1;display:flex;flex-direction:column;font-size:15px;border-radius:18px 18px 0 0;border-top:1px solid #6b5a2e;box-shadow:0 -10px 40px #000a}.gmww-pr-panel[hidden]{display:none}'
+      +'.gmww-pr-panel{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:9500;max-height:calc(100vh - 290px - env(safe-area-inset-bottom,0px));background:rgba(7,13,28,.98);color:#f6e7c1;display:flex;flex-direction:column;font-size:15px;border-radius:18px 18px 0 0;border-top:1px solid #6b5a2e;box-shadow:0 -10px 40px #000a}.gmww-pr-panel[hidden]{display:none}'
       +'.gmww-pr-grip{display:block;width:44px;height:4px;border-radius:4px;background:#6b5a2e;margin:8px auto 0}'
       +'.gmww-pr-head{display:flex;justify-content:space-between;align-items:center;padding:8px 16px 10px;font-size:17px;border-bottom:1px solid #3b3220}.gmww-pr-close{width:38px;height:38px;border-radius:50%;border:1px solid #6b5a2e;background:#1a2238;color:#f6e7c1;font-size:22px}'
       +'.gmww-pr-body{overflow:auto;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 20px);display:flex;flex-direction:column;gap:10px}'

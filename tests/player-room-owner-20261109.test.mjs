@@ -146,7 +146,7 @@ function worker({gate=200}={}){
     if(u.includes('/game-templates/assets'))return u.includes('role%3Aseer')?j({ok:false},404):j({ok:true,package:{roleCard:{name:'W'}}});
     throw new Error('unexpected '+u)};
   const roomFetch=async(u,init={})=>{log.room.push({u,method:init.method||'GET',auth:init.headers?.authorization,body:init.body});return u.endsWith('/owner/state')?j({ok:gate===200},gate):j({ok:true})};
-  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c));
+  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c));
   return {...fn,log};
 }
 const wreq=(method,body)=>new Request('https://x/api',{method,headers:{authorization:'Bearer OWNER','content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
@@ -194,4 +194,19 @@ test('roles-shuffle keeps the secret plan server-side, counts rounds, and start 
   const s=await o.ownerAction('start',req('/owner/start',{body:{}}));assert.equal(s.status,200);
   assert.deepEqual(o.calls[0].body.assignments.map(r=>r.loginId+':'+r.roleId),plan,'start deals the last shuffled plan');
   assert.equal(await o.ctx.storage.get('pendingDeal'),undefined);
+});
+
+test('custom deck: owner picks roles + counts; Worker builds the template from published cards and applies it',async()=>{
+  const w=worker(),res=await w.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{custom:{name:'Ván của Hà',roles:[{roleId:'wolf',count:2},{roleId:'seer',count:1}]}}));
+  assert.equal(res.status,200);
+  const last=w.log.room.at(-1),sent=JSON.parse(last.body);assert.equal(last.u,'https://room.internal/owner/apply-template');
+  assert.equal(sent.template.name,'Ván của Hà');assert.equal(sent.template.playerCount,3);
+  assert.deepEqual(sent.template.compiledConfig.roles.map(r=>[r.roleId,r.count]),[['wolf',2],['seer',1]]);
+  assert.match(sent.template.id,/^custom-/);assert.deepEqual(sent.packages.map(p=>p.roleId),['wolf'],'roles without a card asset are skipped (room refuses start later)');
+  for(const bad of [{roles:[]},{roles:[{roleId:'wolf',count:31},{roleId:'seer',count:1}]},{roles:[{roleId:'ghost',count:1}]}])
+    assert.equal((await w.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{custom:bad}))).status,400,JSON.stringify(bad));
+});
+test('role list needs a member session and is built from published templates',async()=>{
+  const w=worker(),res=await w.playerRoomRoleList({},new Request('https://x',{headers:{authorization:'Bearer t'}})),d=await res.json();
+  assert.equal(res.status,200);assert.deepEqual(d.roles.map(r=>r.roleId).sort(),['seer','wolf']);
 });

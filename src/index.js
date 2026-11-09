@@ -4637,6 +4637,7 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);
   if(url.pathname==="/api/player-rooms"&&request.method==="POST")return createPlayerRoom(env,url,request);
   if(url.pathname==="/api/player-rooms/templates"&&request.method==="GET")return playerRoomTemplates(env,request);
+  if(url.pathname==="/api/player-rooms/roles"&&request.method==="GET")return playerRoomRoleList(env,request);
   const ownerApi=url.pathname.match(/^\/api\/player-rooms\/([A-Za-z0-9]+)\/owner\/([a-z-]+)$/);if(ownerApi)return playerRoomOwnerApi(env,ownerApi[1],ownerApi[2],request);
   const gmObserver=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gm-observer\/(state|action|interaction|day-action|chat-mute|auto)$/);if(gmObserver)return gmObserverApi(env,gmObserver[1],gmObserver[2],request);
   const room=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)$/);if(room&&request.method==="GET")return publicRoomState(env,room[1],request);
@@ -4787,6 +4788,24 @@ async function playerRoomTemplates(env,request){
   if(!session.ok)return session;
   return memberStore(env).fetch("https://member.internal/game-templates/list")
 }
+// Every role that has a published card (from the GM's Ván Mẫu), so an owner can build a deck from them.
+async function playerRoomSourceRoles(env){
+  const store=memberStore(env),lr=await store.fetch("https://member.internal/game-templates/list");if(!lr.ok)return{ok:false,res:lr};
+  const metas=((await lr.json().catch(()=>({})))?.templates||[]).slice(0,40),roles=new Map(),bases=new Map();
+  for(const m of metas){
+    const tr=await store.fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(m.id));if(!tr.ok)continue;
+    const t=(await tr.json().catch(()=>({})))?.template,cfg=t?.compiledConfig;if(!cfg||!Array.isArray(cfg.roles))continue;
+    const {roles:_r,...base}=cfg;bases.set(m.id,base);
+    for(const r of cfg.roles){const id=String(r?.roleId||"");if(id&&!roles.has(id))roles.set(id,{...r,roleId:id,templateId:String(m.id)})}
+  }
+  return{ok:true,roles,bases}
+}
+async function playerRoomRoleList(env,request){
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const src=await playerRoomSourceRoles(env);if(!src.ok)return src.res;
+  return j({ok:true,roles:[...src.roles.values()].map(r=>({roleId:r.roleId,roleName:String(r.roleName||r.roleId),faction:String(r.faction||""),order:Number(r.order)||0})).sort((a,b)=>a.faction.localeCompare(b.faction,"vi")||a.roleName.localeCompare(b.roleName,"vi"))})
+}
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 async function playerRoomOwnerApi(env,rawCode,action,request){
   const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
@@ -4797,6 +4816,21 @@ async function playerRoomOwnerApi(env,rawCode,action,request){
   const body=await safeJson(request)||{};
   if(action==="template"){
     const gate=await stub.fetch("https://room.internal/owner/state",{headers:auth});if(!gate.ok)return gate;
+    if(body.custom&&typeof body.custom==="object"){
+      const name=String(body.custom.name||"").trim().slice(0,48)||"Ván của tôi",picked=new Map();
+      for(const r of Array.isArray(body.custom.roles)?body.custom.roles.slice(0,100):[]){const rid=String(r?.roleId||"").slice(0,80),n=Math.max(0,Math.min(30,Math.floor(Number(r?.count)||0)));if(rid&&n)picked.set(rid,(picked.get(rid)||0)+n)}
+      const total=[...picked.values()].reduce((a,b)=>a+b,0);
+      if(!picked.size||total<1||total>30)return j({ok:false,error:"INVALID_CUSTOM_DECK",message:"Chọn từ 1 đến 30 lá bài."},400);
+      const src=await playerRoomSourceRoles(env);if(!src.ok)return src.res;
+      const rows=[];for(const [rid,n] of picked){const r=src.roles.get(rid);if(!r)return j({ok:false,error:"ROLE_NOT_AVAILABLE",message:"Có vai chưa có lá bài."},400);rows.push({...r,count:n})}
+      const baseId=rows[0].templateId,id="custom-"+Date.now().toString(36),packages=[];
+      for(const r of rows){
+        const ar=await memberStore(env).fetch("https://member.internal/game-templates/assets?id="+encodeURIComponent(r.templateId)+"&assetId="+encodeURIComponent("role:"+r.roleId));if(!ar.ok)continue;
+        const d=await ar.json().catch(()=>null);if(d?.package)packages.push({...d.package,roleId:r.roleId})
+      }
+      const template={id,name,playerCount:total,compiledConfig:{...(src.bases.get(baseId)||{}),id,name,playerCount:total,roles:rows.map(({templateId:_t,...r})=>r)}};
+      return stub.fetch("https://room.internal/owner/apply-template",{method:"POST",headers:json,body:JSON.stringify({template,packages})})
+    }
     const id=String(body.templateId||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const tr=await memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));if(!tr.ok)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     const template=(await tr.json().catch(()=>({}))).template,packages=[];
