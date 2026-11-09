@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.318';
+const VERSION='3.319';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -4157,8 +4157,22 @@ function renderPlayerRooms(){
     const b=document.createElement('button');b.type='button';b.setAttribute('role','listitem');b.className='play-player-room'+(current?' active':'')+(phase==='running'?' running':'');
     const ago=playerRoomAgo(r.updatedAt);
     b.innerHTML='<span><b>'+playEsc(playReadableRoomName(r.roomName))+'</b><small>'+playEsc(code+' • '+(PLAYER_ROOM_PHASE_LABEL[phase]||phase)+' • '+(Number(r.playerCount)||0)+'/'+(Number(r.seatCount)||0)+' người'+(ago?' • '+ago:''))+'</small></span><i>'+(current?'ĐANG XEM':'XEM')+'</i>';
-    b.onclick=()=>observePlayerRoom(r);list.appendChild(b);
+    b.onclick=()=>observePlayerRoom(r);
+    const row=document.createElement('div');row.className='play-player-room-row';row.setAttribute('role','listitem');b.removeAttribute('role');
+    const del=document.createElement('button');del.type='button';del.className='play-player-room-del';del.textContent='XOÁ';del.setAttribute('aria-label','Xoá phòng '+code);
+    del.onclick=()=>void deletePlayerRoom(r);
+    row.append(b,del);list.appendChild(row);
   }
+}
+async function deletePlayerRoom(r){
+  const code=String(r?.code||'');if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code))return;
+  if(!confirm('Xoá phòng '+code+' ('+playReadableRoomName(r.roomName)+')? Người chơi trong phòng sẽ bị đưa ra.'))return;
+  try{
+    await gmApi('/api/gm/rooms/'+encodeURIComponent(code),{method:'DELETE'});
+    if(String(playSceneState.roomCode)===code){playSceneState.roomCode='';playSceneState.gmToken='';playSceneRuntime.room=null;savePlayScene();renderPlayScene()}
+    playerRoomsState.error='';
+  }catch(err){playerRoomsState.error=err?.message||'Không xoá được phòng.'}
+  void loadPlayerRooms();
 }
 async function observePlayerRoom(r){
   const code=String(r?.code||'');if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code))return;
@@ -4169,6 +4183,7 @@ async function observePlayerRoom(r){
     savePlayScene();gmwwSendGmPresence(true);
     const data=await playSyncRoom(true);
     if(!data){if(!isLivePlayRoom())clearStalePlayRoom();playerRoomsState.error='Không vào được phòng '+code+'. Có thể phòng đã đóng.';renderPlayerRooms();void loadPlayerRooms();return}
+    if(playSceneState.step==='lobby'||playSceneState.step==='room'){playSceneState.step='seats';savePlayScene()}
     playRoomUiState.stage='rooms';playRoomUiState.selectedCode='';playRoomUiState.editorMode='';
     document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
     renderPlayScene();
@@ -5650,7 +5665,7 @@ async function advancePlayPhase(){
   if(!battleUnlockedAudioContext||battleUnlockedAudioContext.state!=='running')
     battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
-  if(playSceneState.step==='lobby'||playSceneState.step==='room'){await playEnsureGatherRoom();return}
+  if(playSceneState.step==='lobby'||playSceneState.step==='room'){await openPlayCreateRoomSheet();return}
   if(playSceneState.step==='game'){void openPlayGameStep();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){playConfirmAssignments();return}
@@ -8476,11 +8491,11 @@ function gmAutoComposeRoles(catalog,players,history=[]){
     const required=n>=6?[seer]:[];
     if(n>=5){const defense=pick(['role_guard','role_witch'].map(id=>get(id,'village')).filter(Boolean),attempt+3);if(defense&&!required.some(r=>r.id===defense.id))required.push(defense)}
     for(const r of required)add(r);
-    const others=available.filter(r=>!counts.has(r.id)),extra=Math.min(Math.max(0,specialLimit-required.length),others.length,villageSlots-required.length-1);
-    for(let i=0;i<extra;i++){const r=pick(others,attempt+i+7);add(r);others.splice(others.indexOf(r),1)}
+    const pool=[...all.values()].filter(r=>String(r.factionId||r.faction||'').toLowerCase()==='village'&&String(r.id)!=='role_villager'&&!available.some(a=>a.id===r.id)),others=available.filter(r=>!counts.has(r.id)).concat(pool.filter(r=>!counts.has(r.id))),extra=Math.min(Math.max(0,villageSlots-required.length),others.length);
+    for(let i=0;i<extra;i++){const curated=others.filter(r=>available.some(a=>a.id===r.id)),r=pick(i<specialLimit-required.length&&curated.length?curated:others,attempt+i+7);add(r);others.splice(others.indexOf(r),1)}
     const chosenVillage=[...counts].reduce((sum,[id,count])=>sum+(String(all.get(id)?.factionId||'')==='village'?count:0),0);
-    if(chosenVillage>=villageSlots)continue;
-    add(villager,villageSlots-chosenVillage);
+    if(chosenVillage>villageSlots)continue;
+    if(chosenVillage<villageSlots)throw Error('Thư viện chưa đủ vai Phe Dân đặc biệt cho '+n+' người; hãy bổ sung Vai Trò.');
     const roles=[...counts].map(([id,count])=>({roleId:id,roleName:String(all.get(id).name||id),factionId:String(all.get(id).factionId),count}));
     const village=roles.filter(r=>r.factionId==='village').reduce((s,r)=>s+r.count,0);
     const signature=roles.map(r=>r.roleId+':'+r.count).sort().join('|');

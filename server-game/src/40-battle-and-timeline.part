@@ -125,7 +125,7 @@ async function advancePlayPhase(){
   if(!battleUnlockedAudioContext||battleUnlockedAudioContext.state!=='running')
     battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
-  if(playSceneState.step==='lobby'||playSceneState.step==='room'){await playEnsureGatherRoom();return}
+  if(playSceneState.step==='lobby'||playSceneState.step==='room'){await openPlayCreateRoomSheet();return}
   if(playSceneState.step==='game'){void openPlayGameStep();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){playConfirmAssignments();return}
@@ -2951,11 +2951,11 @@ function gmAutoComposeRoles(catalog,players,history=[]){
     const required=n>=6?[seer]:[];
     if(n>=5){const defense=pick(['role_guard','role_witch'].map(id=>get(id,'village')).filter(Boolean),attempt+3);if(defense&&!required.some(r=>r.id===defense.id))required.push(defense)}
     for(const r of required)add(r);
-    const others=available.filter(r=>!counts.has(r.id)),extra=Math.min(Math.max(0,specialLimit-required.length),others.length,villageSlots-required.length-1);
-    for(let i=0;i<extra;i++){const r=pick(others,attempt+i+7);add(r);others.splice(others.indexOf(r),1)}
+    const pool=[...all.values()].filter(r=>String(r.factionId||r.faction||'').toLowerCase()==='village'&&String(r.id)!=='role_villager'&&!available.some(a=>a.id===r.id)),others=available.filter(r=>!counts.has(r.id)).concat(pool.filter(r=>!counts.has(r.id))),extra=Math.min(Math.max(0,villageSlots-required.length),others.length);
+    for(let i=0;i<extra;i++){const curated=others.filter(r=>available.some(a=>a.id===r.id)),r=pick(i<specialLimit-required.length&&curated.length?curated:others,attempt+i+7);add(r);others.splice(others.indexOf(r),1)}
     const chosenVillage=[...counts].reduce((sum,[id,count])=>sum+(String(all.get(id)?.factionId||'')==='village'?count:0),0);
-    if(chosenVillage>=villageSlots)continue;
-    add(villager,villageSlots-chosenVillage);
+    if(chosenVillage>villageSlots)continue;
+    if(chosenVillage<villageSlots)throw Error('Thư viện chưa đủ vai Phe Dân đặc biệt cho '+n+' người; hãy bổ sung Vai Trò.');
     const roles=[...counts].map(([id,count])=>({roleId:id,roleName:String(all.get(id).name||id),factionId:String(all.get(id).factionId),count}));
     const village=roles.filter(r=>r.factionId==='village').reduce((s,r)=>s+r.count,0);
     const signature=roles.map(r=>r.roleId+':'+r.count).sort().join('|');
