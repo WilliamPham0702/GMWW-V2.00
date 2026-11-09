@@ -436,7 +436,7 @@ html body #gmwwOnlineFooter #gmwwChatPanel{max-height:min(52dvh,440px)!important
  void gmwwChatRefresh();
 }
 function gmwwChatDockSync(){
-  const inGame=!!(state.roomCode&&state.participantId&&['lobby','waiting','role_delivery','running'].includes(state.room?.phase)&&
+  const inGame=!!(state.roomCode&&state.participantId&&['running'].includes(state.room?.phase)&&
     String(state.room?.roomMode||'online').toLowerCase()==='online');
   let footer=document.getElementById('gmwwOnlineFooter'),panel=document.getElementById('gmwwChatPanel');
   if(!inGame){if(footer){if(panel)document.body.appendChild(panel);footer.remove()}if(gmwwOnlineFooterTimer){clearInterval(gmwwOnlineFooterTimer);gmwwOnlineFooterTimer=null}return}
