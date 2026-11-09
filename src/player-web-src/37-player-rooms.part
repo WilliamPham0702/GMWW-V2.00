@@ -178,9 +178,11 @@
   function openSheet(){pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>{});refresh()}
   function closeSheet(){pr.open=false;render()}
   window.gmwwOpenCreateRoom=()=>{if(pr.own&&!inOwnRoom()){/* own room exists but the player is elsewhere */}openSheet()};
+  // Box Chat sống trong trang Phòng; ngoài đó nó nằm ẩn dưới body (không còn thanh chat nổi).
+  function parkChat(){const c=document.getElementById('gmwwChatPanel');if(c&&c.parentElement&&c.parentElement.classList.contains('gmww-pr-chatbox'))document.body.appendChild(c)}
   function render(){
     const panel=document.getElementById('gmwwPrPanel'),back=document.getElementById('gmwwPrBack');if(!panel||!back)return;
-    panel.hidden=back.hidden=!pr.open;renderChrome();if(!pr.open)return;
+    parkChat();panel.hidden=back.hidden=!pr.open;renderChrome();if(!pr.open)return;
     panel.textContent='';
     const head=el('header','gmww-pr-head'),close=el('button','gmww-pr-close','×');close.type='button';close.setAttribute('aria-label','Đóng');close.addEventListener('click',closeSheet);
     head.append(el('b',null,pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng')),close);panel.append(el('i','gmww-pr-grip'),head);
@@ -196,7 +198,11 @@
       if(running&&pr.view!=='battle')sec.prepend(el('p','gmww-pr-note','Ván đang chạy: các bước chuẩn bị chỉ để xem.'));
       body.append(sec);
     }
-    const status=el('div','gmww-pr-status');status.id='gmwwPrStatus';status.textContent=pr.msg;body.append(status);panel.append(body);
+    const status=el('div','gmww-pr-status');status.id='gmwwPrStatus';status.textContent=pr.msg;body.append(status);
+    {const chat=document.getElementById('gmwwChatPanel');
+     if(chat&&state?.roomCode&&String(pr.state?.room?.phase||state?.room?.phase||'lobby').toLowerCase()!=='running'){
+       const box=el('div','gmww-pr-chatbox');box.append(el('div','gmww-pr-sub','CHAT PHÒNG'));box.append(chat);chat.classList.add('open');body.append(box)}}
+    panel.append(body);
   }
   // Top strip + bottom dock are the GM Server's own markup and CSS (GMWW_SERVER_MENU), shown to every logged-in player.
   const LABEL={lobby:'SẢNH CHỜ',room:'PHÒNG',seats:'TẬP HỢP',game:'VÁN MẪU',roles:'PHÂN VAI',deal:'PHÁT VAI',battle:'VÀO TRẬN'};
@@ -241,8 +247,9 @@
       if(confirm(owner()?'Rời phòng của bạn? Phòng trống 30 phút sẽ tự xoá.':'Rời phòng này?'))run(async()=>{closeSheet();await window.leaveRoom()});
     });
     q('playChatTop').addEventListener('click',()=>{
-      if(typeof gmwwChatExpand==='function'&&document.getElementById('gmwwChatPanel')){if(window.gmwwChatOpen)gmwwChatClosePanel();else gmwwChatExpand();return}
-      try{toast('Box Chat mở được khi bạn đã ở trong phòng.')}catch(_){}
+      if(!state?.roomCode){try{toast('Box Chat mở được khi bạn đã ở trong phòng.')}catch(_){}return}
+      if(pr.open){closeSheet();return}
+      pr.view='room';openSheet();
     });
     q('playEndGame').addEventListener('click',()=>{if(owner()&&stepNow()==='battle'&&confirm('Kết thúc ván ngay?'))run(async()=>{await callOwner('end','POST',{});say('Đã kết thúc ván.');await refresh()})});
     document.body.appendChild(host);return host;
@@ -273,6 +280,7 @@
     document.head.appendChild(el('style',null,'#gmwwSetupTop3{display:none!important}'
       +'#gmwwOwnerDock{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
       +'#gmwwStageStrip{position:fixed;left:0;right:0;top:0;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
+      +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbox{display:flex;flex-direction:column;gap:6px}.gmww-pr-chatbox #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
       +'.gmww-pr-ctl{display:flex;align-items:center;gap:8px}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-panel button.gmww-pr-step{padding:0;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1}'
       +'.gmww-pr-roomrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid #4fc3f7!important;background:#0b3a5e!important;color:#e8f6ff;text-align:left}.gmww-pr-roomrow div{display:flex;flex-direction:column;gap:2px;min-width:0}.gmww-pr-roomrow small{opacity:.75;font-weight:500}.gmww-pr-roomrow span{font-size:24px}'
