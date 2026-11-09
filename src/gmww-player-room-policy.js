@@ -24,3 +24,32 @@ export function evaluatePlayerRoomCreate(rows,ownerLoginId,nowMs=Date.now(),{max
   if(active.length>=maxActive)return{ok:false,status:429,error:'PLAYER_ROOM_LIMIT',max:maxActive};
   return{ok:true,active:active.length};
 }
+
+// ---- Empty-room expiry (PR-B) ----
+// A player room with nobody present for 30 minutes is deleted. "Present" uses the same
+// heartbeat window as publicPlayer().online (ROOM_PLAYER_TTL = 70 s); seats are kept while
+// players are merely offline, so only the whole room being empty starts the clock.
+export const PLAYER_ROOM_EMPTY_TTL_MS=30*60*1000;
+export const PLAYER_ROOM_CHECK_MS=5*60*1000;
+export const PLAYER_ROOM_PRESENT_MS=70*1000;
+
+export function playerRoomOccupied(players,nowMs=Date.now(),presentMs=PLAYER_ROOM_PRESENT_MS){
+  return Object.values(players||{}).some(p=>{
+    const hb=Number(p?.lastHeartbeatAt||0)||Date.parse(p?.lastSeenAt||'')||0;
+    return hb>0&&nowMs-hb<=presentMs;
+  });
+}
+
+// Returns the new emptySince (ISO string or null). Keeps the old value while the room stays empty.
+export function nextEmptySince(meta,occupied,nowMs=Date.now()){
+  if(occupied)return null;
+  const prev=Date.parse(meta?.emptySince||'');
+  return Number.isFinite(prev)?String(meta.emptySince):new Date(nowMs).toISOString();
+}
+
+// Timestamp (ms) when an empty player room expires, or null when it is not empty / not a player room.
+export function playerRoomEmptyDue(meta){
+  if(meta?.playerRoom!==true)return null;
+  const since=Date.parse(meta.emptySince||'');
+  return Number.isFinite(since)?since+PLAYER_ROOM_EMPTY_TTL_MS:null;
+}
