@@ -4,7 +4,7 @@
    (role names and counts) but never who holds which role: the server deals blind at Phát Vai.
    Routes: POST /api/player-rooms, GET /api/player-rooms/templates, /api/player-rooms/:code/owner/*. */
 (function gmwwPlayerRooms(){
-  const KEY='gmwwOwnedRoom',STEPS=[['lobby','Sảnh chờ'],['seats','Tập hợp'],['game','Ván Mẫu'],['roles','Phân Vai'],['deal','Phát Vai'],['battle','Vào Trận']];
+  const KEY='gmwwOwnedRoom',STEPS=[['lobby','Sảnh chờ'],['room','Phòng Game'],['seats','Tập hợp'],['game','Ván Mẫu'],['roles','Phân Vai'],['deal','Phát Vai'],['battle','Vào Trận']];
   const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],state:null,msg:'',view:'',touched:false};
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
   const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.code&&v.token?v:null}catch(_){return null}};
@@ -33,7 +33,7 @@
     pr.open=false;try{await enterVillage()}catch(_){}
   }
   // Keeps the strip every player sees in step with the owner's tab (ignored when the server refuses).
-  const STAGE={lobby:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
+  const STAGE={lobby:'room',room:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
   function syncStage(k){if(!pr.own||!STAGE[k]||String(pr.state?.room?.phase||'lobby').toLowerCase()==='running')return;callOwner('stage','POST',{step:STAGE[k]}).then(refresh).catch(()=>{})}
   function goStep(k){pr.view=k;pr.touched=true;syncStage(k);render()}
   async function loadTemplates(){const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[]}
@@ -45,13 +45,28 @@
   function deckSize(cfg){return(cfg?.roles||[]).reduce((n,r)=>n+Math.max(1,Number(r.count)||1),0)}
 
   function viewLobby(box,st,room,players){
-    const link=pr.own.joinUrl||(location.origin+'/'+pr.own.code);
     const g=el('div','gmww-pr-grid');g.append(stat('Mã phòng',pr.own.code),stat('Người trong phòng',players.length+' / '+(room.seatCount||30)));box.append(g);
-    box.append(el('p','gmww-pr-help','Gửi mã hoặc link cho bạn bè để họ vào phòng. Bạn chơi cùng mọi người, Quản Trò Tự Động điều hành ván.'));
-    box.append(btn('SAO CHÉP LINK MỜI',async()=>{try{await navigator.clipboard.writeText(link);say('Đã sao chép link.')}catch(_){say(link)}}));
-    const row=el('div','gmww-pr-row'),name=el('input');name.id='gmwwPrRename';name.maxLength=60;name.placeholder='Đổi tên phòng';name.value=room.roomName||'';
+    box.append(el('p','gmww-pr-help','Bạn chơi cùng mọi người, Quản Trò Tự Động điều hành ván. Bước đầu: gửi phòng cho bạn bè ở trang Phòng Game.'));
+    box.append(btn('TIẾP: PHÒNG GAME →',async()=>goStep('room'),'gmww-pr-main'));
+  }
+  // "Phòng Game": send the room to friends and see who has joined it.
+  function viewRoomPage(box,st,room,players){
+    const link=pr.own.joinUrl||(location.origin+'/?room='+pr.own.code),code=pr.own.code,total=Number(room.seatCount)||30;
+    const big=el('div','gmww-pr-code');big.append(el('small',null,'MÃ PHÒNG'),el('b',null,code));box.append(big);
+    const tools=el('div','gmww-pr-tools');
+    tools.append(btn('GỬI PHÒNG',async()=>{const text='Vào phòng Ma Sói của mình nhé! Mã phòng: '+code+'\n'+link;
+      if(navigator.share){try{await navigator.share({title:'Phòng Ma Sói '+code,text,url:link});return}catch(e){if(e&&e.name==='AbortError')return}}
+      try{await navigator.clipboard.writeText(text);say('Đã sao chép lời mời.')}catch(_){say(text)}},'gmww-pr-main'),
+      btn('SAO CHÉP MÃ',async()=>{try{await navigator.clipboard.writeText(code);say('Đã sao chép mã '+code+'.')}catch(_){say('Mã phòng: '+code)}}));box.append(tools);
+    const row=el('div','gmww-pr-row'),name=el('input');name.id='gmwwPrRename';name.maxLength=60;name.placeholder='Tên phòng';name.value=room.roomName||'';
     row.append(name,btn('LƯU',async()=>{const v=(document.getElementById('gmwwPrRename')?.value||'').trim();if(!v)return;await callOwner('room-settings','POST',{roomName:v});say('Đã đổi tên.');await refresh()}));box.append(row);
-    box.append(btn('TIẾP: TẬP HỢP →',async()=>goStep('seats'),'gmww-pr-main'));
+    box.append(el('div','gmww-pr-sub','ĐÃ VÀO PHÒNG • '+players.length+' / '+total));
+    const list=el('div','gmww-pr-list');
+    for(const p of players){const line=el('div','gmww-pr-player'),isOwner=String(p.loginId||'')===String(st?.ownerLoginId||'');
+      const dot=el('i','gmww-pr-dot'+(p.online===false?' is-off':''));const nm=el('span',null,(p.displayName||p.loginId||'?')+(isOwner?'  ★ chủ phòng':''));
+      const left=el('div','gmww-pr-who');left.append(dot,nm);line.append(left,el('small',null,p.seatId?('Ghế '+p.seatId):'Chưa có ghế'));list.append(line)}
+    if(!players.length)list.append(el('p','gmww-pr-help','Chưa có ai trong phòng.'));
+    box.append(list,btn('TIẾP: TẬP HỢP →',async()=>goStep('seats'),'gmww-pr-main'));
   }
   function viewSeats(box,st,room,players,locked){
     const g=el('div','gmww-pr-grid');g.append(stat('Đã tập hợp',players.length+' người'),stat('Chỗ ngồi',locked?'ĐÃ CHỐT':'Đang mở'));box.append(g);
@@ -112,7 +127,7 @@
     panel.hidden=back.hidden=!pr.open;renderDock();if(!pr.open)return;
     panel.textContent='';
     const head=el('header','gmww-pr-head'),close=el('button','gmww-pr-close','×');close.type='button';close.setAttribute('aria-label','Đóng');close.addEventListener('click',closeSheet);
-    head.append(el('b',null,pr.own?(pr.state?.room?.roomName||'Phòng của tôi'):'Tạo phòng của tôi'),close);panel.append(el('i','gmww-pr-grip'),head);
+    head.append(el('b',null,pr.own?(pr.state?.room?.roomName||'Phòng Game'):'Phòng Game'),close);panel.append(el('i','gmww-pr-grip'),head);
     const body=el('div','gmww-pr-body');
     if(!pr.own){
       body.append(el('p','gmww-pr-help','Bạn chơi cùng mọi người, Quản Trò Tự Động điều hành. Tối đa 30 người. Mỗi người một phòng.'));
@@ -125,7 +140,7 @@
       STEPS.forEach(([k,label],i)=>{const t=el('button',(pr.view===k?'is-view ':'')+(cur===k?'is-now':''));t.type='button';t.append(el('span',null,String(i+1)),el('b',null,label));t.addEventListener('click',()=>goStep(k));tabs.append(t)});
       body.append(tabs);
       const sec=el('section','gmww-pr-sec');
-      ({lobby:viewLobby,seats:viewSeats,game:viewGame,roles:viewRoles,deal:viewDeal,battle:viewBattle})[pr.view](sec,st,room,players,pr.view==='battle'?running:locked);
+      ({lobby:viewLobby,room:viewRoomPage,seats:viewSeats,game:viewGame,roles:viewRoles,deal:viewDeal,battle:viewBattle})[pr.view](sec,st,room,players,pr.view==='battle'?running:locked);
       if(running&&pr.view!=='battle')sec.prepend(el('p','gmww-pr-note','Ván đang chạy: các bước chuẩn bị chỉ để xem.'));
       body.append(sec);
     }
@@ -184,7 +199,7 @@
       +'.gmww-pr-grip{display:block;width:44px;height:4px;border-radius:4px;background:#6b5a2e;margin:8px auto 0}'
       +'.gmww-pr-head{display:flex;justify-content:space-between;align-items:center;padding:8px 16px 10px;font-size:17px;border-bottom:1px solid #3b3220}.gmww-pr-close{width:38px;height:38px;border-radius:50%;border:1px solid #6b5a2e;background:#1a2238;color:#f6e7c1;font-size:22px}'
       +'.gmww-pr-body{overflow:auto;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 20px);display:flex;flex-direction:column;gap:10px}'
-      +'.gmww-pr-steps{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}.gmww-pr-panel .gmww-pr-steps button{font-size:10px;font-weight:600;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;border:1px solid #3b3220;background:#121a30;color:#bfae80}.gmww-pr-steps span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#25304d;font-weight:700;font-size:12px}.gmww-pr-steps b{font-weight:600;white-space:nowrap}'
+      +'.gmww-pr-steps{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.gmww-pr-panel .gmww-pr-steps button{font-size:9px;font-weight:600;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;border:1px solid #3b3220;background:#121a30;color:#bfae80}.gmww-pr-steps span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#25304d;font-weight:700;font-size:12px}.gmww-pr-steps b{font-weight:600;white-space:nowrap;font-size:8.5px}'
       +'.gmww-pr-panel .gmww-pr-steps .is-now span{background:#e0b84c;color:#1a1304}.gmww-pr-panel .gmww-pr-steps .is-view{border-color:#e0b84c;color:#fff2c4}'
       +'.gmww-pr-sec{display:flex;flex-direction:column;gap:10px}.gmww-pr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gmww-pr-stat{background:#121a30;border:1px solid #3b3220;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px}.gmww-pr-stat small{opacity:.7;font-size:11px}.gmww-pr-stat b{font-size:18px}'
       +'.gmww-pr-help{margin:0;font-size:13px;opacity:.85;line-height:1.45}.gmww-pr-note{margin:0;padding:10px;border-radius:10px;background:#2a2312;border:1px solid #6b5a2e;font-size:13px;line-height:1.45}'
@@ -194,7 +209,7 @@
       +'.gmww-pr-list{display:flex;flex-direction:column;gap:6px}.gmww-pr-player{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#121a30;border:1px solid #2c3552}.gmww-pr-player button.gmww-pr-kick{padding:6px 12px;background:#7f1d1d;font-size:12px}'
       +'.gmww-pr-tpl{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border-radius:12px;background:#121a30;border:1px solid #2c3552}.gmww-pr-tpl.is-on{border-color:#e0b84c}.gmww-pr-tpl div{display:flex;flex-direction:column;gap:2px}.gmww-pr-tpl small{opacity:.75}.gmww-pr-tpl button{padding:8px 14px}'
       +'.gmww-pr-deck{background:#121a30;border:1px solid #2c3552;border-radius:12px;padding:8px 10px}.gmww-pr-deck small{opacity:.7}.gmww-pr-deckrow{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #1f2944}.gmww-pr-deckrow:first-of-type{border-top:0}'
-      +'.gmww-pr-status{font-size:12px;opacity:.9;min-height:16px}'));
+      +'.gmww-pr-code{display:flex;flex-direction:column;align-items:center;padding:12px;border-radius:14px;background:#121a30;border:1px solid #e0b84c}.gmww-pr-code small{opacity:.7;font-size:11px;letter-spacing:.1em}.gmww-pr-code b{font-size:34px;letter-spacing:.18em}.gmww-pr-sub{font-size:11px;font-weight:700;letter-spacing:.05em;opacity:.8}.gmww-pr-who{display:flex;align-items:center;gap:8px;min-width:0}.gmww-pr-dot{width:9px;height:9px;border-radius:50%;background:#3fb868;flex:none}.gmww-pr-dot.is-off{background:#6b7280}.gmww-pr-status{font-size:12px;opacity:.9;min-height:16px}'));
     const back=el('div','gmww-pr-back');back.id='gmwwPrBack';back.hidden=true;back.addEventListener('click',closeSheet);
     const panel=el('div','gmww-pr-panel');panel.id='gmwwPrPanel';panel.hidden=true;document.body.append(back,panel);
     pr.own=load();
