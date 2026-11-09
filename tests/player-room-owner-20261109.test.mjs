@@ -56,7 +56,7 @@ function room({meta={},players,cfg,cards=['wolf','seer','villager']}={}){
   if(cfg!==null)data.set('gameConfig',cfg||{id:'t',name:'Mẫu',playerCount:6,roles});
   for(const c of cards)data.set('roleCatalog:'+c,{roleId:c});
   const o=new Owner(),calls=[];o.calls=calls;o.data=data;
-  o.ctx={storage:{get:async k=>structuredClone(data.get(k)),put:async(k,v)=>{data.set(k,structuredClone(v))}}};
+  o.ctx={storage:{get:async k=>structuredClone(data.get(k)),put:async(k,v)=>{data.set(k,structuredClone(v))},delete:async k=>{data.delete(k)}}};
   const rec=(name,res={ok:true})=>async(req,body)=>{calls.push({name,auth:req?.headers?.get?.('authorization')||null,body});return j(res)};
   for(const n of ['gmSeatLock','gmRandomizeRemainingSeats','gmKick','gmRoomSettings','gmConfig','gmRoleAssets','gmStart'])o[n]=rec(n);
   o.gmAssign=async(req,body)=>{calls.push({name:'gmAssign',auth:req.headers.get('authorization'),body});data.get('meta').matchId=body.matchId;return j({ok:true,assignments:body.assignments})};
@@ -182,6 +182,16 @@ test('template list needs a member session',async()=>{
 // ---- wiring guards ----
 test('routes: owner API is under /api/player-rooms and the DO route list matches the Worker whitelist',()=>{
   assert.ok(source.includes('const ownerApi=url.pathname.match(/^\\/api\\/player-rooms\\/([A-Za-z0-9]+)\\/owner\\/([a-z-]+)$/);if(ownerApi)return playerRoomOwnerApi('));
-  assert.ok(source.includes('/^\\/owner\\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start|end|stage)$/'));
+  assert.ok(source.includes('/^\\/owner\\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|roles-shuffle|start|end|stage)$/'));
   assert.ok(source.includes('if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);'),'GM room creation unchanged');
+});
+
+test('roles-shuffle keeps the secret plan server-side, counts rounds, and start reuses the last plan',async()=>{
+  const o=room(),a=await o.ownerAction('roles-shuffle',req('/owner/roles-shuffle',{body:{}})),ta=await a.text();
+  assert.equal(a.status,200);assert.equal(JSON.parse(ta).dealRound,1);assert.equal(ta.includes('roleId'),false,'shuffle response carries no role information');
+  const b=await o.ownerAction('roles-shuffle',req('/owner/roles-shuffle',{body:{}}));assert.equal(JSON.parse(await b.text()).dealRound,2);
+  const plan=(await o.ctx.storage.get('pendingDeal')).rows.map(r=>r.loginId+':'+r.roleId);
+  const s=await o.ownerAction('start',req('/owner/start',{body:{}}));assert.equal(s.status,200);
+  assert.deepEqual(o.calls[0].body.assignments.map(r=>r.loginId+':'+r.roleId),plan,'start deals the last shuffled plan');
+  assert.equal(await o.ctx.storage.get('pendingDeal'),undefined);
 });

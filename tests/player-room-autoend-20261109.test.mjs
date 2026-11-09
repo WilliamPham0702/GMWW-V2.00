@@ -43,7 +43,7 @@ test('a failed end is reported as not ended',async()=>{
 });
 test('source wiring: auto-advance checks the win for player rooms, owner end is whitelisted',()=>{
   assert.match(source,/if\(meta\.playerRoom===true&&await this\.playerRoomAutoEnd\(meta\)\)return true;/);
-  assert.match(source,/apply-template\|start\|end\|stage\)\$/);
-  assert.match(source,/"template","start","end","stage"\]\.includes\(action\)/);
+  assert.match(source,/apply-template\|roles-shuffle\|start\|end\|stage\)\$/);
+  assert.match(source,/"template","roles-shuffle","start","end","stage"]\.includes\(action\)/);
   assert.match(source,/if\(action==="end"\)return this\.ownerEnd\(gm,meta\);/);
 });

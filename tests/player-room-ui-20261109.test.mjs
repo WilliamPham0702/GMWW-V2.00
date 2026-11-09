@@ -17,7 +17,7 @@ test('panel only talks to the player-room API and never to GM routes or tokens',
 });
 test('owner actions used by the panel are exactly the ones the Worker whitelists',()=>{
   const used=[...part.matchAll(/callOwner\('([a-z-]+)'/g)].map(m=>m[1]);
-  const allowed=['template','seat-lock','seats-randomize','start','kick','end','stage','room-settings'];
+  const allowed=['template','seat-lock','seats-randomize','start','kick','end','stage','room-settings','roles-shuffle'];
   assert.ok(used.length>=7);for(const u of used)assert.ok(allowed.includes(u),u);
 });
 test('owner token is kept only under its own storage key and cleared when the room closes',()=>{
@@ -38,7 +38,7 @@ test('server bottom bar is bundled from the GM app, the plus button and Top 3 ar
 
 test('creating a room enters the village so the bar shows, and players can join by code',()=>{
   assert.match(part,/await enterVillage\(\)/);
-  assert.match(part,/joinByCode/);assert.match(part,/id='gmwwRoomBar'/);assert.match(part,/barScreen/);assert.doesNotMatch(part,/profile-actions-row/);
+  assert.match(part,/joinByCode/);assert.match(part,/host\.id='gmwwStageStrip'/);assert.match(part,/barScreen/);assert.doesNotMatch(part,/profile-actions-row/);
   const urls=[...part.matchAll(/'(\/api\/[^']*)'/g)].map(m=>m[1]);for(const u of urls)assert.match(u,/^\/api\/player-rooms/);
 });
 

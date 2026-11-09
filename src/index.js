@@ -199,7 +199,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/directory/rooms/upsert"&&request.method==="POST")return this.roomDirectoryUpsert(await safeJson(request));
     if(url.pathname==="/directory/rooms/list"&&request.method==="GET")return this.roomDirectoryList(url);
     if(url.pathname==="/directory/rooms/delete"&&request.method==="POST")return this.roomDirectoryDelete(await safeJson(request));
-    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start|end|stage)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
+    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|roles-shuffle|start|end|stage)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
     if(url.pathname==="/directory/player-rooms/reserve"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(async()=>this.playerRoomReserve(await safeJson(request)));
     if(url.pathname==="/global-assets/victory"&&request.method==="GET")return this.globalAssetGet("globalAsset:victory","audio/mpeg");
     if(url.pathname==="/global-assets/victory"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:victory","audio/mpeg",125000);
@@ -924,6 +924,7 @@ export class RoomDurableObject extends DurableObject {
       return this.gmRoomSettings(gm,picked)
     }
     if(action==="apply-template")return this.ownerApplyTemplate(gm,meta,body);
+    if(action==="roles-shuffle")return this.ownerRolesShuffle(gm,meta);
     if(action==="start")return this.ownerStart(gm,meta,body);
     if(action==="end")return this.ownerEnd(gm,meta);
     if(action==="stage"){const step=String(body.step||"").toLowerCase();return["room","seats","game","roles","deal"].includes(step)?this.gmStage(gm,{step}):j({ok:false,error:"INVALID_GM_STAGE"},400)}
@@ -932,7 +933,7 @@ export class RoomDurableObject extends DurableObject {
   async ownerState(request){
     const gate=await this.ownerGate(request);if(!gate.ok)return gate.response;
     const players=(await this.ctx.storage.get("players"))||{};
-    return j({ok:true,room:publicRoom(gate.meta),players:Object.values(players).map(publicPlayer),config:ownerDeckView(await this.ctx.storage.get("gameConfig")),ownerLoginId:gate.meta.ownerLoginId||null})
+    return j({ok:true,room:publicRoom(gate.meta),players:Object.values(players).map(publicPlayer),config:ownerDeckView(await this.ctx.storage.get("gameConfig")),dealRound:Number((await this.ctx.storage.get("pendingDeal"))?.round||0),ownerLoginId:gate.meta.ownerLoginId||null})
   }
   // The Worker reads the Ván Mẫu from the member store and passes it here; the owner only names a templateId.
   async ownerApplyTemplate(gm,meta,body){
@@ -959,6 +960,18 @@ export class RoomDurableObject extends DurableObject {
     if(String(meta.phase||"").toLowerCase()!=="running")return j({ok:false,error:"ROOM_NOT_RUNNING"},409);
     return this.gmEnd(gm,{matchId:meta.matchId})
   }
+  // Phân Vai: the server shuffles the deck in secret and keeps the plan in storage (never returned); only the round count is visible.
+  async ownerRolesShuffle(gm,meta){
+    const phase=String(meta.phase||"lobby").toLowerCase();
+    if(phase!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY",message:"Ván đã được bắt đầu."},409);
+    const cfg=await this.ctx.storage.get("gameConfig");if(!cfg||!Array.isArray(cfg.roles)||!cfg.roles.length)return j({ok:false,error:"TEMPLATE_NOT_SELECTED",message:"Hãy chọn Ván Mẫu trước."},409);
+    const players=(await this.ctx.storage.get("players"))||{},members=Object.values(players).filter(p=>p?.kind==="member").sort((a,b)=>Number(a.seatId||0)-Number(b.seatId||0));
+    const plan=planPlayerRoomDeal(cfg.roles,members,secureShuffle);
+    if(!plan.ok)return j({ok:false,error:plan.error,need:plan.need??null,have:plan.have??null},409);
+    const old=await this.ctx.storage.get("pendingDeal"),round=Number(old?.round||0)+1;
+    await this.ctx.storage.put("pendingDeal",{round,rows:plan.rows,members:members.map(m=>String(m.loginId||"")).sort(),roleKey:cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(",")});
+    return j({ok:true,dealRound:round})
+  }
   // Seats must be locked; deals the template's roles at random, starts the match and the first night.
   async ownerStart(gm,meta,body){
     const phase=String(meta.phase||"lobby").toLowerCase();
@@ -969,8 +982,11 @@ export class RoomDurableObject extends DurableObject {
     const haveCards=new Set();for(const r of cfg.roles){const id=String(r.roleId||"");if(id&&!haveCards.has(id)&&await this.ctx.storage.get("roleCatalog:"+id))haveCards.add(id)}
     const missing=missingRoleCards(cfg.roles,id=>haveCards.has(id));
     if(missing.length)return j({ok:false,error:"TEMPLATE_ASSETS_MISSING",missing},409);
-    const plan=planPlayerRoomDeal(cfg.roles,members,secureShuffle);
+    let plan=planPlayerRoomDeal(cfg.roles,members,secureShuffle);
     if(!plan.ok)return j({ok:false,error:plan.error,need:plan.need??null,have:plan.have??null},409);
+    const pending=await this.ctx.storage.get("pendingDeal");
+    if(pending&&Array.isArray(pending.rows)&&pending.members?.join(",")===members.map(m=>String(m.loginId||"")).sort().join(",")&&pending.roleKey===cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(","))plan={ok:true,rows:pending.rows};
+    await this.ctx.storage.delete("pendingDeal");
     const matchId="p"+Date.now().toString(36)+Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>b.toString(16).padStart(2,"0")).join("");
     const assigned=await this.gmAssign(gm,{assignments:plan.rows,matchId,matchRevision:1,deliveryVersion:1});if(!assigned.ok)return assigned;
     const started=await this.gmStart(gm,{matchId});if(!started.ok)return started;
@@ -4774,7 +4790,7 @@ async function playerRoomTemplates(env,request){
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 async function playerRoomOwnerApi(env,rawCode,action,request){
   const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
-  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","start","end","stage"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
+  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","roles-shuffle","start","end","stage"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
   const stub=roomStub(env,code),auth={authorization:request.headers.get("authorization")||""},json={...auth,"content-type":"application/json"};
   if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return stub.fetch("https://room.internal/owner/state",{headers:auth})}
   if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
