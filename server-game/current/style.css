@@ -8916,3 +8916,29 @@ body.play-immersive #start #playShell #playSetupStrip.gm-stage-timeline-v330>but
 body.play-immersive #start #playShell[data-phase] #gmTopMenu.gm-stage-dock-v330{grid-template-columns:48px minmax(0,1fr) minmax(0,1.1fr) 48px!important}
 #playChatTop.play-chat-top{width:auto!important;min-width:0;display:flex;align-items:center;justify-content:flex-start;padding:0 12px;gap:6px;border-radius:14px}
 #playChatTop .play-chat-top-text{font-size:13px;font-weight:600;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* V3.321 Trận đấu: hai thanh canh giữa màn hình; ô giữa thanh dưới là khung chat, ô hành động chỉ hiện khi có hành động ban ngày / Artifact. */
+body.play-immersive #start #playBattleTop,
+body.play-immersive #start #playSetupStrip.gm-stage-timeline-v330,
+body.play-immersive #start #gmTopMenu.gm-stage-dock-v330{
+ left:0!important;right:0!important;margin-left:auto!important;margin-right:auto!important;
+ width:min(calc(100% - 14px),760px)!important;max-width:760px!important;box-sizing:border-box!important;transform:none!important;
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls.battle-bottom-controls-v3104{
+ left:0!important;right:0!important;margin-left:auto!important;margin-right:auto!important;
+ width:min(calc(100vw - 10px),760px)!important;max-width:760px!important;box-sizing:border-box!important;transform:none!important;
+}
+#battleGMChatFloat{display:none!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot{gap:4px!important;padding:3px!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleChatBox{
+ display:flex!important;align-items:center!important;flex:1 1 0!important;min-width:0!important;width:auto!important;height:100%!important;margin:0!important;
+ padding:0 12px!important;border:1px solid rgba(190,235,245,.32)!important;border-radius:10px!important;background:rgba(5,35,49,.34)!important;
+ color:rgba(236,250,255,.78)!important;font:600 13px/1 system-ui,-apple-system,sans-serif!important;text-align:left!important;white-space:nowrap!important;overflow:hidden!important;
+ pointer-events:auto!important;touch-action:manipulation!important
+}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleChatBox span{display:block!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleChatBox.is-open{border-color:#87e4ff!important;box-shadow:0 0 8px rgba(135,228,255,.5)!important;color:#fff!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleChatBox:disabled{opacity:.45!important}
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot #battleActionTray:not([hidden]){
+ flex:0 1 54%!important;width:auto!important;max-width:54%!important;margin:0!important
+}

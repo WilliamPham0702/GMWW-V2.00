@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.320';
+const VERSION='3.321';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -4220,6 +4220,15 @@ function gmwwSetupFreeBattleIcons(){
   if(rail){
     let actionSlot=document.getElementById('battleMainActionSlot');
     if(!actionSlot){actionSlot=document.createElement('div');actionSlot.id='battleMainActionSlot';actionSlot.className='battle-main-action-slot';}
+    // V3.321: the middle slot is the chat box; the action box (day action / Artifact) sits beside it only when it has content.
+    let chatBox=document.getElementById('battleChatBox');
+    if(!chatBox){
+      chatBox=document.createElement('button');chatBox.id='battleChatBox';chatBox.type='button';chatBox.className='battle-chat-box-v321';
+      chatBox.setAttribute('aria-controls','gmwwGMChatPanel');chatBox.setAttribute('aria-pressed','false');chatBox.setAttribute('aria-label','Chat Làng và Chat riêng');
+      chatBox.title='Chat Làng và Chat riêng';chatBox.innerHTML='<span aria-hidden="true">Nhắn cho phòng…</span>';
+      chatBox.onclick=()=>document.getElementById('battleGMChatToggle')?.click();
+    }
+    actionSlot.appendChild(chatBox);
     for(const id of ['battleDayActionFloat','battleActionTray']){
       const item=document.getElementById(id);if(item)actionSlot.appendChild(item);
     }
@@ -7425,9 +7434,11 @@ function battleSyncPhaseDock(phase,visible){
   const day=!!visible&&phase==='day',night=!!visible&&phase==='night';
   const shell=document.getElementById('playShell');
   if(shell)shell.dataset.battlePhase=visible?phase:'';
-  const slots={playBattleClockFloat:!!visible,battleActionTray:!!visible,
+  // V3.321: battleActionTray is shown by renderPlayBattle only when it has a day/Artifact action; the 💬 float is replaced by #battleChatBox.
+  const slots={playBattleClockFloat:!!visible,
     battleUndoFloat:!!visible,battleDayNoticeFloat:day,battleDayActionFloat:false,
-    battleGMChatFloat:day,battleDayGallowsFloat:day,battleFactionStatsFloat:day};
+    battleGMChatFloat:false,battleDayGallowsFloat:day,battleFactionStatsFloat:day};
+  if(!visible){const tray=document.getElementById('battleActionTray');if(tray)tray.hidden=true}
   for(const [id,show] of Object.entries(slots)){
     const el=document.getElementById(id);if(el)el.hidden=!show;
   }
@@ -7618,7 +7629,7 @@ function renderPlayBattle(){
     bar=document.getElementById('battleActionBar');
   const actionTray=document.getElementById('battleActionTray');
    battleIconDock(actions,phase);battleIconBind();
-  if(actionTray)actionTray.hidden=phase==='day';
+  if(actionTray)actionTray.hidden=!(actions.length&&(phase==='day'||actions.some(a=>a.artifactId)));
   const dayToggle=document.getElementById('battleDayActionToggle');
   if(dayToggle){dayToggle.disabled=!actions.length;dayToggle.setAttribute('aria-expanded',String(!!actions.length&&battleState.dayActionsOpen));}
   if(phase==='day'&&!actions.length)battleState.dayActionsOpen=false;
@@ -9483,6 +9494,7 @@ function gmwwGMChatMount(){
     dayToggle.setAttribute('aria-pressed',String(gmwwGMChatOpen));if(gmwwGMChatOpen)void gmwwGMChatRefresh();
   }}
   if(dayToggle)dayToggle.setAttribute('aria-pressed',String(gmwwGMChatOpen));
+  const chatBox=document.getElementById('battleChatBox');if(chatBox){chatBox.setAttribute('aria-pressed',String(!!active&&gmwwGMChatOpen));chatBox.disabled=!active;chatBox.classList.toggle('is-open',!!active&&gmwwGMChatOpen)}
   if(!active){gmwwGMChatOpen=false;document.getElementById('gmwwGMChatPanel')?.classList.remove('open');dayToggle?.setAttribute('aria-pressed','false')}
   if(active&&gmwwGMChatOpen&&gmwwGMChatLastRoom!==String(playSceneState.roomCode)){
     gmwwGMChatLastRoom=String(playSceneState.roomCode);void gmwwGMChatRefresh();
