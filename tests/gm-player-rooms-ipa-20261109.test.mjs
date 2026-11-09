@@ -38,10 +38,10 @@ test('V3.319: entering Ván Mẫu opens the creation form unless a template is a
 });
 
 test('V3.319: Phòng chỉ xem/xoá, Tiếp tục ở Sảnh chờ mở Phòng, Box Chat dạng ô',()=>{
-  const part=readFileSync('server-game/src/30-village-and-setup.part','utf8');
-  const phase=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-  const css=readFileSync('server-game/current/style.css','utf8');
-  const html=readFileSync('server-game/current/GMWW.html','utf8');
+  const part=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const phase=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+  const css=fs.readFileSync('server-game/current/style.css','utf8');
+
   assert.ok(part.includes('async function deletePlayerRoom(')&&part.includes("method:'DELETE'"));
   assert.ok(css.includes('.play-room-picker-card,#playCreateRoomSheet #playRoomModeStep'));
   assert.ok(phase.includes("step==='room'){await openPlayCreateRoomSheet();return}"));
