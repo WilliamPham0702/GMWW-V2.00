@@ -8886,3 +8886,17 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
   content:"";position:absolute;left:6px;top:50%;width:26px;height:26px;transform:translateY(-50%);pointer-events:none;
   background:url("./action-icons/gmww-gallows-nominate-b.png") center/contain no-repeat;
 }
+
+/* V3.316 Phòng người chơi */
+#playCreateRoomSheet .play-player-rooms-card .play-room-section-title{display:flex;align-items:center;gap:8px}
+#playCreateRoomSheet .play-player-rooms-card .play-room-section-title small{margin-left:auto;opacity:.75}
+#playCreateRoomSheet #playPlayerRoomsRefresh{width:34px;height:34px;border-radius:10px;border:1px solid rgba(92,211,241,.3);background:rgba(8,32,48,.6);color:inherit;font-size:18px}
+#playCreateRoomSheet .play-player-room-list{display:flex;flex-direction:column;gap:8px;max-height:34vh;overflow:auto}
+#playCreateRoomSheet .play-player-room{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;padding:10px 11px;border:1px solid rgba(160,120,255,.35);border-radius:12px;background:rgba(40,24,78,.5);color:inherit}
+#playCreateRoomSheet .play-player-room.running{border-color:rgba(74,225,160,.6)}
+#playCreateRoomSheet .play-player-room.active{border-color:rgba(74,225,255,.8);box-shadow:inset 0 0 0 1px rgba(74,225,255,.25)}
+#playCreateRoomSheet .play-player-room span{min-width:0;display:flex;flex-direction:column;gap:2px}
+#playCreateRoomSheet .play-player-room b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#playCreateRoomSheet .play-player-room small{opacity:.8}
+#playCreateRoomSheet .play-player-room i{font-style:normal;font-size:11px;font-weight:700;padding:3px 8px;border-radius:9px;background:#7c3aed;color:#fff;flex:none}
+#playCreateRoomSheet .play-player-room-note{margin:8px 0 0;font-size:12px;opacity:.8}
