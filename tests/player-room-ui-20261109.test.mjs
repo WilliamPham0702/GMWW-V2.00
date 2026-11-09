@@ -27,3 +27,11 @@ test('assembler lists the new part in order after the GM observer',()=>{
   const a=readFileSync(new URL('../.github/scripts/assemble-player-web.mjs',import.meta.url),'utf8');
   assert.ok(a.indexOf("'36-gm-observer.part'")<a.indexOf("'37-player-rooms.part'")&&a.indexOf("'37-player-rooms.part'")<a.indexOf("'40-cards-and-game.part'"));
 });
+
+test('server bottom bar is bundled from the GM app, the plus button and Top 3 are gone',()=>{
+  assert.ok(script.includes('gmTopMenu')&&script.includes('playPhasePill'));
+  assert.doesNotMatch(part,/gmww-pr-fab|'＋'/);
+  assert.match(part,/#gmwwSetupTop3\{display:none!important\}/);
+  assert.match(part,/GMWW_SERVER_MENU\.dock/);
+  assert.match(part,/gmwwOpenCreateRoom/);
+});
