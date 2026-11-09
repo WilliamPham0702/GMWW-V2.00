@@ -10233,6 +10233,7 @@ async function confirmPlayEndGame(){
   }catch(err){playFlashError(err.message||'Không thể kết thúc cưỡng ép.')}
   finally{playSetBusy(false);if(btn)btn.disabled=false}
 }
+function playRosterEligible(m){const id=String(m&&m.loginId||'').trim();return /^[A-Za-z0-9._]{4,20}$/.test(id)&&id.toLowerCase()!=='gm0702'}
 function playRosterSelectedIds(){return [...document.querySelectorAll('#playRosterList .play-roster-row.selected')].map(x=>String(x.dataset.loginId||'')).filter(Boolean)}
 function updatePlayRosterCount(){const count=playRosterSelectedIds().length,el=document.getElementById('playRosterCount');if(el)el.textContent=count+' đã chọn'}
 let playRosterFilterMode='all';
@@ -10296,6 +10297,7 @@ async function openPlayRosterSheet(){
   let rows;
   try{rows=await playLoadFreshRosterMembers()}
   catch(err){list.innerHTML='<div class="member-empty member-error">'+playEsc(err.message||'Không đồng bộ được trạng thái.')+'</div>';sheet.classList.remove('hidden');return}
+  rows=rows.filter(playRosterEligible);
   const selected=new Set((playSceneState.selectedMemberIds||[]).map(String));
   document.getElementById('playRosterRoomLabel').textContent='Phòng '+playSceneState.roomCode;list.innerHTML='';
   for(const m of rows){
@@ -10326,9 +10328,9 @@ async function savePlayRosterIds(ids){
   // Confirm once against the authoritative room. Do not make the GM wait for a
   // second GET + full-scene render after the server has acknowledged the POST.
   if(playSceneRuntime.busy||playRosterSaving)return;
-  ids=[...new Set((ids||[]).map(String).filter(Boolean))];
+  ids=[...new Set((ids||[]).map(String).filter(id=>id&&playRosterEligible({loginId:id})))];
   if(!ids.length){playRosterSaveFeedback('Hãy chọn ít nhất 1 Người Chơi.',true);playFlashError('Hãy chọn ít nhất 1 Người Chơi.');return}
-  const existing=new Map(playLiveMembers().map(p=>[String(p.loginId),p])),source=memberAdminState.members||[],selected=new Set(ids);
+  const existing=new Map(playLiveMembers().map(p=>[String(p.loginId),p])),source=(memberAdminState.members||[]).filter(playRosterEligible),selected=new Set(ids);
   const chosen=source.filter(m=>selected.has(String(m.loginId))).map(m=>({
     loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,
     gameCharacterId:m.gameCharacterId||existing.get(String(m.loginId))?.gameCharacterId||null,
