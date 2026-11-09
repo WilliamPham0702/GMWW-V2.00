@@ -23,6 +23,7 @@ import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisua
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
 import { sanitizeGameConfig, roomModeSwitchBlocked, normalizeRoomMode, normalizeSeatMoveMode, normalizeSeatCount } from "./gmww-room-config-rules.js";
+import { planPlayerRoomDeal, playerRoomConfigFromTemplate, missingRoleCards, ownerDeckView } from "./gmww-player-room-setup.js";
 import { evaluatePlayerRoomCreate, playerRoomOccupied, nextEmptySince, playerRoomEmptyDue, PLAYER_ROOM_CHECK_MS } from "./gmww-player-room-policy.js";
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
@@ -198,6 +199,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/directory/rooms/upsert"&&request.method==="POST")return this.roomDirectoryUpsert(await safeJson(request));
     if(url.pathname==="/directory/rooms/list"&&request.method==="GET")return this.roomDirectoryList(url);
     if(url.pathname==="/directory/rooms/delete"&&request.method==="POST")return this.roomDirectoryDelete(await safeJson(request));
+    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
     if(url.pathname==="/directory/player-rooms/reserve"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(async()=>this.playerRoomReserve(await safeJson(request)));
     if(url.pathname==="/global-assets/victory"&&request.method==="GET")return this.globalAssetGet("globalAsset:victory","audio/mpeg");
     if(url.pathname==="/global-assets/victory"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:victory","audio/mpeg",125000);
@@ -894,6 +896,71 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,room:rec},201);
   }
 
+  // ---- Player-room owner API (set-up only; never exposes roles, assignments or the GM token) ----
+  ownerAsGm(request){const h=new Headers(request.headers);h.set("authorization","Bearer "+GM_SYNC_TOKEN);return new Request(request.url,{method:request.method,headers:h})}
+  async ownerGate(request){
+    const meta=await this.ctx.storage.get("meta");
+    if(!meta||String(meta.phase||"").toLowerCase()==="deleted")return{ok:false,response:j({ok:false,error:"ROOM_NOT_FOUND"},404)};
+    const token=bearer(request);
+    if(meta.playerRoom!==true||!meta.ownerTokenHash||!token||!timingSafeEqual(await sha256(token),String(meta.ownerTokenHash)))return{ok:false,response:j({ok:false,error:"UNAUTHORIZED"},401)};
+    return{ok:true,meta}
+  }
+  async ownerAction(action,request){
+    if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return this.ownerState(request)}
+    if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
+    const gate=await this.ownerGate(request);if(!gate.ok)return gate.response;
+    const meta=gate.meta,body=await safeJson(request)||{},gm=this.ownerAsGm(request);
+    if(action==="seat-lock")return this.gmSeatLock(gm,{locked:body.locked!==false});
+    if(action==="seats-randomize")return this.gmRandomizeRemainingSeats(gm);
+    if(action==="kick"){
+      const target=normalizeLoginId(body.loginId);
+      if(!target)return j({ok:false,error:"INVALID_REQUEST"},400);
+      if(target===normalizeLoginId(meta.ownerLoginId))return j({ok:false,error:"CANNOT_KICK_OWNER"},400);
+      return this.gmKick(gm,{loginId:target})
+    }
+    if(action==="room-settings"){
+      const picked={roomMode:"online",demo:false};
+      for(const k of ["roomName","seatCount","seatMoveMode"])if(Object.prototype.hasOwnProperty.call(body,k))picked[k]=body[k];
+      return this.gmRoomSettings(gm,picked)
+    }
+    if(action==="apply-template")return this.ownerApplyTemplate(gm,meta,body);
+    if(action==="start")return this.ownerStart(gm,meta,body);
+    return j({ok:false,error:"NOT_FOUND"},404)
+  }
+  async ownerState(request){
+    const gate=await this.ownerGate(request);if(!gate.ok)return gate.response;
+    const players=(await this.ctx.storage.get("players"))||{};
+    return j({ok:true,room:publicRoom(gate.meta),players:Object.values(players).map(publicPlayer),config:ownerDeckView(await this.ctx.storage.get("gameConfig")),ownerLoginId:gate.meta.ownerLoginId||null})
+  }
+  // The Worker reads the Ván Mẫu from the member store and passes it here; the owner only names a templateId.
+  async ownerApplyTemplate(gm,meta,body){
+    const phase=String(meta.phase||"lobby").toLowerCase();
+    if(phase!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY",message:"Chỉ chọn Ván Mẫu khi ván chưa bắt đầu."},409);
+    const cfg=playerRoomConfigFromTemplate(body?.template);if(!cfg)return j({ok:false,error:"INVALID_TEMPLATE"},400);
+    const packages=Array.isArray(body?.packages)?body.packages:[],known=new Set(cfg.roles.map(r=>String(r.roleId||"")));
+    const rows=packages.filter(x=>known.has(String(x?.roleId||"")));
+    const done=await this.gmConfig(gm,{gameConfig:cfg});if(!done.ok)return done;
+    if(rows.length){const assets=await this.gmRoleAssets(gm,{roles:rows});if(!assets.ok)return assets}
+    return j({ok:true,config:ownerDeckView(await this.ctx.storage.get("gameConfig")),roleCards:rows.length})
+  }
+  // Seats must be locked; deals the template's roles at random, starts the match and the first night.
+  async ownerStart(gm,meta,body){
+    const phase=String(meta.phase||"lobby").toLowerCase();
+    if(phase!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY",message:"Ván đã được bắt đầu."},409);
+    if(meta.seatsLocked!==true)return j({ok:false,error:"SEATS_NOT_LOCKED",message:"Hãy chốt chỗ ngồi trước khi bắt đầu."},409);
+    const cfg=await this.ctx.storage.get("gameConfig");if(!cfg||!Array.isArray(cfg.roles)||!cfg.roles.length)return j({ok:false,error:"TEMPLATE_NOT_SELECTED",message:"Hãy chọn Ván Mẫu trước."},409);
+    const players=(await this.ctx.storage.get("players"))||{},members=Object.values(players).filter(p=>p?.kind==="member").sort((a,b)=>Number(a.seatId||0)-Number(b.seatId||0));
+    const haveCards=new Set();for(const r of cfg.roles){const id=String(r.roleId||"");if(id&&!haveCards.has(id)&&await this.ctx.storage.get("roleCatalog:"+id))haveCards.add(id)}
+    const missing=missingRoleCards(cfg.roles,id=>haveCards.has(id));
+    if(missing.length)return j({ok:false,error:"TEMPLATE_ASSETS_MISSING",missing},409);
+    const plan=planPlayerRoomDeal(cfg.roles,members,secureShuffle);
+    if(!plan.ok)return j({ok:false,error:plan.error,need:plan.need??null,have:plan.have??null},409);
+    const matchId="p"+Date.now().toString(36)+Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>b.toString(16).padStart(2,"0")).join("");
+    const assigned=await this.gmAssign(gm,{assignments:plan.rows,matchId,matchRevision:1,deliveryVersion:1});if(!assigned.ok)return assigned;
+    const started=await this.gmStart(gm,{matchId});if(!started.ok)return started;
+    const fresh=await this.ctx.storage.get("meta");await this.applyCycle(fresh,"night",1,"night-1","auto");
+    return j({ok:true,room:publicRoom(await this.ctx.storage.get("meta")),started:true})
+  }
   async memberLogout(request){
     const token=bearer(request);if(token){const key="session:"+await sha256(token),ses=await this.ctx.storage.get(key);if(ses){const member=await this.ctx.storage.get("member:"+ses.loginId);if(member){member.presenceAt=0;member.lastSeenAt=new Date().toISOString();member.ready=false;await this.ctx.storage.put("member:"+ses.loginId,member)}}await this.ctx.storage.delete(key)}return j({ok:true})
   }
@@ -4536,6 +4603,8 @@ export default {async fetch(request,env){
   if(url.pathname==="/api/rooms"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/directory/rooms/list");
   if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);
   if(url.pathname==="/api/player-rooms"&&request.method==="POST")return createPlayerRoom(env,url,request);
+  if(url.pathname==="/api/player-rooms/templates"&&request.method==="GET")return playerRoomTemplates(env,request);
+  const ownerApi=url.pathname.match(/^\/api\/player-rooms\/([A-Za-z0-9]+)\/owner\/([a-z-]+)$/);if(ownerApi)return playerRoomOwnerApi(env,ownerApi[1],ownerApi[2],request);
   const gmObserver=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gm-observer\/(state|action|interaction|day-action|chat-mute|auto)$/);if(gmObserver)return gmObserverApi(env,gmObserver[1],gmObserver[2],request);
   const room=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)$/);if(room&&request.method==="GET")return publicRoomState(env,room[1],request);
   const joinApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/join$/);if(joinApi&&request.method==="POST")return joinRoom(env,joinApi[1],request);
@@ -4678,6 +4747,33 @@ async function createPlayerRoom(env,url,request){
     if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)
   }
   return j({ok:false,error:"ROOM_CODE_EXHAUSTED"},503)
+}
+// Ván Mẫu published by the GM; any logged-in member may list them when creating a room.
+async function playerRoomTemplates(env,request){
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  return memberStore(env).fetch("https://member.internal/game-templates/list")
+}
+// Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
+async function playerRoomOwnerApi(env,rawCode,action,request){
+  const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
+  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","start"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
+  const stub=roomStub(env,code),auth={authorization:request.headers.get("authorization")||""},json={...auth,"content-type":"application/json"};
+  if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return stub.fetch("https://room.internal/owner/state",{headers:auth})}
+  if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
+  const body=await safeJson(request)||{};
+  if(action==="template"){
+    const gate=await stub.fetch("https://room.internal/owner/state",{headers:auth});if(!gate.ok)return gate;
+    const id=String(body.templateId||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
+    const tr=await memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));if(!tr.ok)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
+    const template=(await tr.json().catch(()=>({}))).template,packages=[];
+    for(const roleId of [...new Set((template?.compiledConfig?.roles||[]).map(r=>String(r?.roleId||"")).filter(Boolean))].slice(0,100)){
+      const ar=await memberStore(env).fetch("https://member.internal/game-templates/assets?id="+encodeURIComponent(id)+"&assetId="+encodeURIComponent("role:"+roleId));if(!ar.ok)continue;
+      const d=await ar.json().catch(()=>null);if(d?.package)packages.push({...d.package,roleId})
+    }
+    return stub.fetch("https://room.internal/owner/apply-template",{method:"POST",headers:json,body:JSON.stringify({template,packages})})
+  }
+  return stub.fetch("https://room.internal/owner/"+action,{method:"POST",headers:json,body:JSON.stringify(body)})
 }
 async function joinRoom(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const body=await safeJson(request);if(body?.token){const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:{Authorization:"Bearer "+body.token}}));if(!me.ok)return me;const data=await me.json();const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({member:data.member})});if(joined.ok){await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,roomCode:code,ready:false})});await syncRoomDirectory(env,code)}return joined}const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({guest:body?.guest})});if(joined.ok)await syncRoomDirectory(env,code);return joined}
 async function readyRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/ready",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
