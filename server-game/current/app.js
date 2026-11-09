@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.315';
+const VERSION='3.316';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -4131,6 +4131,55 @@ function renderPlayCreatedRooms(){
     };
     list.appendChild(b);
   });
+}
+/* V3.316 Phòng người chơi: rooms created by players (online) are managed from the same room sheet.
+   The list comes from the GM room directory; tapping a room attaches it to the Chơi screen in GM mode (watch + run). */
+const playerRoomsState={rows:[],loading:false,error:'',timer:0};
+const PLAYER_ROOM_PHASE_LABEL={lobby:'Sảnh chờ',waiting:'Sảnh chờ',role_delivery:'Phát vai',running:'Đang chơi',started:'Đang chơi',playing:'Đang chơi',ended:'Kết thúc'};
+function playerRoomAgo(iso){const t=Date.parse(iso||'');if(!Number.isFinite(t))return '';const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<1?'vừa xong':m<60?m+' phút trước':Math.round(m/60)+' giờ trước'}
+async function loadPlayerRooms(){
+  if(playerRoomsState.loading)return;playerRoomsState.loading=true;
+  try{
+    const data=await gmApi('/api/gm/rooms',{method:'GET'});
+    playerRoomsState.rows=(Array.isArray(data?.rooms)?data.rooms:[]).filter(r=>r&&r.playerRoom===true&&r.code).sort((a,b)=>(String(b.phase)==='running')-(String(a.phase)==='running')||String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+    playerRoomsState.error='';
+  }catch(err){playerRoomsState.error=err?.message||'Không đọc được danh sách phòng.'}
+  finally{playerRoomsState.loading=false;renderPlayerRooms()}
+}
+function renderPlayerRooms(){
+  const list=document.getElementById('playPlayerRoomList');if(!list)return;
+  const count=document.getElementById('playPlayerRoomsCount'),note=document.getElementById('playPlayerRoomNote'),rows=playerRoomsState.rows;
+  if(count)count.textContent=rows.length+' phòng';
+  if(note)note.textContent=playerRoomsState.error||(rows.length?'Chạm một phòng để quan sát và điều hành với quyền GM.':'Chưa có phòng nào do người chơi tạo.');
+  list.replaceChildren();
+  for(const r of rows){
+    const code=String(r.code),current=String(playSceneState.roomCode)===code,phase=String(r.phase||'lobby').toLowerCase();
+    const b=document.createElement('button');b.type='button';b.setAttribute('role','listitem');b.className='play-player-room'+(current?' active':'')+(phase==='running'?' running':'');
+    const ago=playerRoomAgo(r.updatedAt);
+    b.innerHTML='<span><b>'+playEsc(playReadableRoomName(r.roomName))+'</b><small>'+playEsc(code+' • '+(PLAYER_ROOM_PHASE_LABEL[phase]||phase)+' • '+(Number(r.playerCount)||0)+'/'+(Number(r.seatCount)||0)+' người'+(ago?' • '+ago:''))+'</small></span><i>'+(current?'ĐANG XEM':'XEM')+'</i>';
+    b.onclick=()=>observePlayerRoom(r);list.appendChild(b);
+  }
+}
+async function observePlayerRoom(r){
+  const code=String(r?.code||'');if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code))return;
+  try{
+    if(typeof demoStop==='function')await demoStop('room_change');
+    playSceneState.roomCode=code;playSceneState.gmToken='';playSceneState.roomMode='online';
+    playSceneState.seatCount=Math.max(1,Math.min(30,Number(r.seatCount)||12));playSceneState.roomEnabled=r.enabled!==false;
+    savePlayScene();gmwwSendGmPresence(true);
+    const data=await playSyncRoom(true);
+    if(!data){if(!isLivePlayRoom())clearStalePlayRoom();playerRoomsState.error='Không vào được phòng '+code+'. Có thể phòng đã đóng.';renderPlayerRooms();void loadPlayerRooms();return}
+    playRoomUiState.stage='rooms';playRoomUiState.selectedCode='';playRoomUiState.editorMode='';
+    document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
+    renderPlayScene();
+  }catch(err){playerRoomsState.error=err?.message||'Không vào được phòng.';renderPlayerRooms()}
+}
+function bindPlayerRoomsCard(){
+  const sheet=document.getElementById('playCreateRoomSheet'),card=document.getElementById('playPlayerRoomsCard');
+  if(!sheet||!card||card.dataset.bound==='1')return;card.dataset.bound='1';
+  document.getElementById('playPlayerRoomsRefresh')?.addEventListener('click',()=>void loadPlayerRooms());
+  const sync=()=>{const open=!sheet.classList.contains('hidden');clearInterval(playerRoomsState.timer);playerRoomsState.timer=0;if(open){void loadPlayerRooms();playerRoomsState.timer=setInterval(()=>{if(!document.hidden)void loadPlayerRooms()},5000)}};
+  new MutationObserver(sync).observe(sheet,{attributes:true,attributeFilter:['class']});sync();
 }
 /* Demo controls now live at the top of the GM campfire menu. */
 function demoPanelTouch(){}
@@ -10726,6 +10775,7 @@ function initPlayScene(){
   document.getElementById('playCreateRoomReset')?.addEventListener('click',playResetCreatedRoom);
   document.getElementById('playCreateRoomDelete')?.addEventListener('click',playDeleteCreatedRoom);
   document.getElementById('playCreateRoomClose')?.addEventListener('click',()=>document.getElementById('playCreateRoomSheet')?.classList.add('hidden'));
+  bindPlayerRoomsCard();
   document.getElementById('playUserAvatar')?.setAttribute('hidden','');
   document.getElementById('playWorld')?.addEventListener('click',async e=>{if(e.target.closest?.('button,.play-player-token,.play-village-core,.play-hud,.play-world-status'))return;const r=e.currentTarget.getBoundingClientRect(),raw=globalThis.GMWW_VILLAGE_LAYOUT.fromScreen(e.clientX-r.left,e.clientY-r.top,r.width,r.height);if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(raw.x,raw.y))return;const p=selectedPlayPlayer();if(!isLivePlayRoom()||!p)return;if(p&&!p.seatId&&!playSceneRuntime.room?.seatsLocked){try{const d=await playRoomApi('/move',{method:'POST',body:JSON.stringify({participantId:p.participantId,...raw})});playSceneRuntime.players=d.players||playSceneRuntime.players;renderPlayPlayers()}catch(err){playFlashError(err.message)}return}});
   window.addEventListener('resize',renderPlayScene);
