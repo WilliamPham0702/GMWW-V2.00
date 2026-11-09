@@ -12,6 +12,7 @@ const paths=[
   'src/player-web-src/30-rooms-and-realtime.part',
   'src/player-web-src/35-online-chat.part',
   'src/player-web-src/36-gm-observer.part',
+  'src/player-web-src/37-player-rooms.part',
   'src/player-web-src/40-cards-and-game.part',
   'src/player-web-src/50-privacy-and-runtime.part'
 ];
@@ -21,7 +22,7 @@ const script=()=>JSON.parse(compiled().slice('export const gmwwMembersLiveScript
 
 test('G3.9: source parts assemble the EXACT deployed Player Web JavaScript',()=>{
   const pieces=paths.map(p=>readFileSync(p,'utf8'));
-  assert.equal(pieces.length,8);
+  assert.equal(pieces.length,9);
   for(const [i,part] of pieces.entries())assert.ok(part.length>1000,'Missing source part '+i);
   const body=pieces.join('').replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(process.cwd()))+";\n");
   assert.equal(body,script(),'Decoded Player Web source must be unchanged');
