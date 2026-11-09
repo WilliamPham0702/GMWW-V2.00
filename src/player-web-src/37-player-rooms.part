@@ -49,6 +49,7 @@
     box.append(el('p','gmww-pr-help','Bạn chơi cùng mọi người, Quản Trò Tự Động điều hành ván. Bước đầu: gửi phòng cho bạn bè ở trang Phòng.'));
     box.append(btn('TIẾP: PHÒNG →',async()=>goStep('room'),'gmww-pr-main'));
   }
+  // v3.322 menu Phòng gọn (deploy lại sau khi CI main xanh).
   // Quản lý phòng: mã phòng + Gửi phòng + Sao chép mã trên 1 dòng, rồi danh sách người đã vào (Xoá).
   function roomDetails(box,st,room,players,locked){
     const link=pr.own.joinUrl||(location.origin+'/?room='+pr.own.code),code=pr.own.code,total=Number(room.seatCount)||30;
