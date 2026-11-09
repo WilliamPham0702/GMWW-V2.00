@@ -6,3 +6,8 @@
 - Chạm ô trạng thái: tấm trượt từ dưới lên với đúng bước hiện tại (6 tab).
 - ⏻ rời phòng; ◇ kết thúc sớm khi đang chơi; ↻ báo Auto GM luôn bật.
 - Nút "TẠO PHÒNG +" ở Trang Hồ sơ và danh sách phòng; sau khi tạo tự vào phòng.
+
+## Sửa sau test đầu (09/11/2026)
+- Tạo phòng xong tự vào làng (trước đó đứng ở Hồ sơ nên thanh dưới bị ẩn).
+- Thêm ô "Mã phòng + VÀO BẰNG MÃ" ở Hồ sơ vì Player Web V2 không có màn danh sách phòng.
+- Nếu đang ở ngoài phòng của mình: nút "VÀO LẠI PHÒNG".

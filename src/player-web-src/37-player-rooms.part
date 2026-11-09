@@ -30,6 +30,7 @@
     pr.own={code:d.roomCode,token:d.ownerToken,joinUrl:d.joinUrl};save(pr.own);pr.view='';pr.touched=false;
     try{await window.joinRoom(d.roomCode)}catch(_){}
     say('Đã tạo phòng '+d.roomCode+'.');await refresh();
+    pr.open=false;try{await enterVillage()}catch(_){}
   }
   // Keeps the strip every player sees in step with the owner's tab (ignored when the server refuses).
   const STAGE={lobby:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
@@ -119,6 +120,7 @@
     }else{
       const st=pr.state,room=st?.room||{},players=Array.isArray(st?.players)?st.players:[],running=String(room.phase||'lobby').toLowerCase()==='running';
       const locked=room.seatsLocked===true,cur=stepNow();if(!pr.touched||!pr.view)pr.view=cur;
+      if(!inOwnRoom())body.append(el('p','gmww-pr-note','Bạn đang ở ngoài phòng '+pr.own.code+'. Vào lại phòng để dùng thanh điều khiển.'),btn('VÀO LẠI PHÒNG '+pr.own.code,async()=>{if(!await window.joinRoom(pr.own.code))throw new Error('Không vào lại được phòng.');pr.open=false;try{await enterVillage()}catch(_){}}));
       const tabs=el('nav','gmww-pr-steps');
       STEPS.forEach(([k,label],i)=>{const t=el('button',(pr.view===k?'is-view ':'')+(cur===k?'is-now':''));t.type='button';t.append(el('span',null,String(i+1)),el('b',null,label));t.addEventListener('click',()=>goStep(k));tabs.append(t)});
       body.append(tabs);
@@ -144,25 +146,31 @@
     document.body.appendChild(host);return host;
   }
   function renderDock(){
-    const host=ensureDock(),show=inOwnRoom()&&!pr.open&&(state.activeScreenId||'game')==='game';
+    const host=ensureDock(),show=inOwnRoom()&&!pr.open&&['game'].includes(state.activeScreenId||'game');
     host.hidden=!show;if(!show)return;
     const root=host.shadowRoot,k=stepNow(),title=root.getElementById('playPhaseTitle'),hint=root.getElementById('playPhaseHint');
     if(title.textContent!==LABEL[k])title.textContent=LABEL[k];
     const h=k==='battle'?'ĐANG CHƠI':'CHẠM ĐỂ TIẾP';if(hint.textContent!==h)hint.textContent=h;
     root.getElementById('playEndGame').style.opacity=k==='battle'?'1':'.35';
   }
+  // Player Web V2 has no room picker, so players enter a player-created room by its code from the profile page.
+  async function joinByCode(code){
+    code=String(code||'').trim().toUpperCase();
+    if(!/^[A-Z0-9]{4,8}$/.test(code)){try{toast('Hãy nhập mã phòng.')}catch(_){}return}
+    const ok=await window.joinRoom(code);
+    if(ok===false){try{toast('Không vào được phòng '+code+'.')}catch(_){}return}
+    try{await enterVillage()}catch(_){}
+  }
   function injectCreateButtons(){
     if(!state?.token||!state?.member)return;
-    if(pr.own&&inOwnRoom())return;
     for(const row of document.querySelectorAll('.profile-actions-row')){
-      if(row.parentNode.querySelector('.gmww-pr-create'))continue;
-      const b=el('button','primary gold gmww-pr-create',pr.own?'PHÒNG CỦA TÔI':'TẠO PHÒNG +');b.type='button';b.style.cssText='width:100%;margin:0 0 10px';
-      b.addEventListener('click',()=>window.gmwwOpenCreateRoom());row.parentNode.insertBefore(b,row);
-    }
-    const rooms=document.querySelector('#rooms .room-list');
-    if(rooms&&!rooms.parentNode.querySelector('.gmww-pr-create')){
-      const b=el('button','primary gold gmww-pr-create','TẠO PHÒNG CỦA TÔI +');b.type='button';b.style.cssText='width:100%;margin:0 0 10px';
-      b.addEventListener('click',()=>window.gmwwOpenCreateRoom());rooms.parentNode.insertBefore(b,rooms);
+      if(row.parentNode.querySelector('.gmww-pr-join'))continue;
+      const wrap=el('div','gmww-pr-join');wrap.style.cssText='display:grid;grid-template-columns:1fr auto;gap:8px;margin:0 0 10px';
+      const inp=el('input');inp.placeholder='Mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.setAttribute('aria-label','Mã phòng');inp.style.cssText='padding:12px;border-radius:12px;border:1px solid #6b5a2e;text-transform:uppercase;font-size:16px;min-width:0';
+      const go=el('button','primary gold','VÀO BẰNG MÃ');go.type='button';go.addEventListener('click',()=>joinByCode(inp.value));
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter')joinByCode(inp.value)});wrap.append(inp,go);
+      const mk=el('button','primary gold gmww-pr-create',pr.own?'PHÒNG CỦA TÔI':'TẠO PHÒNG +');mk.type='button';mk.style.cssText='width:100%;margin:0 0 10px';mk.addEventListener('click',()=>window.gmwwOpenCreateRoom());
+      row.parentNode.insertBefore(wrap,row);row.parentNode.insertBefore(mk,row);
     }
   }
   function mount(){
@@ -170,7 +178,7 @@
     injectCreateButtons();
     if(pr.mounted)return;pr.mounted=true;
     document.head.appendChild(el('style',null,'#gmwwSetupTop3{display:none!important}'
-      +'#gmwwOwnerDock{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);z-index:8000}#gmwwOwnerDock[hidden]{display:none}'
+      +'#gmwwOwnerDock{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);z-index:9400}#gmwwOwnerDock[hidden]{display:none}'
       +'.gmww-pr-back{position:fixed;inset:0;z-index:9490;background:rgba(0,0,0,.45)}.gmww-pr-back[hidden]{display:none}'
       +'.gmww-pr-panel{position:fixed;left:0;right:0;bottom:0;z-index:9500;max-height:82vh;background:rgba(7,13,28,.98);color:#f6e7c1;display:flex;flex-direction:column;font-size:15px;border-radius:18px 18px 0 0;border-top:1px solid #6b5a2e;box-shadow:0 -10px 40px #000a}.gmww-pr-panel[hidden]{display:none}'
       +'.gmww-pr-grip{display:block;width:44px;height:4px;border-radius:4px;background:#6b5a2e;margin:8px auto 0}'
