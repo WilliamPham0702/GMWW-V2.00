@@ -1885,9 +1885,11 @@ function battleSyncPhaseDock(phase,visible){
   const day=!!visible&&phase==='day',night=!!visible&&phase==='night';
   const shell=document.getElementById('playShell');
   if(shell)shell.dataset.battlePhase=visible?phase:'';
-  const slots={playBattleClockFloat:!!visible,battleActionTray:!!visible,
+  // V3.321: battleActionTray is shown by renderPlayBattle only when it has a day/Artifact action; the 💬 float is replaced by #battleChatBox.
+  const slots={playBattleClockFloat:!!visible,
     battleUndoFloat:!!visible,battleDayNoticeFloat:day,battleDayActionFloat:false,
-    battleGMChatFloat:day,battleDayGallowsFloat:day,battleFactionStatsFloat:day};
+    battleGMChatFloat:false,battleDayGallowsFloat:day,battleFactionStatsFloat:day};
+  if(!visible){const tray=document.getElementById('battleActionTray');if(tray)tray.hidden=true}
   for(const [id,show] of Object.entries(slots)){
     const el=document.getElementById(id);if(el)el.hidden=!show;
   }
@@ -2078,7 +2080,7 @@ function renderPlayBattle(){
     bar=document.getElementById('battleActionBar');
   const actionTray=document.getElementById('battleActionTray');
    battleIconDock(actions,phase);battleIconBind();
-  if(actionTray)actionTray.hidden=phase==='day';
+  if(actionTray)actionTray.hidden=!(actions.length&&(phase==='day'||actions.some(a=>a.artifactId)));
   const dayToggle=document.getElementById('battleDayActionToggle');
   if(dayToggle){dayToggle.disabled=!actions.length;dayToggle.setAttribute('aria-expanded',String(!!actions.length&&battleState.dayActionsOpen));}
   if(phase==='day'&&!actions.length)battleState.dayActionsOpen=false;

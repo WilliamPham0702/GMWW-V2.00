@@ -109,7 +109,7 @@ test('GM day footer follows approved six controls and day actions use free icons
   assert.match(footer,/id="battleFactionStatsToggle"[\s\S]*?⚖️/);
   assert.match(footer,/id="battleGMChatToggle"/);
   assert.match(gmControls,/battleDayActionFloat:false/);
-  assert.match(gmControls,/battleGMChatFloat:day/);
+  assert.match(gmControls,/battleGMChatFloat:false/); // V3.321: 💬 replaced by the chat box in the middle slot
   assert.match(gmControls,/battleIconDock\(actions,phase\)/);
   assert.match(gm,/battleGMChatToggle/);
   assert.match(gmSocket,/d\.type==='chat_tick'/);

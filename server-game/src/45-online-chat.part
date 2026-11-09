@@ -376,6 +376,7 @@ function gmwwGMChatMount(){
     dayToggle.setAttribute('aria-pressed',String(gmwwGMChatOpen));if(gmwwGMChatOpen)void gmwwGMChatRefresh();
   }}
   if(dayToggle)dayToggle.setAttribute('aria-pressed',String(gmwwGMChatOpen));
+  const chatBox=document.getElementById('battleChatBox');if(chatBox){chatBox.setAttribute('aria-pressed',String(!!active&&gmwwGMChatOpen));chatBox.disabled=!active;chatBox.classList.toggle('is-open',!!active&&gmwwGMChatOpen)}
   if(!active){gmwwGMChatOpen=false;document.getElementById('gmwwGMChatPanel')?.classList.remove('open');dayToggle?.setAttribute('aria-pressed','false')}
   if(active&&gmwwGMChatOpen&&gmwwGMChatLastRoom!==String(playSceneState.roomCode)){
     gmwwGMChatLastRoom=String(playSceneState.roomCode);void gmwwGMChatRefresh();

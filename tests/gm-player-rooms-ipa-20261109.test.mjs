@@ -18,8 +18,8 @@ test('IPA loads only playerRoom rooms from GM API and observes them',()=>{
 });
 test('assembled app.js contains the feature and version is synced',()=>{
   assert.ok(app.includes('function observePlayerRoom'));
-  assert.ok(core.includes("const VERSION='3.320'"));
-  assert.ok(html.includes('<title>GMWW V3.320</title>'));
+  assert.ok(core.includes("const VERSION='3.321'"));
+  assert.ok(html.includes('<title>GMWW V3.321</title>'));
 });
 test('V3.317 menu: 7-step top with Phòng tab, 4-button bottom with Box Chat',()=>{
   const roles=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');

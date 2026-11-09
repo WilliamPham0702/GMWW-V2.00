@@ -968,6 +968,15 @@ function gmwwSetupFreeBattleIcons(){
   if(rail){
     let actionSlot=document.getElementById('battleMainActionSlot');
     if(!actionSlot){actionSlot=document.createElement('div');actionSlot.id='battleMainActionSlot';actionSlot.className='battle-main-action-slot';}
+    // V3.321: the middle slot is the chat box; the action box (day action / Artifact) sits beside it only when it has content.
+    let chatBox=document.getElementById('battleChatBox');
+    if(!chatBox){
+      chatBox=document.createElement('button');chatBox.id='battleChatBox';chatBox.type='button';chatBox.className='battle-chat-box-v321';
+      chatBox.setAttribute('aria-controls','gmwwGMChatPanel');chatBox.setAttribute('aria-pressed','false');chatBox.setAttribute('aria-label','Chat Làng và Chat riêng');
+      chatBox.title='Chat Làng và Chat riêng';chatBox.innerHTML='<span aria-hidden="true">Nhắn cho phòng…</span>';
+      chatBox.onclick=()=>document.getElementById('battleGMChatToggle')?.click();
+    }
+    actionSlot.appendChild(chatBox);
     for(const id of ['battleDayActionFloat','battleActionTray']){
       const item=document.getElementById(id);if(item)actionSlot.appendChild(item);
     }
