@@ -126,7 +126,7 @@ async function advancePlayPhase(){
     battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
   if(playSceneState.step==='lobby'||playSceneState.step==='room'){await playEnsureGatherRoom();return}
-  if(playSceneState.step==='game'){openPlayGameSheet();return}
+  if(playSceneState.step==='game'){void openPlayGameStep();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){playConfirmAssignments();return}
   if(playSceneState.step==='deal'){if(playDeliveryProgress().success){playSceneState.step='battle';savePlayScene();await advancePlayPhase();return}await playDealRoles();return}
@@ -3380,6 +3380,16 @@ async function openPlayGameSheet(){
   sheet.classList.remove('hidden');gmwwGameSheetSetFloating(true);
 }
 let playGameSheetOpenSeq=0;
+// V3.317: entering the Ván Mẫu step shows the template creation form straight away (no ＋ THÊM MỚI tap).
+// Skipped when a template is already chosen for this match, so it never wipes the GM's selection.
+async function openPlayGameStep(){
+  await openPlayGameSheet();
+  const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');
+  if(!sheet||!card||sheet.classList.contains('hidden')||card.dataset.mode!=='play')return;
+  if(String(playSceneState.gameTemplateId||''))return;
+  playGameReturnToSelection=true;
+  await openLibraryGameTemplate('');
+}
 let playGameReturnToSelection=false;
 async function openLibraryGameTemplate(id=''){
   ++playGameSheetOpenSeq;

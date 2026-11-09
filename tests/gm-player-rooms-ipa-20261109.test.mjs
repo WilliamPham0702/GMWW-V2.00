@@ -18,8 +18,8 @@ test('IPA loads only playerRoom rooms from GM API and observes them',()=>{
 });
 test('assembled app.js contains the feature and version is synced',()=>{
   assert.ok(app.includes('function observePlayerRoom'));
-  assert.ok(core.includes("const VERSION='3.317'"));
-  assert.ok(html.includes('<title>GMWW V3.317</title>'));
+  assert.ok(core.includes("const VERSION='3.318'"));
+  assert.ok(html.includes('<title>GMWW V3.318</title>'));
 });
 test('V3.317 menu: 7-step top with Phòng tab, 4-button bottom with Box Chat',()=>{
   const roles=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
@@ -28,4 +28,11 @@ test('V3.317 menu: 7-step top with Phòng tab, 4-button bottom with Box Chat',()
   assert.match(roles,/\[data-play-room-tab\]'\)\?\.addEventListener\('click'/);
   assert.match(roles,/playChatTop'\)\?\.addEventListener/);
   assert.doesNotMatch(html,/id="playAutoGM"|id="playAudioTop"/);
+});
+test('V3.318: entering Ván Mẫu opens the creation form unless a template is already chosen',()=>{
+  const bt=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+  assert.match(bt,/async function openPlayGameStep\(\)/);
+  assert.match(bt,/if\(String\(playSceneState\.gameTemplateId\|\|''\)\)return;/);
+  assert.match(bt,/playGameReturnToSelection=true;\s*await openLibraryGameTemplate\(''\)/);
+  assert.match(bt,/void openPlayGameStep\(\);return/);
 });
