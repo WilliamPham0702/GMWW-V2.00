@@ -35,3 +35,9 @@ test('server bottom bar is bundled from the GM app, the plus button and Top 3 ar
   assert.match(part,/GMWW_SERVER_MENU\.dock/);
   assert.match(part,/gmwwOpenCreateRoom/);
 });
+
+test('creating a room enters the village so the bar shows, and players can join by code',()=>{
+  assert.match(part,/await enterVillage\(\)/);
+  assert.match(part,/joinByCode/);assert.match(part,/VÀO BẰNG MÃ/);
+  const urls=[...part.matchAll(/'(\/api\/[^']*)'/g)].map(m=>m[1]);for(const u of urls)assert.match(u,/^\/api\/player-rooms/);
+});
