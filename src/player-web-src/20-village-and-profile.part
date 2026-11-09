@@ -120,7 +120,7 @@ function renderPlayerTimeline(timeline){
  }
  const battle=stage==='battle',setup=root.querySelector('#playSetupStrip'),battleTop=root.querySelector('#playBattleTop');
  for(const bar of [setup,battleTop])for(const [key,value] of Object.entries({position:'relative',inset:'auto',width:'100%','max-width':'none',margin:'0',transform:'none'}))bar.style.setProperty(key,value,'important');
- setup.style.setProperty('display',battle?'none':'grid','important');
+ setup.style.setProperty('display','none','important'); // thanh bước phía trên do #gmwwStageStrip (37-player-rooms) đảm nhiệm, tránh hiện 2 menu
  battleTop.hidden=!battle;battleTop.style.setProperty('display',battle?'grid':'none','important');
  const publicSteps=gmwwSharedTimeline?.steps||[],list=root.querySelector('#battleTimeline');
  const sig=JSON.stringify(publicSteps);
@@ -580,9 +580,8 @@ function renderSetupTop3(){
 }
 // Top 3 chỉ ở các bước setup (Sảnh chờ → Phát Vai); vào trận thì CSS ẩn theo data-gmww-player-scene.
 function syncSetupTop3(active){
-  if(!active||!state.member)return;
-  renderSetupTop3();
-  void loadSetupTop3().then(renderSetupTop3)
+  // Top 3 đã gỡ khỏi Player Web (09/11/2026): luôn xoá nếu còn sót, không gọi API.
+  document.getElementById('gmwwSetupTop3')?.remove()
 }
 async function openRoomSetup(){
   state.roomSetupOpen=true;await loadGameCharacters();const me=currentRoomPlayer();state.selectedGameCharacterId=String(me?.gameCharacterId||state.member?.gameCharacterId||'');state.selectedSeatId=Number(me?.seatId||0)||Number(me?.moveTargetSeatId||0)||null;renderRoomSetup();syncVillageFrame();scheduleMovementCompletion(me)
