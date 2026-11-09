@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.319';
+const VERSION='3.320';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5665,7 +5665,10 @@ async function advancePlayPhase(){
   if(!battleUnlockedAudioContext||battleUnlockedAudioContext.state!=='running')
     battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
-  if(playSceneState.step==='lobby'||playSceneState.step==='room'){await openPlayCreateRoomSheet();return}
+  if(playSceneState.step==='lobby'||playSceneState.step==='room'){
+    const sheet=document.getElementById('playCreateRoomSheet');
+    if(playSceneState.step==='lobby'){playSceneState.step='room';savePlayScene();renderPlayScene();await openPlayCreateRoomSheet();return}
+    sheet?.classList.add('hidden');await playEnsureGatherRoom();return}
   if(playSceneState.step==='game'){void openPlayGameStep();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){playConfirmAssignments();return}

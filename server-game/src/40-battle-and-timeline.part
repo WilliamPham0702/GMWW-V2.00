@@ -125,7 +125,10 @@ async function advancePlayPhase(){
   if(!battleUnlockedAudioContext||battleUnlockedAudioContext.state!=='running')
     battleUnlockAudioFromGesture();
   if(playSceneRuntime.busy)return;
-  if(playSceneState.step==='lobby'||playSceneState.step==='room'){await openPlayCreateRoomSheet();return}
+  if(playSceneState.step==='lobby'||playSceneState.step==='room'){
+    const sheet=document.getElementById('playCreateRoomSheet');
+    if(playSceneState.step==='lobby'){playSceneState.step='room';savePlayScene();renderPlayScene();await openPlayCreateRoomSheet();return}
+    sheet?.classList.add('hidden');await playEnsureGatherRoom();return}
   if(playSceneState.step==='game'){void openPlayGameStep();return}
   if(playSceneState.step==='seats'){await playFinishSeating();return}
   if(playSceneState.step==='roles'){playConfirmAssignments();return}

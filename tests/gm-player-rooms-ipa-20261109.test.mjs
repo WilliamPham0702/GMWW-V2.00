@@ -18,8 +18,8 @@ test('IPA loads only playerRoom rooms from GM API and observes them',()=>{
 });
 test('assembled app.js contains the feature and version is synced',()=>{
   assert.ok(app.includes('function observePlayerRoom'));
-  assert.ok(core.includes("const VERSION='3.319'"));
-  assert.ok(html.includes('<title>GMWW V3.319</title>'));
+  assert.ok(core.includes("const VERSION='3.320'"));
+  assert.ok(html.includes('<title>GMWW V3.320</title>'));
 });
 test('V3.317 menu: 7-step top with Phòng tab, 4-button bottom with Box Chat',()=>{
   const roles=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
@@ -29,7 +29,7 @@ test('V3.317 menu: 7-step top with Phòng tab, 4-button bottom with Box Chat',()
   assert.match(roles,/playChatTop'\)\?\.addEventListener/);
   assert.doesNotMatch(html,/id="playAutoGM"|id="playAudioTop"/);
 });
-test('V3.319: entering Ván Mẫu opens the creation form unless a template is already chosen',()=>{
+test('V3.320: entering Ván Mẫu opens the creation form unless a template is already chosen',()=>{
   const bt=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
   assert.match(bt,/async function openPlayGameStep\(\)/);
   assert.match(bt,/if\(String\(playSceneState\.gameTemplateId\|\|''\)\)return;/);
@@ -37,14 +37,14 @@ test('V3.319: entering Ván Mẫu opens the creation form unless a template is a
   assert.match(bt,/void openPlayGameStep\(\);return/);
 });
 
-test('V3.319: Phòng chỉ xem/xoá, Tiếp tục ở Sảnh chờ mở Phòng, Box Chat dạng ô',()=>{
+test('V3.320: Phòng chỉ xem/xoá, Tiếp tục ở Sảnh chờ mở Phòng, Box Chat dạng ô',()=>{
   const part=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
   const phase=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
 
   assert.ok(part.includes('async function deletePlayerRoom(')&&part.includes("method:'DELETE'"));
   assert.ok(css.includes('.play-room-picker-card,#playCreateRoomSheet #playRoomModeStep'));
-  assert.ok(phase.includes("step==='room'){await openPlayCreateRoomSheet();return}"));
+  assert.ok(phase.includes("sheet?.classList.add('hidden');await playEnsureGatherRoom();return}"));
   assert.ok(html.includes('play-chat-top-text'));
   assert.ok(!phase.includes('add(villager,villageSlots-chosenVillage)'));
 });
