@@ -116,6 +116,38 @@ async function logs(env){
   for(const key of last){const v=await env.AUDIT.get(key.name,"json");if(v)items.push(v)}
   return items;
 }
+const USAGE_LIMITS=Object.freeze({workersDay:100000,durableObjectsDay:100000});
+const USAGE_QUERY=`query U($a:String!,$d0:Time!,$d1:Time!,$m0:Time!){viewer{accounts(filter:{accountTag:$a}){
+day:workersInvocationsAdaptive(limit:1,filter:{datetime_geq:$d0,datetime_leq:$d1}){sum{requests errors}}
+month:workersInvocationsAdaptive(limit:1,filter:{datetime_geq:$m0,datetime_leq:$d1}){sum{requests errors}}
+doDay:durableObjectsInvocationsAdaptiveGroups(limit:1,filter:{datetime_geq:$d0,datetime_leq:$d1}){sum{requests}}
+doMonth:durableObjectsInvocationsAdaptiveGroups(limit:1,filter:{datetime_geq:$m0,datetime_leq:$d1}){sum{requests}}}}}`;
+export function usageStatus(percent){return percent>=100?"over":percent>=80?"warn":"ok"}
+export function summarizeUsage(acc,now=new Date()){
+  const n=v=>Number.isFinite(v)&&v>=0?Math.round(v):null;
+  const pick=(rows,k)=>n(rows?.[0]?.sum?.[k]);
+  const day={workers:pick(acc?.day,"requests"),durableObjects:pick(acc?.doDay,"requests"),errors:pick(acc?.day,"errors")};
+  const month={workers:pick(acc?.month,"requests"),durableObjects:pick(acc?.doMonth,"requests")};
+  const pct=(v,l)=>v===null?null:Math.round(v/l*1000)/10;
+  const percent={workers:pct(day.workers,USAGE_LIMITS.workersDay),durableObjects:pct(day.durableObjects,USAGE_LIMITS.durableObjectsDay)};
+  const worst=Math.max(percent.workers??0,percent.durableObjects??0);
+  return{schema:1,updatedAt:now.toISOString(),day,month,limits:USAGE_LIMITS,percent,status:usageStatus(worst)};
+}
+async function publicUsage(env,request=fetch,now=new Date()){
+  if(typeof env?.CLOUDFLARE_ACCOUNT_ID!=="string"||!/^[a-f0-9]{32}$/.test(env.CLOUDFLARE_ACCOUNT_ID)||typeof env?.CF_MANAGEMENT_API_TOKEN!=="string"||env.CF_MANAGEMENT_API_TOKEN.length<20)
+    return{status:503,body:{error:"Backend chưa có token đọc thống kê"}};
+  const d0=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate())).toISOString();
+  const m0=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1)).toISOString();
+  try{
+    const r=await request("https://api.cloudflare.com/client/v4/graphql",{method:"POST",
+      headers:{authorization:"Bearer "+env.CF_MANAGEMENT_API_TOKEN,"content-type":"application/json"},
+      body:JSON.stringify({query:USAGE_QUERY,variables:{a:env.CLOUDFLARE_ACCOUNT_ID,d0,d1:now.toISOString(),m0}})});
+    const b=await r.json().catch(()=>null);
+    const acc=b?.data?.viewer?.accounts?.[0];
+    if(!r.ok||!acc)return{status:503,body:{error:b?.errors?.length?"Token thiếu quyền Account Analytics Read hoặc truy vấn bị từ chối":"Không đọc được thống kê Cloudflare"}};
+    return{status:200,body:summarizeUsage(acc,now)};
+  }catch{return{status:503,body:{error:"Không đọc được thống kê Cloudflare"}}}
+}
 async function handler(request,env){
   const pathname=new URL(request.url).pathname;
   if(pathname==="/"&&request.method==="GET")
@@ -141,6 +173,11 @@ async function handler(request,env){
       mode:String(raw.mode||"").slice(0,24),productionProtected:true,
       reportUrl:"https://github.com/WilliamPham0702/GMWW-V2.00/issues/320",
       actionsUrl:"https://github.com/WilliamPham0702/GMWW-V2.00/actions/workflows/cloudflare-maintenance.yml"});
+  }
+  if(pathname==="/api/public-usage"&&request.method==="GET"){
+    // Aggregate request counters only (no account id/token); CORS open so GM Server can read it.
+    const out=await publicUsage(env);
+    return new Response(JSON.stringify(out.body),{status:out.status,headers:{...JSON_HEADERS,"access-control-allow-origin":"*","cache-control":"public, max-age=60"}});
   }
   if(!pathname.startsWith("/api/"))return failure("Not found",404);
   if(!required(env))return failure("Backend chưa có secret quản trị hoặc audit storage",503);
