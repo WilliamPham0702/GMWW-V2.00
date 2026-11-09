@@ -63,7 +63,7 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
 })();
 </script>
 
-<title>GMWW V3.316</title>
+<title>GMWW V3.317</title>
 <link rel="stylesheet" href="style.css?v=gmww-v3268-template-dock">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
@@ -226,11 +226,12 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
 
         <section class="play-setup-strip gm-stage-timeline-v330" id="playSetupStrip" aria-label="Luồng vào trận">
           <button class="active" data-play-step="lobby" type="button"><span>1</span><b>Sảnh chờ</b></button>
-          <button data-play-step="seats" type="button"><span>2</span><b>Tập hợp</b></button>
-          <button data-play-step="game" type="button"><span>3</span><b>Ván Mẫu</b></button>
-          <button data-play-step="roles" type="button"><span>4</span><b>Phân Vai</b></button>
-          <button data-play-step="deal" type="button"><span>5</span><b>Phát Vai</b></button>
-          <button data-play-step="battle" type="button"><span>6</span><b>Vào Trận</b></button>
+          <button data-play-room-tab="1" type="button"><span>2</span><b>Phòng</b></button>
+          <button data-play-step="seats" type="button"><span>3</span><b>Tập hợp</b></button>
+          <button data-play-step="game" type="button"><span>4</span><b>Ván Mẫu</b></button>
+          <button data-play-step="roles" type="button"><span>5</span><b>Phân Vai</b></button>
+          <button data-play-step="deal" type="button"><span>6</span><b>Phát Vai</b></button>
+          <button data-play-step="battle" type="button"><span>7</span><b>Vào Trận</b></button>
         </section>
 
         <section id="playBattleTop" class="play-battle-top" aria-label="Điều khiển trong trận" hidden>
@@ -496,9 +497,8 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
 
         <nav class="gm-top-menu-v293 gm-bottom-menu-v325 gm-stage-dock-v330" id="gmTopMenu" aria-label="Thanh điều khiển dưới">
           <button class="gm-top-box-v293 gm-top-small-v293 play-exit-top" id="playExitVillage" type="button" aria-label="Thoát về Trang Chủ" title="Thoát"><span class="gm-top-icon-v293">⏻</span></button>
-          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-auto-v293 is-on" id="playAutoGM" type="button" aria-pressed="true" aria-label="Auto GM đang bật" title="Auto GM"><span class="gm-top-icon-v293 gm-top-icon-auto-v293">↻</span></button>
+          <button class="gm-top-box-v293 gm-top-small-v293 play-chat-top" id="playChatTop" type="button" aria-label="Box Chat" title="Box Chat"><span class="gm-top-icon-v293">💬</span></button>
           <button class="gm-top-box-v293 gm-top-info-v293" id="playPhasePill" type="button" aria-label="Trạng thái và chuyển bước tiếp theo" title="Trạng thái · Chạm để tiếp tục"><div class="gm-top-info-copy-v293"><b id="playPhaseTitle" aria-live="polite">SẢNH CHỜ</b><small id="playPhaseHint" aria-live="polite">CHẠM ĐỂ TIẾP</small></div><span class="gm-step-forward-icon" aria-hidden="true">›</span></button>
-          <button class="gm-top-box-v293 gm-top-small-v293 gm-top-audio-v293" id="playAudioTop" type="button" aria-pressed="true" aria-label="Âm thanh đang bật" title="Audio"><span class="gm-top-icon-v293 gm-top-icon-audio-v293">🔊</span></button>
           <button class="gm-top-box-v293 gm-top-small-v293 play-end-top" id="playEndGame" type="button" aria-label="Kết thúc ván" title="Kết thúc"><span class="gm-top-icon-v293">◇</span></button>
         </nav>
       </div>
@@ -1107,7 +1107,7 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
 <div class="sheet hidden play-center-sheet" id="playCreateRoomSheet">
   <div class="sheet-card play-room-page-card">
     <div class="sheet-head play-room-page-head play-room-title-centered">
-      <h3>TẠO PHÒNG</h3>
+      <h3>PHÒNG</h3>
       <button id="playCreateRoomClose" type="button" aria-label="Đóng">×</button>
     </div>
     <div class="play-room-page-body">

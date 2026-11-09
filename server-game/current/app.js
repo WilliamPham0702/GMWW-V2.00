@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.316';
+const VERSION='3.317';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -10710,6 +10710,8 @@ function initPlayScene(){
   document.getElementById('playDisbandAll')?.addEventListener('click',()=>{void playDisbandAll()});
   document.getElementById('playDisbandSheet')?.addEventListener('click',ev=>{if(ev.target===document.getElementById('playDisbandSheet'))closePlayDisbandSheet()});
   document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>{void handlePlayTimelineStep(b.dataset.playStep)}));
+  document.querySelector('[data-play-room-tab]')?.addEventListener('click',()=>{if(!playSceneRuntime.busy)void openPlayCreateRoomSheet()});
+  document.getElementById('playChatTop')?.addEventListener('click',()=>{const launch=document.getElementById('gmwwGMChatLaunch');if(launch)launch.click();else playFlashError('Box Chat mở được khi đã có phòng, từ bước Tập hợp trở đi.')});
   document.getElementById('playPhasePill')?.addEventListener('click',()=>{void advancePlayPhase()});
   document.getElementById('playExitVillage')?.addEventListener('click',exitPlayImmersive);
   document.querySelectorAll('.nav[data-page="start"]').forEach(n=>n.addEventListener('click',enterPlayImmersive));
