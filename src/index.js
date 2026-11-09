@@ -23,6 +23,7 @@ import {STATUS_DEFS,STATUS_VISUAL_IDS,activeStatusRows,confirmedNightStatusVisua
 import {GAME_CHARACTER_COUNT,normalizeLoginId,normalizeGameCharacterId,activeGameCharacterId,normalizeCharacterScale} from "./gmww-player-identity-rules.js";
 import {ROOM_PLAYER_TTL,normalizeVillageCoord,currentMovementPosition,clearPlayerMovement,normalizeSeatLayout,normalizeSeatId,firstFreeSeat,enforceUniqueSeatClaims,playerSetupComplete,roomPlayerPresence,villagePresence,publicPlayer} from "./gmww-village-player-state.js";
 import { sanitizeGameConfig, roomModeSwitchBlocked, normalizeRoomMode, normalizeSeatMoveMode, normalizeSeatCount } from "./gmww-room-config-rules.js";
+import { evaluatePlayerRoomCreate } from "./gmww-player-room-policy.js";
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
@@ -197,6 +198,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/directory/rooms/upsert"&&request.method==="POST")return this.roomDirectoryUpsert(await safeJson(request));
     if(url.pathname==="/directory/rooms/list"&&request.method==="GET")return this.roomDirectoryList(url);
     if(url.pathname==="/directory/rooms/delete"&&request.method==="POST")return this.roomDirectoryDelete(await safeJson(request));
+    if(url.pathname==="/directory/player-rooms/reserve"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(async()=>this.playerRoomReserve(await safeJson(request)));
     if(url.pathname==="/global-assets/victory"&&request.method==="GET")return this.globalAssetGet("globalAsset:victory","audio/mpeg");
     if(url.pathname==="/global-assets/victory"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:victory","audio/mpeg",125000);
     if(url.pathname==="/global-assets/card-back"&&request.method==="GET")return this.globalAssetGet("globalAsset:cardBack","image/webp");
@@ -220,7 +222,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/global-settings/gm-move"&&request.method==="POST")return this.globalGmMovePut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
       if(await this.ctx.storage.get("meta"))return j({ok:false,error:"ROOM_EXISTS"},409);
-      const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Làng Asahi"),roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,gmStage:"room",gmStageRevision:0,enabled,autoGM:b?.demo===true?false:true,demo:b?.demo===true,roomMode,seatMoveMode,seatCount,seatLayout:villageLayout.recommendedSeatShape(seatCount),gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken)};
+      const b=await safeJson(request),now=new Date().toISOString(),gmToken=randomToken(32),cfg=sanitizeGameConfig(b?.gameConfig),roomName=normalizeRoomName(b?.roomName)||String(cfg?.name||"Làng Asahi"),roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode),seatMoveMode=normalizeSeatMoveMode(b?.seatMoveMode),seatCount=normalizeSeatCount(b?.seatCount,Number(cfg?.playerCount||0)||12),enabled=b&&Object.prototype.hasOwnProperty.call(b,"enabled")?b.enabled!==false:true,meta={code:normalizeRoomCode(b?.code||""),roomName,status:"waiting",phase:"lobby",locked:false,seatsLocked:false,gmStage:"room",gmStageRevision:0,enabled,autoGM:b?.demo===true?false:true,demo:b?.demo===true,roomMode,seatMoveMode,seatCount,seatLayout:villageLayout.recommendedSeatShape(seatCount),gameName:cfg?.name||"",playerCount:Number(cfg?.playerCount||0),createdAt:now,updatedAt:now,lastUsedAt:now,startedAt:null,roleDeliveredAt:null,gmTokenHash:await sha256(gmToken),...(b?.playerRoom===true?{playerRoom:true,ownerLoginId:String(b.ownerLoginId||""),ownerTokenHash:String(b.ownerTokenHash||"")}:{})};
       await this.ctx.storage.put("meta",meta);try{await this.ctx.storage.setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);if(cfg)await this.ctx.storage.put("gameConfig",cfg);if(validImageDataUrl(b?.cardBackImage))await this.ctx.storage.put("cardBackImage",String(b.cardBackImage));return j({ok:true,room:publicRoom(meta),gmToken},201);
     }
     if(url.pathname==="/state"&&request.method==="GET")return this.publicState();
@@ -864,7 +866,7 @@ export class RoomDurableObject extends DurableObject {
     const code=normalizeRoomCode(body?.code);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
     const key="roomdir:"+code,old=await this.ctx.storage.get(key),incomingResetVersion=Math.max(0,Number(body?.resetVersion||0)),oldResetVersion=Math.max(0,Number(old?.resetVersion||0));
     if(old&&incomingResetVersion<oldResetVersion)return j({ok:true,staleIgnored:true,room:old});
-    const rec={code,roomName:normalizeRoomName(body?.roomName)||("Phòng "+code),gameName:String(body?.gameName||"").slice(0,120),phase:String(body?.phase||"lobby"),status:String(body?.status||"waiting"),locked:!!body?.locked,enabled:body?.enabled!==false,demo:body?.demo===true,roomMode:normalizeRoomMode(body?.roomMode||old?.roomMode),seatMoveMode:normalizeSeatMoveMode(body?.seatMoveMode||old?.seatMoveMode),seatCount:normalizeSeatCount(body?.seatCount,old?.seatCount||12),playerCount:Math.max(0,Number(body?.playerCount||0)),joinedCount:Math.max(0,Number(body?.joinedCount||0)),resetVersion:incomingResetVersion,createdAt:body?.createdAt||old?.createdAt||new Date().toISOString(),updatedAt:body?.updatedAt||new Date().toISOString(),leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE};
+    const rec={code,roomName:normalizeRoomName(body?.roomName)||("Phòng "+code),gameName:String(body?.gameName||"").slice(0,120),phase:String(body?.phase||"lobby"),status:String(body?.status||"waiting"),locked:!!body?.locked,enabled:body?.enabled!==false,demo:body?.demo===true,roomMode:normalizeRoomMode(body?.roomMode||old?.roomMode),seatMoveMode:normalizeSeatMoveMode(body?.seatMoveMode||old?.seatMoveMode),seatCount:normalizeSeatCount(body?.seatCount,old?.seatCount||12),playerCount:Math.max(0,Number(body?.playerCount||0)),joinedCount:Math.max(0,Number(body?.joinedCount||0)),resetVersion:incomingResetVersion,createdAt:body?.createdAt||old?.createdAt||new Date().toISOString(),updatedAt:body?.updatedAt||new Date().toISOString(),leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE,...((body?.playerRoom===true||old?.playerRoom===true)?{playerRoom:true}:{})};
     if(shouldSkipDirectoryHeartbeat(old,rec,Date.now())){
       this.gmwwWriteSkipped('roomDirectory');
       return j({ok:true,room:old,unchanged:true});
@@ -876,7 +878,21 @@ export class RoomDurableObject extends DurableObject {
     for(const [key,r] of rows){const phase=String(r?.phase||"").toLowerCase(),last=Date.parse(r?.updatedAt||r?.createdAt||"");if(phase==="deleted"||(Number.isFinite(last)&&nowMs-last>=ROOM_IDLE_TTL)){await this.ctx.storage.delete(key);continue}if(!includeDisabled&&r?.enabled===false)continue;if(!includeEnded){if(phase==="ended")continue;const lease=Number(r?.leaseUntil||0),activeDemo=r?.demo===true&&phase==="running"&&r?.enabled!==false;if(!activeDemo&&((lease&&nowMs>lease)||(!lease&&Number.isFinite(last)&&nowMs-last>ROOM_DIRECTORY_LEASE)))continue}rooms.push(r)}
     rooms.sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));return j({ok:true,count:rooms.length,rooms,ttlHours:72,leaseSeconds:Math.floor(ROOM_DIRECTORY_LEASE/1000)});
   }
-  async roomDirectoryDelete(body){const code=normalizeRoomCode(body?.code);if(isValidRoomCode(code))await this.ctx.storage.delete("roomdir:"+code);return j({ok:true,deleted:true,code})}
+  async roomDirectoryDelete(body){const code=normalizeRoomCode(body?.code);if(isValidRoomCode(code)){await this.ctx.storage.delete("roomdir:"+code);await this.ctx.storage.delete("playerroom:"+code)}return j({ok:true,deleted:true,code})}
+  // Atomic check + reserve for a player-created room: one handler, storage-only awaits.
+  // The owner login is kept under a private key so the public room list never exposes it.
+  async playerRoomReserve(body){
+    const code=normalizeRoomCode(body?.code),owner=normalizeLoginId(body?.ownerLoginId);
+    if(!isValidRoomCode(code)||!owner)return j({ok:false,error:"INVALID_REQUEST"},400);
+    if(await this.ctx.storage.get("roomdir:"+code))return j({ok:false,error:"CODE_TAKEN"},409);
+    const dirRows=await this.ctx.storage.list({prefix:"roomdir:"}),ownerRows=await this.ctx.storage.list({prefix:"playerroom:"}),owners=new Map();
+    for(const [key,v] of ownerRows)owners.set(key.slice("playerroom:".length),String(v?.ownerLoginId||""));
+    const rows=[...dirRows.values()].map(r=>({...r,ownerLoginId:owners.get(r?.code)||""})),verdict=evaluatePlayerRoomCreate(rows,owner,Date.now());
+    if(!verdict.ok)return j({ok:false,error:verdict.error,roomCode:verdict.roomCode||null,max:verdict.max||null},verdict.status);
+    const now=new Date().toISOString(),rec={code,roomName:normalizeRoomName(body?.roomName)||("Phòng "+code),gameName:"",phase:"lobby",status:"waiting",locked:false,enabled:true,demo:false,roomMode:"online",seatMoveMode:"instant",seatCount:normalizeSeatCount(body?.seatCount,12),playerCount:0,joinedCount:0,resetVersion:0,createdAt:now,updatedAt:now,leaseUntil:Date.now()+ROOM_DIRECTORY_LEASE,playerRoom:true};
+    await this.ctx.storage.put("playerroom:"+code,{ownerLoginId:owner,createdAt:now});await this.ctx.storage.put("roomdir:"+code,rec);
+    return j({ok:true,room:rec},201);
+  }
 
   async memberLogout(request){
     const token=bearer(request);if(token){const key="session:"+await sha256(token),ses=await this.ctx.storage.get(key);if(ses){const member=await this.ctx.storage.get("member:"+ses.loginId);if(member){member.presenceAt=0;member.lastSeenAt=new Date().toISOString();member.ready=false;await this.ctx.storage.put("member:"+ses.loginId,member)}}await this.ctx.storage.delete(key)}return j({ok:true})
@@ -4507,6 +4523,7 @@ export default {async fetch(request,env){
   const gameCharacterImageRoute=url.pathname.match(/^\/api\/game-characters\/(character-(?:0[1-9]|[1-3][0-9]|4[0-2]))\/image$/);if(gameCharacterImageRoute&&request.method==="GET")return character40Image(env,gameCharacterImageRoute[1],request);
   if(url.pathname==="/api/rooms"&&request.method==="GET")return memberStore(env).fetch("https://member.internal/directory/rooms/list");
   if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);
+  if(url.pathname==="/api/player-rooms"&&request.method==="POST")return createPlayerRoom(env,url,request);
   const gmObserver=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/gm-observer\/(state|action|interaction|day-action|chat-mute|auto)$/);if(gmObserver)return gmObserverApi(env,gmObserver[1],gmObserver[2],request);
   const room=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)$/);if(room&&request.method==="GET")return publicRoomState(env,room[1],request);
   const joinApi=url.pathname.match(/^\/api\/rooms\/([A-Za-z0-9]+)\/join$/);if(joinApi&&request.method==="POST")return joinRoom(env,joinApi[1],request);
@@ -4630,6 +4647,26 @@ async function applyPublicEntryRateLimit(env,request,policy){
 }
 
 async function createRoom(env,url,request){const body=await safeJson(request)||{};if(body.demo===true&&bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"DEMO_GM_ONLY"},403);for(let i=0;i<8;i++){const code=generateRoomCode(),r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code,roomName:body.roomName||"",roomMode:body.roomMode||"online",demo:body.demo===true,enabled:Object.prototype.hasOwnProperty.call(body,"enabled")?body.enabled!==false:true,seatMoveMode:body.seatMoveMode||"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:body.cardBackImage||null})});if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);return j({ok:true,roomCode:code,roomName:data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code),gmToken:data.gmToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)}return j({ok:false,error:"ROOM_CODE_EXHAUSTED"},503)}
+// Player-created online room. Requires a member session; never returns the room's gmToken.
+// The owner only receives an ownerToken (set-up rights are added in a later step), and the
+// 5-room / one-room-per-owner limits are enforced atomically in the member store.
+async function createPlayerRoom(env,url,request){
+  const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
+  if(!session.ok)return session;
+  const own=await session.json().catch(()=>({})),ownerLoginId=normalizeLoginId(own?.member?.loginId);
+  if(!ownerLoginId)return j({ok:false,error:"UNAUTHORIZED"},401);
+  const body=await safeJson(request)||{},ownerToken=randomToken(32),ownerTokenHash=await sha256(ownerToken),json={"content-type":"application/json"};
+  for(let i=0;i<8;i++){
+    const code=generateRoomCode(),rsv=await memberStore(env).fetch("https://member.internal/directory/player-rooms/reserve",{method:"POST",headers:json,body:JSON.stringify({code,ownerLoginId,roomName:body.roomName||"",seatCount:body.seatCount})});
+    if(rsv.status===409){const d=await rsv.clone().json().catch(()=>({}));if(d.error==="CODE_TAKEN")continue;return rsv}
+    if(rsv.status!==201)return rsv;
+    const r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:json,body:JSON.stringify({code,roomName:body.roomName||"",roomMode:"online",demo:false,enabled:true,seatMoveMode:"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:null,playerRoom:true,ownerLoginId,ownerTokenHash})});
+    if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);return j({ok:true,roomCode:code,roomName:data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code),ownerToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}
+    await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:json,body:JSON.stringify({code})});
+    if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)
+  }
+  return j({ok:false,error:"ROOM_CODE_EXHAUSTED"},503)
+}
 async function joinRoom(env,raw,request){const code=normalizeRoomCode(raw);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);const body=await safeJson(request);if(body?.token){const me=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:{Authorization:"Bearer "+body.token}}));if(!me.ok)return me;const data=await me.json();const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({member:data.member})});if(joined.ok){await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:data.member.loginId,roomCode:code,ready:false})});await syncRoomDirectory(env,code)}return joined}const joined=await roomStub(env,code).fetch("https://room.internal/join",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({guest:body?.guest})});if(joined.ok)await syncRoomDirectory(env,code);return joined}
 async function readyRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/ready",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
 async function heartbeatRoom(env,raw,request){const code=normalizeRoomCode(raw),body=await safeJson(request),res=await roomStub(env,code).fetch("https://room.internal/heartbeat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});if(res.ok){if(String(body?.participantId||"").startsWith("member:"))await memberStore(env).fetch("https://member.internal/members/presence-internal",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({loginId:String(body.participantId).slice(7),roomCode:code,ready:!!body.ready})});await syncRoomDirectory(env,code)}return res}
