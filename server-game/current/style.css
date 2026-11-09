@@ -8907,3 +8907,12 @@ body.play-immersive #start #playShell[data-phase] #gmTopMenu.gm-stage-dock-v330{
 body.play-immersive #start #playShell[data-phase] #playSetupStrip.play-setup-strip.gm-stage-timeline-v330{grid-template-columns:repeat(7,minmax(0,1fr))!important}
 body.play-immersive #start #playShell #playSetupStrip.gm-stage-timeline-v330>button{min-width:0!important}
 body.play-immersive #start #playShell #playSetupStrip.gm-stage-timeline-v330>button b{font-size:min(10px,2.5vw)!important;white-space:nowrap!important}
+
+/* V3.319 Phòng = chỉ quản lý phòng người chơi (xem + xoá); Box Chat dạng ô nhập ở menu dưới. */
+#playCreateRoomSheet .play-room-picker-card,#playCreateRoomSheet #playRoomModeStep,#playCreateRoomSheet #playRoomEditor{display:none!important}
+#playCreateRoomSheet .play-player-room-row{display:flex;gap:8px;align-items:stretch}
+#playCreateRoomSheet .play-player-room-row .play-player-room{flex:1;min-width:0}
+#playCreateRoomSheet .play-player-room-del{flex:none;padding:0 12px;border-radius:12px;border:1px solid rgba(255,90,90,.55);background:rgba(120,20,30,.55);color:#ffd7d7;font-weight:800;font-size:12px}
+body.play-immersive #start #playShell[data-phase] #gmTopMenu.gm-stage-dock-v330{grid-template-columns:48px minmax(0,1fr) minmax(0,1.1fr) 48px!important}
+#playChatTop.play-chat-top{width:auto!important;min-width:0;display:flex;align-items:center;justify-content:flex-start;padding:0 12px;gap:6px;border-radius:14px}
+#playChatTop .play-chat-top-text{font-size:13px;font-weight:600;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

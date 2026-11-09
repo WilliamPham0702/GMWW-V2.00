@@ -905,8 +905,22 @@ function renderPlayerRooms(){
     const b=document.createElement('button');b.type='button';b.setAttribute('role','listitem');b.className='play-player-room'+(current?' active':'')+(phase==='running'?' running':'');
     const ago=playerRoomAgo(r.updatedAt);
     b.innerHTML='<span><b>'+playEsc(playReadableRoomName(r.roomName))+'</b><small>'+playEsc(code+' • '+(PLAYER_ROOM_PHASE_LABEL[phase]||phase)+' • '+(Number(r.playerCount)||0)+'/'+(Number(r.seatCount)||0)+' người'+(ago?' • '+ago:''))+'</small></span><i>'+(current?'ĐANG XEM':'XEM')+'</i>';
-    b.onclick=()=>observePlayerRoom(r);list.appendChild(b);
+    b.onclick=()=>observePlayerRoom(r);
+    const row=document.createElement('div');row.className='play-player-room-row';row.setAttribute('role','listitem');b.removeAttribute('role');
+    const del=document.createElement('button');del.type='button';del.className='play-player-room-del';del.textContent='XOÁ';del.setAttribute('aria-label','Xoá phòng '+code);
+    del.onclick=()=>void deletePlayerRoom(r);
+    row.append(b,del);list.appendChild(row);
   }
+}
+async function deletePlayerRoom(r){
+  const code=String(r?.code||'');if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code))return;
+  if(!confirm('Xoá phòng '+code+' ('+playReadableRoomName(r.roomName)+')? Người chơi trong phòng sẽ bị đưa ra.'))return;
+  try{
+    await gmApi('/api/gm/rooms/'+encodeURIComponent(code),{method:'DELETE'});
+    if(String(playSceneState.roomCode)===code){playSceneState.roomCode='';playSceneState.gmToken='';playSceneRuntime.room=null;savePlayScene();renderPlayScene()}
+    playerRoomsState.error='';
+  }catch(err){playerRoomsState.error=err?.message||'Không xoá được phòng.'}
+  void loadPlayerRooms();
 }
 async function observePlayerRoom(r){
   const code=String(r?.code||'');if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code))return;
@@ -917,6 +931,7 @@ async function observePlayerRoom(r){
     savePlayScene();gmwwSendGmPresence(true);
     const data=await playSyncRoom(true);
     if(!data){if(!isLivePlayRoom())clearStalePlayRoom();playerRoomsState.error='Không vào được phòng '+code+'. Có thể phòng đã đóng.';renderPlayerRooms();void loadPlayerRooms();return}
+    if(playSceneState.step==='lobby'||playSceneState.step==='room'){playSceneState.step='seats';savePlayScene()}
     playRoomUiState.stage='rooms';playRoomUiState.selectedCode='';playRoomUiState.editorMode='';
     document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
     renderPlayScene();

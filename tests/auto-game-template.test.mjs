@@ -24,7 +24,7 @@ const sample=[
   ['role_fairy','Yêu Tinh','village'],['role_knight','Hiệp Sĩ','village'],
   ['role_bear_god','Thần Gấu','village'],
   ['role_assassin','Sát Thủ','third'],['role_destroyer','Kẻ Hủy Diệt','third']
-].map(([id,name,factionId])=>({id,name,factionId}));
+].concat(Array.from({length:20},(_,i)=>['role_extra_'+i,'Vai Dân '+i,'village'])).map(([id,name,factionId])=>({id,name,factionId}));
 
 test('role setup: exact count, two sides and third side from 10 players',()=>{
   for(const n of [3,4,5,6,7,8,9,10,11,12,15,20,25,30]){
@@ -33,6 +33,7 @@ test('role setup: exact count, two sides and third side from 10 players',()=>{
     assert.ok(generated.counts.wolf>=1,'wolf for '+n);
     assert.ok(generated.counts.village>generated.counts.wolf,'village majority for '+n);
     assert.equal(generated.counts.third,n>=10?1:0,'third side for '+n);
+    assert.ok(!generated.roles.some(r=>r.roleId==='role_villager'),'no plain villager for '+n);
     for(const role of generated.roles){
       const canonical=sample.find(r=>r.id===role.roleId);
       assert.ok(canonical,'unknown role '+role.roleId);
