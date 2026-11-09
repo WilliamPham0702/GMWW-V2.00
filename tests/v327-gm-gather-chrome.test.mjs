@@ -14,7 +14,7 @@ test('V3.37 keeps seven-stage timeline above a smaller four-icon GM dock',()=>{
  assert.match(html,/id="playSetupStrip"/);
  assert.ok(html.indexOf('id="playSetupStrip"')<html.indexOf('id="playWorld"'));
  assert.ok(html.indexOf('id="gmTopMenu"')>html.indexOf('id="playWorld"'));
- const controls=['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'];
+ const controls=['playExitVillage','playChatTop','playPhasePill','playEndGame'];
  for(const id of controls)assert.match(html,new RegExp('id="'+id+'"'));
  const menu=html.slice(html.indexOf('<nav class="gm-top-menu-v293'),html.indexOf('</nav>',html.indexOf('<nav class="gm-top-menu-v293'))+6);
  assert.doesNotMatch(menu,/<small>THOÁT<\/small>|<small>AUTO GM<\/small>|<small>AUDIO<\/small>|<small>KẾT THÚC<\/small>/);

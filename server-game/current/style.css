@@ -8900,3 +8900,10 @@ body.play-immersive #playGameSheet.gmww-template-floating .play-game-sheet-card[
 #playCreateRoomSheet .play-player-room small{opacity:.8}
 #playCreateRoomSheet .play-player-room i{font-style:normal;font-size:11px;font-weight:700;padding:3px 8px;border-radius:9px;background:#7c3aed;color:#fff;flex:none}
 #playCreateRoomSheet .play-player-room-note{margin:8px 0 0;font-size:12px;opacity:.8}
+
+/* V3.317 Menu Server: 7 bước + thanh dưới ⏻ · Box Chat · Tiếp tục · ◇ */
+#gmwwGMChatLaunch{display:none!important}
+body.play-immersive #start #playShell[data-phase] #gmTopMenu.gm-stage-dock-v330{grid-template-columns:48px 48px minmax(0,1fr) 48px!important}
+body.play-immersive #start #playShell[data-phase] #playSetupStrip.play-setup-strip.gm-stage-timeline-v330{grid-template-columns:repeat(7,minmax(0,1fr))!important}
+body.play-immersive #start #playShell #playSetupStrip.gm-stage-timeline-v330>button{min-width:0!important}
+body.play-immersive #start #playShell #playSetupStrip.gm-stage-timeline-v330>button b{font-size:min(10px,2.5vw)!important;white-space:nowrap!important}

@@ -12,8 +12,8 @@ test('V3.30 presents the seven-stage timeline above the game, and five controls 
  const timeline=html.indexOf('id="playSetupStrip"'),world=html.indexOf('id="playWorld"'),dock=html.indexOf('id="gmTopMenu"');
  assert.ok(timeline>=0&&timeline<world&&world<dock);
  const bar=html.slice(html.indexOf('<nav class="gm-top-menu-v293'),html.indexOf('</nav>',dock)+6);
- const ids=['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'];
- assert.deepEqual((bar.match(/<button\b/g)||[]).length,5);
+ const ids=['playExitVillage','playChatTop','playPhasePill','playEndGame'];
+ assert.deepEqual((bar.match(/<button\b/g)||[]).length,4);
  for(const id of ids)assert.ok(bar.includes('id="'+id+'"'),id);
  assert.doesNotMatch(html,/id="playBack"|id="playNext"|id="playPrimaryAction"|play-control-bar-three/);
  assert.match(html,/class="play-setup-strip gm-stage-timeline-v330"/);

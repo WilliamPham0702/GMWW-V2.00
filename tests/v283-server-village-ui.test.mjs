@@ -54,7 +54,7 @@ test('GM player labels show compact name/presence and only character artwork sca
 
 test('V3.25 removes the old three-button footer and retains all core GM actions',()=>{
   assert.doesNotMatch(html,/play-control-bar-three|id="playBack"|id="playPrimaryAction"|id="playNext"/);
-  for(const id of ['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'])assert.match(html,new RegExp('id="'+id+'"'));
+  for(const id of ['playExitVillage','playChatTop','playPhasePill','playEndGame'])assert.match(html,new RegExp('id="'+id+'"'));
   assert.ok(html.indexOf('id="playSetupStrip"')<html.indexOf('id="gmTopMenu"'));
   assert.match(css,/#gmTopMenu\.gm-top-menu-v293\{/);
   assert.match(app,/handlePlayTimelineStep\(b\.dataset\.playStep\)/);

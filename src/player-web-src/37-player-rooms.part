@@ -156,7 +156,7 @@
     const q=id=>root.getElementById(id);
     q('playPhasePill').addEventListener('click',()=>{pr.view=stepNow();openSheet()});
     q('playExitVillage').addEventListener('click',()=>{if(confirm('Rời phòng của bạn? Phòng trống 30 phút sẽ tự xoá.'))run(async()=>{closeSheet();await window.leaveRoom()})});
-    q('playAutoGM').addEventListener('click',()=>{try{toast('Quản Trò Tự Động luôn bật trong phòng người chơi.')}catch(_){}});
+    q('playChatTop')?.addEventListener('click',()=>{try{toast('Box Chat sẽ có ở bản sau.')}catch(_){}});
     q('playEndGame').addEventListener('click',()=>{if(stepNow()==='battle'&&confirm('Kết thúc ván ngay?'))run(async()=>{await callOwner('end','POST',{});say('Đã kết thúc ván.');await refresh()})});
     document.body.appendChild(host);return host;
   }
