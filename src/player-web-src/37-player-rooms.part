@@ -214,7 +214,7 @@
     let host=document.getElementById('gmwwStageStrip');if(host)return host;
     host=el('div');host.id='gmwwStageStrip';host.hidden=true;
     const root=host.attachShadow({mode:'open'}),strip=(GMWW_SERVER_MENU.markup.match(/<section\b[^>]*id="playSetupStrip"[\s\S]*?<\/section>/)||[''])[0];
-    root.innerHTML='<style>'+GMWW_SERVER_MENU.css+SHADOW_BASE+'#start #playShell #playSetupStrip.play-setup-strip.gm-stage-timeline-v330{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;width:100%!important;max-width:760px!important;margin:0 auto!important;transform:none!important;min-height:58px!important}</style><div id="start"><div id="playShell" class="play-shell" data-phase="lobby" style="position:relative;height:auto;min-height:0;padding:0;background:none;overflow:visible">'+strip+'</div></div>';
+    root.innerHTML='<style>'+GMWW_SERVER_MENU.css+SHADOW_BASE+'#start #playShell #playSetupStrip.play-setup-strip.gm-stage-timeline-v330{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important;min-height:58px!important;border:0!important;outline:0!important;border-radius:0 0 22px 22px!important;box-shadow:none!important;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 7%,#000 93%,transparent 100%),linear-gradient(180deg,#000 0,#000 72%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 7%,#000 93%,transparent 100%),linear-gradient(180deg,#000 0,#000 72%,transparent 100%);mask-composite:intersect}</style><div id="start"><div id="playShell" class="play-shell" data-phase="lobby" style="position:relative;height:auto;min-height:0;padding:0;background:none;overflow:visible">'+strip+'</div></div>';
     root.querySelectorAll('#playSetupStrip button').forEach(b=>b.addEventListener('click',()=>onTab(b.dataset.playStep||'room')));
     document.body.appendChild(host);return host;
   }
@@ -272,7 +272,7 @@
     if(pr.mounted)return;pr.mounted=true;
     document.head.appendChild(el('style',null,'#gmwwSetupTop3{display:none!important}'
       +'#gmwwOwnerDock{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
-      +'#gmwwStageStrip{position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 58px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
+      +'#gmwwStageStrip{position:fixed;left:0;right:0;top:0;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
       +'.gmww-pr-ctl{display:flex;align-items:center;gap:8px}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-panel button.gmww-pr-step{padding:0;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1}'
       +'.gmww-pr-roomrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid #4fc3f7!important;background:#0b3a5e!important;color:#e8f6ff;text-align:left}.gmww-pr-roomrow div{display:flex;flex-direction:column;gap:2px;min-width:0}.gmww-pr-roomrow small{opacity:.75;font-weight:500}.gmww-pr-roomrow span{font-size:24px}'
