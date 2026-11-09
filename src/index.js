@@ -199,7 +199,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/directory/rooms/upsert"&&request.method==="POST")return this.roomDirectoryUpsert(await safeJson(request));
     if(url.pathname==="/directory/rooms/list"&&request.method==="GET")return this.roomDirectoryList(url);
     if(url.pathname==="/directory/rooms/delete"&&request.method==="POST")return this.roomDirectoryDelete(await safeJson(request));
-    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start|end)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
+    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|start|end|stage)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
     if(url.pathname==="/directory/player-rooms/reserve"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(async()=>this.playerRoomReserve(await safeJson(request)));
     if(url.pathname==="/global-assets/victory"&&request.method==="GET")return this.globalAssetGet("globalAsset:victory","audio/mpeg");
     if(url.pathname==="/global-assets/victory"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:victory","audio/mpeg",125000);
@@ -926,6 +926,7 @@ export class RoomDurableObject extends DurableObject {
     if(action==="apply-template")return this.ownerApplyTemplate(gm,meta,body);
     if(action==="start")return this.ownerStart(gm,meta,body);
     if(action==="end")return this.ownerEnd(gm,meta);
+    if(action==="stage"){const step=String(body.step||"").toLowerCase();return["room","seats","game","roles","deal"].includes(step)?this.gmStage(gm,{step}):j({ok:false,error:"INVALID_GM_STAGE"},400)}
     return j({ok:false,error:"NOT_FOUND"},404)
   }
   async ownerState(request){
@@ -4773,7 +4774,7 @@ async function playerRoomTemplates(env,request){
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 async function playerRoomOwnerApi(env,rawCode,action,request){
   const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
-  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","start","end"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
+  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","start","end","stage"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
   const stub=roomStub(env,code),auth={authorization:request.headers.get("authorization")||""},json={...auth,"content-type":"application/json"};
   if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return stub.fetch("https://room.internal/owner/state",{headers:auth})}
   if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
