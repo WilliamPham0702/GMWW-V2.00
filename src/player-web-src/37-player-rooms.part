@@ -5,7 +5,7 @@
    Routes: POST /api/player-rooms, GET /api/player-rooms/templates, /api/player-rooms/:code/owner/*. */
 (function gmwwPlayerRooms(){
   const KEY='gmwwOwnedRoom',STEPS=[['lobby','Sảnh chờ'],['room','Phòng Game'],['seats','Tập hợp'],['game','Ván Mẫu'],['roles','Phân Vai'],['deal','Phát Vai'],['battle','Vào Trận']];
-  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],artifacts:[],deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false,joinCode:'',known:null,pos:null,chatOpen:false};
+  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],artifacts:[],catalogStatus:'idle',catalogError:'',deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false,joinCode:'',known:null,pos:null,chatOpen:false};
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
   const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.code&&v.token?v:null}catch(_){return null}};
   const save=v=>{try{if(v)localStorage.setItem(KEY,JSON.stringify(v));else localStorage.removeItem(KEY)}catch(_){}};
@@ -43,7 +43,17 @@
   const STAGE={lobby:'room',room:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
   function syncStage(k){if(!pr.own||!STAGE[k]||String(pr.state?.room?.phase||'lobby').toLowerCase()==='running')return;callOwner('stage','POST',{step:STAGE[k]}).then(refresh).catch(()=>{})}
   function goStep(k){pr.view=k;pr.touched=true;syncStage(k);render()}
-  async function loadTemplates(){const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];const r=await api('/api/player-rooms/roles',{headers:auth()});pr.roles=Array.isArray(r.roles)?r.roles:[];pr.artifacts=Array.isArray(r.artifacts)?r.artifacts:[]}
+  async function loadTemplates(){
+    pr.catalogStatus='loading';pr.catalogError='';
+    try{
+      const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];
+      const available=new Map();for(const t of pr.templates){const cfg=t?.compiledConfig||t?.gameConfig||{};for(const r of Array.isArray(cfg.roles)?cfg.roles:[]){const id=String(r?.roleId||'');if(id&&!available.has(id))available.set(id,{roleId:id,roleName:String(r.roleName||r.name||id),faction:String(r.faction||''),order:Number(r.order)||0})}}
+      pr.roles=[...available.values()];
+      try{const r=await api('/api/player-rooms/roles',{headers:auth()});if(Array.isArray(r.roles)&&r.roles.length)pr.roles=r.roles;pr.artifacts=Array.isArray(r.artifacts)?r.artifacts:[]}
+      catch(e){pr.catalogError=errText(e)}
+      pr.catalogStatus='ready';
+    }catch(e){pr.catalogStatus='error';pr.catalogError=errText(e);throw e}
+  }
   const btn=(label,fn,cls,disabled)=>{const b=el('button',cls||null,label);b.type='button';if(disabled||pr.busy)b.disabled=true;b.addEventListener('click',()=>run(fn));return b};
   const stat=(k,v)=>{const d=el('div','gmww-pr-stat');d.append(el('small',null,k),el('b',null,String(v)));return d};
   // Step the server is on, mapped to the six tabs; the owner can still browse the other tabs.
@@ -174,7 +184,9 @@
   function pickTemplates(box,st,players){
     const cfg=st?.config,need=deckSize(cfg);
     box.append(el('p','gmww-pr-help','Chọn cấu hình Ván Mẫu đã lưu trên Server. Vai trò, Artifact và thời gian sẽ được áp dụng nguyên cấu hình. Cần '+players.length+' lá bài cho phòng này.'));
-    if(!pr.templates.length)box.append(el('p','gmww-pr-help','Chưa có Ván Mẫu trên Server. Chọn “Thiết kế Ván Mẫu” để tạo từ bộ bài và Artifact đã phát hành.'));
+    if(pr.catalogStatus==='loading'||pr.catalogStatus==='idle')box.append(el('p','gmww-pr-help','Đang tải Ván Mẫu Server…'));
+    else if(pr.catalogStatus==='error')box.append(el('p','gmww-pr-note','Không tải được Ván Mẫu Server: '+pr.catalogError));
+    else if(!pr.templates.length)box.append(el('p','gmww-pr-help','Chưa có Ván Mẫu trên Server.'));
     for(const t of pr.templates){
       const card=el('div','gmww-pr-tpl'+(cfg?.id===t.id?' is-on':'')),fit=Number(t.playerCount)===players.length;
       const head=el('div'),tc=t.compiledConfig||t.gameConfig||{},roles=Array.isArray(tc.roles)?tc.roles:[],arts=tc.artifactsEnabled===true?(tc.artifacts||[]):[];
@@ -196,7 +208,10 @@
   // Full Ván Mẫu editor: roles and order, per-role action time, Artifact pool/quota, game timing.
   function deckBuilder(box,people){
     box.append(el('div','gmww-pr-sub','THIẾT KẾ VÁN MẪU'));
-    if(!pr.roles.length){box.append(el('p','gmww-pr-help','Chưa có danh sách vai để tạo ván.'));return}
+    if(pr.catalogStatus==='loading'||pr.catalogStatus==='idle'){box.append(el('p','gmww-pr-help','Đang tải danh sách vai từ Ván Mẫu Server…'));return}
+    if(pr.catalogStatus==='error'){box.append(el('p','gmww-pr-note','Không tải được danh sách Ván Mẫu Server: '+pr.catalogError),btn('TẢI LẠI DANH SÁCH',async()=>{await loadTemplates()},'gmww-pr-main'));return}
+    if(!pr.roles.length){box.append(el('p','gmww-pr-help','Chưa có vai trong các Ván Mẫu Server đã lưu. Chọn tab “Ván Mẫu Server” để dùng mẫu có sẵn.'));return}
+    if(pr.catalogError)box.append(el('p','gmww-pr-note','Danh sách Vai Trò đã tải từ Ván Mẫu Server; danh sách Artifact chưa tải được: '+pr.catalogError));
     if(!pr.timing)pr.timing=freshTiming();if(!pr.secs)pr.secs=new Map();
     const name=el('input');name.id='gmwwPrDeckName';name.maxLength=48;name.placeholder='Tên Ván Mẫu';name.value=pr.deckName;name.addEventListener('input',()=>{pr.deckName=name.value});box.append(name);
     const sum=el('div','gmww-pr-note');sum.id='gmwwPrDeckSum';box.append(sum);
@@ -260,7 +275,7 @@
   }
   const stepNow=()=>{const room=pr.state?.room||{};return String(room.phase||'lobby').toLowerCase()==='running'?'battle':serverStep(room)};
   const inOwnRoom=()=>!!(pr.own&&state?.roomCode&&String(state.roomCode).toUpperCase()===String(pr.own.code).toUpperCase());
-  function openSheet(){closeChat();pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>{});refresh()}
+  function openSheet(){closeChat();pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>render());refresh()}
   function closeSheet(){pr.open=false;render()}
   window.gmwwOpenCreateRoom=()=>{if(pr.own&&!inOwnRoom()){/* own room exists but the player is elsewhere */}openSheet()};
   // ---- Trang rời (Phòng, Chat): kéo được bằng thanh nắm/tiêu đề, hít vào menu trên/dưới (như màn Server), bấm ngoài để đóng.
