@@ -33,6 +33,8 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
     const root=document.documentElement;
     root.style.setProperty('--gmww-player-visible-height',h+'px');
     root.style.setProperty('--gmww-player-visible-top',top+'px');
+    const w=Math.max(1,Math.round(Math.min(Number(v?.width)||Infinity,window.innerWidth||Infinity,document.documentElement.clientWidth||Infinity)));
+    if(Number.isFinite(w)){root.style.setProperty('--gmww-player-visible-width',w+'px');root.style.setProperty('--gmww-player-visible-left',Math.max(0,Math.round(Number(v?.offsetLeft)||0))+'px')}
   }
   function scheduleViewport(){if(queued)return;queued=true;requestAnimationFrame(syncViewport)}
   syncViewport();
