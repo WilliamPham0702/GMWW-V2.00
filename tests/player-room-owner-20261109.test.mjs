@@ -46,8 +46,8 @@ assert.ok(from>0&&to>from,'find real owner methods');
 const GM='GM-TOKEN-FOR-TEST';
 const bearer=r=>{const m=/^Bearer\s+(.+)$/i.exec(r.headers.get('authorization')||'');return m?m[1]:''};
 const sha256=async v=>'h:'+v,timingSafeEqual=(a,b)=>a===b;
-const Owner=new Function('GM_SYNC_TOKEN','j','bearer','sha256','timingSafeEqual','safeJson','normalizeLoginId','publicRoom','publicPlayer','ownerDeckView','playerRoomConfigFromTemplate','missingRoleCards','planPlayerRoomDeal','secureShuffle','crypto',
-  'return class Owner {\n'+source.slice(from,to)+'\n}')(GM,j,bearer,sha256,timingSafeEqual,async r=>r.json().catch(()=>null),normalizeLoginId,m=>({code:m.code,phase:m.phase}),p=>({loginId:p.loginId,seatId:p.seatId}),ownerDeckView,playerRoomConfigFromTemplate,missingRoleCards,planPlayerRoomDeal,d=>[...d].reverse(),globalThis.crypto);
+const Owner=new Function('GM_SYNC_TOKEN','j','bearer','sha256','timingSafeEqual','safeJson','normalizeLoginId','publicRoom','publicPlayer','ownerDeckView','playerRoomConfigFromTemplate','missingRoleCards','planPlayerRoomDeal','secureShuffle','crypto','MEMBER_STORE_NAME',
+  'return class Owner {\n'+source.slice(from,to)+'\n}')(GM,j,bearer,sha256,timingSafeEqual,async r=>r.json().catch(()=>null),normalizeLoginId,m=>({code:m.code,phase:m.phase}),p=>({loginId:p.loginId,seatId:p.seatId}),ownerDeckView,playerRoomConfigFromTemplate,missingRoleCards,planPlayerRoomDeal,d=>[...d].reverse(),globalThis.crypto,'member-store');
 
 function room({meta={},players,cfg,cards=['wolf','seer','villager']}={}){
   const data=new Map();
@@ -56,7 +56,7 @@ function room({meta={},players,cfg,cards=['wolf','seer','villager']}={}){
   if(cfg!==null)data.set('gameConfig',cfg||{id:'t',name:'Mẫu',playerCount:6,roles});
   for(const c of cards)data.set('roleCatalog:'+c,{roleId:c});
   const o=new Owner(),calls=[];o.calls=calls;o.data=data;
-  o.ctx={storage:{get:async k=>structuredClone(data.get(k)),put:async(k,v)=>{data.set(k,structuredClone(v))},delete:async k=>{data.delete(k)}}};
+  o.ctx={storage:{get:async k=>structuredClone(data.get(k)),put:async(k,v)=>{data.set(k,structuredClone(v))},delete:async k=>{data.delete(k)},list:async({prefix=''}={})=>new Map([...data].filter(([k])=>k.startsWith(prefix)).map(([k,v])=>[k,structuredClone(v)]))}};
   const rec=(name,res={ok:true})=>async(req,body)=>{calls.push({name,auth:req?.headers?.get?.('authorization')||null,body});return j(res)};
   for(const n of ['gmSeatLock','gmRandomizeRemainingSeats','gmKick','gmRoomSettings','gmConfig','gmRoleAssets','gmStart'])o[n]=rec(n);
   o.gmAssign=async(req,body)=>{calls.push({name:'gmAssign',auth:req.headers.get('authorization'),body});data.get('meta').matchId=body.matchId;return j({ok:true,assignments:body.assignments})};
@@ -182,7 +182,7 @@ test('template list needs a member session',async()=>{
 // ---- wiring guards ----
 test('routes: owner API is under /api/player-rooms and the DO route list matches the Worker whitelist',()=>{
   assert.ok(source.includes('const ownerApi=url.pathname.match(/^\\/api\\/player-rooms\\/([A-Za-z0-9]+)\\/owner\\/([a-z-]+)$/);if(ownerApi)return playerRoomOwnerApi('));
-  assert.ok(source.includes('/^\\/owner\\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|roles-shuffle|start|end|stage)$/'));
+  assert.ok(source.includes('/^\\/owner\\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|roles-shuffle|start|end|stage|close)$/'));
   assert.ok(source.includes('if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);'),'GM room creation unchanged');
 });
 
@@ -209,4 +209,19 @@ test('custom deck: owner picks roles + counts; Worker builds the template from p
 test('role list needs a member session and is built from published templates',async()=>{
   const w=worker(),res=await w.playerRoomRoleList({},new Request('https://x',{headers:{authorization:'Bearer t'}})),d=await res.json();
   assert.equal(res.status,200);assert.deepEqual(d.roles.map(r=>r.roleId).sort(),['seer','wolf']);
+});
+
+test('owner close: deletes the room, tells the sockets, frees the directory slot; blocked while running; refused for others',async()=>{
+  const closed=[],dir=[],ws={close:(c,r)=>closed.push([c,r])};
+  const mk=opts=>{const o=room(opts);o.chatVoiceClear=async()=>{};o.ctx.getWebSockets=()=>[ws];
+    o.env={ROOMS:{idFromName:n=>n,get:()=>({fetch:async(u,i)=>{dir.push([u,JSON.parse(i.body)]);return j({ok:true})}})}};return o};
+  const bad=mk();assert.equal((await bad.ownerAction('close',req('/owner/close',{token:'WRONG',body:{}}))).status,401);
+  const running=mk({meta:{phase:'running'}}),rr=await running.ownerAction('close',req('/owner/close',{body:{}}));
+  assert.equal(rr.status,409);assert.equal((await rr.json()).error,'ROOM_RUNNING');assert.equal(running.data.get('meta').phase,'running');
+  const o=mk(),res=await o.ownerAction('close',req('/owner/close',{body:{}}));
+  assert.equal(res.status,200);assert.equal((await res.json()).closed,true);
+  const meta=o.data.get('meta');assert.equal(meta.phase,'deleted');assert.equal(meta.status,'deleted');assert.deepEqual(o.data.get('players'),{});
+  assert.deepEqual(closed,[[1000,'ROOM_CLOSED']]);
+  assert.deepEqual(dir,[['https://member.internal/directory/rooms/delete',{code:'ABCDEF'}]]);
+  assert.equal((await o.ownerAction('state',req('/owner/state',{method:'GET'}))).status,404,'a closed room is gone for its owner');
 });

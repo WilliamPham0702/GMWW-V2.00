@@ -199,7 +199,7 @@ export class RoomDurableObject extends DurableObject {
     if(url.pathname==="/directory/rooms/upsert"&&request.method==="POST")return this.roomDirectoryUpsert(await safeJson(request));
     if(url.pathname==="/directory/rooms/list"&&request.method==="GET")return this.roomDirectoryList(url);
     if(url.pathname==="/directory/rooms/delete"&&request.method==="POST")return this.roomDirectoryDelete(await safeJson(request));
-    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|roles-shuffle|start|end|stage)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
+    const ownerRoute=url.pathname.match(/^\/owner\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|roles-shuffle|start|end|stage|close)$/);if(ownerRoute)return this.ownerAction(ownerRoute[1],request);
     if(url.pathname==="/directory/player-rooms/reserve"&&request.method==="POST")return this.ctx.blockConcurrencyWhile(async()=>this.playerRoomReserve(await safeJson(request)));
     if(url.pathname==="/global-assets/victory"&&request.method==="GET")return this.globalAssetGet("globalAsset:victory","audio/mpeg");
     if(url.pathname==="/global-assets/victory"&&request.method==="PUT")return this.globalAssetPut(request,"globalAsset:victory","audio/mpeg",125000);
@@ -927,8 +927,21 @@ export class RoomDurableObject extends DurableObject {
     if(action==="roles-shuffle")return this.ownerRolesShuffle(gm,meta);
     if(action==="start")return this.ownerStart(gm,meta,body);
     if(action==="end")return this.ownerEnd(gm,meta);
+    if(action==="close")return this.ownerClose(meta);
     if(action==="stage"){const step=String(body.step||"").toLowerCase();return["room","seats","game","roles","deal"].includes(step)?this.gmStage(gm,{step}):j({ok:false,error:"INVALID_GM_STAGE"},400)}
     return j({ok:false,error:"NOT_FOUND"},404)
+  }
+  // Owner deletes their own room (frees their one-room slot). A running match must be ended first.
+  async ownerClose(meta){
+    if(String(meta.phase||"").toLowerCase()==="running")return j({ok:false,error:"ROOM_RUNNING",message:"Ván đang chơi. Hãy kết thúc ván trước khi xoá phòng."},409);
+    await this.wipeRoom(meta,"ROOM_CLOSED");
+    return j({ok:true,closed:true,code:meta.code});
+  }
+  // Wipes a room and detaches it from the directory. Shared by idle expiry and the owner's "Xoá phòng".
+  async wipeRoom(meta,reason="ROOM_EXPIRED"){
+      await this.chatVoiceClear();
+      const now=new Date().toISOString();meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=now;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}for(const ws of this.ctx.getWebSockets())try{ws.close(1000,reason)}catch{}
+      if(meta.playerRoom===true){try{await this.env.ROOMS.get(this.env.ROOMS.idFromName(MEMBER_STORE_NAME)).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:meta.code})})}catch(e){console.warn("GMWW_PLAYER_ROOM_DIRECTORY_DELETE",e)}}
   }
   async ownerState(request){
     const gate=await this.ownerGate(request);if(!gate.ok)return gate.response;
@@ -3737,9 +3750,7 @@ export class RoomDurableObject extends DurableObject {
       }
       meta=await this.ctx.storage.get("meta");const due=this.roomExpiryDue(meta);
       if(Date.now()<due){await this.scheduleRoomAlarm(meta);return}
-      await this.chatVoiceClear();
-      const now=new Date().toISOString();meta.phase="deleted";meta.status="deleted";meta.locked=true;meta.deletedAt=now;meta.updatedAt=now;await this.ctx.storage.put("meta",meta);await this.ctx.storage.put("players",{});await this.ctx.storage.put("assignments",[]);await this.ctx.storage.delete("gameConfig");await this.ctx.storage.delete("cardBackImage");for(const prefix of ["role:","roles:","artifact:","artifactUse:","artifactCycle:","nightRuntime:","roleAsset:","roleCatalog:","artworkAsset:"]){const rows=await this.ctx.storage.list({prefix});for(const k of rows.keys())await this.ctx.storage.delete(k)}for(const ws of this.ctx.getWebSockets())try{ws.close(1000,"ROOM_EXPIRED")}catch{}
-      if(meta.playerRoom===true){try{await this.env.ROOMS.get(this.env.ROOMS.idFromName(MEMBER_STORE_NAME)).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({code:meta.code})})}catch(e){console.warn("GMWW_PLAYER_ROOM_DIRECTORY_DELETE",e)}}
+      await this.wipeRoom(meta,"ROOM_EXPIRED");
     }catch(e){
       console.error("GMWW_ROOM_ALARM",e);
       const meta=await this.ctx.storage.get("meta"),lease=await this.ctx.storage.get("demoLease");
@@ -4138,7 +4149,7 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,room,player:publicPlayer(p),players:publicPlayers,arrived:true,seatId:targetSeatId})
   }
   async join(body){
-    const meta=await this.ctx.storage.get("meta");if(!meta)return j({ok:false,error:"ROOM_NOT_FOUND"},404);if(meta.demo===true&&!body?.member?.loginId)return j({ok:false,error:"DEMO_LOGIN_REQUIRED",message:"Đăng nhập thành viên để tham gia DEMO."},403);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);
+    const meta=await this.ctx.storage.get("meta");if(!meta||String(meta.phase||"").toLowerCase()==="deleted")return j({ok:false,error:"ROOM_NOT_FOUND",message:"Không tìm thấy phòng này (mã sai hoặc phòng đã bị xoá)."},404);if(meta.demo===true&&!body?.member?.loginId)return j({ok:false,error:"DEMO_LOGIN_REQUIRED",message:"Đăng nhập thành viên để tham gia DEMO."},403);if(meta.enabled===false)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);
     let players=(await this.ctx.storage.get("players"))||{};players=(await this.pruneOfflinePlayers(meta,players)).players;const now=new Date().toISOString(),phase=String(meta.phase||"lobby").toLowerCase(),inProgress=["role_delivery","running","started","game","playing"].includes(phase);let player;
     if(body?.member?.loginId&&normalizeLoginId(body.member.loginId)===GM_OBSERVER_LOGIN_ID)return j({ok:false,error:"GM_OBSERVER_NOT_PLAYER",message:"Tài khoản GM chỉ quan sát, không làm người chơi."},403);
     if(body?.member?.loginId){const m=body.member,key="member:"+m.loginId,evicted=(await this.ctx.storage.get("evictedMembers"))||[];if(evicted.includes(normalizeLoginId(m.loginId))&&!players[key])return j({ok:false,error:"PLAYER_NOT_IN_ROOM",message:"GM đã mời bạn ra khỏi Phòng. Hãy chờ GM gọi lại."},403);const resumeExisting=normalizeRoomCode(m.currentRoomCode||"")===normalizeRoomCode(meta.code||""),reserved=players[key]?.reservedByGM===true,known=!!players[key]||resumeExisting||reserved;if(meta.enabled===false&&!known)return j({ok:false,error:"ROOM_DISABLED",message:"Phòng đang Tắt. Hãy chờ Quản Trò Bật Phòng."},423);if(inProgress&&!known&&meta.demo!==true)return j({ok:false,error:"ROOM_IN_PROGRESS",message:"Ván đang chơi. Chỉ Thành Viên đã tham dự mới có thể vào lại trận."},423);player={...players[key],participantId:key,kind:"member",humanControlled:meta.demo===true||players[key]?.humanControlled===true,loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:normalizeGameCharacterId(m.gameCharacterId)||normalizeGameCharacterId(players[key]?.gameCharacterId)||null,seatId:normalizeSeatId(players[key]?.seatId,meta.seatCount),ready:reserved===true||(players[key]?.ready??m.ready??false),reservedByGM:reserved,joinedAt:players[key]?.joinedAt||now,lastSeenAt:now,lastHeartbeatAt:Date.now(),restoredAt:!players[key]&&resumeExisting?now:players[key]?.restoredAt||null};if(!playerSetupComplete(meta,player)&&!player.reservedByGM)player.ready=false;players[key]=player}
@@ -4809,7 +4820,7 @@ async function playerRoomRoleList(env,request){
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 async function playerRoomOwnerApi(env,rawCode,action,request){
   const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
-  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","roles-shuffle","start","end","stage"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
+  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","roles-shuffle","start","end","stage","close"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
   const stub=roomStub(env,code),auth={authorization:request.headers.get("authorization")||""},json={...auth,"content-type":"application/json"};
   if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return stub.fetch("https://room.internal/owner/state",{headers:auth})}
   if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
