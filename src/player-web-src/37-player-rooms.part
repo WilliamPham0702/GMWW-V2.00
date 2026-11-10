@@ -364,14 +364,20 @@
     let host=document.getElementById('gmwwStageStrip');if(host)return host;
     host=el('div');host.id='gmwwStageStrip';host.hidden=true;
     const root=host.attachShadow({mode:'open'}),strip=(GMWW_SERVER_MENU.markup.match(/<section\b[^>]*id="playSetupStrip"[\s\S]*?<\/section>/)||[''])[0];
-    root.innerHTML='<style>'+GMWW_SERVER_MENU.css+SHADOW_BASE+'#start #playShell #playSetupStrip.play-setup-strip.gm-stage-timeline-v330{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important;min-height:58px!important;border:0!important;outline:0!important;border-radius:0 0 22px 22px!important;box-shadow:none!important;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 7%,#000 93%,transparent 100%),linear-gradient(180deg,#000 0,#000 72%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 7%,#000 93%,transparent 100%),linear-gradient(180deg,#000 0,#000 72%,transparent 100%);mask-composite:intersect}</style><div id="start"><div id="playShell" class="play-shell" data-phase="lobby" style="position:relative;height:auto;min-height:0;padding:0;background:none;overflow:visible">'+strip+'</div></div>';
+    root.innerHTML='<style>'+GMWW_SERVER_MENU.css+SHADOW_BASE+'#start #playShell #playSetupStrip.play-setup-strip.gm-stage-timeline-v330{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important;min-height:58px!important;border:0!important;outline:0!important;border-radius:0 0 22px 22px!important;box-shadow:none!important;padding:7px 8px!important;-webkit-mask-image:linear-gradient(180deg,#000 0,#000 72%,transparent 100%);mask-image:linear-gradient(180deg,#000 0,#000 72%,transparent 100%)}</style><div id="start"><div id="playShell" class="play-shell" data-phase="lobby" style="position:relative;height:auto;min-height:0;padding:0;background:none;overflow:visible">'+strip+'</div></div>';
     root.querySelectorAll('#playSetupStrip button').forEach(b=>b.addEventListener('click',()=>onTab(b.dataset.playStep||'room')));
     document.body.appendChild(host);return host;
   }
   // Only the owner of the room they are in drives the steps; everyone can open the Phòng page (create / join / manage).
+  async function rejoinOwn(){
+    if(await window.joinRoom(pr.own.code)===false)throw new Error('Không vào lại được phòng.');
+    try{await enterVillage()}catch(_){}
+    await refresh();
+  }
   function onTab(k){
     if(k==='room'||k==='lobby'&&!pr.own){pr.view='room';pr.touched=true;openSheet();return}
-    if(!(pr.own&&inOwnRoom())){try{toast(pr.own?'Hãy vào lại phòng của bạn để điều hành.':'Chỉ chủ phòng điều hành các bước này.')}catch(_){}return}
+    if(pr.own&&!inOwnRoom()){run(async()=>{await rejoinOwn();pr.view=k;pr.touched=true;syncStage(k);openSheet()});return}
+    if(!(pr.own&&inOwnRoom())){try{toast('Chỉ chủ phòng điều hành các bước này.')}catch(_){}return}
     pr.view=k;pr.touched=true;syncStage(k);if(pr.open)render();else openSheet();
   }
   function ensureDock(){
@@ -382,7 +388,8 @@
     const q=id=>root.getElementById(id),owner=()=>!!(pr.own&&inOwnRoom());
     q('playPhasePill').addEventListener('click',()=>{
       if(!state?.roomCode&&!pr.own){pr.view='room';openSheet();return}
-      if(!owner()){try{toast(pr.own?'Hãy vào lại phòng của bạn để điều hành.':'Chủ phòng điều hành ván; bạn chỉ cần chờ.')}catch(_){}return}
+      if(pr.own&&!owner()){run(async()=>{await rejoinOwn();pr.view='room';pr.touched=true;openSheet()});return}
+      if(!owner()){try{toast('Chủ phòng điều hành ván; bạn chỉ cần chờ.')}catch(_){}return}
       const i=ORDER.indexOf(pr.open?pr.view:stepNow()),nxt=ORDER[Math.min(ORDER.length-1,i+1)];
       pr.view=nxt;pr.touched=true;syncStage(nxt);if(pr.open)render();else openSheet();
     });
@@ -426,7 +433,7 @@
     if(pr.mounted)return;pr.mounted=true;
     document.head.appendChild(el('style',null,'#gmwwSetupTop3{display:none!important}'
       +'#gmwwOwnerDock{position:fixed;left:calc(var(--gmww-player-visible-left,0px) + 8px);right:auto;width:calc(var(--gmww-player-visible-width,100vw) - 16px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));bottom:auto;transform:translateY(-100%);box-sizing:border-box;z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
-      +'#gmwwStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;overflow:hidden;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
+      +'#gmwwStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
       +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex-direction:column;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
       +'.gmww-pr-ctl{display:flex;align-items:center;gap:8px}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-panel button.gmww-pr-step{padding:0;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1}'

@@ -28,3 +28,8 @@ test('menu trên/dưới bám vùng nhìn thấy cả chiều ngang (Chrome iOS)
   assert.match(rooms,/#gmwwOwnerDock\{[^}]*translateY\(-100%\)/);
   assert.match(rooms,/#gmwwStageStrip\{[^}]*--gmww-player-visible-width/);
 });
+test('menu dưới: bấm Phòng khi đã có phòng thì vào lại luôn, menu trên không mờ mép',()=>{
+  assert.match(rooms,/async function rejoinOwn\(\)/);
+  assert.match(rooms,/if\(pr\.own&&!owner\(\)\)\{run\(async\(\)=>\{await rejoinOwn\(\)/);
+  assert.doesNotMatch(rooms,/mask-image:linear-gradient\(90deg,transparent 0,#000 7%/);
+});
