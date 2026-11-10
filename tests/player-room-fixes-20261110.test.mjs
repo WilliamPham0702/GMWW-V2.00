@@ -20,7 +20,7 @@ test('floating pages drag by grip/title, snap to the top/bottom menu within 32px
   assert.match(part,/addEventListener\('pointerdown',dismissOutside,true\)/);assert.match(part,/stopImmediatePropagation/);
   assert.match(part,/#gmwwStageStrip,#gmwwOwnerDock/);
   // the catcher behind the pages is visible for the sheet AND the chat page (the village iframe swallows taps otherwise)
-  assert.match(part,/back\.hidden=!\(pr\.open\|\|pr\.chatOpen\|\|pr\.holdBack\)/);
+  assert.match(part,/back\.hidden=!\(pr\.open\|\|pr\.chatOpen\|\|pr\.holdBack\|\|seatDragOn\(\)\)/);
 });
 test('typed room code survives panel re-renders and failures are shown inside the page',()=>{
   assert.match(part,/inp\.addEventListener\('input',\(\)=>\{pr\.joinCode=inp\.value\}\)/);assert.match(part,/joinByCode\(pr\.joinCode\)/);

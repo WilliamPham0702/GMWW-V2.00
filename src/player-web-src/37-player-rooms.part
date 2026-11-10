@@ -118,7 +118,8 @@
     det.append(list);box.append(det);
   }
   // Kéo cả khối seat trên cảnh làng (như GM Server): 1 ngón dời, 2 ngón chỉnh khoảng cách; chạm không kéo thì đóng trang.
-  const seatDragOn=()=>!!(pr.open&&pr.view==='seats'&&pr.own&&inOwnRoom()&&pr.state?.room?.seatsLocked!==true&&String(pr.state?.room?.phase||'lobby').toLowerCase()!=='running');
+  // Như GM Server: ở bước Tập hợp, chủ phòng kéo/chụm trực tiếp trên cảnh làng, không cần mở trang.
+  const seatDragOn=()=>!!(pr.own&&inOwnRoom()&&stepNow()==='seats'&&pr.state?.room?.seatsLocked!==true&&String(pr.state?.room?.phase||'lobby').toLowerCase()!=='running');
   function installSeatDrag(back){
     const pts=new Map();let g=null,moved=false;
     const frame=()=>document.getElementById('gmwwVillageFrame')?.getBoundingClientRect()||{width:innerWidth,height:innerHeight};
@@ -329,7 +330,7 @@
   }
   function render(){
     const panel=document.getElementById('gmwwPrPanel'),back=document.getElementById('gmwwPrBack');if(!panel||!back)return;
-    panel.hidden=!pr.open;back.hidden=!(pr.open||pr.chatOpen||pr.holdBack);back.classList.toggle('seatdrag',seatDragOn());renderChrome();if(!pr.open)return;
+    panel.hidden=!pr.open;back.hidden=!(pr.open||pr.chatOpen||pr.holdBack||seatDragOn());back.classList.toggle('seatdrag',seatDragOn());renderChrome();if(!pr.open)return;
     panel.textContent='';
     const head=el('header','gmww-pr-head'),close=el('button','gmww-pr-close','×');close.type='button';close.setAttribute('aria-label','Đóng');close.addEventListener('click',closeSheet);
     head.append(el('b',null,pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng')),close);panel.append(el('i','gmww-pr-grip'),head);
