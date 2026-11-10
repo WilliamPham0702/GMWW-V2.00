@@ -5,7 +5,7 @@
    Routes: POST /api/player-rooms, GET /api/player-rooms/templates, /api/player-rooms/:code/owner/*. */
 (function gmwwPlayerRooms(){
   const KEY='gmwwOwnedRoom',STEPS=[['lobby','Sảnh chờ'],['room','Phòng Game'],['seats','Tập hợp'],['game','Ván Mẫu'],['roles','Phân Vai'],['deal','Phát Vai'],['battle','Vào Trận']];
-  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false};
+  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false,joinCode:'',known:null,pos:null,chatOpen:false};
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
   const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.code&&v.token?v:null}catch(_){return null}};
   const save=v=>{try{if(v)localStorage.setItem(KEY,JSON.stringify(v));else localStorage.removeItem(KEY)}catch(_){}};
@@ -18,10 +18,17 @@
   async function run(fn){if(pr.busy)return;pr.busy=true;render();try{await fn()}catch(e){
     if(e?.status===404||e?.data?.error==='ROOM_NOT_FOUND'){if(pr.own){pr.own=null;save(null);pr.state=null}}
     say(errText(e))}finally{pr.busy=false;render()}}
+  // The owner hears about each new arrival (first look only records who is already inside).
+  function noteJoins(st){
+    const ps=Array.isArray(st?.players)?st.players:[],ids=new Set(ps.map(p=>String(p.loginId||'')));
+    if(pr.known){const fresh=ps.filter(p=>p.loginId&&!pr.known.has(String(p.loginId))&&String(p.loginId)!==String(st?.ownerLoginId||''));
+      if(fresh.length){const t=fresh.map(p=>p.displayName||p.loginId).join(', ')+' đã vào phòng.';say(t);try{toast(t)}catch(_){}}}
+    pr.known=ids;
+  }
   async function refresh(){
     if(!pr.own)return;
-    try{pr.state=await api(base()+'state',{headers:oh()})}
-    catch(e){if(e?.status===404||e?.status===401){pr.own=null;pr.state=null;save(null);say('Phòng đã đóng.')}}
+    try{pr.state=await api(base()+'state',{headers:oh()});noteJoins(pr.state)}
+    catch(e){if(e?.status===404||e?.status===401){pr.own=null;pr.state=null;pr.known=null;save(null);say('Phòng đã đóng.')}}
     render();autoSeat();
   }
   async function create(){
@@ -51,6 +58,14 @@
   }
   // v3.322 menu Phòng gọn (deploy lại sau khi CI main xanh).
   // Quản lý phòng: mã phòng + Gửi phòng + Sao chép mã trên 1 dòng, rồi danh sách người đã vào (Xoá).
+  async function deleteRoom(){
+    const code=pr.own.code;
+    if(!confirm('Xoá phòng '+code+'? Mọi người trong phòng sẽ bị đưa ra ngoài.'))return;
+    await callOwner('close','POST',{});
+    pr.own=null;pr.state=null;pr.known=null;pr.view='room';pr.touched=true;save(null);
+    try{await handleRoomMembershipLost('Đã xoá phòng '+code+'.')}catch(_){}
+    say('Đã xoá phòng '+code+'.');
+  }
   function roomDetails(box,st,room,players,locked){
     const link=pr.own.joinUrl||(location.origin+'/?room='+pr.own.code),code=pr.own.code,total=Number(room.seatCount)||30;
     const line1=el('div','gmww-pr-line');line1.append(el('b','gmww-pr-linecode',code),
@@ -66,19 +81,22 @@
       list.append(line)}
     if(!players.length)list.append(el('p','gmww-pr-help','Chưa có ai trong phòng.'));
     box.append(list);
+    box.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));
   }
   // "Phòng": 1) vào phòng bằng mã  2) tạo phòng riêng  3) quản lý phòng đã tạo.
   function viewRoomHub(box,st,room,players){
     box.append(el('div','gmww-pr-sub','1. VÀO PHÒNG'));
     const row=el('div','gmww-pr-row'),inp=el('input');inp.id='gmwwPrJoin';inp.placeholder='Nhập mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.style.textTransform='uppercase';
-    row.append(inp,btn('Vào Game',async()=>{await joinByCode(document.getElementById('gmwwPrJoin')?.value)}));box.append(row);
+    // The panel is rebuilt on every refresh / button press, so the typed code lives in pr.joinCode, not only in the input.
+    inp.value=pr.joinCode||'';inp.addEventListener('input',()=>{pr.joinCode=inp.value});
+    row.append(inp,btn('Vào Game',async()=>{await joinByCode(pr.joinCode)}));box.append(row);
     box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG'));
     box.append(btn('Tạo phòng riêng',create,'gmww-pr-main',!!pr.own));
     box.append(el('div','gmww-pr-sub','3. QUẢN LÝ PHÒNG'));
     if(!pr.own){box.append(el('p','gmww-pr-help','Bạn chưa tạo phòng nào.'));return}
     if(!inOwnRoom()){box.append(btn('Vào lại phòng '+pr.own.code,async()=>{
       if(await window.joinRoom(pr.own.code)===false)throw new Error('Không vào lại được phòng.');try{await enterVillage()}catch(_){}
-      await refresh()},'gmww-pr-main'));return}
+      await refresh()},'gmww-pr-main'),btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));return}
     roomDetails(box,st,room,players,room.seatsLocked===true);
   }
   function viewSeats(box,st,room,players,locked){
@@ -166,14 +184,94 @@
   }
   const stepNow=()=>{const room=pr.state?.room||{};return String(room.phase||'lobby').toLowerCase()==='running'?'battle':serverStep(room)};
   const inOwnRoom=()=>!!(pr.own&&state?.roomCode&&String(state.roomCode).toUpperCase()===String(pr.own.code).toUpperCase());
-  function openSheet(){pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>{});refresh()}
+  function openSheet(){closeChat();pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>{});refresh()}
   function closeSheet(){pr.open=false;render()}
   window.gmwwOpenCreateRoom=()=>{if(pr.own&&!inOwnRoom()){/* own room exists but the player is elsewhere */}openSheet()};
-  // Box Chat sống trong trang Phòng; ngoài đó nó nằm ẩn dưới body (không còn thanh chat nổi).
-  function parkChat(){const c=document.getElementById('gmwwChatPanel');if(c&&c.parentElement&&c.parentElement.classList.contains('gmww-pr-chatbox'))document.body.appendChild(c)}
+  // ---- Trang rời (Phòng, Chat): kéo được bằng thanh nắm/tiêu đề, hít vào menu trên/dưới (như màn Server), bấm ngoài để đóng.
+  const DOCK_KEY='gmww_pr_dock_v1',SNAP_PX=32;
+  const readDock=()=>{try{const v=JSON.parse(localStorage.getItem(DOCK_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch(_){return{}}};
+  function saveDock(id,edge){const v=readDock();if(edge==='top'||edge==='bottom')v[id]=edge;else delete v[id];try{localStorage.setItem(DOCK_KEY,JSON.stringify(v))}catch(_){}}
+  // Visible menu bars (the bars live in shadow roots); null when a bar is not on screen.
+  function barRects(){
+    const rect=(hostId,innerId)=>{const h=document.getElementById(hostId);if(!h||h.hidden||!h.getClientRects().length)return null;
+      const r=(h.shadowRoot?.getElementById(innerId)||h).getBoundingClientRect();return r.width>40&&r.height>10?r:null};
+    return{top:rect('gmwwStageStrip','playSetupStrip'),bottom:rect('gmwwOwnerDock','gmTopMenu')};
+  }
+  function placeGeometry(panel,edge,bars){
+    const gap=5,vw=innerWidth,vh=innerHeight,top=bars.top?bars.top.bottom+gap:8,bot=bars.bottom?bars.bottom.top-gap:vh-8;
+    const ref=(edge==='top'?bars.top:bars.bottom)||bars.bottom||bars.top,width=Math.min(ref?ref.width:vw,vw-16),left=ref?ref.left+(ref.width-width)/2:(vw-width)/2;
+    return{top,bot,width,left:Math.max(8,Math.min(vw-width-8,left)),maxH:Math.max(180,Math.min(bot-top,vh-290))};
+  }
+  function place(panel){
+    if(!panel||panel.hidden||panel.dataset.prDragging==='1')return;
+    const bars=barRects(),saved=readDock()[panel.id],edge=pr.pos&&pr.pos[panel.id]?'free':(saved==='top'?'top':'bottom'),g=placeGeometry(panel,edge,bars),st=panel.style;
+    st.right='auto';st.transform='none';panel.classList.remove('gmww-dock-near');
+    if(edge==='free'){
+      const q=pr.pos[panel.id],w=Math.min(q.width||g.width,innerWidth-12),h=panel.offsetHeight||200;
+      st.width=w+'px';st.left=Math.max(6,Math.min(innerWidth-w-6,q.left))+'px';st.top=Math.max(6,Math.min(innerHeight-h-6,q.top))+'px';st.bottom='auto';st.maxHeight=Math.max(180,innerHeight-parseFloat(st.top)-8)+'px';panel.classList.remove('gmww-dock-snapped');return;
+    }
+    st.width=g.width+'px';st.left=g.left+'px';st.maxHeight=g.maxH+'px';panel.classList.add('gmww-dock-snapped');
+    if(edge==='top'){st.top=g.top+'px';st.bottom='auto'}else{st.top='auto';st.bottom=(innerHeight-g.bot)+'px'}
+  }
+  // Which menu edge a released page would stick to (or null when it is farther than 32px from both).
+  function snapFor(rect){
+    const bars=barRects();let best=null;
+    if(bars.top){const d=Math.abs(rect.top-(bars.top.bottom+5));if(d<=SNAP_PX)best={edge:'top',d}}
+    if(bars.bottom){const d=Math.abs(rect.bottom-(bars.bottom.top-5));if(d<=SNAP_PX&&(!best||d<best.d))best={edge:'bottom',d}}
+    return best;
+  }
+  function floatPage(panel){
+    if(!panel||panel.dataset.prFloat==='1')return;panel.dataset.prFloat='1';let drag=null;
+    panel.addEventListener('pointerdown',e=>{
+      if(panel.hidden||(e.button!==0&&e.pointerType!=='touch'))return;
+      if(!e.target.closest('.gmww-pr-grip,.gmww-pr-head')||e.target.closest('button,input,select,textarea,a'))return;
+      const r=panel.getBoundingClientRect();drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top,w:r.width,h:r.height};
+      panel.dataset.prDragging='1';try{panel.setPointerCapture(e.pointerId)}catch(_){}e.preventDefault();
+    });
+    panel.addEventListener('pointermove',e=>{
+      if(!drag||e.pointerId!==drag.id)return;const st=panel.style;
+      const left=Math.max(6,Math.min(innerWidth-drag.w-6,drag.left+e.clientX-drag.x)),top=Math.max(6,Math.min(innerHeight-drag.h-6,drag.top+e.clientY-drag.y));
+      st.width=drag.w+'px';st.left=left+'px';st.top=top+'px';st.right='auto';st.bottom='auto';st.transform='none';st.maxHeight=Math.max(180,innerHeight-top-8)+'px';
+      panel.classList.remove('gmww-dock-snapped');panel.classList.toggle('gmww-dock-near',!!snapFor({top,bottom:top+drag.h}));e.preventDefault();
+    });
+    const stop=e=>{
+      if(!drag||e.pointerId!==drag.id)return;const r=panel.getBoundingClientRect(),snap=e.type==='pointerup'?snapFor(r):null;
+      drag=null;panel.dataset.prDragging='0';panel.classList.remove('gmww-dock-near');try{panel.releasePointerCapture(e.pointerId)}catch(_){}
+      pr.pos=pr.pos||{};
+      if(snap){delete pr.pos[panel.id];saveDock(panel.id,snap.edge)}else{pr.pos[panel.id]={left:r.left,top:r.top,width:r.width};saveDock(panel.id,null)}
+      place(panel);
+    };
+    panel.addEventListener('pointerup',stop);panel.addEventListener('pointercancel',stop);
+  }
+  // Chat là một trang rời riêng (nút Box Chat ở thanh dưới), không nằm trong trang Phòng.
+  function closeChat(){
+    const page=document.getElementById('gmwwPrChat'),chat=document.getElementById('gmwwChatPanel');
+    const was=pr.chatOpen;pr.chatOpen=false;if(page)page.hidden=true;
+    if(chat&&page&&page.contains(chat)){chat.classList.remove('open');document.body.appendChild(chat)}
+    if(was)render();
+  }
+  function openChat(){
+    const page=document.getElementById('gmwwPrChat'),host=page?.querySelector('.gmww-pr-chatbody'),chat=document.getElementById('gmwwChatPanel');
+    if(!page||!host)return;
+    if(!state?.roomCode||!chat){try{toast('Box Chat mở được khi bạn đã ở trong phòng.')}catch(_){}return}
+    pr.open=false;render();host.appendChild(chat);chat.classList.add('open');pr.chatOpen=true;page.hidden=false;render();place(page);
+    try{document.getElementById('gmwwChatText')?.focus({preventScroll:true})}catch(_){}
+  }
+  // Bấm ra ngoài trang thì đóng trang trên cùng (như Server); thanh menu trên/dưới vẫn bấm được.
+  function dismissOutside(e){
+    const t=e.target;if(!t?.closest||(e.pointerType==='mouse'&&e.button!==0))return;
+    if(t.closest('#gmwwStageStrip,#gmwwOwnerDock,#gmwwToast'))return;
+    const chatPage=document.getElementById('gmwwPrChat'),panel=document.getElementById('gmwwPrPanel');
+    const chatUp=pr.chatOpen&&chatPage&&!chatPage.hidden&&!chatPage.contains(t),sheetUp=pr.open&&panel&&!panel.hidden&&!panel.contains(t);
+    if(!chatUp&&!sheetUp)return;
+    e.preventDefault();e.stopImmediatePropagation();
+    // keep an invisible catcher for a moment so the finger-up click does not land on the village underneath
+    pr.holdBack=true;setTimeout(()=>{pr.holdBack=false;render()},450);
+    if(chatUp)closeChat();else closeSheet();
+  }
   function render(){
     const panel=document.getElementById('gmwwPrPanel'),back=document.getElementById('gmwwPrBack');if(!panel||!back)return;
-    parkChat();panel.hidden=back.hidden=!pr.open;renderChrome();if(!pr.open)return;
+    panel.hidden=!pr.open;back.hidden=!(pr.open||pr.chatOpen||pr.holdBack);renderChrome();if(!pr.open)return;
     panel.textContent='';
     const head=el('header','gmww-pr-head'),close=el('button','gmww-pr-close','×');close.type='button';close.setAttribute('aria-label','Đóng');close.addEventListener('click',closeSheet);
     head.append(el('b',null,pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng')),close);panel.append(el('i','gmww-pr-grip'),head);
@@ -190,10 +288,7 @@
       body.append(sec);
     }
     const status=el('div','gmww-pr-status');status.id='gmwwPrStatus';status.textContent=pr.msg;body.append(status);
-    {const chat=document.getElementById('gmwwChatPanel');
-     if(chat&&state?.roomCode&&String(pr.state?.room?.phase||state?.room?.phase||'lobby').toLowerCase()!=='running'){
-       const box=el('div','gmww-pr-chatbox');box.append(el('div','gmww-pr-sub','CHAT PHÒNG'));box.append(chat);chat.classList.add('open');body.append(box)}}
-    panel.append(body);
+    panel.append(body);place(panel);
   }
   // Top strip + bottom dock are the GM Server's own markup and CSS (GMWW_SERVER_MENU), shown to every logged-in player.
   const LABEL={lobby:'SẢNH CHỜ',room:'PHÒNG',seats:'TẬP HỢP',game:'VÁN MẪU',roles:'PHÂN VAI',deal:'PHÁT VAI',battle:'VÀO TRẬN'};
@@ -239,8 +334,8 @@
     });
     q('playChatTop').addEventListener('click',()=>{
       if(!state?.roomCode){try{toast('Box Chat mở được khi bạn đã ở trong phòng.')}catch(_){}return}
-      if(pr.open){closeSheet();return}
-      pr.view='room';openSheet();
+      if(pr.chatOpen){closeChat();return}
+      openChat();
     });
     q('playEndGame').addEventListener('click',()=>{if(owner()&&stepNow()==='battle'&&confirm('Kết thúc ván ngay?'))run(async()=>{await callOwner('end','POST',{});say('Đã kết thúc ván.');await refresh()})});
     document.body.appendChild(host);return host;
@@ -258,10 +353,13 @@
   const renderDock=renderChrome,renderBar=renderChrome;
   async function joinByCode(code){
     code=String(code||'').trim().toUpperCase();
-    if(!/^[A-Z0-9]{4,8}$/.test(code)){try{toast('Hãy nhập mã phòng.')}catch(_){}return}
+    if(!/^[A-Z0-9]{4,8}$/.test(code)){say('Hãy nhập mã phòng (4–8 ký tự).');return}
+    state.lastJoinError=null;
     const ok=await window.joinRoom(code);
-    if(ok===false){try{toast('Không vào được phòng '+code+'.')}catch(_){}return}
-    pr.open=false;try{await enterVillage()}catch(_){}render();
+    if(ok===false){
+      const err=state.lastJoinError||{},c=String(err.code||'');
+      say(c==='ROOM_NOT_FOUND'||err.status===404?'Không tìm thấy phòng '+code+'. Hãy kiểm tra lại mã.':(c==='ROOM_IN_PROGRESS'?'Ván đang chơi, không vào giữa trận được.':(err.message&&err.message!==c?err.message:'Không vào được phòng '+code+'.')));return}
+    pr.joinCode='';pr.open=false;try{await enterVillage()}catch(_){}render();
   }
   function injectCreateButtons(){renderChrome()}
   function mount(){
@@ -271,13 +369,14 @@
     document.head.appendChild(el('style',null,'#gmwwSetupTop3{display:none!important}'
       +'#gmwwOwnerDock{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
       +'#gmwwStageStrip{position:fixed;left:0;right:0;top:0;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
-      +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbox{display:flex;flex-direction:column;gap:6px}.gmww-pr-chatbox #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
+      +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex-direction:column;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
       +'.gmww-pr-ctl{display:flex;align-items:center;gap:8px}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-panel button.gmww-pr-step{padding:0;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1}'
       +'.gmww-pr-roomrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid #4fc3f7!important;background:#0b3a5e!important;color:#e8f6ff;text-align:left}.gmww-pr-roomrow div{display:flex;flex-direction:column;gap:2px;min-width:0}.gmww-pr-roomrow small{opacity:.75;font-weight:500}.gmww-pr-roomrow span{font-size:24px}'
-      +'.gmww-pr-back{position:fixed;inset:0;z-index:9490;background:rgba(0,0,0,.45)}.gmww-pr-back[hidden]{display:none}'
+      +'.gmww-pr-back{position:fixed;inset:0;z-index:9490;background:rgba(0,0,0,.22)}.gmww-pr-back[hidden]{display:none}'
       +'.gmww-pr-panel{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:9500;max-height:calc(100vh - 290px - env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,#0f4c75,#0a2f4f);color:#e8f6ff;display:flex;flex-direction:column;font-size:15px;border-radius:18px 18px 0 0;border-top:1px solid #4fc3f7;box-shadow:0 -10px 40px #000a}.gmww-pr-panel[hidden]{display:none}'
-      +'.gmww-pr-grip{display:block;width:44px;height:4px;border-radius:4px;background:#4fc3f7;margin:8px auto 0}'
+      +'.gmww-pr-grip{display:block;height:22px;position:relative;touch-action:none;cursor:grab}.gmww-pr-grip::after{content:"";position:absolute;left:50%;top:9px;width:44px;height:4px;margin-left:-22px;border-radius:4px;background:#4fc3f7}.gmww-pr-head{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}'
+      +'.gmww-pr-panel.gmww-dock-near{outline:2px solid rgba(118,239,224,.68);outline-offset:2px;box-shadow:0 0 0 4px rgba(39,196,179,.11),0 12px 30px rgba(0,15,31,.38)}.gmww-pr-panel.gmww-dock-snapped{border-radius:14px;border:1px solid rgba(120,255,221,.76)}'
       +'.gmww-pr-head{display:flex;justify-content:space-between;align-items:center;padding:8px 16px 10px;font-size:17px;border-bottom:1px solid #1d6fa5}.gmww-pr-close{width:38px;height:38px;border-radius:50%;border:1px solid #4fc3f7;background:#0b3a5e;color:#e8f6ff;font-size:22px}'
       +'.gmww-pr-body{overflow:auto;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 20px);display:flex;flex-direction:column;gap:10px}'
       +'.gmww-pr-steps{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.gmww-pr-panel .gmww-pr-steps button{font-size:9px;font-weight:600;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;border:1px solid #1d6fa5;background:#0b3a5e;color:#9fd6f5}.gmww-pr-steps span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#14598a;font-weight:700;font-size:12px}.gmww-pr-steps b{font-weight:600;white-space:nowrap;font-size:8.5px}'
@@ -291,8 +390,14 @@
       +'.gmww-pr-tpl{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border-radius:12px;background:#0b3a5e;border:1px solid #1d6fa5}.gmww-pr-tpl.is-on{border-color:#4fc3f7}.gmww-pr-tpl div{display:flex;flex-direction:column;gap:2px}.gmww-pr-tpl small{opacity:.75}.gmww-pr-tpl button{padding:8px 14px}'
       +'.gmww-pr-deck{background:#0b3a5e;border:1px solid #1d6fa5;border-radius:12px;padding:8px 10px}.gmww-pr-deck small{opacity:.7}.gmww-pr-deckrow{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #1f2944}.gmww-pr-deckrow:first-of-type{border-top:0}'
       +'.gmww-pr-code{display:flex;flex-direction:column;align-items:center;padding:12px;border-radius:14px;background:#0b3a5e;border:1px solid #4fc3f7}.gmww-pr-code small{opacity:.7;font-size:11px;letter-spacing:.1em}.gmww-pr-code b{font-size:34px;letter-spacing:.18em}.gmww-pr-sub{font-size:11px;font-weight:700;letter-spacing:.05em;opacity:.8}.gmww-pr-who{display:flex;align-items:center;gap:8px;min-width:0}.gmww-pr-dot{width:9px;height:9px;border-radius:50%;background:#3fb868;flex:none}.gmww-pr-dot.is-off{background:#6b7280}.gmww-pr-status{font-size:12px;opacity:.9;min-height:16px}'));
-    const back=el('div','gmww-pr-back');back.id='gmwwPrBack';back.hidden=true;back.addEventListener('click',closeSheet);
+    const back=el('div','gmww-pr-back');back.id='gmwwPrBack';back.hidden=true;back.addEventListener('click',()=>{if(pr.chatOpen)closeChat();if(pr.open)closeSheet()});
     const panel=el('div','gmww-pr-panel');panel.id='gmwwPrPanel';panel.hidden=true;document.body.append(back,panel);
+    const chatPage=el('div','gmww-pr-panel gmww-pr-chatpage');chatPage.id='gmwwPrChat';chatPage.hidden=true;
+    const chatHead=el('header','gmww-pr-head'),chatClose=el('button','gmww-pr-close','×');chatClose.type='button';chatClose.setAttribute('aria-label','Đóng');chatClose.addEventListener('click',closeChat);
+    chatHead.append(el('b',null,'Chat phòng'),chatClose);chatPage.append(el('i','gmww-pr-grip'),chatHead,el('div','gmww-pr-chatbody'));document.body.append(chatPage);
+    floatPage(panel);floatPage(chatPage);
+    document.addEventListener('pointerdown',dismissOutside,true);
+    const replace=()=>{place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});try{visualViewport?.addEventListener('resize',replace,{passive:true})}catch(_){}
     pr.own=load();
     clearInterval(pr.timer);pr.timer=setInterval(()=>{if(pr.own&&inOwnRoom()&&!document.hidden&&!pr.busy)refresh();else renderDock()},4000);
     setInterval(renderDock,1000);
