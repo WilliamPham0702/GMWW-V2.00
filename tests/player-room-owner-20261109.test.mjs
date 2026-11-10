@@ -28,15 +28,22 @@ test('deal refuses a template whose size differs from the seated players',()=>{
   assert.equal(planPlayerRoomDeal(roles,[],d=>d).error,'NO_PLAYERS');
   assert.equal(planPlayerRoomDeal(roles,names.map(loginId=>({loginId})),()=>[]).error,'SHUFFLE_FAILED');
 });
-test('template config for a player room switches artifacts off and keeps the roles',()=>{
+test('template config for a player room preserves the full Artifact and timing setup',()=>{
   const cfg=playerRoomConfigFromTemplate({id:'t1',compiledConfig:{name:'Mẫu',playerCount:6,roles,artifactsEnabled:true,artifacts:[{artifactId:'a'}]}});
-  assert.equal(cfg.artifactsEnabled,false);assert.deepEqual(cfg.artifacts,[]);assert.equal(cfg.roles.length,3);assert.equal(cfg.id,'t1');
+  assert.equal(cfg.artifactsEnabled,true);assert.deepEqual(cfg.artifacts,[{artifactId:'a'}]);assert.equal(cfg.roles.length,3);assert.equal(cfg.id,'t1');
   assert.equal(playerRoomConfigFromTemplate({compiledConfig:{roles:[]}}),null);assert.equal(playerRoomConfigFromTemplate(null),null);
+});
+test('selected Artifacts are distributed randomly and remain private in the plan',()=>{
+  const pool=[{artifactId:'a',name:'Cổ vật A',artifactCard:{name:'Cổ vật A'}},{artifactId:'b',name:'Cổ vật B',artifactCard:{name:'Cổ vật B'}}];
+  const plan=planPlayerRoomDeal(roles,names.map(loginId=>({loginId})),items=>[...items].reverse(),pool);
+  assert.equal(plan.ok,true);assert.equal(plan.rows.filter(x=>x.artifact).length,2);
+  assert.deepEqual(plan.rows.filter(x=>x.artifact).map(x=>x.artifact.artifactId),['a','b']);
+  assert.ok(plan.rows.every(x=>x.loginId&&x.roleId));
 });
 test('missing role cards are reported once per role and the owner deck view has no assignments',()=>{
   assert.deepEqual(missingRoleCards(roles,id=>id==='wolf'),['seer','villager']);
   const view=ownerDeckView({id:'t',name:'N',playerCount:6,roles,assignments:[{loginId:'a',roleId:'wolf'}],gmTokenHash:'x'});
-  assert.deepEqual(Object.keys(view).sort(),['id','name','playerCount','roles']);
+  assert.deepEqual(Object.keys(view).sort(),['artifactLimitPerCycle','artifacts','artifactsEnabled','id','name','playerCount','roles','timing']);
   assert.deepEqual(Object.keys(view.roles[0]).sort(),['count','faction','roleId','roleName']);
 });
 
@@ -98,12 +105,12 @@ test('owner state shows the deck only: no assignments, roles of players, tokens 
   for(const bad of ['assignments','gmTokenHash','ownerTokenHash','SECRET','h:OWNER','roleId":"wolf","loginId'])assert.equal(text.includes(bad),false,bad);
   assert.equal((await o.ownerAction('state',req('/owner/state',{token:'WRONG',method:'GET'}))).status,401);
 });
-test('apply-template loads config and role cards, forces artifacts off, and only in the lobby',async()=>{
+test('apply-template loads config and role cards, preserves artifacts, and only in the lobby',async()=>{
   const o=room({cfg:null,cards:[]}),template={id:'t1',compiledConfig:{name:'Mẫu',playerCount:6,roles,artifactsEnabled:true,artifacts:[{artifactId:'a'}]}};
   const res=await o.ownerAction('apply-template',req('/owner/apply-template',{body:{template,packages:[{roleId:'wolf',roleCard:{}},{roleId:'not-in-template'}]}}));
   assert.equal(res.status,200);
   assert.deepEqual(o.calls.map(c=>c.name),['gmConfig','gmRoleAssets']);
-  assert.equal(o.calls[0].body.gameConfig.artifactsEnabled,false);assert.deepEqual(o.calls[1].body.roles.map(r=>r.roleId),['wolf'],'packages outside the template are dropped');
+  assert.equal(o.calls[0].body.gameConfig.artifactsEnabled,true);assert.deepEqual(o.calls[0].body.gameConfig.artifacts,[{artifactId:'a'}]);assert.deepEqual(o.calls[1].body.roles.map(r=>r.roleId),['wolf'],'packages outside the template are dropped');
   const running=room({meta:{phase:'running'}});assert.equal((await running.ownerAction('apply-template',req('/owner/apply-template',{body:{template}}))).status,409);
   assert.equal((await room().ownerAction('apply-template',req('/owner/apply-template',{body:{template:{}}}))).status,400);
 });
@@ -137,16 +144,18 @@ test('a failing deal or start is returned as is and does not start night 1',asyn
 // ---- Worker owner API (real source) ----
 const fFrom=source.indexOf('async function playerRoomTemplates(env,request){'),fTo=source.indexOf('async function joinRoom(env,raw,request){',fFrom);
 assert.ok(fFrom>0&&fTo>fFrom,'find real Worker owner API');
-function worker({gate=200}={}){
+function worker({gate=200,roomOwner='nam01'}={}){
   const log={room:[],member:[]};
   const memberFetch=async(input,init)=>{const u=typeof input==='string'?input:input.url;log.member.push(u);
     if(u.endsWith('/members/session'))return j({ok:true,member:{loginId:'nam01'}});
-    if(u.endsWith('/game-templates/list'))return j({ok:true,templates:[{id:'t1'}]});
-    if(u.includes('/game-templates/get'))return u.includes('id=missing')?j({ok:false},404):j({ok:true,template:{id:'t1',compiledConfig:{roles:[{roleId:'wolf'},{roleId:'seer'},{roleId:'wolf'}]}}});
+    if(u.endsWith('/artifacts/shared/status'))return j({ok:true,artifacts:[]});
+    if(u.endsWith('/game-templates/list'))return j({ok:true,templates:[{id:'t1',source:'PLAYER'}]});
+    if(u.includes('/game-templates/get'))return u.includes('id=missing')?j({ok:false},404):j({ok:true,template:{id:'t1',source:'PLAYER',ownerLoginId:'nam01',compiledConfig:{roles:[{roleId:'wolf'},{roleId:'seer'},{roleId:'wolf'}]}}});
+    if(u.includes('/game-templates/delete'))return j({ok:true,deleted:true});
     if(u.includes('/game-templates/assets'))return u.includes('role%3Aseer')?j({ok:false},404):j({ok:true,package:{roleCard:{name:'W'}}});
     throw new Error('unexpected '+u)};
-  const roomFetch=async(u,init={})=>{log.room.push({u,method:init.method||'GET',auth:init.headers?.authorization,body:init.body});return u.endsWith('/owner/state')?j({ok:gate===200},gate):j({ok:true})};
-  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c));
+  const roomFetch=async(u,init={})=>{log.room.push({u,method:init.method||'GET',auth:init.headers?.authorization,body:init.body});return u.endsWith('/owner/state')?j({ok:gate===200,ownerLoginId:roomOwner},gate):j({ok:true})};
+  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode','normalizeLoginId',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c),normalizeLoginId);
   return {...fn,log};
 }
 const wreq=(method,body)=>new Request('https://x/api',{method,headers:{authorization:'Bearer OWNER','content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
@@ -176,7 +185,13 @@ test('template selection verifies the owner first, then sends the template and i
 });
 test('template list needs a member session',async()=>{
   const w=worker(),res=await w.playerRoomTemplates({},new Request('https://x',{headers:{authorization:'Bearer t'}}));
-  assert.equal(res.status,200);assert.equal((await res.json()).templates[0].id,'t1');
+  assert.equal(res.status,200);const d=await res.json();assert.equal(d.templates[0].id,'t1');assert.equal(d.templates[0].canEdit,true);
+});
+test('only the creator can delete a player-made Ván Mẫu',async()=>{
+  const other=worker({roomOwner:'another'}),denied=await other.playerRoomOwnerApi({},'ABCDEF','template-delete',wreq('POST',{templateId:'t1'}));
+  assert.equal(denied.status,403);
+  const owner=worker(),ok=await owner.playerRoomOwnerApi({},'ABCDEF','template-delete',wreq('POST',{templateId:'t1'}));
+  assert.equal(ok.status,200);assert.ok(owner.log.member.some(u=>u.includes('/game-templates/delete')));
 });
 
 // ---- wiring guards ----
