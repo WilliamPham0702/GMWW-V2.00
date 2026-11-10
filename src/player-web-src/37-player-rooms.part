@@ -5,7 +5,7 @@
    Routes: POST /api/player-rooms, GET /api/player-rooms/templates, /api/player-rooms/:code/owner/*. */
 (function gmwwPlayerRooms(){
   const KEY='gmwwOwnedRoom',STEPS=[['lobby','Sảnh chờ'],['room','Phòng Game'],['seats','Tập hợp'],['game','Ván Mẫu'],['roles','Phân Vai'],['deal','Phát Vai'],['battle','Vào Trận']];
-  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false,joinCode:'',known:null,pos:null,chatOpen:false};
+  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],artifacts:[],deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false,joinCode:'',known:null,pos:null,chatOpen:false};
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
   const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.code&&v.token?v:null}catch(_){return null}};
   const save=v=>{try{if(v)localStorage.setItem(KEY,JSON.stringify(v));else localStorage.removeItem(KEY)}catch(_){}};
@@ -43,7 +43,7 @@
   const STAGE={lobby:'room',room:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
   function syncStage(k){if(!pr.own||!STAGE[k]||String(pr.state?.room?.phase||'lobby').toLowerCase()==='running')return;callOwner('stage','POST',{step:STAGE[k]}).then(refresh).catch(()=>{})}
   function goStep(k){pr.view=k;pr.touched=true;syncStage(k);render()}
-  async function loadTemplates(){const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];if(!pr.roles.length){try{const r=await api('/api/player-rooms/roles',{headers:auth()});pr.roles=Array.isArray(r.roles)?r.roles:[]}catch(_){}}}
+  async function loadTemplates(){const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];const r=await api('/api/player-rooms/roles',{headers:auth()});pr.roles=Array.isArray(r.roles)?r.roles:[];pr.artifacts=Array.isArray(r.artifacts)?r.artifacts:[]}
   const btn=(label,fn,cls,disabled)=>{const b=el('button',cls||null,label);b.type='button';if(disabled||pr.busy)b.disabled=true;b.addEventListener('click',()=>run(fn));return b};
   const stat=(k,v)=>{const d=el('div','gmww-pr-stat');d.append(el('small',null,k),el('b',null,String(v)));return d};
   // Step the server is on, mapped to the six tabs; the owner can still browse the other tabs.
@@ -161,32 +161,41 @@
       await callOwner('seats-randomize','POST',{});pr.state=await api(base()+'state',{headers:oh()});render();
     }catch(_){}finally{pr.autoSeating=false}})();
   }
-  const TIMING=[['villageDiscussionSec','Thảo luận làng',300],['wolfDiscussionSec','Thảo luận Sói',30],['earlyArtifactSec','Artifact sớm',30],['defaultActionSec','Hành động mặc định',45],['artifactActionSec','Hành động Artifact',30]];
+  const TIMING=[['villageDiscussionSec','Thảo luận làng',300],['gallowsNominationSec','Đề cử Lên Giàn',60],['gallowsVoteSec','Bỏ phiếu Lên Giàn',60],['wolfDiscussionSec','Sói nhận diện nhau',30],['earlyArtifactSec','Artifact ưu tiên đầu ván',30],['defaultActionSec','Hành động mặc định',30],['artifactActionSec','Hành động Artifact',30]];
   const freshTiming=()=>Object.fromEntries(TIMING.map(([k,,d])=>[k,d]));
-  // Ván Mẫu: tab "Ván mẫu" (chọn/xoá, tối đa 5 ván gần nhất trên server) và tab "Tạo ván" (vai + thời gian + timeline, lưu).
+  // Ván Mẫu uses the same complete role, Artifact, order and timing configuration as the GM Server.
   function viewGame(box,st,room,players,locked){
     const tab=pr.gameTab==='make'?'make':'pick',tabs=el('div','gmww-pr-tabs');
-    for(const [k,t] of [['make','Tạo ván'],['pick','Ván mẫu']]){const b=el('button',k===tab?'is-on':null,t);b.type='button';b.addEventListener('click',()=>{pr.gameTab=k;render()});tabs.append(b)}
+    for(const [k,t] of [['make','Thiết kế Ván Mẫu'],['pick','Ván Mẫu Server']]){const b=el('button',k===tab?'is-on':null,t);b.type='button';b.addEventListener('click',()=>{pr.gameTab=k;render()});tabs.append(b)}
     box.append(tabs);
     if(tab==='make')deckBuilder(box,players.length);else pickTemplates(box,st,players);
     box.append(btn('TIẾP: PHÂN VAI →',async()=>goStep('roles'),'gmww-pr-main'));
   }
   function pickTemplates(box,st,players){
     const cfg=st?.config,need=deckSize(cfg);
-    box.append(el('p','gmww-pr-help','Server chỉ giữ 5 Ván Mẫu gần nhất. Số lá bài phải bằng số người ('+players.length+').'));
-    if(!pr.templates.length)box.append(el('p','gmww-pr-help','Chưa có Ván Mẫu nào. Sang tab "Tạo ván" để tạo.'));
+    box.append(el('p','gmww-pr-help','Chọn cấu hình Ván Mẫu đã lưu trên Server. Vai trò, Artifact và thời gian sẽ được áp dụng nguyên cấu hình. Cần '+players.length+' lá bài cho phòng này.'));
+    if(!pr.templates.length)box.append(el('p','gmww-pr-help','Chưa có Ván Mẫu trên Server. Chọn “Thiết kế Ván Mẫu” để tạo từ bộ bài và Artifact đã phát hành.'));
     for(const t of pr.templates){
       const card=el('div','gmww-pr-tpl'+(cfg?.id===t.id?' is-on':'')),fit=Number(t.playerCount)===players.length;
-      const head=el('div');head.append(el('b',null,t.name||'Ván Mẫu'),el('small',null,(t.playerCount||'?')+' người'+(fit?' • vừa đủ':'')+(t.source==='PLAYER'?' • người chơi tạo':' • Server')));
+      const head=el('div'),tc=t.compiledConfig||t.gameConfig||{},roles=Array.isArray(tc.roles)?tc.roles:[],arts=tc.artifactsEnabled===true?(tc.artifacts||[]):[];
+      head.append(el('b',null,t.name||'Ván Mẫu'),el('small',null,(t.playerCount||'?')+' người'+(fit?' • vừa đủ':'')+' • '+roles.length+' loại Vai'+(arts.length?' • '+arts.length+' Artifact':' • không Artifact')));
+      const detail=el('small','gmww-pr-tpldetail',roles.map(r=>(r.roleName||r.roleId)+' × '+(r.count||1)).join(' · '));head.append(detail);
+      const timing=tc.timing||{};head.append(el('small','gmww-pr-tpldetail','Thảo luận '+(timing.villageDiscussionSec??300)+'s • Lên Giàn '+(timing.gallowsNominationSec??60)+'/'+(timing.gallowsVoteSec??60)+'s • Auto '+(timing.autoAdvance===false?'Tắt':'Bật')));
       const acts=el('div','gmww-pr-tplacts');
-      acts.append(btn(cfg?.id===t.id?'ĐANG DÙNG':'Chọn ván',async()=>{await callOwner('template','POST',{templateId:t.id});say('Đã chọn Ván Mẫu.');await refresh()},null,cfg?.id===t.id),
-        btn('Xoá ván',async()=>{if(!confirm('Xoá Ván Mẫu "'+(t.name||'')+'"?'))return;await callOwner('template-delete','POST',{templateId:t.id});await loadTemplates();say('Đã xoá Ván Mẫu.')},'gmww-pr-danger'));
+      acts.append(btn(cfg?.id===t.id?'ĐANG DÙNG':'Chọn Ván Mẫu',async()=>{await callOwner('template','POST',{templateId:t.id});say('Đã nạp đầy đủ Ván Mẫu từ Server.');await refresh()},null,cfg?.id===t.id));
+      if(t.canEdit===true)acts.append(btn('Chỉnh sửa',async()=>editTemplate(t)),btn('Xoá mẫu',async()=>{if(!confirm('Xoá Ván Mẫu "'+(t.name||'')+'"?'))return;await callOwner('template-delete','POST',{templateId:t.id});await loadTemplates();say('Đã xoá Ván Mẫu.')},'gmww-pr-danger'));
       card.append(head,acts);box.append(card)}
-    if(cfg)box.append(el('p','gmww-pr-help','Đang chọn: '+(cfg.name||cfg.id)+' • '+need+' lá bài'));
+    if(cfg){const selected=(cfg.artifacts||[]).map(a=>a.name||a.artifactId).filter(Boolean);box.append(el('p','gmww-pr-help','Đang chọn: '+(cfg.name||cfg.id)+' • '+need+' lá bài • Artifact: '+(cfg.artifactsEnabled?selected.join(', ')||'đã bật':'tắt')))}
   }
-  // Tạo ván: chọn số lá từng vai, thời gian hành động của từng vai và các thời gian timeline; Lưu ván / Xoá ván.
+  function editTemplate(t){
+    const cfg=t?.compiledConfig;if(!cfg)return;
+    pr.editTemplateId=String(t.id||'');pr.deckName=String(t.name||cfg.name||'Ván của tôi');pr.deck=new Map((cfg.roles||[]).map(r=>[String(r.roleId),Math.max(0,Number(r.count)||0)]).filter(([id,n])=>id&&n));
+    pr.roleOrder=new Map((cfg.roles||[]).map(r=>[String(r.roleId),Number(r.order)||0]));pr.secs=new Map((cfg.roles||[]).map(r=>[String(r.roleId),Number(r.actionDurationSec)]).filter(([,n])=>Number.isFinite(n)));
+    pr.timing={...freshTiming(),...(cfg.timing||{})};pr.artifactIds=new Set(cfg.artifactsEnabled===true?(cfg.artifacts||[]).map(a=>String(a.artifactId||'')).filter(Boolean):[]);pr.artifactLimitPerCycle=Math.max(0,Number(cfg.artifactLimitPerCycle??3)||0);pr.gameTab='make';render();
+  }
+  // Full Ván Mẫu editor: roles and order, per-role action time, Artifact pool/quota, game timing.
   function deckBuilder(box,people){
-    box.append(el('div','gmww-pr-sub','TẠO VÁN'));
+    box.append(el('div','gmww-pr-sub','THIẾT KẾ VÁN MẪU'));
     if(!pr.roles.length){box.append(el('p','gmww-pr-help','Chưa có danh sách vai để tạo ván.'));return}
     if(!pr.timing)pr.timing=freshTiming();if(!pr.secs)pr.secs=new Map();
     const name=el('input');name.id='gmwwPrDeckName';name.maxLength=48;name.placeholder='Tên Ván Mẫu';name.value=pr.deckName;name.addEventListener('input',()=>{pr.deckName=name.value});box.append(name);
@@ -202,17 +211,26 @@
         minus.type=plus.type='button';secIn.title='Giây hành động';secIn.style.display=pr.deck.get(r.roleId)?'':'none';
         const set=n=>{n=Math.max(0,Math.min(30,n));if(n)pr.deck.set(r.roleId,n);else pr.deck.delete(r.roleId);cnt.textContent=String(n);secIn.style.display=n?'':'none';refreshSum()};
         minus.addEventListener('click',()=>set((pr.deck.get(r.roleId)||0)-1));plus.addEventListener('click',()=>set((pr.deck.get(r.roleId)||0)+1));
-        const ctl=el('div','gmww-pr-ctl');ctl.append(secIn,minus,cnt,plus);line.append(el('span',null,r.roleName||r.roleId),ctl);sec.append(line)}
+        const order=el('span','gmww-pr-order',String(pr.roleOrder?.get(r.roleId)||r.order||1)),up=el('button','gmww-pr-step','↑'),down=el('button','gmww-pr-step','↓');up.title='Đưa vai lên trước';down.title='Đưa vai xuống sau';
+        const move=delta=>{const active=pr.roles.filter(x=>pr.deck.has(x.roleId)).sort((a,b)=>(pr.roleOrder?.get(a.roleId)||a.order||999)-(pr.roleOrder?.get(b.roleId)||b.order||999));const at=active.findIndex(x=>x.roleId===r.roleId),to=Math.max(0,Math.min(active.length-1,at+delta));if(at<0||to===at)return;[active[at],active[to]]=[active[to],active[at]];pr.roleOrder=new Map(active.map((x,i)=>[x.roleId,i+1]));render()};up.addEventListener('click',()=>move(-1));down.addEventListener('click',()=>move(1));
+        const ctl=el('div','gmww-pr-ctl');ctl.append(order,up,down,secIn,minus,cnt,plus);line.append(el('span',null,r.roleName||r.roleId),ctl);sec.append(line)}
       box.append(sec)}
+    const artifacts=el('div','gmww-pr-deck');artifacts.append(el('small',null,'ARTIFACT • chọn các lá có thể phát trong ván'));
+    if(!pr.artifacts.length)artifacts.append(el('p','gmww-pr-help','Chưa có Artifact đã đồng bộ từ Server.'));
+    for(const a of pr.artifacts){const line=el('label','gmww-pr-deckrow'),check=el('input');check.type='checkbox';check.checked=pr.artifactIds?.has(a.artifactId)||false;check.addEventListener('change',()=>{if(!pr.artifactIds)pr.artifactIds=new Set();if(check.checked)pr.artifactIds.add(a.artifactId);else pr.artifactIds.delete(a.artifactId)});line.append(check,el('span',null,a.name||a.artifactId),el('small',null,a.singleUse?'Dùng một lần':''));artifacts.append(line)}
+    const quotaLine=el('div','gmww-pr-deckrow');quotaLine.append(el('span',null,'Artifact tối đa mỗi Ngày / Đêm'),num(pr.artifactLimitPerCycle??3,v=>{pr.artifactLimitPerCycle=v}));artifacts.append(quotaLine);box.append(artifacts);
     const tl=el('div','gmww-pr-deck');tl.append(el('small',null,'TIMELINE (giây)'));
     for(const [k,label] of TIMING){const line=el('div','gmww-pr-deckrow');line.append(el('span',null,label),num(pr.timing[k],v=>{pr.timing[k]=v}));tl.append(line)}
+    const auto=el('label','gmww-pr-deckrow'),autoCheck=el('input');autoCheck.type='checkbox';autoCheck.checked=pr.timing.autoAdvance!==false;auto.append(autoCheck,el('span',null,'Tự động chuyển vai khi hết giờ'));autoCheck.addEventListener('change',()=>{pr.timing.autoAdvance=autoCheck.checked});tl.append(auto);box.append(tl);
     box.append(tl);
     const row=el('div','gmww-pr-line');
     const save=btn('LƯU VÁN',async()=>{
-      const roles=[...pr.deck].map(([roleId,count])=>({roleId,count,actionDurationSec:pr.secs.has(roleId)?pr.secs.get(roleId):pr.timing.defaultActionSec}));
-      await callOwner('template-save','POST',{name:pr.deckName.trim()||'Ván của tôi',roles,timing:pr.timing});
-      say('Đã lưu Ván Mẫu. Server chỉ giữ 5 ván gần nhất.');pr.deckName='';pr.deck=new Map();pr.secs=new Map();pr.timing=freshTiming();pr.gameTab='pick';await loadTemplates()},'gmww-pr-main');save.id='gmwwPrDeckApply';
-    const clear=btn('XOÁ VÁN',async()=>{pr.deckName='';pr.deck=new Map();pr.secs=new Map();pr.timing=freshTiming();render()},'gmww-pr-danger');
+      const roles=[...pr.deck].map(([roleId,count],i)=>({roleId,count,order:pr.roleOrder?.get(roleId)||i+1,actionDurationSec:pr.secs.has(roleId)?pr.secs.get(roleId):pr.timing.defaultActionSec}));
+      const artifacts=[...(pr.artifactIds||new Set())].map((artifactId,i)=>({artifactId,order:i+1}));
+      await callOwner('template-save','POST',{templateId:pr.editTemplateId||'',name:pr.deckName.trim()||'Ván của tôi',roles,timing:pr.timing,artifactsEnabled:artifacts.length>0,artifacts,artifactLimitPerCycle:pr.artifactLimitPerCycle??3});
+      say(pr.editTemplateId?'Đã cập nhật Ván Mẫu trên Server.':'Đã lưu đầy đủ Ván Mẫu trên Server.');pr.editTemplateId='';pr.deckName='';pr.deck=new Map();pr.secs=new Map();pr.roleOrder=new Map();pr.artifactIds=new Set();pr.artifactLimitPerCycle=3;pr.timing=freshTiming();pr.gameTab='pick';await loadTemplates()},'gmww-pr-main');save.id='gmwwPrDeckApply';
+    save.textContent=pr.editTemplateId?'CẬP NHẬT VÁN MẪU':'LƯU VÁN MẪU';
+    const clear=btn('MẪU MỚI',async()=>{pr.editTemplateId='';pr.deckName='';pr.deck=new Map();pr.secs=new Map();pr.roleOrder=new Map();pr.artifactIds=new Set();pr.artifactLimitPerCycle=3;pr.timing=freshTiming();render()},'gmww-pr-danger');
     row.append(save,clear);box.append(row);
     refreshSum();
   }
@@ -222,7 +240,8 @@
     if(!cfg){box.append(el('p','gmww-pr-note','Chưa chọn Ván Mẫu.'),btn('← VÁN MẪU',async()=>goStep('game')));return}
     box.append(el('p','gmww-pr-help','Bấm PHÂN VAI NGẪU NHIÊN để máy chủ xáo bài kín. Có thể phân nhiều lần. Để giữ bí mật, không ai (kể cả bạn) thấy ai giữ vai hay Artifact nào.'));
     if(!ok)box.append(el('p','gmww-pr-note','Số lá bài ('+need+') chưa bằng số người ('+players.length+'). Hãy đổi Ván Mẫu hoặc điều chỉnh số người.'));
-    box.append(btn('🎲 PHÂN VAI NGẪU NHIÊN',async()=>{await callOwner('roles-shuffle','POST',{});say('Đã phân vai ngẫu nhiên (kín).');await refresh()},'gmww-pr-main',!ok));
+    if(cfg.artifactsEnabled)box.append(el('p','gmww-pr-note','Artifact được trộn và phát ngẫu nhiên cùng với Vai Trò. Người chủ phòng không thấy ai nhận lá nào.'));
+    box.append(btn('🎲 PHÂN VAI NGẪU NHIÊN',async()=>{await callOwner('roles-shuffle','POST',{});say('Đã trộn Vai Trò và Artifact kín trên Server.');await refresh()},'gmww-pr-main',!ok));
     const row=el('div','gmww-pr-tools');row.append(btn('← VÁN MẪU',async()=>goStep('game')),btn('TIẾP: PHÁT VAI →',async()=>goStep('deal'),'gmww-pr-main',!ok));box.append(row);
   }
   function viewDeal(box,st,room,players,locked){
@@ -436,7 +455,7 @@
       +'#gmwwStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
       +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex-direction:column;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
-      +'.gmww-pr-ctl{display:flex;align-items:center;gap:8px}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-panel button.gmww-pr-step{padding:0;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1}'
+      +'.gmww-pr-ctl{display:flex;align-items:center;gap:6px;flex-shrink:0}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-order{min-width:18px;text-align:center;opacity:.75}.gmww-pr-panel button.gmww-pr-step{padding:0;width:32px;height:32px;border-radius:50%;font-size:18px;line-height:1}.gmww-pr-tpldetail{display:block;max-width:62vw;white-space:normal!important;line-height:1.35;opacity:.78}'
       +'.gmww-pr-roomrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid #4fc3f7!important;background:#0b3a5e!important;color:#e8f6ff;text-align:left}.gmww-pr-roomrow div{display:flex;flex-direction:column;gap:2px;min-width:0}.gmww-pr-roomrow small{opacity:.75;font-weight:500}.gmww-pr-roomrow span{font-size:24px}'
       +'.gmww-pr-back{position:fixed;inset:0;z-index:9490;background:rgba(0,0,0,.22)}.gmww-pr-back[hidden]{display:none}.gmww-pr-seatlist summary{padding:8px 2px;font-weight:700;cursor:pointer}.gmww-pr-tabs{display:flex;gap:6px}.gmww-pr-tabs button{flex:1;padding:10px;border-radius:12px;border:1px solid #4fc3f7;background:#0b3a5e;color:#e8f6ff;font-weight:700}.gmww-pr-tabs button.is-on{background:#27c4b3;color:#032}.gmww-pr-tplacts{display:flex;gap:8px;margin-top:6px}.gmww-pr-tplacts button{flex:1}input.gmww-pr-sec-in{width:64px;padding:6px;border-radius:8px;text-align:center}.gmww-pr-back.seatdrag{background:transparent;touch-action:none}'
       +'.gmww-pr-panel{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:9500;max-height:calc(100vh - 290px - env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,#0f4c75,#0a2f4f);color:#e8f6ff;display:flex;flex-direction:column;font-size:15px;border-radius:18px 18px 0 0;border-top:1px solid #4fc3f7;box-shadow:0 -10px 40px #000a}.gmww-pr-panel[hidden]{display:none}'

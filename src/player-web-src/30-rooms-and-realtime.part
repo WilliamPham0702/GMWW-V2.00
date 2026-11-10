@@ -305,7 +305,7 @@ function gallowsWidget(){
   let el=document.getElementById('gmwwGallowsPlayer');if(el)return el;
   const style=document.createElement('style');style.id='gmwwGallowsPlayerCss';
   style.textContent=`
-#gmwwGallowsPlayer{position:fixed;z-index:990;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,460px);max-height:68dvh;overflow:auto;padding:12px;border-radius:17px;border:1px solid #a7d9df;background:rgba(9,49,65,.93);box-shadow:0 12px 36px #0008;color:#effcff;display:grid;gap:10px;box-sizing:border-box}
+#gmwwGallowsPlayer{position:fixed;z-index:100012;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,460px);max-height:68dvh;overflow:auto;padding:12px;border-radius:17px;border:1px solid #a7d9df;background:rgba(9,49,65,.93);box-shadow:0 12px 36px #0008;color:#effcff;display:grid;gap:10px;box-sizing:border-box}
 #gmwwGallowsPlayer[hidden],#gmwwGallowsDock[hidden]{display:none!important}
 #gmwwGallowsPlayer h3{margin:0;text-align:center;font-size:15px;color:#ffe0a4}
 #gmwwGallowsPlayer .gallows-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}

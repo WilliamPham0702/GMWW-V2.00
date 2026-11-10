@@ -513,8 +513,11 @@ export class RoomDurableObject extends DurableObject {
   // A room owner saves their own Ván Mẫu: roles + timeline; role artwork is copied so it survives pruning of its source.
   async gameTemplatePlayerSave(body){
     const cfg=sanitizeGameConfig(body?.compiledConfig);if(!cfg||!cfg.roles.length)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
-    const id="player-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),now=new Date().toISOString();
-    const rec={id,name:String(cfg.name||"Ván của tôi").slice(0,120),playerCount:Number(cfg.playerCount||0),revision:1,updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"PLAYER"};
+    const ownerLoginId=normalizeLoginId(body?.ownerLoginId||''),requested=String(body?.id||'').trim().slice(0,120),old=requested?await this.ctx.storage.get("gameTemplate:"+requested):null;
+    if(!ownerLoginId)return j({ok:false,error:"TEMPLATE_OWNER_REQUIRED"},400);
+    if(requested&&(!old||old.source!=="PLAYER"||normalizeLoginId(old.ownerLoginId||'')!==ownerLoginId))return j({ok:false,error:"TEMPLATE_EDIT_FORBIDDEN"},403);
+    const id=requested||("player-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),now=new Date().toISOString();
+    const rec={id,name:String(cfg.name||"Ván của tôi").slice(0,120),playerCount:Number(cfg.playerCount||0),revision:Math.max(1,Number(old?.revision||0)+1),updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"PLAYER",ownerLoginId};
     await this.ctx.storage.put("gameTemplate:"+id,rec);
     for(const c of Array.isArray(body?.copyAssets)?body.copyAssets.slice(0,100):[]){
       const from=String(c?.from||"").slice(0,120),roleId=String(c?.roleId||"").slice(0,120);if(!from||!roleId)continue;
@@ -982,7 +985,9 @@ export class RoomDurableObject extends DurableObject {
   async ownerState(request){
     const gate=await this.ownerGate(request);if(!gate.ok)return gate.response;
     const players=(await this.ctx.storage.get("players"))||{};
-    return j({ok:true,room:publicRoom(gate.meta),players:Object.values(players).map(publicPlayer),config:ownerDeckView(await this.ctx.storage.get("gameConfig")),dealRound:Number((await this.ctx.storage.get("pendingDeal"))?.round||0),ownerLoginId:gate.meta.ownerLoginId||null})
+    const cfg=await this.ctx.storage.get("gameConfig"),view=ownerDeckView(cfg);
+    if(view?.artifactsEnabled)for(const a of view.artifacts){const card=await this.ctx.storage.get('roleCatalog:artifact:'+a.artifactId);a.name=String(card?.roleCard?.name||a.name||a.artifactId)}
+    return j({ok:true,room:publicRoom(gate.meta),players:Object.values(players).map(publicPlayer),config:view,dealRound:Number((await this.ctx.storage.get("pendingDeal"))?.round||0),ownerLoginId:gate.meta.ownerLoginId||null})
   }
   // The Worker reads the Ván Mẫu from the member store and passes it here; the owner only names a templateId.
   async ownerApplyTemplate(gm,meta,body){
@@ -1015,10 +1020,12 @@ export class RoomDurableObject extends DurableObject {
     if(phase!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY",message:"Ván đã được bắt đầu."},409);
     const cfg=await this.ctx.storage.get("gameConfig");if(!cfg||!Array.isArray(cfg.roles)||!cfg.roles.length)return j({ok:false,error:"TEMPLATE_NOT_SELECTED",message:"Hãy chọn Ván Mẫu trước."},409);
     const players=(await this.ctx.storage.get("players"))||{},members=Object.values(players).filter(p=>p?.kind==="member").sort((a,b)=>Number(a.seatId||0)-Number(b.seatId||0));
-    const plan=planPlayerRoomDeal(cfg.roles,members,secureShuffle);
+    const artifactPool=[];for(const a of Array.isArray(cfg.artifacts)?cfg.artifacts:[]){const id=String(a?.artifactId||'');if(!id)continue;const catalog=await this.ctx.storage.get('roleCatalog:artifact:'+id);if(catalog?.roleCard)artifactPool.push({artifactId:id,name:catalog.roleCard.name,artifactCard:catalog.roleCard})}
+    if(cfg.artifactsEnabled===true&&artifactPool.length!==cfg.artifacts.length)return j({ok:false,error:"TEMPLATE_ASSETS_MISSING",message:"Chưa nạp đủ Artifact của Ván Mẫu."},409);
+    const plan=planPlayerRoomDeal(cfg.roles,members,secureShuffle,cfg.artifactsEnabled===true?artifactPool:[]);
     if(!plan.ok)return j({ok:false,error:plan.error,need:plan.need??null,have:plan.have??null},409);
     const old=await this.ctx.storage.get("pendingDeal"),round=Number(old?.round||0)+1;
-    await this.ctx.storage.put("pendingDeal",{round,rows:plan.rows,members:members.map(m=>String(m.loginId||"")).sort(),roleKey:cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(",")});
+    await this.ctx.storage.put("pendingDeal",{round,rows:plan.rows,members:members.map(m=>String(m.loginId||"")).sort(),roleKey:cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(","),artifactKey:artifactPool.map(a=>a.artifactId).sort().join(",")});
     return j({ok:true,dealRound:round})
   }
   // Seats must be locked; deals the template's roles at random, starts the match and the first night.
@@ -1031,10 +1038,12 @@ export class RoomDurableObject extends DurableObject {
     const haveCards=new Set();for(const r of cfg.roles){const id=String(r.roleId||"");if(id&&!haveCards.has(id)&&await this.ctx.storage.get("roleCatalog:"+id))haveCards.add(id)}
     const missing=missingRoleCards(cfg.roles,id=>haveCards.has(id));
     if(missing.length)return j({ok:false,error:"TEMPLATE_ASSETS_MISSING",missing},409);
-    let plan=planPlayerRoomDeal(cfg.roles,members,secureShuffle);
+    const artifactPool=[];for(const a of Array.isArray(cfg.artifacts)?cfg.artifacts:[]){const id=String(a?.artifactId||'');if(!id)continue;const catalog=await this.ctx.storage.get('roleCatalog:artifact:'+id);if(catalog?.roleCard)artifactPool.push({artifactId:id,name:catalog.roleCard.name,artifactCard:catalog.roleCard})}
+    if(cfg.artifactsEnabled===true&&artifactPool.length!==cfg.artifacts.length)return j({ok:false,error:"TEMPLATE_ASSETS_MISSING",message:"Chưa nạp đủ Artifact của Ván Mẫu."},409);
+    let plan=planPlayerRoomDeal(cfg.roles,members,secureShuffle,cfg.artifactsEnabled===true?artifactPool:[]);
     if(!plan.ok)return j({ok:false,error:plan.error,need:plan.need??null,have:plan.have??null},409);
     const pending=await this.ctx.storage.get("pendingDeal");
-    if(pending&&Array.isArray(pending.rows)&&pending.members?.join(",")===members.map(m=>String(m.loginId||"")).sort().join(",")&&pending.roleKey===cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(","))plan={ok:true,rows:pending.rows};
+    if(pending&&Array.isArray(pending.rows)&&pending.members?.join(",")===members.map(m=>String(m.loginId||"")).sort().join(",")&&pending.roleKey===cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(",")&&pending.artifactKey===artifactPool.map(a=>a.artifactId).sort().join(","))plan={ok:true,rows:pending.rows};
     await this.ctx.storage.delete("pendingDeal");
     const matchId="p"+Date.now().toString(36)+Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>b.toString(16).padStart(2,"0")).join("");
     const assigned=await this.gmAssign(gm,{assignments:plan.rows,matchId,matchRevision:1,deliveryVersion:1});if(!assigned.ok)return assigned;
@@ -4833,7 +4842,14 @@ async function createPlayerRoom(env,url,request){
 async function playerRoomTemplates(env,request){
   const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
   if(!session.ok)return session;
-  return memberStore(env).fetch("https://member.internal/game-templates/list")
+  const store=memberStore(env),list=await store.fetch("https://member.internal/game-templates/list");if(!list.ok)return list;
+  const data=await list.json().catch(()=>({})),sessionData=await session.json().catch(()=>({})),loginId=normalizeLoginId(sessionData?.member?.loginId||''),templates=[];
+  for(const meta of Array.isArray(data?.templates)?data.templates:[]){
+    const detail=await store.fetch('https://member.internal/game-templates/get?id='+encodeURIComponent(meta.id));
+    const template=detail.ok?(await detail.json().catch(()=>({})))?.template:null;
+    templates.push(template?{...meta,compiledConfig:template.compiledConfig,canEdit:meta.source==='PLAYER'&&normalizeLoginId(template.ownerLoginId||'')===loginId}:meta);
+  }
+  return j({ok:true,count:templates.length,templates})
 }
 // Every role that has a published card (from the GM's Ván Mẫu), so an owner can build a deck from them.
 async function playerRoomSourceRoles(env){
@@ -4847,11 +4863,17 @@ async function playerRoomSourceRoles(env){
   }
   return{ok:true,roles,bases}
 }
+async function playerRoomSourceArtifacts(env){
+  const r=await memberStore(env).fetch('https://member.internal/artifacts/shared/status');if(!r.ok)return{ok:false,res:r};
+  const rows=(await r.json().catch(()=>({})))?.artifacts||[];
+  return{ok:true,artifacts:rows.map(x=>({assetId:String(x.assetId||''),roleCard:x.package?.roleCard||null})).filter(x=>x.assetId.startsWith('artifact:')&&x.roleCard)}
+}
 async function playerRoomRoleList(env,request){
   const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
   if(!session.ok)return session;
   const src=await playerRoomSourceRoles(env);if(!src.ok)return src.res;
-  return j({ok:true,roles:[...src.roles.values()].map(r=>({roleId:r.roleId,roleName:String(r.roleName||r.roleId),faction:String(r.faction||""),order:Number(r.order)||0})).sort((a,b)=>a.faction.localeCompare(b.faction,"vi")||a.roleName.localeCompare(b.roleName,"vi"))})
+  const arts=await playerRoomSourceArtifacts(env);if(!arts.ok)return arts.res;
+  return j({ok:true,roles:[...src.roles.values()].map(r=>({roleId:r.roleId,roleName:String(r.roleName||r.roleId),faction:String(r.faction||""),order:Number(r.order)||0})).sort((a,b)=>a.faction.localeCompare(b.faction,"vi")||a.roleName.localeCompare(b.roleName,"vi")),artifacts:arts.artifacts.map(x=>({artifactId:x.assetId.slice(9),name:String(x.roleCard.name||x.assetId.slice(9)),information:String(x.roleCard.information||''),singleUse:x.roleCard.singleUse===true,priorityFirst:x.roleCard.priorityFirst===true})).sort((a,b)=>a.name.localeCompare(b.name,'vi'))})
 }
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 async function playerRoomOwnerApi(env,rawCode,action,request){
@@ -4863,23 +4885,35 @@ async function playerRoomOwnerApi(env,rawCode,action,request){
   const body=await safeJson(request)||{};
   if(action==="template-delete"){
     const gate=await stub.fetch("https://room.internal/owner/state",{headers:auth});if(!gate.ok)return gate;
+    const ownerLoginId=normalizeLoginId((await gate.clone().json().catch(()=>({})))?.ownerLoginId||'');
     const id=String(body.templateId||"").trim().slice(0,120);if(!id||id.includes("/")||id.includes(".."))return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
+    const existing=await memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));if(!existing.ok)return existing;
+    const record=(await existing.json().catch(()=>({})))?.template;if(record?.source!=="PLAYER"||normalizeLoginId(record.ownerLoginId||'')!==ownerLoginId)return j({ok:false,error:"TEMPLATE_DELETE_FORBIDDEN",message:"Chỉ xóa được Ván Mẫu do bạn tạo."},403);
     return memberStore(env).fetch("https://member.internal/game-templates/delete?id="+encodeURIComponent(id),{method:"DELETE"})
   }
   if(action==="template-save"){
     const gate=await stub.fetch("https://room.internal/owner/state",{headers:auth});if(!gate.ok)return gate;
-    const name=String(body.name||"").trim().slice(0,48)||"Ván của tôi",picked=new Map(),secs=new Map();
-    for(const r of Array.isArray(body.roles)?body.roles.slice(0,100):[]){const rid=String(r?.roleId||"").slice(0,80),n=Math.max(0,Math.min(30,Math.floor(Number(r?.count)||0)));if(rid&&n){picked.set(rid,(picked.get(rid)||0)+n);if(r.actionDurationSec!=null&&r.actionDurationSec!=="")secs.set(rid,Math.max(0,Math.min(3600,Math.trunc(Number(r.actionDurationSec)||0))))}}
+    const gateData=await gate.clone().json().catch(()=>({})),ownerLoginId=normalizeLoginId(gateData.ownerLoginId||''),templateId=String(body.templateId||'').trim().slice(0,120);
+    if(templateId){const saved=await memberStore(env).fetch('https://member.internal/game-templates/get?id='+encodeURIComponent(templateId));if(!saved.ok)return saved;const record=(await saved.json().catch(()=>({})))?.template;if(record?.source!=="PLAYER"||normalizeLoginId(record.ownerLoginId||'')!==ownerLoginId)return j({ok:false,error:"TEMPLATE_EDIT_FORBIDDEN"},403)}
+    const name=String(body.name||"").trim().slice(0,48)||"Ván của tôi",picked=new Map(),secs=new Map(),orders=new Map();
+    for(const r of Array.isArray(body.roles)?body.roles.slice(0,100):[]){const rid=String(r?.roleId||"").slice(0,80),n=Math.max(0,Math.min(30,Math.floor(Number(r?.count)||0)));if(rid&&n){picked.set(rid,(picked.get(rid)||0)+n);if(r.actionDurationSec!=null&&r.actionDurationSec!=="")secs.set(rid,Math.max(0,Math.min(3600,Math.trunc(Number(r.actionDurationSec)||0))));if(r.order!=null)orders.set(rid,Math.max(0,Math.trunc(Number(r.order)||0)))}}
     const total=[...picked.values()].reduce((a,b)=>a+b,0);
     if(!picked.size||total<1||total>30)return j({ok:false,error:"INVALID_CUSTOM_DECK",message:"Chọn từ 1 đến 30 lá bài."},400);
     const src=await playerRoomSourceRoles(env);if(!src.ok)return src.res;
     const rows=[],copyAssets=[];
     for(const [rid,n] of picked){const r=src.roles.get(rid);if(!r)return j({ok:false,error:"ROLE_NOT_AVAILABLE",message:"Có vai chưa có lá bài."},400);
-      const row={...r,count:n};if(secs.has(rid))row.actionDurationSec=secs.get(rid);rows.push(row);copyAssets.push({from:r.templateId,roleId:rid})}
+      const row={...r,count:n};if(secs.has(rid))row.actionDurationSec=secs.get(rid);if(orders.has(rid))row.order=orders.get(rid);rows.push(row);copyAssets.push({from:r.templateId,roleId:rid})}
     const t=body.timing&&typeof body.timing==="object"?body.timing:{},timing={};
-    for(const k of ["villageDiscussionSec","wolfDiscussionSec","earlyArtifactSec","defaultActionSec","artifactActionSec"])if(t[k]!=null&&t[k]!=="")timing[k]=Math.max(0,Math.min(3600,Math.trunc(Number(t[k])||0)));
-    const baseId=rows[0].templateId,compiledConfig={...(src.bases.get(baseId)||{}),name,playerCount:total,timing:{...((src.bases.get(baseId)||{}).timing||{}),...timing},roles:rows.map(({templateId:_t,...r})=>r)};
-    return memberStore(env).fetch("https://member.internal/game-templates/player-save",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({compiledConfig,copyAssets})})
+    for(const k of ["villageDiscussionSec","gallowsNominationSec","gallowsVoteSec","wolfDiscussionSec","earlyArtifactSec","defaultActionSec","artifactActionSec"])if(t[k]!=null&&t[k]!=="")timing[k]=Math.max(k.startsWith('gallows')?1:0,Math.min(3600,Math.trunc(Number(t[k])||0)));
+    if(Object.prototype.hasOwnProperty.call(t,'autoAdvance'))timing.autoAdvance=t.autoAdvance!==false;
+    const artifactEnabled=body.artifactsEnabled===true,selectedArtifacts=[...new Map((Array.isArray(body.artifacts)?body.artifacts:[]).map((a,i)=>[String(a?.artifactId||''),{artifactId:String(a?.artifactId||''),order:Math.max(0,Math.trunc(Number(a?.order)||i+1))}]).filter(([id])=>id)).values()];
+    if(artifactEnabled&&!selectedArtifacts.length)return j({ok:false,error:"INVALID_ARTIFACT_SELECTION",message:"Chọn ít nhất một Artifact hoặc tắt Artifact."},400);
+    const availableArtifacts=await playerRoomSourceArtifacts(env);if(!availableArtifacts.ok)return availableArtifacts.res;
+    const allowedArtifacts=new Set(availableArtifacts.artifacts.map(x=>x.assetId.slice(9)));
+    if(selectedArtifacts.some(a=>!allowedArtifacts.has(a.artifactId)))return j({ok:false,error:"ARTIFACT_NOT_AVAILABLE",message:"Có Artifact chưa được phát hành trên Server."},400);
+    const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(body.artifactLimitPerCycle??3)||0)));
+    const baseId=rows[0].templateId,base=src.bases.get(baseId)||{},compiledConfig={...base,name,playerCount:total,timing:{...(base.timing||{}),...timing},roles:rows.map(({templateId:_t,...r})=>r),artifactsEnabled:artifactEnabled,artifacts:artifactEnabled?selectedArtifacts:[],artifactLimitPerCycle};
+    return memberStore(env).fetch("https://member.internal/game-templates/player-save",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({id:templateId||undefined,ownerLoginId,compiledConfig,copyAssets})})
   }
   if(action==="template"){
     const gate=await stub.fetch("https://room.internal/owner/state",{headers:auth});if(!gate.ok)return gate;
@@ -4901,6 +4935,11 @@ async function playerRoomOwnerApi(env,rawCode,action,request){
     const id=String(body.templateId||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const tr=await memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));if(!tr.ok)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     const template=(await tr.json().catch(()=>({}))).template,packages=[];
+    const cfg=template?.compiledConfig||{};
+    if(cfg.artifactsEnabled===true&&Array.isArray(cfg.artifacts)&&cfg.artifacts.length){
+      const prep=await gmPreloadSharedArtifacts(env,code,new Request('https://room.internal/gm/shared-artifacts',{method:'POST',headers:{authorization:'Bearer '+GM_SYNC_TOKEN,'content-type':'application/json'},body:JSON.stringify({assetIds:cfg.artifacts.map(a=>'artifact:'+String(a?.artifactId||''))})}));
+      if(!prep.ok)return prep;
+    }
     for(const roleId of [...new Set((template?.compiledConfig?.roles||[]).map(r=>String(r?.roleId||"")).filter(Boolean))].slice(0,100)){
       const ar=await memberStore(env).fetch("https://member.internal/game-templates/assets?id="+encodeURIComponent(id)+"&assetId="+encodeURIComponent("role:"+roleId));if(!ar.ok)continue;
       const d=await ar.json().catch(()=>null);if(d?.package)packages.push({...d.package,roleId})
