@@ -338,6 +338,8 @@ let toastTimer;
 // Keep transient notices below the real top menu, not behind the fixed Online Chat footer.
 function gmwwToastTop(){
   const visibleTop=Math.max(0,Number(window.visualViewport?.offsetTop)||0);
+  const stripHost=document.getElementById('gmwwStageStrip'),stripBottom=stripHost&&!stripHost.hidden?stripHost.shadowRoot?.getElementById('playSetupStrip')?.getBoundingClientRect().bottom:NaN;
+  if(Number.isFinite(stripBottom)&&stripBottom>visibleTop)return Math.ceil(stripBottom+8);
   const menuBottom=document.getElementById('gmwwPlayerTopMenu')?.getBoundingClientRect().bottom;
   return Math.ceil(Math.max(visibleTop+12,Number.isFinite(menuBottom)&&menuBottom>visibleTop?menuBottom+10:visibleTop+68));
 }
