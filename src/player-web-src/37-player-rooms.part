@@ -85,19 +85,19 @@
   }
   // "Phòng": 1) vào phòng bằng mã  2) tạo phòng riêng  3) quản lý phòng đã tạo.
   function viewRoomHub(box,st,room,players){
-    box.append(el('div','gmww-pr-sub','1. VÀO PHÒNG'));
+    box.append(el('div','gmww-pr-sub','1. QUẢN LÝ PHÒNG'));
+    if(!pr.own)box.append(el('p','gmww-pr-help','Bạn chưa tạo phòng nào.'));
+    else if(!inOwnRoom())box.append(btn('Vào lại phòng '+pr.own.code,async()=>{
+      if(await window.joinRoom(pr.own.code)===false)throw new Error('Không vào lại được phòng.');try{await enterVillage()}catch(_){}
+      await refresh()},'gmww-pr-main'),btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));
+    else roomDetails(box,st,room,players,room.seatsLocked===true);
+    box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG'));
+    box.append(btn('Tạo phòng riêng',create,'gmww-pr-main',!!pr.own));
+    box.append(el('div','gmww-pr-sub','3. VÀO PHÒNG'));
     const row=el('div','gmww-pr-row'),inp=el('input');inp.id='gmwwPrJoin';inp.placeholder='Nhập mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.style.textTransform='uppercase';
     // The panel is rebuilt on every refresh / button press, so the typed code lives in pr.joinCode, not only in the input.
     inp.value=pr.joinCode||'';inp.addEventListener('input',()=>{pr.joinCode=inp.value});
     row.append(inp,btn('Vào Game',async()=>{await joinByCode(pr.joinCode)}));box.append(row);
-    box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG'));
-    box.append(btn('Tạo phòng riêng',create,'gmww-pr-main',!!pr.own));
-    box.append(el('div','gmww-pr-sub','3. QUẢN LÝ PHÒNG'));
-    if(!pr.own){box.append(el('p','gmww-pr-help','Bạn chưa tạo phòng nào.'));return}
-    if(!inOwnRoom()){box.append(btn('Vào lại phòng '+pr.own.code,async()=>{
-      if(await window.joinRoom(pr.own.code)===false)throw new Error('Không vào lại được phòng.');try{await enterVillage()}catch(_){}
-      await refresh()},'gmww-pr-main'),btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));return}
-    roomDetails(box,st,room,players,room.seatsLocked===true);
   }
   function viewSeats(box,st,room,players,locked){
     const g=el('div','gmww-pr-grid');g.append(stat('Đã vào phòng',players.length+' người'),stat('Chỗ ngồi',locked?'ĐÃ CHỐT':'Tự xếp'));box.append(g);
@@ -346,7 +346,7 @@
     const now=stripNow(),idx=ORDER.indexOf(now),sroot=strip.shadowRoot;
     sroot.querySelectorAll('#playSetupStrip button').forEach(b=>{const k=b.dataset.playStep||'room',i=ORDER.indexOf(k);b.classList.toggle('active',i===idx);b.classList.toggle('done',i<idx);if(i===idx)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
     const root=dock.shadowRoot,title=root.getElementById('playPhaseTitle'),hint=root.getElementById('playPhaseHint'),
-      owner=!!(pr.own&&inOwnRoom()),label=LABEL[now]||'SẢNH CHỜ',h=!state?.roomCode?'CHẠM ĐỂ VÀO PHÒNG':!owner?'CHỦ PHÒNG ĐIỀU HÀNH':now==='battle'?'ĐANG CHƠI':'CHẠM ĐỂ TIẾP';
+      owner=!!(pr.own&&inOwnRoom()),nxt=ORDER[idx+1],label=(owner||!state?.roomCode)&&nxt?LABEL[nxt]:(LABEL[now]||'SẢNH CHỜ'),h=!state?.roomCode?'CHẠM ĐỂ VÀO PHÒNG':!owner?'CHỦ PHÒNG ĐIỀU HÀNH':now==='battle'?'ĐANG CHƠI':'CHẠM ĐỂ TIẾP';
     if(title.textContent!==label)title.textContent=label;if(hint.textContent!==h)hint.textContent=h;
     root.getElementById('playEndGame').style.opacity=owner&&now==='battle'?'1':'.35';
   }
@@ -367,8 +367,8 @@
     injectCreateButtons();
     if(pr.mounted)return;pr.mounted=true;
     document.head.appendChild(el('style',null,'#gmwwSetupTop3{display:none!important}'
-      +'#gmwwOwnerDock{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
-      +'#gmwwStageStrip{position:fixed;left:0;right:0;top:0;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
+      +'#gmwwOwnerDock{position:fixed;left:8px;right:8px;top:auto;bottom:calc(100vh - var(--gmww-player-visible-top,0px) - var(--gmww-player-visible-height,100vh) + env(safe-area-inset-bottom,0px) + 8px);max-width:calc(100vw - 16px);box-sizing:border-box;z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
+      +'#gmwwStageStrip{position:fixed;left:0;right:0;top:var(--gmww-player-visible-top,0px);width:100%;max-width:100vw;overflow:hidden;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
       +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex-direction:column;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
       +'.gmww-pr-ctl{display:flex;align-items:center;gap:8px}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-panel button.gmww-pr-step{padding:0;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1}'
