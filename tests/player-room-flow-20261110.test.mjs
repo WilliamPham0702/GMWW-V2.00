@@ -23,6 +23,14 @@ test('Ván Mẫu: bỏ Tạo ván rút gọn; Web có editor đầy đủ và n�
   assert.match(worker,/playerRoomSourceArtifacts/);assert.match(worker,/TEMPLATE_EDIT_FORBIDDEN/);
   assert.match(worker,/gmPreloadSharedArtifacts\(env,code/);assert.match(worker,/artifactsEnabled/);
 });
+test('Ván Mẫu: editor lấy Vai Trò dự phòng từ mẫu Server và không báo rỗng khi đang tải/lỗi',()=>{
+  assert.match(rooms,/catalogStatus:'idle'/);
+  assert.match(rooms,/const available=new Map\(\);for\(const t of pr\.templates\)/);
+  assert.match(rooms,/if\(Array\.isArray\(r\.roles\)&&r\.roles\.length\)pr\.roles=r\.roles/);
+  assert.match(rooms,/Đang tải danh sách vai từ Ván Mẫu Server/);
+  assert.match(rooms,/Không tải được danh sách Ván Mẫu Server/);
+  assert.match(rooms,/TẢI LẠI DANH SÁCH/);
+});
 test('Server giữ tối đa 5 Ván Mẫu gần nhất',()=>{
   assert.match(worker,/pruneGameTemplates\(5,id\)/);
   assert.match(worker,/"\/game-templates\/player-save"/);
