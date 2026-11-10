@@ -510,14 +510,6 @@ export class RoomDurableObject extends DurableObject {
     for(const x of rows.slice(keep)){if(x.id===protectId)continue;await this.removeGameTemplate(x.id);gone.push(x.id)}
     return gone;
   }
-  async gameTemplateDelete(id){
-    id=String(id||"").trim().slice(0,120);
-    if(!id||id.includes("/")||id.includes(".."))return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
-    const existing=await this.ctx.storage.get("gameTemplate:"+id);
-    if(!existing)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
-    await this.removeGameTemplate(id);
-    return j({ok:true,deleted:true,id});
-  }
   // A room owner saves their own Ván Mẫu: roles + timeline; role artwork is copied so it survives pruning of its source.
   async gameTemplatePlayerSave(body){
     const cfg=sanitizeGameConfig(body?.compiledConfig);if(!cfg||!cfg.roles.length)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
@@ -536,6 +528,17 @@ export class RoomDurableObject extends DurableObject {
     return j({ok:true,template:{id,name:rec.name,playerCount:rec.playerCount,updatedAt:now},pruned});
   }
 
+  async gameTemplateDelete(id){
+    id=String(id||"").trim().slice(0,120);
+    if(!id||id.includes("/")||id.includes(".."))return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
+    const key="gameTemplate:"+id,existing=await this.ctx.storage.get(key);
+    if(!existing)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
+    await this.ctx.storage.delete(key);
+    const savedAssets=typeof this.ctx.storage.list==='function'?await this.ctx.storage.list({prefix:"gameTemplateAsset:"+id+":"}):new Map();
+    if(savedAssets.size)await this.ctx.storage.delete([...savedAssets.keys()]);
+    return j({ok:true,deleted:true,id});
+  }
+
   async gameTemplateUpsert(body){
     const cfg=sanitizeGameConfig(body?.gameConfig||body?.template||body);if(!cfg)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
     const id=String(body?.id||cfg.id||("template-"+Date.now().toString(36))).trim().slice(0,120),now=new Date().toISOString(),key="gameTemplate:"+id,old=await this.ctx.storage.get(key);
@@ -546,7 +549,7 @@ export class RoomDurableObject extends DurableObject {
     const revision=unchanged?Math.max(1,Number(old.revision||1)):Math.max(1,Number(old?.revision||0)+1);
     const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:unchanged?(old.preloadedAt||now):now,compiledConfig,source:"GM_IPA"};
     await this.ctx.storage.put(key,rec);
-    await this.pruneGameTemplates(5,id);
+    if(typeof this.pruneGameTemplates==="function")await this.pruneGameTemplates(5,id);
     return j({ok:true,template:rec});
   }
   // Artifact artwork is a reusable server-wide catalog, never part of a template revision.
