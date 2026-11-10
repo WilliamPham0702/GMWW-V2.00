@@ -77,7 +77,9 @@ test('alarm wiring: sync first, auto-advance cannot keep an expired empty room a
   assert.ok(alarm.includes('meta=await this.syncPlayerRoomEmpty(meta);const playerExpired=meta.playerRoom===true&&this.roomExpiryDue(meta)<=Date.now();'));
   assert.ok(alarm.includes('if(!playerExpired){\n        if(typeof this.dayCountdownCue==="function"&&await this.dayCountdownCue(meta)){await this.scheduleRoomAlarm(meta);return}\n        if(await this.runAutoAdvanceIfDue(meta))return;\n      }'));
   assert.ok(alarm.includes('async syncPlayerRoomEmpty(meta){')||source.slice(b).startsWith('  async gmDelete'),'sync method sits inside the alarm method range');
-  assert.ok(alarm.includes('"https://member.internal/directory/rooms/delete"')&&alarm.includes('if(meta.playerRoom===true)'),'expired player room is removed from the directory');
+  const w=source.indexOf('  async wipeRoom(meta,reason="ROOM_EXPIRED"){'),wipe=source.slice(w,source.indexOf('  async ownerState(request){',w));
+  assert.ok(alarm.includes('await this.wipeRoom(meta,"ROOM_EXPIRED")'),'alarm deletes expired rooms through the shared wipeRoom');
+  assert.ok(wipe.includes('"https://member.internal/directory/rooms/delete"')&&wipe.includes('if(meta.playerRoom===true)'),'expired player room is removed from the directory');
   assert.ok(source.includes('presenceDue=meta.playerRoom===true?Date.now()+PLAYER_ROOM_CHECK_MS:0'),'player rooms sample presence at least every 5 minutes');
   assert.equal((source.match(/setAlarm\(Date\.now\(\)\+\(meta&&meta\.playerRoom===true\?PLAYER_ROOM_CHECK_MS:ROOM_IDLE_TTL\)\)/g)||[]).length,4,'all idle alarms use the player-room delay');
   assert.equal(source.includes('setAlarm(Date.now()+ROOM_IDLE_TTL)}catch(_){}'),false);
