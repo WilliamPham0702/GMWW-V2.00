@@ -27,6 +27,7 @@ import { planPlayerRoomDeal, playerRoomConfigFromTemplate, missingRoleCards, own
 import { evaluatePlayerRoomCreate, playerRoomOccupied, nextEmptySince, playerRoomEmptyDue, PLAYER_ROOM_CHECK_MS } from "./gmww-player-room-policy.js";
 import { sanitizePlayerRoleCard, mergePlayerRoleCard, privateRole, sanitizePlayerArtifactCard, privateArtifact } from "./gmww-private-card-contract.js";
 import { isBattleActorBlocked } from "./gmww-battle-actor-eligibility.js";
+import { PLAYER_ROOM_ROLE_CATALOG } from "./player-room-role-catalog.js";
 import { expireCycleEffects } from "./gmww-cycle-effect-expiry.js";
 import { buildMatchHistory, upsertMatchIndex } from "./gmww-match-history.js";
 import { resolveWolfNight, readNightAssignments, isNightImmune, resolveNightReveal, canSnowWolfBite, resolveMaidenNight } from "./gmww-wolf-night-resolution.js";
@@ -4853,13 +4854,13 @@ async function playerRoomTemplates(env,request){
 }
 // Every role that has a published card (from the GM's Ván Mẫu), so an owner can build a deck from them.
 async function playerRoomSourceRoles(env){
-  const store=memberStore(env),lr=await store.fetch("https://member.internal/game-templates/list");if(!lr.ok)return{ok:false,res:lr};
-  const metas=((await lr.json().catch(()=>({})))?.templates||[]).slice(0,40),roles=new Map(),bases=new Map();
+  const store=memberStore(env),lr=await store.fetch("https://member.internal/game-templates/list");
+  const metas=lr.ok?(((await lr.json().catch(()=>({})))?.templates||[]).slice(0,40)):[],roles=new Map(PLAYER_ROOM_ROLE_CATALOG.map(r=>[String(r.roleId),{...r,templateId:''}])),bases=new Map();
   for(const m of metas){
     const tr=await store.fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(m.id));if(!tr.ok)continue;
     const t=(await tr.json().catch(()=>({})))?.template,cfg=t?.compiledConfig;if(!cfg||!Array.isArray(cfg.roles))continue;
     const {roles:_r,...base}=cfg;bases.set(m.id,base);
-    for(const r of cfg.roles){const id=String(r?.roleId||"");if(id&&!roles.has(id))roles.set(id,{...r,roleId:id,templateId:String(m.id)})}
+    for(const r of cfg.roles){const id=String(r?.roleId||"");if(id&&!roles.has(id))roles.set(id,{...r,roleId:id,templateId:String(m.id)});else if(id&&roles.has(id)&&!roles.get(id).templateId)roles.set(id,{...roles.get(id),templateId:String(m.id)})}
   }
   return{ok:true,roles,bases}
 }
@@ -4872,8 +4873,8 @@ async function playerRoomRoleList(env,request){
   const session=await memberStore(env).fetch(new Request("https://member.internal/members/session",{headers:request.headers}));
   if(!session.ok)return session;
   const src=await playerRoomSourceRoles(env);if(!src.ok)return src.res;
-  const arts=await playerRoomSourceArtifacts(env);if(!arts.ok)return arts.res;
-  return j({ok:true,roles:[...src.roles.values()].map(r=>({roleId:r.roleId,roleName:String(r.roleName||r.roleId),faction:String(r.faction||""),order:Number(r.order)||0})).sort((a,b)=>a.faction.localeCompare(b.faction,"vi")||a.roleName.localeCompare(b.roleName,"vi")),artifacts:arts.artifacts.map(x=>({artifactId:x.assetId.slice(9),name:String(x.roleCard.name||x.assetId.slice(9)),information:String(x.roleCard.information||''),singleUse:x.roleCard.singleUse===true,priorityFirst:x.roleCard.priorityFirst===true})).sort((a,b)=>a.name.localeCompare(b.name,'vi'))})
+  const arts=await playerRoomSourceArtifacts(env);
+  return j({ok:true,roles:[...src.roles.values()].map(r=>({roleId:r.roleId,roleName:String(r.roleName||r.name||r.roleId),faction:String(r.faction||""),order:Number(r.order)||0})).sort((a,b)=>a.faction.localeCompare(b.faction,"vi")||a.roleName.localeCompare(b.roleName,"vi")),artifacts:arts.ok?arts.artifacts.map(x=>({artifactId:x.assetId.slice(9),name:String(x.roleCard.name||x.assetId.slice(9)),information:String(x.roleCard.information||''),singleUse:x.roleCard.singleUse===true,priorityFirst:x.roleCard.priorityFirst===true})).sort((a,b)=>a.name.localeCompare(b.name,'vi')):[],artifactError:arts.ok?'':String(arts.res?.status||'unavailable')})
 }
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 async function playerRoomOwnerApi(env,rawCode,action,request){
@@ -4902,15 +4903,15 @@ async function playerRoomOwnerApi(env,rawCode,action,request){
     const src=await playerRoomSourceRoles(env);if(!src.ok)return src.res;
     const rows=[],copyAssets=[];
     for(const [rid,n] of picked){const r=src.roles.get(rid);if(!r)return j({ok:false,error:"ROLE_NOT_AVAILABLE",message:"Có vai chưa có lá bài."},400);
-      const row={...r,count:n};if(secs.has(rid))row.actionDurationSec=secs.get(rid);if(orders.has(rid))row.order=orders.get(rid);rows.push(row);copyAssets.push({from:r.templateId,roleId:rid})}
+      const row={...r,count:n};if(secs.has(rid))row.actionDurationSec=secs.get(rid);if(orders.has(rid))row.order=orders.get(rid);rows.push(row);if(r.templateId)copyAssets.push({from:r.templateId,roleId:rid})}
     const t=body.timing&&typeof body.timing==="object"?body.timing:{},timing={};
     for(const k of ["villageDiscussionSec","gallowsNominationSec","gallowsVoteSec","wolfDiscussionSec","earlyArtifactSec","defaultActionSec","artifactActionSec"])if(t[k]!=null&&t[k]!=="")timing[k]=Math.max(k.startsWith('gallows')?1:0,Math.min(3600,Math.trunc(Number(t[k])||0)));
     if(Object.prototype.hasOwnProperty.call(t,'autoAdvance'))timing.autoAdvance=t.autoAdvance!==false;
     const artifactEnabled=body.artifactsEnabled===true,selectedArtifacts=[...new Map((Array.isArray(body.artifacts)?body.artifacts:[]).map((a,i)=>[String(a?.artifactId||''),{artifactId:String(a?.artifactId||''),order:Math.max(0,Math.trunc(Number(a?.order)||i+1))}]).filter(([id])=>id)).values()];
     if(artifactEnabled&&!selectedArtifacts.length)return j({ok:false,error:"INVALID_ARTIFACT_SELECTION",message:"Chọn ít nhất một Artifact hoặc tắt Artifact."},400);
-    const availableArtifacts=await playerRoomSourceArtifacts(env);if(!availableArtifacts.ok)return availableArtifacts.res;
-    const allowedArtifacts=new Set(availableArtifacts.artifacts.map(x=>x.assetId.slice(9)));
-    if(selectedArtifacts.some(a=>!allowedArtifacts.has(a.artifactId)))return j({ok:false,error:"ARTIFACT_NOT_AVAILABLE",message:"Có Artifact chưa được phát hành trên Server."},400);
+    if(artifactEnabled){const availableArtifacts=await playerRoomSourceArtifacts(env);if(!availableArtifacts.ok)return availableArtifacts.res;
+      const allowedArtifacts=new Set(availableArtifacts.artifacts.map(x=>x.assetId.slice(9)));
+      if(selectedArtifacts.some(a=>!allowedArtifacts.has(a.artifactId)))return j({ok:false,error:"ARTIFACT_NOT_AVAILABLE",message:"Có Artifact chưa được phát hành trên Server."},400)}
     const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(body.artifactLimitPerCycle??3)||0)));
     const baseId=rows[0].templateId,base=src.bases.get(baseId)||{},compiledConfig={...base,name,playerCount:total,timing:{...(base.timing||{}),...timing},roles:rows.map(({templateId:_t,...r})=>r),artifactsEnabled:artifactEnabled,artifacts:artifactEnabled?selectedArtifacts:[],artifactLimitPerCycle};
     return memberStore(env).fetch("https://member.internal/game-templates/player-save",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({id:templateId||undefined,ownerLoginId,compiledConfig,copyAssets})})
@@ -4926,6 +4927,7 @@ async function playerRoomOwnerApi(env,rawCode,action,request){
       const rows=[];for(const [rid,n] of picked){const r=src.roles.get(rid);if(!r)return j({ok:false,error:"ROLE_NOT_AVAILABLE",message:"Có vai chưa có lá bài."},400);rows.push({...r,count:n})}
       const baseId=rows[0].templateId,id="custom-"+Date.now().toString(36),packages=[];
       for(const r of rows){
+        if(!r.templateId)continue;
         const ar=await memberStore(env).fetch("https://member.internal/game-templates/assets?id="+encodeURIComponent(r.templateId)+"&assetId="+encodeURIComponent("role:"+r.roleId));if(!ar.ok)continue;
         const d=await ar.json().catch(()=>null);if(d?.package)packages.push({...d.package,roleId:r.roleId})
       }
@@ -4934,8 +4936,16 @@ async function playerRoomOwnerApi(env,rawCode,action,request){
     }
     const id=String(body.templateId||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const tr=await memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));if(!tr.ok)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
-    const template=(await tr.json().catch(()=>({}))).template,packages=[];
-    const cfg=template?.compiledConfig||{};
+    let template=(await tr.json().catch(()=>({}))).template;const packages=[];
+    let cfg=template?.compiledConfig||{};
+    const override=body.matchOverrides&&typeof body.matchOverrides==='object'?body.matchOverrides:null;
+    if(override){
+      const timing={...(cfg.timing||{})};for(const k of ["villageDiscussionSec","gallowsNominationSec","gallowsVoteSec","wolfDiscussionSec","earlyArtifactSec","defaultActionSec","artifactActionSec"]){const n=Number(override.timing?.[k]);if(Number.isFinite(n))timing[k]=Math.max(k.startsWith('gallows')?1:0,Math.min(3600,Math.trunc(n)))}
+      const roleTimes=override.roleDurations&&typeof override.roleDurations==='object'?override.roleDurations:{};
+      const roles=(Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>Object.prototype.hasOwnProperty.call(roleTimes,String(r.roleId))?{...r,actionDurationSec:Math.max(0,Math.min(3600,Math.trunc(Number(roleTimes[r.roleId])||0)))}:r);
+      const artifactsEnabled=override.artifactsEnabled===true&&Array.isArray(cfg.artifacts)&&cfg.artifacts.length>0;
+      cfg={...cfg,timing,roles,artifactsEnabled};template={...template,compiledConfig:cfg};
+    }
     if(cfg.artifactsEnabled===true&&Array.isArray(cfg.artifacts)&&cfg.artifacts.length){
       const prep=await gmPreloadSharedArtifacts(env,code,new Request('https://room.internal/gm/shared-artifacts',{method:'POST',headers:{authorization:'Bearer '+GM_SYNC_TOKEN,'content-type':'application/json'},body:JSON.stringify({assetIds:cfg.artifacts.map(a=>'artifact:'+String(a?.artifactId||''))})}));
       if(!prep.ok)return prep;
