@@ -5,7 +5,7 @@
    Routes: POST /api/player-rooms, GET /api/player-rooms/templates, /api/player-rooms/:code/owner/*. */
 (function gmwwPlayerRooms(){
   const KEY='gmwwOwnedRoom',STEPS=[['lobby','Sảnh chờ'],['room','Phòng Game'],['seats','Tập hợp'],['game','Ván Mẫu'],['roles','Phân Vai'],['deal','Phát Vai'],['battle','Vào Trận']];
-  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false,joinCode:'',known:null,pos:null,chatOpen:false};
+  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],artifacts:[],catalogStatus:'idle',catalogError:'',deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false,joinCode:'',known:null,pos:null,chatOpen:false};
   const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
   const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.code&&v.token?v:null}catch(_){return null}};
   const save=v=>{try{if(v)localStorage.setItem(KEY,JSON.stringify(v));else localStorage.removeItem(KEY)}catch(_){}};
@@ -43,7 +43,17 @@
   const STAGE={lobby:'room',room:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
   function syncStage(k){if(!pr.own||!STAGE[k]||String(pr.state?.room?.phase||'lobby').toLowerCase()==='running')return;callOwner('stage','POST',{step:STAGE[k]}).then(refresh).catch(()=>{})}
   function goStep(k){pr.view=k;pr.touched=true;syncStage(k);render()}
-  async function loadTemplates(){const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];if(!pr.roles.length){try{const r=await api('/api/player-rooms/roles',{headers:auth()});pr.roles=Array.isArray(r.roles)?r.roles:[]}catch(_){}}}
+  async function loadTemplates(){
+    pr.catalogStatus='loading';pr.catalogError='';
+    try{
+      const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];
+      const available=new Map();for(const t of pr.templates){const cfg=t?.compiledConfig||t?.gameConfig||{};for(const r of Array.isArray(cfg.roles)?cfg.roles:[]){const id=String(r?.roleId||'');if(id&&!available.has(id))available.set(id,{roleId:id,roleName:String(r.roleName||r.name||id),faction:String(r.faction||''),order:Number(r.order)||0})}}
+      pr.roles=[...available.values()];
+      try{const r=await api('/api/player-rooms/roles',{headers:auth()});if(Array.isArray(r.roles)&&r.roles.length)pr.roles=r.roles;pr.artifacts=Array.isArray(r.artifacts)?r.artifacts:[];if(r.artifactError)pr.catalogError='Artifact chưa tải được.'}
+      catch(e){pr.catalogError=errText(e)}
+      pr.catalogStatus='ready';
+    }catch(e){pr.catalogStatus='error';pr.catalogError=errText(e);throw e}
+  }
   const btn=(label,fn,cls,disabled)=>{const b=el('button',cls||null,label);b.type='button';if(disabled||pr.busy)b.disabled=true;b.addEventListener('click',()=>run(fn));return b};
   const stat=(k,v)=>{const d=el('div','gmww-pr-stat');d.append(el('small',null,k),el('b',null,String(v)));return d};
   // Step the server is on, mapped to the six tabs; the owner can still browse the other tabs.
@@ -162,59 +172,123 @@
       await callOwner('seats-randomize','POST',{});pr.state=await api(base()+'state',{headers:oh()});render();
     }catch(_){}finally{pr.autoSeating=false}})();
   }
-  const TIMING=[['villageDiscussionSec','Thảo luận làng',300],['wolfDiscussionSec','Thảo luận Sói',30],['earlyArtifactSec','Artifact sớm',30],['defaultActionSec','Hành động mặc định',45],['artifactActionSec','Hành động Artifact',30]];
+  const TIMING=[['villageDiscussionSec','Thảo luận làng',300],['gallowsNominationSec','Đề cử Lên Giàn',60],['gallowsVoteSec','Bỏ phiếu Lên Giàn',60],['wolfDiscussionSec','Sói nhận diện nhau',30],['earlyArtifactSec','Artifact ưu tiên đầu ván',30],['defaultActionSec','Hành động mặc định',30],['artifactActionSec','Hành động Artifact',30]];
   const freshTiming=()=>Object.fromEntries(TIMING.map(([k,,d])=>[k,d]));
-  // Ván Mẫu: tab "Ván mẫu" (chọn/xoá, tối đa 5 ván gần nhất trên server) và tab "Tạo ván" (vai + thời gian + timeline, lưu).
+  // Ván Mẫu uses the same complete role, Artifact, order and timing configuration as the GM Server.
   function viewGame(box,st,room,players,locked){
-    const tab=pr.gameTab==='make'?'make':'pick',tabs=el('div','gmww-pr-tabs');
-    for(const [k,t] of [['make','Tạo ván'],['pick','Ván mẫu']]){const b=el('button',k===tab?'is-on':null,t);b.type='button';b.addEventListener('click',()=>{pr.gameTab=k;render()});tabs.append(b)}
-    box.append(tabs);
-    if(tab==='make')deckBuilder(box,players.length);else pickTemplates(box,st,players);
-    box.append(btn('TIẾP: PHÂN VAI →',async()=>goStep('roles'),'gmww-pr-main'));
+    if(pr.gameView==='design')deckBuilder(box,players.length);
+    else pickTemplates(box,st,players);
   }
   function pickTemplates(box,st,players){
     const cfg=st?.config,need=deckSize(cfg);
-    box.append(el('p','gmww-pr-help','Server chỉ giữ 5 Ván Mẫu gần nhất. Số lá bài phải bằng số người ('+players.length+').'));
-    if(!pr.templates.length)box.append(el('p','gmww-pr-help','Chưa có Ván Mẫu nào. Sang tab "Tạo ván" để tạo.'));
-    for(const t of pr.templates){
-      const card=el('div','gmww-pr-tpl'+(cfg?.id===t.id?' is-on':'')),fit=Number(t.playerCount)===players.length;
-      const head=el('div');head.append(el('b',null,t.name||'Ván Mẫu'),el('small',null,(t.playerCount||'?')+' người'+(fit?' • vừa đủ':'')+(t.source==='PLAYER'?' • người chơi tạo':' • Server')));
-      const acts=el('div','gmww-pr-tplacts');
-      acts.append(btn(cfg?.id===t.id?'ĐANG DÙNG':'Chọn ván',async()=>{await callOwner('template','POST',{templateId:t.id});say('Đã chọn Ván Mẫu.');await refresh()},null,cfg?.id===t.id),
-        btn('Xoá ván',async()=>{if(!confirm('Xoá Ván Mẫu "'+(t.name||'')+'"?'))return;await callOwner('template-delete','POST',{templateId:t.id});await loadTemplates();say('Đã xoá Ván Mẫu.')},'gmww-pr-danger'));
-      card.append(head,acts);box.append(card)}
-    if(cfg)box.append(el('p','gmww-pr-help','Đang chọn: '+(cfg.name||cfg.id)+' • '+need+' lá bài'));
+    box.append(el('div','gmww-pr-sub','CHỌN VÁN MẪU'));
+    if(pr.catalogStatus==='loading'||pr.catalogStatus==='idle')box.append(el('p','gmww-pr-help','Đang tải Ván Mẫu và thư viện Vai Trò…'));
+    if(pr.catalogStatus==='error')box.append(el('p','gmww-pr-note','Không tải được Ván Mẫu: '+pr.catalogError,btn('TẢI LẠI',async()=>loadTemplates(),'gmww-pr-main')));
+    const row=el('div','gmww-pr-game-actions'),suggest=el('label','gmww-pr-suggest');suggest.append(el('small',null,'VÁN GỢI Ý'));
+    const select=el('select');select.setAttribute('aria-label','Chọn Ván Mẫu');select.append(new Option('Chọn Ván Mẫu',''));
+    for(const t of pr.templates){const tc=t.compiledConfig||t.gameConfig||{},opt=new Option((t.name||'Ván Mẫu')+' • '+(t.playerCount||'?')+' người',String(t.id));opt.selected=String(t.id)==String(pr.selectedTemplateId||cfg?.id||'');select.append(opt)}
+    select.addEventListener('change',()=>{pr.selectedTemplateId=select.value;pr.matchTiming=null;pr.matchRoleSeconds=null;pr.matchArtifactEnabled=null;render()});suggest.append(select);
+    row.append(suggest,btn('✨ AUTO VÁN',async()=>{const deck=composeAutoDeck(pr.roles,players.length,pr.autoHistory||[]);pr.autoHistory=[...(pr.autoHistory||[]),deck.signature].slice(-100);await callOwner('template','POST',{custom:{name:'AUTO '+players.length+' người',roles:deck.roles.map((r,i)=>({roleId:r.roleId,count:r.count,order:i+1}))}});pr.selectedTemplateId='';say('Đã tạo AUTO VÁN cân bằng theo số người.');await refresh();goStep('roles')},'gmww-pr-main',players.length<3||!pr.roles.length),btn('+ THÊM MỚI',async()=>newTemplate(),'gmww-pr-main'));
+    box.append(row);
+    if(pr.catalogStatus==='ready'&&!pr.templates.length)box.append(el('p','gmww-pr-help','Chưa có Ván Mẫu đã lưu. Chạm + THÊM MỚI để thiết kế mẫu đầu tiên.'));
+    const active=pr.templates.find(t=>String(t.id)===String(pr.selectedTemplateId||cfg?.id||''));
+    if(active){const c=active.compiledConfig||active.gameConfig||{},count=deckSize(c),chosenArts=Array.isArray(c.artifacts)?c.artifacts:[];
+      const summary=el('div','gmww-pr-note');summary.textContent=count+' lá cho '+players.length+' người • '+(count===players.length?'Đủ số lượng':'Không khớp số người');box.append(summary);
+      const artifact=el('label','gmww-pr-deckrow gmww-pr-match-toggle'),check=el('input');check.type='checkbox';check.checked=pr.matchArtifactEnabled??(c.artifactsEnabled===true);check.disabled=!chosenArts.length;check.addEventListener('change',()=>{pr.matchArtifactEnabled=check.checked});artifact.append(check,el('span',null,'CÓ SỬ DỤNG ARTIFACT'),el('small',null,'Chỉ áp dụng cho trận này'));box.append(artifact);
+      box.append(el('p','gmww-pr-help','Artifact: '+(check.checked&&chosenArts.length?'CÓ sử dụng trong trận này':'KHÔNG sử dụng trong trận này')));
+      const timing=el('details','gmww-pr-timing');timing.append(el('summary',null,'THỜI GIAN THỰC HIỆN • Chạm để tùy chỉnh (giây)'));
+      const timeValues={...(c.timing||{}),...(pr.matchTiming||{})};for(const [key,label,def] of TIMING){const line=el('label','gmww-pr-deckrow');line.append(el('span',null,label),numberInput(timeValues[key]??def,0,3600,v=>{pr.matchTiming={...(pr.matchTiming||{}),[key]:v}}));timing.append(line)}
+      const roleTime=el('details','gmww-pr-timing');roleTime.append(el('summary',null,'THỜI GIAN RIÊNG TỪNG VAI • Chạm để tùy chỉnh (giây)'));
+      for(const r of c.roles||[]){const line=el('label','gmww-pr-deckrow');line.append(el('span',null,r.roleName||r.roleId),numberInput(pr.matchRoleSeconds?.[r.roleId]??r.actionDurationSec??timeValues.defaultActionSec??30,v=>{pr.matchRoleSeconds={...(pr.matchRoleSeconds||{}),[r.roleId]:v}}));roleTime.append(line)}
+      box.append(timing,roleTime);
+    }else if(cfg){box.append(el('p','gmww-pr-help','Ván đang áp dụng: '+(cfg.name||'Ván Mẫu')))}
+    const footer=el('div','gmww-pr-game-footer');footer.append(btn('HỦY',async()=>{pr.selectedTemplateId=cfg?.id||'';pr.matchTiming=null;pr.matchRoleSeconds=null;pr.matchArtifactEnabled=null;render()}),btn('CHỌN VÁN',async()=>{const id=pr.selectedTemplateId||active?.id||cfg?.id;if(!id)throw new Error('Hãy chọn một Ván Mẫu hoặc tạo AUTO VÁN.');const base=active?.compiledConfig||cfg||{},overrides={artifactsEnabled:pr.matchArtifactEnabled??base.artifactsEnabled,timing:pr.matchTiming||{},roleDurations:pr.matchRoleSeconds||{}};await callOwner('template','POST',{templateId:id,matchOverrides:overrides});pr.selectedTemplateId=id;say('Đã áp dụng Ván Mẫu cho trận này.');await refresh();goStep('roles')},'gmww-pr-main',!active&&!cfg||!players.length));box.append(footer);
+    if(active?.canEdit)box.append(btn('CHỈNH SỬA VÁN MẪU',async()=>editTemplate(active)));
   }
-  // Tạo ván: chọn số lá từng vai, thời gian hành động của từng vai và các thời gian timeline; Lưu ván / Xoá ván.
+  const numberInput=(value,min,max,onChange)=>{const i=el('input');i.type='number';i.inputMode='numeric';i.min=String(min);i.max=String(max);i.value=String(value);i.className='gmww-pr-sec-in';i.addEventListener('change',()=>onChange(Math.max(min,Math.min(max,Math.trunc(Number(i.value)||0)))));return i};
+  function newTemplate(){pr.editTemplateId='';pr.deckName='';pr.deck=new Map();pr.roleOrder=new Map();pr.secs=new Map();pr.timing=freshTiming();pr.artifactIds=new Set();pr.artifactLimitPerCycle=3;pr.gameView='design';render()}
+  function factionFor(role){const f=String(role?.faction||'').toLocaleLowerCase('vi');return f.includes('sói')||f==='wolf'?'Phe Sói':f.includes('ba')||f==='third'?'Phe Ba':'Phe Dân'}
+  function roleIsStarred(role){try{return typeof prefs!=='undefined'&&!!prefs.cards?.[role.roleId]?.starred}catch(_){return false}}
+  function composeAutoDeck(roles,players,history){
+    const n=Math.trunc(Number(players)||0);if(n<3||n>30)throw new Error('AUTO VÁN hỗ trợ 3–30 người.');
+    const all=new Map((roles||[]).map(r=>[String(r.roleId),{...r,id:String(r.roleId),name:String(r.roleName||r.roleId),factionId:factionFor(r)==='Phe Sói'?'wolf':factionFor(r)==='Phe Ba'?'third':'village'}]));
+    const get=(id,team)=>{const r=all.get(id);return r&&r.factionId===team?r:null},wolf=get('role_wolf','wolf'),villager=get('role_villager','village'),seer=get('role_seer','village');
+    if(!wolf||!villager||!seer)throw new Error('Thư viện chưa có đủ Sói Thường, Dân Làng và Tiên Tri.');
+    const neutrals=['role_destroyer','role_assassin'].map(id=>get(id,'third')).filter(Boolean);if(n>=10&&!neutrals.length)throw new Error('Thư viện chưa có vai Phe Ba cho AUTO VÁN.');
+    const wolves=n<=6?1:Math.max(2,Math.round((n-1)/4.5)),third=n>=10?1:0,special=n<=4?1:n<=8?2:n<=11?3:n<=15?4:n<=20?5:Math.min(8,Math.floor(n/3)),seen=new Set((history||[]).slice(-1));
+    const pick=(arr,salt)=>arr.length?arr[Math.floor(((Math.random()+salt*.61803398875)%1)*arr.length)]:null;
+    for(let attempt=0;attempt<160;attempt++){
+      const counts=new Map(),add=(r,num=1)=>{if(r)counts.set(r.id,(counts.get(r.id)||0)+num)};add(wolf);
+      const variants=(n>=12?['role_wolf_seer','role_wolf_cub']:[]).concat(n>=15?['role_alpha_wolf']:[],n>=17?['role_snow_wolf','role_wolf_hunter']:[]).map(id=>get(id,'wolf')).filter(Boolean);
+      for(let i=1;i<wolves;i++)add(variants.length&&i<=Math.min(2,Math.floor(n/8))?pick(variants,attempt+i*5):wolf);if(third)add(pick(neutrals,attempt+2));
+      const slots=n-wolves-third,ids=n<=4?['role_seer','role_guard','role_aura_seer']:n===5?['role_seer','role_guard','role_aura_seer','role_witch','role_hunter']:['role_seer','role_guard','role_witch','role_hunter','role_spiritualist','role_fox','role_aura_seer','role_piper','role_maiden','role_fairy','role_knight','role_bear_god'];
+      const available=ids.map(id=>get(id,'village')).filter(Boolean),required=n>=6?[seer]:[];if(n>=5){const defense=pick(['role_guard','role_witch'].map(id=>get(id,'village')).filter(Boolean),attempt+3);if(defense&&!required.some(r=>r.id===defense.id))required.push(defense)}for(const r of required)add(r);
+      const pool=[...all.values()].filter(r=>r.factionId==='village'&&r.id!=='role_villager'&&!available.some(a=>a.id===r.id)),others=available.filter(r=>!counts.has(r.id)).concat(pool.filter(r=>!counts.has(r.id)));let extra=Math.min(Math.max(0,slots-required.length),others.length);
+      for(let i=0;i<extra;i++){const curated=others.filter(r=>available.some(a=>a.id===r.id)),candidate=pick(i<special-required.length&&curated.length?curated:others,attempt+i+7);add(candidate);others.splice(others.indexOf(candidate),1)}
+      const rows=[...counts].map(([id,count])=>({roleId:id,count})),village=rows.filter(r=>all.get(r.roleId)?.factionId==='village').reduce((sum,r)=>sum+r.count,0),signature=rows.map(r=>r.roleId+':'+r.count).sort().join('|');
+      if(village!==slots||rows.reduce((sum,r)=>sum+r.count,0)!==n||village<=wolves||seen.has(signature))continue;return{roles:rows,signature};
+    }throw new Error('Đã hết đội hình khác nhau với thư viện hiện tại.');
+  }
+  function editTemplate(t){
+    const cfg=t?.compiledConfig;if(!cfg)return;
+    pr.editTemplateId=t.canEdit===true?String(t.id||''):'';pr.deckName=String(t.name||cfg.name||'Ván của tôi');pr.deck=new Map((cfg.roles||[]).map(r=>[String(r.roleId),Math.max(0,Number(r.count)||0)]).filter(([id,n])=>id&&n));
+    pr.roleOrder=new Map((cfg.roles||[]).map(r=>[String(r.roleId),Number(r.order)||0]));pr.secs=new Map((cfg.roles||[]).map(r=>[String(r.roleId),Number(r.actionDurationSec)]).filter(([,n])=>Number.isFinite(n)));
+    pr.timing={...freshTiming(),...(cfg.timing||{})};pr.artifactIds=new Set(cfg.artifactsEnabled===true?(cfg.artifacts||[]).map(a=>String(a.artifactId||'')).filter(Boolean):[]);pr.artifactLimitPerCycle=Math.max(0,Number(cfg.artifactLimitPerCycle??3)||0);pr.gameView='design';render();
+  }
+  // Full Ván Mẫu editor: roles and order, per-role action time, Artifact pool/quota, game timing.
   function deckBuilder(box,people){
-    box.append(el('div','gmww-pr-sub','TẠO VÁN'));
-    if(!pr.roles.length){box.append(el('p','gmww-pr-help','Chưa có danh sách vai để tạo ván.'));return}
+    const title=el('div','gmww-pr-sub','THIẾT KẾ VÁN MẪU');box.append(title,el('p','gmww-pr-help','Thư Viện • lưu trước khi vào Phòng'));
+    if(pr.catalogStatus==='loading'||pr.catalogStatus==='idle'){box.append(el('p','gmww-pr-help','Đang tải danh sách vai từ Ván Mẫu Server…'));return}
+    if(pr.catalogStatus==='error'){box.append(el('p','gmww-pr-note','Không tải được danh sách Ván Mẫu Server: '+pr.catalogError),btn('TẢI LẠI DANH SÁCH',async()=>{await loadTemplates()},'gmww-pr-main'));return}
+    if(!pr.roles.length){box.append(el('p','gmww-pr-help','Chưa có danh sách Vai Trò từ Ván Mẫu Server. Hãy tải lại danh sách hoặc chọn một mẫu đã lưu.'));return}
+    if(pr.catalogError)box.append(el('p','gmww-pr-note','Danh sách Vai Trò đã tải từ Ván Mẫu Server; danh sách Artifact chưa tải được: '+pr.catalogError));
     if(!pr.timing)pr.timing=freshTiming();if(!pr.secs)pr.secs=new Map();
+    const templateRow=el('div','gmww-pr-game-actions'),templateSelect=el('select');templateSelect.setAttribute('aria-label','Chọn mẫu để chỉnh sửa');templateSelect.append(new Option('Tạo Ván Mẫu mới',''));
+    for(const t of pr.templates){const opt=new Option(t.name||'Ván Mẫu',String(t.id));if(String(t.id)===String(pr.editTemplateId||''))opt.selected=true;templateSelect.append(opt)}
+    templateSelect.addEventListener('change',()=>{const t=pr.templates.find(x=>String(x.id)===templateSelect.value);if(t)editTemplate(t);else newTemplate()});
+    templateRow.append(templateSelect,btn('+ THÊM MỚI',async()=>newTemplate(),'gmww-pr-main'));const editing=pr.templates.find(t=>String(t.id)===String(pr.editTemplateId||''));if(editing?.canEdit===true)templateRow.append(btn('XÓA MẪU',async()=>{if(!confirm('Xóa Ván Mẫu “'+(editing.name||'')+'”?'))return;await callOwner('template-delete','POST',{templateId:editing.id});pr.editTemplateId='';await loadTemplates();pr.gameView='pick';say('Đã xóa Ván Mẫu.');render()},'gmww-pr-danger'));box.append(templateRow);
+    box.append(btn('← QUAY LẠI CHỌN VÁN',async()=>{pr.gameView='pick';render()}));
     const name=el('input');name.id='gmwwPrDeckName';name.maxLength=48;name.placeholder='Tên Ván Mẫu';name.value=pr.deckName;name.addEventListener('input',()=>{pr.deckName=name.value});box.append(name);
-    const sum=el('div','gmww-pr-note');sum.id='gmwwPrDeckSum';box.append(sum);
+    box.append(el('div','gmww-pr-sub','CHỌN VAI TRÒ'));
+    const filters=el('div','gmww-pr-role-filters'),search=el('input');search.placeholder='Tìm Lá Bài theo tên hoặc Phe…';search.value=pr.roleSearch||'';search.addEventListener('input',()=>{pr.roleSearch=search.value;renderRoleGallery()});
+    const faction=el('select');faction.append(new Option('Tất cả phe','all'),new Option('Phe Dân','Phe Dân'),new Option('Phe Sói','Phe Sói'),new Option('Phe Ba','Phe Ba'));faction.value=pr.roleFaction||'all';faction.addEventListener('change',()=>{pr.roleFaction=faction.value;renderRoleGallery()});
+    const onlyFav=el('label','gmww-pr-favorite'),fav=el('input');fav.type='checkbox';fav.checked=!!pr.roleStarredOnly;fav.addEventListener('change',()=>{pr.roleStarredOnly=fav.checked;renderRoleGallery()});onlyFav.append(fav,el('span',null,'★ Thường dùng'));filters.append(search,faction,onlyFav);box.append(filters);
+    const gallery=el('div','gmww-pr-role-gallery');gallery.id='gmwwPrRoleGallery';box.append(gallery);
+    const sum=el('div','gmww-pr-note');sum.id='gmwwPrDeckSum';box.append(el('div','gmww-pr-sub','VAI TRÒ ĐÃ CHỌN'),sum);
+    const selected=el('div','gmww-pr-list');selected.id='gmwwPrSelectedRoles';box.append(selected);
     const total=()=>[...pr.deck.values()].reduce((a,b)=>a+b,0);
-    const refreshSum=()=>{const t=total(),ok=t>0&&t<=30;sum.textContent='Đã chọn '+t+' lá • Số người '+people+(t===people?' • Đủ':t>people?' • Thừa '+(t-people):' • Thiếu '+(people-t));const a=document.getElementById('gmwwPrDeckApply');if(a)a.disabled=pr.busy||!ok};
-    const num=(val,onSet)=>{const i=el('input');i.type='number';i.inputMode='numeric';i.min='0';i.max='3600';i.value=String(val);i.className='gmww-pr-sec-in';i.addEventListener('input',()=>onSet(Math.max(0,Math.min(3600,Math.trunc(Number(i.value)||0)))));return i};
-    const groups=new Map();for(const r of pr.roles){const f=r.faction||'Khác';if(!groups.has(f))groups.set(f,[]);groups.get(f).push(r)}
-    for(const [f,rows] of groups){
-      const sec=el('div','gmww-pr-deck');sec.append(el('small',null,f));
-      for(const r of rows){
-        const line=el('div','gmww-pr-deckrow'),cnt=el('b',null,String(pr.deck.get(r.roleId)||0)),minus=el('button','gmww-pr-step','−'),plus=el('button','gmww-pr-step','+'),secIn=num(pr.secs.has(r.roleId)?pr.secs.get(r.roleId):pr.timing.defaultActionSec,v=>pr.secs.set(r.roleId,v));
-        minus.type=plus.type='button';secIn.title='Giây hành động';secIn.style.display=pr.deck.get(r.roleId)?'':'none';
-        const set=n=>{n=Math.max(0,Math.min(30,n));if(n)pr.deck.set(r.roleId,n);else pr.deck.delete(r.roleId);cnt.textContent=String(n);secIn.style.display=n?'':'none';refreshSum()};
-        minus.addEventListener('click',()=>set((pr.deck.get(r.roleId)||0)-1));plus.addEventListener('click',()=>set((pr.deck.get(r.roleId)||0)+1));
-        const ctl=el('div','gmww-pr-ctl');ctl.append(secIn,minus,cnt,plus);line.append(el('span',null,r.roleName||r.roleId),ctl);sec.append(line)}
-      box.append(sec)}
+    const refreshSum=()=>{const t=total(),ok=t>0&&t<=30;sum.textContent=t+' lá • '+new Set([...pr.deck.keys()]).size+' vai • '+(t===people?'Đủ số người':t>people?'Thừa '+(t-people):'Thiếu '+(people-t));const a=document.getElementById('gmwwPrDeckApply');if(a)a.disabled=pr.busy||!ok;renderSelectedRoles()};
+    const renderRoleGallery=()=>{gallery.replaceChildren();const q=String(pr.roleSearch||'').trim().toLocaleLowerCase('vi'),rows=pr.roles.filter(r=>(!q||(String(r.roleName||r.roleId)+' '+factionFor(r)).toLocaleLowerCase('vi').includes(q))&&(pr.roleFaction==='all'||!pr.roleFaction||factionFor(r)===pr.roleFaction)&&(!pr.roleStarredOnly||roleIsStarred(r)));
+      for(const r of rows){const picked=!!pr.deck.get(r.roleId),card=el('button','gmww-pr-role-card'+(picked?' is-picked':''));card.type='button';card.setAttribute('aria-pressed',String(picked));
+        const art=el('span','gmww-pr-role-art'),img=el('img');img.alt='';img.loading='lazy';art.append(img,el('i',null,picked?'✓':'+'));card.append(art,el('b',null,r.roleName||r.roleId));
+        resolveArtwork('cards',r.roleId,'thumb').then(url=>{if(img.isConnected)img.src=url||'default-artwork.webp'}).catch(()=>{if(img.isConnected)img.src='default-artwork.webp'});img.onerror=()=>{img.onerror=null;img.src='default-artwork.webp'};
+        card.addEventListener('click',()=>{const n=pr.deck.get(r.roleId)||0;if(n)pr.deck.delete(r.roleId);else pr.deck.set(r.roleId,1);render();});gallery.append(card)}
+      if(!rows.length)gallery.append(el('p','gmww-pr-help','Không tìm thấy Lá Bài. Hãy điều chỉnh bộ lọc.'))};
+    const renderSelectedRoles=()=>{selected.replaceChildren();const roles=pr.roles.filter(r=>pr.deck.has(r.roleId)).sort((a,b)=>(pr.roleOrder?.get(a.roleId)||a.order||999)-(pr.roleOrder?.get(b.roleId)||b.order||999));const counts={'Phe Dân':0,'Phe Sói':0,'Phe Ba':0};for(const r of roles)counts[factionFor(r)]+=Number(pr.deck.get(r.roleId))||0;
+      const totals=el('div','gmww-pr-faction-totals');for(const [k,v] of [['Tổng vai',total()],['Dân',counts['Phe Dân']],['Sói',counts['Phe Sói']],['Phe Ba',counts['Phe Ba']]])totals.append(stat(k,v));selected.append(totals);
+      for(const [i,r] of roles.entries()){const line=el('div','gmww-pr-selected-role'),image=el('img');image.loading='lazy';image.alt='';line.append(image);resolveArtwork('cards',r.roleId,'thumb').then(url=>{if(image.isConnected)image.src=url||'default-artwork.webp'}).catch(()=>{if(image.isConnected)image.src='default-artwork.webp'});
+        const title=el('span','gmww-pr-selected-title');title.append(el('b',null,r.roleName||r.roleId),el('small',null,factionFor(r)));const ctl=el('div','gmww-pr-ctl'),less=el('button','gmww-pr-step','−'),count=el('b',null,String(pr.deck.get(r.roleId)||0)),more=el('button','gmww-pr-step','+');less.type=more.type='button';
+        const set=n=>{n=Math.max(0,Math.min(30,n));if(n)pr.deck.set(r.roleId,n);else pr.deck.delete(r.roleId);render();};less.onclick=()=>set((pr.deck.get(r.roleId)||0)-1);more.onclick=()=>set((pr.deck.get(r.roleId)||0)+1);ctl.append(less,count,more);
+        const time=numberInput(pr.secs.has(r.roleId)?pr.secs.get(r.roleId):pr.timing.defaultActionSec,0,3600,v=>{pr.secs.set(r.roleId,v)});time.title='Thời gian riêng của vai (giây)';
+        const order=numberInput(pr.roleOrder?.get(r.roleId)||i+1,1,99,v=>{pr.roleOrder.set(r.roleId,v)});order.title='Thứ tự';line.append(title,order,time,ctl);selected.append(line)}
+      if(!roles.length)selected.append(el('p','gmww-pr-help','Chưa chọn Vai Trò. Chạm vào ảnh phía trên để thêm vào ván.'))};
+    renderRoleGallery();
+    const artifacts=el('div','gmww-pr-deck');artifacts.append(el('small',null,'ARTIFACT • chọn các lá có thể phát trong ván'));
+    if(!pr.artifacts.length)artifacts.append(el('p','gmww-pr-help','Chưa có Artifact đã đồng bộ từ Server.'));
+    for(const a of pr.artifacts){const line=el('label','gmww-pr-deckrow'),check=el('input');check.type='checkbox';check.checked=pr.artifactIds?.has(a.artifactId)||false;check.addEventListener('change',()=>{if(!pr.artifactIds)pr.artifactIds=new Set();if(check.checked)pr.artifactIds.add(a.artifactId);else pr.artifactIds.delete(a.artifactId)});line.append(check,el('span',null,a.name||a.artifactId),el('small',null,a.singleUse?'Dùng một lần':''));artifacts.append(line)}
+    const quotaLine=el('div','gmww-pr-deckrow');quotaLine.append(el('span',null,'Artifact tối đa mỗi Ngày / Đêm'),numberInput(pr.artifactLimitPerCycle??3,0,30,v=>{pr.artifactLimitPerCycle=v}));artifacts.append(quotaLine);box.append(artifacts);
     const tl=el('div','gmww-pr-deck');tl.append(el('small',null,'TIMELINE (giây)'));
-    for(const [k,label] of TIMING){const line=el('div','gmww-pr-deckrow');line.append(el('span',null,label),num(pr.timing[k],v=>{pr.timing[k]=v}));tl.append(line)}
-    box.append(tl);
-    const row=el('div','gmww-pr-line');
+    for(const [k,label] of TIMING){const line=el('div','gmww-pr-deckrow');line.append(el('span',null,label),numberInput(pr.timing[k],0,3600,v=>{pr.timing[k]=v}));tl.append(line)}
+    const auto=el('label','gmww-pr-deckrow'),autoCheck=el('input');autoCheck.type='checkbox';autoCheck.checked=pr.timing.autoAdvance!==false;auto.append(autoCheck,el('span',null,'Tự động chuyển vai khi hết giờ'));autoCheck.addEventListener('change',()=>{pr.timing.autoAdvance=autoCheck.checked});tl.append(auto);
+    const details=el('details','gmww-pr-designer-advanced');details.append(el('summary',null,'Artifact và thời gian trận'));details.append(artifacts,tl);box.append(details);
+    const row=el('div','gmww-pr-game-footer');
     const save=btn('LƯU VÁN',async()=>{
-      const roles=[...pr.deck].map(([roleId,count])=>({roleId,count,actionDurationSec:pr.secs.has(roleId)?pr.secs.get(roleId):pr.timing.defaultActionSec}));
-      await callOwner('template-save','POST',{name:pr.deckName.trim()||'Ván của tôi',roles,timing:pr.timing});
-      say('Đã lưu Ván Mẫu. Server chỉ giữ 5 ván gần nhất.');pr.deckName='';pr.deck=new Map();pr.secs=new Map();pr.timing=freshTiming();pr.gameTab='pick';await loadTemplates()},'gmww-pr-main');save.id='gmwwPrDeckApply';
-    const clear=btn('XOÁ VÁN',async()=>{pr.deckName='';pr.deck=new Map();pr.secs=new Map();pr.timing=freshTiming();render()},'gmww-pr-danger');
-    row.append(save,clear);box.append(row);
+      const roles=[...pr.deck].map(([roleId,count],i)=>({roleId,count,order:pr.roleOrder?.get(roleId)||i+1,actionDurationSec:pr.secs.has(roleId)?pr.secs.get(roleId):pr.timing.defaultActionSec}));
+      const artifacts=[...(pr.artifactIds||new Set())].map((artifactId,i)=>({artifactId,order:i+1}));
+      await callOwner('template-save','POST',{templateId:pr.editTemplateId||'',name:pr.deckName.trim()||'Ván của tôi',roles,timing:pr.timing,artifactsEnabled:artifacts.length>0,artifacts,artifactLimitPerCycle:pr.artifactLimitPerCycle??3});
+      say(pr.editTemplateId?'Đã cập nhật Ván Mẫu trên Server.':'Đã lưu Ván Mẫu trên Server.');pr.editTemplateId='';pr.deckName='';pr.deck=new Map();pr.secs=new Map();pr.roleOrder=new Map();pr.artifactIds=new Set();pr.artifactLimitPerCycle=3;pr.timing=freshTiming();pr.gameView='pick';await loadTemplates()},'gmww-pr-main');save.id='gmwwPrDeckApply';
+    save.textContent='LƯU';
+    const cancel=btn('HỦY',async()=>{pr.gameView='pick';render()});row.append(cancel,save);box.append(row);
     refreshSum();
   }
   function viewRoles(box,st,room,players){
@@ -223,7 +297,8 @@
     if(!cfg){box.append(el('p','gmww-pr-note','Chưa chọn Ván Mẫu.'),btn('← VÁN MẪU',async()=>goStep('game')));return}
     box.append(el('p','gmww-pr-help','Bấm PHÂN VAI NGẪU NHIÊN để máy chủ xáo bài kín. Có thể phân nhiều lần. Để giữ bí mật, không ai (kể cả bạn) thấy ai giữ vai hay Artifact nào.'));
     if(!ok)box.append(el('p','gmww-pr-note','Số lá bài ('+need+') chưa bằng số người ('+players.length+'). Hãy đổi Ván Mẫu hoặc điều chỉnh số người.'));
-    box.append(btn('🎲 PHÂN VAI NGẪU NHIÊN',async()=>{await callOwner('roles-shuffle','POST',{});say('Đã phân vai ngẫu nhiên (kín).');await refresh()},'gmww-pr-main',!ok));
+    if(cfg.artifactsEnabled)box.append(el('p','gmww-pr-note','Artifact được trộn và phát ngẫu nhiên cùng với Vai Trò. Người chủ phòng không thấy ai nhận lá nào.'));
+    box.append(btn('🎲 PHÂN VAI NGẪU NHIÊN',async()=>{await callOwner('roles-shuffle','POST',{});say('Đã trộn Vai Trò và Artifact kín trên Server.');await refresh()},'gmww-pr-main',!ok));
     const row=el('div','gmww-pr-tools');row.append(btn('← VÁN MẪU',async()=>goStep('game')),btn('TIẾP: PHÁT VAI →',async()=>goStep('deal'),'gmww-pr-main',!ok));box.append(row);
   }
   function viewDeal(box,st,room,players,locked){
@@ -242,7 +317,7 @@
   }
   const stepNow=()=>{const room=pr.state?.room||{};return String(room.phase||'lobby').toLowerCase()==='running'?'battle':serverStep(room)};
   const inOwnRoom=()=>!!(pr.own&&state?.roomCode&&String(state.roomCode).toUpperCase()===String(pr.own.code).toUpperCase());
-  function openSheet(){closeChat();pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>{});refresh()}
+  function openSheet(){closeChat();pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>render());refresh()}
   function closeSheet(){pr.open=false;render()}
   window.gmwwOpenCreateRoom=()=>{if(pr.own&&!inOwnRoom()){/* own room exists but the player is elsewhere */}openSheet()};
   // ---- Trang rời (Phòng, Chat): kéo được bằng thanh nắm/tiêu đề, hít vào menu trên/dưới (như màn Server), bấm ngoài để đóng.
@@ -333,7 +408,8 @@
     panel.hidden=!pr.open;back.hidden=!(pr.open||pr.chatOpen||pr.holdBack||seatDragOn());back.classList.toggle('seatdrag',seatDragOn());renderChrome();if(!pr.open)return;
     panel.textContent='';
     const head=el('header','gmww-pr-head'),close=el('button','gmww-pr-close','×');close.type='button';close.setAttribute('aria-label','Đóng');close.addEventListener('click',closeSheet);
-    head.append(el('b',null,pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng')),close);panel.append(el('i','gmww-pr-grip'),head);
+    const panelTitle=pr.view==='game'?(pr.gameView==='design'?'Thiết kế Ván Mẫu':'Chọn Ván Mẫu'):pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng');
+    head.append(el('b',null,panelTitle),close);panel.append(el('i','gmww-pr-grip'),head);
     const body=el('div','gmww-pr-body');
     if(!pr.own||pr.view==='room'&&!inOwnRoom()){
       viewRoomHub(body,pr.state,pr.state?.room||{},Array.isArray(pr.state?.players)?pr.state.players:[]);
@@ -437,7 +513,7 @@
       +'#gmwwStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}'
       +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex-direction:column;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
-      +'.gmww-pr-ctl{display:flex;align-items:center;gap:8px}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-panel button.gmww-pr-step{padding:0;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1}'
+      +'.gmww-pr-ctl{display:flex;align-items:center;gap:6px;flex-shrink:0}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-order{min-width:18px;text-align:center;opacity:.75}.gmww-pr-panel button.gmww-pr-step{padding:0;width:32px;height:32px;border-radius:50%;font-size:18px;line-height:1}.gmww-pr-tpldetail{display:block;max-width:62vw;white-space:normal!important;line-height:1.35;opacity:.78}'
       +'.gmww-pr-roomrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid #4fc3f7!important;background:#0b3a5e!important;color:#e8f6ff;text-align:left}.gmww-pr-roomrow div{display:flex;flex-direction:column;gap:2px;min-width:0}.gmww-pr-roomrow small{opacity:.75;font-weight:500}.gmww-pr-roomrow span{font-size:24px}'
       +'.gmww-pr-back{position:fixed;inset:0;z-index:9490;background:rgba(0,0,0,.22)}.gmww-pr-back[hidden]{display:none}.gmww-pr-seatlist summary{padding:8px 2px;font-weight:700;cursor:pointer}.gmww-pr-tabs{display:flex;gap:6px}.gmww-pr-tabs button{flex:1;padding:10px;border-radius:12px;border:1px solid #4fc3f7;background:#0b3a5e;color:#e8f6ff;font-weight:700}.gmww-pr-tabs button.is-on{background:#27c4b3;color:#032}.gmww-pr-tplacts{display:flex;gap:8px;margin-top:6px}.gmww-pr-tplacts button{flex:1}input.gmww-pr-sec-in{width:64px;padding:6px;border-radius:8px;text-align:center}.gmww-pr-back.seatdrag{background:transparent;touch-action:none}'
       +'.gmww-pr-panel{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:9500;max-height:calc(100vh - 290px - env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,#0f4c75,#0a2f4f);color:#e8f6ff;display:flex;flex-direction:column;font-size:15px;border-radius:18px 18px 0 0;border-top:1px solid #4fc3f7;box-shadow:0 -10px 40px #000a}.gmww-pr-panel[hidden]{display:none}'
@@ -454,7 +530,8 @@
       +'.gmww-pr-row{display:grid;grid-template-columns:1fr auto;gap:8px}.gmww-pr-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gmww-pr-line{display:flex;flex-wrap:nowrap;align-items:center;gap:8px}.gmww-pr-line button{white-space:nowrap;padding:8px 10px}.gmww-pr-linecode{flex:1;text-align:center;font-size:22px;letter-spacing:4px;min-width:0}'
       +'.gmww-pr-list{display:flex;flex-direction:column;gap:6px}.gmww-pr-player{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#0b3a5e;border:1px solid #1d6fa5}.gmww-pr-player button.gmww-pr-kick{padding:6px 12px;background:#7f1d1d;font-size:12px}'
       +'.gmww-pr-tpl{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border-radius:12px;background:#0b3a5e;border:1px solid #1d6fa5}.gmww-pr-tpl.is-on{border-color:#4fc3f7}.gmww-pr-tpl div{display:flex;flex-direction:column;gap:2px}.gmww-pr-tpl small{opacity:.75}.gmww-pr-tpl button{padding:8px 14px}'
-      +'.gmww-pr-deck{background:#0b3a5e;border:1px solid #1d6fa5;border-radius:12px;padding:8px 10px}.gmww-pr-deck small{opacity:.7}.gmww-pr-deckrow{display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #1f2944}.gmww-pr-deckrow:first-of-type{border-top:0}'
+      +'.gmww-pr-deck{background:#0b3a5e;border:1px solid #1d6fa5;border-radius:12px;padding:8px 10px}.gmww-pr-deck small{opacity:.7}.gmww-pr-deckrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #1f2944}.gmww-pr-deckrow:first-of-type{border-top:0}'
+      +'.gmww-pr-game-actions{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:stretch}.gmww-pr-suggest{min-width:0;display:flex;flex-direction:column;gap:4px;padding:6px;border:1px solid #4fc3f7;border-radius:12px}.gmww-pr-suggest small{font-weight:800;text-align:center}.gmww-pr-suggest select,.gmww-pr-game-actions>button{min-width:0;height:100%;font-size:12px;padding:9px 6px}.gmww-pr-game-footer{display:grid;grid-template-columns:.8fr 1.2fr;gap:8px;padding-top:8px;border-top:1px solid #1d6fa5}.gmww-pr-game-footer button{min-height:48px}.gmww-pr-match-toggle{justify-content:flex-start!important;min-height:58px;padding:12px!important;border:1px solid #4fc3f7;border-radius:12px;background:#0b3a5e}.gmww-pr-match-toggle input,.gmww-pr-favorite input{width:auto!important}.gmww-pr-match-toggle span{font-weight:800}.gmww-pr-timing{border:1px solid #4fc3f7;border-radius:12px;padding:10px;background:#0b3a5e}.gmww-pr-timing summary,.gmww-pr-designer-advanced summary{font-weight:800;cursor:pointer;padding:4px}.gmww-pr-role-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.7fr);gap:7px}.gmww-pr-role-filters .gmww-pr-favorite{grid-column:1/-1;display:flex;align-items:center;gap:8px}.gmww-pr-role-gallery{display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;padding:4px 2px 10px}.gmww-pr-role-card{flex:0 0 112px;width:112px;max-width:112px;padding:6px!important;display:flex;flex-direction:column;gap:5px;align-items:center;background:#082e4b!important;border:2px solid #315d79!important}.gmww-pr-role-card.is-picked{border-color:#4fc3f7!important;box-shadow:0 0 0 2px #4fc3f744}.gmww-pr-role-art{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;border-radius:10px;background:#123c58}.gmww-pr-role-art img{width:100%;height:100%;object-fit:cover}.gmww-pr-role-art i{position:absolute;right:5px;top:5px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#0d5374;color:#fff;font-style:normal}.gmww-pr-role-card b{font-size:12px;color:#9bd9ff;text-align:center}.gmww-pr-faction-totals{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.gmww-pr-selected-role{display:flex;align-items:center;gap:7px;padding:7px;border:1px solid #1d6fa5;border-radius:10px;background:#0b3a5e}.gmww-pr-selected-role>img{width:40px;height:48px;object-fit:cover;border-radius:6px}.gmww-pr-selected-title{flex:1;display:flex;flex-direction:column;min-width:0}.gmww-pr-selected-title small{opacity:.7}.gmww-pr-selected-role input.gmww-pr-sec-in{width:52px;padding:5px}.gmww-pr-designer-advanced{display:flex;flex-direction:column;gap:8px;padding:9px;border:1px solid #1d6fa5;border-radius:12px}'
       +'.gmww-pr-code{display:flex;flex-direction:column;align-items:center;padding:12px;border-radius:14px;background:#0b3a5e;border:1px solid #4fc3f7}.gmww-pr-code small{opacity:.7;font-size:11px;letter-spacing:.1em}.gmww-pr-code b{font-size:34px;letter-spacing:.18em}.gmww-pr-sub{font-size:11px;font-weight:700;letter-spacing:.05em;opacity:.8}.gmww-pr-who{display:flex;align-items:center;gap:8px;min-width:0}.gmww-pr-dot{width:9px;height:9px;border-radius:50%;background:#3fb868;flex:none}.gmww-pr-dot.is-off{background:#6b7280}.gmww-pr-status{font-size:12px;opacity:.9;min-height:16px}'));
     const back=el('div','gmww-pr-back');back.id='gmwwPrBack';back.hidden=true;back.addEventListener('click',()=>{if(pr.suppressBackClick)return;if(pr.chatOpen)closeChat();if(pr.open)closeSheet()});installSeatDrag(back);
     const panel=el('div','gmww-pr-panel');panel.id='gmwwPrPanel';panel.hidden=true;document.body.append(back,panel);

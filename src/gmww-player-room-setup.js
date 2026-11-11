@@ -14,21 +14,29 @@ export function expandDeck(roles){
 }
 
 // members: [{loginId}], shuffle: array => shuffled copy (the Worker passes its crypto shuffle).
-export function planPlayerRoomDeal(roles,members,shuffle){
+export function planPlayerRoomDeal(roles,members,shuffle,artifacts=[]){
   const deck=expandDeck(roles),people=(Array.isArray(members)?members:[]).filter(m=>m&&m.loginId);
   if(!people.length)return{ok:false,error:'NO_PLAYERS'};
   if(deck.length!==people.length)return{ok:false,error:'ROLE_COUNT_MISMATCH',need:deck.length,have:people.length};
   const mixed=shuffle([...deck]);
   if(!Array.isArray(mixed)||mixed.length!==deck.length)return{ok:false,error:'SHUFFLE_FAILED'};
-  return{ok:true,rows:people.map((m,i)=>({loginId:m.loginId,roleId:mixed[i].roleId,roleName:mixed[i].roleName,faction:mixed[i].faction,order:mixed[i].order}))};
+  const artifactPool=Array.isArray(artifacts)?artifacts.filter(a=>String(a?.artifactId||a?.id||'')):[];
+  const artifactOrder=shuffle([...artifactPool]);
+  if(!Array.isArray(artifactOrder)||artifactOrder.length!==artifactPool.length)return{ok:false,error:'SHUFFLE_FAILED'};
+  const recipients=artifactOrder.length?shuffle([...people]):[];
+  if(artifactOrder.length&&(!Array.isArray(recipients)||recipients.length!==people.length))return{ok:false,error:'SHUFFLE_FAILED'};
+  const artifactByPlayer=new Map(recipients.slice(0,Math.min(people.length,artifactOrder.length)).map((m,i)=>[String(m.loginId),artifactOrder[i]]));
+  return{ok:true,rows:people.map((m,i)=>{
+    const a=artifactByPlayer.get(String(m.loginId));
+    return{loginId:m.loginId,roleId:mixed[i].roleId,roleName:mixed[i].roleName,faction:mixed[i].faction,order:mixed[i].order,...(a?{artifact:{artifactId:String(a.artifactId||a.id),artifactName:String(a.name||a.artifactName||''),artifactCard:a.artifactCard||a.package?.roleCard||a}}:{})};
+  })};
 }
 
-// Version 1 of player rooms plays roles only: artifacts are not dealt, so the template's
-// artifact list is switched off for the room instead of leaving cards nobody can receive.
 export function playerRoomConfigFromTemplate(template){
   const base=template&&typeof template.compiledConfig==='object'?template.compiledConfig:null;
   if(!base||!Array.isArray(base.roles)||!base.roles.length)return null;
-  return{...base,id:String(template.id||base.id||''),artifactsEnabled:false,artifacts:[]};
+  return{...base,id:String(template.id||base.id||''),artifactsEnabled:base.artifactsEnabled===true,
+    artifacts:base.artifactsEnabled===true&&Array.isArray(base.artifacts)?base.artifacts.slice(0,100):[]};
 }
 
 // Role ids of a config that have no stored role card yet (checked before dealing).
@@ -40,5 +48,7 @@ export function missingRoleCards(roles,hasCard){
 export function ownerDeckView(cfg){
   if(!cfg||typeof cfg!=='object')return null;
   return{id:String(cfg.id||''),name:String(cfg.name||''),playerCount:Number(cfg.playerCount||0),
+    artifactsEnabled:cfg.artifactsEnabled===true,artifacts:(Array.isArray(cfg.artifacts)?cfg.artifacts:[]).map(a=>({artifactId:String(a?.artifactId||''),name:String(a?.name||a?.artifactName||''),order:Number(a?.order)||0})),
+    artifactLimitPerCycle:Math.max(0,Math.min(30,Number(cfg.artifactLimitPerCycle??3)||0)),timing:cfg.timing&&typeof cfg.timing==='object'?{...cfg.timing}:{},
     roles:(Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>({roleId:String(r?.roleId||''),roleName:String(r?.roleName||''),faction:String(r?.faction||''),count:Math.max(1,Number(r?.count)||1)}))};
 }

@@ -15,9 +15,21 @@ test('Tập hợp: kéo cả khối seat, preview qua làng, lưu seatOffset/sea
   assert.match(village,/window\.gmwwSeatPreview/);
   assert.match(worker,/"seatMoveMode","seatLayout","seatOffset","seatSpacing"/);
 });
-test('Ván Mẫu: tab Tạo ván + Ván mẫu, Lưu/Xoá, timeline',()=>{
-  assert.match(rooms,/'Tạo ván'/);assert.match(rooms,/'Ván mẫu'/);assert.match(rooms,/LƯU VÁN/);assert.match(rooms,/XOÁ VÁN/);
-  assert.match(rooms,/'template-save'/);assert.match(rooms,/'template-delete'/);assert.match(rooms,/villageDiscussionSec/);
+test('Ván Mẫu: bỏ Tạo ván rút gọn; Web có editor đầy đủ và nạp mẫu Server',()=>{
+  assert.doesNotMatch(rooms,/'Tạo ván'/);assert.match(rooms,/Thiết kế Ván Mẫu/);assert.match(rooms,/Ván Mẫu Server/);
+  assert.match(rooms,/ARTIFACT • chọn các lá/);assert.match(rooms,/artifactLimitPerCycle/);assert.match(rooms,/gallowsNominationSec/);
+  assert.match(rooms,/roleOrder/);assert.match(rooms,/Tự động chuyển vai khi hết giờ/);
+  assert.match(rooms,/save\.textContent='LƯU'/);assert.match(rooms,/template-save/);assert.match(rooms,/template-delete/);
+  assert.match(worker,/playerRoomSourceArtifacts/);assert.match(worker,/TEMPLATE_EDIT_FORBIDDEN/);
+  assert.match(worker,/gmPreloadSharedArtifacts\(env,code/);assert.match(worker,/artifactsEnabled/);
+});
+test('Ván Mẫu: editor lấy Vai Trò dự phòng từ mẫu Server và không báo rỗng khi đang tải/lỗi',()=>{
+  assert.match(rooms,/catalogStatus:'idle'/);
+  assert.match(rooms,/const available=new Map\(\);for\(const t of pr\.templates\)/);
+  assert.match(rooms,/if\(Array\.isArray\(r\.roles\)&&r\.roles\.length\)pr\.roles=r\.roles/);
+  assert.match(rooms,/Đang tải danh sách vai từ Ván Mẫu Server/);
+  assert.match(rooms,/Không tải được danh sách Ván Mẫu Server/);
+  assert.match(rooms,/TẢI LẠI DANH SÁCH/);
 });
 test('Server giữ tối đa 5 Ván Mẫu gần nhất',()=>{
   assert.match(worker,/pruneGameTemplates\(5,id\)/);
