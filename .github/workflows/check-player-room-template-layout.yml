@@ -12,6 +12,7 @@ permissions:
 jobs:
   template-layout:
     runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.58.2-noble
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -21,12 +22,7 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: gmww-webkit-${{ runner.os }}-playwright-1.58.2
       - run: npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.58.2
-      - run: npx playwright install --with-deps chromium webkit
       - name: Reproduce percentage height regression on base source when present
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
