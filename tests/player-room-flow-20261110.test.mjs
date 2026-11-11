@@ -45,3 +45,7 @@ test('menu dưới: bấm Phòng khi đã có phòng thì vào lại luôn, menu
   assert.match(rooms,/if\(pr\.own&&!owner\(\)\)\{run\(async\(\)=>\{await rejoinOwn\(\)/);
   assert.doesNotMatch(rooms,/mask-image:linear-gradient\(90deg,transparent 0,#000 7%/);
 });
+test('Tập hợp: chủ phòng kéo/chụm seat trực tiếp trên cảnh làng khi ở bước Tập hợp (không cần mở trang)',()=>{
+  assert.match(rooms,/const seatDragOn=\(\)=>!!\(pr\.own&&inOwnRoom\(\)&&stepNow\(\)==='seats'/);
+  assert.match(rooms,/back\.hidden=!\(pr\.open\|\|pr\.chatOpen\|\|pr\.holdBack\|\|seatDragOn\(\)\)/);
+});
