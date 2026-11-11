@@ -19,7 +19,7 @@ test('Ván Mẫu: bỏ Tạo ván rút gọn; Web có editor đầy đủ và n�
   assert.doesNotMatch(rooms,/'Tạo ván'/);assert.match(rooms,/Thiết kế Ván Mẫu/);assert.match(rooms,/Ván Mẫu Server/);
   assert.match(rooms,/ARTIFACT • chọn các lá/);assert.match(rooms,/artifactLimitPerCycle/);assert.match(rooms,/gallowsNominationSec/);
   assert.match(rooms,/roleOrder/);assert.match(rooms,/Tự động chuyển vai khi hết giờ/);
-  assert.match(rooms,/LƯU VÁN MẪU/);assert.match(rooms,/template-save/);assert.match(rooms,/template-delete/);
+  assert.match(rooms,/save\.textContent='LƯU'/);assert.match(rooms,/template-save/);assert.match(rooms,/template-delete/);
   assert.match(worker,/playerRoomSourceArtifacts/);assert.match(worker,/TEMPLATE_EDIT_FORBIDDEN/);
   assert.match(worker,/gmPreloadSharedArtifacts\(env,code/);assert.match(worker,/artifactsEnabled/);
 });

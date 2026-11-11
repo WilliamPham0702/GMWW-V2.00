@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {expandDeck,planPlayerRoomDeal,playerRoomConfigFromTemplate,missingRoleCards,ownerDeckView} from '../src/gmww-player-room-setup.js';
 import {normalizeLoginId} from '../src/gmww-player-identity-rules.js';
+import {PLAYER_ROOM_ROLE_CATALOG} from '../src/player-room-role-catalog.js';
 
 const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
 const j=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json'}});
@@ -155,7 +156,7 @@ function worker({gate=200,roomOwner='nam01'}={}){
     if(u.includes('/game-templates/assets'))return u.includes('role%3Aseer')?j({ok:false},404):j({ok:true,package:{roleCard:{name:'W'}}});
     throw new Error('unexpected '+u)};
   const roomFetch=async(u,init={})=>{log.room.push({u,method:init.method||'GET',auth:init.headers?.authorization,body:init.body});return u.endsWith('/owner/state')?j({ok:gate===200,ownerLoginId:roomOwner},gate):j({ok:true})};
-  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode','normalizeLoginId',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c),normalizeLoginId);
+  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode','normalizeLoginId','PLAYER_ROOM_ROLE_CATALOG',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c),normalizeLoginId,PLAYER_ROOM_ROLE_CATALOG);
   return {...fn,log};
 }
 const wreq=(method,body)=>new Request('https://x/api',{method,headers:{authorization:'Bearer OWNER','content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
@@ -221,9 +222,10 @@ test('custom deck: owner picks roles + counts; Worker builds the template from p
   for(const bad of [{roles:[]},{roles:[{roleId:'wolf',count:31},{roleId:'seer',count:1}]},{roles:[{roleId:'ghost',count:1}]}])
     assert.equal((await w.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{custom:bad}))).status,400,JSON.stringify(bad));
 });
-test('role list needs a member session and is built from published templates',async()=>{
+test('role list needs a member session and includes the Server library plus published custom roles',async()=>{
   const w=worker(),res=await w.playerRoomRoleList({},new Request('https://x',{headers:{authorization:'Bearer t'}})),d=await res.json();
-  assert.equal(res.status,200);assert.deepEqual(d.roles.map(r=>r.roleId).sort(),['seer','wolf']);
+  assert.equal(res.status,200);assert.ok(d.roles.some(r=>r.roleId==='role_wolf'));assert.ok(d.roles.some(r=>r.roleId==='role_seer'));
+  assert.ok(d.roles.some(r=>r.roleId==='wolf'));assert.ok(d.roles.some(r=>r.roleId==='seer'));
 });
 
 test('owner close: deletes the room, tells the sockets, frees the directory slot; blocked while running; refused for others',async()=>{
