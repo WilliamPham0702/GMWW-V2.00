@@ -9,11 +9,18 @@ test('shipped Player Web script contains the player-room panel and it parses',()
   assert.ok(script.includes('gmwwPlayerRooms'));
   assert.doesNotThrow(()=>new Function(script));
 });
-test('panel only talks to the player-room API and never to GM routes or tokens',()=>{
-  const urls=[...part.matchAll(/'(\/api\/[^']*)'/g)].map(m=>m[1]);
+// The existing public artwork endpoint is allowed only as an image src, never as an owner API call.
+const artworkSource=/(?:img|image)\.src='\/api\/gm\/template-role-artwork\/'\+encodeURIComponent\(r\.roleId\);/g;
+const ownerSource=part.replace(artworkSource,'');
+test('panel keeps owner API calls isolated; public artwork is only an image GET',()=>{
+  assert.equal([...part.matchAll(artworkSource)].length,2);
+  const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+  assert.ok(worker.includes('if(templateRoleArtwork&&request.method==="GET")'));
+
+  const urls=[...ownerSource.matchAll(/'(\/api\/[^']*)'/g)].map(m=>m[1]);
   assert.ok(urls.length>=2);
   for(const u of urls)assert.match(u,/^\/api\/player-rooms/,u);
-  assert.doesNotMatch(part,/gmToken|gm-observer|\/api\/gm\/|assignments|roleId\b.*assign/);
+  assert.doesNotMatch(ownerSource,/gmToken|gm-observer|\/api\/gm\/|assignments|roleId\b.*assign/);
 });
 test('owner actions used by the panel are exactly the ones the Worker whitelists',()=>{
   const used=[...part.matchAll(/callOwner\('([a-z-]+)'/g)].map(m=>m[1]);
@@ -39,7 +46,7 @@ test('server bottom bar is bundled from the GM app, the plus button and Top 3 ar
 test('creating a room enters the village so the bar shows, and players can join by code',()=>{
   assert.match(part,/await enterVillage\(\)/);
   assert.match(part,/joinByCode/);assert.match(part,/host\.id='gmwwStageStrip'/);assert.match(part,/barScreen/);assert.doesNotMatch(part,/profile-actions-row/);
-  const urls=[...part.matchAll(/'(\/api\/[^']*)'/g)].map(m=>m[1]);for(const u of urls)assert.match(u,/^\/api\/player-rooms/);
+  const urls=[...ownerSource.matchAll(/'(\/api\/[^']*)'/g)].map(m=>m[1]);for(const u of urls)assert.match(u,/^\/api\/player-rooms/);
 });
 
 test('Phòng Game page sits between Sảnh chờ and Tập hợp and offers send + joined list',()=>{
