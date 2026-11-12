@@ -31,6 +31,9 @@ jobs:
           if grep -Fq 'min-width:0;height:100%;font-size:12px' /tmp/template-layout-before.part; then
             node tests/player-room-template-layout-browser.mjs --source=/tmp/template-layout-before.part --expect-layout-failure
           fi
+          if grep -Fq 'pr.busy)refresh();else renderDock()' /tmp/template-layout-before.part; then
+            node tests/player-room-template-layout-browser.mjs --source=/tmp/template-layout-before.part --expect-refresh-failure
+          fi
       - name: Verify picker and designer layout and interactions on iPhone and iPad sizes
         run: node tests/player-room-template-layout-browser.mjs
       - name: Save browser screenshots
