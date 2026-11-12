@@ -10,6 +10,7 @@ const source=fs.readFileSync(sourcePath,'utf8').replace('setInterval(mount,1500)
 const menu=gmwwMembersLiveScript.match(/const GMWW_SERVER_MENU=(.*);\n/)[1];
 const host=fs.readFileSync('src/player-page-src/00-head-and-style.part','utf8');
 fs.mkdirSync('artifacts/template-layout',{recursive:true});
+let layoutRegressions=0;
 for(const [engine,type] of Object.entries({chromium,webkit})){
  const browser=await type.launch();
  try{for(const [width,height] of [[390,844],[768,1024],[1024,768]]){
@@ -41,7 +42,7 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   });
   const initial=await checkLayout();
   await page.screenshot({path:`artifacts/template-layout/${baseline?'before':'picker'}-${engine}-${width}.png`});
-  if(baseline){assert.ok(!initial.controlsFit||initial.rowHeight>150||initial.footerTop<initial.rowBottom,JSON.stringify(initial));console.log('REPRODUCED layout',engine,width,initial);await page.getByRole('button',{name:'+ THÊM MỚI',exact:true}).click();await page.waitForFunction(()=>roomFixture.pr.msg.includes('resolveArtwork'));assert.match(await page.evaluate(()=>roomFixture.pr.msg),/resolveArtwork/);assert.equal(await page.locator('#gmwwPrDeckName').count(),0);await page.screenshot({path:`artifacts/template-layout/before-empty-designer-${engine}-${width}.png`});console.log('REPRODUCED empty designer',engine,width);await page.close();continue;}
+  if(baseline){if(!initial.controlsFit||initial.rowHeight>150||initial.footerTop<initial.rowBottom)layoutRegressions++;console.log('BASE layout measurement',engine,width,initial);await page.getByRole('button',{name:'+ THÊM MỚI',exact:true}).click();await page.waitForFunction(()=>roomFixture.pr.msg.includes('resolveArtwork'));assert.match(await page.evaluate(()=>roomFixture.pr.msg),/resolveArtwork/);assert.equal(await page.locator('#gmwwPrDeckName').count(),0);await page.screenshot({path:`artifacts/template-layout/before-empty-designer-${engine}-${width}.png`});console.log('REPRODUCED empty designer',engine,width);await page.close();continue;}
   assert.ok(initial.controlsFit&&initial.noHorizontalOverflow&&initial.rowHeight<150&&initial.footerTop>=initial.rowBottom,JSON.stringify(initial));
   await page.getByRole('button',{name:'+ THÊM MỚI',exact:true}).click();
   await page.locator('#gmwwPrDeckName').fill('Mẫu kiểm thử');
@@ -51,6 +52,9 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   await page.screenshot({path:`artifacts/template-layout/designer-${engine}-${width}.png`});
   await page.getByRole('button',{name:'LƯU',exact:true}).click();
   await page.getByRole('combobox',{name:'Chọn Ván Mẫu',exact:true}).selectOption('saved');
+  const selectedLayout=await checkLayout();assert.ok(selectedLayout.controlsFit&&selectedLayout.noHorizontalOverflow&&selectedLayout.footerTop>=selectedLayout.rowBottom,JSON.stringify(selectedLayout));
+  await page.locator('.gmww-pr-body').evaluate(n=>{n.scrollTop=0;});
+  await page.screenshot({path:`artifacts/template-layout/selected-${engine}-${width}.png`});
   await page.getByText('THỜI GIAN RIÊNG TỪNG VAI • Chạm để tùy chỉnh (giây)',{exact:true}).click();
   const seconds=page.locator('.gmww-pr-timing').nth(1).locator('input').first();
   await seconds.fill('45');await seconds.press('Tab');
@@ -61,3 +65,4 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   await page.close();
  }}finally{await browser.close();}
 }
+if(baseline)assert.ok(layoutRegressions>0,'At least one target browser must reproduce the control size regression');
