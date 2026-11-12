@@ -27,7 +27,7 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          git show "$BASE_SHA:src/player-web-src/37-player-rooms.part" > /tmp/template-layout-before.part
+          git -c safe.directory="$GITHUB_WORKSPACE" show "$BASE_SHA:src/player-web-src/37-player-rooms.part" > /tmp/template-layout-before.part
           if grep -Fq 'min-width:0;height:100%;font-size:12px' /tmp/template-layout-before.part; then
             node tests/player-room-template-layout-browser.mjs --source=/tmp/template-layout-before.part --expect-layout-failure
           fi

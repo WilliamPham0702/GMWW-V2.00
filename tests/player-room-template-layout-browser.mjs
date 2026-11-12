@@ -15,13 +15,12 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
  try{for(const [width,height] of [[390,844],[768,1024],[1024,768]]){
   const page=await browser.newPage({viewport:{width,height}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  await page.route('http://fixture.test/**',r=>r.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body></body></html>'}));
+  await page.route('http://fixture.test/**',r=>r.request().url().includes('/api/gm/template-role-artwork/')?r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="90" height="120"><rect width="90" height="120" fill="teal"/></svg>'}):r.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body></body></html>'}));
   await page.goto('http://fixture.test/');
   for(const m of host.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g))await page.addStyleTag({content:m[1]});
   await page.evaluate(roles=>{
    window.state={token:'synthetic',member:{loginId:'test'},roomCode:'ABCDEF',activeScreenId:'game'};
    window.setInterval=()=>0;window.auth=()=>({});window.syncVillageFrame=()=>{};window.toast=()=>{};
-   window.resolveArtwork=async()=> 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="90" height="120"><rect width="90" height="120" fill="teal"/></svg>';
    window.savedTemplates=[];window.requests=[];
    window.api=async(url,options={})=>{
     const data=options.body?JSON.parse(options.body):{};requests.push({url,data});
@@ -42,10 +41,11 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   });
   const initial=await checkLayout();
   await page.screenshot({path:`artifacts/template-layout/${baseline?'before':'picker'}-${engine}-${width}.png`});
-  if(baseline){assert.ok(!initial.controlsFit||initial.rowHeight>150||initial.footerTop<initial.rowBottom,JSON.stringify(initial));console.log('REPRODUCED',engine,width,initial);await page.close();continue;}
+  if(baseline){assert.ok(!initial.controlsFit||initial.rowHeight>150||initial.footerTop<initial.rowBottom,JSON.stringify(initial));console.log('REPRODUCED layout',engine,width,initial);await page.getByRole('button',{name:'+ THÊM MỚI',exact:true}).click();assert.ok(errors.some(e=>e.includes('resolveArtwork')),JSON.stringify(errors));assert.equal(await page.locator('#gmwwPrDeckName').count(),0);await page.screenshot({path:`artifacts/template-layout/before-empty-designer-${engine}-${width}.png`});console.log('REPRODUCED empty designer',engine,width);await page.close();continue;}
   assert.ok(initial.controlsFit&&initial.noHorizontalOverflow&&initial.rowHeight<150&&initial.footerTop>=initial.rowBottom,JSON.stringify(initial));
   await page.getByRole('button',{name:'+ THÊM MỚI',exact:true}).click();
   await page.locator('#gmwwPrDeckName').fill('Mẫu kiểm thử');
+  await page.waitForFunction(()=>{const img=document.querySelector('.gmww-pr-role-card img');return img?.src.includes('/api/gm/template-role-artwork/')&&img.naturalWidth>0;});
   for(const name of PLAYER_ROOM_ROLE_CATALOG.slice(0,3).map(r=>r.roleName))await page.getByRole('button',{name,exact:false}).first().click();
   assert.equal(await page.locator('.gmww-pr-selected-role').count(),3);
   await page.screenshot({path:`artifacts/template-layout/designer-${engine}-${width}.png`});
