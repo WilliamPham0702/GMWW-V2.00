@@ -27,7 +27,8 @@ test('Thiết kế Ván Mẫu uses the full Server core role library and matchin
   assert.match(part,/Thường dùng/);
   assert.match(part,/Phe Sói/);
   assert.match(part,/gmww-pr-role-gallery/);
-  assert.match(part,/resolveArtwork\('cards',r\.roleId,'thumb'\)/);
+  assert.match(part,/\/api\/gm\/template-role-artwork\//);
+  assert.doesNotMatch(part,/resolveArtwork\(/,'Server-only resolver must not break the Player Web designer');
   assert.match(part,/gmww-pr-faction-totals/);
   assert.match(part,/QUAY LẠI CHỌN VÁN/);
   assert.match(part,/save\.textContent='LƯU'/);

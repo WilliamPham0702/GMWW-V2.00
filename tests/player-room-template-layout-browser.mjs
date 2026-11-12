@@ -15,7 +15,7 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
  try{for(const [width,height] of [[390,844],[768,1024],[1024,768]]){
   const page=await browser.newPage({viewport:{width,height}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  await page.route('http://fixture.test/**',r=>r.request().url().includes('/api/gm/template-role-artwork/')?r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="90" height="120"><rect width="90" height="120" fill="teal"/></svg>'}):r.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body></body></html>'}));
+  await page.route('http://fixture.test/**',r=>r.request().url().includes('/api/gm/template-role-artwork/')?r.fulfill({contentType:'image/webp',body:fs.readFileSync('assets/updates/runtime/V3.119/assets/role-artwork-v251/original/'+new URL(r.request().url()).pathname.split('/').pop()+'.webp')}):r.fulfill({contentType:'text/html',body:'<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body></body></html>'}));
   await page.goto('http://fixture.test/');
   for(const m of host.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g))await page.addStyleTag({content:m[1]});
   await page.evaluate(roles=>{
@@ -41,7 +41,7 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   });
   const initial=await checkLayout();
   await page.screenshot({path:`artifacts/template-layout/${baseline?'before':'picker'}-${engine}-${width}.png`});
-  if(baseline){assert.ok(!initial.controlsFit||initial.rowHeight>150||initial.footerTop<initial.rowBottom,JSON.stringify(initial));console.log('REPRODUCED layout',engine,width,initial);await page.getByRole('button',{name:'+ THÊM MỚI',exact:true}).click();assert.ok(errors.some(e=>e.includes('resolveArtwork')),JSON.stringify(errors));assert.equal(await page.locator('#gmwwPrDeckName').count(),0);await page.screenshot({path:`artifacts/template-layout/before-empty-designer-${engine}-${width}.png`});console.log('REPRODUCED empty designer',engine,width);await page.close();continue;}
+  if(baseline){assert.ok(!initial.controlsFit||initial.rowHeight>150||initial.footerTop<initial.rowBottom,JSON.stringify(initial));console.log('REPRODUCED layout',engine,width,initial);await page.getByRole('button',{name:'+ THÊM MỚI',exact:true}).click();await page.waitForFunction(()=>roomFixture.pr.msg.includes('resolveArtwork'));assert.match(await page.evaluate(()=>roomFixture.pr.msg),/resolveArtwork/);assert.equal(await page.locator('#gmwwPrDeckName').count(),0);await page.screenshot({path:`artifacts/template-layout/before-empty-designer-${engine}-${width}.png`});console.log('REPRODUCED empty designer',engine,width);await page.close();continue;}
   assert.ok(initial.controlsFit&&initial.noHorizontalOverflow&&initial.rowHeight<150&&initial.footerTop>=initial.rowBottom,JSON.stringify(initial));
   await page.getByRole('button',{name:'+ THÊM MỚI',exact:true}).click();
   await page.locator('#gmwwPrDeckName').fill('Mẫu kiểm thử');
