@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {chromium,webkit} from 'playwright';
 import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 import {PLAYER_ROOM_ROLE_CATALOG} from '../src/player-room-role-catalog.js';
+const refreshBaseline=process.argv.includes('--expect-refresh-failure');
 const baseline=process.argv.includes('--expect-layout-failure');
 const sourcePath=process.argv.find(x=>x.startsWith('--source='))?.slice(9)||'src/player-web-src/37-player-rooms.part';
 const source=fs.readFileSync(sourcePath,'utf8').replace('setInterval(mount,1500);','window.roomFixture={pr,mount,render};');
@@ -21,7 +22,7 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   for(const m of host.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g))await page.addStyleTag({content:m[1]});
   await page.evaluate(roles=>{
    window.state={token:'synthetic',member:{loginId:'test'},roomCode:'ABCDEF',activeScreenId:'game'};
-   window.setInterval=()=>0;window.auth=()=>({});window.syncVillageFrame=()=>{};window.toast=()=>{};
+   window.polls={};window.setInterval=(fn,ms)=>{polls[ms]=fn;return ms;};window.auth=()=>({});window.syncVillageFrame=()=>{};window.toast=()=>{};
    window.savedTemplates=[];window.requests=[];
    window.api=async(url,options={})=>{
     const data=options.body?JSON.parse(options.body):{};requests.push({url,data});
@@ -50,6 +51,25 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   for(const name of PLAYER_ROOM_ROLE_CATALOG.slice(0,3).map(r=>r.roleName))await page.getByRole('button',{name,exact:false}).first().click();
   assert.equal(await page.locator('.gmww-pr-selected-role').count(),3);
   await page.screenshot({path:`artifacts/template-layout/designer-${engine}-${width}.png`});
+  // Exercise the real 4s poll callback twice, including changed room state, while editing.
+  const before=await page.evaluate(()=>{
+   const b=document.querySelector('.gmww-pr-body'),g=document.querySelector('.gmww-pr-role-gallery'),input=document.querySelector('.gmww-pr-selected-role input');
+   document.querySelector('.gmww-pr-designer-advanced').open=true;
+   input.focus();input.value='17';b.scrollTop=450;g.scrollLeft=210;window.editorBody=b;window.editorInput=input;
+   return {top:b.scrollTop,left:g.scrollLeft};
+  });
+  assert.ok(before.top>0&&before.left>0);
+  for(let tick=0;tick<2;tick++)await page.evaluate(async()=>{polls[4000]();await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);});
+  const after=await page.evaluate(()=>({same:editorBody===document.querySelector('.gmww-pr-body'),focus:document.activeElement===editorInput,value:editorInput.value,top:document.querySelector('.gmww-pr-body').scrollTop,left:document.querySelector('.gmww-pr-role-gallery').scrollLeft,open:document.querySelector('.gmww-pr-designer-advanced').open,polls:requests.filter(r=>r.url.endsWith('/state')).length}));
+  assert.ok(after.polls>=2);
+  if(refreshBaseline){assert.equal(after.same,false);assert.equal(after.top,0);console.log('REPRODUCED poll resets editor',engine,width);await page.close();continue;}
+  assert.equal(after.same,true);assert.equal(after.focus,true);assert.equal(after.value,'17');assert.equal(after.top,before.top);assert.equal(after.left,before.left);assert.equal(after.open,true);
+  await page.locator('.gmww-pr-selected-role input').first().press('Tab');
+  // A deliberate role count change rebuilds the view but must retain scroll and disclosure state.
+  const explicit=await page.evaluate(()=>{const b=document.querySelector('.gmww-pr-body');b.scrollTop=300;const top=b.scrollTop;document.querySelector('.gmww-pr-selected-role .gmww-pr-step:last-child').click();return {top,after:document.querySelector('.gmww-pr-body').scrollTop,open:document.querySelector('.gmww-pr-designer-advanced').open};});
+  assert.equal(explicit.after,explicit.top);assert.equal(explicit.open,true);
+  await page.evaluate(()=>document.querySelector('.gmww-pr-selected-role .gmww-pr-step').click());
+  console.log('PASS editor poll/focus/scroll and role count',engine,width);
   await page.getByRole('button',{name:'LƯU',exact:true}).click();
   await page.getByRole('combobox',{name:'Chọn Ván Mẫu',exact:true}).selectOption('saved');
   const selectedLayout=await checkLayout();assert.ok(selectedLayout.controlsFit&&selectedLayout.noHorizontalOverflow&&selectedLayout.footerTop>=selectedLayout.rowBottom,JSON.stringify(selectedLayout));

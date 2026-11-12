@@ -25,11 +25,11 @@
       if(fresh.length){const t=fresh.map(p=>p.displayName||p.loginId).join(', ')+' đã vào phòng.';say(t);try{toast(t)}catch(_){}}}
     pr.known=ids;
   }
-  async function refresh(){
+  async function refresh(options={}){
     if(!pr.own)return;
     try{pr.state=await api(base()+'state',{headers:oh()});noteJoins(pr.state)}
     catch(e){if(e?.status===404||e?.status===401){pr.own=null;pr.state=null;pr.known=null;save(null);say('Phòng đã đóng.')}}
-    render();autoSeat();
+    render({background:options.background===true});autoSeat();
   }
   async function create(){
         const d=await api('/api/player-rooms',{method:'POST',headers:auth(),body:JSON.stringify({})});
@@ -403,9 +403,19 @@
     pr.holdBack=true;setTimeout(()=>{pr.holdBack=false;render()},450);
     if(chatUp)closeChat();else closeSheet();
   }
-  function render(){
+  function render(options={}){
     const panel=document.getElementById('gmwwPrPanel'),back=document.getElementById('gmwwPrBack');if(!panel||!back)return;
     panel.hidden=!pr.open;back.hidden=!(pr.open||pr.chatOpen||pr.holdBack||seatDragOn());back.classList.toggle('seatdrag',seatDragOn());renderChrome();if(!pr.open)return;
+    const viewKey=[pr.own?.code||'',pr.view,pr.gameView||'pick',pr.editTemplateId||''].join(':');
+    const oldBody=panel.querySelector('.gmww-pr-body'),sameView=panel.dataset.viewKey===viewKey;
+    // Poll room authority without replacing the editor DOM under a touch/keyboard gesture.
+    if(options?.background&&sameView&&oldBody&&pr.view==='game'&&pr.gameView==='design'&&pr.own&&inOwnRoom()&&String(pr.state?.room?.phase||'lobby').toLowerCase()==='lobby'){
+      const sum=document.getElementById('gmwwPrDeckSum'),people=pr.state?.players?.length||0,t=[...pr.deck.values()].reduce((a,b)=>a+b,0);
+      if(sum)sum.textContent=t+' lá • '+pr.deck.size+' vai • '+(t===people?'Đủ số người':t>people?'Thừa '+(t-people):'Thiếu '+(people-t));
+      return;
+    }
+    const keep=sameView&&pr.view==='game'&&oldBody?{top:oldBody.scrollTop,left:oldBody.querySelector('.gmww-pr-role-gallery')?.scrollLeft||0,details:[...oldBody.querySelectorAll('details')].map(n=>n.open)}:null;
+    panel.dataset.viewKey=viewKey;
     panel.textContent='';
     const head=el('header','gmww-pr-head'),close=el('button','gmww-pr-close','×');close.type='button';close.setAttribute('aria-label','Đóng');close.addEventListener('click',closeSheet);
     const panelTitle=pr.view==='game'?(pr.gameView==='design'?'Thiết kế Ván Mẫu':'Chọn Ván Mẫu'):pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng');
@@ -424,6 +434,7 @@
     }
     const status=el('div','gmww-pr-status');status.id='gmwwPrStatus';status.textContent=pr.msg;body.append(status);
     panel.append(body);place(panel);
+    if(keep){body.querySelectorAll('details').forEach((n,i)=>{n.open=!!keep.details[i]});body.scrollTop=keep.top;const gallery=body.querySelector('.gmww-pr-role-gallery');if(gallery)gallery.scrollLeft=keep.left;}
   }
   // Top strip + bottom dock are the GM Server's own markup and CSS (GMWW_SERVER_MENU), shown to every logged-in player.
   const LABEL={lobby:'SẢNH CHỜ',room:'PHÒNG',seats:'TẬP HỢP',game:'VÁN MẪU',roles:'PHÂN VAI',deal:'PHÁT VAI',battle:'VÀO TRẬN'};
@@ -544,7 +555,7 @@
     document.addEventListener('pointerdown',dismissOutside,true);
     const replace=()=>{place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});try{visualViewport?.addEventListener('resize',replace,{passive:true})}catch(_){}
     pr.own=load();
-    clearInterval(pr.timer);pr.timer=setInterval(()=>{if(pr.own&&inOwnRoom()&&!document.hidden&&!pr.busy)refresh();else renderDock()},4000);
+    clearInterval(pr.timer);pr.timer=setInterval(()=>{if(pr.own&&inOwnRoom()&&!document.hidden&&!pr.busy)refresh({background:true});else renderDock()},4000);
     setInterval(renderDock,1000);
   }
   setInterval(mount,1500);
