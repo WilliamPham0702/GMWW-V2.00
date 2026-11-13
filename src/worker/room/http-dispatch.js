@@ -154,6 +154,8 @@ export class RoomHttpDispatchMethods {
     if(url.pathname==="/client-errors"&&request.method==="POST")return this.clientErrorAppend(await safeJson(request));
     if(url.pathname==="/client-errors"&&request.method==="GET")return this.clientErrorList();
     if(url.pathname==="/client-errors"&&request.method==="DELETE"){await this.ctx.storage.delete("clientErrorLog");return j({ok:true,items:[]})}
+    if(url.pathname==="/global-settings/gm-push"&&request.method==="GET")return this.globalGmPushGet();
+    if(url.pathname==="/global-settings/gm-push"&&request.method==="PUT")return this.globalGmPushPut(await safeJson(request));
     if(url.pathname==="/global-settings/gm-move"&&request.method==="POST")return this.globalGmMovePut(await safeJson(request));
     if(url.pathname==="/init"&&request.method==="POST"){
       if(await this.ctx.storage.get("meta"))return j({ok:false,error:"ROOM_EXISTS"},409);

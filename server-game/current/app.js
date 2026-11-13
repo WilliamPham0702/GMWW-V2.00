@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.321';
+const VERSION='3.322';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -10708,6 +10708,41 @@ function initDraggablePlaySheets(){
     handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
   });
 }
+// Thông báo iPhone khi người chơi tạo phòng (Bark) + mở thẳng Quản lý phòng từ thông báo (gmww://rooms).
+function gmPushSetStatus(text,state=''){const el=document.getElementById('gmPushStatus');if(el){el.textContent=text;el.dataset.state=state}}
+function gmPushShow(data){
+  const input=document.getElementById('gmPushKey');if(input){input.value='';input.placeholder=data?.enabled?'Đang dùng mã '+data.barkKeyMasked+' (dán mã mới để đổi)':'Dán mã hoặc link Bark vào đây'}
+  gmPushSetStatus(data?.enabled?'Đang bật: iPhone sẽ báo khi có phòng mới.':'Đang tắt: chưa có mã Bark.',data?.enabled?'ok':'');
+}
+async function gmPushLoad(){try{gmPushShow(await gmApi('/api/gm/push-settings',{method:'GET'}))}catch(err){gmPushSetStatus(err?.message||'Không đọc được cài đặt thông báo.','error')}}
+async function gmPushSave(barkKey){
+  try{gmPushSetStatus('Đang lưu…');gmPushShow(await gmApi('/api/gm/push-settings',{method:'PUT',body:JSON.stringify({barkKey})}));return true}
+  catch(err){gmPushSetStatus(err?.message||'Không lưu được mã Bark.','error');return false}
+}
+async function gmPushTest(){
+  const typed=String(document.getElementById('gmPushKey')?.value||'').trim();if(typed&&!(await gmPushSave(typed)))return;
+  try{gmPushSetStatus('Đang gửi thử…');await gmApi('/api/gm/push-test',{method:'POST',body:'{}'});gmPushSetStatus('Đã gửi thử. Kiểm tra thông báo trên iPhone.','ok')}
+  catch(err){gmPushSetStatus(err?.message||'Gửi thử thất bại. Kiểm tra lại mã Bark.','error')}
+}
+function bindGmPushCard(){
+  const card=document.getElementById('gmPushCard');if(!card||card.dataset.bound==='1')return;card.dataset.bound='1';
+  document.getElementById('gmPushSave')?.addEventListener('click',()=>{const v=String(document.getElementById('gmPushKey')?.value||'').trim();if(!v){gmPushSetStatus('Hãy dán mã hoặc link Bark trước khi lưu.','error');return}void gmPushSave(v)});
+  document.getElementById('gmPushTest')?.addEventListener('click',()=>void gmPushTest());
+  document.getElementById('gmPushOff')?.addEventListener('click',()=>void gmPushSave(''));
+  void gmPushLoad();
+}
+// Native shell (IPA) gọi hàm này khi app được mở bằng gmww://rooms. Trả true khi đã xử lý để shell thôi gửi lại.
+async function gmwwOpenRoomsFromLink(){
+  const nav=document.querySelector('.nav[data-page="start"]');if(nav&&!nav.classList.contains('active'))nav.click();
+  if(typeof playSceneRuntime==='object'&&playSceneRuntime?.busy)return;
+  await openPlayCreateRoomSheet();void loadPlayerRooms();
+  document.getElementById('playPlayerRoomsCard')?.scrollIntoView({block:'start'});
+}
+window.GMWWDeepLink=function(target){
+  if(String(target||'')!=='rooms'||!document.getElementById('playCreateRoomSheet'))return false;
+  gmwwOpenRoomsFromLink().catch(err=>console.warn('GMWW_DEEP_LINK',err));return true;
+};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindGmPushCard,{once:true});else bindGmPushCard();
 async function handlePlayTimelineStep(step){
   if(playSceneRuntime.busy)return;
   const from=PLAY_STEPS.indexOf(playSceneState.step),target=PLAY_STEPS.indexOf(step);

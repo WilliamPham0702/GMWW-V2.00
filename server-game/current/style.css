@@ -8942,3 +8942,10 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
 body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot #battleActionTray:not([hidden]){
  flex:0 1 54%!important;width:auto!important;max-width:54%!important;margin:0!important
 }
+
+/* Thông báo iPhone khi có phòng mới (Bark) */
+.gm-push-card{display:flex;flex-direction:column;gap:10px}
+.gm-push-help,.gm-push-status{display:block;line-height:1.45;opacity:.86}
+.gm-push-input{width:100%;box-sizing:border-box;min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.28);color:inherit;font:inherit;font-size:16px}
+.gm-push-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gm-push-status[data-state="ok"]{color:#8fe3b4}.gm-push-status[data-state="error"]{color:#ff9d9d}

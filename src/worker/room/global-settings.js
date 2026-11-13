@@ -61,6 +61,16 @@ export class RoomGlobalSettingsMethods {
     const st=await this.ctx.storage.get("clientErrorLog")||{items:[],dropped:0};
     return j({ok:true,items:st.items,dropped:st.dropped||0,report:formatClientErrorReport(st.items,VERSION)});
   }
+  async globalGmPushGet(){
+    const rec=await this.ctx.storage.get("globalSetting:gmPush");
+    return j({ok:true,barkKey:String(rec?.barkKey||""),updatedAt:rec?.updatedAt||null});
+  }
+  async globalGmPushPut(body){
+    const barkKey=String(body?.barkKey||"").slice(0,64);
+    if(barkKey&&!/^[A-Za-z0-9]{8,64}$/.test(barkKey))return j({ok:false,error:"INVALID_BARK_KEY"},400);
+    await this.ctx.storage.put("globalSetting:gmPush",{barkKey,updatedAt:new Date().toISOString()});
+    return j({ok:true,enabled:!!barkKey});
+  }
   async globalGmPresenceGet(){
     const rec=await this.ctx.storage.get("globalSetting:gmPresence"),now=Date.now(),lastSeenAt=Math.max(0,Number(rec?.lastSeenAt||0));
     const online=rec?.online===true&&lastSeenAt>0&&(now-lastSeenAt)<=GM_PRESENCE_TTL;
