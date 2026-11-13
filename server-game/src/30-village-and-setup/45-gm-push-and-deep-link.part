@@ -28,8 +28,9 @@ async function gmwwOpenRoomsFromLink(){
   await openPlayCreateRoomSheet();void loadPlayerRooms();
   document.getElementById('playPlayerRoomsCard')?.scrollIntoView({block:'start'});
 }
-window.GMWWDeepLink=function(target){
+function gmwwHandleDeepLink(target){
   if(String(target||'')!=='rooms'||!document.getElementById('playCreateRoomSheet'))return false;
   gmwwOpenRoomsFromLink().catch(err=>console.warn('GMWW_DEEP_LINK',err));return true;
-};
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindGmPushCard,{once:true});else bindGmPushCard();
+}
+// Gọi một lần từ initPlayScene; file này chỉ khai báo hàm, không chạy lệnh ở cấp ngoài cùng.
+function initGmPushAndDeepLink(){window.GMWWDeepLink=gmwwHandleDeepLink;bindGmPushCard()}

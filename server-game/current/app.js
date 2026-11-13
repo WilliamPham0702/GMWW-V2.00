@@ -4196,6 +4196,42 @@ function bindPlayerRoomsCard(){
   const sync=()=>{const open=!sheet.classList.contains('hidden');clearInterval(playerRoomsState.timer);playerRoomsState.timer=0;if(open){void loadPlayerRooms();playerRoomsState.timer=setInterval(()=>{if(!document.hidden)void loadPlayerRooms()},5000)}};
   new MutationObserver(sync).observe(sheet,{attributes:true,attributeFilter:['class']});sync();
 }
+// Thông báo iPhone khi người chơi tạo phòng (Bark) + mở thẳng Quản lý phòng từ thông báo (gmww://rooms).
+function gmPushSetStatus(text,state=''){const el=document.getElementById('gmPushStatus');if(el){el.textContent=text;el.dataset.state=state}}
+function gmPushShow(data){
+  const input=document.getElementById('gmPushKey');if(input){input.value='';input.placeholder=data?.enabled?'Đang dùng mã '+data.barkKeyMasked+' (dán mã mới để đổi)':'Dán mã hoặc link Bark vào đây'}
+  gmPushSetStatus(data?.enabled?'Đang bật: iPhone sẽ báo khi có phòng mới.':'Đang tắt: chưa có mã Bark.',data?.enabled?'ok':'');
+}
+async function gmPushLoad(){try{gmPushShow(await gmApi('/api/gm/push-settings',{method:'GET'}))}catch(err){gmPushSetStatus(err?.message||'Không đọc được cài đặt thông báo.','error')}}
+async function gmPushSave(barkKey){
+  try{gmPushSetStatus('Đang lưu…');gmPushShow(await gmApi('/api/gm/push-settings',{method:'PUT',body:JSON.stringify({barkKey})}));return true}
+  catch(err){gmPushSetStatus(err?.message||'Không lưu được mã Bark.','error');return false}
+}
+async function gmPushTest(){
+  const typed=String(document.getElementById('gmPushKey')?.value||'').trim();if(typed&&!(await gmPushSave(typed)))return;
+  try{gmPushSetStatus('Đang gửi thử…');await gmApi('/api/gm/push-test',{method:'POST',body:'{}'});gmPushSetStatus('Đã gửi thử. Kiểm tra thông báo trên iPhone.','ok')}
+  catch(err){gmPushSetStatus(err?.message||'Gửi thử thất bại. Kiểm tra lại mã Bark.','error')}
+}
+function bindGmPushCard(){
+  const card=document.getElementById('gmPushCard');if(!card||card.dataset.bound==='1')return;card.dataset.bound='1';
+  document.getElementById('gmPushSave')?.addEventListener('click',()=>{const v=String(document.getElementById('gmPushKey')?.value||'').trim();if(!v){gmPushSetStatus('Hãy dán mã hoặc link Bark trước khi lưu.','error');return}void gmPushSave(v)});
+  document.getElementById('gmPushTest')?.addEventListener('click',()=>void gmPushTest());
+  document.getElementById('gmPushOff')?.addEventListener('click',()=>void gmPushSave(''));
+  void gmPushLoad();
+}
+// Native shell (IPA) gọi hàm này khi app được mở bằng gmww://rooms. Trả true khi đã xử lý để shell thôi gửi lại.
+async function gmwwOpenRoomsFromLink(){
+  const nav=document.querySelector('.nav[data-page="start"]');if(nav&&!nav.classList.contains('active'))nav.click();
+  if(typeof playSceneRuntime==='object'&&playSceneRuntime?.busy)return;
+  await openPlayCreateRoomSheet();void loadPlayerRooms();
+  document.getElementById('playPlayerRoomsCard')?.scrollIntoView({block:'start'});
+}
+function gmwwHandleDeepLink(target){
+  if(String(target||'')!=='rooms'||!document.getElementById('playCreateRoomSheet'))return false;
+  gmwwOpenRoomsFromLink().catch(err=>console.warn('GMWW_DEEP_LINK',err));return true;
+}
+// Gọi một lần từ initPlayScene; file này chỉ khai báo hàm, không chạy lệnh ở cấp ngoài cùng.
+function initGmPushAndDeepLink(){window.GMWWDeepLink=gmwwHandleDeepLink;bindGmPushCard()}
 /* Demo controls now live at the top of the GM campfire menu. */
 function demoPanelTouch(){}
 const GMWW_DEMO_OBSERVER_COMPACT_KEY='gmww_demo_observer_compact_v1';
@@ -10708,41 +10744,6 @@ function initDraggablePlaySheets(){
     handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
   });
 }
-// Thông báo iPhone khi người chơi tạo phòng (Bark) + mở thẳng Quản lý phòng từ thông báo (gmww://rooms).
-function gmPushSetStatus(text,state=''){const el=document.getElementById('gmPushStatus');if(el){el.textContent=text;el.dataset.state=state}}
-function gmPushShow(data){
-  const input=document.getElementById('gmPushKey');if(input){input.value='';input.placeholder=data?.enabled?'Đang dùng mã '+data.barkKeyMasked+' (dán mã mới để đổi)':'Dán mã hoặc link Bark vào đây'}
-  gmPushSetStatus(data?.enabled?'Đang bật: iPhone sẽ báo khi có phòng mới.':'Đang tắt: chưa có mã Bark.',data?.enabled?'ok':'');
-}
-async function gmPushLoad(){try{gmPushShow(await gmApi('/api/gm/push-settings',{method:'GET'}))}catch(err){gmPushSetStatus(err?.message||'Không đọc được cài đặt thông báo.','error')}}
-async function gmPushSave(barkKey){
-  try{gmPushSetStatus('Đang lưu…');gmPushShow(await gmApi('/api/gm/push-settings',{method:'PUT',body:JSON.stringify({barkKey})}));return true}
-  catch(err){gmPushSetStatus(err?.message||'Không lưu được mã Bark.','error');return false}
-}
-async function gmPushTest(){
-  const typed=String(document.getElementById('gmPushKey')?.value||'').trim();if(typed&&!(await gmPushSave(typed)))return;
-  try{gmPushSetStatus('Đang gửi thử…');await gmApi('/api/gm/push-test',{method:'POST',body:'{}'});gmPushSetStatus('Đã gửi thử. Kiểm tra thông báo trên iPhone.','ok')}
-  catch(err){gmPushSetStatus(err?.message||'Gửi thử thất bại. Kiểm tra lại mã Bark.','error')}
-}
-function bindGmPushCard(){
-  const card=document.getElementById('gmPushCard');if(!card||card.dataset.bound==='1')return;card.dataset.bound='1';
-  document.getElementById('gmPushSave')?.addEventListener('click',()=>{const v=String(document.getElementById('gmPushKey')?.value||'').trim();if(!v){gmPushSetStatus('Hãy dán mã hoặc link Bark trước khi lưu.','error');return}void gmPushSave(v)});
-  document.getElementById('gmPushTest')?.addEventListener('click',()=>void gmPushTest());
-  document.getElementById('gmPushOff')?.addEventListener('click',()=>void gmPushSave(''));
-  void gmPushLoad();
-}
-// Native shell (IPA) gọi hàm này khi app được mở bằng gmww://rooms. Trả true khi đã xử lý để shell thôi gửi lại.
-async function gmwwOpenRoomsFromLink(){
-  const nav=document.querySelector('.nav[data-page="start"]');if(nav&&!nav.classList.contains('active'))nav.click();
-  if(typeof playSceneRuntime==='object'&&playSceneRuntime?.busy)return;
-  await openPlayCreateRoomSheet();void loadPlayerRooms();
-  document.getElementById('playPlayerRoomsCard')?.scrollIntoView({block:'start'});
-}
-window.GMWWDeepLink=function(target){
-  if(String(target||'')!=='rooms'||!document.getElementById('playCreateRoomSheet'))return false;
-  gmwwOpenRoomsFromLink().catch(err=>console.warn('GMWW_DEEP_LINK',err));return true;
-};
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindGmPushCard,{once:true});else bindGmPushCard();
 async function handlePlayTimelineStep(step){
   if(playSceneRuntime.busy)return;
   const from=PLAY_STEPS.indexOf(playSceneState.step),target=PLAY_STEPS.indexOf(step);
@@ -10854,7 +10855,7 @@ function initPlayScene(){
   document.getElementById('playCreateRoomReset')?.addEventListener('click',playResetCreatedRoom);
   document.getElementById('playCreateRoomDelete')?.addEventListener('click',playDeleteCreatedRoom);
   document.getElementById('playCreateRoomClose')?.addEventListener('click',()=>document.getElementById('playCreateRoomSheet')?.classList.add('hidden'));
-  bindPlayerRoomsCard();
+  bindPlayerRoomsCard();initGmPushAndDeepLink();
   document.getElementById('playUserAvatar')?.setAttribute('hidden','');
   document.getElementById('playWorld')?.addEventListener('click',async e=>{if(e.target.closest?.('button,.play-player-token,.play-village-core,.play-hud,.play-world-status'))return;const r=e.currentTarget.getBoundingClientRect(),raw=globalThis.GMWW_VILLAGE_LAYOUT.fromScreen(e.clientX-r.left,e.clientY-r.top,r.width,r.height);if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(raw.x,raw.y))return;const p=selectedPlayPlayer();if(!isLivePlayRoom()||!p)return;if(p&&!p.seatId&&!playSceneRuntime.room?.seatsLocked){try{const d=await playRoomApi('/move',{method:'POST',body:JSON.stringify({participantId:p.participantId,...raw})});playSceneRuntime.players=d.players||playSceneRuntime.players;renderPlayPlayers()}catch(err){playFlashError(err.message)}return}});
   window.addEventListener('resize',renderPlayScene);

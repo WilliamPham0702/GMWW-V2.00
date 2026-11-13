@@ -39,8 +39,12 @@ test('Worker: push settings are GM-only and creation notifies without blocking o
   }finally{globalThis.fetch=realFetch}
 });
 test('GM Server: settings card, deep-link handler inside the app scope, bundle in sync',()=>{
-  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8'),roles=gmSource('50-roles-and-artifacts');
+  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8'),roles=gmSource('30-village-and-setup');
   for(const id of ['gmPushCard','gmPushKey','gmPushSave','gmPushTest','gmPushOff','gmPushStatus'])assert.ok(html.includes('id="'+id+'"'),id);
-  assert.match(roles,/window\.GMWWDeepLink=function\(target\)/);assert.match(roles,/openPlayCreateRoomSheet\(\);void loadPlayerRooms\(\)/);
-  assert.ok(app.indexOf('window.GMWWDeepLink=')>0&&app.indexOf('window.GMWWDeepLink=')<app.lastIndexOf('window.GMWWRuntimeRecovery?.ready(VERSION)'));
+  assert.match(roles,/function initGmPushAndDeepLink\(\)\{window\.GMWWDeepLink=gmwwHandleDeepLink;bindGmPushCard\(\)\}/);
+  assert.match(roles,/openPlayCreateRoomSheet\(\);void loadPlayerRooms\(\)/);
+  assert.ok(app.includes('bindPlayerRoomsCard();initGmPushAndDeepLink();'));
+  // The part must stay declarations-only: other tests evaluate slices of this group without a DOM.
+  const part=fs.readFileSync('server-game/src/30-village-and-setup/45-gm-push-and-deep-link.part','utf8');
+  for(const line of part.split('\n'))assert.match(line,/^(\/\/|async function |function |  |\}|$)/,line.slice(0,60));
 });
