@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Fail-closed Runtime V3.250 focused release contract.
 // Only the approved role-card settings, version / OTA and CI policy may differ.
+import {gmSource} from './source-groups.mjs';
 import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const base=process.env.GMWW_V3250_BASE||'HEAD^1';
@@ -27,7 +28,7 @@ for(const path of ['src/index.js','server-game/src/00-core-and-library.part',
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8')),
  worker=fs.readFileSync('src/index.js','utf8'),
  gm=fs.readFileSync('server-game/current/app.js','utf8'),
- source=fs.readFileSync('server-game/src/00-core-and-library.part','utf8'),
+ source=gmSource('00-core-and-library'),
  html=fs.readFileSync('server-game/current/GMWW.html','utf8'),
  notes=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
 if(pkg.version!=='3.250.0'||!worker.includes('VERSION="V3.250"')||

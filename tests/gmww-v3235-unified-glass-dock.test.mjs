@@ -1,9 +1,10 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read=p=>fs.readFileSync(p,'utf8');
-const html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css'),setup=read('server-game/src/30-village-and-setup.part'),battle=read('server-game/src/40-battle-and-timeline.part');
+const html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css'),setup=gmSource('30-village-and-setup'),battle=gmSource('40-battle-and-timeline');
 test('V3.235: five daytime text controls and compact clock',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  assert.match(html,/Đồng hồ · Báo · Hành động · Lên Giàn · Khôi phục/);
  assert.match(html,/class="battle-clock-caption"/);
@@ -25,13 +26,13 @@ test('V3.235: 🌈 independent draggable and local persisted, DEMO preserved',()
 test('V3.235: Cloudflare 1-line label and 16 tools',()=>{
  assert.match(html,/gmww-cloudflare-label">CLOUDFLARE<\/b>/);
  assert.doesNotMatch(html,/gmww-cloudflare-label"><span>QUẢN LÝ/);
- assert.match(read('server-game/src/20-members-and-roster.part'),/gmwwCloudflareOpen:'CLOUDFLARE'/);
+ assert.match(gmSource('20-members-and-roster'),/gmwwCloudflareOpen:'CLOUDFLARE'/);
  const tools=html.slice(html.indexOf('id="settingsToolsRail"'),html.indexOf('id="settingsNoticePanel"'));
  assert.equal([...tools.matchAll(/<button\b[^>]*\bid="[^"]+"/g)].length,16);
 });
 test('V3.235: assembled app and versions stay aligned',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'];
- assert.equal(read('server-game/current/app.js'),parts.map(x=>read('server-game/src/'+x+'.part')).join(''));
+ assert.equal(read('server-game/current/app.js'),parts.map(x=>gmSource(x)).join(''));
  assert.match(workerSource(),/VERSION="V3\.235"/);
  assert.match(read('server-game/current/app.js'),/const VERSION='3\.235'/);
  assert.match(read('package.json'),/"version": "3\.235\.0"/);

@@ -1,0 +1,165 @@
+function playSetBusy(on){
+  playSceneRuntime.busy=!!on;
+  for(const id of ['playPrimaryAction','playNext','playBack','playEndGame','playExitVillage']){const el=document.getElementById(id);if(el)el.disabled=!!on}
+  renderPlayGatherToolbar(); // Restore button interactivity immediately when a request completes.
+  renderPlayRoleAssignmentPanel(); // Restore draft approval interactivity after config save.
+}
+function playGameStatus(message,kind='info'){
+  const status=document.getElementById('playGameStatus');
+  if(!status)return;
+  status.textContent=String(message||'');
+  status.hidden=!message;
+  status.dataset.kind=kind;
+}
+function playFlashError(message){
+  playSceneRuntime.lastError=String(message||'Không thể thực hiện thao tác.');
+  if(!document.getElementById('playGameSheet')?.classList.contains('hidden'))playGameStatus(playSceneRuntime.lastError,'error');
+  const title=document.getElementById('playPhaseTitle');
+  if(title)title.textContent=playSceneRuntime.lastError;
+  setTimeout(()=>renderPlayRealtimeHeader(),1800);
+}
+async function playRoomApi(path='',opts={}){
+  if(!isLivePlayRoom())throw new Error('Chưa có Phòng Online.');
+  // While the Demo bot owns a lease, all its writes carry the same owner ID.
+  const headers=playSceneRuntime.room?.demo===true&&typeof demoRunner!=='undefined'&&demoRunner.owner&&demoRunner.roomCode===String(playSceneState.roomCode)
+    ?{...(opts.headers||{}),'x-gmww-demo-owner':demoRunner.owner}:opts.headers;
+  return gmApi('/api/gm/rooms/'+encodeURIComponent(playSceneState.roomCode)+path,{...opts,headers});
+}
+function disconnectPlaySocket(){if(playSceneRuntime.socketReconnect){clearTimeout(playSceneRuntime.socketReconnect);playSceneRuntime.socketReconnect=0}if(playSceneRuntime.roomSyncTimer){clearTimeout(playSceneRuntime.roomSyncTimer);playSceneRuntime.roomSyncTimer=0}if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}try{playSceneRuntime.socket?.close(1000,'GM_ROOM_CHANGED')}catch{}playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode=''}
+function stopPlayGlobalVillagePoll(){if(playSceneRuntime.villagePollTimer){clearInterval(playSceneRuntime.villagePollTimer);playSceneRuntime.villagePollTimer=0}}
+async function playSyncGlobalVillageMotion(forceRender=false){
+  if(isLivePlayRoom())return null;
+  try{
+    const before=playPlayerRenderSignature(),res=await fetch(GMWW_SERVER_BASE+'/api/village?ts='+Date.now(),{cache:'no-store'}),d=await res.json();
+    if(!res.ok||d?.ok===false)throw new Error(d?.message||d?.error||('HTTP '+res.status));
+    if(Number.isFinite(Number(d?.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();
+    const rows=(Array.isArray(d?.players)?d.players:[]).map(p=>{const participantId=String(p?.participantId||''),loginId=String(p?.loginId||participantId.replace(/^member:/,''));return{...p,participantId:participantId||('member:'+loginId),kind:'member',loginId,online:p?.online!==false}});
+    playSceneRuntime.players=rows;playSceneRuntime.lastSyncAt=Date.now();setPlayRealtimeState('live');
+    const changed=before!==playPlayerRenderSignature();
+    if(forceRender||changed)renderPlayPlayers();else syncPlayMovementTicker();
+    renderPlayRealtimeHeader();return d
+  }catch(err){setPlayRealtimeState('offline');return null}
+}
+function ensurePlayGlobalVillagePoll(){
+  if(isLivePlayRoom()){stopPlayGlobalVillagePoll();return}
+  if(playSceneRuntime.villagePollTimer)return;
+  playSyncGlobalVillageMotion(true);
+  playSceneRuntime.villagePollTimer=setInterval(()=>{if(document.visibilityState!=='visible'||playSceneRuntime.busy)return;const anyMoving=(playSceneRuntime.players||[]).some(p=>p?.movementStatus==='moving');if(!anyMoving&&Date.now()-Number(playSceneRuntime.lastSyncAt||0)<5000)return;playSyncGlobalVillageMotion(false)},1500)
+}
+function ensurePlayRealtimePoll(){if(!isLivePlayRoom()){if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}ensurePlayGlobalVillagePoll();return}stopPlayGlobalVillagePoll();if(playSceneRuntime.pollTimer)return;playSceneRuntime.pollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&!playSceneRuntime.busy&&(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN||playRealtimeLooksStale()))playSyncRoom(false)},2500)}
+// V3.301 realtime watchdog: the Durable Object owns the turn clock. If no socket
+// message or REST sync arrived for 8 s, or the current turn deadline passed without
+// the next turn arriving, the socket is silently dead (iPhone app switch) → resync.
+function playRealtimeLooksStale(){
+  const now=Date.now(),seen=Math.max(Number(playSceneRuntime.socketMessageAt||0),Number(playSceneRuntime.restSyncAt||0));
+  if(now-seen>8000)return true;
+  const deadline=Date.parse(playSceneRuntime.nightRuntime?.deadlineAt||'');
+  const serverNow=now+(Number(playSceneRuntime.serverClockOffsetMs)||0);
+  return Number.isFinite(deadline)&&serverNow>deadline+1500&&now-seen>1500;
+}
+// Returning to the GM app (e.g. after checking Player Web on the same iPhone) must
+// show the live Server state at once, not the turn frozen when the app went to background.
+function playResumeRealtime(){
+  if(!isLivePlayRoom()||document.visibilityState!=='visible')return;
+  const ws=playSceneRuntime.socket,quiet=Date.now()-Math.max(Number(playSceneRuntime.socketMessageAt||0),Number(playSceneRuntime.restSyncAt||0))>2500;
+  if(ws&&quiet){playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode='';try{ws.close()}catch{}}
+  if(playSceneRuntime.socketReconnect){clearTimeout(playSceneRuntime.socketReconnect);playSceneRuntime.socketReconnect=0}
+  playSceneRuntime.socketFailures=0;connectPlaySocket();void playSyncRoom(true);
+}
+document.addEventListener('visibilitychange',playResumeRealtime);
+window.addEventListener('pageshow',playResumeRealtime);
+window.addEventListener('focus',playResumeRealtime);
+window.addEventListener('online',playResumeRealtime);
+function playPlayerRenderSignature(players=playSceneRuntime.players){return (Array.isArray(players)?players:[]).map(p=>[String(p?.loginId||p?.participantId||''),Number(p?.seatId||0),String(p?.gameCharacterId||''),String(p?.movementStatus||''),String(p?.villageActivity||''),String(p?.moveId||''),String(p?.characterAnimation?.state||''),String(p?.characterAnimation?.motion||''),String(p?.characterAnimation?.facing||''),p?.online===false?'0':'1',p?.ready?'1':'0'].join(':')).sort().join('|')+':status:'+JSON.stringify((playSceneRuntime.activeEffects||[]).filter(x=>x?.effectActive!==false).map(x=>[x.loginId,x.type,x.statusId,x.expiresAt]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))))}
+function connectPlaySocket(){
+  if(!isLivePlayRoom()){disconnectPlaySocket();setPlayRealtimeState('offline');return}
+  const code=String(playSceneState.roomCode);
+  if(playSceneRuntime.socket&&playSceneRuntime.socketRoomCode===code&&[WebSocket.OPEN,WebSocket.CONNECTING].includes(playSceneRuntime.socket.readyState)){
+    setPlayRealtimeState(playSceneRuntime.socket.readyState===WebSocket.OPEN?'live':'connecting');return
+  }
+  disconnectPlaySocket();setPlayRealtimeState('connecting');
+  const base=String(GMWW_SERVER_BASE||'').replace(/^http:/,'ws:').replace(/^https:/,'wss:').replace(/\/$/,'');let ws;
+  try{ws=new WebSocket(base+'/ws/'+encodeURIComponent(code))}catch{setPlayRealtimeState('offline');return}
+  playSceneRuntime.socket=ws;playSceneRuntime.socketRoomCode=code;
+  ws.onopen=()=>{if(playSceneRuntime.socket===ws){playSceneRuntime.socketFailures=0;setPlayRealtimeState('live');ensurePlayRealtimePoll()}};
+  ws.onmessage=e=>{try{
+    if(playSceneRuntime.socket===ws)playSceneRuntime.socketMessageAt=Date.now();
+    const d=JSON.parse(e.data||'{}');
+    if(d.type==='chat_tick'&&String(playSceneState.roomCode)===code){if(typeof gmwwGMChatRefresh==='function'&&gmwwGMChatOpen)void gmwwGMChatRefresh();return}
+    if(['demo_event','demo_control','demo_winner'].includes(d.type)&&String(playSceneState.roomCode)===code){void playSyncRoom(true);return}
+    if(d.type==='gallows_updated'&&String(playSceneState.roomCode)===code){
+      if(Number.isFinite(Number(d.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();
+      playSceneRuntime.gallows=d.gallows||null;
+      battleState.gallowsClosedShown=false;
+      if(playSceneState.step==='battle'&&playSceneState.phase==='day')battleGallowsRender('day');
+      return;
+    }
+    // A verified Player action is signaled as a privacy-safe WebSocket tick.
+    // Only the GM-authenticated /gm/state may reveal committed targets.
+    if(['battle_action_confirmed','battle_action_undone','battle_action_reverted','day_action_confirmed',
+        'player_interaction_response','player_status_changed'].includes(d.type)&&String(playSceneState.roomCode)===code){
+      if(playSceneRuntime.roomSyncTimer)clearTimeout(playSceneRuntime.roomSyncTimer);
+      playSceneRuntime.roomSyncTimer=setTimeout(()=>{playSceneRuntime.roomSyncTimer=0;void playSyncRoom(true)},80);
+      return;
+    }
+    const movementEvent=d.type==='player_move'||d.type==='player_move_complete',gameEvent=['night_turn','room_cycle','auto_gm'].includes(d.type);
+    if(!['room_state','player_move','player_move_complete','night_turn','room_cycle','auto_gm','role_progress','artifact_progress','delivery_progress'].includes(d.type)||String(playSceneState.roomCode)!==code)return;
+    if(d.type==='role_progress'||d.type==='artifact_progress'||d.type==='delivery_progress'){
+      // The durable object stores acknowledgement timestamps; refresh from it,
+      // rather than assuming a websocket notification means the card was viewed.
+      if(playSceneRuntime.roomSyncTimer)clearTimeout(playSceneRuntime.roomSyncTimer);
+      playSceneRuntime.roomSyncTimer=setTimeout(()=>{playSceneRuntime.roomSyncTimer=0;void playSyncRoom(true)},200);
+      return;
+    }
+    setPlayRealtimeState('live');
+    const beforePlayerSig=playPlayerRenderSignature();
+    if(Number.isFinite(Number(d.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();
+    if(gameEvent){
+      const room=d.room||playSceneRuntime.room;
+      if(room){playSceneRuntime.room=room;if(Object.prototype.hasOwnProperty.call(room,'autoGM'))playSceneState.autoGM=room.autoGM!==false;const serverPhase=String(room.phase||'lobby').toLowerCase(),cyclePhase=String(room.cyclePhase||d.phase||'').toLowerCase(),cycleNight=Math.max(0,Number(room.cycleNight||d.night)||0);if(['running','started','game','playing'].includes(serverPhase)){playSceneState.step='battle';if(cyclePhase==='night'){playSceneState.phase='night';playSceneState.night=Math.max(1,cycleNight)}else if(cyclePhase==='morning'||cyclePhase==='day'){playSceneState.phase='day';playSceneState.night=Math.max(1,cycleNight)}}}
+      if(d.runtime)playSceneRuntime.nightRuntime=d.runtime;else if(d.nightRuntime)playSceneRuntime.nightRuntime=d.nightRuntime;
+      if(Array.isArray(d.players))playSceneRuntime.players=d.players;
+      playSceneRuntime.lastSyncAt=Date.now();savePlayScene();renderPlayScene();
+      if(playSceneRuntime.roomSyncTimer)clearTimeout(playSceneRuntime.roomSyncTimer);
+      playSceneRuntime.roomSyncTimer=setTimeout(()=>{playSceneRuntime.roomSyncTimer=0;playSyncRoom(true)},180);return
+    }
+    const previousGmStage=playSceneRuntime.room?.gmStage;
+    playSceneRuntime.room=d.room||playSceneRuntime.room;
+    if(Array.isArray(d.players))playSceneRuntime.players=d.players;
+    if(d.room?.gmStage&&d.room.gmStage!==previousGmStage&&!playStagePublishPending&&['room','seats','game','roles','deal'].includes(d.room.gmStage)&&['lobby','waiting'].includes(String(d.room.phase||'lobby'))){
+      playSceneState.step=d.room.gmStage;savePlayScene();renderPlayScene();return;
+    }
+    playSceneRuntime.lastSyncAt=Date.now();
+    if(d.room&&Object.prototype.hasOwnProperty.call(d.room,'autoGM'))playSceneState.autoGM=d.room.autoGM!==false;
+    const playerRenderChanged=beforePlayerSig!==playPlayerRenderSignature();
+    // Room-state heartbeats can contain an in-flight move too. Keep the player layer hot
+    // instead of rebuilding the whole scene, so GM sees the same smooth movement as Player Web.
+    if(movementEvent||d.type==='room_state'){if(playerRenderChanged)renderPlayPlayers();syncPlayMovementTicker();renderPlayRealtimeHeader()}
+    else renderPlayScene()
+  }catch{}};
+  ws.onclose=()=>{if(playSceneRuntime.socket===ws){playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode='';setPlayRealtimeState('connecting');if(isLivePlayRoom()&&String(playSceneState.roomCode)===code){const failures=Math.min(5,Number(playSceneRuntime.socketFailures||0)+1);playSceneRuntime.socketFailures=failures;playSceneRuntime.socketReconnect=setTimeout(connectPlaySocket,Math.min(10000,750*2**failures))}}};
+  ws.onerror=()=>{if(playSceneRuntime.socket===ws)setPlayRealtimeState('offline')};
+}
+function playRoomDisplayName(){
+  if(!isLivePlayRoom())return'SẢNH CHỜ';
+  const runtimeName=String(playSceneRuntime.room?.roomName||'').trim();if(runtimeName)return playReadableRoomName(runtimeName);
+  const hit=playRoomRegistry().find(x=>String(x?.roomCode||'')===String(playSceneState.roomCode||''));
+  return playReadableRoomName(hit?.roomName)
+}
+function playReadableRoomName(value){const name=String(value||'').trim();return !name||/^(Phòng GMWW|Phòng Online)$/i.test(name)?'Làng Asahi':name}
+function playVisibleStageLabel(){
+  if(playSceneState.phase==='night')return 'Đêm '+Math.max(1,Number(playSceneState.night)||1);
+  if(playSceneState.phase==='day')return 'Ngày '+Math.max(1,Number(playSceneState.night)||1);
+  // The top timeline is the single authoritative label for all seven setup stages.
+  const key=PLAY_STEPS.includes(playSceneState.step)?playSceneState.step:'lobby';
+  const timelineButton=Array.from(document.querySelectorAll('[data-play-step]')).find(el=>el.dataset?.playStep===key);
+  return String(timelineButton?.querySelector('b')?.textContent||PLAY_STEP_COPY[key]?.t||'Sảnh chờ').trim();
+}
+function renderPlayRealtimeHeader(){
+  // Room-state / presence websocket events must never replace the current stage with the room name.
+  const label=playVisibleStageLabel(),title=document.getElementById('playPhaseTitle');
+  if(title)title.textContent=label;
+  const next=document.getElementById('playPhasePill');
+  if(next)next.setAttribute('aria-label','Bước hiện tại '+label+' · Chạm để tiếp tục');
+}
+function clearStalePlayRoom(){disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;playSceneState.selectedMemberIds=[];playSceneState.step='lobby';playSceneState.phase='lobby';playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;savePlayScene();gmwwSendGmPresence(true);renderPlayScene()}

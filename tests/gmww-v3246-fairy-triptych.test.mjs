@@ -1,6 +1,7 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import{createHash}from'node:crypto';
-const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const battle=gmSource('40-battle-and-timeline');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const server=workerSource();
 const css=fs.readFileSync('server-game/current/style.css','utf8');

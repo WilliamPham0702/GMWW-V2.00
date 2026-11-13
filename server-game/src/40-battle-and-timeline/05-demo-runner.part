@@ -1,0 +1,334 @@
+/* Dedicated battle mode: in-match controls use the server's authoritative turn queue. */
+/* Isolated Demo playback. All decisions are sampled from currently legal GM
+ * choices and submitted through the same server action/turn endpoints. */
+const demoRunner={running:false,paused:false,owner:'',speed:1,timer:0,epoch:0,steps:0,roomCode:'',matchId:'',
+  completed:new Set(),pending:new Set(),dayDone:new Set(),autoStartedMatch:'',status:'Sẵn sàng — nhấn Chạy Demo',error:''};
+// Native only: prevent Auto-Lock during an active foreground DEMO without camera/polling.
+let demoScreenAwakeSent=null;
+function demoSyncScreenAwake(){
+  const enabled=demoRunner.running===true&&playSceneRuntime.room?.demo===true&&
+    playSceneRuntime.room?.phase==='running'&&playSceneState.step==='battle'&&
+    document.visibilityState!=='hidden';
+  if(enabled===demoScreenAwakeSent)return;
+  const bridge=window.webkit?.messageHandlers?.gmwwScreen;
+  if(!bridge)return;
+  try{bridge.postMessage({action:'setDemoAwake',enabled});demoScreenAwakeSent=enabled}
+  catch(error){console.warn('GMWW_DEMO_SCREEN_AWAKE',error)}
+}
+document.addEventListener('visibilitychange',demoSyncScreenAwake);
+window.addEventListener('pagehide',()=>{
+  try{window.webkit?.messageHandlers?.gmwwScreen?.postMessage({action:'setDemoAwake',enabled:false})}catch(_){}
+  demoScreenAwakeSent=null;
+});
+const demoPick=rows=>rows[Math.floor(Math.random()*rows.length)];
+const demoDelay=()=>250;
+const demoLeaseBody=(command,extra={})=>({command,owner:demoRunner.owner,speed:demoRunner.speed,...extra});
+const GMWW_GM_HAPTIC_KEY='gmww_gm_haptic_v1';
+function gmHapticEnabled(){try{return localStorage.getItem(GMWW_GM_HAPTIC_KEY)==='1'}catch{return false}}
+function gmHapticAvailable(){return !!window.webkit?.messageHandlers?.gmwwHaptic||typeof navigator.vibrate==='function'}
+function setGmHapticEnabled(value){
+  if(value&&!gmHapticAvailable()){
+    playFlashError('iPhone Safari không hỗ trợ rung từ trang web. Cần IPA GMWW mới có cầu nối gmwwHaptic.');
+    return false;
+  }
+  try{localStorage.setItem(GMWW_GM_HAPTIC_KEY,value?'1':'0')}catch{}
+  if(value)gmHapticFeedback(); // instant tactile confirmation that the toggle is functional
+  return true;
+}
+function gmHapticFeedback(){
+  if(!gmHapticEnabled())return false;
+  try{
+    // Only native WKWebView IPA hosts that register gmwwHaptic can vibrate on iOS.
+    const bridge=window.webkit?.messageHandlers?.gmwwHaptic;
+    if(bridge){bridge.postMessage({event:'action-confirmed'});return true}
+    if(typeof navigator.vibrate==='function')return !!navigator.vibrate(60);
+  }catch(error){console.warn('GM haptic unavailable',error)}
+  return false;
+}
+function demoConfirmedFeedback(){
+  gmHapticFeedback();
+  // Gallows nominations and thumb votes may be numerous; no repeated OK cue.
+  if(playSceneState.phase==='day'&&['nominating','selecting','voting','closed','resolved']
+    .includes(String(playSceneRuntime.gallows?.stage||'')))return;
+  if(!playAudioMuted())void battlePlayConfiguredAudio('system','audio_system_confirm','Xác nhận');
+}
+
+// Project server progress; polling never chooses or submits gameplay actions.
+function demoApplyServerControl(control){
+  if(control?.engine!=='server')return;
+  const event=control.lastEvent,sameRoom=demoRunner.roomCode===String(playSceneState.roomCode),previous=demoRunner.lastEvent;
+  const heard=demoRunner.heardEvents||(demoRunner.heardEvents=new Set());
+  // A delayed Server event from the preceding turn/cycle must not interrupt
+  // the currently playing voice, particularly at x2/x5.
+  const sameCycle=!event?.cycleKey||String(event.cycleKey)===String(playSceneRuntime.room?.cycleKey||'');
+  const feedback=!heard.has(event?.id)&&sameRoom&&sameCycle&&demoRunner.observedMatch===String(playSceneRuntime.room?.matchId||'')&&event&&event.id!==previous?.id&&event.status==='accepted';
+  demoRunner.observedMatch=String(playSceneRuntime.room?.matchId||'');
+  demoRunner.roomCode=String(playSceneState.roomCode);demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
+  demoRunner.running=control.running===true;demoRunner.paused=control.paused===true;demoRunner.speed=Number(control.speed)||1;
+  demoRunner.steps=Number(control.steps)||0;demoRunner.error=control.error||'';
+  demoRunner.status=control.running?'Đang chạy trên server':control.reason==='winner'?'Đã xác định phe thắng':control.paused?'Đã tạm dừng':'Sẵn sàng — nhấn Chạy Demo';
+  if(typeof demoSyncScreenAwake==='function')demoSyncScreenAwake();
+  demoRunner.lastEvent=event||null;
+  demoRunner.history=Array.isArray(control.history)?control.history:[];
+  demoRunner.visual=event?.status==='accepted'&&event.actionId?{matchId:event.matchId,cycleKey:event.cycleKey,turnId:event.turnId,actionId:event.actionId,actorId:event.actorId,targetIds:event.targetIds||[]}:null;
+  if(feedback){
+    heard.add(event.id);if(heard.size>800)heard.delete(heard.values().next().value);
+    if(event.revelation?.message&&event.revelation?.actionId){
+      gmHapticFeedback();battlePresentRevelation(event.revelation.actionId,event.revelation);
+    }else if(event.audioActionId){gmHapticFeedback();void battlePlayConfiguredAudio('actions',event.audioActionId,event.action)}
+    else demoConfirmedFeedback();
+  }
+  if(control.running&&playSceneState.step==='battle'&&!demoRunner.timer)demoSchedule(750);
+}
+function demoHoldForGM(){
+  if(playSceneRuntime.demoControl?.engine!=='server'||!demoRunner.running)return;
+  if(Date.now()-Number(demoRunner.lastHoldAt||0)<1000)return;
+  demoRunner.lastHoldAt=Date.now();
+  void playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'hold'})}).catch(()=>{});
+}
+function demoStopTimer(){if(demoRunner.timer){clearTimeout(demoRunner.timer);demoRunner.timer=0}}
+async function demoStop(reason='manual'){
+  const active=demoRunner.running,code=demoRunner.roomCode;
+  demoRunner.paused=reason==='manual'&&active;
+  demoRunner.status=demoRunner.paused?'Đã tạm dừng':reason==='completed'?'Ván Demo đã kết thúc':'Sẵn sàng — nhấn Chạy Demo';
+  demoRunner.running=false;demoRunner.epoch++;demoStopTimer();demoSyncScreenAwake();
+  if(!active)return;
+  if(playSceneRuntime.demoControl?.engine==='server'&&['room_change','exit_play'].includes(reason)){renderPlayBattle();return}
+  try{
+    if(code===String(playSceneState.roomCode)&&isLivePlayRoom())
+      await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('stop'))});
+  }catch(err){console.warn('Demo release deferred to lease expiry',reason,err)}
+  renderPlayBattle();
+}
+function demoRenderControls(){
+  demoSyncScreenAwake();
+  initDemoPanel();demoRenderObserver();demoRenderVisual();
+  document.getElementById('battleDemoExpand')?.classList.toggle('is-running',demoRunner.running);
+  const panel=document.getElementById('battleDemoPanel'),status=document.getElementById('battleDemoStatus');
+  if(panel)panel.hidden=!(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle');
+  if(status){status.textContent=demoRunner.error||demoRunner.status;status.classList.toggle('is-error',!!demoRunner.error)}
+  const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
+    wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
+    field=document.getElementById('battleDemoSpeed');
+  if(button){button.hidden=!enabled;button.dataset.runState=demoRunner.running?'running':'paused';button.title=demoRunner.error||demoRunner.status||'DEMO';button.setAttribute('aria-label',demoRunner.running?'Đang chạy DEMO, chạm để tạm dừng':'Đã tạm dừng DEMO, chạm để tiếp tục');button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  const orbit=button?.querySelector('.demo-clockwise-orbit');if(orbit)orbit.textContent=demoRunner.running?'↻':'Ⅱ';
+  if(wrap)wrap.hidden=!enabled;
+  if(auto)auto.hidden=false;
+  if(field){field.dataset.speed=String(demoRunner.speed);field.textContent='×'+String(demoRunner.speed);field.setAttribute('aria-label','Tốc độ DEMO: '+demoRunner.speed+' lần. Chạm để thay đổi.');}
+  const matchKey=[playSceneState.roomCode,playSceneRuntime.room?.matchId].join(':');
+  // Start once when a DEMO match enters battle; never override the GM's Pause.
+  if(playSceneRuntime.demoControl?.engine!=='server'&&enabled&&playSceneState.step==='battle'&&playSceneRuntime.room?.phase==='running'&&
+     playSceneRuntime.room?.matchId&&demoRunner.autoStartedMatch!==matchKey&&!demoRunner.running&&!demoRunner.paused){
+    demoRunner.autoStartedMatch=matchKey;
+    setTimeout(()=>{if(playSceneRuntime.room?.demo===true&&playSceneState.step==='battle'&&
+      [playSceneState.roomCode,playSceneRuntime.room?.matchId].join(':')===matchKey)void demoToggle()},0);
+  }
+}
+async function demoToggle(){
+  // Start DEMO may call the server before the first role cue. Unlock the iOS
+  // AudioContext synchronously on the actual GM tap, not after awaiting HTTP.
+  battleUnlockAudioFromGesture();
+  if(playSceneRuntime.room?.demo!==true)return;
+  if(demoRunner.running){await demoStop();return}
+  if(playSceneState.step!=='battle'){playFlashError('Hãy setup và vào trận trước khi chạy Demo.');return}
+  const sameMatch=demoRunner.roomCode===String(playSceneState.roomCode)&&
+    demoRunner.matchId===String(playSceneRuntime.room?.matchId||'');
+  if(!sameMatch){demoRunner.completed.clear();demoRunner.pending.clear();demoRunner.dayDone.clear();demoRunner.steps=0;demoRunner.lastEvent=null;demoRunner.nightPlan=null;demoRunner.visual=null}
+  demoRunner.owner='demo-'+(globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2));
+  demoRunner.roomCode=String(playSceneState.roomCode);
+  demoRunner.matchId=String(playSceneRuntime.room?.matchId||'');
+  demoRunner.speed=Number(document.getElementById('battleDemoSpeed')?.dataset.speed)||1;
+  try{
+    if(playSceneRuntime.room?.autoGM!==false){const data=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled:false})});playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneState.autoGM=false}
+    const status=await playRoomApi('/demo',{method:'POST',body:JSON.stringify({command:'start',speed:demoRunner.speed})});
+    if(status?.ok!==true)throw Error(status?.message||status?.error||'Không khởi động được Demo.');
+    demoRunner.running=true;demoRunner.paused=false;demoRunner.error='';demoRunner.status='Đang chạy Demo';demoRunner.epoch++;
+    if(status.engine==='server'){playSceneRuntime.demoControl=status;demoApplyServerControl(status)}
+    renderPlayBattle();demoSchedule(0);
+  }catch(err){demoRunner.error='Không chạy được: '+String(err?.message||err);playFlashError('Demo: '+String(err?.message||err));renderPlayBattle()}
+}
+function demoSchedule(ms=demoDelay()){
+  demoStopTimer();
+  if(!demoRunner.running)return;
+  const epoch=demoRunner.epoch;
+  demoRunner.timer=setTimeout(()=>{demoRunner.timer=0;if(demoRunner.running&&epoch===demoRunner.epoch)void demoStep(epoch)},ms);
+}
+async function demoActionNight(t,epoch){return demoRunNight(t,epoch)}
+async function demoExecuteNight(action,actorId,t,signature,epoch){
+  const room=playSceneRuntime.room;
+      const saveTargets=action.actionId==='action_witch_save'?(playSceneRuntime.nightIntel?.attacked||[]).map(x=>x.to):null;
+      const available=playLiveMembers().filter(m=>m?.loginId&&(!saveTargets||saveTargets.includes(m.loginId))&&(!action.noSelf||m.loginId!==actorId)&&battleRules()?.targetAllowed(
+        action,m,playPlayerEffect(m.loginId),playSceneRuntime.activeEffects,playSceneState.night));
+      const count=Math.max(0,Number(action.targetCount)||0),chosen=[];
+      while(chosen.length<count&&available.length){
+        const id=demoPick(available).loginId;
+        chosen.push(id);available.splice(available.findIndex(x=>x.loginId===id),1);
+      }
+      if(chosen.length!==count){demoObserve(action.name+' · Không đủ mục tiêu hợp lệ',actorId,[],'skipped');return}
+      if(chosen.length===count){
+        const seer=['action_seer','action_aura_read','action_fox_scan','action_bear_scan','action_scan_three',
+          'action_find_seer','action_destroyer_scry','action_compare_faction','action_wolf_seer','action_rotten_seer','action-digan-scry','action-rotten-seer-check','action-vampire-check']
+          .includes(action.actionId)&&!action.artifactId;
+        const transfer=String(action.actionId)==='action_transfer_bite'&&!action.artifactId;
+        const direction=transfer?demoPick(['left','right','none']):'';
+        const payload={matchId:String(room.matchId||''),cycleKey:String(room.cycleKey||''),turnId:t.id,
+          night:Number(playSceneState.night||1),actorId,type:transfer?'effect_notice':action.type,
+          actionId:action.actionId,effectId:action.effectIds?.[0]||'',effectName:action.name,
+          targetIds:seer||transfer||count===0?[actorId]:chosen,
+          clientEventId:'demo-'+(globalThis.crypto?.randomUUID?.()||Math.random().toString(36).slice(2)),
+          ...(action.artifactId?{artifactId:action.artifactId}:{}),
+          ...(seer?{revealTargetIds:chosen,message:'GM Demo thực hiện soi xét.'}:{}),
+          ...(transfer?{direction,message:'Demo dịch vết cắn '+direction}:{}),
+          ...(action.actionId==='action_assassin_mark'?{assassinChoice:demoPick(['👍','👎'])}:{})
+        };
+        demoFocus(action,actorId,chosen);
+        demoObserve(action.name,actorId,seer?chosen:transfer?[]:chosen,'pending');
+        demoRunner.pending.add(signature);
+        try{
+          const result=await playRoomApi('/battle-action',{method:'POST',body:JSON.stringify(payload)});
+          if(result?.ok!==true)throw Error(result?.message||result?.error||'Hành động không được server chấp nhận.');
+          demoRunner.pending.delete(signature);demoRunner.completed.add(signature);
+          demoObserve(action.name+(transfer?' · '+({left:'Trái',right:'Phải',none:'Không dịch'}[direction]||''):''),actorId,seer?chosen:transfer?[]:chosen);
+          demoConfirmedFeedback();
+          if(result.revelation?.message&&demoRunner.running&&epoch===demoRunner.epoch)
+            battlePresentRevelation(action.actionId,result.revelation);
+        }catch(err){if(err?.status>=400&&err?.status<500)demoRunner.pending.delete(signature);throw err}
+    }
+}
+async function demoActionDay(epoch){
+  const room=playSceneRuntime.room,cycle=String(room.matchId||'')+':'+String(room.cycleKey||'');
+  const available=battleActions().filter(a=>!a.unavailable&&!demoRunner.dayDone.has(cycle+':'+a.id)&&a.actorIds?.length);
+  if(available.length){
+    const a=demoPick(available),actorId=demoPick(a.actorIds),memberIds=playLiveMembers().filter(m=>
+      m?.loginId&&(!a.noSelf||m.loginId!==actorId)&&battleRules()?.targetAllowed(
+        a,m,playPlayerEffect(m.loginId),playSceneRuntime.activeEffects,playSceneState.night)).map(m=>m.loginId);
+    const chosen=[];
+    while(chosen.length<a.targetCount&&memberIds.length){
+      const id=demoPick(memberIds);chosen.push(id);memberIds.splice(memberIds.indexOf(id),1);
+    }
+    demoRunner.dayDone.add(cycle+':'+a.id);
+    if(chosen.length===a.targetCount&&Math.random()<0.85){
+      demoFocus(a,actorId,chosen);demoObserve(a.name,actorId,chosen,'pending');
+      const result=await playRoomApi('/day-action',{method:'POST',body:JSON.stringify({
+        matchId:room.matchId,cycleKey:room.cycleKey,actorId,
+        roleId:a.roleId||'',artifactId:a.artifactId||'',actionId:a.actionId,targetIds:chosen,
+        clientEventId:'demo-'+(globalThis.crypto?.randomUUID?.()||Math.random().toString(36).slice(2))
+      })});
+      if(result?.ok!==true)throw Error('Hành động ngày không hợp lệ: '+(result?.message||result?.error||'Server từ chối.'));
+      demoObserve(a.name,actorId,chosen);
+      demoConfirmedFeedback();
+    }
+    return;
+  }
+  // After 50% let day powers act; hold the gallows until the discussion expires.
+  const dayClock=playSceneRuntime.demoControl?.clock;
+  if(dayClock?.kind==='discussion'&&Number(dayClock.remainingMs)>0)return;
+  const g=playSceneRuntime.gallows||{},stage=String(g.stage||'ready'),
+    now=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0),
+    eligible=(Array.isArray(g.eligible)?g.eligible:playLiveMembers().map(x=>x.loginId)).filter(id=>id&&playPlayerEffect(id)!=='dead'&&playPlayerEffect(id)!=='expelled');
+  const post=async(command,extra={})=>{
+    const result=await playRoomApi('/gallows',{method:'POST',body:JSON.stringify({command,source:'demo',...extra})});
+    if(result?.ok!==true)throw Error(result?.message||result?.error||'Lên Giàn không hợp lệ.');
+    demoObserve(({open:'Mở đề cử',begin:'Lên Giàn',resolve:'Kết quả · '+(extra.outcome==='dead'?'Chết':'Sống')})[command]||command,'',extra.targetId?[extra.targetId]:command==='resolve'&&g.candidateId?[g.candidateId]:[]);
+  };
+  if(!eligible.length)throw Error('Không còn thành viên đủ điều kiện để bỏ phiếu; GM cần kiểm tra kết quả thắng.');
+  if(stage==='ready'){await post('open');return}
+  if(stage==='nominating'&&now<Number(g.nominationDeadlineAt||0)){
+    const awaiting=eligible.filter(id=>!Object.hasOwn(g.nominations||{},id));
+    if(awaiting.length){
+      const actor=demoPick(awaiting),target=demoPick(eligible);demoObserve('Đề cử',actor,[target],'pending');
+      const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('nominate',{
+        loginId:actor,targetId:target,matchId:room.matchId,cycleKey:room.cycleKey}))});
+      if(result?.ok!==true)throw Error(result?.message||result?.error||'Đề cử không thành công.');
+      demoObserve('Đề cử',actor,[target]);
+    }
+    return;
+  }
+  if(stage==='selecting'||stage==='nominating'){
+    const counts={};for(const id of Object.values(g.nominations||{}))counts[id]=(counts[id]||0)+1;
+    const rank=Object.keys(counts).filter(id=>eligible.includes(id)).sort((a,b)=>counts[b]-counts[a]);
+    await post('begin',{targetId:rank[0]||demoPick(eligible)});return;
+  }
+  if(stage==='voting'&&now<Number(g.deadlineAt||0)){
+    const awaiting=eligible.filter(id=>id!==g.candidateId&&!Object.hasOwn(g.votes||{},id)&&!(g.blocked||[]).includes(id));
+    if(awaiting.length){
+      const actor=demoPick(awaiting),choice=demoPick(['👍','👎']);demoObserve('Bỏ phiếu '+choice,actor,[g.candidateId],'pending');
+      const result=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('vote',{
+        loginId:actor,choice,matchId:room.matchId,cycleKey:room.cycleKey}))});
+      if(result?.ok!==true)throw Error(result?.message||result?.error||'Bỏ phiếu không thành công.');
+      demoObserve('Bỏ phiếu '+choice,actor,[g.candidateId]);
+    }
+    return;
+  }
+  if(stage==='closed'||stage==='voting'){
+    const votes=Object.values(g.votes||{}),kill=votes.filter(x=>x==='👎').length>votes.filter(x=>x==='👍').length;
+    await post('resolve',{outcome:kill?'dead':'alive'});return;
+  }
+  if(stage==='resolved'){
+    if(demoRunner.running&&epoch===demoRunner.epoch)await playSetServerCycle('night',Math.max(1,Number(playSceneState.night)||1)+1);
+    return;
+  }
+  throw Error('Trạng thái giàn treo chưa được hỗ trợ: '+stage);
+}
+async function demoStep(epoch){
+  if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+  if(playSceneRuntime.demoControl?.engine==='server'){
+    // A failed refresh only affects this viewer. It must never pause the server.
+    await playSyncRoom(true);
+    if(demoRunner.running&&String(playSceneState.roomCode)===demoRunner.roomCode)demoSchedule(750);
+    return;
+  }
+  try{
+    if(demoRunner.steps>800)throw Error('Đã đạt giới hạn an toàn 800 bước. GM cần kiểm tra ván.');
+    const beat=await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('heartbeat'))});
+    if(beat?.ok!==true)throw Error(beat?.message||beat?.error||'Mất quyền điều khiển Demo.');
+    if(playSceneRuntime.busy||battleState.busy||battleState.syncPending||battleState.gallowsBusy||battleState.undoBusy||(typeof battleConfirmAudioGate!=='undefined'&&battleConfirmAudioGate)||battleState.targetSheet||battleState.targets.length){demoSchedule(250);return}
+    if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+    const beforeSync=Number(playSceneRuntime.syncSerial||0),latest=await playSyncRoom(true);
+    if(!latest&&Number(playSceneRuntime.syncSerial)>beforeSync+1){demoSchedule(250);return}
+    if(!latest)throw Error('Mất đồng bộ với server; không thể tiếp tục tự chơi.');
+    if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+    if(playSceneRuntime.busy||battleState.busy||battleState.syncPending||battleState.gallowsBusy||battleState.undoBusy||(typeof battleConfirmAudioGate!=='undefined'&&battleConfirmAudioGate)||battleState.targetSheet||battleState.targets.length){demoSchedule(250);return}
+    const room=playSceneRuntime.room;
+    demoRunner.status='Đang chạy · '+(playSceneState.phase==='day'?'Ngày ':'Đêm ')+Number(playSceneState.night||1)+' · '+String(battleTurn()?.label||'Lên Giàn');
+    demoRenderControls();
+    if(room?.demo!==true||String(playSceneState.roomCode)!==demoRunner.roomCode||room?.phase!=='running'){
+      await demoStop('room_or_match_changed');return;
+    }
+    if(playSceneRuntime.winProposal){
+      await demoStop('winner_ready');await openPlayCompletionSheet();return;
+    }
+    const clock=playSceneRuntime.demoControl?.clock;
+    if(clock&&clock.kind==='discussion'&&clock.remainingMs>0){
+      const halfway=Math.max(0,Number(clock.durationMs||0)/2);
+      const cycle=String(room.matchId||'')+':'+String(room.cycleKey||'');
+      const actionsPending=playSceneState.phase==='day'&&battleActions().some(a=>
+        !a.unavailable&&a.actorIds?.length&&!demoRunner.dayDone.has(cycle+':'+a.id));
+      if(clock.remainingMs>halfway||!actionsPending){
+        demoSchedule(Math.min(500,Math.max(50,(clock.remainingMs-(actionsPending?halfway:0))/Math.max(1,clock.speed))));return;
+      }
+    }
+    if(playSceneState.phase!=='night')demoRunner.steps++;
+    if(playSceneState.phase==='night'){
+      const rt=playSceneRuntime.nightRuntime,t=battleTurn();
+      if(t)await demoActionNight(t,epoch);
+      else if(rt?.completed)await playSetServerCycle('day',Math.max(1,Number(playSceneState.night)||1));
+      else throw Error('Không tìm thấy lượt Đêm hợp lệ.');
+    }else if(playSceneState.phase==='day')await demoActionDay(epoch);
+    else throw Error('Demo chỉ chạy khi đã vào Ngày hoặc Đêm.');
+    if(demoRunner.running&&epoch===demoRunner.epoch)demoSchedule(clock?.kind==='night'&&clock.remainingMs>0?Math.min(500,Math.max(50,clock.remainingMs/Math.max(1,clock.speed)/Math.max(1,demoRunner.nightPlan?.ids.length||1))):demoDelay());
+  }catch(error){
+    if(!demoRunner.running||epoch!==demoRunner.epoch)return;
+    if(['STALE_TURN','STALE_BATTLE_ACTION','ARTIFACT_ALREADY_USED','ROLE_NIGHT_ACTION_EXHAUSTED','ACTION_GAME_LIMIT_REACHED','ACTION_NIGHT_LIMIT_REACHED'].includes(error?.code)){await playSyncRoom(true);demoRunner.nightPlan=null;demoSchedule();return}
+    const msg=String(error?.message||error);
+    demoRunner.error='Đã dừng: '+msg;
+    if(demoRunner.lastEvent?.status==='pending')demoRunner.lastEvent.status='uncertain';
+    demoRunner.running=false;demoRunner.epoch++;demoStopTimer();demoSyncScreenAwake();
+    // Keep an uncertain request blocked; do not blindly retry with a new receipt ID.
+    if(!/DEMO_LEASE_OWNED|DEMO_LEASE_EXPIRED/.test(msg))
+      try{await playRoomApi('/demo',{method:'POST',body:JSON.stringify(demoLeaseBody('stop'))})}catch{}
+    playFlashError('Demo đã dừng: '+msg);
+    renderPlayBattle();
+  }
+}
+

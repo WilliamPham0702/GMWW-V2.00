@@ -1,0 +1,100 @@
+async function api(path,opts={}){
+  const headers={...(opts.headers||{})};
+  if(opts.body!==undefined&&!headers['content-type'])headers['content-type']='application/json';
+  const r=await fetch(path,{...opts,headers,cache:'no-store'});
+  let d={};try{d=await r.json()}catch{}
+  if(!r.ok)throw Object.assign(new Error(d.message||d.error||'Có lỗi xảy ra.'),{status:r.status,data:d});
+  return d;
+}
+function auth(){return state.token?{Authorization:'Bearer '+state.token}:{}}
+function avatarUrl(id){return '/api/avatars/'+encodeURIComponent(id)+'/image'}
+async function loadUiSettings(force=false){
+  if(!force&&Date.now()-Number(state.uiSettingsLoadedAt||0)<10000)return state.characterScale;
+  try{const d=await api('/api/ui-settings');state.characterScale=normalizeCharacterScale(d?.characterScale,100);state.actionIconScale=[25,50,75,100,125,150].includes(Number(d?.actionIconScale))?Number(d.actionIconScale):100;state.uiSettingsLoadedAt=Date.now();syncVillageFrame();renderOnlineActionDock();return state.characterScale}catch{return state.characterScale}
+}
+
+function saveSession(d){
+  state.token=d.token;state.member=d.member;
+  localStorage.setItem('gmww_token',d.token);localStorage.setItem('gmww_member',JSON.stringify(d.member));
+  startPresence();
+}
+async function restore(){
+  if(!state.token)return false;
+  try{const d=await api('/api/members/me',{headers:auth()});state.member=d.member;localStorage.setItem('gmww_member',JSON.stringify(d.member));startPresence();return true}
+  catch(e){
+    if(e?.status===401||e?.status===403){state.token='';state.member=null;localStorage.removeItem('gmww_token');localStorage.removeItem('gmww_member');return false}
+    try{const cached=JSON.parse(localStorage.getItem('gmww_member')||'null');if(cached){state.member=cached;startPresence();setTimeout(()=>restore(),2500);return true}}catch{}
+    return false
+  }
+}
+
+function setLoginPasswordVisible(show){
+  const block=$('#loginPasswordBlock'),pass=$('#loginPass');if(block)block.classList.toggle('open',!!show);if(!show&&pass)pass.value='';
+}
+function setLoginRegisterGuide(show){const g=$('#loginRegisterGuide');if(g)g.classList.toggle('show',!!show)}
+function openCreateFromLogin(){
+  const user=$('#loginUser')?.value.trim()||'',reg=$('#regUser');if(reg&&user)reg.value=user;setLoginRegisterGuide(false);go('create');
+  setTimeout(()=>{const target=user?$('#regDisplay'):$('#regUser');target?.focus()},40);
+}
+window.openCreateFromLogin=openCreateFromLogin;
+function toggleRegistrationPassword(){
+  const fields=$('#registrationPasswordFields'),toggle=$('#registrationPasswordToggle');if(!fields)return;const open=!fields.classList.contains('open');fields.classList.toggle('open',open);
+  if(toggle)toggle.textContent=open?'− Không đặt mật khẩu':'＋ Đặt mật khẩu cho tài khoản nếu muốn';
+  if(open)$('#regPass')?.focus();else{const p=$('#regPass'),p2=$('#regPass2');if(p)p.value='';if(p2)p2.value=''}
+}
+window.toggleRegistrationPassword=toggleRegistrationPassword;
+
+async function login(){
+  const user=$('#loginUser')?.value.trim()||'';
+  if(!user){toast('Vui lòng nhập tên đăng nhập.');return}
+  setLoginRegisterGuide(false);setLoginPasswordVisible(false);
+  const btn=$('#login .primary');btn?.classList.add('loading');
+  try{const d=await api('/api/members/login',{method:'POST',body:JSON.stringify({loginId:user})});saveSession(d);state.roomNavigationAuthorized=false;await enterVillage()}
+  catch(e){if(String(e?.data?.error||'')==='MEMBER_NOT_FOUND'){setLoginRegisterGuide(true);toast('Tên đăng nhập này chưa có tài khoản.')}else toast(e.message)}
+  finally{btn?.classList.remove('loading')}
+}
+
+window.login=login;
+$('#loginUser')?.addEventListener('input',()=>{setLoginPasswordVisible(false);setLoginRegisterGuide(false)});
+
+function openReset(){
+  const u=$('#resetUser'),from=$('#loginUser')?.value.trim()||'';if(u)u.value=from;
+  const f=$('#resetForm'),s=$('#resetSuccess');if(f)f.style.display='block';if(s)s.style.display='none';go('reset');
+}
+window.openReset=openReset;
+async function requestPasswordReset(){
+  const loginId=$('#resetUser')?.value.trim()||'';if(!loginId){toast('Vui lòng nhập tên tài khoản.');return}
+  const btn=$('#resetSubmit');btn?.classList.add('loading');
+  try{await api('/api/members/reset-request',{method:'POST',body:JSON.stringify({loginId})});const f=$('#resetForm'),s=$('#resetSuccess');if(f)f.style.display='none';if(s)s.style.display='block'}
+  catch(e){toast(e.message)}
+  finally{btn?.classList.remove('loading')}
+}
+window.requestPasswordReset=requestPasswordReset;
+
+async function createAccount(){
+  const loginId=$('#regUser')?.value.trim()||'',displayName=$('#regDisplay')?.value.trim()||'';
+  if(!loginId){toast('Vui lòng nhập tên đăng nhập.');$('#regUser')?.focus();return}
+  if(!displayName){toast('Vui lòng nhập Tên Hiển Thị.');$('#regDisplay')?.focus();return}
+  if(!state.selectedAvatarId){toast('Vui lòng chọn Nhân Vật GMWW.');return}
+  const btn=$('#create .primary.violet');btn?.classList.add('loading');
+  try{const d=await api('/api/members/register',{method:'POST',body:JSON.stringify({loginId,displayName,gameCharacterId:state.selectedAvatarId})});saveSession(d);state.roomNavigationAuthorized=false;await enterVillage();return}
+  catch(e){toast(e.message)}finally{btn?.classList.remove('loading')}
+}
+
+window.createAccount=createAccount;
+
+async function logout(){
+  try{if(state.token)await api('/api/members/logout',{method:'POST',headers:auth(),body:'{}'})}catch{}
+  clearActiveRoom();disconnectRoom();clearInterval(state.presenceTimer);state.presenceTimer=null;if(state.gmPresencePoll){clearInterval(state.gmPresencePoll);state.gmPresencePoll=null}state.gmPresence=null;clearLobbyMotionTimer();state.token='';state.member=null;
+  localStorage.removeItem('gmww_token');localStorage.removeItem('gmww_member');
+  go('login');
+}
+
+async function changePassword(){
+  const inputs=$$('.change-pass .pass-grid .input');if(inputs.length<3)return;
+  const [cur,nw,cf]=inputs.map(x=>x.value);
+  if(nw!==cf){toast('Mật khẩu mới nhập lại chưa khớp.');return}
+  try{await api('/api/members/password',{method:'POST',headers:auth(),body:JSON.stringify({currentPassword:cur,newPassword:nw})});inputs.forEach(x=>x.value='');toast('Đã thay đổi mật khẩu.')}
+  catch(e){toast(e.message)}
+}
+

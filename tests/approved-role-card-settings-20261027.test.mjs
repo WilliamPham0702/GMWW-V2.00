@@ -1,9 +1,10 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+const source=gmSource('00-core-and-library');
 const start=source.indexOf('function applyApprovedRoleSettings(s){');
 const end=source.indexOf('function applyV221AudioGuard(s){',start);
 assert.ok(start>=0&&end>start,'approved migration must be present in canonical GM source');
@@ -105,7 +106,7 @@ test('lost functions are restored from the approved default without removing cus
 test('existing and legacy saved libraries apply contract AFTER canonical defaults are upserted',()=>{
  assert.match(source,/return applyApprovedRoleSettings\(applyV226Catalog\(/);
  assert.match(source,/const s=applyApprovedRoleSettings\(applyV226Catalog\(/);
- const ui=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+ const ui=gmSource('10-library-and-settings');
  for(const binding of ['entityInformation','specialLimits','specialConditions','functionList'])
    assert.ok(ui.includes(binding),'Settings editor must display '+binding);
  assert.match(source,/let state=loadState\(\),prefs=loadPrefs\(\);\s*saveState\(\)/);

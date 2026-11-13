@@ -1,3 +1,4 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -56,7 +57,7 @@ test('manual conclusion retains server snapshot for same match only',()=>{
 
 test('GM UI shows collapsible auto/manual, all roster counts and matching menu width',()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
- const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+ const gm=gmSource('40-battle-and-timeline');
  const css=fs.readFileSync('server-game/current/style.css','utf8');
  assert.ok(html.includes('id="battleGallowsModeDetails"'));
  assert.ok(html.includes('id="battleGallowsCandidateControl"'));
@@ -69,9 +70,9 @@ test('GM UI shows collapsible auto/manual, all roster counts and matching menu w
 });
 
 test('Player Web keeps stage-scoped nomination and vote actions; configured audio upload IDs exist',()=>{
- const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+ const player=playerWebSource('30-rooms-and-realtime');
  const server=workerSource();
- const audio=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+ const audio=gmSource('00-core-and-library');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  assert.ok(player.includes("stage==='nominating'"));
  assert.ok(player.includes("stage==='voting'"));

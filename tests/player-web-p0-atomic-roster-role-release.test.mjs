@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js';
 const compiled=patchPrivatePlayerCards(gmwwMembersLiveScript);
 const worker=workerSource();
-const village=readFileSync(new URL('../src/player-web-src/20-village-and-profile.part',import.meta.url),'utf8');
+const village=playerWebSource('20-village-and-profile');
 
 test('P0 Player Web JS compiles after roster and role recovery patch',()=>{
  assert.doesNotThrow(()=>new vm.Script(compiled));

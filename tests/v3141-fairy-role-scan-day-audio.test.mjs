@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -29,7 +30,7 @@ test('V3.141 divination: all real role scans have correct result types and targe
  assert.equal(reveal('action_transfer_bite',['wolf']),null,'non-scan action must not leak results');
 });
 test('V3.141 fairy chooser: only three positional controls; no header and no extra OK',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const battle=read('server-game/src/40-battle-and-timeline.part');
+ const battle=gmSource('40-battle-and-timeline');
  const start=battle.indexOf('function battleRenderTransferPanel(){'),end=battle.indexOf('function battleCloseResultPopup(){',start);
  const code=battle.slice(start,end);
  assert.ok(code.includes("['left','↩️'")&&code.includes("['none','⏺️'")&&code.includes("['right','↪️'"));
@@ -41,7 +42,7 @@ test('V3.141 fairy chooser: only three positional controls; no header and no ext
  assert.ok(read('src/gmww-wolf-night-resolution.js').includes("const n=seated.findIndex(x=>x.loginId===origin)"));
 });
 test('V3.141 GM role labels: full wrapping and data-only faction coloring',()=>{
- const gm=read('server-game/src/30-village-and-setup.part'),css=read('server-game/current/style.css');
+ const gm=gmSource('30-village-and-setup'),css=read('server-game/current/style.css');
  assert.ok(gm.includes('data-faction='));
  assert.ok(gm.includes("roleFaction=factionRaw.includes('wolf')"));
  for(const f of ['village','wolf','third'])assert.ok(css.includes('.play-player-role[data-faction="'+f+'"]'));
@@ -50,7 +51,7 @@ test('V3.141 GM role labels: full wrapping and data-only faction coloring',()=>{
  assert.ok(!read('assets/village/village.mjs').includes('data-faction'),'do not leak GM faction to Player Web');
 });
 test('V3.141 role-result popup is scan-only and contains result without explanations',()=>{
- const code=read('server-game/src/40-battle-and-timeline.part');
+ const code=gmSource('40-battle-and-timeline');
  assert.ok(code.includes('if(revelation)battlePresentRevelation(a.actionId,revelation)'));
  assert.ok(code.includes("battleShowResultPopup('',String(revelation.message||''),true)"));
  assert.ok(!code.includes("battleShowResultPopup('🐺 KẾT QUẢ VẾT CẮN'"));
@@ -58,7 +59,7 @@ test('V3.141 role-result popup is scan-only and contains result without explanat
  assert.ok(code.includes("popup.classList.toggle('is-scan-result',scanOnly)"));
 });
 test('V3.141 system audio: every scan result, final 30 seconds, time-up and wake-up have linkable IDs',()=>{
- const code=read('server-game/src/00-core-and-library.part'),battle=read('server-game/src/40-battle-and-timeline.part');
+ const code=gmSource('00-core-and-library'),battle=gmSource('40-battle-and-timeline');
  const ids=['audio_system_day_wakeup','audio_system_countdown','audio_system_time_up',
    'audio_system_seer_wolf','audio_system_seer_not_wolf','audio_system_aura_read',
    'audio_system_destroyer_role','audio_system_fox_wolf','audio_system_fox_no_wolf',
@@ -71,7 +72,7 @@ test('V3.141 system audio: every scan result, final 30 seconds, time-up and wake
  assert.ok(battle.includes("battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối')"));
 });
 test('V3.141 wake-up audio completion advances via Server to day exactly once',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const battle=read('server-game/src/40-battle-and-timeline.part'),audio=read('server-game/src/30-village-and-setup.part');
+ const battle=gmSource('40-battle-and-timeline'),audio=gmSource('30-village-and-setup');
  assert.ok(battle.includes('function battlePlayWakeupAndAdvance(turn,key)'));
  assert.ok(battle.includes('battleState.wakeAudioStartedKey===key'));
  assert.ok(battle.includes('await advancePlayPhase(); // Complete the actual wake-up turn'));

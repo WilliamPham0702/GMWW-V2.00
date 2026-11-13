@@ -1,10 +1,11 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {gmwwMembersLiveScript as script} from '../src/gmww-members-live.js';
 
-const part=readFileSync(new URL('../src/player-web-src/37-player-rooms.part',import.meta.url),'utf8');
+const part=playerWebSource('37-player-rooms');
 
 test('shipped Player Web script contains the player-room panel and it parses',()=>{
   assert.ok(script.includes('gmwwPlayerRooms'));
@@ -32,8 +33,8 @@ test('owner token is kept only under its own storage key and cleared when the ro
   assert.match(part,/KEY='gmwwOwnedRoom'/);assert.match(part,/save\(null\)/);
 });
 test('assembler lists the new part in order after the GM observer',()=>{
-  const a=readFileSync(new URL('../.github/scripts/assemble-player-web.mjs',import.meta.url),'utf8');
-  assert.ok(a.indexOf("'36-gm-observer.part'")<a.indexOf("'37-player-rooms.part'")&&a.indexOf("'37-player-rooms.part'")<a.indexOf("'40-cards-and-game.part'"));
+  const a=readFileSync(new URL('../.github/scripts/source-groups.mjs',import.meta.url),'utf8');
+  assert.ok(a.indexOf("'36-gm-observer'")>0&&a.indexOf("'36-gm-observer'")<a.indexOf("'37-player-rooms'")&&a.indexOf("'37-player-rooms'")<a.indexOf("'40-cards-and-game'"));
 });
 
 test('server bottom bar is bundled from the GM app, the plus button and Top 3 are gone',()=>{
@@ -55,7 +56,7 @@ test('Phòng Game page sits between Sảnh chờ and Tập hợp and offers send
   assert.match(part,/Gửi phòng/);assert.match(part,/Sao chép mã/);assert.match(part,/Tạo phòng riêng/);assert.match(part,/Vào Game/);assert.match(part,/ĐÃ VÀO PHÒNG/);assert.match(part,/navigator\.share/);
 });
 test('GM Player Web list shows every room with kind and status; players list no longer shares the rooms container',()=>{
-  const gm=readFileSync(new URL('../src/player-web-src/36-gm-observer.part',import.meta.url),'utf8');
+  const gm=playerWebSource('36-gm-observer');
   assert.match(gm,/PHÒNG GAME/);assert.match(gm,/NGƯỜI CHƠI/);assert.match(gm,/gmww-gmobs-players/);
   assert.match(script,/gmww-gmobs-players/);
 });

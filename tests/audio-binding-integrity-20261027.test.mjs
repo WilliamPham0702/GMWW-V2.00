@@ -1,11 +1,12 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const read=p=>fs.readFileSync(p,'utf8');
-const core=read('server-game/src/00-core-and-library.part'),
-  lib=read('server-game/src/10-library-and-settings.part'),
-  battle=read('server-game/src/30-village-and-setup.part');
+const core=gmSource('00-core-and-library'),
+  lib=gmSource('10-library-and-settings'),
+  battle=gmSource('30-village-and-setup');
 const cut=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
 
 test('runtime routes on ID only; never selects a coincidentally matching name',()=>{
@@ -72,7 +73,7 @@ test('a name-only reveal without exact cut NEVER plays first 5 seconds of wake-u
 
 test('GM assembly still matches seven source files byte-for-byte',()=>{
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
- assert.equal(read('server-game/current/app.js'),parts.map(p=>read('server-game/src/'+p)).join(''));
+ assert.equal(read('server-game/current/app.js'),parts.map(p=>gmSource(p.replace(/\.part$/,''))).join(''));
 });
 
 test('fallback is restricted to real system event IDs with exact Vietnamese scripts',()=>{

@@ -1,3 +1,4 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,12 +9,12 @@ import {chatPolicy} from '../src/gmww-online-chat-policy.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 
 const read=p=>fs.readFileSync(p,'utf8');
-const chat=read('src/player-web-src/35-online-chat.part');
-const player=read('src/player-web-src/20-village-and-profile.part');
-const ws=read('src/player-web-src/30-rooms-and-realtime.part');
-const gm=read('server-game/src/45-online-chat.part');
-const gmSocket=read('server-game/src/30-village-and-setup.part');
-const gmControls=read('server-game/src/40-battle-and-timeline.part');
+const chat=playerWebSource('35-online-chat');
+const player=playerWebSource('20-village-and-profile');
+const ws=playerWebSource('30-rooms-and-realtime');
+const gm=gmSource('45-online-chat');
+const gmSocket=gmSource('30-village-and-setup');
+const gmControls=gmSource('40-battle-and-timeline');
 const gmHtml=read('server-game/current/GMWW.html');
 const server=workerSource();
 

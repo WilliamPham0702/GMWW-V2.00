@@ -30,8 +30,8 @@ jobs:
           grep -Fq "u.pathname='/characters/gmww40/originals/'+visual+'.webp'" src/gmww-character40-catalog.js
           grep -Fq "document.addEventListener('visibilitychange',visibility)" assets/village/village-performance.mjs
           grep -Fq 'if(!document.hidden)void sync()' assets/village/scene-manager.mjs
-          grep -Fq 'if(document.hidden)return;sendPresence()' src/player-web-src/30-rooms-and-realtime.part
-          grep -Fq 'if(!document.hidden)checkWebUpdate()' src/player-web-src/50-privacy-and-runtime.part
+          grep -rFq 'if(document.hidden)return;sendPresence()' src/player-web-src/30-rooms-and-realtime/
+          grep -rFq 'if(!document.hidden)checkWebUpdate()' src/player-web-src/50-privacy-and-runtime/
       - uses: actions/setup-node@v4
         with:
           node-version: 22

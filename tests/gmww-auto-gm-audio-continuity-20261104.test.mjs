@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const setup=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
 const between=(source,begin,end)=>{
   const start=source.indexOf(begin),stop=source.indexOf(end,start);
   assert.ok(start>=0&&stop>start,'missing source function '+begin);

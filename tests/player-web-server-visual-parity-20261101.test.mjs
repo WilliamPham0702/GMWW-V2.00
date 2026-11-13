@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,10 +7,10 @@ import vm from 'node:vm';
 import {onlineGmActionIcon} from '../src/gmww-online-action-icons.js';
 import {resolveWolfNight} from '../src/gmww-wolf-night-resolution.js';
 
-const web=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const web=playerWebSource('35-online-chat');
 const runner=fs.readFileSync('src/gmww-demo-runner.js','utf8');
 const worker=workerSource();
-const refresh=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+const refresh=playerWebSource('30-rooms-and-realtime');
 function section(src,from,to){
  const start=src.indexOf(from),end=src.indexOf(to,start);
  assert.ok(start>=0&&end>start,'Missing '+from);

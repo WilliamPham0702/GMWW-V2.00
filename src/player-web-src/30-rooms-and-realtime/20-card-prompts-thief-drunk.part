@@ -1,0 +1,129 @@
+// Say Rượu opens the exact existing role-card back, without a separate box.
+let cardPromptBusy=false;
+function clearCardPrompt(id){document.getElementById(id)?.remove()}
+function cardPromptPanel(id,html){
+  let panel=document.getElementById(id);
+  if(panel)return panel;
+  panel=document.createElement('section');panel.id=id;
+  panel.style.cssText='position:fixed;left:8px;right:8px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:2147482000;background:#081d37ee;color:#fff;border-radius:12px;padding:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;box-shadow:0 8px 24px #0009';
+  panel.innerHTML=html;document.getElementById('game')?.appendChild(panel);return panel;
+}
+async function cardPromptPost(path,payload,doneText){
+  if(cardPromptBusy||!state.roomCode)return false;
+  cardPromptBusy=true;
+  try{
+    const r=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+path,{method:'POST',headers:auth(),body:JSON.stringify(payload)});
+    if(r?.ok!==true)throw Error('Chưa thể xác nhận.');
+    toast(doneText);await refreshPrivateRole(true);return true;
+  }catch(err){toast(err?.message||'Chưa thể xác nhận, vui lòng thử lại.');return false}
+  finally{cardPromptBusy=false}
+}
+function renderCardPrompts(d){
+  const room=state.room||{},active=!!state.roomCode&&String(room.phase||'')==='running'&&document.getElementById('game')?.classList.contains('active');
+  const peek=active&&String(room.cyclePhase||'')==='night'&&d?.peekAlert&&String(d.peekAlert.matchId||'')===String(room.matchId||'');
+  if(!peek)clearCardPrompt('gmwwPeekAlert');
+  else{
+    const panel=cardPromptPanel('gmwwPeekAlert','<strong style="flex:1 1 100%">Có người đang hí mắt nhìn Bầy Sói. Bầy Sói có phát hiện không?</strong><button type="button" data-v="1" style="flex:1;padding:10px;border-radius:8px;font-weight:700">Phát hiện</button><button type="button" data-v="0" style="flex:1;padding:10px;border-radius:8px">Không phát hiện</button>');
+    for(const b of panel.querySelectorAll('button'))b.onclick=async()=>{if(await cardPromptPost('/peek/decide',{detected:b.dataset.v==='1'},'Đã ghi nhận quyết định của Bầy Sói.'))clearCardPrompt('gmwwPeekAlert')};
+  }
+  const ghost=active&&String(room.cyclePhase||'')==='morning'&&d?.ghostPrompt&&String(d.ghostPrompt.matchId||'')===String(room.matchId||'');
+  if(!ghost)clearCardPrompt('gmwwGhostWord');
+  else{
+    const panel=cardPromptPanel('gmwwGhostWord','<strong style="flex:1 1 100%">Hồn Ma: gửi đúng 1 từ làm manh mối (không nhắc tên người chơi)</strong><input type="text" maxlength="30" autocomplete="off" aria-label="Một từ manh mối" style="flex:1;min-width:120px;padding:10px;border-radius:8px"><button type="button" style="padding:10px 14px;border-radius:8px;font-weight:700">Gửi</button>');
+    const input=panel.querySelector('input'),btn=panel.querySelector('button');
+    btn.onclick=async()=>{
+      const word=input.value.trim();
+      if(!word||/\s/.test(word)){toast('Chỉ được nhập đúng một từ.');return}
+      if(await cardPromptPost('/ghost/word',{word},'Hồn Ma đã gửi manh mối.'))clearCardPrompt('gmwwGhostWord');
+    };
+  }
+}
+let thiefBusy=false;
+function clearThiefPanel(){thiefBusy=false;state.thiefDraw=null;document.getElementById('gmwwThiefDraw')?.remove()}
+function renderThiefDraw(draw){
+  const room=state.room||{};
+  const visible=!!state.roomCode&&String(room.phase||'')==='running'&&String(room.cyclePhase||'')==='night'&&
+    Number(room.cycleNight||0)>=3&&draw?.kind==='thief'&&draw.status==='pending'&&String(draw.matchId||'')===String(room.matchId||'')&&
+    document.getElementById('game')?.classList.contains('active');
+  state.thiefDraw=draw||null;
+  let panel=document.getElementById('gmwwThiefDraw');
+  if(!visible){if(panel)panel.remove();return}
+  if(!panel){
+    panel=document.createElement('section');panel.id='gmwwThiefDraw';panel.setAttribute('aria-label','Kẻ Trộm chọn một lá Vai Trò');
+    panel.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:#001222cc';
+    panel.innerHTML='<div style="max-width:min(96vw,560px);max-height:86dvh;overflow-y:auto;background:#081d37;border-radius:12px;padding:16px;color:#fff"><h3 style="margin:0 0 8px">Kẻ Trộm: chọn một Vai Trò</h3><div class="th-list" style="display:flex;flex-wrap:wrap;gap:8px"></div></div>';
+    document.getElementById('game').appendChild(panel);
+  }
+  const list=panel.querySelector('.th-list');list.replaceChildren();
+  const keep=document.createElement('button');keep.type='button';keep.textContent='Không đổi';keep.disabled=thiefBusy;
+  keep.style.cssText='flex:1 1 100%;padding:10px;border-radius:8px;font-weight:700';keep.onclick=()=>submitThief({keep:true});list.appendChild(keep);
+  for(const c of draw.cards||[]){
+    const b=document.createElement('button');b.type='button';b.textContent=c.roleName;b.disabled=thiefBusy;
+    b.style.cssText='padding:8px 10px;border-radius:8px';b.onclick=()=>submitThief({roleId:c.id});list.appendChild(b);
+  }
+}
+async function submitThief(payload){
+  if(thiefBusy||!state.thiefDraw||state.thiefDraw.status!=='pending'||!state.roomCode)return;
+  thiefBusy=true;renderThiefDraw(state.thiefDraw);
+  try{
+    const response=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/thief/choose',{method:'POST',headers:auth(),body:JSON.stringify(payload)});
+    if(response?.ok!==true)throw Error('Chưa thể xác nhận lựa chọn.');
+    clearThiefPanel();await refreshPrivateRole(true);
+  }catch(err){thiefBusy=false;renderThiefDraw(state.thiefDraw);toast(err?.message||'Chưa thể xác nhận, vui lòng thử lại.');await pollRoomState()}
+}
+let drunkDrawBusy=false;
+function clearDrunkDraw(){
+  drunkDrawBusy=false;state.drunkDraw=null;state.drunkDrawDismissed='';
+  document.getElementById('gmwwDrunkDraw')?.remove();
+}
+function renderDrunkDraw(draw){
+  const room=state.room||{};
+  const inTurn=!!state.roomCode&&String(room.phase||'')==='running'&&
+    String(room.cyclePhase||'')==='night'&&Number(room.cycleNight||0)===3&&
+    String(draw?.matchId||'')===String(room.matchId||'');
+  if(!inTurn&&!['running'].includes(String(room.phase||''))){
+    clearDrunkDraw();return;
+  }
+  state.drunkDraw=draw||null;
+  let panel=document.getElementById('gmwwDrunkDraw');
+  const visible=inTurn&&draw?.status==='pending'&&Array.isArray(draw.cards)&&
+    draw.cards.length>0&&document.getElementById('game')?.classList.contains('active');
+  if(!visible){if(panel)panel.hidden=true;return}
+  if(!panel){
+    const css=document.createElement('style');css.id='gmwwDrunkDrawStyle';
+    css.textContent='#gmwwDrunkDraw{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:16px;background:#00122266;pointer-events:auto}'+
+      '#gmwwDrunkDraw[hidden]{display:none!important}'+
+      '#gmwwDrunkDraw .dd-deck{max-width:min(96vw,620px);max-height:82dvh;overflow-y:auto;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:12px;touch-action:pan-y}'+
+      '#gmwwDrunkDraw .dd-card{display:block;flex:0 0 auto;width:clamp(84px,34vw,178px);aspect-ratio:3/4;padding:0;border:0;border-radius:9px;overflow:hidden;background:#081d37;box-shadow:0 10px 24px #0008;cursor:pointer;touch-action:manipulation}'+
+      '#gmwwDrunkDraw .dd-card img{display:block;width:100%;height:100%;object-fit:cover}'+
+      '#gmwwDrunkDraw .dd-card:disabled{opacity:.7}';
+    document.head.appendChild(css);
+    panel=document.createElement('section');panel.id='gmwwDrunkDraw';
+    panel.setAttribute('aria-label','Say Rượu chọn một lá Vai Trò');
+    panel.innerHTML='<div class="dd-deck" role="group" aria-label="Chọn một lá Vai Trò úp"></div>';
+    document.getElementById('game').appendChild(panel);
+  }
+  panel.hidden=false;
+  const grid=panel.querySelector('.dd-deck');grid.replaceChildren();
+  const image=document.querySelector('#roleCard .gmww-card-back-img')?.src||'/role-card-back.webp';
+  for(const [i,c] of draw.cards.entries()){
+    const card=document.createElement('button');card.type='button';card.className='dd-card';
+    card.disabled=drunkDrawBusy;card.setAttribute('aria-label','Mở lá úp số '+(i+1));
+    const img=document.createElement('img');img.src=image;img.alt='Mặt lưng Vai Trò';img.draggable=false;
+    card.appendChild(img);card.onclick=()=>submitDrunkDraw(c.id);grid.appendChild(card);
+  }
+}
+async function submitDrunkDraw(cardId){
+  if(drunkDrawBusy||!state.drunkDraw||state.drunkDraw.status!=='pending'||!state.roomCode)return;
+  drunkDrawBusy=true;renderDrunkDraw(state.drunkDraw);
+  try{
+    const response=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/drunk/draw',{
+      method:'POST',headers:auth(),body:JSON.stringify({cardId})});
+    if(response?.ok!==true)throw Error('Chưa thể xác nhận lá đã mở.');
+    clearDrunkDraw();await refreshPrivateRole(true);
+  }catch(err){
+    drunkDrawBusy=false;renderDrunkDraw(state.drunkDraw);
+    toast(err?.message||'Chưa thể mở lá, vui lòng thử lại.');
+    await pollRoomState();
+  }
+}

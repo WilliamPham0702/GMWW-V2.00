@@ -1,10 +1,11 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const gm=fs.readFileSync('server-game/src/45-online-chat.part','utf8');
-const player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const gm=gmSource('45-online-chat');
+const player=playerWebSource('35-online-chat');
 const worker=workerSource();
 
 test('GM and Player use real microphone samples, not decorative bars, without speaker feedback',()=>{

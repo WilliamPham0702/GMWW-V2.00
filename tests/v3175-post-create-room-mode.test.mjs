@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import {readFileSync} from 'node:fs';
 import {roomModeSwitchBlocked} from '../src/gmww-room-config-rules.js';
 
 const worker=workerSource();
-const battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const battle=gmSource('40-battle-and-timeline');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');
 
@@ -84,7 +85,7 @@ test('The template selector waits for the saved template to be rehydrated before
 });
 
 test('DEMO chooses online room transport without losing bot isolation or enabling ordinary online actions',()=>{
-  const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const setup=gmSource('30-village-and-setup');
   assert.match(setup,/const patch=\{demo:target==='demo',roomMode:\(target==='online'\|\|target==='demo'\)\?'online':'offline'\}/);
   assert.match(worker,/roomMode=b\?\.demo===true\?"online":normalizeRoomMode\(b\?\.roomMode\)/);
   assert.match(worker,/const roomMode=desiredDemo\?"online":/);

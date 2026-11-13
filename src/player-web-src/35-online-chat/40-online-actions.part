@@ -1,0 +1,210 @@
+/* Online action offers are delivered privately and validated again on Server. */
+let gmwwOnlinePick=null,gmwwOnlineCanRestore=false,gmwwOnlineIconScope='';
+let gmwwOnlineWitchBite=null,gmwwOnlineConfirmedTargets=[],gmwwOnlineConfirmedUntil=0,gmwwOnlineRevealTimer=null;
+const gmwwOnlineIconPositions=new Map();
+function gmwwOnlineClearPositions(){
+ gmwwOnlineIconPositions.clear();gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0;
+ for(const node of document.querySelectorAll('#gmwwOnlineDock button'))node.style.transform='';
+ gmwwOnlineTurnEffects(state.onlineActions||[]);
+}
+async function gmwwOnlineRestore(){
+ if(!gmwwOnlineCanRestore||state.room?.phase!=='running'||state.room?.cyclePhase!=='night'){
+  toast('Không có hành động đã gửi hợp lệ để khôi phục.');return;
+ }
+ if(state.onlineBusy)return;
+ state.onlineBusy=true;
+ try{
+  await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/undo-action',{
+   method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey})
+  });
+  gmwwOnlineCanRestore=false;gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0;gmwwOnlineTurnEffects(state.onlineActions||[]);toast('Đã khôi phục hành động gần nhất.');await refreshPrivateRole(true);
+ }catch(e){
+  if(e?.status===409)gmwwOnlineCanRestore=false;
+  toast('Không thể khôi phục: '+String(e.message||'Lượt hoặc dữ liệu đã thay đổi.'));
+ }finally{state.onlineBusy=false}
+}
+function gmwwOnlinePeople(){return (state.players||[]).filter(p=>p?.loginId).map(p=>({id:String(p.loginId),name:String(p.displayName||p.loginId)}))}
+function gmwwOnlineStop(){gmwwOnlinePick=null;document.getElementById('gmwwOnlinePick')?.remove();if(!state.onlineBusy)gmwwCardRestore();gmwwOnlineTurnEffects(state.onlineActions||[])}
+function gmwwOnlinePlayerCenter(id){
+ const frame=document.getElementById('gmwwVillageFrame');id=String(id||'').replace(/^member:/,'');if(!frame||!id)return null;
+ try{
+   const rect=frame.getBoundingClientRect(),inner=frame.contentWindow;
+   const sx=rect.width/Math.max(1,Number(inner?.innerWidth)||frame.clientWidth||rect.width);
+   const sy=rect.height/Math.max(1,Number(inner?.innerHeight)||frame.clientHeight||rect.height);
+   for(const node of frame.contentDocument.querySelectorAll('#players .player[data-player-id]')){
+     if(String(node.dataset.playerId||'').replace(/^member:/,'')!==id)continue;
+     const face=node.querySelector('img,.portrait,canvas')||node,b=face.getBoundingClientRect();
+     if(!b.width||!b.height)continue;
+     return {x:rect.left+(b.left+b.width/2)*sx,y:rect.top+(b.top+b.height/2)*sy};
+   }
+ }catch{}
+ return null;
+}
+function gmwwOnlineFlyGhost(ghost,to,absorb){
+ if(!ghost)return Promise.resolve();
+ const from={x:parseFloat(ghost.style.left)||to.x,y:parseFloat(ghost.style.top)||to.y};
+ ghost.classList?.toggle('is-magnet',!!absorb);
+ ghost.style.left=to.x+'px';ghost.style.top=to.y+'px';
+ if(typeof ghost.animate!=='function'||matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return Promise.resolve();
+ const frames=absorb?
+   [{left:from.x+'px',top:from.y+'px',transform:'translate(-50%,-50%) scale(1)',opacity:1},
+    {left:to.x+'px',top:to.y+'px',transform:'translate(-50%,-50%) scale(1.18) rotate(-8deg)',opacity:1,offset:.45},
+    {left:to.x+'px',top:to.y+'px',transform:'translate(-50%,-50%) scale(.1) rotate(160deg)',opacity:0}]:
+   [{left:from.x+'px',top:from.y+'px',transform:'translate(-50%,-50%) scale(1)'},
+    {left:to.x+'px',top:to.y+'px',transform:'translate(-50%,-50%) scale(1)'}];
+ return ghost.animate(frames,{duration:absorb?360:240,easing:absorb?'cubic-bezier(.5,0,.7,.4)':'cubic-bezier(.2,.8,.3,1)',fill:'forwards'}).finished.catch(()=>{});
+}
+function gmwwOnlineRestoreHint(){
+ const b=document.getElementById('gmwwPlayerRestore');if(!b)return;
+ const ready=!!(gmwwOnlinePick||(gmwwOnlineCanRestore&&state.room?.phase==='running'&&state.room?.cyclePhase==='night'));
+ b.classList.toggle('gmww-restore-ready',ready);
+ b.title=ready?'Bấm Khôi phục để hoàn tác hành động/lựa chọn vừa làm':'Khôi phục lựa chọn hoặc hành động gần nhất của bạn';
+}
+// One batched read of every valid player's hit box/centre in parent-page pixels (V3.301 drag).
+function gmwwOnlineTargetSnapshot(){
+ const frame=document.getElementById('gmwwVillageFrame');if(!frame)return [];
+ try{
+   const rect=frame.getBoundingClientRect(),inner=frame.contentWindow;if(!rect.width||!rect.height)return [];
+   const sx=rect.width/Math.max(1,Number(inner?.innerWidth)||frame.clientWidth||rect.width);
+   const sy=rect.height/Math.max(1,Number(inner?.innerHeight)||frame.clientHeight||rect.height);
+   const valid=new Set(gmwwOnlinePeople().map(p=>p.id)),out=[];
+   for(const node of frame.contentDocument.querySelectorAll('#players .player[data-player-id]')){
+     const id=String(node.dataset.playerId||'').replace(/^member:/,'');if(!valid.has(id))continue;
+     const b=node.getBoundingClientRect();if(!b.width||!b.height)continue;
+     const face=node.querySelector('img,.portrait,canvas')||node,f=face.getBoundingClientRect(),fb=f.width&&f.height?f:b;
+     out.push({id,left:rect.left+b.left*sx,right:rect.left+b.right*sx,top:rect.top+b.top*sy,bottom:rect.top+b.bottom*sy,
+       mx:rect.left+(b.left+b.width/2)*sx,my:rect.top+(b.top+b.height/2)*sy,
+       cx:rect.left+(fb.left+fb.width/2)*sx,cy:rect.top+(fb.top+fb.height/2)*sy,
+       radius:Math.max(55,Math.min(115,Math.max(b.width,b.height)*.85))*Math.max(sx,sy)});
+   }
+   return out;
+ }catch{return []}
+}
+function gmwwOnlineTargetAt(x,y){
+ const frame=document.getElementById('gmwwVillageFrame');if(!frame)return '';
+ try{
+   const rect=frame.getBoundingClientRect(),inner=frame.contentWindow;
+   if(!rect.width||!rect.height)return '';
+   // Coordinates crossing the scaled village iframe must be mapped back into its viewport.
+   const sx=rect.width/Math.max(1,Number(inner?.innerWidth)||frame.clientWidth||rect.width);
+   const sy=rect.height/Math.max(1,Number(inner?.innerHeight)||frame.clientHeight||rect.height);
+   const localX=(x-rect.left)/sx,localY=(y-rect.top)/sy;
+   const valid=new Set(gmwwOnlinePeople().map(p=>p.id));
+   const idOf=node=>String(node?.dataset?.playerId||'').replace(/^member:/,'');
+   // Prefer the player directly under the finger, not an adjacent avatar.
+   const hit=frame.contentDocument?.elementFromPoint?.(localX,localY)?.closest?.('#players .player[data-player-id]');
+   if(hit&&valid.has(idOf(hit)))return idOf(hit);
+   let best='',distance=Infinity;
+   for(const node of frame.contentDocument.querySelectorAll('#players .player[data-player-id]')){
+     const id=idOf(node);if(!valid.has(id))continue;
+     const b=node.getBoundingClientRect(),d=Math.hypot(localX-b.left-b.width/2,localY-b.top-b.height/2);
+     const radius=Math.max(55,Math.min(115,Math.max(b.width,b.height)*.85));
+     if(d<radius&&d<distance){best=id;distance=d}
+   }
+   return best;
+ }catch{return ''}
+}
+function gmwwOnlinePickAction(action){
+ if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlineStop();
+ if(!gmwwOnlinePick)gmwwOnlinePick={action,targets:[]};
+ const box=document.getElementById('gmwwOnlinePick')||document.createElement('section');
+ box.id='gmwwOnlinePick';box.replaceChildren();
+ const h=document.createElement('strong');h.textContent=String(action.name||'Hành động');box.appendChild(h);
+ const line=document.createElement('small');line.textContent='Chọn mục tiêu '+(gmwwOnlinePick.targets.length+1)+' / '+Math.max(0,Number(action.targetCount)||0);box.appendChild(line);
+ const list=document.createElement('div');list.className='gmww-online-people';box.appendChild(list);
+ const count=Math.max(0,Number(action.targetCount)||0);
+ if(count)for(const p of gmwwOnlinePeople().filter(p=>(!action.noSelf||p.id!==state.member?.loginId)&&!gmwwOnlinePick.targets.includes(p.id))){
+   const b=document.createElement('button');b.textContent=p.name;b.onclick=()=>gmwwOnlineTarget(p.id);list.appendChild(b);
+ }else{line.textContent='Không cần mục tiêu';queueMicrotask(()=>{if(gmwwOnlinePick?.action.key===action.key)void gmwwOnlineSubmit()})}
+ const cancel=document.createElement('button');cancel.textContent='✕ Hủy';cancel.onclick=gmwwOnlineStop;box.appendChild(cancel);
+ document.body.appendChild(box);
+}
+function gmwwOnlineTarget(id){
+ const pick=gmwwOnlinePick;if(!pick)return;id=String(id||'').replace(/^member:/,'');
+ if(!gmwwOnlinePeople().some(p=>p.id===id)||pick.targets.includes(id)||(pick.action.noSelf&&id===state.member?.loginId))return;
+ pick.targets.push(id);gmwwOnlineTurnEffects(state.onlineActions||[]);
+ if(pick.targets.length>=Math.max(0,Number(pick.action.targetCount)||0))void gmwwOnlineSubmit();else toast('Đã chọn '+pick.targets.length+'/'+pick.action.targetCount+'; kéo icon tới người tiếp theo.');
+}
+function gmwwOnlineAssassinChoice(){
+ const pick=gmwwOnlinePick;if(!pick||pick.action.actionId!=='action_assassin_mark')return;
+ let box=document.getElementById('gmwwOnlinePick');
+ if(!box){box=document.createElement('section');box.id='gmwwOnlinePick';document.body.appendChild(box)}
+ box.replaceChildren();
+ const title=document.createElement('strong');title.textContent='Sát Thủ · chọn dấu hiệu cho mục tiêu';box.appendChild(title);
+ const choices=document.createElement('div');choices.className='gmww-online-people';box.appendChild(choices);
+ for(const choice of ['👍','👎']){
+  const b=document.createElement('button');b.type='button';b.textContent=choice;
+  b.setAttribute('aria-label',choice==='👍'?'Sát Thủ chọn thích':'Sát Thủ chọn không thích');
+  b.onclick=()=>{void gmwwOnlineSubmit(choice)};choices.appendChild(b);
+ }
+ const cancel=document.createElement('button');cancel.type='button';cancel.textContent='✕ Hủy';cancel.onclick=gmwwOnlineStop;box.appendChild(cancel);
+}
+async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
+ const pick=gmwwOnlinePick;if(!pick||state.onlineBusy)return;
+ const action=(state.onlineActions||[]).find(a=>a.key===pick.action.key);
+ if(!action||action.blocked||state.room?.phase!=='running'){gmwwOnlineStop();return}
+ if(pick.targets.length!==Math.max(0,Number(action.targetCount)||0)){gmwwOnlinePickAction(action);return}
+ const names=pick.targets.map(id=>gmwwOnlinePeople().find(p=>p.id===id)?.name||id);
+  // Actor and targets are server-authoritative; do not ask for redundant confirmation.
+ let direction,assassinChoice;
+ if(action.actionId==='action_transfer_bite'){
+   direction=prompt('Chọn hướng: left / none / right','none');
+   if(direction===null)return;direction=direction.toLowerCase().trim();
+   if(!['left','none','right'].includes(direction)){toast('Hướng không hợp lệ');return}
+ }
+ if(action.actionId==='action-fire-wolf-bite'){
+   direction=prompt('Lửa Lan sang người bên nào? left / right','left');
+   if(direction===null)return;direction=direction.toLowerCase().trim();
+   if(!['left','right'].includes(direction)){toast('Hướng không hợp lệ');return}
+ }
+ if(action.actionId==='action_assassin_mark'){
+   if(!['👍','👎'].includes(confirmedAssassinChoice)){gmwwOnlineAssassinChoice();return}
+   assassinChoice=confirmedAssassinChoice;
+ }
+ state.onlineBusy=true;
+ try{
+   const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/action',{method:'POST',headers:auth(),signal:AbortSignal.timeout(20000),body:JSON.stringify({matchId:state.room?.matchId,cycleKey:state.room?.cycleKey,actionKey:action.key,targetIds:pick.targets,direction,assassinChoice})});
+   gmwwOnlineConfirmedTargets=pick.targets.slice();gmwwOnlineConfirmedUntil=Date.now()+5500;
+   setTimeout(()=>gmwwOnlineTurnEffects(state.onlineActions||[]),5600);
+   gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';gmwwOnlineRestoreHint();toast('Đã thực hiện: '+String(action.name||'Hành động')+(gmwwOnlineCanRestore?' · bấm Khôi phục ở menu dưới nếu cần làm lại':''));
+   if(d.revelation?.message)gmwwOnlineShowRevelation(d.revelation);
+ }catch(e){toast(gmwwOnlineActionErrorText(e))}
+ finally{state.onlineBusy=false;gmwwCardRestore(700);await refreshPrivateRole(true)}
+}
+function gmwwOnlineActionErrorText(e){
+ if(e?.name==='TimeoutError'||e?.name==='AbortError')return 'Máy chủ phản hồi chậm, hãy thử lại.';
+ const raw=String(e?.message||e||'').trim();
+ const map={
+  DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN:'Bạn đã dùng hành động này hoặc chưa đến lượt của bạn.',
+  ACTION_ALREADY_USED:'Bạn đã dùng hành động này rồi.',
+  NOT_YOUR_TURN:'Chưa đến lượt của bạn.',
+  UNAUTHORIZED:'Phiên đăng nhập đã hết hạn, hãy vào lại phòng.',
+  ROOM_NOT_FOUND:'Không tìm thấy phòng.',
+  NETWORK_ERROR:'Mất kết nối, hãy thử lại.'
+ };
+ if(map[raw])return map[raw];
+ if(/^[A-Z0-9_]{4,}$/.test(raw))return 'Hành động chưa được chấp nhận. Hãy thử lại hoặc hỏi Quản trò.';
+ return 'Hành động chưa được chấp nhận'+(raw?': '+raw:'.');
+}
+function gmwwOnlineShowRevelation(revelation){
+ // GM uses revelation.message in battlePresentRevelation; never expose its raw JSON.
+ const message=String(revelation?.message||'').trim();
+ if(!message)return;
+ document.getElementById('gmwwOnlineRevelation')?.remove();
+ toast('Kết quả: '+message);
+}
+let gmwwWitchNoticeLast='';
+function gmwwOnlineWitchNotice(){
+ // Bite information is provided by the authenticated /me response ONLY for active Witch,
+ // and never again after her save potion is spent. Shown through the shared notice centre.
+ document.getElementById('gmwwOnlineWitchIntel')?.remove();
+ const intel=gmwwOnlineWitchBite;
+ if(!intel||state.room?.phase!=='running'||String(state.room?.cyclePhase||'')!=='night'){gmwwWitchNoticeLast='';return}
+ const ids=Array.isArray(intel.targetIds)?intel.targetIds:[],
+       names=ids.map(id=>gmwwOnlinePeople().find(p=>p.id===String(id))?.name||String(id)).filter(Boolean),
+       text=intel.packDisabled?'🐺 Bầy Sói không thể cắn đêm nay.':names.length?
+   '🐺 Người bị Sói cắn: '+names.join(', '):'🐺 Chưa có người bị Sói cắn.',
+       key=String(state.room?.cycleNight||'')+'|'+text;
+ if(key===gmwwWitchNoticeLast)return;
+ gmwwWitchNoticeLast=key;toast(text);
+}

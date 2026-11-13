@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const part = fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
-const operations = fs.readFileSync('server-game/src/20-members-and-roster.part','utf8');
+const part = gmSource('10-library-and-settings');
+const operations = gmSource('20-members-and-roster');
 const start = part.indexOf('let gmwwDiagnosticBusy=false,gmwwRuntimeErrors=[];');
 const end = part.indexOf('\nfunction setDiagnosticState(',start);
 assert.ok(start>=0&&end>start,'Runtime diagnostic source marker missing');
@@ -72,6 +73,6 @@ test('GM bundle ghép đúng 6 source parts, không ảnh hưởng gameplay/Play
   const pieces=['00-core-and-library.part','10-library-and-settings.part',
     '20-members-and-roster.part','30-village-and-setup.part',
     '40-battle-and-timeline.part','50-roles-and-artifacts.part'];
-  const joined=pieces.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join('');
+  const joined=pieces.map(name=>gmSource(name.replace(/\.part$/,''))).join('');
   assert.equal(fs.readFileSync('server-game/current/app.js','utf8'),joined);
 });

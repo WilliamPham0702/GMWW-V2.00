@@ -4,8 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "server-game/src/30-village-and-setup.part"
-      - "server-game/src/40-battle-and-timeline.part"
+      - "server-game/src/30-village-and-setup/**"
+      - "server-game/src/40-battle-and-timeline/**"
       - "server-game/current/app.js"
       - "tests/gmww-auto-gm-audio-continuity-20261104.test.mjs"
       - "tests/audio-binding-integrity-20261027.test.mjs"

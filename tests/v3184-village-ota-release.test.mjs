@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -11,7 +12,7 @@ test('V3.184 and newer runtime version consistent across Worker, GM and package 
  const ver=pkg.version.replace(/\.0$/,'');
  assert.ok(workerSource().includes('VERSION="V'+ver+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+ver.replaceAll('.','')+'"'));
  assert.ok(read('server-game/current/app.js').includes("const VERSION='"+ver+"'"));
- assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+ver+"'"));
+ assert.ok(gmSource('00-core-and-library').includes("const VERSION='"+ver+"'"));
  const html=read('server-game/current/GMWW.html');
  assert.ok(html.includes('<title>GMWW V'+ver+'</title>'));
  assert.ok(html.includes('style.css?v='+ver));

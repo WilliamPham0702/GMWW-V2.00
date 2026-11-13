@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -41,8 +42,8 @@ test('Seer may inspect a victim killed tonight, not yesterday, while rejecting s
  assert.equal(allowed(action,{loginId:'seer'},'alive',[],1),false);
 });
 test('iPhone navigation, multi-target drag, next-turn confirmation, and popup outside-dismiss are wired',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const b=read('server-game/src/40-battle-and-timeline.part'),
-       audio=read('server-game/src/30-village-and-setup.part');
+ const b=gmSource('40-battle-and-timeline'),
+       audio=gmSource('30-village-and-setup');
  assert.ok(b.includes('battleUnlockAudioFromGesture(); // iOS'));
  assert.ok(audio.includes('queue[cursor+1]'));
  assert.ok(b.includes('battleState.pendingNextTurnId=t.id'));
@@ -55,7 +56,7 @@ test('iPhone navigation, multi-target drag, next-turn confirmation, and popup ou
 });
 
 test('Cached GM characters relight at night when expulsion expires without requiring tap',()=>{
- const gm=read('server-game/src/30-village-and-setup.part'),
+ const gm=gmSource('30-village-and-setup'),
        start=gm.indexOf('function playPlayerEffect('),end=gm.indexOf('function playDeliveryLabel(',start);
  assert.ok(start>0&&end>start);
  const state={activeEffects:[{loginId:'p1',type:'expelled',effectActive:true}]};
@@ -67,7 +68,7 @@ test('Cached GM characters relight at night when expulsion expires without requi
  assert.ok(gm.includes("token.classList.toggle('is-'+status,status===effect&&status!=='alive')"));
 });
 test('V3.143: no dormant GM patrol timers or stale position state',()=>{
- const gm=read('server-game/src/10-library-and-settings.part');
+ const gm=gmSource('10-library-and-settings');
  assert.doesNotMatch(gm,/gmwwGmClearWalk\(/);
  assert.doesNotMatch(gm,/gmwwGmLastSafePoint/);
  assert.doesNotMatch(gm,/GMWW_GM_AUTO_HOLD_MS/);
@@ -75,7 +76,7 @@ test('V3.143: no dormant GM patrol timers or stale position state',()=>{
 });
 
 test('Dead turn is informational; the GM controls timeline advance',()=>{
- const gm=read('server-game/src/40-battle-and-timeline.part');
+ const gm=gmSource('40-battle-and-timeline');
  assert.ok(gm.includes("deadActors.length===actorIds.length"));
  assert.ok(gm.includes('☠️ ĐÃ CHẾT'));
  assert.ok(gm.includes('if(bar&&!deadOnly&&sig!==battleState.actionSig)'));

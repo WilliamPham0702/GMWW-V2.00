@@ -1,11 +1,12 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 
-const src=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
-const chat=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const src=playerWebSource('20-village-and-profile');
+const chat=playerWebSource('35-online-chat');
 const start=src.indexOf('let toastTimer;'),end=src.indexOf('window.toast=toast;',start);
 assert.ok(start>=0&&end>start,'Player Web toast implementation exists');
 const code=src.slice(start,end+'window.toast=toast;'.length);

@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,8 +10,8 @@ const ota=read('.github/scripts/prepare-update-channel.mjs');
 const verifier=read('.github/scripts/verify-native-web.mjs');
 const worker=workerSource();
 const gm=read('server-game/current/app.js');
-const source=read('server-game/src/00-core-and-library.part');
-const audio=read('server-game/src/10-library-and-settings.part');
+const source=gmSource('00-core-and-library');
+const audio=gmSource('10-library-and-settings');
 const project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj');
 test('native IPA and manual OTA ship only current action-icon V3 assets',()=>{
  assert.ok(native.includes('cp -R server-game/current/action-icons/v3 "$APPDIR/Web/action-icons/v3"'));

@@ -1,6 +1,7 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8'),battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8'),worker=workerSource();
+const setup=gmSource('30-village-and-setup'),battle=gmSource('40-battle-and-timeline'),worker=workerSource();
 const extract=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)+a.length));
 test('IPA cross-origin Demo owner header is accepted by real server CORS policy',()=>{
  const cors=vm.runInNewContext('('+worker.match(/function corsHeaders\(\)\{return\{[^}]+\}\}/)[0]+')')();
@@ -40,7 +41,7 @@ test('Demo controller appears before other GM actions in the campfire menu',{ski
  assert.match(html,/id="battleDemoToggle"/);
 });
 test('Demo roster saves only GM-selected snapshots in both modes, without presence writes',async()=>{
- const events=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+ const events=gmSource('50-roles-and-artifacts');
  const fnSource=extract(events,'async function savePlayRosterIds(ids){','async function savePlayRoster(');
  for(const mode of ['online','offline']){
   const calls=[],runtime={room:{demo:true},players:[]},scene={roomMode:mode,roomCode:'DEMOAA'},node={disabled:false,classList:{add(){}},setAttribute(){},removeAttribute(){}};

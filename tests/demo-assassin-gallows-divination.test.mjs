@@ -1,3 +1,4 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -55,7 +56,7 @@ test('DEMO prepares one dawn response per eligible, unanswered Assassin mark onl
  assert.deepEqual(pendingDemoAssassinResponses({rows,players},{matchId:'m',cycleNight:1}).map(x=>x.interactionId),['good']);
 });
 test('GM audio honors an excerpt instead of playing a full role wake-up file',async()=>{
- const audio=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+ const audio=gmSource('30-village-and-setup');
  const start=audio.indexOf('async function battlePlayConfiguredAudio('),end=audio.indexOf('function battleTurnAudioCue(',start);
  assert.ok(start>=0&&end>start);
  let calls=0,last;
@@ -73,6 +74,6 @@ test('the real battle handler rejects incomplete multi-target scans before state
  const src=workerSource();
  const validate=src.indexOf('const expectedInspectCount='),write=src.indexOf('const usageKey="battleRoleUsage:"+matchId;');
  assert.ok(validate>0&&write>validate);
- const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+ const player=playerWebSource('30-rooms-and-realtime');
  assert.match(player,/canVote=eligible\.includes\(me\)&&me!==String\(g\.candidateId/);
 });

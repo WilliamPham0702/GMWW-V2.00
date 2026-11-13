@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,8 +6,8 @@ import vm from 'node:vm';
 
 const read=(path)=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const app=read('server-game/current/app.js');
-const part30=read('server-game/src/30-village-and-setup.part');
-const part40=read('server-game/src/40-battle-and-timeline.part');
+const part30=gmSource('30-village-and-setup');
+const part40=gmSource('40-battle-and-timeline');
 const css=read('server-game/current/style.css');
 const html=read('server-game/current/GMWW.html');
 const piece=(source,start,end)=>{

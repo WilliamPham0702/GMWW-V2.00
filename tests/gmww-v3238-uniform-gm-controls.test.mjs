@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,8 +6,8 @@ import fs from 'node:fs';
 const read=p=>fs.readFileSync(p,'utf8');
 const html=read('server-game/current/GMWW.html');
 const css=read('server-game/current/style.css');
-const gm=read('server-game/src/50-roles-and-artifacts.part');
-const battle=read('server-game/src/40-battle-and-timeline.part');
+const gm=gmSource('50-roles-and-artifacts');
+const battle=gmSource('40-battle-and-timeline');
 
 test('V3.238 all GM buttons have correct short stable labels',()=>{
  const expected={battleGMChromeToggle:'Menu',battleGMActionIcons:'iCon',battleShowDead:'Người Chết',
@@ -55,7 +56,7 @@ test('V3.238 toggle DOM state derives from functionality both Setup and Battle',
 });
 test('V3.238 icon and menu changes remain UI-only; bundle, versions and release notes agree',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const names=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'];
- assert.equal(read('server-game/current/app.js'),names.map(n=>read('server-game/src/'+n+'.part')).join(''));
+ assert.equal(read('server-game/current/app.js'),names.map(n=>gmSource(n)).join(''));
  assert.match(read('server-game/current/app.js'),/const VERSION='3\.238'/);
  assert.match(workerSource(),/VERSION="V3\.238"/);
  assert.match(read('server-game/current/GMWW.html'),/GMWW V3\.238/);

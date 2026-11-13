@@ -1,10 +1,11 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const src=p=>fs.readFileSync(p,'utf8');
 const village=src('assets/village/village.mjs');
-const parent=src('src/player-web-src/20-village-and-profile.part');
+const parent=playerWebSource('20-village-and-profile');
 
 test('Snap chọn Character hợp lệ gần nhất, không hút người chết hoặc người không đủ điều kiện',()=>{
   const start=village.indexOf('      const snapCandidate=(x,y)=>{');

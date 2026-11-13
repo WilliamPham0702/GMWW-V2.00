@@ -3,10 +3,10 @@ on:
   push:
     branches: [main]
     paths:
-      - 'server-game/src/20-members-and-roster.part'
-      - 'server-game/src/30-village-and-setup.part'
-      - 'server-game/src/40-battle-and-timeline.part'
-      - 'server-game/src/50-roles-and-artifacts.part'
+      - 'server-game/src/20-members-and-roster/**'
+      - 'server-game/src/30-village-and-setup/**'
+      - 'server-game/src/40-battle-and-timeline/**'
+      - 'server-game/src/50-roles-and-artifacts/**'
       - 'server-game/current/app.js'
       - 'server-game/current/GMWW.html'
       - 'server-game/current/style.css'
@@ -16,10 +16,10 @@ on:
       - '.github/workflows/check-lobby-gather-assassin.yml'
   pull_request:
     paths:
-      - 'server-game/src/20-members-and-roster.part'
-      - 'server-game/src/30-village-and-setup.part'
-      - 'server-game/src/40-battle-and-timeline.part'
-      - 'server-game/src/50-roles-and-artifacts.part'
+      - 'server-game/src/20-members-and-roster/**'
+      - 'server-game/src/30-village-and-setup/**'
+      - 'server-game/src/40-battle-and-timeline/**'
+      - 'server-game/src/50-roles-and-artifacts/**'
       - 'server-game/current/app.js'
       - 'server-game/current/GMWW.html'
       - 'server-game/current/style.css'

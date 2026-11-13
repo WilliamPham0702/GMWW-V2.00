@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -48,7 +49,7 @@ test('Any 6–30 Seat formation can be dragged to all four map edges, never spli
 
 test('Pinch spacing 50–300%, restore button and one-pointer drag coexist',()=>{
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  const src=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const src=gmSource('30-village-and-setup');
   const bundled=fs.readFileSync('server-game/current/app.js','utf8');
   assert.doesNotMatch(html,/id="playGatherSpacing" type="range"/);
   assert.match(html,/id="playGatherSpacingValue"/);

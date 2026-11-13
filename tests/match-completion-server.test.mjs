@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';
 const source=workerSource(),fragment=source.slice(source.indexOf('  async gmEnd(request,body){'),source.indexOf('  async alarm(){'));
@@ -9,5 +10,5 @@ test('Server completion receipt is idempotent and cannot rewrite a confirmed win
  const one=await finish('Phe Dân');assert.equal(one.memberResults[0].result,'win');assert.equal((await finish('Phe Dân')).idempotent,true);assert.equal(data.get('meta').resultVersion,1);assert.equal(events.filter(x=>x.type==='game_result').length,1);assert.equal((await finish('Phe Sói')).error,'WINNER_ALREADY_CONFIRMED');
 });
 test('Player reconnect/poll recognizes completed results while retained room is already in lobby',()=>{
- const script=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8'),fn=vm.runInNewContext('('+script.slice(0,script.indexOf('\n'))+')');assert.equal(fn({phase:'lobby',endedAt:'now',winnerFaction:'Phe Sói',lastEndedMatchId:'m1'}),true);assert.equal(fn({phase:'lobby',endedAt:null,winnerFaction:null}),false);
+ const script=playerWebSource('30-rooms-and-realtime'),fn=vm.runInNewContext('('+script.slice(0,script.indexOf('\n'))+')');assert.equal(fn({phase:'lobby',endedAt:'now',winnerFaction:'Phe Sói',lastEndedMatchId:'m1'}),true);assert.equal(fn({phase:'lobby',endedAt:null,winnerFaction:null}),false);
 });

@@ -1,11 +1,12 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 import {playerServerMenuBundle} from '../.github/scripts/player-server-menu.mjs';
 
-const chat=readFileSync('src/player-web-src/35-online-chat.part','utf8');
-const village=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+const chat=playerWebSource('35-online-chat');
+const village=playerWebSource('20-village-and-profile');
 test('fire action offers stay visible after menu inactivity; no GM powers are exposed',()=>{
  assert.match(chat,/#gmwwOnlineDock\.is-idle-hidden\{opacity:1;pointer-events:auto\}/);
  assert.match(chat,/gmwwOnlinePlaceAtFire\(dock\)/);
@@ -28,7 +29,7 @@ test('dead chat uses blue notice and frozen day chat uses explicit reason',()=>{
 });
 test('Player packaged script remains exact source and keeps GM menu',()=>{
  const parts=['00-bootstrap-and-session','10-role-card-artwork','20-village-and-profile','30-rooms-and-realtime','35-online-chat','36-gm-observer','37-player-rooms','40-cards-and-game','50-privacy-and-runtime'];
- const body=parts.map(p=>readFileSync('src/player-web-src/'+p+'.part','utf8')).join('')
+ const body=parts.map(p=>playerWebSource(p)).join('')
   .replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(process.cwd()))+";\n");
  assert.equal(gmwwMembersLiveScript,body);
 });

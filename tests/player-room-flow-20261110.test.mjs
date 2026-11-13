@@ -1,10 +1,11 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const rooms=fs.readFileSync('src/player-web-src/37-player-rooms.part','utf8');
-const boot=fs.readFileSync('src/player-web-src/00-bootstrap-and-session.part','utf8');
-const village=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+const rooms=playerWebSource('37-player-rooms');
+const boot=playerWebSource('00-bootstrap-and-session');
+const village=playerWebSource('20-village-and-profile');
 const worker=workerSource();
 test('Quản lý phòng: mã – Sao chép mã – Gửi phòng, rồi Xoá phòng + Tập hợp',()=>{
   const i=rooms.indexOf("'Sao chép mã'"),j=rooms.indexOf("'Gửi phòng'"),k=rooms.indexOf("'Xoá phòng',deleteRoom"),l=rooms.indexOf("'Tập hợp →',async()=>goStep('seats')");

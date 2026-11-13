@@ -1,3 +1,4 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,10 +8,10 @@ import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js';
 
 const read=path=>readFileSync(path,'utf8'),worker=workerSource(),
-  village=read('src/player-web-src/20-village-and-profile.part'),
-  ws=read('src/player-web-src/30-rooms-and-realtime.part'),
-  chat=read('src/player-web-src/35-online-chat.part'),
-  session=read('src/player-web-src/00-bootstrap-and-session.part');
+  village=playerWebSource('20-village-and-profile'),
+  ws=playerWebSource('30-rooms-and-realtime'),
+  chat=playerWebSource('35-online-chat'),
+  session=playerWebSource('00-bootstrap-and-session');
 const has=(src,fragment)=>assert.ok(src.includes(fragment),'Expected fragment: '+fragment);
 
 test('P0: legacy and night-action statuses require explicit GM display approval',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
@@ -53,7 +54,7 @@ test('Server-patched Player script never mounts the legacy bottom deck in Online
 });
 
 test('GM can reply to an authenticated private Player channel without public chat fanout',()=>{
-  const gm=read('server-game/src/45-online-chat.part');
+  const gm=gmSource('45-online-chat');
   assert.ok(gm.includes("String(ch.channel).startsWith('gm:')"));
   assert.ok(gm.includes("playRoomApi('/chat',{method:'POST'"));
   assert.ok(gm.includes("loginId,text:msg"));
@@ -177,7 +178,7 @@ test('V3.303: Player joins the clip at the Server position, skips finished clips
 
 
 test('ISO server deadline produces a countdown',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const s=read('src/player-web-src/35-online-chat.part');
+ const s=playerWebSource('35-online-chat');
  const code=s.slice(s.indexOf('function gmwwChatDockSync(){'),s.indexOf('function gmwwChatClear(){'));
  const clock={},panel={classList:{add(){},toggle(){}}},footer={},game={classList:{contains:()=>true}};
  const c={Date:class extends Date {static now(){return Date.parse('2026-10-29T12:00:00.000Z')}},state:{roomCode:'ABCDEF',participantId:'a',room:{phase:'running',roomMode:'online',dayDeadlineAt:'2026-10-29T12:01:30.000Z'}},document:{getElementById:id=>({gmwwOnlineFooter:footer,gmwwChatPanel:panel,gmwwPlayerClock:clock,game}[id])},clearTimeout(){},setInterval(){return 1}};
@@ -185,7 +186,7 @@ test('ISO server deadline produces a countdown',{skip:'LEGACY-QUARANTINE 2026-11
  assert.equal(clock.textContent,'01:30');
 });
 test('Online shortcuts enter the shared private viewer',()=>{
- const s=read('src/player-web-src/20-village-and-profile.part');
+ const s=playerWebSource('20-village-and-profile');
  const handler=s.slice(s.indexOf('button.onclick=()=>{if(button.dataset.gmwwMiniMoved)'),s.indexOf('host.hidden=',s.indexOf('button.onclick=()=>{if(button.dataset.gmwwMiniMoved)')));
  assert.ok(handler.includes('openPrivateCardViewer(type)'));
 });

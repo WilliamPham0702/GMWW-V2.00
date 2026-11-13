@@ -1,0 +1,203 @@
+// GM-only procession around the campfire. Single GPU transform per trip; no new frame loop.
+function gmwwFireWalkDestination(x,y,cx,cy,width,height,used=[]){
+  // One SCREEN-SPACE radius for all directions; the old rx/ry ellipse and
+  // per-point clamping left the upper actors visibly farther from the fire.
+  // Fit the whole circle inside the court instead of clamping single points.
+  const edge=Math.min(cx-37,width-cx-37,cy-56,height-cy-56);
+  const radius=Math.min(88,Math.max(80,width*.23),Math.max(80,height*.13),edge);
+  if(!Number.isFinite(radius)||radius<74)return null; // never place inside flames
+  let best=Infinity,chosen=null;
+  const sourceAngle=Math.atan2(y-cy,x-cx);
+  for(let i=0;i<24;i++){
+    const angle=2*Math.PI*i/24;
+    const px=cx+Math.cos(angle)*radius,py=cy+Math.sin(angle)*radius;
+    const closest=used.reduce((v,p)=>Math.min(v,Math.hypot(px-p.x,py-p.y)),Infinity);
+    const delta=Math.atan2(Math.sin(angle-sourceAngle),Math.cos(angle-sourceAngle));
+    const score=Math.abs(delta)*42+Math.hypot(px-x,py-y)*.04+(closest<40?1000:0);
+    if(score<best){best=score;chosen={x:px,y:py}}
+  }
+  return chosen;
+}
+function gmwwFireWalkRig(token,member,phase){
+  if(!member)return;
+  playUpdateCharacterRig(token.querySelector('.play-player-avatar'),member,{
+    effect:playPlayerEffect(member.loginId),battleTurnTravel:phase,
+    battleTurnFacing:token.dataset.gmwwFireFacing||'right'
+  });
+}
+function gmwwFireWalkCancel(token,member){
+  if(!token)return;
+  token.gmwwFireAnimation?.cancel();token.gmwwFireAnimation=null;
+  token.dataset.gmwwFireWalk='';delete token.dataset.gmwwFireFacing;
+  delete token.dataset.gmwwFireRestFacing;
+  delete token.dataset.gmwwFireDx;delete token.dataset.gmwwFireDy;
+  delete token.dataset.gmwwFireX;delete token.dataset.gmwwFireY;
+  // translate is an independent CSS transform layer; preserve all theme/seat
+  // transforms (including immersive -100% anchor and .is-active scale).
+  token.style.removeProperty('translate');
+  token.style.removeProperty('will-change');
+  token.style.removeProperty('z-index');
+  token.classList.remove('is-gm-walking-fire');
+  if(member)gmwwFireWalkRig(token,member,'');
+}
+function gmwwFireWalkDetach(){
+  document.getElementById('playPlayerRing')?.querySelectorAll('[data-gmww-fire-walk]')?.forEach(el=>gmwwFireWalkCancel(el));
+}
+function gmwwFireWalkTravel(token,member,phase,dx,dy,ms){
+  // The old transform animation fought #start .play-player-token and therefore
+  // only flipped the avatar on an iPhone. Animate CSS "translate" instead.
+  const current=getComputedStyle(token).translate;
+  const from=current&&current!=='none'?current:'0px 0px';
+  token.gmwwFireAnimation?.cancel();
+  const target=phase==='back'?'0px 0px':
+    dx.toFixed(2)+'px '+dy.toFixed(2)+'px';
+  token.dataset.gmwwFireWalk=phase;
+  token.dataset.gmwwFireFacing=dx<0?'left':'right';
+  token.style.zIndex='145';
+  token.classList.add('is-gm-walking-fire');
+  gmwwFireWalkRig(token,member,phase);
+  const finish=()=>{
+    if(!token.isConnected||token.dataset.gmwwFireWalk!==phase)return;
+    // Set the final actual position before canceling fill:forwards.
+    token.style.translate=target;
+    token.gmwwFireAnimation?.cancel();token.gmwwFireAnimation=null;
+    if(phase==='back')gmwwFireWalkCancel(token,member);
+    else{
+      token.dataset.gmwwFireWalk='hold';
+      token.dataset.gmwwFireFacing=token.dataset.gmwwFireRestFacing||token.dataset.gmwwFireFacing;
+      gmwwFireWalkRig(token,member,'hold');
+    }
+  };
+  // iPhone Safari supports WAAPI on individual CSS translate; if another
+  // renderer lacks it, update DOM position immediately rather than only face.
+  const supported=typeof token.animate==='function'&&
+    (typeof CSS==='undefined'||typeof CSS.supports!=='function'||CSS.supports('translate','1px 1px'));
+  if(!supported){token.style.translate=target;finish();return}
+  const a=token.animate([{translate:from},{translate:target}],{
+    duration:ms,easing:phase==='back'?'ease-in':'ease-out',fill:'forwards'
+  });
+  token.gmwwFireAnimation=a;
+  a.finished.then(()=>{if(token.gmwwFireAnimation===a)finish()}).catch(()=>{});
+}
+function gmwwFireWalkSync(ring,actors,active){
+  const tokens=[...ring.querySelectorAll('[data-play-player-id]')];
+  const r=ring.getBoundingClientRect();if(!r.width||!r.height)return;
+  const f=document.querySelector('#playWorld .play-core-pearl')?.getBoundingClientRect();
+  const cx=f?.width?f.left+f.width/2-r.left:r.width*.5;
+  const cy=f?.height?f.top+f.height/2-r.top:r.height*.46;
+  const used=[];
+  // First reserve destinations of already arrived actors so heartbeats cannot cause collisions.
+  for(const el of tokens)if(['out','hold'].includes(el.dataset.gmwwFireWalk)&&actors.has(el.dataset.playPlayerId))
+    used.push({x:Number(el.dataset.gmwwFireX),y:Number(el.dataset.gmwwFireY)});
+  for(const el of tokens){
+    const id=String(el.dataset.playPlayerId||''),member=battleMember(id),phase=el.dataset.gmwwFireWalk||'';
+    const permitted=active&&actors.has(id)&&member&&!['dead','frozen','expelled'].includes(playPlayerEffect(id));
+    if(!permitted){
+      if(phase==='back'&&(!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))))gmwwFireWalkCancel(el,member);
+      if(phase==='out'||phase==='hold'){
+        if(!member||['dead','frozen','expelled'].includes(playPlayerEffect(id))){gmwwFireWalkCancel(el,member);continue}
+        const dx=Number(el.dataset.gmwwFireDx)||0,dy=Number(el.dataset.gmwwFireDy)||0;
+        gmwwFireWalkTravel(el,member,'back',-dx,-dy,Math.max(350,Math.min(1700,Math.hypot(dx,dy)/.22)));
+      }
+      continue;
+    }
+    if(phase==='out'||phase==='hold')continue;
+    const x=Number.parseFloat(el.style.left)*r.width/100,y=Number.parseFloat(el.style.top)*r.height/100;
+    if(!Number.isFinite(x)||!Number.isFinite(y))continue;
+    const p=gmwwFireWalkDestination(x,y,cx,cy,r.width,r.height,used);if(!p)continue;
+    used.push(p);
+    const dx=p.x-x,dy=p.y-y,distance=Math.hypot(dx,dy);if(distance<5)continue;
+    el.dataset.gmwwFireDx=String(dx);el.dataset.gmwwFireDy=String(dy);
+    el.dataset.gmwwFireX=String(p.x);el.dataset.gmwwFireY=String(p.y);
+    el.dataset.gmwwFireRestFacing=p.x>cx?'left':'right';
+    gmwwFireWalkTravel(el,member,'out',dx,dy,Math.max(440,Math.min(2200,distance/.14)));
+  }
+}
+function battleMarkPlayers(){
+  const ring=document.getElementById('playPlayerRing');if(!ring)return;
+  if(battleState.impacts.size)battleState.impacts.clear();
+  const t=battleTurn(),actorIds=[...(t?.recognitionIds||t?.loginIds||[t?.loginId]).filter(Boolean),...(Array.isArray(t?.roles)?t.roles.flatMap(r=>r?.loginIds||[r?.loginId]).filter(Boolean):[]),...(Array.isArray(t?.actions)?t.actions.map(x=>x.loginId).filter(Boolean):[])];
+  // During the day, a chosen action identifies the actor without making all day roles fly.
+  const dayActorIds=playSceneState.phase==='day'?(battleAction()?.actorIds||[]):[];
+  const actors=new Set([...actorIds,...dayActorIds].map(id=>String(id).replace(/^member:/,''))),now=Date.now();
+  const motionOn=playSceneState.step==='battle'&&battleMotionOn()&&document.visibilityState!=='hidden'&&!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const witchAwake=playSceneState.phase==='night'&&
+    (t?.roleId==='role_witch'||(t?.roles||[]).some(row=>row.roleId==='role_witch'));
+  const intel=playSceneRuntime.nightIntel;
+  const biteTargets=witchAwake&&intel?.ok&&!intel.packDisabled&&!intel.witchSaveUsed?
+    (intel.attacked||[]).map(row=>String(row?.to||'').replace(/^member:/,'')).filter(Boolean):[];
+  // GM-only battleUndo is taken from /gm/state, never from a public socket.
+  // The confirmed target flame applies only during the current night turn.
+  const confirmed=playSceneState.phase==='night'&&playSceneRuntime.battleUndo?.turnId===t?.id?
+    (playSceneRuntime.battleUndo.targets||[]):[];
+  const chosen=new Set([...(battleState.targets.length?battleState.targets:(demoVisualCurrent()?.targetIds||[])),...confirmed,...biteTargets]);
+  ring.querySelectorAll('[data-play-player-id]').forEach(el=>{
+    const id=String(el.dataset.playPlayerId||'');
+    el.classList.toggle('is-battle-actor',playSceneState.step==='battle'&&playSceneState.phase==='night'&&actors.has(id));
+    el.classList.toggle('is-battle-target',playSceneState.step==='battle'&&chosen.has(id));
+    const actorOn=el.classList.contains('is-battle-actor'),targetOn=el.classList.contains('is-battle-target'),avatar=el.querySelector('.play-player-avatar');
+    const effect=playPlayerEffect(id),canAnimate=motionOn&&!['dead','expelled','frozen'].includes(effect);
+    const runTarget=canAnimate&&targetOn&&!actors.has(id);
+    el.classList.toggle('is-gm-target-running',runTarget);
+    // Update only on state transitions; a heartbeat must not reset animated rigs.
+    if(avatar&&el.dataset.gmwwMotionRun!==String(runTarget)){
+      el.dataset.gmwwMotionRun=String(runTarget);
+      const member=battleMember(id);
+      if(member)playUpdateCharacterRig(avatar,member,{effect,battleTargetRunning:runTarget});
+    }
+    // Battle labels live at the very top of the existing status/name/role stack.
+    // Absolute-positioned labels obscured player names on smaller iPhones.
+    const labels=el.querySelector('.play-player-over');
+    let mark=labels?.querySelector(':scope>.battle-turn-mark')||el.querySelector(':scope>.battle-turn-mark');
+    if(actorOn&&labels){
+      if(!mark){mark=document.createElement('span');mark.className='battle-turn-mark';mark.setAttribute('aria-hidden','true');mark.textContent='★ ĐẾN LƯỢT'}
+      if(labels.firstElementChild!==mark)labels.prepend(mark);
+    }else mark?.remove();
+    let targetMark=labels?.querySelector(':scope>.battle-target-mark');
+    if(targetOn&&labels){
+      if(!targetMark){targetMark=document.createElement('span');targetMark.className='battle-target-mark';targetMark.setAttribute('aria-hidden','true');targetMark.textContent='MỤC TIÊU'}
+      if(actorOn&&mark?.parentElement===labels)mark.after(targetMark);
+      else if(labels.firstElementChild!==targetMark)labels.prepend(targetMark);
+    }else targetMark?.remove();
+    // GM sees the same public vote above the character as every Player Web client.
+    const vote=playSceneState.phase==='day'?playSceneRuntime.gallows?.votes?.[id]:null;
+    let voteMark=labels?.querySelector(':scope>.battle-gallows-vote-mark');
+    if((vote==='👍'||vote==='👎')&&labels){
+      if(!voteMark){voteMark=document.createElement('span');voteMark.className='battle-gallows-vote-mark';voteMark.setAttribute('aria-label','Phiếu Lên Giàn')}
+      if(voteMark.textContent!==vote)voteMark.textContent=vote;
+      if(labels.firstElementChild!==voteMark)labels.prepend(voteMark);
+    }else voteMark?.remove();
+    // Server-verified public nominations: ornamental pearl number above each Character.
+    const tally=playSceneState.phase==='day'&&['nominating','selecting','voting','closed'].includes(String(playSceneRuntime.gallows?.stage||''))?
+      (playSceneRuntime.gallows?.nominationTotals||[]).find(x=>String(x.loginId)===id):null;
+    const count=Math.max(0,Math.trunc(Number(tally?.votes)||0));
+    let countMark=labels?.querySelector(':scope>.battle-nomination-pearl');
+    if(count>0&&labels){
+      if(!countMark){countMark=document.createElement('span');countMark.className='battle-nomination-pearl';
+        countMark.setAttribute('aria-label','Số phiếu đề cử')}
+      countMark.textContent=String(count);
+      countMark.title='Được đề cử '+count+' phiếu';
+      if(labels.firstElementChild!==countMark)labels.prepend(countMark);
+    }else countMark?.remove();
+    // Reuse the exact 🐺 status orbit DOM + 6s gmwwSvVerticalOrbit animation (only icon changes).
+    let orb=avatar?.querySelector(':scope>.battle-orbit');
+    if(avatar&&(actorOn||targetOn)){
+      const kind=actorOn?'actor':'target',count=6;
+      if(!orb){orb=document.createElement('span');orb.className='battle-orbit gmww-sv-orbit';orb.setAttribute('aria-hidden','true');avatar.appendChild(orb)}
+      else if(!orb.classList.contains('gmww-sv-orbit'))orb.classList.add('gmww-sv-orbit');
+      if(orb.dataset.kind!==kind||orb.childElementCount!==count){
+        orb.dataset.kind=kind;
+        orb.replaceChildren(...Array.from({length:count},(_,k)=>{
+          const item=document.createElement('span');item.className='gmww-sv-orbit-item';
+          item.style.setProperty('--orbit-delay',(-6*k/count).toFixed(4)+'s');
+          const icon=document.createElement('span');icon.textContent=kind==='actor'?'🧞‍♂️':'🐦‍🔥';
+          item.appendChild(icon);return item;
+        }));
+      }
+    }else orb?.remove();
+    for(const type of ['dead','frozen','expelled','revive','effect_notice','wolf-bite','shield','swap','seer'])el.classList.remove('battle-impact-'+type);
+  });
+  gmwwFireWalkSync(ring,actors,motionOn&&!battleState.gmwwWalkExpired);
+  for(const [id,x] of battleState.impacts)if(x.until<=now)battleState.impacts.delete(id)
+}
+

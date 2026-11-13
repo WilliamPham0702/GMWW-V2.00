@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,8 +6,8 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {spawnSync} from 'node:child_process';
 
-const app=readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
-const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
+const app=gmSource('50-roles-and-artifacts');
+const setup=gmSource('30-village-and-setup');
 const worker=workerSource();
 const between=(source,a,b)=>{
   const start=source.indexOf(a),end=source.indexOf(b,start+a.length);

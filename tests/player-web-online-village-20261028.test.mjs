@@ -1,10 +1,11 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {privateRoleGroupRecognition} from '../src/gmww-wolf-recognition.js';
-const village=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
-const game=readFileSync('src/player-web-src/40-cards-and-game.part','utf8');
-const chat=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const village=playerWebSource('20-village-and-profile');
+const game=playerWebSource('40-cards-and-game');
+const chat=playerWebSource('35-online-chat');
 test('Online uses the existing village without transient card page on delivery',()=>{
   assert.match(village,/iframe\.src='\/village\/\?embed=1/);
   assert.match(game,/Do not auto-open an Online card screen/);

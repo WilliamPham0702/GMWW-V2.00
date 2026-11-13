@@ -1,3 +1,4 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -45,8 +46,8 @@ test('Configured 38s vote timer still works; unspecified ballot defaults to 60s'
 });
 test('Gallows controls live in the GM panel, server-owned and visible on Player Web',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
- const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
- const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+ const gm=gmSource('40-battle-and-timeline');
+ const player=playerWebSource('30-rooms-and-realtime');
  const worker=workerSource();
  for(const id of ['playGallowsNominationSec','playGallowsVoteSec'])assert.doesNotMatch(html,new RegExp('id="'+id+'"'));
  assert.match(html,/id="battleGallowsSeconds"/);
@@ -64,5 +65,5 @@ test('Gallows controls live in the GM panel, server-owned and visible on Player 
  const packaged=fs.readFileSync('server-game/current/app.js','utf8');
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
  '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
- assert.equal(packaged,parts.map(f=>fs.readFileSync('server-game/src/'+f,'utf8')).join(''));
+ assert.equal(packaged,parts.map(f=>gmSource(f.replace(/\.part$/,''))).join(''));
 });

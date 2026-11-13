@@ -1,11 +1,12 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(p,'utf8');
-const setup=read('server-game/src/30-village-and-setup.part');
-const battle=read('server-game/src/40-battle-and-timeline.part');
-const events=read('server-game/src/50-roles-and-artifacts.part');
+const setup=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
+const events=gmSource('50-roles-and-artifacts');
 const html=read('server-game/current/GMWW.html');
 const css=read('server-game/current/style.css');
 const extract=(source,a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,start+1);assert.ok(start>=0&&end>start,a);return source.slice(start,end)};

@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -60,7 +61,7 @@ test('V3.133: other divination can show role abilities or group wolf status with
  assert.match(worker,/String\(body\?\.direction\|\|""\),body\?\.revealTargetIds\|\|\[\]/);
 });
 test('V3.133: Artifact first turn never resolves empty target to Xac Nhan audio',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const src=read('server-game/src/30-village-and-setup.part');
+ const src=gmSource('30-village-and-setup');
  let a=src.indexOf('function battleFindAudio('),b=src.indexOf('async function battleWarmAudio(',a);
  assert.ok(a>0&&b>a);
  const ctx={state:{audio:{system:[
@@ -73,7 +74,7 @@ test('V3.133: Artifact first turn never resolves empty target to Xac Nhan audio'
  assert.equal(ctx.findAudio('system','audio_system_confirm','Xác nhận').id,'audio_system_confirm');
 });
 test('V3.133: correct audio maps wolf-group, Old Witch, Snow Wolf, Artifact and dawn',()=>{
- const src=read('server-game/src/30-village-and-setup.part');
+ const src=gmSource('30-village-and-setup');
  const a=src.indexOf('function battleTurnAudioCue('),b=src.indexOf('function battleAudioForTurn(',a);
  assert.ok(a>0&&b>a);
  const ctx={};vm.runInNewContext(src.slice(a,b)+'\n globalThis.cue=battleTurnAudioCue;',ctx);
@@ -95,7 +96,7 @@ test('V3.133: timeline numbers and GM movable controls retain role and effect sa
  assert.match(worker,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",\s*recognitionIds:/);
  assert.doesNotMatch(worker,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",\s*loginIds:/);
  const runtime=read('server-game/current/app.js'),parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
- assert.equal(runtime,parts.map(p=>read('server-game/src/'+p)).join(''));
+ assert.equal(runtime,parts.map(p=>gmSource(p.replace(/\.part$/,''))).join(''));
  assert.match(runtime,/battleBindConfirmDrag\(\)/);
  assert.ok(runtime.includes("battleShowResultPopup('',String(revelation.message||''),true)"));
  assert.match(runtime,/\['none','⏺️','Không dịch'\]/); // three-way buttons generated dynamically

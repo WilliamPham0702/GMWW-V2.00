@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +10,7 @@ const ctx={};vm.runInNewContext(file('assets/village/village-layout.js'),ctx);
 const layout=ctx.GMWW_VILLAGE_LAYOUT;
 const visualsCtx={};vm.runInNewContext(file('server-game/current/status-visuals.js'),visualsCtx);
 const vis=visualsCtx.GMWW_STATUS_VISUALS;
-const source=file('server-game/src/30-village-and-setup.part');
+const source=gmSource('30-village-and-setup');
 const runtime=file('server-game/current/app.js');
 const village=file('assets/village/village.mjs');
 const worker=workerSource();
@@ -73,5 +74,5 @@ test('V3.126: actor status changes are local DOM patches, not expensive characte
   assert.ok(worker.includes('VERSION="V'+runtimeVersion+'"'));
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
-  assert.equal(runtime,parts.map(p=>file('server-game/src/'+p)).join(''));
+  assert.equal(runtime,parts.map(p=>gmSource(p.replace(/\.part$/,''))).join(''));
 });

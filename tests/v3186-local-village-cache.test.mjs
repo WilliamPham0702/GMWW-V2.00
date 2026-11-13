@@ -1,3 +1,4 @@
+import {readSourceAtLegacyPath} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,7 +6,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {IDBFactory} from 'fake-indexeddb';
 const paths=['server-game/src/00-core-and-library.part','assets/village/scene-manager.mjs'];
-function cacheSource(path){const s=fs.readFileSync(path,'utf8');return s.slice(s.indexOf('function createVillageLocalCache('),s.indexOf('// End village local cache'));}
+function cacheSource(path){const s=readSourceAtLegacyPath(path);return s.slice(s.indexOf('function createVillageLocalCache('),s.indexOf('// End village local cache'));}
 function setup(path,indexedDB=new IDBFactory(),online=true){
  const source=cacheSource(path);assert.ok(source.includes('function createVillageLocalCache('),'persistent local image cache must exist');
  let calls=0;
@@ -40,7 +41,7 @@ for(const path of paths){
   const boot={hidden:false};const shell={dataset:{phase:'day'}};
   const ctx={indexedDB:first.indexedDB,URL,URLSearchParams,AbortSignal,setTimeout,clearTimeout,setInterval:()=>0,location:{href:'https://game.example/village/',search:''},window:{},Image:class{set src(value){assert.match(value,/^data:image\//);queueMicrotask(()=>this.onload())}},fetch:async()=>{throw Error('offline')},MutationObserver:class{observe(){}},document:{getElementById:id=>id==='playWorld'?world:id==='playShell'?shell:id==='game'?{classList:{contains:()=>phase==='night'}}:id.includes('BootStatus')?boot:null,querySelector:()=>world,addEventListener(){}}};
   vm.createContext(ctx);
-  const text=fs.readFileSync(path,'utf8');
+  const text=readSourceAtLegacyPath(path);
   if(path.startsWith('server-game')){
    vm.runInContext(text.slice(text.indexOf('function createVillageLocalCache('),text.indexOf('// V2.82 runtime:'))+';const GMWW_SERVER_BASE="https://game.example";this.start=restoreGMVillageLocal;this.apply=applyGMVillageScene;',ctx);
    await ctx.start();shell.dataset.phase='night';ctx.apply();

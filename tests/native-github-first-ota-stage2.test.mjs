@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const swift=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const source=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+const source=gmSource('10-library-and-settings');
 
 test('IPA advertises GitHub-first and keeps existing manual updater and rollback',()=>{
   assert.match(swift,/GMWW_NATIVE_GITHUB_OTA=true/);

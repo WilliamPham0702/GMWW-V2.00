@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,9 +6,9 @@ import {readFileSync} from 'node:fs';
 import {gmwwMembersLiveScript as script} from '../src/gmww-members-live.js';
 
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
-const part=read('../src/player-web-src/37-player-rooms.part');
-const rooms=read('../src/player-web-src/30-rooms-and-realtime.part');
-const village=read('../src/player-web-src/20-village-and-profile.part');
+const part=playerWebSource('37-player-rooms');
+const rooms=playerWebSource('30-rooms-and-realtime');
+const village=playerWebSource('20-village-and-profile');
 const worker=workerSource();
 
 test('Phòng page no longer embeds the chat box; Box Chat is its own floating page',()=>{

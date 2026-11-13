@@ -1,9 +1,10 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+const source=gmSource('10-library-and-settings');
 const bundle=fs.readFileSync('server-game/current/app.js','utf8');
 const begin=source.indexOf('function artifactArtworkSideMargins(');
 const end=source.indexOf('async function renderEntityFront()',begin);

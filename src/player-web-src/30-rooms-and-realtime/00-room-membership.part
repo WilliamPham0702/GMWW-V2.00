@@ -1,0 +1,48 @@
+function hasCompletedRoomResult(room){return String(room?.phase||'').toLowerCase()==='ended'||!!(room?.endedAt&&room?.winnerFaction&&room?.lastEndedMatchId)}
+function renderRooms(){
+  const list=$('#rooms .room-list');if(!list)return;list.innerHTML='';
+  if(!state.rooms.length){list.innerHTML='<article class="room-card"><div class="wait-note">Hiện chưa có phòng Online hoặc DEMO đang mở.</div></article>';return}
+  for(const r of state.rooms){
+    const card=document.createElement('article');card.className='room-card';card.dataset.roomCode=r.code;
+    card.innerHTML='<div class="room-head"><div><h3></h3><small></small></div><span class="live">● LIVE</span></div><div class="room-metrics"><div class="metric"><b></b><span>Đã cấu hình cho ván</span></div><div class="metric"><b></b><span>Người đã tham gia</span></div></div><button class="primary join-btn">THAM GIA</button><div class="room-detail"><div class="section-title" style="margin-top:0">Thành viên</div><div class="joinedPlayers"></div><div class="wait-note"></div><div class="room-actions"><button class="secondary leaveButton">RỜI ĐI</button></div></div>';
+    card.querySelector('h3').textContent=r.roomName||('Phòng '+r.code);card.querySelector('small').textContent=(r.demo===true?'DEMO':String(r.roomMode||'online').toLowerCase()==='offline'?'OFFLINE':'ONLINE')+' • Mã '+r.code+(r.gameName?' • '+r.gameName:'');const metrics=card.querySelectorAll('.metric b'),current=state.roomCode===r.code&&!!state.participantId,slots=Number(r.seatCount||0)||Number(current?state.room?.seatCount:0)||12,joined=current?state.players.length:Number(r.joinedCount||0);metrics[0].textContent=slots+' Vị trí';metrics[1].textContent=joined+' / '+slots;
+    const join=card.querySelector('.join-btn');if(r.locked&&!(r.demo===true&&r.phase==='running')){join.disabled=true;join.textContent='PHÒNG ĐÃ KHÓA';join.classList.add('loading')}else join.onclick=()=>joinRoom(r.code);
+    if(state.roomCode===r.code&&state.participantId){card.classList.add('joined');join.style.display='none';renderRoomMembers(card)}
+    list.appendChild(card);
+  }
+}
+function renderRoomMembers(card){
+  const box=card.querySelector('.joinedPlayers');if(!box)return;box.innerHTML='';
+  for(const p of state.players){const row=document.createElement('div');row.className='member-row';row.innerHTML='<img><div><b></b><small></small></div><span class="badge"></span>';row.querySelector('img').src=p.gameCharacterId?gameCharacterImageUrl(p.gameCharacterId):avatarUrl(p.avatarId);row.querySelector('b').textContent=p.displayName;const sm=row.querySelector('small'),bd=row.querySelector('.badge');sm.textContent='Vị trí '+(p.seatId||'—')+' • '+(p.ready?'Đã sẵn sàng':p.setupComplete?'Đang chuẩn bị':'Chưa chọn Nhân Vật/Vị trí');sm.className=p.ready?'ready-yes':'ready-no';bd.textContent=p.ready?'READY':p.setupComplete?'WAIT':'SETUP';bd.classList.add(p.ready?'win':'lose');box.appendChild(row)}
+  const note=card.querySelector('.wait-note'),ended=String(state.room?.phase||'').toLowerCase()==='ended';note.textContent=ended?'':(state.ready?'✓ Đã sẵn sàng • Đang chờ Quản Trò bắt đầu ván chơi.':'Đã được gọi vào phòng • Chờ GM xếp vị trí.');
+  const lb=card.querySelector('.leaveButton');if(lb){const sticky=!!state.room?.locked&&String(state.room?.phase||'').toLowerCase()!=='ended';if(sticky){lb.textContent='PHÒNG ĐÃ KHÓA';lb.disabled=true;lb.onclick=null}else{lb.textContent='RỜI ĐI';lb.disabled=false;lb.onclick=leaveRoom}}
+}
+async function joinRoom(code){
+  if(!state.token){go('login');return false}
+  code=String(code||'').trim().toUpperCase();if(!code)return false;
+  try{const d=await api('/api/rooms/'+encodeURIComponent(code)+'/join',{method:'POST',body:JSON.stringify({token:state.token})});state.roomCode=code;state.room=d.room||state.rooms.find(x=>x.code===code)||null;state.participantId=d.player.participantId;state.ready=!!d.player.ready;state.players=[d.player];state.selectedGameCharacterId=String(d.player?.gameCharacterId||'');state.selectedSeatId=Number(d.player?.seatId||d.player?.moveTargetSeatId||0)||null;state.lastResultKey='';state.lobbyMotionPaused=false;resetLobbyMotionPlan();rememberActiveRoom(code,state.participantId);restoreCachedRole();await sendPresence();connectWS();startRoomStateWatch();await refreshPrivateRole(true);maybeOpenGame();await loadGameCharacters();state.roomSetupOpen=false;closeRoomSetup();ensureVillageReadyDock();gmwwChatMount();scheduleMovementCompletion(d.player);syncVillageFrame();scheduleLobbyMotion(500);return true}catch(e){state.lastJoinError={code:String(e?.data?.error||''),status:e?.status||0,message:String(e?.message||'')};toast(e.message);return false}
+}
+window.joinRoom=joinRoom;
+async function leaveRoom(){
+  if(!state.participantId)return;
+  if(state.room?.locked&&String(state.room?.phase||'').toLowerCase()!=='ended'){toast('Phòng đã khóa. Chỉ GM có thể Kick hoặc Mở Phòng.');return}
+  try{await api('/api/rooms/'+state.roomCode+'/leave',{method:'POST',body:JSON.stringify({participantId:state.participantId})})}
+  catch(e){toast(e.message||'Không thể rời Phòng.');return}
+  clearActiveRoom();disconnectRoom();await sendPresence();await enterVillage();
+}
+window.leaveRoom=leaveRoom;
+
+function disconnectRoom(){
+  gmwwChatUnmount();clearDrunkDraw();(typeof clearThiefPanel==='function')&&clearThiefPanel();state.onlineActions=[];document.getElementById('gmwwOnlineDock')?.remove();gmwwOnlineStop();renderPlayerTimeline(null);
+  try{state.ws?.close(1000,'PLAYER_LEFT_ROOM')}catch{};if(state.wsPingTimer){clearInterval(state.wsPingTimer);state.wsPingTimer=null}if(state.rolePoll){clearInterval(state.rolePoll);state.rolePoll=null}if(state.gameStateTimer){clearInterval(state.gameStateTimer);state.gameStateTimer=null}
+  clearMovementCompletionTimer();state.lobbyMotionPaused=false;state.lobbySeatWalkPending=null;resetLobbyMotionPlan();state.ws=null;state.roomCode='';state.room=null;state.participantId=null;state.players=[];state.ready=false;state.selectedGameCharacterId='';state.selectedSeatId=null;state.roomSetupOpen=false;$('#gmwwRoomSetup')?.classList.remove('open');$('#gmwwVillageReadyDock')?.classList.remove('show');state.role=null;state.roleOpen=false;state.lastResultKey='';state.dead=false;state.demoActions=[];renderDemoActions();
+}
+async function handleRoomMembershipLost(message='Bạn đã rời Phòng.'){
+  if(!state.participantId&&!state.roomCode)return;
+  clearActiveRoom();disconnectRoom();state.roles=[];state.roleIndex=0;state.roleEffects={};state.artifact=null;state.artifactOpen=false;state.artifactCycle={cycleKey:'',count:0,max:3};state.roomNavigationAuthorized=true;$('#roleCard')?.classList.remove('revealed');renderRoleEffects();
+  try{await api('/api/members/presence',{method:'POST',headers:auth(),body:JSON.stringify({roomCode:null,ready:false})})}catch{}
+  try{await loadRooms(false)}catch{}renderRooms();await enterVillage();toast(message);
+}
+async function sendRoomHeartbeat(){if(!state.roomCode||!state.participantId)return;try{const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/heartbeat',{method:'POST',body:JSON.stringify({participantId:state.participantId,ready:state.ready})});if(d?.room){state.room=d.room;if(hasCompletedRoomResult(d.room))showResult(d.room.winnerFaction||d.room.winnerLabel||'',d.room.matchId||'')}}catch(e){if(e?.status===403||e?.status===404||e?.status===423||e?.code==='ROOM_DISABLED')await handleRoomMembershipLost()}}
+async function sendPresence(){if(!state.token)return;const hint=savedActiveRoom();const roomCode=state.participantId?state.roomCode:(hint?.roomCode||null);try{const presence=await api('/api/members/presence',{method:'POST',headers:auth(),body:JSON.stringify({roomCode,ready:state.participantId?state.ready:false})});if(presence?.roomRevoked&&state.participantId){await handleRoomMembershipLost('GM đã mời bạn về Sảnh chờ.');return}}catch{}if(state.participantId)await sendRoomHeartbeat()}
+function startPresence(){clearInterval(state.presenceTimer);sendPresence();state.presenceTimer=setInterval(()=>{if(document.hidden)return;sendPresence();if($('#rooms')?.classList.contains('active')&&!state.participantId)loadRooms(false)},30000)}

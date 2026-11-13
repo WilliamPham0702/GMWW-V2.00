@@ -1,0 +1,36 @@
+
+/* Online-first Chat: all reads are authenticated; the WebSocket carries only a generic tick.
+ * DO NOT use public room_state to transport chat messages or secret group membership. */
+let gmwwChatOpen=false,gmwwChatSeq=0,gmwwPlayerCueKey='',gmwwChatIdleTimer=null,gmwwOnlineFooterTimer=null,gmwwChatTarget='room';
+const gmwwChatLatestByChannel=new Map();
+function gmwwChatUnread(unread){
+ const panel=document.getElementById('gmwwChatPanel'),footer=document.getElementById('gmwwOnlineFooter');
+ panel?.classList.toggle('gmww-chat-unread',!!unread);footer?.classList.toggle('gmww-chat-unread',!!unread);
+ panel?.setAttribute('aria-label',unread?'Chat Làng • Có tin mới':'Chat Làng');
+}
+function gmwwChatClosePanel(){
+ gmwwChatOpen=false;clearTimeout(gmwwChatIdleTimer);
+ document.getElementById('gmwwChatPanel')?.classList.remove('open');
+ if(document.activeElement?.id==='gmwwChatText')document.activeElement.blur();
+ syncPlayerMiniCards();
+}
+function gmwwChatTouch(){
+ revealPlayerTopMenu(true);
+ document.getElementById('gmwwOnlineFooter')?.classList.remove('is-idle-hidden');
+ clearTimeout(gmwwChatIdleTimer);gmwwChatIdleTimer=setTimeout(()=>{
+  if(gmwwChatVoiceRecorder?.state==='recording'||gmwwChatVoiceProcessing||gmwwChatVoiceDraft){gmwwChatTouch();return}
+  gmwwChatClosePanel();document.getElementById('gmwwOnlineFooter')?.classList.add('is-idle-hidden');
+ },30000);
+}
+function gmwwChatExpand(){
+ gmwwChatOpen=true;document.getElementById('gmwwChatPanel')?.classList.add('open');
+ gmwwChatUnread(false);
+ if(typeof closePrivateCardViewer==='function')closePrivateCardViewer();
+ gmwwChatTouch();syncPlayerMiniCards();
+}
+function gmwwChatColor(id){
+ const ids=[...new Set((state.players||[]).map(p=>String(p.loginId||p.participantId||'').replace(/^member:/,'')))].sort();
+ const normalized=String(id||'').replace(/^member:/,'').toLowerCase();const index=ids.indexOf(normalized);let hash=0;for(const c of normalized)hash=(hash*31+c.charCodeAt(0))>>>0;
+ // Reserve red exclusively for GM and public announcements.
+ return 'hsl('+(38+((index>=0?index*137.508:hash)%278))+' 85% 78%)';
+}

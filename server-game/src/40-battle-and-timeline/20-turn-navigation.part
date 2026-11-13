@@ -1,0 +1,157 @@
+function battleTickCountdown(){
+  battleGallowsTick();
+  const clock=document.getElementById('battleCountdown'),root=document.getElementById('playBattleDock');
+  if(!clock||!root||root.hidden)return;
+  const serverNow=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0);
+  const rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase;
+  let seconds=phase==='night'?battleRules()?.remainingSeconds(rt,serverNow):null;
+  if(phase==='day'){
+    const room=playSceneRuntime.room||{},duration=Number(playSceneRuntime.gameConfig?.timing?.villageDiscussionSec),
+      deadline=Date.parse(room.dayDeadlineAt||''),started=Date.parse(room.cycleStartedAt||'');
+    const paused=room.autoGM===false?Number(room.dayPausedRemainingMs):NaN;
+    if(room.autoGM===false&&room.dayPausedRemainingMs!=null&&Number.isFinite(paused))
+      seconds=Math.max(0,Math.ceil(paused/1000));
+    else if(Number.isFinite(deadline))seconds=Math.max(0,Math.ceil((deadline-serverNow)/1000));
+    else if(Number.isFinite(duration)&&duration>0)
+      seconds=Number.isFinite(started)?Math.max(0,Math.ceil(duration-(serverNow-started)/1000)):Math.ceil(duration);
+  }
+  // Anchor the local countdown to a stable turn identity. A server refresh must
+  // never restart the countdown or increase the remaining time.
+  const tickKey=[playSceneRuntime.room?.matchId||'',phase,playSceneState.night||0,
+    rt?.cursor??'',rt?.currentId||'',phase==='day'?[playSceneRuntime.room?.cycleStartedAt||'',playSceneRuntime.room?.dayDeadlineAt||'',playSceneRuntime.room?.dayPausedRemainingMs??'',playSceneRuntime.room?.autoGM!==false].join('/'):''].join(':');
+  const now=performance.now();
+  if(battleState.countdownKey!==tickKey){
+    battleState.countdownKey=tickKey;
+    battleState.countdownBase=Number.isFinite(seconds)?seconds:null;
+    battleState.countdownAt=now;
+  }else{
+    if(phase==='day'&&playSceneRuntime.room?.autoGM===false){
+      // Pausing Auto GM must freeze the day clock, not merely disable the server alarm.
+      battleState.countdownBase=seconds;battleState.countdownAt=now;
+    }else if(Number.isFinite(battleState.countdownBase)){
+      const local=Math.max(0,Math.ceil(battleState.countdownBase-(now-battleState.countdownAt)/1000));
+      seconds=Number.isFinite(seconds)?Math.min(seconds,local):local;
+    }else if(Number.isFinite(seconds)){
+      battleState.countdownBase=seconds;
+      battleState.countdownAt=now;
+    }
+  }
+  if(phase==='day'&&Number.isFinite(seconds)){
+    const demoSpeed=playSceneRuntime.room?.demo===true&&demoRunner.running?
+      Math.max(1,Number(demoRunner.speed)||1):1;
+    const warningSeconds=Math.max(1,Math.ceil(30/demoSpeed));
+    const cueKey=[playSceneRuntime.room?.matchId||'',playSceneState.night,playSceneRuntime.room?.cycleStartedAt||''].join(':');
+    if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=warningSeconds&&seconds>0&&battleState.dayCountdownCueKey!==cueKey){
+      battleState.dayCountdownCueKey=cueKey;
+      if(typeof battleQueueDayAudio==='function')battleQueueDayAudio([['audio_system_countdown','Đếm ngược 30 giây cuối']]);
+      else void battlePlayConfiguredAudio('system','audio_system_countdown','Đếm ngược 30 giây cuối');
+    }
+    if(playSceneRuntime.room?.dayPausedRemainingMs==null&&seconds<=0&&battleState.dayTimeupCueKey!==cueKey){
+      battleState.dayTimeupCueKey=cueKey;
+      if(typeof battleQueueDayAudio==='function')battleQueueDayAudio([['audio_system_time_up','Hết giờ']]);
+      else void battlePlayConfiguredAudio('system','audio_system_time_up','Hết giờ');
+    }
+  }
+  // Edge-triggered: returning from campfire happens exactly when the night turn reaches 0.
+  // No new timer or rAF; preserves server-clock ownership and works across refetches.
+  const expired=phase==='night'&&Number.isFinite(seconds)&&seconds<=0;
+  if(battleState.gmwwWalkExpired!==expired){
+    battleState.gmwwWalkExpired=expired;battleMarkPlayers();
+  }
+  const formatted=battleRules()?.formatTime(seconds)||'--:--';
+  if(clock.textContent!==formatted)clock.textContent=formatted;
+  clock.classList.toggle('is-ending',seconds!==null&&seconds<=10);
+  clock.title=seconds===null?'Chưa thiết lập thời gian':rt?.autoAdvance===false&&phase==='night'?'Auto GM tạm dừng: thời gian lượt còn lại':'Đếm ngược theo thời gian cấu hình';
+}
+async function battleNavigateIndex(index){
+  if(battleState.busy||battleState.syncPending||playSceneRuntime.busy||playSceneState.step!=='battle'||playSceneState.phase!=='night')return;
+  const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[];
+  if(!Number.isInteger(index)||index<0||index>=queue.length||index===rt.cursor)return;
+  if(battleUsed(queue[index])){playFlashError('Artifact này đã dùng ở lượt trước; không thể dùng lại trong đêm.');return}
+  battleUnlockAudioFromGesture(); // iOS needs an unlocked audio path before the asynchronous Server turn switch.
+  const upcomingCue=battleTurnAudioCue(queue[index]);
+  if(upcomingCue){
+    const upcomingAudio=battleFindAudio(upcomingCue.kind,upcomingCue.targetId,upcomingCue.name);
+    if(upcomingAudio)void battleWarmAudio(upcomingCue.kind,upcomingAudio);
+  }
+  if(battleState.targets.length&&!confirm('Bỏ mục tiêu chưa xác nhận để chuyển lượt?'))return;
+  battleState.busy=true;renderPlayBattle();
+  try{
+    const targetId=queue[index].id,jump=(targetIndex,expectedTurnId)=>playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'jump',targetIndex,expectedTurnId,source:'gm-timeline'})});
+    let result;
+    try{result=await jump(index,rt.currentId||'')}
+    catch(err){
+      if(err?.code!=='STALE_TURN'||!demoRunner.running)throw err;
+      await playSyncRoom(true);
+      const fresh=playSceneRuntime.nightRuntime,retryIndex=fresh?.queue?.findIndex(x=>x.id===targetId)??-1;
+      if(retryIndex<0||battleUsed(fresh.queue[retryIndex]))throw err;
+      result=retryIndex===fresh.cursor?{runtime:fresh}:await jump(retryIndex,fresh.currentId||'');
+    }
+    playSceneRuntime.nightRuntime=result?.runtime||rt;
+    battleClear();await playSyncRoom(true);
+  }catch(err){playFlashError('Không thể chuyển lượt: '+String(err?.message||err));await playSyncRoom(true).catch(()=>{})}
+  finally{battleState.busy=false;renderPlayBattle()}
+}
+function battleNavigateRelative(delta){
+  const rt=playSceneRuntime.nightRuntime;
+  if(playSceneState.phase!=='night'||!rt?.queue?.length)return;
+  let index=rt.cursor+delta;
+  while(index>=0&&index<rt.queue.length&&battleUsed(rt.queue[index]))index+=delta;
+  if(index>=0&&index<rt.queue.length)void battleNavigateIndex(index);
+}
+
+const battleVisualType=a=>{const key=String([a?.actionId,a?.name,...(a?.effectIds||[])].join(' ')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(/(bite|can|wolf)/.test(key))return'wolf-bite';
+  if(/(freeze|dong bang|frozen)/.test(key))return'frozen';
+  if(/(exile|expel|duoi)/.test(key))return'expelled';
+  if(/(revive|hoi sinh)/.test(key))return'revive';
+  if(/(kill|giet|poison)/.test(key))return'dead';
+  if(/(protect|bao ve|shield)/.test(key))return'shield';
+  if(/(swap|clone|doi vai|trang guong)/.test(key))return'swap';
+  if(/(seer|soi|tien tri|reveal)/.test(key))return'seer';
+  return'effect_notice';
+};
+function battleIsTransfer(a){return !!a&&!a.artifactId&&String(a.actionId||'')==='action_transfer_bite'}
+// GM picks the bite direction; OK confirms. No choice means the Fairy does nothing.
+function battleRenderTransferPanel(){
+ const bar=document.getElementById('battleActionBar');if(!bar)return;
+ let panel=document.getElementById('battleTransferPanel');
+ if(!panel){panel=document.createElement('div');panel.id='battleTransferPanel';(bar.closest('.battle-action-rail')||bar).insertAdjacentElement('afterend',panel)}
+ const a=battleAction(),show=!!a&&battleIsTransfer(a)&&battleState.actionId===a.id&&!a.unavailable&&!battleIconOn();
+ const sig=show+':'+battleState.busy+':'+battleState.syncPending;
+ if(panel.dataset.sig===sig)return;panel.dataset.sig=sig;panel.hidden=!show;
+ if(!show){panel.innerHTML='';return}
+ panel.innerHTML='<div class="gmww-transfer-card gmww-fairy-panel" role="group" aria-label="Hướng dịch vết cắn">'+
+   '<img draggable="false" src="action-icons/v3/51_yeu_tinh_three_way.webp" alt="">'+
+   [['left','Dịch trái'],['none','Không dịch'],['right','Dịch phải']].map(([v,label])=>
+     '<button type="button" class="gmww-fairy-hotspot" data-transfer="'+v+'" aria-label="'+label+'" title="'+label+'"></button>').join('')+
+   '</div>';
+ panel.querySelectorAll('[data-transfer]').forEach(button=>button.addEventListener('click',()=>{
+   if(battleState.busy||battleState.syncPending)return;
+   if(!playAudioMuted())void battlePlayConfiguredAudio('actions',a.actionId,a.name);
+   battleState.transferDir=button.dataset.transfer;void battleConfirm(true);
+ }));
+}
+function battleUpdateActionNavigation(){
+  // GMWW mobile: the full-width action rail uses direct swipe; arrows take
+  // no space and never appear after render or resize.
+  const previous=document.getElementById('battleActionPrevious'),next=document.getElementById('battleActionNext');
+  if(previous){previous.hidden=true;previous.disabled=true}
+  if(next){next.hidden=true;next.disabled=true}
+}
+function battleActionGestureMode(dx,dy){
+  return Math.abs(dx)>Math.abs(dy)*1.25?'scroll':'drag';
+}
+function battleNavigateActions(direction){
+  const bar=document.getElementById('battleActionBar');if(!bar)return;
+  // Arrow navigation and direct drag have distinct touch targets: never turn a drag into a swipe.
+  // Move to the next complete action button rather than a hard-to-select page.
+  const buttons=[...bar.querySelectorAll('button[data-battle-action]')];
+  if(!buttons.length)return;
+  const left=bar.scrollLeft;
+  const offsets=buttons.map(button=>button.offsetLeft-buttons[0].offsetLeft);
+  const destination=direction>0
+    ?offsets.find(offset=>offset>left+5)
+    :offsets.slice().reverse().find(offset=>offset<left-5);
+  bar.scrollTo({left:destination??(direction>0?bar.scrollWidth:0),behavior:'smooth'});
+}

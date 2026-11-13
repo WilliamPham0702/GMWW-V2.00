@@ -1,4 +1,5 @@
 // Real layout and user actions; all room/API data is synthetic and local to this page.
+import {readSourceAtLegacyPath} from '../.github/scripts/source-groups.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {chromium,webkit} from 'playwright';
@@ -7,7 +8,7 @@ import {PLAYER_ROOM_ROLE_CATALOG} from '../src/player-room-role-catalog.js';
 const refreshBaseline=process.argv.includes('--expect-refresh-failure');
 const baseline=process.argv.includes('--expect-layout-failure');
 const sourcePath=process.argv.find(x=>x.startsWith('--source='))?.slice(9)||'src/player-web-src/37-player-rooms.part';
-const source=fs.readFileSync(sourcePath,'utf8').replace('setInterval(mount,1500);','window.roomFixture={pr,mount,render};');
+const source=readSourceAtLegacyPath(sourcePath).replace('setInterval(mount,1500);','window.roomFixture={pr,mount,render};');
 const menu=gmwwMembersLiveScript.match(/const GMWW_SERVER_MENU=(.*);\n/)[1];
 const host=fs.readFileSync('src/player-page-src/00-head-and-style.part','utf8');
 fs.mkdirSync('artifacts/template-layout',{recursive:true});

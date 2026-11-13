@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,10 +6,9 @@ import vm from 'node:vm';
 import crypto from 'node:crypto';
 const iconPath=new URL('../server-game/current/action-icon-library.js',import.meta.url);
 const htmlPath=new URL('../server-game/current/GMWW.html',import.meta.url);
-const corePath=new URL('../server-game/src/00-core-and-library.part',import.meta.url);
 const script=fs.readFileSync(iconPath,'utf8');
 const html=fs.readFileSync(htmlPath,'utf8');
-const core=fs.readFileSync(corePath,'utf8');
+const core=gmSource('00-core-and-library');
 const ctx={
   window:{},
   document:{readyState:'loading',addEventListener(){}},
@@ -165,7 +165,7 @@ test('Double-tap tiles never show external Edit/Delete buttons and delete action
  assert.ok(script.includes("document.getElementById('gmwwIconDelete').onclick"));
 });
 test('Fire icon uses battle targetAllowed and original Server commit, without a second action ledger',()=>{
- const battle=fs.readFileSync(new URL('../server-game/src/40-battle-and-timeline.part',import.meta.url),'utf8');
+ const battle=gmSource('40-battle-and-timeline');
  assert.match(battle,/battleIconDock\(actions,phase\)/);
  assert.match(battle,/battleIconTargetAt\(e\.clientX,e\.clientY,(?:action|a)\)/);
  assert.match(battle,/battlePickTargetWithAudio\(String\(target\.dataset\.playPlayerId/);

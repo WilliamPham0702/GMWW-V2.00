@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -70,7 +71,7 @@ test('Worker stores public-only per-day archive and serves it even when chatting
 });
 
 test('Player Web ticker loops slowly and messages/voice remain borderless',()=>{
- const source=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ const source=playerWebSource('35-online-chat');
  assert.match(source,/id="gmwwVillageTicker"/);
  assert.match(source,/🎬:/);
  assert.match(source,/@keyframes gmww-village-marquee/);
@@ -90,12 +91,12 @@ test('entire public night/day history remains preserved above earlier 100/150 ca
  const historical=mergePublicChatNotices([],current);
  assert.equal(historical.length,170,'do not truncate at 150 events');
  assert.deepEqual(historical.map(x=>x.id),current.map(x=>x.id));
- const ticker=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ const ticker=playerWebSource('35-online-chat');
  assert.doesNotMatch(ticker,/filter\(n=>n\?\.system===true&&typeof n\.text==='string'\)\.slice\(-150\)/);
 });
 
 test('marquee skips empty records while retaining all actual village announcements',()=>{
- const src=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ const src=playerWebSource('35-online-chat');
  assert.match(src,/n\.text\.trim\(\)\.length>0/);
  assert.match(src,/gmwwVillageTickerUpdate\(result\.notices,result\.noticeCycleNight\)/);
  const fake=[{id:'valid',system:true,text:'A Dũng đã bị Sát Thủ chọn.'},{id:'empty',system:true,text:'   '}];

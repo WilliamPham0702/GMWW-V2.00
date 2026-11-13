@@ -1,13 +1,14 @@
+import {gmSource,GM_GROUPS} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const village=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const chat=fs.readFileSync('server-game/src/45-online-chat.part','utf8');
+const village=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
+const chat=gmSource('45-online-chat');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const parts=fs.readdirSync('server-game/src').filter(f=>f.endsWith('.part')).sort().map(f=>fs.readFileSync('server-game/src/'+f,'utf8')).join('');
+const parts=GM_GROUPS.map(gmSource).join('');
 
 test('V3.321: app.js stays identical to the concatenated parts',()=>assert.equal(app,parts));
 test('V3.321: middle slot holds the chat box that opens the GM chat',()=>{

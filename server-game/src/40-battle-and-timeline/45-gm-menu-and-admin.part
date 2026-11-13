@@ -1,0 +1,139 @@
+/* V3.234 — phase-specific night and daytime dock. */
+function battleSyncPhaseDock(phase,visible){
+  const day=!!visible&&phase==='day',night=!!visible&&phase==='night';
+  const shell=document.getElementById('playShell');
+  if(shell)shell.dataset.battlePhase=visible?phase:'';
+  // V3.321: battleActionTray is shown by renderPlayBattle only when it has a day/Artifact action; the 💬 float is replaced by #battleChatBox.
+  const slots={playBattleClockFloat:!!visible,
+    battleUndoFloat:!!visible,battleDayNoticeFloat:day,battleDayActionFloat:false,
+    battleGMChatFloat:false,battleDayGallowsFloat:day,battleFactionStatsFloat:day};
+  if(!visible){const tray=document.getElementById('battleActionTray');if(tray)tray.hidden=true}
+  for(const [id,show] of Object.entries(slots)){
+    const el=document.getElementById(id);if(el)el.hidden=!show;
+  }
+}
+function battleSyncGMMenuControls(){
+  // V3.238: one visual ON/OFF language, both Setup and Battle.
+  // Placement/Exit/End buttons are one-shot commands: do not misrepresent them as persistent switches.
+  const on=(id,value,label)=>{const el=document.getElementById(id);if(!el)return;
+    el.setAttribute('aria-pressed',String(!!value));el.setAttribute('aria-label',label+': '+(value?'Bật':'Tắt'));
+    el.classList.toggle('is-off',!value);
+  };
+  on('battleGMChromeToggle',!gmwwPlayChromeHidden,'Menu');
+  on('battleLabelArtifact',gmLabelVisibility.artifact,'Artifact');
+  on('battleLabelRole',gmLabelVisibility.role,'Vai Trò');
+  on('battleLabelPlayer',gmLabelVisibility.player,'Người Chơi');
+  on('battleShowDead',gmLabelVisibility.dead,'Người Chết');
+  on('battleGMActionIcons',battleIconOn(),'iCon');
+  on('battleGMTurnMotion',battleMotionOn(),'Đi bộ');
+  on('battleGMAudio',!playAudioMuted(),'Audio');
+  on('battleGMHaptic',gmHapticEnabled(),'Rung');
+  on('battleGMAuto',!!playSceneState.autoGM,'Auto GM');
+  for(const [id,label] of [['battleGMChromeToggle','Menu'],['battleGMTurnMotion','Đi bộ'],['battleGMActionIcons','iCon'],['battleShowDead','Người Chết'],['battleGMAudio','Audio'],['battleGMHaptic','Rung'],['battleGMAuto','Auto GM']]){
+    const el=document.getElementById(id);if(el)el.textContent=label;
+  }
+}
+
+/* GM administrative actions: independent of the role turn and action-icon toggle.
+ * GM-authorized Room APIs apply every effect; no private chat data enters public state. */
+let gmwwGMAdminPointer=null;
+function gmwwGMAdminTargetAt(x,y,type){
+  const ring=document.getElementById('playPlayerRing');if(!ring)return null;
+  const members=new Set(playLiveMembers().filter(p=>p.loginId).map(p=>String(p.loginId)));
+  let best=null,distance=Infinity;
+  for(const node of ring.querySelectorAll('[data-play-player-id]')){
+    const id=String(node.dataset.playPlayerId||''),status=playPlayerEffect(id);
+    if(!members.has(id)||(type==='revive'?status!=='dead':type==='dead'?status==='dead':false))continue;
+    const rect=node.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+    const d=Math.hypot(x-cx,y-cy),limit=Math.max(64,Math.min(112,Math.max(rect.width,rect.height)*1.1));
+    if(d<limit&&d<distance){best=node;distance=d}
+  }
+  return best;
+}
+function gmwwGMAdminMount(){
+  const top=document.getElementById('playBattleTop');if(!top)return;
+  let bar=document.getElementById('gmwwGMAdminDock');
+  if(!document.getElementById('gmwwGMAdminDockV3305')){
+    // V3.305 top-right GM menu: Cứu · Giết · Cấm Chat · Auto GM (game action icons). Overrides older left offsets.
+    const st=document.createElement('style');st.id='gmwwGMAdminDockV3305';
+    st.textContent='#start #gmwwGMAdminDock button[data-gm-admin="revive"]{left:calc(100vw - 202px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="dead"]{left:calc(100vw - 152px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="mute-chat"]{left:calc(100vw - 102px)!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"]{left:calc(100vw - 52px)!important}'+
+      '#start #gmwwGMAdminDock button{border:0!important;background:transparent!important;border-radius:12px!important}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"]::after{content:"AUTO";position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);padding:1px 4px;border-radius:6px;font:800 8px/1.2 system-ui;letter-spacing:.04em;color:#3d0b05;background:#ff9b8f;pointer-events:none}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"][data-state="on"]::after{color:#0c3317;background:#7ee08a}'+
+      '#start #gmwwGMAdminDock button[data-gm-admin="auto-gm"][data-state="off"] img{filter:grayscale(.75) brightness(.8)}';
+    document.head.appendChild(st);
+  }
+  if(!bar){
+    bar=document.createElement('div');bar.id='gmwwGMAdminDock';
+    bar.setAttribute('role','group');bar.setAttribute('aria-label','Hành động riêng của GM');
+    // V3.305: top-right GM menu = the fire GM menu functions, reusing the game's action icons.
+    bar.innerHTML='<button type="button" data-gm-admin="revive" aria-label="GM Cứu" title="GM • Cứu / Hồi Sinh"><img src="action-icons/v3/07_cuu.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="dead" aria-label="GM Giết" title="GM • Giết"><img src="action-icons/v3/15_san_giet.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="mute-chat" aria-label="GM Cấm chat" title="GM • Cấm / Mở Chat"><img src="action-icons/v3/39_cam_noi.webp" alt=""></button>'+
+      '<button type="button" data-gm-admin="auto-gm" aria-label="Auto GM" title="GM • Auto GM"><img src="action-icons/v3/31_rung_chuong.webp" alt=""></button>';
+    // The stylesheet scopes this dock under #start; mounting on <body> left it unstyled/invisible.
+    (document.getElementById('start')||document.body).appendChild(bar);
+    for(const button of bar.querySelectorAll('[data-gm-admin]')){
+      try{const saved=JSON.parse(localStorage.getItem(GMWW_ADMIN_POS_KEY+button.dataset.gmAdmin)||'null');if(saved&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)){button.style.left=Math.max(0,Math.min(window.innerWidth-44,saved.x))+'px';button.style.top=Math.max(0,Math.min(window.innerHeight-44,saved.y))+'px'}}catch{}
+    }
+    bar.addEventListener('pointerdown',event=>{
+      const button=event.target.closest('[data-gm-admin]');
+      if(!button||button.disabled||(event.button!==0&&event.pointerType!=='touch'))return;
+      gmwwGMAdminPointer={button,id:event.pointerId,type:button.dataset.gmAdmin,
+        x:event.clientX,y:event.clientY,moved:false,target:null,ghost:null};
+      try{button.setPointerCapture(event.pointerId)}catch{}
+      event.preventDefault();event.stopPropagation();
+    });
+    bar.addEventListener('pointermove',event=>{
+      const drag=gmwwGMAdminPointer;if(!drag||drag.id!==event.pointerId)return;
+      if(!drag.moved&&Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<8)return;
+      drag.moved=true;
+      if(!drag.ghost){
+        drag.ghost=document.createElement('span');drag.ghost.className='gmww-gm-admin-ghost';
+        drag.ghost.innerHTML=drag.button.innerHTML;document.body.appendChild(drag.ghost);
+      }
+      drag.ghost.style.left=event.clientX+'px';drag.ghost.style.top=event.clientY+'px';
+      const target=GMWW_ADMIN_TOGGLES.has(drag.type)?null:gmwwGMAdminTargetAt(event.clientX,event.clientY,drag.type);
+      if(!target){drag.button.style.left=Math.max(0,Math.min(window.innerWidth-44,event.clientX-22))+'px';drag.button.style.top=Math.max(0,Math.min(window.innerHeight-44,event.clientY-22))+'px'}
+      if(target!==drag.target){drag.target?.classList.remove('gmww-battle-icon-snap');
+        drag.target=target;target?.classList.add('gmww-battle-icon-snap')}
+      drag.ghost.classList.toggle('is-sucked',!!target);
+      event.preventDefault();
+    });
+    const finish=event=>{
+      const drag=gmwwGMAdminPointer;if(!drag||drag.id!==event.pointerId)return;
+      const target=event.type==='pointerup'&&drag.moved?gmwwGMAdminTargetAt(event.clientX,event.clientY,drag.type):null;
+      drag.target?.classList.remove('gmww-battle-icon-snap');drag.ghost?.remove();
+      gmwwGMAdminPointer=null;
+      if(event.type==='pointerup'&&!drag.button.disabled){
+        if(drag.moved){if(target&&!GMWW_ADMIN_TOGGLES.has(drag.type))void battleQuickApply(String(target.dataset.playPlayerId||''),drag.type);else{try{localStorage.setItem(GMWW_ADMIN_POS_KEY+drag.type,JSON.stringify({x:parseFloat(drag.button.style.left),y:parseFloat(drag.button.style.top)}))}catch{}}}
+        else gmwwGMAdminTap(drag.type);
+      }
+      event.preventDefault();event.stopPropagation();
+    };
+    bar.addEventListener('pointerup',finish);
+    bar.addEventListener('pointercancel',finish);
+    bar.addEventListener('click',event=>{
+      // Keyboard activation has detail=0. Touch/mouse activation is handled on pointerup.
+      if(event.detail!==0)return;
+      const button=event.target.closest('[data-gm-admin]');
+      if(button&&!button.disabled)gmwwGMAdminTap(button.dataset.gmAdmin);
+    });
+  }
+  bar.hidden=playSceneState.step!=='battle';
+  for(const b of bar.querySelectorAll('[data-gm-admin]')){
+    const auto=b.dataset.gmAdmin==='auto-gm';
+    b.disabled=auto?playSceneRuntime.busy||playSceneRuntime.room?.demo===true:battleState.busy||battleState.syncPending||playSceneRuntime.busy||!isLivePlayRoom();
+    b.setAttribute('aria-pressed',String(auto?!!playSceneState.autoGM:battleState.quickType===b.dataset.gmAdmin));
+    if(auto){b.dataset.state=playSceneState.autoGM?'on':'off';b.setAttribute('aria-label',playSceneState.autoGM?'Auto GM đang bật':'Auto GM đang tắt')}
+  }
+}
+// Mute-chat and Auto GM are toggles; Cứu/Giết keep drag-onto-player or tap-then-pick.
+const GMWW_ADMIN_TOGGLES=new Set(['auto-gm']),GMWW_ADMIN_POS_KEY='gmww-admin-icon-v3305-';
+function gmwwGMAdminTap(type){
+  if(type==='auto-gm'){void togglePlayAutoGM();return}
+  battleQuickSelect(type);
+}

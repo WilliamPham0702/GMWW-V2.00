@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource,workerModuleSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,7 +6,7 @@ import fs from 'node:fs';
 const read=(p)=>fs.readFileSync(p,'utf8');
 const index=workerSource();
 const observerApi=workerModuleSource('http/gm-observer-api.js');
-const part=read('src/player-web-src/36-gm-observer.part');
+const part=playerWebSource('36-gm-observer');
 
 test('GM observer edge route only accepts the GM0702 member session', () => {
   assert.ok(index.includes('gm-observer\\/(state|action|interaction|day-action|chat-mute|auto)'));

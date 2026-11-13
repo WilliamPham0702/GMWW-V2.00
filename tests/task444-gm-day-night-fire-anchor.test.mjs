@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ const read=p=>readFileSync(p,'utf8');
 
 test('TASK #444: bundled GM runtime equals split source after Day/Night menu change',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const fragments=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
- assert.equal(read('server-game/current/app.js'),fragments.map(n=>read('server-game/src/'+n)).join(''));
+ assert.equal(read('server-game/current/app.js'),fragments.map(n=>gmSource(n.replace(/\.part$/,''))).join(''));
 });
 
 test('TASK #444: both phases use current saved fire anchor, not the previous phase',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{

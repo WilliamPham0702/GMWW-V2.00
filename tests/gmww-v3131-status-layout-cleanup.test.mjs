@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const read=p=>fs.readFileSync(p,'utf8');
-const gm=read('server-game/current/app.js'),gmSrc=read('server-game/src/30-village-and-setup.part');
+const gm=read('server-game/current/app.js'),gmSrc=gmSource('30-village-and-setup');
 const worker=workerSource(),html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css');
 const gmStatus=read('server-game/current/status-visuals.css'),webStatus=read('assets/village/status-visuals.css');
 const web=read('assets/village/village.mjs'),webCss=read('assets/village/village.css');

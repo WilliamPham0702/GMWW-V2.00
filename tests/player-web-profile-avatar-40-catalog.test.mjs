@@ -1,9 +1,10 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const source=readFileSync(new URL('../src/player-web-src/20-village-and-profile.part',import.meta.url),'utf8');
+const source=playerWebSource('20-village-and-profile');
 const excerpt=(start,end)=>{
   const a=source.indexOf(start),b=source.indexOf(end,a+start.length);
   assert.ok(a>=0&&b>a,'Missing Player Web source: '+start);

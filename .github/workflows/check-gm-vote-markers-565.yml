@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/40-battle-and-timeline/**'
       - 'server-game/current/app.js'
       - 'server-game/current/style.css'
       - 'tests/gm-gallows-vote-markers-ui.test.mjs'
@@ -14,7 +14,7 @@ on:
     paths:
       - 'server-game/current/app.js'
       - 'server-game/current/style.css'
-      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/40-battle-and-timeline/**'
       - '.github/workflows/check-gm-vote-markers-565.yml'
   workflow_dispatch:
 permissions:

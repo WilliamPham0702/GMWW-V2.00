@@ -6,19 +6,11 @@ import {playerServerMenuBundle} from './player-server-menu.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {PLAYER_WEB_SOURCE_DIR,PLAYER_WEB_GROUPS,playerWebSource,assertNoStrayGroups} from './source-groups.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-const parts=[
-  '00-bootstrap-and-session.part',
-  '10-role-card-artwork.part',
-  '20-village-and-profile.part',
-  '30-rooms-and-realtime.part',
-  '35-online-chat.part',
-  '36-gm-observer.part',
-  '37-player-rooms.part',
-  '40-cards-and-game.part',
-  '50-privacy-and-runtime.part'
-];
-const body=parts.map(file=>fs.readFileSync(path.join(root,'src/player-web-src',file),'utf8')).join('').replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(root))+";\n");
+const parts=PLAYER_WEB_GROUPS;
+assertNoStrayGroups(PLAYER_WEB_SOURCE_DIR,parts);
+const body=parts.map(playerWebSource).join('').replace("'use strict';",()=>"'use strict';\nconst GMWW_SERVER_MENU="+JSON.stringify(playerServerMenuBundle(root))+";\n");
 const compiled='export const gmwwMembersLiveScript = '+JSON.stringify(body)+';\n';
 const target=path.join(root,'src/gmww-members-live.js');
 const sha=b=>createHash('sha256').update(b).digest('hex');

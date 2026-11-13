@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,8 +7,8 @@ import vm from 'node:vm';
 import {resolveNightReveal} from '../src/gmww-wolf-night-resolution.js';
 import {demoTaskAt} from '../src/gmww-demo-runner.js';
 
-const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const source=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
 const worker=workerSource();
 const between=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
 

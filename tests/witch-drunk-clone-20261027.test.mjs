@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
 import {arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
@@ -68,7 +69,7 @@ test('Witch Save and Kill use separate once-per-match ledgers in the same night'
 });
 
 test('saved GM cards migrate Witch, Drunk and Clone limits without losing artwork/audio',()=>{
-  const source=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+  const source=gmSource('00-core-and-library');
   const start=source.indexOf('function applyWitchDrunkCloneRules(s){');
   const end=source.indexOf('function applyV221AudioGuard(s){',start);
   assert.ok(start>=0&&end>start);
@@ -95,7 +96,7 @@ test('saved GM cards migrate Witch, Drunk and Clone limits without losing artwor
 });
 test('Worker and GM implement authoritative Witch target and do not advance on first potion',()=>{
   const worker=workerSource(),
-    gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+    gm=gmSource('40-battle-and-timeline');
   assert.match(worker,/WITCH_SAVE_TARGET_INVALID/);
   assert.match(worker,/witchSaveTargetAllowed\(finalBite,targets\[0\]\)/);
   assert.match(worker,/partitionNightSpecialRoles\(roleTurns,n\)/);

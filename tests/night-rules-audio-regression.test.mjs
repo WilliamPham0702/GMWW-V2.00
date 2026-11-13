@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ import * as nightRules from '../src/gmww-wolf-night-resolution.js';
 import * as policy from '../src/gmww-battle-action-policy.js';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 const read=p=>fs.readFileSync(p,'utf8');
-const worker=workerSource(),audio=read('server-game/src/30-village-and-setup.part'),battle=read('server-game/src/40-battle-and-timeline.part'),core=read('server-game/src/00-core-and-library.part');
+const worker=workerSource(),audio=gmSource('30-village-and-setup'),battle=gmSource('40-battle-and-timeline'),core=gmSource('00-core-and-library');
 function cut(s,a,b){return s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));}
 function harness(actionId='action_seer',roleId='role_seer'){
  const meta={matchId:'m',cycleKey:'n1',cycleNight:1,cyclePhase:'night',phase:'running'};

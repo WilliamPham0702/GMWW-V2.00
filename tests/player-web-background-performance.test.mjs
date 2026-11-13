@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -58,8 +59,8 @@ test('PR648 normal village has no idle FPS animation but keeps interval telemetr
 });
 
 test('Player Web background network timers are visibility guarded',()=>{
-  const rooms=read('src/player-web-src/30-rooms-and-realtime.part');
-  const runtime=read('src/player-web-src/50-privacy-and-runtime.part');
+  const rooms=playerWebSource('30-rooms-and-realtime');
+  const runtime=playerWebSource('50-privacy-and-runtime');
   const scene=read('assets/village/scene-manager.mjs');
   assert.match(rooms,/state\.presenceTimer=setInterval\(\(\)=>\{if\(document\.hidden\)return;/);
   assert.match(runtime,/gmwwWebUpdateTimer=setInterval\(\(\)=>\{if\(!document\.hidden\)checkWebUpdate\(\)\},60000\)/);

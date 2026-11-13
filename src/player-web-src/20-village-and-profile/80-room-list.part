@@ -1,0 +1,26 @@
+async function openRooms(){
+  if(!state.token){go('login');return}
+  state.roomNavigationAuthorized=true;
+  go('rooms');
+  await loadRooms(false);
+  if(targetRoom){
+    const card=$('[data-room-code="'+targetRoom+'"]');
+    if(card){
+      card.scrollIntoView({block:'center'});
+      card.style.boxShadow='0 0 0 2px #ffd27b,0 14px 34px #0008';
+      setTimeout(()=>card.style.boxShadow='',1800);
+    }
+    sessionStorage.removeItem('gmww_pending_room');
+  }
+}
+window.openRooms=openRooms;
+
+async function loadRooms(show=false){
+  ensureOnline2DStyle();if(!state.token){go('login');return}
+  if(show&&!state.roomNavigationAuthorized)return;if(roomListRefreshBusy)return;roomListRefreshBusy=true;
+  const list=$('#rooms .room-list');if(list)list.innerHTML='<div class="room-card"><div class="wait-note">Đang tải phòng Online…</div></div>';
+  try{let d=await api('/api/rooms');state.rooms=d.rooms||[];if(!state.rooms.length){await new Promise(ok=>setTimeout(ok,320));d=await api('/api/rooms');state.rooms=d.rooms||[]}if(targetRoom&&!state.rooms.some(r=>String(r?.code||r?.roomCode||'').toUpperCase()===targetRoom)){try{const direct=await api('/api/rooms/'+encodeURIComponent(targetRoom)),rr=direct?.room;if(rr){state.rooms=[{...rr,code:String(rr.code||targetRoom),joinedCount:Array.isArray(direct.players)?direct.players.length:0},...state.rooms]}}catch{}}renderRooms()}
+  catch(e){if(list)list.innerHTML='<div class="room-card"><div class="wait-note">'+escapeHtml(e.message)+'</div></div>'}
+  finally{roomListRefreshBusy=false}
+}
+function escapeHtml(v){return String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}

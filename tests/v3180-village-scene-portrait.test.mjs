@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,7 +29,7 @@ test('GM Runtime V3.180 includes new scene camera without changing native shell'
  assert.ok(worker.includes('NATIVE_SHELL_VERSION="3.110"'));
  assert.ok(worker.includes('UPDATE_CHANNEL_REV="runtime-'+v.replaceAll('.','')+'"'));
  assert.ok(gm.includes("const VERSION='"+v+"'"));
- assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+v+"'"));
+ assert.ok(gmSource('00-core-and-library').includes("const VERSION='"+v+"'"));
  assert.ok(read('server-game/current/GMWW.html').includes('style.css?v='+v));
  assert.ok(read('server-game/current/GMWW.html').includes('app.js?v='+v));
 });

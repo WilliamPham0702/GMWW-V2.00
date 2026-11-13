@@ -1,12 +1,13 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const backend=workerSource();
-const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
-const playerWS=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
-const gmWS=readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const gmFx=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const player=playerWebSource('35-online-chat');
+const playerWS=playerWebSource('30-rooms-and-realtime');
+const gmWS=gmSource('30-village-and-setup');
+const gmFx=gmSource('40-battle-and-timeline');
 test('Auto GM advances zero-second turns or derives a missing server deadline',()=>{
  assert.match(backend,/const started=Date\.parse\(active\.startedAt\|\|runtime\.startedAt/);
  assert.match(backend,/started\+seconds\*1000/);

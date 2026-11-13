@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import fs from 'node:fs';
 const read = name => fs.readFileSync(name,'utf8');
 const css = read('server-game/current/style.css');
 const html = read('server-game/current/GMWW.html');
-const battle = read('server-game/src/40-battle-and-timeline.part');
+const battle = gmSource('40-battle-and-timeline');
 const gm = read('server-game/current/app.js');
 const version = JSON.parse(read('package.json')).version.replace(/\.0$/,'');
 const region = css.slice(css.indexOf('/* V3.178 — compact battle chrome:'), css.indexOf('/* V3.179 —'));
@@ -37,7 +38,7 @@ test('V3.178: shell, GM, Player Worker versions match without native IPA changes
  assert.ok(workerSource().includes('VERSION="V'+version+'"'));
  assert.ok(workerSource().includes('UPDATE_CHANNEL_REV="runtime-'+version.replace('.','')+'"'));
  assert.ok(gm.includes("const VERSION='"+version+"'"));
- assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+version+"'"));
+ assert.ok(gmSource('00-core-and-library').includes("const VERSION='"+version+"'"));
  assert.ok(html.includes('<title>GMWW V'+version+'</title>'));
  assert.ok(html.includes('style.css?v='+version+'-compact-room'));
  assert.ok(html.includes('app.js?v='+version+'-compact-room'));

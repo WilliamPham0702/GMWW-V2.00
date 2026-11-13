@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -65,7 +66,7 @@ test('Authenticated room route never trusts Player Web actor or source role',()=
  assert.match(worker,/DRUNK_WRONG_TURN/);
  assert.match(worker,/DRUNK_CARD_INVALID/);
  assert.match(worker,/blockConcurrencyWhile/);
- const client=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+ const client=playerWebSource('30-rooms-and-realtime');
  assert.match(client,/drunk\/draw/);
  assert.match(client,/dd-card/);
  assert.match(client,/refreshPrivateRole\(true\)/);

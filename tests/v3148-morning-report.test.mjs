@@ -1,13 +1,14 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+const gm=gmSource('40-battle-and-timeline');
+const setup=gmSource('30-village-and-setup');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
-const catalog=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+const catalog=gmSource('00-core-and-library');
 
 test('Village morning report uses only confirmed interactions from this match and night',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   const start=gm.indexOf('function battleMorningRows(){');

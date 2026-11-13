@@ -1,12 +1,13 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const part=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const part=gmSource('40-battle-and-timeline');
 const runtime=readFileSync('server-game/current/app.js','utf8');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
-const actions=readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const actions=gmSource('50-roles-and-artifacts');
 const begin='function gmAutoRankTemplates(',end='function gmAutoShowSummary(';
 const extract=text=>text.slice(text.indexOf(begin),text.indexOf(end));
 const context=vm.createContext({});

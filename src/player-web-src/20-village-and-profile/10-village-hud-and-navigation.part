@@ -1,0 +1,145 @@
+function ensureVillageHud(){
+  ensureVillageGameView();let hud=$('#gmwwVillageHud');if(!hud){hud=document.createElement('div');hud.id='gmwwVillageHud';hud.innerHTML='<div class="status"><b></b><small></small></div><button id="gmwwVillageProfileButton" type="button" aria-label="Thông tin"><img id="gmwwVillageProfileAvatar" alt="Avatar của bạn"></button>';$('#game').appendChild(hud)}
+  if(!$('#gmwwVillageV260Style')){const st=document.createElement('style');st.id='gmwwVillageV260Style';st.textContent=`
+    #gmwwVillageHud{position:fixed;inset:0;z-index:73;pointer-events:none;color:#fff4da}
+    #gmwwVillageHud .status{display:none;position:absolute;left:8px;top:max(6px,env(safe-area-inset-top));padding:5px 8px;border:1px solid #d7b775;border-radius:11px;background:#05283ad9;max-width:48vw}
+    #gmwwVillageHud.has-room .status{display:block}#gmwwVillageHud .status b,#gmwwVillageHud .status small{display:block}#gmwwVillageHud .status b{font-size:10px}#gmwwVillageHud .status small{font-size:8px;color:#c3e6e4}
+    #gmwwVillageProfileButton{pointer-events:auto;position:absolute;right:10px;top:max(8px,env(safe-area-inset-top));width:44px;height:44px;padding:0;overflow:hidden;border:1px solid #e4c982;border-radius:50%;background:#0b3144;color:#fff4da;display:grid;place-items:center;box-shadow:0 4px 14px #00131f66}
+    #gmwwVillageProfileAvatar{width:100%;height:100%;display:block;object-fit:contain;object-position:center;background:linear-gradient(180deg,#174f65,#0b293a)}
+    #game:after,#game:before{display:none!important}
+    #game.screen.active>.page-head,#game.screen.active>.page-title{display:none!important}
+    #gmwwGameViewTabs{top:auto!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;right:10px!important;width:190px!important;background:#05283aeb!important;backdrop-filter:none!important}
+    #gmwwRoomSetup,#gmwwVillagePerfBadge{display:none!important}
+    #gmwwVillageReadyDock{bottom:calc(4px + env(safe-area-inset-bottom));background:#05283aeb;backdrop-filter:none!important}
+    #profile.screen.active{position:fixed!important;left:50%!important;right:auto!important;bottom:auto!important;top:50%!important;transform:translate(-50%,-50%)!important;width:min(88vw,360px)!important;max-height:72svh!important;padding:12px!important;z-index:240!important;border:1px solid #d7b775;border-radius:18px;background:#05283af5!important;backdrop-filter:none!important}
+    #rooms.screen.active{position:fixed!important;inset:auto 8px 8px!important;top:54px!important;z-index:240!important;border:1px solid #d7b775;border-radius:18px;max-height:calc(100svh - 66px);background:#05283af5!important;backdrop-filter:none!important}
+    #profile.screen.active:before,#rooms.screen.active:before{display:none!important}
+    #rooms .room-card{backdrop-filter:none!important}
+    #gmwwVillageChoice{position:fixed;inset:0;z-index:120;background:#00172760;display:grid;align-items:end;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+    #gmwwVillageChoice>div{padding:18px;border:1px solid #e3c786;border-radius:20px;background:#05283af5;color:#fff4da}
+    #gmwwVillageChoice p{font-size:16px;margin:0 0 14px}#gmwwVillageChoice .choices{display:flex;gap:8px;flex-wrap:wrap}
+    #gmwwVillageChoice button{flex:1;min-height:48px;padding:10px;border:1px solid #d7b775;border-radius:12px;background:#0a5c70;color:#fff4da;font-size:15px}
+    #gmwwProfileVillageBack,#gmwwRoomsVillageBack{position:absolute;right:8px;top:8px;z-index:5;width:34px;height:34px;min-height:34px;margin:0;border:1px solid #d7b775;border-radius:50%;background:#0a5c70;color:#fff4da;padding:0;font-size:22px;line-height:1}
+    #loginPasswordBlock,#registrationPasswordToggle,#registrationPasswordFields,#reset{display:none!important}
+    #profile.screen.active{width:min(92vw,382px)!important;height:auto!important;min-height:0!important;max-height:min(76svh,560px)!important;padding:44px 10px 10px!important;overflow:auto!important;top:50%!important}
+    #profile .profile-main{width:100%!important;margin:0!important;padding:10px!important;grid-template-columns:72px minmax(0,1fr)!important;gap:10px!important;border-radius:14px!important}
+    #profile .profile-main .meta,#profile>.kicker,#profile>.page-title,#profile>.page-sub,#profile .change-pass,#profile .profile-enter-room{display:none!important}
+    #profile #profileEditPanel{width:100%!important;margin:8px 0 0!important;border-radius:12px!important}
+    #profile #profileEditPanel>summary{min-height:40px!important;padding:8px 10px!important;font-size:12px!important}
+    #profile #profileEditPanel label:has(#profileDisplayInput){display:none!important}
+    #profile #profileEditPanel .avatar-edit-row{margin-top:4px!important}
+    #profile #profileSaveButton{min-height:44px!important;margin-top:8px!important}
+    #profile .section-title{width:100%!important;margin:9px 0 5px!important;font-size:11px!important}
+    #profile .stats{width:100%!important;margin:0!important;gap:6px!important}
+    #profile .stat{min-height:58px!important;padding:7px 4px!important;border-radius:11px!important}
+    #profile .stat strong{font-size:20px!important}#profile .stat span{font-size:8px!important}
+    #profile .profile-actions-row{display:flex!important;width:100%!important;margin:9px 0 0!important;gap:7px!important}
+    #profile .profile-exit-btn{display:block!important;flex:1!important;min-height:44px!important;border-radius:12px!important}
+    #profile .history-fold{display:block!important;width:100%!important;margin:8px 0 0!important;padding:0!important;border:1px solid #d7b775!important;border-radius:11px!important;background:#073146!important;overflow:hidden!important}
+    #profile .history-fold>summary{display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:38px!important;margin:0!important;padding:8px 10px!important;cursor:pointer!important;color:#fff4da!important;font-size:11px!important;font-weight:900!important;list-style:none!important;border:0!important;border-radius:0!important;outline:0!important;box-shadow:none!important;background:transparent!important}
+    #profile .history-fold>summary::-webkit-details-marker{display:none!important}
+    #profile .history-fold>summary:after{content:'⌄';font-size:16px!important;transition:transform .18s ease}
+    #profile .history-fold[open]>summary:after{transform:rotate(180deg)}
+    #profile .history-fold .history{display:grid!important;gap:5px!important;max-height:170px!important;overflow:auto!important;padding:0 7px 7px!important}
+    #profile .history-item{padding:7px!important;border-radius:8px!important;font-size:10px!important}
+    #profileLobbyMotionRow{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;width:100%!important;margin:8px 0 0!important;padding:9px 10px!important;border:1px solid #547f92!important;border-radius:11px!important;background:#073146!important;color:#fff4da!important}
+    #profileLobbyMotionRow .motion-copy{min-width:0!important}#profileLobbyMotionRow b{display:block!important;font-size:11px!important;line-height:1.2!important}#profileLobbyMotionRow small{display:block!important;margin-top:2px!important;color:#a8d4df!important;font-size:8px!important;line-height:1.3!important}
+    #profileLobbyMotionToggle{flex:0 0 48px!important;width:48px!important;height:28px!important;min-height:28px!important;padding:2px!important;border:1px solid #6f91a0!important;border-radius:999px!important;background:#183848!important;position:relative!important;box-shadow:none!important}
+    #profileLobbyMotionToggle:after{content:''!important;display:block!important;width:22px!important;height:22px!important;border-radius:50%!important;background:#d8e7ec!important;transform:translateX(0)!important;transition:transform .18s ease,background .18s ease!important}
+    #profileLobbyMotionToggle[aria-checked='true']{background:#11745e!important;border-color:#54d8b2!important}#profileLobbyMotionToggle[aria-checked='true']:after{transform:translateX(20px)!important;background:#ecfff8!important}
+  `;document.head.appendChild(st)}
+  if(!$('#gmwwProfileVillageBack')){const b=document.createElement('button');b.id='gmwwProfileVillageBack';b.setAttribute('aria-label','Đóng');b.textContent='×';b.onclick=enterVillage;$('#profile')?.prepend(b)}if(!$('#gmwwRoomsVillageBack')){const b=document.createElement('button');b.id='gmwwRoomsVillageBack';b.setAttribute('aria-label','Đóng');b.textContent='×';b.onclick=enterVillage;$('#rooms')?.prepend(b)}
+  const profileButton=$('#gmwwVillageProfileButton');if(profileButton&&!profileButton.dataset.bound){profileButton.dataset.bound='1';profileButton.onclick=openVillageProfile}
+  ensurePlayerTopMenu();
+  ensureDesktopResponsiveStyle();
+  return hud;
+}
+function updateVillageHud(){const hud=$('#gmwwVillageHud');if(!hud)return;updatePlayerTopMenu();const me=currentRoomPlayer();hud.classList.toggle('has-room',!!state.roomCode);const b=hud.querySelector('.status b'),sm=hud.querySelector('.status small');if(b)b.textContent=state.roomCode?('Phòng '+state.roomCode):'';if(sm)sm.textContent=state.roomCode?(state.room?.seatsLocked?'Vị trí đã khóa':me?.seatId?'Vị trí '+me.seatId:'Chọn vị trí'):' ';const img=hud.querySelector('#gmwwVillageProfileAvatar'),id=String(state.member?.gameCharacterId||state.gameCharacters[0]?.id||'character-01');if(img&&id){const key=id+':hud';if(img.dataset.gmwwHud!==key){img.dataset.gmwwHud=key;img.dataset.gmwwWalkCharacter=id;img.src=gameCharacterImageUrl(id)}ensureCharacterPreviewTicker()}}
+
+let gmRoomCallWatchBusy=false,gmRoomCallLastCheckAt=0;
+async function followGmRoomCall(){
+  // Only the confirmed GM-reserved player may transition automatically into a room.
+  if(!state.member||!state.token||state.roomCode||state.participantId||document.hidden||gmRoomCallWatchBusy)return false;
+  const now=Date.now();if(now-gmRoomCallLastCheckAt<2500)return false;
+  gmRoomCallLastCheckAt=now;gmRoomCallWatchBusy=true;
+  try{
+    const me=await api('/api/members/me',{headers:auth()});
+    if(state.roomCode||state.participantId)return false;
+    const code=String(me?.member?.currentRoomCode||'').trim().toUpperCase();
+    if(!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code)){
+      // Single active DEMO may be joined while the GM is already running it.
+      // Only an authenticated member is admitted; no private role is granted.
+      const list=await api('/api/rooms');
+      const demos=(list?.rooms||[]).filter(r=>r?.demo===true&&r?.enabled!==false&&String(r?.phase||'').toLowerCase()==='running');
+      if(demos.length!==1)return false;
+      return await joinRoom(demos[0].code);
+    }
+    const roster=await api('/api/rooms/'+encodeURIComponent(code));
+    if(!roster?.room||roster.room.enabled===false||!Array.isArray(roster.players))return false;
+    const loginId=String(state.member.loginId||'').trim().toLowerCase();
+    const called=roster.players.some(p=>String(p?.loginId||'').trim().toLowerCase()===loginId&&p?.reservedByGM===true);
+    if(!called||state.roomCode||state.participantId){
+      if(roster.room.demo===true&&roster.room.phase==='running'&&!state.roomCode&&!state.participantId)return await joinRoom(code);
+      return false;
+    }
+    return await joinRoom(code);
+  }catch{return false}
+  finally{gmRoomCallWatchBusy=false}
+}
+
+async function enterVillage(){if(!state.member)return go('login');ensureVillageHud();go('game');setGameViewPane('village',{persist:false});syncPlayerPresentation();ensureVillageReadyDock();await loadUiSettings();await refreshGmPresence();startGmPresencePoll();if(!state.roomCode)await loadVillageLobby();syncVillageFrame();scheduleLobbyMotion(400);if(!state.lobbyPoll)state.lobbyPoll=setInterval(()=>{if(state.member&&!state.roomCode&&!document.hidden)loadVillageLobby()},1600);void followGmRoomCall()}
+async function loadVillageLobby(){try{await loadUiSettings();const data=await api('/api/village');if(Number.isFinite(Number(data?.serverTime)))state.serverClockOffsetMs=Number(data.serverTime)-Date.now();state.lobbyPlayers=data.players||[];syncVillageFrame();if(!state.lobbyMotionTimer)scheduleLobbyMotion(450)}catch{}finally{void followGmRoomCall()}}
+async function walkInVillage(x,y){holdLobbyMotionForManualWalk();try{const d=await api('/api/village/move',{method:'POST',headers:auth(),body:JSON.stringify({x,y})});state.lobbyPlayers=d.players||state.lobbyPlayers;syncVillageFrame();return d}catch(e){toast(e.message);return null}}
+function villageChoice(message,actions){$('#gmwwVillageChoice')?.remove();const shell=document.createElement('div');shell.id='gmwwVillageChoice';const card=document.createElement('div'),text=document.createElement('p'),buttons=document.createElement('div');text.textContent=message;buttons.className='choices';card.append(text,buttons);shell.appendChild(card);for(const [label,action]of actions){const b=document.createElement('button');b.textContent=label;b.onclick=async()=>{shell.remove();await action?.()};buttons.appendChild(b)}shell.addEventListener('click',e=>{if(e.target===shell)shell.remove()});document.body.appendChild(shell)}
+function showSeatChoice(){toast('Vị trí do GM xếp. Vui lòng chờ Quản Trò.')}
+async function releaseMySeat(){
+  if(!state.roomCode||!state.participantId)return;const me=currentRoomPlayer();if(!Number(me?.seatId||0))return;
+  try{const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/setup',{method:'POST',headers:auth(),body:JSON.stringify({seatId:null})});state.players=d.players||state.players;state.ready=false;state.selectedSeatId=null;await sendPresence();ensureVillageReadyDock();syncVillageFrame();toast('Đã rời ghế. Chờ GM xếp lại vị trí.')}catch(e){toast(e.message)}
+}
+let roomListRefreshBusy=false;
+
+function go(id,opts={}){
+  // V2.00 has no room-picker page: every legacy route to it lands in the village (lobby / gather stage set by the GM).
+  if(id==='rooms'){if(state.member&&!opts.fromRooms)enterVillage();return false}
+  if(id==='profile'&&!opts.fromHistory)state.roomNavigationAuthorized=false;
+  $$('.screen').forEach(x=>x.classList.remove('active'));if(state.member&&['profile','rooms'].includes(id))$('#game')?.classList.add('active');
+  const el=$('#'+id);if(!el)return false;
+  el.classList.add('active');state.activeScreenId=id;
+  // Reveal the selected real screen only after navigation has chosen its destination.
+  document.documentElement.dataset.gmwwBoot='ready';
+  window.scrollTo({top:0,behavior:'instant'});
+  try{
+    if(!state.historyReady){history.replaceState({gmwwScreen:id},'',location.href);state.historyReady=true}
+    else if(!opts.fromHistory&&history.state?.gmwwScreen!==id)history.pushState({gmwwScreen:id},'',location.href)
+  }catch{}
+  return true;
+}
+function gmwwBack(){
+  try{history.back()}catch{}
+}
+window.go=go;window.gmwwBack=gmwwBack;
+window.addEventListener('popstate',e=>{const id=e.state?.gmwwScreen;if(id){if(id==='rooms')state.roomNavigationAuthorized=true;go(id,{fromHistory:true})}});
+
+let toastTimer;
+// Keep transient notices below the real top menu, not behind the fixed Online Chat footer.
+function gmwwToastTop(){
+  const visibleTop=Math.max(0,Number(window.visualViewport?.offsetTop)||0);
+  const stripHost=document.getElementById('gmwwStageStrip'),stripBottom=stripHost&&!stripHost.hidden?stripHost.shadowRoot?.getElementById('playSetupStrip')?.getBoundingClientRect().bottom:NaN;
+  if(Number.isFinite(stripBottom)&&stripBottom>visibleTop)return Math.ceil(stripBottom+8);
+  const menuBottom=document.getElementById('gmwwPlayerTopMenu')?.getBoundingClientRect().bottom;
+  return Math.ceil(Math.max(visibleTop+12,Number.isFinite(menuBottom)&&menuBottom>visibleTop?menuBottom+10:visibleTop+68));
+}
+function toast(text){
+  let t=$('#gmwwToast');
+  if(!t){
+    t=document.createElement('div');t.id='gmwwToast';
+    t.setAttribute('role','status');t.setAttribute('aria-live','polite');
+    t.style.cssText='position:fixed;z-index:9700;left:50%;top:0;bottom:auto;transform:translateX(-50%);width:max-content;max-width:min(360px,calc(100vw - 24px));box-sizing:border-box;padding:10px 14px;border:1px solid #c7893e;border-radius:12px;background:#080b12ee;color:#ffe0a1;font-size:11px;font-weight:800;box-shadow:0 10px 30px #000b;text-align:center;pointer-events:none';
+    document.body.appendChild(t);
+  }
+  t.style.top=gmwwToastTop()+'px';
+  // One notice centre for the whole Player Web: always under the top menu, replaced by the next notice, auto-closes after 15 s.
+  t.textContent=text||'';t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',15000);
+}
+window.toast=toast;
+

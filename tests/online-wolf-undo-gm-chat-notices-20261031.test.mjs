@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -5,8 +6,8 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 await import('../server-game/current/battle-controls.js');
 
-const gm=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const chat=readFileSync('server-game/src/45-online-chat.part','utf8');
+const gm=gmSource('40-battle-and-timeline');
+const chat=gmSource('45-online-chat');
 const server=workerSource();
 const app=readFileSync('server-game/current/app.js','utf8');
 const slice=(s,a,b)=>{
@@ -139,5 +140,5 @@ test('Packaged runtime exactly matches all seven GM source modules',()=>{
  const names=['00-core-and-library.part','10-library-and-settings.part',
   '20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part',
   '45-online-chat.part','50-roles-and-artifacts.part'];
- assert.equal(names.map(n=>readFileSync('server-game/src/'+n,'utf8')).join(''),app);
+ assert.equal(names.map(n=>gmSource(n.replace(/\.part$/,''))).join(''),app);
 });

@@ -1,0 +1,253 @@
+async function handlePlayTimelineStep(step){
+  if(playSceneRuntime.busy)return;
+  const from=PLAY_STEPS.indexOf(playSceneState.step),target=PLAY_STEPS.indexOf(step);
+  if(from<0||target<0)return;
+  if(target===from){
+    if(step==='seats'){playGatherToolsDismissed=false;renderPlayGatherToolbar();return}
+    if(step==='game')await openPlayGameStep();
+    return;
+  }
+  if(target===from+1){await advancePlayPhase();return}
+  if(target<from){
+    if(step==='lobby'){await playReturnToLobby();return}
+    setPlayStep(step);
+    if(step==='game')await openPlayGameStep();
+    return;
+  }
+  playFlashError('Hãy hoàn tất bước hiện tại trước khi chuyển đến bước này.');
+}
+function initPlayScene(){
+  gmwwBindOutsideDismiss();
+  initPlayCompletion();
+  const shell=document.getElementById('playShell');if(!shell)return;
+  initBattleControls();
+  initPlayGameChromeAutoHide();
+  initDraggablePlaySheets();initPlayGameSheetDock();
+  initDraggablePlayGatherToolbar();
+  document.getElementById('playAssignmentRandom')?.addEventListener('click',()=>{try{playBuildAssignments({random:true})}catch(err){playFlashError(err.message)}});
+  document.getElementById('playAssignmentInOrder')?.addEventListener('click',()=>{try{playBuildAssignments({random:false})}catch(err){playFlashError(err.message)}});
+  document.getElementById('playAssignmentArtifactShuffle')?.addEventListener('click',()=>{try{playRerollArtifacts()}catch(err){playFlashError(err.message)}});
+  document.getElementById('playAssignmentBack')?.addEventListener('click',()=>{setPlayStep('game');void openPlayGameStep()});
+  document.getElementById('playAssignmentConfirm')?.addEventListener('click',playSaveAssignments);
+  document.querySelector('[data-play-step="roles"]')?.addEventListener('click',()=>{playSceneRuntime.assignmentPanelDismissed=false;renderPlayRoleAssignmentPanel()});
+  document.getElementById('playGatherCall')?.addEventListener('click',()=>{void playGatherCallMembers()});
+  document.getElementById('playGatherSeatPreset')?.addEventListener('click',openPlaySeatPresetPanel);
+  document.getElementById('playSeatPresetClose')?.addEventListener('click',closePlaySeatPresetPanel);
+
+  document.getElementById('playGatherDistribute')?.addEventListener('click',()=>{void playGatherDistribute()});
+  document.getElementById('playGatherDisband')?.addEventListener('click',openPlayDisbandSheet);
+  document.getElementById('playGatherConfirm')?.addEventListener('click',()=>{void playGatherConfirm()});
+  document.getElementById('playGatherClose')?.addEventListener('click',()=>{playGatherToolsDismissed=false;renderPlayGatherToolbar()});
+  document.getElementById('playDisbandClose')?.addEventListener('click',closePlayDisbandSheet);
+  document.getElementById('playDisbandAll')?.addEventListener('click',()=>{void playDisbandAll()});
+  document.getElementById('playDisbandSheet')?.addEventListener('click',ev=>{if(ev.target===document.getElementById('playDisbandSheet'))closePlayDisbandSheet()});
+  document.querySelectorAll('[data-play-step]').forEach(b=>b.addEventListener('click',()=>{void handlePlayTimelineStep(b.dataset.playStep)}));
+  document.querySelector('[data-play-room-tab]')?.addEventListener('click',()=>{if(!playSceneRuntime.busy)void openPlayCreateRoomSheet()});
+  document.getElementById('playChatTop')?.addEventListener('click',()=>{const launch=document.getElementById('gmwwGMChatLaunch');if(launch)launch.click();else playFlashError('Box Chat mở được khi đã có phòng, từ bước Tập hợp trở đi.')});
+  document.getElementById('playPhasePill')?.addEventListener('click',()=>{void advancePlayPhase()});
+  document.getElementById('playExitVillage')?.addEventListener('click',exitPlayImmersive);
+  document.querySelectorAll('.nav[data-page="start"]').forEach(n=>n.addEventListener('click',enterPlayImmersive));
+  document.getElementById('playAutoGM')?.addEventListener('click',togglePlayAutoGM);
+  document.getElementById('playRefreshServer')?.addEventListener('click',refreshPlayServerRealtime);
+  document.getElementById('playAudioTop')?.addEventListener('click',togglePlayAudio);
+  document.getElementById('playPrimaryAction')?.addEventListener('click',()=>{void advancePlayPhase()});
+  document.getElementById('playEndGame')?.addEventListener('click',()=>{void openPlayCompletionSheet()});
+  document.querySelectorAll('[data-play-card]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-play-card]').forEach(x=>x.classList.toggle('is-front',x===b))}));
+  document.getElementById('playRoomButton')?.addEventListener('click',openPlayGMSheet);
+  document.getElementById('playGMClose')?.addEventListener('click',closePlayGMSheet);
+  document.getElementById('playGMSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playGMSheet'))closePlayGMSheet()});
+  document.getElementById('playGMKill')?.addEventListener('click',async()=>{if(await applyPlayPlayerState('dead'))closePlayGMSheet()});
+  document.getElementById('playGMRevive')?.addEventListener('click',async()=>{if(await applyPlayPlayerState('revive'))closePlayGMSheet()});
+  document.getElementById('playRosterClose')?.addEventListener('click',closePlayRosterSheet);document.getElementById('playRosterCancel')?.addEventListener('click',closePlayRosterSheet);
+  document.getElementById('playRosterSave')?.addEventListener('click',savePlayRoster);
+  document.querySelectorAll('#playRosterFilters [data-play-roster-filter]').forEach(btn=>btn.addEventListener('click',()=>setPlayRosterFilter(btn.dataset.playRosterFilter)));
+  document.getElementById('playRosterSelectAll')?.addEventListener('click',()=>{const rows=[...document.querySelectorAll('#playRosterList .play-roster-row')].filter(x=>!x.classList.contains('hidden')),all=rows.length&&rows.every(x=>x.classList.contains('selected'));rows.forEach(x=>x.classList.toggle('selected',!all));updatePlayRosterCount()});
+  document.getElementById('playRosterSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playRosterSheet'))closePlayRosterSheet()});
+  document.getElementById('playSeatClose')?.addEventListener('click',closePlaySeatSheet);document.getElementById('playSeatCancel')?.addEventListener('click',closePlaySeatSheet);document.getElementById('playSeatRelease')?.addEventListener('click',releaseSelectedPlayerSeat);
+  document.querySelectorAll('[data-play-seat-member-mode]').forEach(b=>b.addEventListener('click',()=>{playSeatCandidateMode=b.dataset.playSeatMemberMode==='offline'?'offline':'online';renderPlaySeatSheet()}));
+  document.getElementById('playSeatSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playSeatSheet'))closePlaySeatSheet()});
+  document.getElementById('playGameClose')?.addEventListener('click',closePlayGameSheet);document.getElementById('playGameCancel')?.addEventListener('click',closePlayGameSheet);
+  document.getElementById('playGameSave')?.addEventListener('click',savePlayGame);
+  document.getElementById('playGameTemplateAdd')?.addEventListener('click',()=>{playGameReturnToSelection=true;void openLibraryGameTemplate('')});
+  document.getElementById('playGameAuto')?.addEventListener('click',()=>{void gmAutoPreviewGame()});
+  document.getElementById('playGameTemplateBack')?.addEventListener('click',()=>{playGameReturnToSelection=false;void openPlayGameSheet()});
+  document.getElementById('playGameDelete')?.addEventListener('click',async()=>{
+    const id=String(playSceneState.gameTemplateId||'');if(!id||document.querySelector('.play-game-sheet-card')?.dataset.mode!=='library')return;
+    if(!confirm('Xóa Ván Mẫu đã lưu? Thao tác này không thể hoàn tác.'))return;
+    const button=document.getElementById('playGameDelete');if(button)button.disabled=true;
+    try{const result=await gmApi('/api/gm/game-templates/'+encodeURIComponent(id),{method:'DELETE'});if(result?.ok!==true)throw new Error('Server chưa xác nhận xóa Ván Mẫu.');playSceneState.gameTemplateId='';closePlayGameSheet();await loadPlayGameTemplates();renderGameTemplateLibrary()}
+    catch(err){playFlashError(err?.message||'Không xóa được Ván Mẫu.')}
+    finally{if(button)button.disabled=false}
+  });
+  for(const id of ['playTemplateRoleSearch','playTemplateRoleFaction','playTemplateOnlyStarred'])document.getElementById(id)?.addEventListener(id==='playTemplateRoleSearch'?'input':'change',playTemplateRenderCatalog);
+  for(const id of ['playVillageDiscussionSec','playGallowsNominationSec','playGallowsVoteSec','playWolfDiscussionSec','playEarlyArtifactSec','playDefaultActionSec','playArtifactActionSec','playAutoAdvance'])document.getElementById(id)?.addEventListener('change',e=>{
+    playSceneState.gameTiming=playSceneState.gameTiming||{};
+    const key={playVillageDiscussionSec:'villageDiscussionSec',playGallowsNominationSec:'gallowsNominationSec',playGallowsVoteSec:'gallowsVoteSec',playWolfDiscussionSec:'wolfDiscussionSec',playEarlyArtifactSec:'earlyArtifactSec',playDefaultActionSec:'defaultActionSec',playArtifactActionSec:'artifactActionSec',playAutoAdvance:'autoAdvance'}[id];
+    playSceneState.gameTiming[key]=id==='playAutoAdvance'?!!e.currentTarget.checked:id==='playGallowsNominationSec'||id==='playGallowsVoteSec'?Math.max(1,Math.min(3600,Math.trunc(Number(e.currentTarget.value)||10))):Math.max(0,Math.min(3600,Number(e.currentTarget.value)||0));
+    playRememberMatchArtifacts();savePlayScene();if(id==='playDefaultActionSec')renderPlayGameRoleTimings();
+  });
+  document.getElementById('playArtifactsEnabled')?.addEventListener('change',e=>{
+    if(document.querySelector('.play-game-sheet-card')?.dataset.mode!=='play')return;
+    playSceneState.artifactsEnabled=!!e.currentTarget.checked;
+    playRememberMatchArtifacts();savePlayScene();updatePlayArtifactToggle();
+  });
+  document.getElementById('playArtifactLimitPerCycle')?.addEventListener('change',e=>{const n=Math.max(0,Math.min(30,Math.trunc(Number(e.currentTarget.value)||0)));e.currentTarget.value=String(n);playSceneState.artifactLimitPerCycle=n;playRememberMatchArtifacts();savePlayScene();updatePlayArtifactToggle()});
+  document.getElementById('playGameSuggest')?.addEventListener('click',suggestPlayGameRoles);
+  document.getElementById('playGameClear')?.addEventListener('click',()=>{playSceneState.rolePlan={};savePlayScene();renderPlayGameRoles();updatePlayGameRoleCount()});
+  document.getElementById('playGameSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playGameSheet'))closePlayGameSheet()});
+  document.querySelectorAll('[data-play-winner]').forEach(b=>b.addEventListener('click',()=>selectPlayWinner(b.dataset.playWinner)));
+  document.getElementById('playUseWinProposal')?.addEventListener('click',()=>selectPlayWinner(playSceneRuntime.winProposal?.winnerFaction||''));
+  document.getElementById('playEndConfirm')?.addEventListener('click',confirmPlayEndGame);
+  document.getElementById('playEndClose')?.addEventListener('click',closePlayEndSheet);document.getElementById('playEndCancel')?.addEventListener('click',closePlayEndSheet);
+  document.getElementById('playEndSheet')?.addEventListener('click',e=>{if(e.target===document.getElementById('playEndSheet'))closePlayEndSheet()});
+  document.querySelector('.play-core-pearl')?.addEventListener('click',()=>battleToggleWolfMenu());
+  document.getElementById('battleGMChromeToggle')?.addEventListener('click',gmwwTogglePlayChrome);
+  document.getElementById('playCreateRoomAdd')?.addEventListener('click',()=>openPlayRoomEditor(true));
+  document.getElementById('playCreateRoomSave')?.addEventListener('click',savePlayRoomEditor);
+  document.getElementById('playCreateRoomSeatCount')?.addEventListener('change',e=>{playSceneState.seatCount=Math.max(1,Math.min(30,Number(e.target.value)||12));e.target.value=String(playSceneState.seatCount);savePlayScene();if(isLivePlayRoom())playUpdateRoomSettings({seatCount:playSceneState.seatCount})});
+  document.getElementById('playCreateRoomEnabled')?.addEventListener('click',playToggleRoomEnabled);document.getElementById('playRoomNextStep')?.addEventListener('click',playCreateRoomNext);
+  document.getElementById('playCreateRoomReset')?.addEventListener('click',playResetCreatedRoom);
+  document.getElementById('playCreateRoomDelete')?.addEventListener('click',playDeleteCreatedRoom);
+  document.getElementById('playCreateRoomClose')?.addEventListener('click',()=>document.getElementById('playCreateRoomSheet')?.classList.add('hidden'));
+  bindPlayerRoomsCard();
+  document.getElementById('playUserAvatar')?.setAttribute('hidden','');
+  document.getElementById('playWorld')?.addEventListener('click',async e=>{if(e.target.closest?.('button,.play-player-token,.play-village-core,.play-hud,.play-world-status'))return;const r=e.currentTarget.getBoundingClientRect(),raw=globalThis.GMWW_VILLAGE_LAYOUT.fromScreen(e.clientX-r.left,e.clientY-r.top,r.width,r.height);if(!globalThis.GMWW_VILLAGE_LAYOUT.inside(raw.x,raw.y))return;const p=selectedPlayPlayer();if(!isLivePlayRoom()||!p)return;if(p&&!p.seatId&&!playSceneRuntime.room?.seatsLocked){try{const d=await playRoomApi('/move',{method:'POST',body:JSON.stringify({participantId:p.participantId,...raw})});playSceneRuntime.players=d.players||playSceneRuntime.players;renderPlayPlayers()}catch(err){playFlashError(err.message)}return}});
+  window.addEventListener('resize',renderPlayScene);
+  // No bulk Artifact sync at startup: one item per idle window outside active games.
+  playScheduleSharedArtifactLibrarySync();
+  bindPlayRoomModeButtons();bindPlaySeatMoveButtons();renderPlayScene();document.body.classList.add('play-immersive');document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='start'));if(isLivePlayRoom())setTimeout(()=>playSyncRoom(true),80);
+  if(!playSceneRuntime.pollTimer)playSceneRuntime.pollTimer=setInterval(()=>{if(document.getElementById('start')?.classList.contains('active')){if(isLivePlayRoom()){if(!playSceneRuntime.socket||playSceneRuntime.socket.readyState!==WebSocket.OPEN)playSyncRoom(false)}else gmApi('/api/gm/members').then(d=>{memberAdminState.members=d.members||[];renderPlayPlayers()}).catch(()=>{})}},15000);
+}
+document.querySelectorAll('[data-page="start"]').forEach(el=>el.addEventListener('click',()=>setTimeout(async()=>{try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}if(isLivePlayRoom())await playSyncRoom(true);else renderPlayScene()},40)));
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initPlayScene,{once:true});else initPlayScene();
+
+
+/* GMWW: safe batch importer for 44 artwork-only Sea Artifacts.
+   ZIP_STORED with artworks/*.webp + manifest.json (SHA-256).
+   Card metadata, role assignments and old game snapshots remain untouched. */
+(() => {
+  'use strict';
+  const total=44, limit=25*1024*1024, td=new TextDecoder();
+  const el=id=>document.getElementById(id);
+  const notice=msg=>{if(el('seaArtifactImportStatus'))el('seaArtifactImportStatus').textContent=msg};
+  const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  let rows=null,urls=[];
+  function readStoredZip(ab){
+    const v=new DataView(ab),out=new Map();let p=0;
+    while(p+4<=ab.byteLength&&v.getUint32(p,true)===0x04034b50){
+      if(p+30>ab.byteLength)throw Error('ZIP không hợp lệ');
+      const flags=v.getUint16(p+6,true),method=v.getUint16(p+8,true),
+        compressed=v.getUint32(p+18,true),size=v.getUint32(p+22,true),
+        n=v.getUint16(p+26,true),extra=v.getUint16(p+28,true);
+      if((flags&9)||method!==0||size!==compressed||size>limit)throw Error('Cần ZIP chuẩn Stored, không mã hóa.');
+      const start=p+30+n+extra,end=start+size;
+      if(end>ab.byteLength)throw Error('ZIP bị thiếu dữ liệu');
+      const name=td.decode(new Uint8Array(ab,p+30,n));
+      if(out.has(name)||name.includes('..')||name.startsWith('/'))throw Error('Đường dẫn ảnh không hợp lệ');
+      out.set(name,new Uint8Array(ab.slice(start,end)));p=end;
+    }
+    return out;
+  }
+  async function sha256(b){
+    const d=await crypto.subtle.digest('SHA-256',b);
+    return Array.from(new Uint8Array(d),x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  async function parse(file){
+    if(!file||file.size>limit||!file.name.toLowerCase().endsWith('.zip'))throw Error('Chọn ZIP 44 lá đã tối ưu, tối đa 25 MB');
+    const files=readStoredZip(await file.arrayBuffer()),raw=files.get('manifest.json');
+    if(!raw)throw Error('Thiếu manifest.json');
+    const m=JSON.parse(td.decode(raw));
+    if(m.themeId!=='theme-sea'||m.imageCount!==total||!Array.isArray(m.items)||m.items.length!==total)throw Error('Không phải bộ 44 Artifact chủ đề Biển');
+    const used=new Set(), result=[];
+    for(const item of m.items){
+      const key='artworks/'+String(item.webp||'');
+      if(used.has(key)||!key.endsWith('.webp'))throw Error('Tên ảnh không hợp lệ / trùng');
+      used.add(key);
+      const b=files.get(key);
+      if(!b||b.length<1000||b.length>1300000||await sha256(b)!==item.sha256)throw Error('Lỗi SHA-256: '+item.webp);
+      result.push({item,blob:new Blob([b],{type:'image/webp'}),artifactId:''});
+    }
+    if([...files.keys()].filter(k=>k.startsWith('artworks/')).length!==total)throw Error('Ảnh trong ZIP không đủ 44');
+    return result;
+  }
+  function validation(){
+    const ids=(rows||[]).map(x=>x.artifactId);
+    return rows&&rows.length===total&&ids.every(Boolean)&&new Set(ids).size===total;
+  }
+  function preview(){
+    const host=el('seaArtifactImportPreview');host.replaceChildren();
+    for(const u of urls)URL.revokeObjectURL(u);urls=[];
+    const cards=(state.artifacts||[]).filter(a=>a?.id);
+    if(cards.length!==total){notice('GM đang có '+cards.length+'/44 Artifact. Hãy đồng bộ danh sách lá trước khi nhập, không tạo lá ảo.');return}
+    const chosen=new Set();
+    for(const row of rows){
+      const candidate=cards.filter(a=>norm(a.name)===norm(row.item.suggestedArtifactName));
+      if(candidate.length===1&&!chosen.has(String(candidate[0].id))){
+        row.artifactId=String(candidate[0].id);chosen.add(row.artifactId);
+      }
+      const item=document.createElement('div');item.className='sea-artwork-import-row';
+      const img=document.createElement('img');img.alt='Artwork không có bảng tên';img.src=URL.createObjectURL(row.blob);urls.push(img.src);
+      const info=document.createElement('div'),caption=document.createElement('small'),hint=document.createElement('small'),select=document.createElement('select');
+      caption.textContent=row.item.webp;
+      hint.textContent='Gợi ý chưa nghiệm thu: '+String(row.item.suggestedArtifactName||'Chưa có');
+      select.setAttribute('aria-label','Chọn lá Artifact ứng với ảnh');
+      select.add(new Option('Chọn lá Artifact',''));
+      for(const card of cards)select.add(new Option(card.name,String(card.id)));
+      select.value=row.artifactId;
+      select.onchange=()=>{row.artifactId=select.value;notice(validation()?'Đã ghép đủ 44/44. Kiểm tra hình trước khi nạp.':'Chưa ghép đủ 44 ảnh với 44 Artifact khác nhau.');};
+      info.append(caption,select,hint);item.append(img,info);host.append(item);
+    }
+    notice(validation()?'Đã ghép 44/44 theo gợi ý. KIỂM TRA đối chiếu ảnh với tên lá trước khi nạp.':'Chưa ghép đủ 44 ảnh với 44 Artifact khác nhau.');
+  }
+  async function perform(){
+    if(!validation()){notice('Phải ghép 44 ảnh với 44 lá Artifact khác nhau.');return}
+    if(typeof isLivePlayRoom==='function'&&isLivePlayRoom()){notice('Không thể thay artwork khi phòng đang chơi.');return}
+    if(!confirm('Nạp 44 ảnh chủ đề Biển sau khi đã kiểm tra ghép đúng lá? Artwork cũ sẽ được sao lưu.'))return;
+    const button=el('seaArtifactImportStart');button.disabled=true;
+    try{
+      state.themes.activeId='theme-sea';saveState();
+      let index=0;
+      for(const x of rows){
+        const id=x.artifactId;
+        for(const type of ['display','thumb']){
+          const key=cardBlobKey('theme-sea','artifacts',id,type);
+          const before=await dbGet(key),backup='sea-artifact-44-backup|'+key;
+          if(before?.blob&&!(await dbGet(backup)))await dbPut(backup,before.blob);
+          await dbPut(key,type==='display'?x.blob:await thumbBlobFromFile(x.blob));
+          const previous=objectUrls.get(key);
+          if(previous)URL.revokeObjectURL(previous);
+          objectUrls.delete(key);
+        }
+        notice('Đã cập nhật ảnh trong chủ đề Biển '+(++index)+'/44. Đang chờ đồng bộ server...');
+      }
+      notice('Đang nạp 44 lá vào kho Artifact dùng chung. Giữ trang mở...');
+      const ids=rows.map(x=>x.artifactId);
+      const report=await playSyncSharedArtifactLibrary({onlyIds:ids,forceIds:ids});
+      const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+      const serverSignatures=new Map((status?.artifacts||[]).map(a=>[String(a.assetId),String(a.signature)]));
+      const verified=await Promise.all(rows.map(async x=>serverSignatures.get('artifact:'+x.artifactId)===(await playSharedArtifactSignature((state.artifacts||[]).find(a=>String(a.id)===x.artifactId)))));
+      if(!report || !Array.isArray(report.failed) || report.failed.length || report.synced!==44 || verified.some(ok=>!ok)){
+        notice('Chưa xác minh đủ 44 ảnh trên server. Không xác nhận thành công; giữ lựa chọn để thử lại.');
+      }else{
+        notice('THÀNH CÔNG: 44/44 ảnh đã được máy chủ xác nhận, Player Web dùng kho Artifact mới.');
+        rows=null;
+        const pending=el('seaArtifactImportFile');if(pending)pending.value='';
+        const previewBox=el('seaArtifactImportPreview');if(previewBox)previewBox.replaceChildren();
+        for(const u of urls)URL.revokeObjectURL(u);urls=[];
+      }
+      await renderTheme();renderEntityGrid('artifacts');
+    }catch(e){notice('Có lỗi: '+String(e?.message||e)+'. Ảnh cũ đã được sao lưu.');}
+    finally{button.disabled=!rows}
+  }
+  const picker=el('seaArtifactImportFile'),start=el('seaArtifactImportStart');
+  if(!picker||!start)return;
+  picker.onchange=async()=>{
+    rows=null;start.disabled=true;el('seaArtifactImportPreview').replaceChildren();
+    try{notice('Đang kiểm tra 44 ảnh và SHA-256...');rows=await parse(picker.files?.[0]);preview();start.disabled=false}
+    catch(e){notice(String(e?.message||e))}
+  };
+  start.onclick=perform;
+  window.GMWWSeaArtifactImporter=Object.freeze({readStoredZip,parse,validation});
+})();
+window.GMWWRuntimeRecovery?.ready(VERSION);
+})();

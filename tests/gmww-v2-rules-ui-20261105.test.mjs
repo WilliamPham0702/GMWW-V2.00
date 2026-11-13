@@ -1,10 +1,11 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read=f=>fs.readFileSync(new URL('../'+f,import.meta.url),'utf8');
 const worker=workerSource(),gm=read('server-game/current/app.js'),page=read('src/gmww-members-page.js'),
-  part=n=>read('src/player-web-src/'+n+'.part'),village=read('assets/village/village.mjs');
+  part=n=>playerWebSource(n),village=read('assets/village/village.mjs');
 
 test('V2.00 has no room-picker page and legacy routes land in the village',()=>{
   assert.doesNotMatch(page,/id="rooms"|Chọn Phòng/);

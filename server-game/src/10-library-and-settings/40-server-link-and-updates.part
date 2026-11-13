@@ -1,0 +1,367 @@
+/* V2.22 — Server Health in Cài Đặt */
+const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
+const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
+setTimeout(initVillageSceneManager,0);
+let gmwwGmPresenceTimer=null,gmwwGmPresenceState=null;
+async function gmwwSendGmPresence(online=true){
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+'/api/gm/presence',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({online:online!==false,roomCode:online!==false&&isLivePlayRoom()?String(playSceneState.roomCode||''):null}),cache:'no-store',keepalive:true}),d=await res.json();if(res.ok){
+      gmwwGmPresenceState=d?.gm||null;
+      const generation=Math.max(0,Number(d?.lobbyGeneration||0));
+      if(generation>Number(playSceneState.lobbyGeneration||0)&&!playSceneRuntime.busy){
+        const mustReturn=isLivePlayRoom()||playSceneState.step!=='lobby';
+        playApplyLobbyStage(generation);
+        if(mustReturn)gmwwSendGmPresence(true);
+      }
+      if(typeof renderPlayPlayers==='function'&&document.getElementById('playPlayerRing'))renderPlayPlayers();
+    }
+  }catch(_){}
+}
+function gmwwStartGmPresence(){
+  gmwwSendGmPresence(true);
+  if(gmwwGmPresenceTimer)clearInterval(gmwwGmPresenceTimer);
+  gmwwGmPresenceTimer=setInterval(()=>{if(document.visibilityState!=='hidden')gmwwSendGmPresence(true)},20000);
+}
+setTimeout(gmwwStartGmPresence,0);
+window.addEventListener('pagehide',()=>{gmwwSendGmPresence(false)});
+
+/* UPDATE MANAGER V1 — prepared off-main */
+let gmwwUpdateManifest=null,gmwwUpdateBusy=false,gmwwUpdateSlowTimer=null;
+
+/* Chỉ hiển thị phần trăm đã xác nhận; iOS cũ không trả tiến độ theo byte. */
+function gmwwSetUpdateProgress(status='idle',percent=null,label=''){
+  const root=document.getElementById('updateProgress'),fill=document.getElementById('updateProgressFill'),
+        value=document.getElementById('updateProgressPercent'),title=document.getElementById('updateProgressTitle');
+  if(!root)return;
+  const valid=typeof percent==='number'&&Number.isFinite(percent);
+  const n=valid?Math.max(0,Math.min(100,Math.round(percent))):null;
+  root.dataset.state=status;
+  if(valid){root.setAttribute('aria-valuenow',String(n));root.removeAttribute('aria-valuetext')}
+  else{root.removeAttribute('aria-valuenow');root.setAttribute('aria-valuetext','Đang tải, chưa có dữ liệu phần trăm thực tế')}
+  if(fill)fill.style.width=valid?n+'%':'0%';
+  if(value)value.textContent=valid?n+'%':'—';
+  if(title)title.textContent=label||({idle:'Chưa bắt đầu',running:'Đang thực hiện…',done:'Đã hoàn tất',error:'Có lỗi khi thực hiện'}[status]||'');
+}
+const gmwwRuntimeVersion=()=>String(VERSION||'').replace(/^V/i,'');
+const gmwwShellVersion=()=>String(window.GMWW_NATIVE_SHELL_VERSION||VERSION||'').replace(/^V/i,'');
+function gmwwVersionParts(v){return String(v||'').replace(/^V/i,'').split('.').map(x=>Math.max(0,Number.parseInt(x,10)||0))}
+function gmwwVersionCompare(a,b){const aa=gmwwVersionParts(a),bb=gmwwVersionParts(b),n=Math.max(aa.length,bb.length);for(let i=0;i<n;i++){const d=(aa[i]||0)-(bb[i]||0);if(d)return d>0?1:-1}return 0}
+function gmwwNativePost(action,payload={}){
+  try{const h=window.webkit?.messageHandlers?.gmwwUpdater;if(!h)return false;h.postMessage({action,...payload});return true}catch(e){console.warn('GMWW_NATIVE_UPDATE_BRIDGE',e);return false}
+}
+function setUpdateUi(kind,status,message,detail=''){
+  const dot=document.getElementById('updateDot'),pill=document.getElementById('updateStatus'),msg=document.getElementById('updateMessage'),det=document.getElementById('updateDetail');
+  if(dot)dot.className='update-dot '+kind;
+  if(pill){pill.className='update-pill '+kind;pill.textContent=status}
+  if(msg)msg.textContent=message||'';
+  if(det){const repeated=/^(?:Bản cập nhật|Có gì mới)\s*:/.test(String(detail||''));det.textContent=repeated?'':detail||'';det.hidden=repeated||!detail;}
+  const put=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  put('updateShellVersion','V'+gmwwShellVersion());
+  put('updateRuntimeVersion','V'+gmwwRuntimeVersion());
+}
+function setUpdateAction(kind,context={}){
+  const runtime=document.getElementById('installRuntimeUpdate'),ipa=document.getElementById('downloadNewIPA'),web=document.getElementById('syncPlayerWebUpdate');
+  const title=document.getElementById('updateDecisionTitle'),hint=document.getElementById('updateDecisionHint');
+  const buttons=[runtime,ipa,web];buttons.forEach(x=>{if(!x)return;x.classList.remove('recommended');x.disabled=false;x.removeAttribute('aria-disabled')});
+  const enable=x=>{if(!x)return;x.disabled=false;x.removeAttribute('aria-disabled');x.classList.add('recommended')};
+  const shell=String(context.shell||gmwwShellVersion()),runtimeV=String(context.runtime||gmwwRuntimeVersion()),latest=String(context.latest||runtimeV),ipaV=String(context.ipaVersion||'').replace(/^V/i,'');
+  if(kind==='runtime'){enable(runtime);if(title)title.textContent='Cần cập nhật Runtime lên V'+latest;if(hint)hint.textContent='Nhấn TỰ ĐỘNG. Không cần tải IPA mới.'}
+  else if(kind==='native'){enable(ipa);if(title)title.textContent='Bắt buộc cài IPA V'+latest;if(hint)hint.textContent='Nhấn TẢI IPA. Cập nhật Runtime không thay thế được phiên bản ứng dụng này.'}
+  else if(kind==='server_only'){enable(web);if(title)title.textContent='Chỉ Player Web/Server cần đồng bộ';if(hint)hint.textContent='Ứng dụng GM không cần cập nhật hoặc tải IPA.'}
+  else if(kind==='compatible'){if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Ứng dụng V'+shell+' vẫn tương thích với Runtime/Server V'+runtimeV+'.'}
+  else if(kind==='restart'){if(title)title.textContent='Chỉ cần khởi động lại ứng dụng';if(hint)hint.textContent='IPA V'+shell+' đã có sẵn; không tải lại IPA.'}
+  else if(kind==='pending'){if(title)title.textContent='Server đang phát hành bản cập nhật.';if(hint)hint.textContent='Chưa có gói Runtime sẵn sàng. Không cần nhấn Cập nhật lúc này.'}
+  else if(kind==='unverified'){if(title)title.textContent='Chưa xác minh được phiên bản mới nhất.';if(hint)hint.textContent='Không kết luận đã cập nhật xong khi Server hoặc gói cập nhật chưa phản hồi. Nhấn ↻ để kiểm tra lại.'}
+  else {if(title)title.textContent='GMWW đang ở phiên bản mới nhất.';if(hint)hint.textContent='Không cần làm gì • Hệ thống đang ở trạng thái phù hợp.'}
+}
+function installManualRuntimeUpdate(){
+  if(gmwwUpdateBusy)return false;
+  if(!window.GMWW_NATIVE_MANUAL_RUNTIME){
+    setUpdateUi('warn','CẦN NÂNG IPA','Cập nhật thủ công cần IPA hỗ trợ chọn file.','Cài IPA có tính năng Thủ Công một lần, sau đó chọn file .gmwwupdate trong Tệp.');
+    return false;
+  }
+  gmwwUpdateBusy=true;
+  if(!gmwwNativePost('pickRuntimePackage')){gmwwUpdateBusy=false;return false}
+  gmwwSetUpdateProgress('running',null,'Chọn file cập nhật trong Tệp');
+  return true;
+}
+async function installRuntimeUpdate(){
+  if(gmwwUpdateBusy||!gmwwUpdateManifest)return false;
+  const files=gmwwUpdateManifest?.runtime?.files;
+  if(!Array.isArray(files)||!files.length){setUpdateUi('warn','KHÔNG CÓ GÓI DỮ LIỆU','Không có gói Runtime cần cài.','Nếu cần bản ứng dụng mới, chọn TẢI FILE IPA.');return false}
+  gmwwUpdateBusy=true;gmwwSetUpdateProgress('running',null,'Đang tải Runtime • chờ dữ liệu thực tế');setUpdateUi('checking','ĐANG CẬP NHẬT','Đang tải và kiểm tra dữ liệu phiên bản mới…','Không tắt ứng dụng trong lúc cập nhật.');
+  // IPA V3.110 provides no byte-progress events; advisory only. Never
+  // fabricate percent complete or cancel a still-valid native transfer.
+  if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);
+  gmwwUpdateSlowTimer=setTimeout(()=>{
+    gmwwUpdateSlowTimer=null;
+    if(!gmwwUpdateBusy)return;
+    gmwwSetUpdateProgress('running',null,'Đang tải chậm • chờ iOS xác minh SHA-256');
+    setUpdateUi('warn','ĐANG TẢI CHẬM','iOS chưa trả kết quả tải Runtime.','Giữ ứng dụng mở và chờ kết quả; Runtime cũ và dữ liệu game chưa bị thay đổi.');
+  },45000);
+  if(!gmwwNativePost('installRuntime',{manifest:gmwwUpdateManifest})){
+    gmwwUpdateBusy=false;if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;gmwwSetUpdateProgress('error',null,'Ứng dụng chưa hỗ trợ cập nhật');setUpdateUi('bad','KHÔNG HỖ TRỢ','Bản ứng dụng hiện tại chưa có Update Manager.','Chọn TẢI FILE IPA để cài bản có Update Manager.');return false
+  }
+  return true
+}
+function downloadUpdateIPA(){
+  const manifestIpa=gmwwUpdateManifest?.ipa||{},version=String(manifestIpa.version||'').replace(/^V/i,''),url=String(manifestIpa.url||'').trim(),fileName=String(manifestIpa.fileName||'').trim();
+  if(!version||!url||!fileName){
+    setUpdateUi('warn','CHƯA CÓ IPA','Server chưa công bố file IPA mới để tải.','Không tải lại IPA cũ trong máy.');
+    return false;
+  }
+  gmwwSetUpdateProgress('running',null,'Đang tải IPA • chờ dữ liệu thực tế');
+  setUpdateUi('checking','ĐANG TẢI IPA','Đang tải IPA V'+version,'');
+  if(!gmwwNativePost('downloadIPA',{url,fileName,version}))window.location.assign(url);
+  return true;
+}
+let gmwwGithubInstallRequested=false;
+let gmwwGithubNotifyRequested=false;
+async function updateDataNow(){
+  const btn=document.getElementById('installRuntimeUpdate');if(btn)btn.disabled=true;
+  try{
+    gmwwGithubInstallRequested=Boolean(window.GMWW_NATIVE_GITHUB_OTA);
+    const d=await checkAppUpdate({notify:false});if(!d)return;
+    gmwwGithubInstallRequested=false;
+    const latest=String(d.releaseVersion||d.runtimeVersion||d.serverVersion||'').replace(/^V/i,''),type=String(d.releaseType||'server_only').toLowerCase(),newer=gmwwVersionCompare(latest,gmwwRuntimeVersion())>0;
+    if(newer&&type==='runtime'){await installRuntimeUpdate();return}
+    if(newer&&type==='native'){setUpdateAction('native',{latest});setUpdateUi('warn','CẦN FILE IPA','Phiên bản V'+latest+' cần cài ứng dụng mới.','Chọn TẢI FILE IPA.');return}
+    gmwwSetUpdateProgress('running',0,'Đang cập nhật dữ liệu thành viên và máy chủ');
+    memberAdminState.loaded=false;await loadMembers(true);await checkServerHealth();
+    gmwwSetUpdateProgress('done',100,'Dữ liệu đã cập nhật');
+    setUpdateUi('ok','DỮ LIỆU ĐÃ CẬP NHẬT','Dữ liệu Server hiện tại đã được tải lại.','Không cần cài lại IPA.');
+  }catch(e){console.warn('GMWW_UPDATE_DATA',e);gmwwSetUpdateProgress('error',null,'Không thể cập nhật dữ liệu');setUpdateUi('bad','CẬP NHẬT LỖI','Không cập nhật được dữ liệu.',String(e?.message||'Vui lòng thử lại.'))}
+  finally{if(btn&&!gmwwUpdateBusy)btn.disabled=false}
+}
+async function syncPlayerWebUpdate(){
+  const btn=document.getElementById('syncPlayerWebUpdate');if(btn)btn.disabled=true;
+  gmwwSetUpdateProgress('running',0,'Đang gửi yêu cầu đồng bộ Web');
+  setUpdateUi('checking','ĐANG ĐỒNG BỘ','Đang gửi tín hiệu đồng bộ tới Player Web…','');
+  try{
+    const stamp=Date.now();
+    const res=await fetch(GMWW_SERVER_BASE+'/api/gm/web-sync?ts='+stamp,{
+      method:'POST',
+      headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},
+      body:JSON.stringify({source:'GM_APP',runtimeVersion:gmwwRuntimeVersion()}),
+      cache:'no-store'
+    });
+    let d={};try{d=await res.json()}catch{}
+    if(!res.ok||d.ok!==true)throw new Error(d.message||d.error||('HTTP '+res.status));
+    const webVersion=String(d.webVersion||d.version||'').replace(/^V/i,'');
+    const serverEl=document.getElementById('updateServerVersion');if(serverEl&&webVersion)serverEl.textContent='V'+webVersion;
+    gmwwSetUpdateProgress('done',100,'Máy chủ đã xác nhận đồng bộ Web');
+    setUpdateAction('none');setUpdateUi('ok','WEB ĐÃ ĐỒNG BỘ','Player Web đã nhận tín hiệu đồng bộ V'+(webVersion||'—')+'.','Người chơi đang mở web cũ sẽ được yêu cầu tải lại trang.');
+  }catch(e){console.warn('GMWW_SYNC_PLAYER_WEB',e);gmwwSetUpdateProgress('error',null,'Đồng bộ Web không thành công');setUpdateUi('bad','ĐỒNG BỘ LỖI','Không đồng bộ được Player Web.',String(e?.message||'Vui lòng thử lại.'))}
+  finally{if(btn)btn.disabled=false}
+}
+/* Validate both release metadata and Worker health before claiming "latest". */
+let gmwwUpdateCheckSerial=0;
+async function gmwwUpdateProbe(path){
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
+    try{
+      const res=await fetch(GMWW_SERVER_BASE+path,{method:'GET',cache:'no-store',signal:controller.signal});
+      let body=null;try{body=await res.json()}catch{}
+      if(!res.ok||!body||body.ok!==true){
+        const error=new Error(String(body?.error||body?.message||('HTTP '+res.status)));
+        error.code=String(body?.error||'');error.status=res.status;
+        throw error;
+      }
+      return body;
+    }catch(error){lastError=error}
+    finally{clearTimeout(timer)}
+    if(attempt===0)await new Promise(resolve=>setTimeout(resolve,350));
+  }
+  throw lastError||new Error('Không nhận được phản hồi');
+}
+function gmwwVersionVerified(v){return /^\d+\.\d+(?:\.\d+)?$/.test(String(v||'').replace(/^V/i,''))}
+function gmwwReleaseNotesList(manifest){
+  const notes=Array.isArray(manifest?.releaseNotes)
+    ?manifest.releaseNotes.filter(x=>typeof x==='string').map(x=>x.trim()).filter(Boolean):[];
+  const current=gmwwRuntimeVersion(), latest=String(manifest?.releaseVersion||manifest?.runtimeVersion||'').replace(/^V/i,'');
+  if(!latest)return ['Chưa có thông tin phiên bản.'];
+  if(gmwwVersionCompare(latest,current)<=0)return notes.length?notes.slice(0,6):['Phiên bản V'+latest+' đang sử dụng; chưa có ghi chú cập nhật.'];
+  const previous=String(manifest?.previousVersion||manifest?.fromVersion||'').replace(/^V/i,'');
+  if(previous&&gmwwVersionCompare(previous,current)!==0)return ['Phiên bản V'+latest+' có bản cập nhật mới. Chưa có ghi chú riêng cho bước nâng cấp từ V'+current+'.'];
+  return notes.length?notes.slice(0,6):['Có bản cập nhật V'+latest+'. Chưa có ghi chú thay đổi riêng cho phiên bản này.'];
+}
+function gmwwReleaseNotesText(manifest){return gmwwReleaseNotesList(manifest).join(' • ')}
+function gmwwRenderReleaseNotes(manifest){
+  const box=document.getElementById('updateReleaseNotes');if(!box)return;
+  const title=document.createElement('b');title.className='update-release-title';title.textContent='Có gì mới';
+  const list=document.createElement('ul');list.className='update-release-list';
+  for(const note of gmwwReleaseNotesList(manifest)){
+    const item=document.createElement('li');item.textContent=note;list.appendChild(item);
+  }
+  box.replaceChildren(title,list);
+}
+async function checkAppUpdate({notify=false,skipGithub=false}={}){
+  if(!skipGithub&&window.GMWW_NATIVE_GITHUB_OTA){
+    if(gmwwUpdateBusy)return null;
+    gmwwUpdateBusy=true;gmwwGithubNotifyRequested=notify;
+    setUpdateAction("unverified");
+    setUpdateUi("checking","GITHUB OTA","Đang kiểm tra bản Runtime trên GitHub…","Cloudflare là kênh dự phòng.");
+    if(gmwwNativePost("checkGithubRuntime"))return null;
+    gmwwUpdateBusy=false;gmwwGithubInstallRequested=false;
+  }
+  if(gmwwUpdateBusy)return null;
+  const serial=++gmwwUpdateCheckSerial,retry=document.getElementById('retryUpdateCheck'),serverEl=document.getElementById('updateServerVersion');
+  if(retry){retry.disabled=true;retry.setAttribute('aria-busy','true')}
+  if(serverEl)serverEl.textContent='V—';
+  setUpdateAction('unverified');
+  setUpdateUi('checking','ĐANG KIỂM TRA','Đang đối chiếu Server và gói cập nhật…','');
+  try{
+    const stamp=Date.now(),[manifestResult,healthResult]=await Promise.allSettled([
+      gmwwUpdateProbe('/api/update/manifest?current='+encodeURIComponent(gmwwRuntimeVersion())+'&ts='+stamp),
+      gmwwUpdateProbe('/api/health?update='+stamp)
+    ]);
+    if(serial!==gmwwUpdateCheckSerial)return null;
+    const manifest=manifestResult.status==='fulfilled'?manifestResult.value:null;
+    const health=healthResult.status==='fulfilled'?healthResult.value:null;
+    const server=String(health?.serverVersion||health?.version||'').replace(/^V/i,'');
+    const latest=String(manifest?.releaseVersion||manifest?.runtimeVersion||'').replace(/^V/i,'');
+    const serverValid=health?.project==='GMWW-V2.00'&&gmwwVersionVerified(server);
+    const manifestValid=gmwwVersionVerified(latest)&&['runtime','native','server_only'].includes(String(manifest?.releaseType||'').toLowerCase());
+    if(serverEl)serverEl.textContent=serverValid?'V'+server:'V—';
+    // Never retain a previously fetched manifest after a failed version check.
+    gmwwUpdateManifest=null;
+    if(!serverValid||!manifestValid){
+      const publishing=serverValid&&manifestResult.status==='rejected'&&
+        ['RUNTIME_MANIFEST_NOT_READY','UPDATE_MANIFEST_NOT_FOUND'].includes(String(manifestResult.reason?.code||''));
+      if(publishing){
+        setUpdateAction('pending');
+        setUpdateUi('checking','ĐANG PHÁT HÀNH','Server V'+server+' đã chạy nhưng gói cập nhật chưa sẵn sàng.','Chưa cần nhấn Cập nhật. Hệ thống sẽ kiểm tra lại khi bạn mở ứng dụng hoặc bấm ↻.');
+        return null;
+      }
+      const cause=!serverValid?'Chưa xác minh được kết nối Server.':'Chưa đọc được gói cập nhật Runtime.';
+      const retryInfo=!serverValid?healthResult.reason:manifestResult.reason;
+      console.warn('GMWW_UPDATE_UNVERIFIED',cause,retryInfo||'');
+      setUpdateAction('unverified');
+      setUpdateUi('warn','CẦN KIỂM TRA LẠI',cause,'Phiên bản Runtime V'+gmwwRuntimeVersion()+' đang chạy. Nhấn ↻ để thử lại; chưa thể kết luận đây là bản mới nhất.');
+      return null;
+    }
+    const manifestServer=String(manifest.serverVersion||latest).replace(/^V/i,'');
+    if(!gmwwVersionVerified(manifestServer)||gmwwVersionCompare(manifestServer,server)!==0){
+      setUpdateAction('unverified');
+      setUpdateUi('warn','SERVER CHƯA ĐỒNG BỘ','Server V'+server+' và kênh cập nhật V'+manifestServer+' chưa khớp.','Nhấn ↻ kiểm tra lại sau khi hệ thống đồng bộ.');
+      return null;
+    }
+    gmwwUpdateManifest=manifest;
+    gmwwRenderReleaseNotes(manifest);
+    const type=String(manifest.releaseType).toLowerCase(),runtime=gmwwRuntimeVersion(),shell=gmwwShellVersion();
+    const newer=gmwwVersionCompare(latest,runtime)>0,shellCurrent=gmwwVersionCompare(shell,latest)>=0;
+    if(shellCurrent&&gmwwVersionCompare(runtime,shell)<0){
+      setUpdateAction('restart',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CẦN KHỞI ĐỘNG LẠI','Ứng dụng V'+shell+' đã cài nhưng Runtime V'+runtime+' vẫn đang mở.','Đóng hẳn ứng dụng rồi mở lại một lần.');
+      return manifest
+    }
+    if(!newer){
+      setUpdateAction(gmwwVersionCompare(shell,runtime)<0?'compatible':'none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok','ĐÃ ĐỒNG BỘ','Game Runtime V'+runtime+' · Server V'+server+'.','');
+      return manifest
+    }
+    if(type==='native'&&shellCurrent){
+      setUpdateAction('none',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok','ĐÃ CÀI IPA','Đã cài IPA V'+shell,'Phiên bản IPA hiện tại.');
+      return manifest
+    }
+    if(type==='native'){
+      setUpdateAction('native',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CẦN IPA MỚI','Có IPA V'+latest+' mới.','Nhấn TẢI IPA để cài phiên bản ứng dụng.');
+    }else if(type==='runtime'){
+      setUpdateAction('runtime',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('warn','CÓ CẬP NHẬT','Có GMWW V'+latest+' mới.','Cập nhật Game Runtime để nhận thay đổi.');
+    }else{
+      setUpdateAction('server_only',{shell,runtime,latest,ipaVersion:manifest.ipa?.version});
+      setUpdateUi('ok','SERVER ĐÃ CẬP NHẬT','Server/Player Web đã lên V'+latest+'.','Tải lại Player Web để xem thay đổi.');
+    }
+    if(notify&&newer){
+      const key='GMWW_UPDATE_NOTIFIED_'+latest+'_'+type;
+      if(!sessionStorage.getItem(key)){
+        sessionStorage.setItem(key,'1');
+        if(type==='runtime'){
+          if(confirm('Có phiên bản GMWW V'+latest+' mới.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nCập nhật ngay?'))installRuntimeUpdate();
+        }else if(type==='native'){
+          if(confirm('Có phiên bản IPA V'+latest+' mới.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nTải IPA V'+latest+' ngay?'))downloadUpdateIPA();
+        }else{
+          if(confirm('Player Web/Server V'+latest+' đã cập nhật.\n\n'+gmwwReleaseNotesText(manifest)+'\n\nĐồng bộ ngay?'))syncPlayerWebUpdate();
+        }
+      }
+    }
+    return manifest
+  }catch(e){
+    if(serial!==gmwwUpdateCheckSerial)return null;
+    gmwwUpdateManifest=null;setUpdateAction('unverified');
+    setUpdateUi('warn','CẦN KIỂM TRA LẠI','Chưa xác nhận được bản cập nhật.','Kiểm tra kết nối rồi nhấn ↻ để thử lại. Game hiện tại vẫn có thể hoạt động.');
+    console.warn('GMWW_UPDATE_CHECK',e);
+    return null
+  }finally{
+    if(serial===gmwwUpdateCheckSerial&&retry){retry.disabled=false;retry.removeAttribute('aria-busy')}
+  }
+}
+window.GMWWUpdateNative={
+  onProgress(event={}){
+    // Đọc tiến độ thật chỉ khi trình tải bản địa cung cấp dữ liệu hợp lệ.
+    if(!['installRuntime','downloadIPA'].includes(String(event.action||'')))return;
+    const percent=Number(event.percent);
+    if(!Number.isFinite(percent)||event.percent===null||event.percent===undefined)return;
+    gmwwSetUpdateProgress('running',percent,event.action==='installRuntime'?'Đang cài Runtime':'Đang tải IPA');
+  },
+  onResult(result={}){
+    if(result.action==="checkGithubRuntime"){
+      const status=String(result.status||"");
+      if(status==="available"){
+        gmwwUpdateBusy=true;
+        setUpdateAction("runtime",{latest:result.version});
+        setUpdateUi("warn","GITHUB OTA","Đã tìm thấy GMWW Runtime V"+result.version+".","Xác nhận trên iPhone để tải và kiểm tra SHA-256.");
+        return;
+      }
+      if(status==="installing"){
+        gmwwGithubInstallRequested=false;gmwwUpdateBusy=true;
+        gmwwSetUpdateProgress("running",null,"Đang tải Runtime từ GitHub và kiểm tra SHA-256");
+        setUpdateUi("checking","ĐANG CẬP NHẬT","Đang tải gói Runtime chính thức từ GitHub…","Không tắt ứng dụng khi đang cài.");
+        return;
+      }
+      gmwwUpdateBusy=false;
+      if(result.cancelled){
+        gmwwGithubInstallRequested=false;
+        gmwwSetUpdateProgress("idle",null,"Đã hoãn cập nhật GitHub");
+        setUpdateUi("warn","CÓ CẬP NHẬT","GitHub Runtime V"+String(result.version||"mới")+" đã sẵn sàng.","Nhấn TỰ ĐỘNG khi muốn cài.");
+        return;
+      }
+      if(result.ok&&["fallback","current"].includes(status)){
+        const requested=gmwwGithubInstallRequested,notify=gmwwGithubNotifyRequested;
+        gmwwGithubInstallRequested=false;gmwwGithubNotifyRequested=false;
+        void checkAppUpdate({notify,skipGithub:true}).then(manifest=>{
+          if(requested&&manifest?.releaseType==="runtime"&&gmwwVersionCompare(manifest.releaseVersion,gmwwRuntimeVersion())>0)
+            void installRuntimeUpdate();
+        });
+        return;
+      }
+      gmwwGithubInstallRequested=false;gmwwGithubNotifyRequested=false;
+      gmwwSetUpdateProgress("error",null,"Không thể xác minh gói GitHub");
+      setUpdateUi("bad",result.integrityFailure?"GÓI KHÔNG AN TOÀN":"GITHUB OTA LỖI",
+        String(result.error||"Không thể tải gói GitHub."),
+        result.integrityFailure?"Đã chặn cập nhật; không chuyển sang nguồn khác để bỏ qua kiểm tra SHA-256.":"Runtime hiện tại vẫn được giữ nguyên.");
+      return;
+    }
+    gmwwUpdateBusy=false;
+    if(gmwwUpdateSlowTimer)clearTimeout(gmwwUpdateSlowTimer);gmwwUpdateSlowTimer=null;
+    if(result.cancelled){gmwwSetUpdateProgress('idle',null,'Đã hủy chọn file');return}
+    if(result.ok&&result.action==='installRuntime'){
+      gmwwSetUpdateProgress('done',100,'Đã tải và cài Runtime');
+      const v=String(result.version||gmwwUpdateManifest?.releaseVersion||'mới');
+      setUpdateUi('ok','ĐÃ CẬP NHẬT','Đã cài GMWW V'+String(v).replace(/^V/i,'')+'.','Có gì mới: '+gmwwReleaseNotesText(gmwwUpdateManifest));
+      setTimeout(()=>{if(!gmwwNativePost('restartRuntime'))window.location.reload()},300);
+      return
+    }
+    if(result.ok&&result.action==='downloadIPA'){
+      gmwwSetUpdateProgress('done',100,'Đã tải xong IPA');
+      setUpdateUi('ok','ĐÃ TẢI IPA','File IPA đã sẵn sàng.','Chọn Lưu vào Tệp hoặc ứng dụng cài đặt trong bảng chia sẻ.');
+      return
+    }
+    if(result.ok===false){gmwwSetUpdateProgress('error',null,'Tác vụ không thành công');setUpdateUi('bad','CẬP NHẬT LỖI','Không thể hoàn tất cập nhật.',String(result.error||'Đã giữ nguyên phiên bản hiện tại.'));}
+  }
+};
+

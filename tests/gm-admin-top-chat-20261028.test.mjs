@@ -1,12 +1,13 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const battle=gmSource('40-battle-and-timeline');
 const compiled=readFileSync('server-game/current/app.js','utf8');
-const chat=readFileSync('server-game/src/45-online-chat.part','utf8');
+const chat=gmSource('45-online-chat');
 const worker=workerSource();
 const start=battle.indexOf('async function battleQuickApply(');
 const end=battle.indexOf('// V3.96:',start);

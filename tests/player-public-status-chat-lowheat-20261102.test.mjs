@@ -1,11 +1,12 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const realtime=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
-const village=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
-const chat=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const realtime=playerWebSource('30-rooms-and-realtime');
+const village=playerWebSource('20-village-and-profile');
+const chat=playerWebSource('35-online-chat');
 
 test('confirmed status refresh is debounced and authoritative, including cleared effects',async()=>{
  const begin=realtime.indexOf('let gmwwPublicStatusRefreshTimer=null;');

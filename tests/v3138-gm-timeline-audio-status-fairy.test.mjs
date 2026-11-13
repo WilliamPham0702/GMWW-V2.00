@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,7 +29,7 @@ test('V3.138: Maiden visit projects a single kiss status without changing gamepl
  assert.match(visuals,/visited:\['💋'\]/);
 });
 test('V3.138: navigation, assignment collapse, swipe, drop sound and draggable Fairy box are wired',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const battle=read('server-game/src/40-battle-and-timeline.part'),setup=read('server-game/src/50-roles-and-artifacts.part'),html=read('server-game/current/GMWW.html');
+ const battle=gmSource('40-battle-and-timeline'),setup=gmSource('50-roles-and-artifacts'),html=read('server-game/current/GMWW.html');
  assert.ok(html.includes('<b>&lt;Đêm 1</b>'));
  assert.ok(html.includes('<b>Ngày 1&gt;</b>'));
  assert.ok(battle.includes("label.textContent='<Đêm '+night"));
@@ -42,7 +43,7 @@ test('V3.138: navigation, assignment collapse, swipe, drop sound and draggable F
  assert.match(read('server-game/current/style.css'),/battleResultPopup\.is-wolf-result/);
 });
 test('V3.143: GM patrol is retired without impacting status rules',()=>{
- const source=read('server-game/src/10-library-and-settings.part');
+ const source=gmSource('10-library-and-settings');
  assert.doesNotMatch(source,/function gmwwGmNearPlayer\(/);
  assert.doesNotMatch(source,/function gmwwGmClearWalk\(/);
  assert.doesNotMatch(source,/function gmwwGmKeepClear\(/);

@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -42,7 +43,7 @@ test('all four update actions occupy one row and old shells get an honest fallba
 });
 test('manual action never posts to an unsupported shell and blocks duplicate requests',async()=>{
  const {runInNewContext}=await import('node:vm');
- const source=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+ const source=gmSource('10-library-and-settings');
  const fn=source.slice(source.indexOf('function installManualRuntimeUpdate(){'),source.indexOf('async function installRuntimeUpdate(){'));
  const calls=[],ui=[];
  const ctx={window:{},gmwwUpdateBusy:false,gmwwNativePost:a=>{calls.push(a);return true},setUpdateUi:(...a)=>ui.push(a),gmwwSetUpdateProgress:()=>{}};

@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -61,7 +62,7 @@ test('Markup: four ordered sections, shared timer, real-time GM counts and visib
  const css=fs.readFileSync('server-game/current/style.css','utf8');
  const gm=fs.readFileSync('server-game/current/app.js','utf8');
  const worker=workerSource();
- const audios=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+ const audios=gmSource('00-core-and-library');
  for(const id of ['battleGallowsMembers','battleGallowsModeToggle','battleGallowsSeconds',
    'battleGallowsClock','battleGallowsSelectedCount','battleGallowsVotedCount',
    'battleGallowsNominations','battleGallowsInfo','battleGallowsManualConclusion'])
@@ -122,7 +123,7 @@ test('After Chốt đề cử, only unique leader can be voted; a tie blocks all
 });
 
 test('GM only enables Mở bỏ phiếu after Chốt đề cử; stale select cannot override leader',()=>{
- const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+ const gm=gmSource('40-battle-and-timeline');
  assert.match(gm,/command==='begin'&&\(!selecting/);
  assert.match(gm,/command==='begin'\?\(lead\|\|selected\)/);
  assert.match(gm,/allowed=topVotes>0\?ordered\.filter/);
@@ -170,8 +171,8 @@ test('Realtime + Cấm Chọn / Cấm Vote dùng quyền Server, không chờ Ch
  const voteBlock=gallowsSetRestriction(blocked.value,'carol','vote',true,1013);
  assert.equal(voteBlock.ok,true);
  assert.ok(voteBlock.value.blockedVotes.includes('carol'));
- const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
- const socket=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+ const gm=gmSource('40-battle-and-timeline');
+ const socket=gmSource('30-village-and-setup');
  assert.match(socket,/d\.type==='gallows_updated'/);
  assert.match(gm,/data-gallows-kind="nomination"/);
  assert.match(gm,/data-gallows-kind="vote"/);

@@ -1,0 +1,148 @@
+/* V2.97 — self diagnostics for Server + Player Web */
+let gmwwDiagnosticBusy=false,gmwwRuntimeErrors=[];
+/* GMWW Runtime Warning Diagnostics — không tính lỗi tải ảnh là lỗi JavaScript. */
+const GMWW_RUNTIME_RECENT_MS=15*60*1000;
+const gmwwRuntimePromiseIssues=new WeakMap();
+function gmwwRecentRuntimeIssues(now=Date.now()){
+  gmwwRuntimeErrors=gmwwRuntimeErrors.filter(item=>Number.isFinite(item?.at)&&item.at<=now&&now-item.at<GMWW_RUNTIME_RECENT_MS);
+  const seen=new Set();
+  return gmwwRuntimeErrors.filter(item=>{
+    const signature=item.kind+'\u0000'+item.message;
+    if(seen.has(signature))return false;
+    seen.add(signature);return true;
+  });
+}
+function gmwwCaptureRuntimeIssue(kind,message){
+  const raw=String(message??'').replace(/\s+/g,' ').trim();
+  // iOS/WebKit phát 'error' cho ảnh/tài nguyên thiếu message; request bị hủy là bình thường.
+  if(!raw||/^(?:AbortError\b|The operation was aborted\b|The user aborted a request\b)/i.test(raw))return null;
+  const text=raw.replace(/https?:\/\/[^\s"'<>]+/gi,'[URL đã ẩn]')
+    .replace(/\b(?:token|api[_-]?key|password|authorization)\s*[:=]\s*[^\s,;&]+/gi,'[thông tin ẩn]')
+    .slice(0,180);
+  const item={kind:String(kind||'javascript'),message:text,at:Date.now()};
+  gmwwRuntimeErrors.unshift(item);
+  gmwwRuntimeErrors=gmwwRuntimeErrors.slice(0,8);
+  if(document.getElementById('settings')?.classList.contains('active'))
+    setDiagnosticState('warn','PHÁT HIỆN LỖI','Đã ghi nhận lỗi Runtime',text);
+  return item;
+}
+window.addEventListener('error',event=>{
+  const message=event?.message||event?.error?.message;
+  if(!message){
+    // Chỉ thiếu script mới tác động logic; lỗi image/link đơn lẻ không phải crash Runtime.
+    if(String(event?.target?.tagName||'').toUpperCase()==='SCRIPT')
+      gmwwCaptureRuntimeIssue('javascript','Không tải được tệp JavaScript');
+    return;
+  }
+  gmwwCaptureRuntimeIssue('javascript',message);
+});
+window.addEventListener('unhandledrejection',event=>{
+  const reason=event?.reason;
+  if(reason?.name==='AbortError')return;
+  const item=gmwwCaptureRuntimeIssue('promise',typeof reason==='string'?reason:reason?.message||reason?.name||'');
+  if(item&&event?.promise&&(typeof event.promise==='object'||typeof event.promise==='function'))
+    gmwwRuntimePromiseIssues.set(event.promise,item);
+});
+window.addEventListener('rejectionhandled',event=>{
+  const promise=event?.promise;
+  if(!promise)return;
+  const item=gmwwRuntimePromiseIssues.get(promise);
+  if(!item)return;
+  gmwwRuntimePromiseIssues.delete(promise);
+  gmwwRuntimeErrors=gmwwRuntimeErrors.filter(issue=>issue!==item);
+});
+
+function setDiagnosticState(kind,status,summary,detail=''){
+  const dot=document.getElementById('diagnosticDot'),pill=document.getElementById('diagnosticStatus'),sum=document.getElementById('diagnosticSummary'),hint=document.getElementById('diagnosticHint'),det=document.getElementById('diagnosticDetail');
+  if(dot)dot.className='diagnostic-dot '+kind;
+  if(pill){pill.className='diagnostic-pill '+kind;pill.textContent=status}
+  if(sum)sum.textContent=summary||'';
+  if(hint)hint.textContent=kind==='ok'?'Server và Player Web đang hoạt động bình thường.':kind==='checking'?'Đang kiểm tra từng thành phần…':'Hệ thống đã khoanh vùng mục cần xử lý.';
+  if(det)det.textContent=detail||'';
+  gmwwSettingsNoticeFromActive(['runSystemDiagnostics','quickRepairSystem','checkPlayerWebNow','settingsRunHealth'],kind,String(status||'')+' · '+String(summary||'')+(detail?' · '+detail:''));
+}
+function renderDiagnosticItem(key,kind,text){
+  const row=document.querySelector('#diagnosticList [data-diagnostic="'+key+'"]');if(!row)return;
+  row.className=kind||'';const out=row.querySelector('b');if(out)out.textContent=text||'—';
+}
+async function gmwwJsonProbe(path,validate=()=>true,timeout=7000){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout),started=performance.now();
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+path,{cache:'no-store',signal:controller.signal});
+    let data={};try{data=await res.json()}catch{}
+    const valid=res.ok&&validate(data,res)!==false;
+    return{ok:valid,status:res.status,data,latency:Math.max(1,Math.round(performance.now()-started)),error:valid?'':String(data?.error||data?.message||('HTTP '+res.status))}
+  }catch(err){return{ok:false,status:0,data:{},latency:Math.max(1,Math.round(performance.now()-started)),error:String(err?.name==='AbortError'?'Timeout':err?.message||'Network error')}}
+  finally{clearTimeout(timer)}
+}
+async function runSystemDiagnostics({silent=false}={}){
+  if(gmwwDiagnosticBusy)return null;gmwwDiagnosticBusy=true;
+  const btn=document.getElementById('runSystemDiagnostics');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  if(!silent)setDiagnosticState('checking','ĐANG QUÉT','Đang quét Server + Player Web…','5 nhóm kiểm tra');
+  ['server','player','update','characters','settings'].forEach(k=>renderDiagnosticItem(k,'','…'));
+  try{
+    if(navigator.onLine===false){
+      ['server','player','update','characters','settings'].forEach(k=>renderDiagnosticItem(k,'bad','OFFLINE'));
+      setDiagnosticState('bad','MẤT MẠNG','Thiết bị đang Offline.','Kết nối mạng rồi chạy lại Health Check.');
+      return{ok:false,offline:true}
+    }
+    const stamp=Date.now();
+    const [server,player,update,characters,settings]=await Promise.all([
+      gmwwJsonProbe('/api/health?diag='+stamp,d=>d?.ok===true&&d?.project==='GMWW-V2.00'),
+      gmwwJsonProbe('/api/web-sync?diag='+stamp,d=>d?.ok===true),
+      gmwwJsonProbe('/api/update/manifest?diag='+stamp,d=>d?.ok===true&&!!d?.releaseVersion),
+      gmwwJsonProbe('/api/game-characters?diag='+stamp,d=>Array.isArray(d?.characters)&&d.characters.length>=20),
+      gmwwJsonProbe('/api/ui-settings?diag='+stamp,()=>true)
+    ]);
+    const probes={server,player,update,characters,settings};
+    for(const [key,result] of Object.entries(probes))renderDiagnosticItem(key,result.ok?'ok':'bad',result.ok?'OK':(result.error||'LỖI').slice(0,18));
+    const failures=Object.entries(probes).filter(([,v])=>!v.ok);
+    const warnings=[];
+    const m=update.data||{},runtime=String(m.runtimeVersion||''),shell=String(m.shellVersion||''),type=String(m.releaseType||'');
+    if(update.ok&&runtime&&shell&&runtime!==shell&&type!=='runtime')warnings.push('Kênh cập nhật chưa đúng loại Runtime');
+    if(server.ok&&server.latency>800)warnings.push('Server phản hồi chậm '+server.latency+' ms');
+    const recentRuntimeIssues=gmwwRecentRuntimeIssues();
+    if(recentRuntimeIssues.length)warnings.push('Runtime: '+recentRuntimeIssues.length+' lỗi gần đây · '+recentRuntimeIssues[0].message);
+    if(failures.length){
+      setDiagnosticState('bad','PHÁT HIỆN LỖI',failures.length+' thành phần chưa đạt',failures.map(([k,v])=>k+': '+(v.error||'Lỗi')).slice(0,2).join(' • '));
+      return{ok:false,failures,warnings,probes}
+    }
+    if(warnings.length){
+      setDiagnosticState('warn','CÓ CẢNH BÁO','5/5 thành phần kết nối được',warnings.slice(0,2).join(' • '));
+      return{ok:true,warnings,probes}
+    }
+    setDiagnosticState('ok','HỆ THỐNG TỐT','5/5 kiểm tra đạt','Health Check hoàn tất • '+server.latency+' ms');
+    return{ok:true,warnings:[],probes}
+  }finally{gmwwDiagnosticBusy=false;if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+async function quickRepairSystem(){
+  if(gmwwDiagnosticBusy)return;
+  const btn=document.getElementById('quickRepairSystem');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  setDiagnosticState('checking','ĐANG SỬA','Đang thực hiện sửa lỗi an toàn…','Dọn cache tạm • tải lại dữ liệu • đồng bộ Player Web');
+  try{
+    await clearSafeRuntimeCache();
+    memberAdminState.loaded=false;
+    try{await loadMembers(true)}catch(_){}
+    await syncPlayerWebUpdate();
+    await checkAppUpdate({notify:false});
+    await checkServerHealth();
+    // Không xóa lỗi thật chỉ để Health Check báo xanh; giữ cho đến khi hết hạn.
+    const result=await runSystemDiagnostics({silent:true});
+    if(result?.ok)setDiagnosticState(result.warnings?.length?'warn':'ok',result.warnings?.length?'CÒN CẢNH BÁO':'ĐÃ SỬA XONG',result.warnings?.length?'Các kết nối đã phục hồi, còn cảnh báo cần theo dõi.':'Server + Player Web đã được kiểm tra lại.',result.warnings?.slice(0,2).join(' • ')||'Không xoá dữ liệu game.');
+  }catch(err){setDiagnosticState('bad','SỬA LỖI THẤT BẠI','Không hoàn tất được sửa nhanh.',String(err?.message||'Vui lòng thử lại.'))}
+  finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+async function checkPlayerWebNow(){
+  const btn=document.getElementById('checkPlayerWebNow');if(btn){btn.disabled=true;btn.classList.add('is-busy')}
+  try{
+    await syncPlayerWebUpdate();
+    await runSystemDiagnostics({silent:false});
+  }finally{if(btn){btn.disabled=false;btn.classList.remove('is-busy')}}
+}
+const runSystemDiagnosticsBtn=document.getElementById('runSystemDiagnostics');if(runSystemDiagnosticsBtn)runSystemDiagnosticsBtn.addEventListener('click',()=>runSystemDiagnostics({silent:false}));
+const quickRepairSystemBtn=document.getElementById('quickRepairSystem');if(quickRepairSystemBtn)quickRepairSystemBtn.addEventListener('click',quickRepairSystem);
+const checkPlayerWebNowBtn=document.getElementById('checkPlayerWebNow');if(checkPlayerWebNowBtn)checkPlayerWebNowBtn.addEventListener('click',checkPlayerWebNow);
+setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active')){if(gmwwOpsAutoEnabled())gmwwOpsRun({kind:'all',silent:true});false /* Workboard refreshes only when requested */}},120000);
+
+
+/* GMWW Settings: one continuous scrolling screen with consistent health status. */

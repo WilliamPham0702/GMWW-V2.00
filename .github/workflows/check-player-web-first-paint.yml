@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - 'src/gmww-members-page.js'
-      - 'src/player-web-src/20-village-and-profile.part'
+      - 'src/player-web-src/20-village-and-profile/**'
       - 'src/gmww-members-live.js'
       - 'tests/player-web-first-paint-cleanup.test.mjs'
       - '.github/workflows/check-player-web-first-paint.yml'

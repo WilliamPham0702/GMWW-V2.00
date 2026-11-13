@@ -3,7 +3,7 @@ name: Check Approved Role Card Settings
 on:
   pull_request:
     paths:
-      - 'server-game/src/00-core-and-library.part'
+      - 'server-game/src/00-core-and-library/**'
       - 'server-game/current/app.js'
       - 'tests/approved-role-card-settings-20261027.test.mjs'
       - '.github/workflows/check-approved-role-settings.yml'

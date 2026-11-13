@@ -1,3 +1,4 @@
+import {gmSource as readGmGroup} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import * as gallowsRules from '../src/gmww-gallows-rules.js';
@@ -246,7 +247,7 @@ test('ART-01 skip from night two when priority absent/exhausted; no Artifact mod
   assert.equal(first.queue[0].actions.length,0);
   const later=await unprioritized.room.getNightRuntime({...await unprioritized.meta(),cycleNight:2},2,true);
   assert.equal(later.queue.some(x=>x.kind==='early-artifact-window'),false);
-  const audio=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const audio=readGmGroup('30-village-and-setup');
   assert.match(audio,/audio_system_early_artifacts/);
 });
 

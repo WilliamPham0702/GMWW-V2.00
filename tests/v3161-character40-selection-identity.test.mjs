@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {resolveVillageCharacterId, VILLAGE_CHARACTER_COUNT} from '../assets/vill
 import {character40Catalog, character40VisualId} from '../src/gmww-character40-catalog.js';
 
 const village=fs.readFileSync('assets/village/village.mjs','utf8');
-const parent=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+const parent=playerWebSource('20-village-and-profile');
 const generator=fs.readFileSync('tools/generate-character40-portraits.py','utf8');
 
 test('Village actor preserves every selected Character40 ID; never wraps 21–40 into 01–20',()=>{

@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +11,7 @@ test('V3.158 uses V3.110 IPA shell and reproducible GM Runtime',{skip:'LEGACY-QU
   assertCurrentRelease();
   assert.equal(read('server-game/current/app.js'),
     ['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part']
-      .map(n=>read('server-game/src/'+n)).join(''));
+      .map(n=>gmSource(n.replace(/\.part$/,''))).join(''));
   // Current HTML version is verified by assertCurrentRelease.
 });
 

@@ -1,14 +1,15 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const setup=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
 const worker=workerSource();
 const html=readFileSync('server-game/current/GMWW.html','utf8');
-const events=readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const events=gmSource('50-roles-and-artifacts');
 const between=(source,a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,start+1);
   assert.ok(start>=0&&end>start,'Function extraction failed: '+a);
   return source.slice(start,end);

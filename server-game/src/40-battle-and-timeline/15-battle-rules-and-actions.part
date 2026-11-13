@@ -1,0 +1,147 @@
+const battleRules=()=>globalThis.GMWW_BATTLE_CONTROLS;
+const battleTurn=()=>battleRules()?.currentTurn(playSceneState.phase,playSceneRuntime.nightRuntime)||null;
+const battleDayActions=()=>{
+  const rows=Array.isArray(playSceneRuntime.assignments)?playSceneRuntime.assignments:[],
+    night=Math.max(1,Number(playSceneState.night)||1),
+    matchId=String(playSceneRuntime.room?.matchId||''),
+    ledger=Array.isArray(playSceneRuntime.dayActionUsage)?playSceneRuntime.dayActionUsage:[],
+    usedArtifacts=Array.isArray(playSceneRuntime.artifactCycle?.accepted)?playSceneRuntime.artifactCycle.accepted:[],
+    names={'action_stab':'Đâm','action_bear_scan':'Soi nhóm','action_knight_last_strike':'Hiệp Sĩ chọn người chết'};
+  const catalog=(kind)=>Array.isArray(state.actions)?state.actions:Array.isArray(state.actions?.[kind])?state.actions[kind]:[];
+  const roleActions=[];
+  const add=(fn,owner,card,isArtifact)=>{
+    if(!fn||fn.passive||!['day','any','both'].includes(String(fn.phase||''))||
+      (fn.fromNight!=null&&night<Number(fn.fromNight))||
+      (fn.toNight!=null&&night>Number(fn.toNight)))return;
+    const actorId=String(owner.loginId||''),roleId=isArtifact?'':String(owner.roleId||''),
+      artifactId=isArtifact?String(owner.artifactId||''):'',actionId=String(fn.actionId||fn.id||'');
+    if(!actorId||!actionId)return;
+    const knight=roleId==='role_knight'&&actionId==='action_knight_last_strike'&&
+      playSceneRuntime.gallows?.stage==='resolved'&&playSceneRuntime.gallows?.outcome==='dead'&&
+      playSceneRuntime.gallows?.candidateId===actorId;
+    const dead=playPlayerEffect(actorId)==='dead',expelled=playPlayerEffect(actorId)==='expelled',
+      frozen=playPlayerEffect(actorId)==='frozen';
+    const own=ledger.filter(x=>x.actorId===actorId&&x.roleId===roleId&&x.artifactId===artifactId);
+    const hits=own.filter(x=>x.actionId===actionId);
+    const mode=String(fn.usageMode||'unlimited'),quota=Math.max(1,Number(fn.usageCount)||1);
+    let blocked=frozen||expelled||(dead&&!fn.actorMayBeDead&&!knight),
+      reason=blocked?'Người thực hiện đã chết hoặc bị khóa hành động.':'';
+    if(!isArtifact){
+      if(card?.flags?.allowMultipleActions===false&&own.some(x=>Number(x.day)===night)){
+        blocked=true;reason='Đã thực hiện một chức năng trong ngày.'}
+      if((['onceGame','nGame','custom'].includes(mode)&&hits.length>=quota)||
+        (['eachNight','eachDay','nPerNight'].includes(mode)&&hits.filter(x=>Number(x.day)===night).length>=quota)){
+        blocked=true;reason='Hết lượt dùng chức năng.'}
+      if(actionId==='action_bear_scan'&&hits.some(x=>Number(x.day)===night)){
+        blocked=true;reason='Thần Gấu chỉ soi một lần mỗi ngày.'}
+    }else if(usedArtifacts.some(x=>String(x.playerId||'')==='member:'+actorId&&String(x.artifactId||'')===artifactId)){
+      blocked=true;reason='Artifact đã sử dụng trong ngày.'}
+    const definitions=catalog(isArtifact?'artifacts':'role'),
+      def=definitions.find(x=>String(x?.id||'')===actionId),
+      label=String(def?.name||fn.name||names[actionId]||fn.description||'Hành động').trim();
+    const name=/^action[-_]/i.test(label)?'Hành động':label;
+    const ownerId=isArtifact?'artifact:'+artifactId:'role:'+roleId;
+    roleActions.push({id:'day:'+ownerId+':'+actorId+':'+actionId,
+      actionId,roleId,artifactId,name,actorIds:[actorId],
+      type:battleRules()?.resolvedType({actionId,name,effectIds:fn.effectIds||[]})||'effect_notice',
+      targetCount:fn.noTarget?0:Math.max(0,Math.min(30,Number(fn.targetCount??1)||0)),
+      noTarget:!!fn.noTarget,noSelf:fn.noSelf!==false,allowDead:!!fn.allowDead,
+      actorMayBeDead:!!fn.actorMayBeDead||knight,
+      effectIds:Array.isArray(fn.effectIds)?fn.effectIds:[],unavailable:blocked,
+      unavailableReason:reason});
+  };
+  for(const owner of rows){
+    const role=(state.cards||[]).find(x=>String(x.id||'')===String(owner.roleId||''));
+    if(role)for(const fn of role.functions||[])add(fn,owner,role,false);
+    const artId=String(owner.artifactId||'');
+    if(artId){
+      const art=(state.artifacts||[]).find(x=>String(x.id||'')===artId);
+      if(art){
+        const fns=Array.isArray(art.functions)&&art.functions.length?art.functions:art.actions||[];
+        for(const fn of fns)add(fn,owner,art,true);
+      }
+    }
+  }
+  return roleActions;
+};
+const battleActions=()=>{
+  if(playSceneState.phase==='day')return battleDayActions();
+  const turn=battleTurn();
+  const actions=battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn)?[]:
+    battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),state,playSceneRuntime.artifactCycle?.accepted)||[];
+  const ledger=Array.isArray(playSceneRuntime.battleActionUsage)?playSceneRuntime.battleActionUsage:[],
+    night=Math.max(1,Number(playSceneState.night)||1),matchId=String(playSceneRuntime.room?.matchId||'');
+  // Per-player limits: another eligible member of the same waking group can
+  // still act, even when one wolf/player is frozen, dead or exhausted.
+  return actions.map(action=>{
+    let unavailableReason='';
+    if(turn?.kind==='wolf-pack-bite'){
+      const alpha=(playSceneRuntime.assignments||[]).filter(x=>x.roleId==='role_alpha_wolf');
+      const expelled=alpha.some(x=>(playSceneRuntime.activeEffects||[]).some(e=>e.type==='expelled'&&
+        e.effectActive!==false&&String(e.loginId||'').replace(/^member:/,'')===String(x.loginId||'').replace(/^member:/,'')));
+      const alreadyBit=ledger.some(x=>String(x.matchId)===matchId&&Number(x.night)===night&&x.actionId==='action_wolf_bite');
+      if(expelled||alreadyBit)return {...action,unavailable:true,actorIds:[],
+        unavailableReason:expelled?'Sói Trùm bị đuổi: Bầy Sói không thể Cắn.':'Bầy Sói đã Cắn trong đêm này.'};
+    }
+    if(action.roleId==='role_old_witch'&&action.actionId==='action_revive'&&
+      !playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'&&
+        battleRules().oldWitchReviveEligible(action,m,playSceneRuntime.activeEffects,night)))
+      return {...action,unavailable:true,unavailableReason:'Không có người chết hợp lệ từ ngày hoặc đêm trước để Hồi Sinh.'};
+    if(action.roleId!=='role_old_witch'&&(action.type==='revive'||action.actionId==='action_revive')&&
+      !playLiveMembers().some(m=>playPlayerEffect(m.loginId)==='dead'))
+      return {...action,unavailable:true,unavailableReason:'Chưa có người chết để hồi sinh.'};
+    const actorIds=(action.actorIds||[]).filter(actorId=>{
+      if(playPlayerBlocked(actorId)){unavailableReason=playBlockReason(actorId);return false}
+      if(action.artifactId)return true; // Artifact use is governed by its existing cycle ledger.
+      const owner=turn?.kind==='role-group'?(turn.roles||[]).find(r=>
+        (r.loginIds||[]).map(String).includes(String(actorId))&&
+        (r.roleId===action.roleId||!(action.roleIds||[]).length||(action.roleIds||[]).includes(r.roleId))):turn;
+      const roleId=String(owner?.roleId||action.roleId||''),card=(state.cards||[]).find(r=>String(r.id)===roleId);
+      if(roleId==='role_snow_wolf'&&action.actionId==='action_wolf_bite'&&
+        (playSceneRuntime.assignments||[]).some(row=>{
+          const other=String(row?.roleId||''),login=String(row?.loginId||'').trim().toLowerCase().replace(/^member:/,'');
+          const faction=String(row?.roleCard?.factionId||row?.factionId||row?.faction||'').toLowerCase();
+          const wolf=other.includes('wolf')||faction==='wolf'||faction.includes('sói')||faction.includes('soi');
+          return other!=='role_snow_wolf'&&wolf&&login&&playPlayerEffect(login)!=='dead'&&
+            !((playSceneRuntime.activeEffects||[]).some(effect=>String(effect?.loginId||'').trim().toLowerCase().replace(/^member:/,'')===login&&effect?.type==='dead'&&effect?.effectActive!==false));
+        })){unavailableReason='Còn Sói khác sống: Sói Tuyết chưa được Cắn.';return false}
+      if(!roleId||!card)return true; // Legacy catalog: server still validates.
+      const own=ledger.filter(row=>String(row?.matchId)===matchId&&String(row?.actorId)===String(actorId)&&String(row?.roleId)===roleId);
+      const onlyOne=card.flags?.allowMultipleActions===false||roleId==='role_old_witch';
+      if(onlyOne&&own.some(row=>Number(row.night)===night)){unavailableReason='Đã dùng 1 chức năng trong đêm.';return false}
+      const fn=(card.functions||[]).find(item=>String(item.actionId)===String(action.actionId));
+      if(fn){
+        const mode=String(fn.usageMode||''),quota=Math.max(1,Number(fn.usageCount)||1);
+        const hits=own.filter(row=>String(row.actionId)===String(action.actionId)&&
+          (['onceGame','nGame','custom'].includes(mode)||Number(row.night)===night)).length;
+        if((['onceGame','nGame','custom','eachNight','eachDay','nPerNight'].includes(mode))&&hits>=quota){
+          unavailableReason=['onceGame','nGame','custom'].includes(mode)?'Chức năng đã hết lượt trong ván.':'Chức năng đã hết lượt trong đêm.';
+          return false
+        }
+      }else if(roleId==='role_old_witch'&&String(action.actionId)==='action_revive'&&
+        own.some(row=>String(row.actionId)==='action_revive')){
+        unavailableReason='Hồi Sinh chỉ được sử dụng một lần trong ván.';return false
+      }
+      return true;
+    });
+    // Artifact controls show the human-readable action only (never internal action IDs,
+    // artifact title or the owner's name). Older catalogs may carry raw action-* identifiers.
+    const rawName=String(action.name||'').trim();
+    const name=action.artifactId&&/^action[-_][a-z0-9_-]+$/i.test(rawName)
+      ?'Hành động':rawName;
+    // WITCH-01: keep the last confirmed target unavailable on the next night.
+    // Older matches without ledger targets remain protected by the Server check.
+    const actor=actorIds[0];
+    const consecutiveRole=action.actionId==='action_snow_wolf_freeze'?'role_snow_wolf':
+      action.actionId==='action_protect'?'role_guard':
+      action.roleId==='role_old_witch'&&action.actionId==='action_exile'?'role_old_witch':'';
+    const forbiddenTargets=consecutiveRole&&actor?
+      ledger.filter(x=>String(x.matchId)===matchId&&String(x.roleId)===consecutiveRole&&
+        String(x.actionId)===String(action.actionId)&&String(x.actorId)===String(actor)&&Number(x.night)===night-1)
+        .flatMap(x=>Array.isArray(x.targetIds)?x.targetIds:[]):[];
+    return {...action,name,actorIds,forbiddenTargets,unavailable:!!action.unavailable||!actorIds.length,unavailableReason:action.unavailableReason||unavailableReason};
+  });
+};
+const battleAction=()=>battleActions().find(a=>a.id===battleState.actionId);
+const battleMember=id=>playLiveMembers().find(m=>String(m.loginId||'')===String(id));
+const battleUsed=turn=>!!battleRules()?.artifactUsed(playSceneRuntime.artifactCycle?.accepted,turn);

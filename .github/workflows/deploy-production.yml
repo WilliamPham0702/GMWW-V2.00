@@ -248,7 +248,7 @@ jobs:
               '.github/workflows/deploy-production.yml' \
               'tests/ci-browser-scope.test.mjs' | sort)
             if [ "$ACTUAL" = "$EXPECTED" ]; then
-              grep -Fq 'function gmwwOnlinePlaceAtFire(dock){' src/player-web-src/35-online-chat.part || {
+              grep -rFq 'function gmwwOnlinePlaceAtFire(dock){' src/player-web-src/35-online-chat/ || {
                 echo "::error::PR645 modern Online renderer missing; refusing V3.279 release"; exit 1;
               }
               SHOULD_DEPLOY=true
@@ -271,7 +271,7 @@ jobs:
               git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc || {
                 echo "::error::PR652 gameplay or version changed since owner acceptance"; exit 1;
               }
-              grep -Fq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js || exit 1
+              grep -rFq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js src/worker || exit 1
               grep -Fq 'soi-can-canonical' server-game/current/app.js || exit 1
               SHOULD_DEPLOY=true
               echo 'PR652 V3.280: same-SHA Worker, browser, integrity and OTA gates remain mandatory; no IPA/Oracle/data change.' >> "$GITHUB_STEP_SUMMARY"
@@ -292,7 +292,7 @@ jobs:
               git diff --quiet 76426e1a77d8fa87f9f773d4cf7c3d0a95c2f9da HEAD -- src/ server-game/ assets/ package.json package-lock.json wrangler.jsonc || {
                 echo "::error::PR652 Runtime source changed since owner acceptance"; exit 1;
               }
-              grep -Fq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js || exit 1
+              grep -rFq 'advanceNightRuntime(meta,"jump","gm-undo",undoIndex)' src/index.js src/worker || exit 1
               grep -Fq 'soi-can-canonical' server-game/current/app.js || exit 1
               SHOULD_DEPLOY=true
               echo 'PR652 V3.280 final release gate: exact 3 CI-only files; Worker/browser/OTA same SHA mandatory.' >> "$GITHUB_STEP_SUMMARY"
@@ -487,7 +487,7 @@ jobs:
           }
           grep -q 'battleShowDead' server-game/current/GMWW.html || exit 1
           grep -q 'gmwwPirateNominate' assets/village/village.mjs || exit 1
-          grep -q 'gmwwGallowsGrid' src/player-web-src/30-rooms-and-realtime.part || exit 1
+          grep -rq 'gmwwGallowsGrid' src/player-web-src/30-rooms-and-realtime/ || exit 1
           for TRY in $(seq 1 40); do
             RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
               -H "Authorization: Bearer $GH_TOKEN" \
@@ -531,7 +531,7 @@ jobs:
           }
           grep -q 'gmww:gallows-preview-nominate' assets/village/village.mjs || exit 1
           grep -q 'gmwwPirateNominate' assets/village/village.mjs || exit 1
-          grep -q 'gmww:gallows-confirm-nominate' src/player-web-src/20-village-and-profile.part || exit 1
+          grep -rq 'gmww:gallows-confirm-nominate' src/player-web-src/20-village-and-profile/ || exit 1
           for TRY in $(seq 1 40); do
             RESPONSE=$(curl -fsSL --retry 2 --connect-timeout 8 --max-time 25 \
               -H "Authorization: Bearer $GH_TOKEN" \
@@ -1037,7 +1037,7 @@ jobs:
           if [ "$VERSION" != "3.232.0" ]; then exit 0; fi
           test -s docs/releases/GMWW-V3.232-runtime-warning-20261026.md
           grep -q 'GMWW Runtime Warning Diagnostics' server-game/current/app.js
-          grep -q 'gmwwRecentRuntimeIssues' server-game/src/20-members-and-roster.part
+          grep -rq 'gmwwRecentRuntimeIssues' server-game/src/20-members-and-roster/
           grep -q 'V3.232: Sửa cảnh báo' .github/scripts/prepare-update-channel.mjs
           STATUS=missing
           for TRY in $(seq 1 30); do
@@ -1075,7 +1075,7 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           if [ "$VERSION" != "3.233.0" ]; then exit 0; fi
           test -s docs/releases/GMWW-V3.233-audio-templates-footer-20261026.md
-          grep -Fq 'data-system-sound-slot' server-game/src/10-library-and-settings.part || {
+          grep -rFq 'data-system-sound-slot' server-game/src/10-library-and-settings/ || {
             echo "::error::GM audio selector missing"; exit 1;
           }
           grep -Fq 'play-template-actions-row' server-game/current/GMWW.html
@@ -1141,7 +1141,7 @@ jobs:
           ART01_SCOPE=$(GMWW_CI_EVENT=push node .github/scripts/ci-browser-scope.mjs | head -1)
           if [[ "$ART01_SCOPE" == 'GMWW browser CI scope: art01-deploy-gate |'* ]]; then
             test -s docs/releases/GMWW-ART-01-early-artifact-night-flow-20261026.md
-            grep -Fq 'ART-01: Night 1 always opens the Artifact stage' src/index.js
+            grep -rFq 'ART-01: Night 1 always opens the Artifact stage' src/index.js src/worker
             grep -Fq 'ART-01 opening before Wolves' src/gmww-night-turn-rules.js
             node --test tests/artifact-priority-first.test.mjs tests/v389-night-runtime-integration.test.mjs
             CI_STATE=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=$TESTED_SHA&per_page=100" | node -e "
@@ -1644,7 +1644,7 @@ jobs:
           test -s docs/releases/GMWW-DRUNK-CARD-OVERLAY-20261028.md
           test -s assets/role-card-back.webp
           grep -Fq "copy('assets/role-card-back.webp','role-card-back.webp')" .github/scripts/prepare-update-channel.mjs
-          grep -Fq 'NATIVE_SHELL_VERSION="3.257"' src/index.js
+          grep -rFq 'NATIVE_SHELL_VERSION="3.257"' src/index.js src/worker
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/assemble-player-web.mjs --verify
@@ -1674,7 +1674,7 @@ jobs:
           echo "approved=false" >> "$GITHUB_OUTPUT"
           if [ "$(node -p "require('./package.json').version")" != "3.263.0" ]; then exit 0; fi
           test -s docs/releases/GMWW-V3.263-card-rule-executors-20261028.md
-          grep -Fq 'NATIVE_SHELL_VERSION="3.257"' src/index.js
+          grep -rFq 'NATIVE_SHELL_VERSION="3.257"' src/index.js src/worker
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/assemble-player-web.mjs --verify
@@ -1741,7 +1741,7 @@ jobs:
           echo "approved=false" >> "$GITHUB_OUTPUT"
           if [ "$(node -p "require('./package.json').version")" != "3.272.0" ]; then exit 0; fi
           test -s docs/releases/gm-admin-top-chat-20261028.md
-          grep -Fq 'NATIVE_SHELL_VERSION="3.264"' src/index.js
+          grep -rFq 'NATIVE_SHELL_VERSION="3.264"' src/index.js src/worker
           node .github/scripts/verify-gmww-versions.mjs
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/assemble-player-web.mjs --verify
@@ -1782,7 +1782,7 @@ jobs:
           if [ "$(node -p "require('./package.json').version")" != "3.274.0" ]; then exit 0; fi
           test -s docs/releases/GMWW-artifact-preview-centering-main-20261029.md
           grep -Fq 'V3.274 PR613:' .github/scripts/prepare-update-channel.mjs
-          grep -Fq 'NATIVE_SHELL_VERSION="3.264"' src/index.js
+          grep -rFq 'NATIVE_SHELL_VERSION="3.264"' src/index.js src/worker
           node --test tests/artifact-preview-horizontal-centering-20261029.test.mjs
           node --test --test-name-pattern="PR613 Artifact preview V3.274" tests/ci-browser-scope.test.mjs
           node --check server-game/current/app.js
@@ -1835,7 +1835,7 @@ jobs:
           test "$GITHUB_EVENT_NAME" = "workflow_run" || { echo "::error::V3.275 requires main push CI"; exit 1; }
           test -s docs/releases/GMWW-artifact-card-outside-dismiss-20261029.md
           grep -Fq 'V3.275 PR628:' .github/scripts/prepare-update-channel.mjs
-          grep -Fq 'VERSION="V3.275",NATIVE_SHELL_VERSION="3.264"' src/index.js
+          grep -rFq 'VERSION="V3.275",NATIVE_SHELL_VERSION="3.264"' src/index.js src/worker
           node --check server-game/current/app.js
           node .github/scripts/assemble-gm-app.mjs --verify
           node .github/scripts/verify-gmww-versions.mjs

@@ -5,8 +5,8 @@ on:
     paths:
       - "server-game/current/app.js"
       - "server-game/current/style.css"
-      - "server-game/src/30-village-and-setup.part"
-      - "server-game/src/40-battle-and-timeline.part"
+      - "server-game/src/30-village-and-setup/**"
+      - "server-game/src/40-battle-and-timeline/**"
       - "tests/gmww-v3228-battle-icons-footer.test.mjs"
       - "server-game/current/GMWW.html"
       - "src/index.js"

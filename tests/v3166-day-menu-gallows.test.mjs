@@ -1,3 +1,4 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -78,9 +79,9 @@ test('GM all-impact daily notice, negative-first colors and hidden persistent ti
 
 test('GM and Player day vote controls surface both bans, one-button nomination and drag-to-nominate',()=>{
   const html=readFileSync('server-game/current/GMWW.html','utf8');
-  const gm=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-  const player=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
-  const bridge=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+  const gm=gmSource('40-battle-and-timeline');
+  const player=playerWebSource('30-rooms-and-realtime');
+  const bridge=playerWebSource('20-village-and-profile');
   const village=readFileSync('assets/village/village.mjs','utf8');
   assert.match(html,/data-gallows-mode="gm"/);
   assert.match(html,/id="battleGallowsMembers"/);

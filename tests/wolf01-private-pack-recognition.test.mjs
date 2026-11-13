@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -45,8 +46,8 @@ test('WOLF-01 only active wolves receive private role labels; other phases, expi
 });
 test('WOLF-01 rejects leaking a public runtime queue over WebSocket and renders only authenticated labels',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const worker=workerSource();
- const player=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
- const ws=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+ const player=playerWebSource('20-village-and-profile');
+ const ws=playerWebSource('30-rooms-and-realtime');
  assert.match(worker,/Object\.entries\(payload\)\.filter\(\(\[key\]\)=>key!=='runtime'&&key!=='nightRuntime'/);
  assert.match(worker,/const wolfRecognition=privateWolfRecognition\(/);
  assert.match(player,/wolfLabel=wolfView\?/);

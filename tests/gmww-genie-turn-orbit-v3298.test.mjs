@@ -1,11 +1,12 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(p,'utf8');
-const gm=read('server-game/src/40-battle-and-timeline.part');
+const gm=gmSource('40-battle-and-timeline');
 const compiled=read('server-game/current/app.js');
-const web=read('src/player-web-src/35-online-chat.part');
+const web=playerWebSource('35-online-chat');
 const bundled=read('src/gmww-members-live.js');
 const sourceWolf=read('assets/status-visuals.js');
 const wolf=read('server-game/current/status-visuals.css');

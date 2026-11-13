@@ -1,0 +1,79 @@
+// V3.303: upload every configured turn clip once into the room library (content hash),
+// so the Server can push turn audio to all Players itself, even when this app is in
+// background. GM mute never changes Player audio permissions.
+let gmwwAnnouncementLib=null,gmwwAnnouncementLibRoom='',gmwwAnnouncementQueue=Promise.resolve();
+const gmwwAnnouncementWakeup={kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'};
+async function gmwwAnnouncementClip(cue){
+  for(const row of battleFindAudioCandidates(cue.kind,cue.targetId,cue.name)){
+    const src=await battleWarmAudio(cue.kind,row);if(!src)continue;
+    const response=await fetch(src);if(!response.ok)continue;
+    const blob=await response.blob();
+    if(blob.size&&blob.size<=2*1024*1024)return new Uint8Array(await blob.arrayBuffer());
+  }
+  return null;
+}
+async function gmwwUploadAnnouncementCues(cues){
+  const code=String(playSceneState.roomCode||'');
+  if(!code||playSceneRuntime.room?.phase!=='running')return;
+  if(gmwwAnnouncementLibRoom!==code){gmwwAnnouncementLib=null;gmwwAnnouncementLibRoom=code}
+  const path='/api/gm/rooms/'+encodeURIComponent(code)+'/announcement-audio';
+  if(!gmwwAnnouncementLib)gmwwAnnouncementLib=(await gmApi(path,{method:'GET',timeoutMs:15000}))?.targets||{};
+  const seen=new Set();
+  for(const cue of cues){
+    const target=cue?.kind&&cue?.targetId?String(cue.kind)+':'+String(cue.targetId):'';
+    if(!target||seen.has(target))continue;seen.add(target);
+    try{
+      const bytes=await gmwwAnnouncementClip(cue);if(!bytes)continue;
+      const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),hash=[...digest.slice(0,16)].map(b=>b.toString(16).padStart(2,'0')).join('');
+      if(gmwwAnnouncementLib[target]===hash)continue;
+      const signature=(a,b)=>String.fromCharCode(...bytes.slice(a,b));
+      const mime=signature(0,3)==='ID3'||bytes[0]===255&&(bytes[1]&224)===224?'audio/mpeg':signature(4,8)==='ftyp'?'audio/mp4':signature(0,4)==='OggS'?'audio/ogg':signature(0,4)==='RIFF'&&signature(8,12)==='WAVE'?'audio/wav':'';
+      if(!mime)continue;
+      let raw='';for(let i=0;i<bytes.length;i+=16384)raw+=String.fromCharCode(...bytes.subarray(i,i+16384));
+      // Target and bytes are verified again by the room before storing anything.
+      await gmApi(path,{method:'PUT',body:JSON.stringify({target,mime,base64:btoa(raw)}),timeoutMs:30000});
+      gmwwAnnouncementLib[target]=hash;
+    }catch(error){console.warn('Player turn audio pending',target,String(error?.message||error))}
+  }
+}
+// Current turn first, then the rest of tonight and the wake-up call.
+function gmwwPublishAnnouncement(turn){
+  const queue=playSceneRuntime.nightRuntime?.queue||[],cues=[];
+  if(turn)cues.push(...battleAudioCuesForTurn(turn));else cues.push(gmwwAnnouncementWakeup);
+  for(const t of queue)cues.push(...battleAudioCuesForTurn(t));
+  cues.push(gmwwAnnouncementWakeup);
+  gmwwAnnouncementQueue=gmwwAnnouncementQueue.then(()=>gmwwUploadAnnouncementCues(cues)).catch(()=>{});
+  return gmwwAnnouncementQueue;
+}
+
+
+// Share the approved public call independently of GM local playback/mute.
+const gmwwLocalTurnAudio=battleAudioForTurn,gmwwLocalMorningAudio=battleMorningPlayAudio;
+battleAudioForTurn=function(turn,auto=false){void gmwwPublishAnnouncement(turn);return gmwwLocalTurnAudio(turn,auto)};
+// V3.305: the Server starts the 30s countdown for Player Web itself; keep its clip ready from day start.
+const gmwwServerDayCues=[{kind:'system',targetId:'audio_system_countdown',name:'Đếm ngược 30 giây cuối'}];
+battleMorningPlayAudio=function(){void gmwwPublishAnnouncement(null);
+  gmwwAnnouncementQueue=gmwwAnnouncementQueue.then(()=>gmwwUploadAnnouncementCues(gmwwServerDayCues)).catch(()=>{});
+  return gmwwLocalMorningAudio()};
+// V3.304: every daytime GM announcement (wake-up, deaths, Lên Giàn, time-up...) is mirrored
+// to all Player Web through the Server: upload the clips, then publish one public day cue.
+const gmwwLocalDayAudio=battleQueueDayAudio;
+function gmwwPublishDayAnnouncement(cues){
+  const code=String(playSceneState.roomCode||''),room=playSceneRuntime.room||{};
+  if(!code||room.phase!=='running'||room.demo===true||!Array.isArray(cues))return;
+  // Countdown is published by the Server at deadline-30s (V3.305): never twice.
+  const list=cues.filter(c=>Array.isArray(c)&&c[0]&&c[0]!=='__tts__'&&c[0]!=='audio_system_countdown'&&/^audio_system_[A-Za-z0-9_]{1,100}$/.test(String(c[0]))).slice(0,12)
+    .map(([id,label])=>({kind:'system',targetId:String(id),name:String(label||id)}));
+  if(!list.length)return;
+  const queuedAt=Date.now(),path='/api/gm/rooms/'+encodeURIComponent(code)+'/announcement-audio';
+  gmwwAnnouncementQueue=gmwwAnnouncementQueue.then(async()=>{
+    await gmwwUploadAnnouncementCues(list);
+    const day=list.map(c=>'system:'+c.targetId).filter(t=>gmwwAnnouncementLib?.[t]);
+    if(day.length)await gmApi(path,{method:'PUT',body:JSON.stringify({day,elapsedMs:Date.now()-queuedAt}),timeoutMs:15000});
+  }).catch(error=>console.warn('Player day audio pending',String(error?.message||error)));
+}
+battleQueueDayAudio=function(cues){
+  if(playSceneState.phase==='day')gmwwPublishDayAnnouncement(cues);
+  return gmwwLocalDayAudio(cues);
+};
+

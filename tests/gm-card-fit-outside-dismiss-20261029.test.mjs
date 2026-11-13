@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const library=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
-const ui=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const library=gmSource('10-library-and-settings');
+const ui=gmSource('50-roles-and-artifacts');
 const bundle=fs.readFileSync('server-game/current/app.js','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 
