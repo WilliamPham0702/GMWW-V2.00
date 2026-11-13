@@ -1,15 +1,16 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
 const cases=[
- {name:'GM',path:'server-game/src/45-online-chat.part',fn:'gmwwGMVoiceCancel',prefix:'gmwwGMVoice',form:'gmwwGMChatVillage',button:'gmwwGMChatDiscard',reset:'gmwwGMVoiceButtonReset',display:'gmwwGMVoiceRecording'},
- {name:'Player',path:'src/player-web-src/35-online-chat.part',fn:'gmwwChatVoiceCancel',prefix:'gmwwChatVoice',form:'gmwwChatForm',button:'gmwwChatDiscard',reset:'gmwwChatVoiceReset',display:'gmwwChatRecordDisplay'}
+ {name:'GM',read:()=>gmSource('45-online-chat'),fn:'gmwwGMVoiceCancel',prefix:'gmwwGMVoice',form:'gmwwGMChatVillage',button:'gmwwGMChatDiscard',reset:'gmwwGMVoiceButtonReset',display:'gmwwGMVoiceRecording'},
+ {name:'Player',read:()=>playerWebSource('35-online-chat'),fn:'gmwwChatVoiceCancel',prefix:'gmwwChatVoice',form:'gmwwChatForm',button:'gmwwChatDiscard',reset:'gmwwChatVoiceReset',display:'gmwwChatRecordDisplay'}
 ];
 
 for(const c of cases){
- const source=fs.readFileSync(c.path,'utf8');
+ const source=c.read();
  const start=source.indexOf('function '+c.fn+'(){');
  const end=source.indexOf('\n}\n',start);
  assert.ok(start>=0&&end>start,'cancel function exists');

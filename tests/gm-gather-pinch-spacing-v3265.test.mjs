@@ -1,9 +1,10 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import '../assets/village/village-layout.js';
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;
-const src=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+const src=gmSource('30-village-and-setup');
 const built=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');

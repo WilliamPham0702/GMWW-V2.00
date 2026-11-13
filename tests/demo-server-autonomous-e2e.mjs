@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 // Local workerd/SQLite only. No browsers, heartbeats or Production mutations.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const base=process.env.GMWW_TEST_URL||'http://127.0.0.1:8787';assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname));
-const token=fs.readFileSync('src/index.js','utf8').match(/const GM_SYNC_TOKEN="([^"]+)"/)[1];
+const token=workerSource().match(/const GM_SYNC_TOKEN="([^"]+)"/)[1];
 const req=async(path,body)=>{const r=await fetch(base+path,{method:body?'POST':'GET',headers:{authorization:'Bearer '+token,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();assert.ok(r.ok,path+': '+JSON.stringify(d));return d};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const serial=Date.now().toString(36),people=Array.from({length:8},(_,i)=>({loginId:'srv'+i+serial,displayName:'Server '+i+' '+serial,seatId:i+1}));

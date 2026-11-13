@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -35,7 +36,7 @@ test('V3.65 OTA fails closed on missing/wrong hashes, extra deletions or unsuppo
  ]){const x=mk();mutate(x);assert.equal(selectVerifiedRuntimeV365Delta(x,'3.64'),null)}
 });
 test('Both IPA update-manifest routes run V3.65 fast overlay ahead of older algorithms',()=>{
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  for(const v of ['versioned','manifest']){
    const present='selectVerifiedRuntimeV365Delta('+v+',url.searchParams.get("current"))||selectVerifiedRuntimeV364Delta';
    assert.ok(worker.includes(present),'Missing V3.65 selector on '+v);

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -27,7 +28,7 @@ test('V3.100 rejects unsafe OTA payloads',()=>{
 });
 
 test('V3.100 patch remains available for old V3.99 installs',()=>{
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.equal(worker.split('selectVerifiedRuntimeV3100Delta(').length-1,2);
   assert.match(worker,/selectVerifiedRuntimeV3101Delta/);
 });

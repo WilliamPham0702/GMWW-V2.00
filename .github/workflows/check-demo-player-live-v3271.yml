@@ -3,8 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/index.js'
-      - 'src/player-web-src/20-village-and-profile.part'
-      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'src/player-web-src/20-village-and-profile/**'
+      - 'src/player-web-src/30-rooms-and-realtime/**'
       - 'src/gmww-members-live.js'
       - 'tests/demo-player-live-join-v3271.test.mjs'
       - '.github/workflows/check-demo-player-live-v3271.yml'

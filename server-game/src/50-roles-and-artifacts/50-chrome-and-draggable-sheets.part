@@ -1,0 +1,280 @@
+const PLAY_GAME_CHROME_IDLE_MS=30000;
+let playGameChromeIdleTimer=0;
+const GMWW_CHROME_MENU_KEY='gmww_play_menu_hidden_v3236';
+let gmwwPlayChromeHidden=false;
+try{gmwwPlayChromeHidden=localStorage.getItem(GMWW_CHROME_MENU_KEY)==='1'}catch{}
+function setPlayGameChromeHidden(hidden){
+  const shell=document.getElementById('playShell');
+  shell?.classList.toggle('gmww-chrome-hidden',!!hidden);
+  for(const id of ['playSetupStrip','gmTopMenu','playBattleTop','battleBottomControls']){
+    const menu=document.getElementById(id);if(!menu)continue;
+    menu.classList.toggle('is-auto-hidden',!!hidden);menu.dataset.autoHidden=hidden?'1':'0';
+  }
+  const toggle=document.getElementById('battleGMChromeToggle');
+  if(toggle){toggle.setAttribute('aria-pressed',String(!hidden));toggle.textContent='Menu';toggle.title=hidden?'Nhấn để bật hiển thị menu trên và dưới':'Nhấn để tắt hiển thị menu trên và dưới';toggle.setAttribute('aria-label','Menu trên và dưới: '+(hidden?'Tắt':'Bật'))}
+}
+function gmwwTogglePlayChrome(){
+  gmwwPlayChromeHidden=!gmwwPlayChromeHidden;
+  try{localStorage.setItem(GMWW_CHROME_MENU_KEY,gmwwPlayChromeHidden?'1':'0')}catch{}
+  setPlayGameChromeHidden(gmwwPlayChromeHidden);
+}
+function clearPlayGameChromeIdle(){
+  if(playGameChromeIdleTimer){clearTimeout(playGameChromeIdleTimer);playGameChromeIdleTimer=0}
+}
+function resetPlayGameChromeIdle(){
+  // V3.236: GM's explicit toggle owns visibility. Touching the map must not
+  // reveal a deliberately hidden toolbar or auto-hide a deliberately shown one.
+  clearPlayGameChromeIdle();
+  setPlayGameChromeHidden(gmwwPlayChromeHidden);
+}
+function initPlayGameChromeAutoHide(){
+  const top=document.getElementById('playSetupStrip'),bottom=document.getElementById('gmTopMenu');
+  if((top?.dataset.autoHideBound==='1')||(bottom?.dataset.autoHideBound==='1'))return;
+  if(top)top.dataset.autoHideBound='1';if(bottom)bottom.dataset.autoHideBound='1';
+  const reveal=()=>resetPlayGameChromeIdle();
+  document.addEventListener('pointerdown',reveal,{capture:true,passive:true});
+  document.addEventListener('touchstart',reveal,{capture:true,passive:true});
+  document.addEventListener('keydown',reveal,{capture:true});
+  document.addEventListener('wheel',reveal,{capture:true,passive:true});
+  let lastMove=0;
+  document.addEventListener('mousemove',()=>{const now=Date.now();if(now-lastMove>800){lastMove=now;reveal()}},{capture:true,passive:true});
+  top?.addEventListener('focusin',reveal);bottom?.addEventListener('focusin',reveal);document.getElementById('playGatherToolbar')?.addEventListener('focusin',reveal);
+}
+async function enterPlayImmersive(){
+  document.body.classList.add('play-immersive');
+  resetPlayGameChromeIdle();
+  try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}
+  if(isLivePlayRoom())await playSyncRoom(true);else renderPlayScene()
+}
+function exitPlayImmersive(options){
+  if(playSceneRuntime.busy)return;
+  if(options?.completed!==true&&!confirm('Thoát về Trang Chủ?\nPhòng, vị trí và ván đang chơi vẫn được giữ nguyên. Thao tác này không kết thúc ván.'))return;
+  if(typeof demoStop==='function')void demoStop('exit_play');
+  document.body.classList.remove('play-immersive');
+  if(typeof clearPlayGameChromeIdle==='function'){clearPlayGameChromeIdle();setPlayGameChromeHidden(false)}
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='home'));
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page==='home'));
+  const home=document.getElementById('home');if(home)home.scrollTop=0;
+  if(typeof gmwwHomeRefresh==='function')void gmwwHomeRefresh(false)
+}
+async function openPlayCreateRoomSheet(){const sheet=document.getElementById('playCreateRoomSheet');if(!sheet)return;if(isLivePlayRoom())await playSyncRoom(true);playRoomUiState.stage='rooms';playRoomUiState.selectedCode='';playRoomUiState.editorMode='';playRoomUiState.lastTapCode='';playRoomUiState.lastTapAt=0;const seats=document.getElementById('playCreateRoomSeatCount');if(seats)seats.value=String(playSceneState.seatCount||12);renderPlayCreateRoomSheet();sheet.classList.remove('hidden');bindPlayRoomModeButtons()}
+const GMWW_GATHER_DRAG_KEY='GMWW_GATHER_DRAG_OFFSET_V1';
+function playGatherBoundCorrection(rect,bounds){
+  const shift=(start,end,minimum,maximum)=>{
+    if(end-start>maximum-minimum)return minimum-start;
+    if(start<minimum)return minimum-start;
+    if(end>maximum)return maximum-end;
+    return 0;
+  };
+  return {x:shift(rect.left,rect.right,bounds.left,bounds.right),
+          y:shift(rect.top,rect.bottom,bounds.top,bounds.bottom)};
+}
+function initDraggablePlayGatherToolbar(){
+  const bar=document.getElementById('playGatherToolbar'),handle=bar?.querySelector('.play-gather-toolbar-head');
+  if(!bar||!handle||bar.dataset.dragBound==='1')return;
+  bar.dataset.dragBound='1';
+  handle.style.touchAction='none';
+  handle.style.cursor='grab';
+  let x=0,y=0,drag=null;
+  try{
+    const saved=JSON.parse(localStorage.getItem(GMWW_GATHER_DRAG_KEY)||'null');
+    if(Number.isFinite(saved?.x)&&Number.isFinite(saved?.y)){
+      x=Math.max(-2000,Math.min(2000,saved.x));y=Math.max(-2000,Math.min(2000,saved.y));
+    }
+  }catch{}
+  const apply=()=>{
+    bar.style.setProperty('--gmww-gather-drag-x',x+'px');
+    bar.style.setProperty('--gmww-gather-drag-y',y+'px');
+  };
+  const boundaries=()=>{
+    const viewport=window.visualViewport;
+    const vx=Number(viewport?.offsetLeft||0),vy=Number(viewport?.offsetTop||0);
+    const vw=Number(viewport?.width||window.innerWidth),vh=Number(viewport?.height||window.innerHeight);
+    const timeline=document.getElementById('playSetupStrip');
+    const bottomDock=document.getElementById('gmTopMenu');
+    const timelineEnd=timeline&&!timeline.classList.contains('is-auto-hidden')?timeline.getBoundingClientRect().bottom+8:vy+8;
+    const dockStart=bottomDock&&!bottomDock.classList.contains('is-auto-hidden')?bottomDock.getBoundingClientRect().top-8:vy+vh-8;
+    return {left:vx+7,right:vx+vw-7,top:Math.max(vy+8,timelineEnd),bottom:Math.min(vy+vh-8,dockStart)};
+  };
+  const clampOnscreen=()=>{
+    if(bar.classList.contains('hidden')||!bar.getClientRects().length)return;
+    const fix=playGatherBoundCorrection(bar.getBoundingClientRect(),boundaries());
+    if(fix.x||fix.y){x+=fix.x;y+=fix.y;apply()}
+  };
+  bar.gmwwGatherClampOnscreen=clampOnscreen;
+  apply();
+  const save=()=>{try{localStorage.setItem(GMWW_GATHER_DRAG_KEY,JSON.stringify({x,y}))}catch{}};
+  handle.addEventListener('pointerdown',e=>{
+    if(bar.classList.contains('hidden')||e.target.closest('button,input,textarea,select,a'))return;
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    drag={id:e.pointerId,startX:e.clientX,startY:e.clientY,baseX:x,baseY:y};
+    bar.classList.add('is-dragging');
+    handle.style.cursor='grabbing';
+    try{handle.setPointerCapture(e.pointerId)}catch{}
+    e.preventDefault();
+  });
+  handle.addEventListener('pointermove',e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    x=drag.baseX+e.clientX-drag.startX;
+    y=drag.baseY+e.clientY-drag.startY;
+    apply();clampOnscreen();
+    e.preventDefault();
+  });
+  const end=e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    drag=null;bar.classList.remove('is-dragging');handle.style.cursor='grab';
+    try{handle.releasePointerCapture(e.pointerId)}catch{}
+    clampOnscreen();save();
+  };
+  handle.addEventListener('pointerup',end);
+  handle.addEventListener('pointercancel',end);
+  handle.addEventListener('dblclick',e=>{
+    if(e.target.closest('button,input,textarea,select,a'))return;
+    x=0;y=0;apply();clampOnscreen();save();e.preventDefault();
+  });
+  handle.addEventListener('keydown',e=>{
+    const arrows={ArrowLeft:[-12,0],ArrowRight:[12,0],ArrowUp:[0,-12],ArrowDown:[0,12]};
+    const d=arrows[e.key];if(!d)return;
+    x+=d[0];y+=d[1];apply();clampOnscreen();save();e.preventDefault();
+  });
+  window.addEventListener('resize',clampOnscreen,{passive:true});
+  window.visualViewport?.addEventListener('resize',clampOnscreen,{passive:true});
+  requestAnimationFrame(clampOnscreen);
+}
+/* V3.266 — Game-template sheet belongs to the bottom GM dock, not an
+   always-centered full-screen modal. Saved docking is local to this iPhone;
+   the Library editor deliberately remains a normal modal. */
+const GMWW_GAME_SHEET_DOCK_KEY='gmww_game_template_dock_v2';
+function gmwwGameSheetReadDock(){
+  try{const state=JSON.parse(localStorage.getItem(GMWW_GAME_SHEET_DOCK_KEY)||'null');
+    return state&&['bottom','free'].includes(state.mode)?state:{mode:'bottom',collapsed:true}}
+  catch{return{mode:'bottom',collapsed:true}}
+}
+function gmwwGameSheetSaveDock(next){
+  try{localStorage.setItem(GMWW_GAME_SHEET_DOCK_KEY,JSON.stringify(next))}catch{}
+}
+function gmwwGameSheetLayout(){
+  const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');
+  if(!card||sheet.classList.contains('hidden')||card.dataset.mode!=='play')return;
+  const dock=document.getElementById('gmTopMenu'),top=document.getElementById('playSetupStrip');
+  const bar=dock?.getBoundingClientRect(),header=top?.getBoundingClientRect();
+  const bottomY=bar?.width>60&&bar.top>0?bar.top-5:innerHeight-85;
+  const upperY=Math.max(8,(header?.bottom||70)+8);
+  const maxHeight=Math.max(130,Math.min(innerHeight-20,bottomY-upperY));
+  const availableWidth=Math.max(100,innerWidth-16),width=Math.min(availableWidth,bar?.width>60?bar.width:availableWidth);
+  card.style.setProperty('max-height',maxHeight+'px','important');
+  card.style.setProperty('width',width+'px','important');
+  const saved=gmwwGameSheetReadDock();
+  // The compact panel changes its intrinsic height: measure AFTER hiding body.
+  sheet.classList.toggle('gmww-template-compact',saved.collapsed===true);
+  const rect=card.getBoundingClientRect();
+  const clamp=(v,min,max)=>Math.max(min,Math.min(Math.max(min,max),v));
+  const left=saved.mode==='free'?clamp(Number(saved.x)||8,8,innerWidth-rect.width-8):clamp((bar?.left??8)+((bar?.width??width)-rect.width)/2,8,innerWidth-rect.width-8);
+  const upper=8,lower=Math.max(8,innerHeight-rect.height-8);
+  const rawTop=saved.mode==='free'?(Number(saved.y)||upperY):bottomY-rect.height;
+  const y=clamp(rawTop,upper,lower);
+  card.style.setProperty('left',left+'px','important');
+  card.style.setProperty('top',y+'px','important');
+  card.style.setProperty('right','auto','important');card.style.setProperty('bottom','auto','important');
+  card.style.setProperty('transform','none','important');
+  card.classList.toggle('gmww-dock-snapped',saved.mode==='bottom');
+  card.dataset.dockEdge=saved.mode==='bottom'?'bottom':'';
+  const toggle=document.getElementById('playGameDockToggle');
+  if(toggle){toggle.textContent=saved.collapsed?'⌃':'⌄';toggle.setAttribute('aria-expanded',String(!saved.collapsed));toggle.setAttribute('aria-label',saved.collapsed?'Mở bảng Chọn Ván Mẫu':'Thu gọn Ván Mẫu vào menu dưới')}
+}
+function gmwwGameSheetSetFloating(enabled){
+  const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card');if(!sheet||!card)return;
+  sheet.classList.toggle('gmww-template-floating',!!enabled);
+  if(enabled){gmwwGameSheetLayout();return}
+  sheet.classList.remove('gmww-template-compact');card.classList.remove('gmww-dock-snapped','gmww-dock-near');
+  for(const k of ['left','top','right','bottom','transform','max-height','width'])card.style.removeProperty(k);
+  delete card.dataset.dockEdge;
+}
+function initPlayGameSheetDock(){
+  const sheet=document.getElementById('playGameSheet'),card=sheet?.querySelector('.play-game-sheet-card'),handle=card?.querySelector('.sheet-head');
+  if(!sheet||!card||!handle||card.dataset.gameDockReady)return;
+  card.dataset.gameDockReady='1';
+  handle.style.touchAction='none';handle.style.cursor='grab';
+  const toggle=document.getElementById('playGameDockToggle');
+  toggle?.addEventListener('click',()=>{
+    if(card.dataset.mode!=='play')return;
+    const saved=gmwwGameSheetReadDock();saved.mode='bottom';saved.collapsed=!saved.collapsed;
+    gmwwGameSheetSaveDock(saved);gmwwGameSheetLayout();
+  });
+  let drag=null;
+  handle.addEventListener('pointerdown',event=>{
+    if(card.dataset.mode!=='play'||sheet.classList.contains('hidden')||event.target.closest('button,input,select,textarea,a')||(event.pointerType==='mouse'&&event.button!==0))return;
+    const rect=card.getBoundingClientRect();
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false};
+    try{handle.setPointerCapture(event.pointerId)}catch{}
+    event.preventDefault();
+  });
+  handle.addEventListener('pointermove',event=>{
+    if(!drag||event.pointerId!==drag.id)return;
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if(!drag.moved&&Math.hypot(dx,dy)<5)return;
+    drag.moved=true;
+    const x=Math.max(8,Math.min(innerWidth-card.offsetWidth-8,drag.left+dx));
+    const y=Math.max(8,Math.min(innerHeight-card.offsetHeight-8,drag.top+dy));
+    card.style.setProperty('left',x+'px','important');card.style.setProperty('top',y+'px','important');
+    card.classList.remove('gmww-dock-snapped');
+    const menu=document.getElementById('gmTopMenu')?.getBoundingClientRect();
+    card.classList.toggle('gmww-dock-near',!!menu&&Math.abs(card.getBoundingClientRect().bottom-(menu.top-5))<=48);
+    event.preventDefault();
+  },{passive:false});
+  const finish=event=>{
+    if(!drag||event.pointerId!==drag.id)return;
+    const moved=drag.moved;drag=null;
+    try{handle.releasePointerCapture(event.pointerId)}catch{}
+    if(!moved)return;
+    const menu=document.getElementById('gmTopMenu')?.getBoundingClientRect(),rect=card.getBoundingClientRect();
+    const snapped=event.type==='pointerup'&&menu&&Math.abs(rect.bottom-(menu.top-5))<=48;
+    const old=gmwwGameSheetReadDock();
+    const next=snapped?{mode:'bottom',collapsed:old.collapsed}:{mode:'free',collapsed:old.collapsed,x:Math.round(rect.left),y:Math.round(rect.top)};
+    gmwwGameSheetSaveDock(next);card.classList.remove('gmww-dock-near');gmwwGameSheetLayout();
+  };
+  handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish);
+  window.addEventListener('resize',()=>gmwwGameSheetLayout(),{passive:true});
+  window.visualViewport?.addEventListener('resize',()=>gmwwGameSheetLayout(),{passive:true});
+}
+function initDraggablePlaySheets(){
+  document.querySelectorAll('.sheet .sheet-card').forEach(card=>{
+    if(card.closest('#playGameSheet'))return; // Dedicated bottom-dock controller below.
+    if(card.dataset.dragBound==='1')return;card.dataset.dragBound='1';
+    const handle=card.querySelector('.sheet-head');if(!handle)return;
+    handle.style.touchAction='none';handle.style.cursor='grab';
+    let active=false,startX=0,startY=0,baseX=0,baseY=0,pid=null;
+    handle.addEventListener('pointerdown',e=>{
+      if(e.target.closest('button,input,select,textarea')||(e.button!==0&&e.pointerType!=='touch'))return;
+      active=true;pid=e.pointerId;startX=e.clientX;startY=e.clientY;
+      baseX=Number(card.dataset.dragX||0);baseY=Number(card.dataset.dragY||0);
+      handle.setPointerCapture?.(pid);handle.style.cursor='grabbing';e.preventDefault();
+    });
+    handle.addEventListener('pointermove',e=>{
+      if(!active||e.pointerId!==pid)return;
+      const maxX=Math.max(0,(innerWidth-card.offsetWidth)/2),maxY=Math.max(0,(innerHeight-card.offsetHeight)/2);
+      const x=Math.max(-maxX,Math.min(maxX,baseX+e.clientX-startX));
+      const y=Math.max(-maxY,Math.min(maxY,baseY+e.clientY-startY));
+      card.dataset.dragX=x;card.dataset.dragY=y;card.style.transform='translate('+x+'px,'+y+'px)';
+      card.classList.toggle('gmww-dock-near',!!gmwwMenuSnap(card.getBoundingClientRect()));
+      if(Math.hypot(e.clientX-startX,e.clientY-startY)>12)card.classList.remove('gmww-dock-snapped');
+      e.preventDefault();
+    });
+    const end=e=>{
+      if(!active||e.pointerId!==pid)return;
+      active=false;handle.style.cursor='grab';
+      const rect=card.getBoundingClientRect(),snap=e.type==='pointerup'?gmwwMenuSnap(rect):null;
+      card.classList.remove('gmww-dock-near');
+      if(snap){
+        const nx=Number(card.dataset.dragX||0)+snap.left-rect.left;
+        const ny=Number(card.dataset.dragY||0)+snap.top-rect.top;
+        card.dataset.dragX=nx;card.dataset.dragY=ny;
+        card.style.setProperty('--gmww-dock-width',snap.width+'px');
+        card.style.transform='translate('+nx+'px,'+ny+'px)';
+        card.classList.add('gmww-dock-snapped');card.dataset.dockEdge=snap.edge;
+      }else{card.classList.remove('gmww-dock-snapped');card.style.removeProperty('--gmww-dock-width');delete card.dataset.dockEdge}
+      try{handle.releasePointerCapture?.(pid)}catch{}
+    };
+    handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+  });
+}

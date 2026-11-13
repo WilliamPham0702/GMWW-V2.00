@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {seatClaimConflict,movementProgress,movementArrivalReady,movementRemainingMs} from '../src/gmww-seat-movement-rules.js';
 
-const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const server=workerSource();
 const liveModule=readFileSync(new URL('../src/gmww-members-live.js',import.meta.url),'utf8');
 const live=JSON.parse(liveModule.slice(liveModule.indexOf('=')+1,liveModule.lastIndexOf(';')).trim());
 const village=readFileSync(new URL('../assets/village/village.mjs',import.meta.url),'utf8');

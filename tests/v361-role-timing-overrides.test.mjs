@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ import {selectVerifiedRuntimeV361Delta} from '../src/gmww-ota-delta.js';
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const app=readFileSync('server-game/current/app.js','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 test('Chọn Ván restores per-role editable seconds with clear shared-unit label',()=>{
   const panel=html.slice(html.indexOf('<div class="play-template-play-review">'),html.indexOf('<div class="sheet hidden" id="playEndSheet">'));
   assert.match(panel,/Thời gian sử dụng Vai Trò \(giây\):/);

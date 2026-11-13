@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -101,7 +102,7 @@ test('realtime player payload maps into semantic animation state',()=>{
 
 test('Worker exposes character engine manifest and semantic animation in public player payload',async()=>{
   const fs=await import('node:fs');
-  const worker=fs.readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+  const worker=workerSource();
   assert.ok(worker.includes('from "./gmww-character-engine.js"'));
   assert.ok(worker.includes('/api/character-engine/manifest'));
   const playerModule=fs.readFileSync(new URL('../src/gmww-village-player-state.js',import.meta.url),'utf8');

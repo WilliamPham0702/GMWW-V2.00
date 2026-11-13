@@ -1,0 +1,187 @@
+function renderEntityGrid(kind){
+  const grid=$(kind==='cards'?'#cardGrid':'#artifactGrid'),favGrid=$(kind==='cards'?'#cardFavoriteGrid':'#artifactFavoriteGrid'),filter=kind==='cards'?cardFilter:artifactFilter;
+  const all=entityList(kind);
+  const favorites=all.filter(e=>{const p=prefFor(kind,e.id);return p.starred&&!p.hidden}).sort((a,b)=>(prefFor(kind,a.id).starOrder||999999)-(prefFor(kind,b.id).starOrder||999999));
+  const visibleTotal=all.filter(e=>!prefFor(kind,e.id).hidden).length;
+  const countEl=$(kind==='cards'?'#cardFaceCount':'#artifactFaceCount');if(countEl){countEl.textContent=favorites.length+' / '+visibleTotal;countEl.setAttribute('aria-label',(kind==='cards'?'Thường dùng '+favorites.length+' Vai Trò, tổng '+visibleTotal+' Vai Trò':'Thường dùng '+favorites.length+' Artifact, tổng '+visibleTotal+' Artifact'))}
+  favGrid.innerHTML=favorites.length?favorites.map(e=>entityTileHtml(kind,e)).join(''):'<div class="favorite-empty">Chưa có Vai Trò được đánh ★</div>';
+  if(favorites.length)bindEntityTiles(kind,favGrid,favorites);
+  let list=all.filter(e=>{const p=prefFor(kind,e.id);if(filter==='hidden')return p.hidden;return !p.hidden&&!p.starred});
+  list.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'vi'));
+  const add='<button class="role-tile entity-add-tile" data-add-entity="'+kind+'" aria-label="Thêm"><span>＋</span><b>'+(kind==='cards'?'Thêm Vai Trò':'Thêm ARTIFACT')+'</b></button>';
+  grid.innerHTML=add+list.map(e=>entityTileHtml(kind,e)).join('');
+  bindEntityTiles(kind,grid,list);
+  const addBtn=$('[data-add-entity="'+kind+'"]',grid);if(addBtn)addBtn.onclick=()=>createEntity(kind);
+}
+
+function togglePref(kind,id,type){const p=prefFor(kind,id);if(type==='star'){if(p.starred){p.starred=false;p.starOrder=null}else{p.hidden=false;p.starred=true;const orders=Object.values(prefs[kind]||{}).filter(x=>x.starred).map(x=>Number(x.starOrder)||0);p.starOrder=Math.max(0,...orders)+1}}else{p.hidden=!p.hidden;if(p.hidden){p.starred=false;p.starOrder=null}}savePrefs();renderEntityGrid(kind)}
+
+/* Artwork imported from older Artifact packs can include a dark empty gutter on
+   only one side. Detect asymmetric *empty* gutters in a tiny canvas sample;
+   never crop persisted artwork, rename files or touch role cards. */
+function artifactArtworkSideMargins(data,width,height){
+  if(!data||!Number.isFinite(width)||!Number.isFinite(height)||width<60||height<60)return null;
+  const firstY=Math.floor(height*.12),lastY=Math.ceil(height*.88);
+  const columns=new Uint16Array(width);
+  let samples=0;
+  for(let y=firstY;y<lastY;y+=2){
+    samples++;
+    for(let x=0;x<width;x++){
+      const p=(y*width+x)*4;
+      if(data[p+3]<128)continue;
+      const red=data[p],green=data[p+1],blue=data[p+2];
+      const hi=Math.max(red,green,blue),lo=Math.min(red,green,blue);
+      const luminance=.2126*red+.7152*green+.0722*blue;
+      if(luminance>86||(hi>75&&hi-lo>27))columns[x]++;
+    }
+  }
+  if(!samples)return null;
+  const threshold=Math.max(3,Math.ceil(samples*.22)); // Ignore isolated bright specks in dark artwork gutters.
+  const present=x=>columns[x]>=threshold;
+  // A minimum two-column run rejects isolated sparkles/noise in black padding.
+  let left=0;
+  while(left<width-2&&!(present(left)&&present(left+1)))left++;
+  let right=width-1;
+  while(right>1&&!(present(right)&&present(right-1)))right--;
+  if(right<=left)return null;
+  const l=left/width,r=(width-1-right)/width;
+  // Be conservative: real dark artwork must not be auto-cropped.
+  if(l+r>.24||Math.max(l,r)>.22||Math.abs(l-r)<.025)return null;
+  return{left:l,right:r};
+}
+function alignArtifactPreviewArtwork(img){
+  if(!img?.naturalWidth||!img?.naturalHeight)return;
+  try{
+    const sample=document.createElement('canvas');
+    sample.width=240;sample.height=200;
+    const context=sample.getContext('2d',{willReadFrequently:true});
+    if(!context)return;
+    context.drawImage(img,0,0,sample.width,sample.height);
+    const margins=artifactArtworkSideMargins(context.getImageData(0,0,sample.width,sample.height).data,sample.width,sample.height);
+    if(!margins)return;
+    // Center the visible artwork without stretching or changing its aspect ratio.
+    // In CSS percentage transforms, the offset is relative to the image width.
+    const offsetPercent=50*(margins.right-margins.left);
+    if(Math.abs(offsetPercent)<.25)return;
+    img.style.transform='translate3d('+offsetPercent.toFixed(2)+'%,0,0)';
+  }catch(_){
+    // A non-readable external image retains the safe, centered CSS fallback.
+  }
+}
+
+async function renderEntityFront(){
+  const e=editDraft;if(!e)return;const kind=currentKind,card=$('#playerCard'),badge=$('#playerFactionBadge');
+  card.className='player-card '+(kind==='artifacts'?'artifact':(e.factionId||'village'));
+  $('#playerName').textContent=(e.name||'').toUpperCase();
+  if(kind==='cards'){const f=factionMeta(e.factionId);badge.textContent=f.icon;badge.setAttribute('aria-label',f.label)}else{badge.textContent='✦';badge.setAttribute('aria-label','Artifacts')}
+  $('#playerInformation').textContent=formatInformation(e.information||'');
+  const img=$('#playerDisplay'),src=await resolveArtwork(kind,e.id,'display');
+  // Opening another card during an async asset read must not show the old card.
+  if(currentKind!==kind||editDraft?.id!==e.id)return;
+  img.style.removeProperty('transform');
+  img.onload=()=>{if(kind==='artifacts'&&currentKind===kind&&editDraft?.id===e.id)alignArtifactPreviewArtwork(img)};
+  img.onerror=()=>img.style.removeProperty('transform');
+  img.src=src;
+  if(img.complete&&img.naturalWidth)img.onload();
+  fitPlayerCardTitle();fitPlayerCardInformation();
+}
+function fitPlayerCardTitle(){
+  const title=$('#playerName');if(!title)return;
+  title.style.fontSize='';
+  if(typeof requestAnimationFrame!=='function')return;
+  // Fit BOTH lines and height, not just nowrap width. Long Vietnamese Artifact
+  // titles must remain readable on iPhone instead of overflowing the card edge.
+  const expected=title.textContent;
+  requestAnimationFrame(()=>{
+    if(title.textContent!==expected)return;
+    const head=title.parentElement;
+    if(!head)return;
+    const styles=typeof getComputedStyle==='function'?getComputedStyle(head):null;
+    const verticalPadding=(parseFloat(styles?.paddingTop)||0)+(parseFloat(styles?.paddingBottom)||0);
+    const available=Math.max(0,head.clientHeight-verticalPadding-2);
+    let size=Math.min(23,parseFloat(typeof getComputedStyle==='function'?getComputedStyle(title).fontSize:23)||23);
+    title.style.fontSize=size+'px';
+    while(size>12.5&&(title.scrollWidth>title.clientWidth+1||title.scrollHeight>available+1)){
+      size=Math.max(12.5,size-.5);title.style.fontSize=size+'px';
+    }
+  });
+}
+function fitPlayerCardInformation(){
+  const box=$('#playerInformation');if(!box)return;
+  box.style.fontSize='';
+  if(typeof requestAnimationFrame!=='function')return;
+  requestAnimationFrame(()=>{let size=14.5;while(size>12&&box.scrollHeight>box.clientHeight+1){size=Math.max(12,size-.5);box.style.fontSize=size+'px'}});
+}
+function actionOptions(selected){const k=currentKind==='artifacts'?'artifacts':'role';return actionList(k).map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===String(selected)?'selected':'')+'>'+esc(a.name)+'</option>').join('')}
+function functionHtml(fn,index){
+  const to=fn.toNight===null||fn.toNight===''?'end':String(fn.toNight);
+  return '<div class="function-card" data-fn-index="'+index+'"><div class="function-head"><b>Hành Động #'+(index+1)+'</b><button data-remove-fn="'+index+'" aria-label="Xoá">×</button></div>'+
+    '<div class="function-grid">'+
+      '<label class="full">Hành Động<select data-f="actionId">'+actionOptions(fn.actionId)+'</select></label>'+
+      '<label class="full">Mô tả riêng trên Lá<textarea class="function-description" data-t="description">'+esc(fn.description||'')+'</textarea></label>'+
+      '<label>Phase<select data-f="phase">'+selectOptions([['night','Ban Đêm'],['day','Ban Ngày'],['any','Ngày và Đêm'],['both','Ngày và Đêm (cũ)'],['setup','Đầu Ván / Setup'],['trigger','Theo sự kiện']],fn.phase||'night')+'</select></label>'+
+      '<label>Giới hạn sử dụng<select data-f="usageMode">'+selectOptions([['unlimited','Không giới hạn'],['eachNight','Mỗi đêm'],['eachDay','Mỗi ngày'],['onceGame','1 lần / ván'],['nGame','N lần / ván'],['custom','N lần trong khoảng đêm'],['nPerNight','N lần / đêm']],fn.usageMode||'unlimited')+'</select></label>'+
+      '<label>Số lần<select data-f="usageCount">'+numOptions(1,10,fn.usageCount||1)+'</select></label>'+
+      '<label>Cooldown (đêm)<select data-f="cooldownNights">'+numOptions(0,10,fn.cooldownNights||0)+'</select></label>'+
+      '<label>Số mục tiêu<select data-f="targetCount">'+numOptions(0,8,fn.targetCount??1)+'</select></label>'+
+      '<label>Giới hạn mỗi người<select data-f="perUserLimit">'+numOptions(0,5,fn.perUserLimit||0)+'</select></label>'+
+      '<div class="range-row"><label>Từ đêm<select data-f="fromNight">'+numOptions(1,20,fn.fromNight||1)+'</select></label><label>Đến đêm<select data-f="toNight"><option value="end" '+(to==='end'?'selected':'')+'>Hết ván</option>'+numOptions(1,20,to)+'</select></label></div>'+
+      '<label class="full">Kích hoạt khi<select data-f="activation">'+selectOptions([['','Chủ động / Theo lượt'],['stake_execution','Bị Treo Cổ'],['SOURCE_DEATH','Nguồn chết'],['morning','Buổi sáng'],['night_start','Bắt đầu đêm'],['day_start','Bắt đầu ngày']],fn.activation||'')+'</select></label>'+
+    '</div>'+
+    '<div class="function-checks">'+
+      checkHtml('noSelf','Không được chọn bản thân',fn.noSelf)+
+      checkHtml('allowDead','Cho phép chọn người đã chết',fn.allowDead)+
+      checkHtml('noTarget','Không cần chọn mục tiêu',fn.noTarget)+
+      checkHtml('allowConsecutive','Cho phép chọn cùng mục tiêu liên tiếp',fn.allowConsecutive)+
+      checkHtml('passive','Hành Động thụ động',fn.passive)+
+      checkHtml('targetPreviousCycleOnly','Chỉ mục tiêu chu kỳ trước',fn.targetPreviousCycleOnly)+
+      checkHtml('pushToPlayerWeb','Đẩy xuống Player Web',fn.pushToPlayerWeb)+
+      checkHtml('systemRequired','Yêu cầu Hệ Thống',fn.systemRequired)+
+      checkHtml('usesPackBite','Dùng Sói Cắn chung',fn.usesPackBite)+
+      checkHtml('requiresNoOtherLivingWolf','Chỉ khi không còn Sói khác sống',fn.requiresNoOtherLivingWolf)+
+      checkHtml('actorMayBeDead','Người thực hiện có thể đã chết',fn.actorMayBeDead)+
+      checkHtml('allowFriendlyFaction','Cho phép chọn cùng Phe',fn.allowFriendlyFaction)+
+      checkHtml('replacesWolfBite','Thay thế Sói Cắn',fn.replacesWolfBite)+
+    '</div></div>';
+}
+function checkHtml(key,label,checked){return '<label class="check"><input type="checkbox" data-b="'+key+'" '+(checked?'checked':'')+'><span>'+esc(label)+'</span></label>'}
+function renderEntityBack(){
+  const e=editDraft;if(!e)return;
+  $('#entitySettingsTitle').textContent=currentKind==='cards'?'Cài đặt Vai Trò':'Cài đặt ARTIFACTS';
+  $('#entityName').value=e.name||'';$('#entityInformation').value=e.information||'';
+  $('#factionBlock').classList.toggle('hidden',currentKind!=='cards');$('#livesField').classList.toggle('hidden',currentKind!=='cards');
+  if(currentKind==='cards')$$('#factionSeg button').forEach(b=>b.classList.toggle('active',b.dataset.faction===e.factionId));
+  $('#entityLives').value=Math.max(1,Number(e.lives||1));
+  const f=e.flags||{};$('#flagUseDay').checked=!!f.useDay;$('#flagUseNight').checked=!!f.useNight;$('#flagNightImmune').checked=!!f.nightImmune;$('#flagAllowMultipleActions').checked=!!f.allowMultipleActions;$('#flagPassive').checked=!!f.passive;$('#flagSoloWolfOnly').checked=!!f.soloWolfOnly;$('#winCondition').value=e.winCondition||'';
+  $('#passiveRuleEnabled').checked=!!e.passiveRule?.enabled;$('#passiveRuleType').value=e.passiveRule?.type||'stake_survive';
+  $('#passiveFirstTime').value=e.passiveRule?.firstTime||'';$('#passiveNextTime').value=e.passiveRule?.nextTime||'';$('#passiveOnDeath').checked=!!e.passiveRule?.onDeath;$('#passiveSkipDead').checked=!!e.passiveRule?.skipIfTargetAlreadyDead;
+  $('#groupGateEnabled').checked=!!e.groupActionGate?.enabled;$('#groupGateAction').innerHTML='<option value="">Chọn Hành Động</option>'+actionList(currentKind==='artifacts'?'artifacts':'role').map(a=>'<option value="'+esc(a.id)+'" '+(String(a.id)===String(e.groupActionGate?.actionId)?'selected':'')+'>'+esc(a.name)+'</option>').join('');
+  $('#groupGateScope').value=e.groupActionGate?.scope||'self';$('#gateExpelled').checked=(e.groupActionGate?.blockOn||[]).includes('expelled');$('#gateBlocked').checked=(e.groupActionGate?.blockOn||[]).includes('blocked');
+  const sr=e.specialRules||{};$('#ruleSystemRequired').checked=!!sr.systemRequired;$('#ruleUsesPackBite').checked=!!sr.usesPackBite;$('#ruleRequiresSoloWolf').checked=!!sr.requiresNoOtherLivingWolf;$('#ruleActorMayBeDead').checked=!!sr.actorMayBeDead;$('#ruleAllowFriendlyFaction').checked=!!sr.allowFriendlyFaction;$('#ruleReplacesWolfBite').checked=!!sr.replacesWolfBite;
+  $('#specialLimits').value=typeof e.limits==='string'?e.limits:JSON.stringify(e.limits||'');$('#specialConditions').value=typeof e.conditions==='string'?e.conditions:JSON.stringify(e.conditions||'');$('#specialAttributes').value=typeof e.attributes==='string'?e.attributes:JSON.stringify(e.attributes||'');
+  $('#artifactSpecific').classList.toggle('hidden',currentKind!=='artifacts');
+  if(currentKind==='artifacts'){const a=e.artifact||{};$('#artifactOwnerSelection').checked=!!a.ownerSelection;$('#artifactPersistentOwner').checked=!!a.persistentOwner;$('#artifactRevealFollow').checked=!!a.revealFollowTargetOnly;$('#artifactPriorityFirst').checked=!!a.priorityFirst;$('#artifactWakeRole').innerHTML='<option value="">Không</option><option value="source-2" '+(a.wakeWithRoleId==='source-2'?'selected':'')+'>Tiên Tri</option>';$('#artifactWakeAction').innerHTML='<option value="">Không</option>'+state.actions.role.map(x=>'<option value="'+esc(x.id)+'" '+(String(a.wakeWithActionId)===String(x.id)?'selected':'')+'>'+esc(x.name)+'</option>').join('')}
+  $('#functionList').innerHTML=(e.functions||[]).map(functionHtml).join('');bindFunctionControls();
+}
+function bindFunctionControls(){
+  $$('#functionList .function-card').forEach(row=>{const idx=Number(row.dataset.fnIndex),fn=editDraft.functions[idx];
+    $$('select[data-f]',row).forEach(s=>s.onchange=()=>{const k=s.dataset.f;if(k==='toNight')fn[k]=s.value==='end'?null:Number(s.value);else if(['usageCount','cooldownNights','targetCount','fromNight','perUserLimit'].includes(k))fn[k]=Number(s.value);else fn[k]=s.value;if(k==='targetCount'&&fn.targetCount>0)fn.noTarget=false;renderEntityFront()});
+    $$('textarea[data-t]',row).forEach(t=>t.oninput=()=>{fn[t.dataset.t]=t.value});
+    $$('input[data-b]',row).forEach(c=>c.onchange=()=>{const k=c.dataset.b;fn[k]=c.checked;if(k==='noTarget'&&c.checked)fn.targetCount=0;if(k==='noTarget'&&!c.checked&&fn.targetCount===0)fn.targetCount=1;renderEntityBack()});
+  });
+  $$('[data-remove-fn]').forEach(b=>b.onclick=()=>{editDraft.functions.splice(Number(b.dataset.removeFn),1);renderEntityBack()});
+}
+let editBackRendered=false;
+function updateEntityHideButton(){const b=$('#hideEntity');if(!b||!currentId)return;const hidden=!!prefFor(currentKind,currentId).hidden;b.textContent=hidden?'◉':'◌';b.title=hidden?'Hiện lại':'Ẩn';b.setAttribute('aria-label',hidden?'Hiện lại':'Ẩn');b.classList.toggle('on',hidden)}
+function toggleCurrentEntityHidden(){if(!currentId)return;togglePref(currentKind,currentId,'hide');updateEntityHideButton()}
+function openEntityEditor(kind,id){currentKind=kind;currentId=id;const src=entityById(kind,id);if(!src)return;editDraft=normalizeEntity(src,kind);editBackRendered=false;$('#libraryHome').classList.add('hidden');$('#entityEditor').classList.remove('hidden');updateEntityHideButton();setFace('front');renderEntityFront();$('#library').scrollTop=0}
+function closeEntityEditor(){editDraft=null;$('#entityEditor').classList.add('hidden');$('#libraryHome').classList.remove('hidden');renderEntityGrid(currentKind);$('#library').scrollTop=0}
+function saveEntity(){if(!editDraft)return;const kind=currentKind,id=String(currentId);const list=entityList(kind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list[i]=clone(editDraft);ensureAudioPlaceholder(kind,editDraft);saveState();renderEntityGrid(kind);closeEntityEditor();if(kind==='artifacts')void playSyncSharedArtifactLibrary({onlyIds:[id],forceIds:[id]})}
+function deleteEntity(){if(!editDraft)return;if(!confirm('Xoá "'+(editDraft.name||'Lá này')+'"?'))return;const list=entityList(currentKind),i=list.findIndex(x=>x.id===currentId);if(i>=0)list.splice(i,1);if(prefs[currentKind])delete prefs[currentKind][currentId];const bucket=currentKind==='cards'?'cards':'artifacts';state.audio[bucket]=(state.audio[bucket]||[]).filter(a=>a.targetId!==currentId);saveState();savePrefs();closeEntityEditor()}
+function setFace(face){if(face==='back'&&!editBackRendered){renderEntityBack();editBackRendered=true}Array.from(document.querySelectorAll('.face-switch button')).forEach(b=>b.classList.toggle('active',b.dataset.face===face));Array.from(document.querySelectorAll('.face')).forEach(f=>f.classList.toggle('active',f.id===(face==='front'?'entityFront':'entityBack')))}
+let faceTouchStart=null;
+function bindFaceSwipe(){
+  const editor=$('#entityEditor');
+  editor.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];faceTouchStart={x:t.clientX,y:t.clientY,edge:t.clientX<30}},{passive:true});
+  editor.addEventListener('touchend',e=>{if(!faceTouchStart||!e.changedTouches.length)return;const t=e.changedTouches[0],dx=t.clientX-faceTouchStart.x,dy=t.clientY-faceTouchStart.y;const edge=faceTouchStart.edge;faceTouchStart=null;if(Math.abs(dx)<55||Math.abs(dx)<=Math.abs(dy)*1.25)return;if(edge&&dx>70){closeEntityEditor();return}const front=$('#entityFront').classList.contains('active');if(dx<0&&front)setFace('back');else if(dx>0&&!front)setFace('front')},{passive:true});
+}

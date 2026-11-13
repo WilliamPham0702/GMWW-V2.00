@@ -1,3 +1,4 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -30,8 +31,8 @@ test('V3.236 tied save/kill votes are counted as alive, only majority kill is de
  assert.equal(gallowsAutomaticOutcome({...base,votes:{a:'👍',c:'👍'}}),'alive');
 });
 test('V3.236 campfire enters GM menu even in setup; no create-room binding',()=>{
- const source=s('server-game/src/50-roles-and-artifacts.part');
- const battle=s('server-game/src/40-battle-and-timeline.part');
+ const source=gmSource('50-roles-and-artifacts');
+ const battle=gmSource('40-battle-and-timeline');
  const html=s('server-game/current/GMWW.html');
  assert.match(source,/\.play-core-pearl'\)\?\.addEventListener\('click',\(\)=>battleToggleWolfMenu\(\)\)/);
  assert.match(battle,/battleToggleWolfMenu\(\)\{\s*\/\/ The campfire/);
@@ -40,7 +41,7 @@ test('V3.236 campfire enters GM menu even in setup; no create-room binding',()=>
  assert.doesNotMatch(source,/\.play-core-pearl'\)\?\.addEventListener\('click',\(\)=>.*openPlayCreateRoomSheet/);
 });
 test('V3.236 explicit show/hide persists independently of touch auto-hide',()=>{
- const gm=s('server-game/src/50-roles-and-artifacts.part');
+ const gm=gmSource('50-roles-and-artifacts');
  const css=s('server-game/current/style.css');
  assert.match(gm,/const GMWW_CHROME_MENU_KEY/);
  assert.match(gm,/gmwwPlayChromeHidden=!gmwwPlayChromeHidden/);
@@ -51,7 +52,7 @@ test('V3.236 explicit show/hide persists independently of touch auto-hide',()=>{
  assert.match(css,/overflow-x:auto!important/);
 });
 test('V3.236 62px footer SVG icons, text only for action, bare nomination number',()=>{
- const html=s('server-game/current/GMWW.html'),css=s('server-game/current/style.css'),js=s('server-game/src/40-battle-and-timeline.part');
+ const html=s('server-game/current/GMWW.html'),css=s('server-game/current/style.css'),js=gmSource('40-battle-and-timeline');
  for(const id of ['battleDayNoticeToggle','battleDayGallowsToggle','battleUndoButton']){
   const pos=html.indexOf('id="'+id+'"');assert.ok(pos>0,id);
   assert.match(html.slice(pos,pos+550),/gmww-footer-icon/);
@@ -63,12 +64,12 @@ test('V3.236 62px footer SVG icons, text only for action, bare nomination number
  assert.doesNotMatch(js,/countMark\.textContent='✦ '/);
 });
 test('V3.236 player and GM see no-lynch public verdict; bundled sources match',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const player=s('src/player-web-src/30-rooms-and-realtime.part');
- const js=s('server-game/src/40-battle-and-timeline.part');
+ const player=playerWebSource('30-rooms-and-realtime');
+ const js=gmSource('40-battle-and-timeline');
  assert.match(player,/\['dead','alive','no_lynch'\]/);
  assert.match(js,/HÒA PHIẾU · KHÔNG TREO/);
  const gmParts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'];
- assert.equal(s('server-game/current/app.js'),gmParts.map(x=>s('server-game/src/'+x+'.part')).join(''));
+ assert.equal(s('server-game/current/app.js'),gmParts.map(x=>gmSource(x)).join(''));
  const webParts=['00-bootstrap-and-session','10-role-card-artwork','20-village-and-profile','30-rooms-and-realtime','40-cards-and-game','50-privacy-and-runtime'];
- assert.equal(s('src/gmww-members-live.js'),'export const gmwwMembersLiveScript = '+JSON.stringify(webParts.map(x=>s('src/player-web-src/'+x+'.part')).join(''))+';\n');
+ assert.equal(s('src/gmww-members-live.js'),'export const gmwwMembersLiveScript = '+JSON.stringify(webParts.map(x=>playerWebSource(x)).join(''))+';\n');
 });

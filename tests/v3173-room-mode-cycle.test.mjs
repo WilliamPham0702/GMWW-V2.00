@@ -1,10 +1,12 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+const setup=gmSource('30-village-and-setup');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const code=(a,b)=>{const start=setup.indexOf(a),end=setup.indexOf(b,start+a.length);assert.ok(start>=0&&end>start,a);return setup.slice(start,end)};
 test('One shared room, room mode button exists only after creation',()=>{
  assert.match(html,/<button id="playRoomModeToggle"/);

@@ -1,0 +1,183 @@
+function playRosterEligible(m){const id=String(m&&m.loginId||'').trim();return /^[A-Za-z0-9._]{4,20}$/.test(id)&&id.toLowerCase()!=='gm0702'}
+function playRosterSelectedIds(){return [...document.querySelectorAll('#playRosterList .play-roster-row.selected')].map(x=>String(x.dataset.loginId||'')).filter(Boolean)}
+function updatePlayRosterCount(){const count=playRosterSelectedIds().length,el=document.getElementById('playRosterCount');if(el)el.textContent=count+' đã chọn'}
+let playRosterFilterMode='all';
+function applyPlayRosterFilter(){
+  const list=document.getElementById('playRosterList');if(!list)return;
+  document.querySelectorAll('#playRosterFilters [data-play-roster-filter]').forEach(btn=>{
+    const active=btn.dataset.playRosterFilter===playRosterFilterMode;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-pressed',active?'true':'false');
+  });
+  const rows=[...list.querySelectorAll('.play-roster-row')];let visible=0;
+  rows.forEach(row=>{
+    const show=playRosterFilterMode==='all'||row.dataset.presence===playRosterFilterMode;
+    row.classList.toggle('hidden',!show);
+    if(show)visible++;
+  });
+  let empty=document.getElementById('playRosterFilterEmpty');
+  if(rows.length&&!empty){
+    empty=document.createElement('div');empty.id='playRosterFilterEmpty';empty.className='member-empty';
+    list.appendChild(empty);
+  }
+  if(empty){
+    empty.textContent=playRosterFilterMode==='online'?'Không có Thành Viên Online.':playRosterFilterMode==='offline'?'Không có Thành Viên Offline.':'Chưa có Thành Viên trong danh bạ.';
+    empty.classList.toggle('hidden',visible>0);
+  }
+}
+function setPlayRosterFilter(mode){
+  playRosterFilterMode=mode==='online'||mode==='offline'?mode:'all';
+  applyPlayRosterFilter();
+}
+async function playLoadFreshRosterMembers(){
+  const data=await gmApi('/api/gm/members');
+  if(!Array.isArray(data?.members))throw new Error('Không nhận được danh sách Thành Viên mới nhất.');
+  memberAdminState.members=data.members;memberAdminState.loaded=true;
+  return data.members;
+}
+let playRosterPresenceTimer=null;
+async function playRefreshRosterPresence(){
+  const sheet=document.getElementById('playRosterSheet');
+  if(!sheet||sheet.classList.contains('hidden'))return;
+  try{
+    const members=await playLoadFreshRosterMembers();
+    if(sheet.classList.contains('hidden'))return;
+    const live=new Map(members.map(m=>[String(m.loginId),m]));
+    document.querySelectorAll('#playRosterList .play-roster-row').forEach(row=>{
+      const member=live.get(String(row.dataset.loginId||'')),online=member?.online===true;
+      const dot=row.querySelector('.play-roster-presence');
+      if(!dot)return;
+      dot.classList.toggle('is-online',online);dot.classList.toggle('is-offline',!online);
+      dot.setAttribute('aria-label',online?'Đang trực tuyến':'Đang ngoại tuyến');
+      dot.title=online?'Đang trực tuyến':'Đang ngoại tuyến';
+      row.dataset.presence=online?'online':'offline';
+    });
+    applyPlayRosterFilter();
+  }catch(err){console.warn('[GMWW roster presence]',err)}
+}
+async function openPlayRosterSheet(){
+  if(!isLivePlayRoom()){await playCreateRoom();return}
+  const sheet=document.getElementById('playRosterSheet'),list=document.getElementById('playRosterList');if(!sheet||!list)return;
+  list.innerHTML='<div class="member-empty">Đang đồng bộ trạng thái Thành Viên…</div>';
+  let rows;
+  try{rows=await playLoadFreshRosterMembers()}
+  catch(err){list.innerHTML='<div class="member-empty member-error">'+playEsc(err.message||'Không đồng bộ được trạng thái.')+'</div>';sheet.classList.remove('hidden');return}
+  rows=rows.filter(playRosterEligible);
+  const selected=new Set((playSceneState.selectedMemberIds||[]).map(String));
+  document.getElementById('playRosterRoomLabel').textContent='Phòng '+playSceneState.roomCode;list.innerHTML='';
+  for(const m of rows){
+    const b=document.createElement('button');b.type='button';b.className='play-roster-row'+(selected.has(String(m.loginId))?' selected':'');b.dataset.loginId=String(m.loginId);b.dataset.presence=m.online===true?'online':'offline';
+    const initial=(String(m.displayName||m.loginId||'?').trim().charAt(0)||'?').toUpperCase();
+    const online=m.online===true,status=online?'Đang trực tuyến':'Đang ngoại tuyến';
+    b.innerHTML='<img alt=""><div><b>'+playEsc(m.displayName||m.loginId)+'</b></div><span class="play-roster-presence '+(online?'is-online':'is-offline')+'" role="img" aria-label="'+status+'" title="'+status+'"></span><span class="play-roster-check">✓</span>';
+    const img=b.querySelector('img'),characterSrc=playCharacterUrl(m.gameCharacterId);img.src=characterSrc||memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{if(characterSrc&&img.src!==memberAvatarUrl(m.gameCharacterId||m.avatarId)){img.src=memberAvatarUrl(m.gameCharacterId||m.avatarId);return}const s=document.createElement('span');s.className='play-roster-avatar-fallback';s.textContent=initial;img.replaceWith(s)};
+    b.onclick=()=>{b.classList.toggle('selected');updatePlayRosterCount()};list.appendChild(b);
+  }
+  if(!rows.length)list.innerHTML='<div class="member-empty">Chưa có Thành Viên trong danh bạ.</div>';
+  sheet.classList.remove('hidden');updatePlayRosterCount();setPlayRosterFilter('all');
+  if(playRosterPresenceTimer)clearInterval(playRosterPresenceTimer);
+  playRosterPresenceTimer=setInterval(()=>{if(!document.hidden)void playRefreshRosterPresence()},10000);
+}
+let playRosterSaving=false;
+function playRosterSaveFeedback(message='',isError=false){
+  const status=document.getElementById('playRosterSaveStatus');if(!status)return;
+  status.textContent=String(message||'');status.hidden=!message;status.dataset.kind=isError?'error':'info';
+}
+function closePlayRosterSheet(){
+  if(playRosterSaving)return;
+  if(playRosterPresenceTimer)clearInterval(playRosterPresenceTimer);
+  playRosterPresenceTimer=null;
+  document.getElementById('playRosterSheet')?.classList.add('hidden');
+}
+async function savePlayRosterIds(ids){
+  // Confirm once against the authoritative room. Do not make the GM wait for a
+  // second GET + full-scene render after the server has acknowledged the POST.
+  if(playSceneRuntime.busy||playRosterSaving)return;
+  ids=[...new Set((ids||[]).map(String).filter(id=>id&&playRosterEligible({loginId:id})))];
+  if(!ids.length){playRosterSaveFeedback('Hãy chọn ít nhất 1 Người Chơi.',true);playFlashError('Hãy chọn ít nhất 1 Người Chơi.');return}
+  const existing=new Map(playLiveMembers().map(p=>[String(p.loginId),p])),source=(memberAdminState.members||[]).filter(playRosterEligible),selected=new Set(ids);
+  const chosen=source.filter(m=>selected.has(String(m.loginId))).map(m=>({
+    loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,
+    gameCharacterId:m.gameCharacterId||existing.get(String(m.loginId))?.gameCharacterId||null,
+    seatId:existing.get(String(m.loginId))?.seatId||null
+  }));
+  if(chosen.length!==ids.length){playRosterSaveFeedback('Danh sách đã thay đổi. Hãy mở lại Gọi Người.',true);return}
+  if(playSceneState.roomMode==='online'&&playSceneRuntime.room?.demo!==true){
+    const offline=source.filter(m=>selected.has(String(m.loginId))&&m.online!==true);
+    if(offline.length){playRosterSaveFeedback('Chế độ ONLINE chỉ chọn Người Chơi đang Online.',true);playFlashError('Chế độ ONLINE chỉ chọn Người Chơi đang Online.');return}
+  }
+  const roomCode=String(playSceneState.roomCode);
+  const save=document.getElementById('playRosterSave'),cancel=document.getElementById('playRosterCancel'),selectAll=document.getElementById('playRosterSelectAll'),sheet=document.getElementById('playRosterSheet');
+  playRosterSaving=true;playSetBusy(true);
+  if(save){save.disabled=true;save.textContent='ĐANG XỬ LÝ…'}
+  if(cancel)cancel.disabled=true;if(selectAll)selectAll.disabled=true;
+  sheet?.setAttribute('aria-busy','true');
+  playRosterSaveFeedback('Đang xác nhận '+ids.length+' thành viên với Server…');
+  try{
+    const data=await playRoomApi('/participants',{method:'POST',timeoutMs:12000,body:JSON.stringify({members:chosen,replace:true})});
+    if(data?.ok!==true||Number(data.selectedCount)!==ids.length)throw new Error('Server chưa xác nhận đủ Thành Viên. Danh sách chưa được chốt.');
+    if(roomCode!==String(playSceneState.roomCode))throw new Error('Phòng đã thay đổi. Vui lòng mở lại Gọi Người.');
+    playSceneRuntime.room=data.room||playSceneRuntime.room;
+    playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;
+    playSceneState.selectedMemberIds=ids;playSceneState.step='seats';savePlayScene();
+    // Release the sheet on POST acknowledgement, not after the much heavier
+    // follow-up GET/status-display sync/character redraw.
+    playRosterSaving=false;closePlayRosterSheet();
+    void playPublishStage('seats');
+    renderPlayScene();
+    setTimeout(()=>{if(isLivePlayRoom()&&String(playSceneState.roomCode)===roomCode&&!playSceneRuntime.busy)void playSyncRoom(true)},0);
+  }catch(err){
+    const message=String(err?.message||'Không thể xác nhận. Vui lòng thử lại.');
+    playRosterSaveFeedback(message,true);playFlashError(message);
+  }finally{
+    playRosterSaving=false;playSetBusy(false);
+    if(save){save.disabled=false;save.textContent='XÁC NHẬN'}
+    if(cancel)cancel.disabled=false;if(selectAll)selectAll.disabled=false;
+    sheet?.removeAttribute('aria-busy');
+  }
+}
+async function savePlayRoster(){
+  return savePlayRosterIds(playRosterSelectedIds());
+}
+
+function playApplyLobbyStage(generation){
+  playSceneRuntime.syncSerial++;
+  disconnectPlaySocket();
+  playSceneState.step='lobby';playSceneState.phase='lobby';playSceneState.night=0;
+  playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;
+  playSceneState.lobbyGeneration=Math.max(Number(playSceneState.lobbyGeneration||0),Number(generation||0));
+  playSceneState.activePlayerId='';playSceneState.selectedMemberIds=[];playSceneState.assignmentsPreview=[];
+  playSceneState.matchId='';playSceneState.artifactCount=0;playSceneState.rolePlan={};playSceneState.gameTemplateId='';
+  playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];
+  playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
+  playSceneRuntime.activeEffects=[];playSceneRuntime.lastError='';
+  playRoomUiState.selectedCode='';playRoomUiState.stage='rooms';playRoomUiState.editorMode='';
+  savePlayRoomRegistry(playRoomRegistry().map(r=>({...r,enabled:false})));
+  document.getElementById('playCreateRoomSheet')?.classList.add('hidden');
+  savePlayScene();renderPlayScene();
+}
+async function playReturnToLobby(){
+  if(playSceneRuntime.busy||playSceneState.step==='lobby')return false;
+  if(!confirm('Trở về SẢNH CHỜ?\nHệ thống sẽ RESET và TẮT tất cả phòng, kết thúc các ván đang diễn ra và đưa người chơi trên mọi thiết bị về sảnh chờ.\nTài khoản, nhân vật và Ván Mẫu vẫn được giữ nguyên.'))return false;
+  if(typeof demoStop==='function')await demoStop('lobby_reset');
+  playSetBusy(true);
+  try{
+    const data=await gmApi('/api/gm/lobby/reset',{method:'POST',body:JSON.stringify({source:'GM_BACK'})});
+    if(data?.ok!==true||data?.reset!==true)throw new Error('Server chưa xác nhận reset toàn bộ phòng.');
+    playApplyLobbyStage(data.generation);
+    gmwwSendGmPresence(true);
+    return true;
+  }catch(err){playFlashError('Chưa thể về sảnh chờ. '+(err?.message||err));return false}
+  finally{playSetBusy(false)}
+}
+async function backPlayPhase(){
+  if(demoRunner.running)return;
+  if(playSceneRuntime.busy)return;
+  if(playSceneState.phase==='night'&&playSceneRuntime.nightRuntime&&Number(playSceneRuntime.nightRuntime.cursor||0)>0){
+    playSetBusy(true);try{const d=await playRoomApi('/turn',{method:'POST',body:JSON.stringify({action:'back'})});playSceneRuntime.nightRuntime=d?.runtime||playSceneRuntime.nightRuntime;await playSyncRoom(true)}catch(err){playFlashError(err.message)}finally{playSetBusy(false)}return
+  }
+  if(playSceneState.phase!=='lobby'){await playSyncRoom(true);return}
+  if(playSceneState.step==='lobby')return;
+  if(playSceneState.step==='seats'||playSceneState.step==='room'){await playReturnToLobby();return}
+  advancePlaySetup(-1)
+}

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -37,7 +38,7 @@ test('Old and malformed state does not permanently lock out legitimate users',()
 });
 
 test('Worker admission path hashes the client address, applies 429, and probes storage without mutating room data',()=>{
-  const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+  const server=workerSource();
   assert.match(server,/publicEntryPolicy\(request\.method,url\.pathname\)/);
   assert.match(server,/request\.headers\.get\("CF-Connecting-IP"\)/);
   assert.match(server,/sha256\("public-entry-v1:"\+policy\.key\+":"\+clientAddress\)/);

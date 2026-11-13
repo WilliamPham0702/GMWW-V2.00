@@ -1,22 +1,16 @@
+import {GM_SOURCE_DIR,GM_GROUPS,groupBuffer} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 
-const paths=[
-  'server-game/src/00-core-and-library.part',
-  'server-game/src/10-library-and-settings.part',
-  'server-game/src/20-members-and-roster.part',
-  'server-game/src/30-village-and-setup.part',
-  'server-game/src/40-battle-and-timeline.part',
-  'server-game/src/45-online-chat.part',
-  'server-game/src/50-roles-and-artifacts.part'
-];
+const groups=GM_GROUPS;
 const digest=b=>createHash('sha256').update(b).digest('hex');
 
 test('G3.8: seven cohesive GM source parts regenerate EXACT shipped app.js bytes',()=>{
-  const segments=paths.map(path=>readFileSync(path));
+  assert.equal(groups.length,7);
+  const segments=groups.map(group=>groupBuffer(GM_SOURCE_DIR,group));
   for(const [index,chunk] of segments.entries()){
     assert.ok(chunk.length>1000,'source module '+index+' must not be empty');
     assert.ok(chunk.length<300000,'source module '+index+' must be much smaller than monolith');

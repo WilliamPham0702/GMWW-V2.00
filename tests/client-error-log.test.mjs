@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeClientError, appendClientError, formatClientErrorReport, CLIENT_ERROR_MAX_ITEMS } from "../src/gmww-client-error-log.js";
@@ -35,7 +36,7 @@ test("report text is paste-ready and includes room/version", () => {
 
 import fs from "node:fs";
 import vm from "node:vm";
-const src = fs.readFileSync("src/index.js", "utf8");
+const src = workerSource();
 const a = src.indexOf('  if(url.pathname==="/api/client-error"&&request.method==="POST"){');
 const b = src.indexOf('  if(url.pathname==="/api/gm/storage-optimizer"', a);
 assert.ok(a > 0 && b > a, "client-error routes must exist");

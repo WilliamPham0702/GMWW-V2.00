@@ -46,8 +46,8 @@ jobs:
           git diff --quiet 97e4d328366548983aa8009ab4be646f972c4085 HEAD -- src/index.js server-game/current/app.js server-game/src/30-village-and-setup.part
           git diff --quiet gmww-v3.280 HEAD -- assets wrangler.jsonc package.json package-lock.json
           test "$(node -p 'require("./package.json").version')" = "3.280.0"
-          grep -Fq 'roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode)' src/index.js
-          grep -Fq 'const roomMode=desiredDemo?"online":' src/index.js
+          grep -rFq 'roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode)' src/index.js src/worker
+          grep -rFq 'const roomMode=desiredDemo?"online":' src/index.js src/worker
           echo "release=true" >> "$GITHUB_OUTPUT"
       - name: Verify focused DEMO room isolation and Worker dry-run
         if: steps.gate.outputs.release == 'true'

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -26,7 +27,7 @@ test('V3.94 version sources and IPA update manifest route are aligned',()=>{
   const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assertCurrentRelease();
   assert.equal(worker.split('selectVerifiedRuntimeV359Delta(versioned,').length,2);
   assert.equal(worker.split('selectVerifiedRuntimeV359Delta(manifest,').length,2);

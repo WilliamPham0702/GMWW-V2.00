@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import fs from 'node:fs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('V2.67 moves Auto GM authority to Cloudflare Durable Object alarms',()=>{
-  const server=read('src/index.js');
+  const server=workerSource();
   const roomContract=read('src/gmww-public-room-contract.js');
   assert.ok(server.includes('async gmAuto(request,body)'));
   assert.ok(server.includes('async scheduleRoomAlarm(meta=null)'));
@@ -18,7 +19,7 @@ test('V2.67 moves Auto GM authority to Cloudflare Durable Object alarms',()=>{
 });
 
 test('server auto cycle advances night turns, enters morning, then starts the next night',()=>{
-  const server=read('src/index.js');
+  const server=workerSource();
   assert.ok(server.includes('await this.advanceNightRuntime(meta,"next","auto")'));
   assert.ok(server.includes('await this.applyCycle(fresh,"morning",night,"morning-"+night,"auto")'));
   assert.ok(server.includes('await this.applyCycle(meta,"night",night+1,"night-"+(night+1),"auto")'));
@@ -27,7 +28,7 @@ test('server auto cycle advances night turns, enters morning, then starts the ne
 });
 
 test('manual turn/cycle and Auto GM endpoints are serialized against server alarms',()=>{
-  const server=read('src/index.js');
+  const server=workerSource();
   assert.ok(server.includes("'/gm/cycle','/gm/turn','/gm/auto'"));
   assert.ok(server.includes('return j(await this.applyCycle(meta,phase,night,cycleKey'));
   assert.ok(server.includes('await this.scheduleRoomAlarm(meta)'));
@@ -45,7 +46,7 @@ test('GM IPA no longer owns live Auto GM timing and syncs the authoritative serv
 });
 
 test('current GMWW runtime metadata is consistent and native shell is internally aligned',()=>{
-  const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
+  const server=workerSource(),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   const version=app.match(/const VERSION='([^']+)';/)?.[1];
   assert.ok(version,'app VERSION must exist');
   assert.ok(server.includes('VERSION="V'+version+'"'));

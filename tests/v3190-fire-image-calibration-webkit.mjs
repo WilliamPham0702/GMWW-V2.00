@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 // V3.190 iPhone WebKit: actual GM Day/Night uploaded scene fire calibration.
 // Isolated browser harness; no real room, user or Production mutations.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {webkit} from 'playwright';
 const gm=readFileSync('server-game/current/app.js','utf8');
-const engine=readFileSync('src/index.js','utf8');
+const engine=workerSource();
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');
 const start=gm.indexOf('function villageFirePosition(){');

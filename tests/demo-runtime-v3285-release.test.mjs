@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +8,7 @@ import fs from 'node:fs';
 test('V3.290 Runtime and Worker versions align with unchanged native shell',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const gm=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   assert.equal(pkg.version,'3.290.0');
@@ -17,7 +19,7 @@ test('V3.290 Runtime and Worker versions align with unchanged native shell',{ski
   assert.ok(html.includes('<title>GMWW V3.290</title>'));
   assert.ok(worker.includes('const roomMode=desiredDemo?"online":'));
   assert.ok(worker.includes('roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode)'));
-  assert.ok(fs.readFileSync('server-game/src/30-village-and-setup.part','utf8').includes("roomMode:(target==='online'||target==='demo')?'online':'offline'"));
+  assert.ok(gmSource('30-village-and-setup').includes("roomMode:(target==='online'||target==='demo')?'online':'offline'"));
 });
 test('V3.290 package preserves OTA integrity, release notes and rollback',()=>{
   const notes=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');

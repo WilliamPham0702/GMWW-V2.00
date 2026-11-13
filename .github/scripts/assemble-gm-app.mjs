@@ -5,19 +5,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
+import {GM_SOURCE_DIR,GM_GROUPS,groupBuffer,assertNoStrayGroups} from './source-groups.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-const parts=[
-  '00-core-and-library.part',
-  '10-library-and-settings.part',
-  '20-members-and-roster.part',
-  '30-village-and-setup.part',
-  '40-battle-and-timeline.part',
-  '45-online-chat.part',
-  '50-roles-and-artifacts.part'
-];
+const parts=GM_GROUPS;
+assertNoStrayGroups(GM_SOURCE_DIR,parts);
 const target=path.join(root,'server-game/current/app.js');
-const assembled=Buffer.concat(parts.map(n=>fs.readFileSync(path.join(root,'server-game/src',n))));
+const assembled=Buffer.concat(parts.map(group=>groupBuffer(GM_SOURCE_DIR,group)));
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const mode=process.argv[2]||'--verify';
 if(mode==='--write'){

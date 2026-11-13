@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ const read=p=>fs.readFileSync(p,'utf8');
 const html=read('server-game/current/GMWW.html');
 const app=read('server-game/current/app.js');
 const appCss=read('server-game/current/style.css');
-const server=read('src/index.js');
+const server=workerSource();
 const live=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
 const villageCss=read('assets/village/village.css');

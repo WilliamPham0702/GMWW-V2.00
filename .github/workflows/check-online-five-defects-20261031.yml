@@ -4,8 +4,8 @@ on:
     branches: [main]
     paths:
       - "src/index.js"
-      - "server-game/src/40-battle-and-timeline.part"
-      - "server-game/src/45-online-chat.part"
+      - "server-game/src/40-battle-and-timeline/**"
+      - "server-game/src/45-online-chat/**"
       - "server-game/current/app.js"
       - "server-game/current/battle-controls.js"
       - "tests/online-wolf-undo-gm-chat-notices-20261031.test.mjs"
@@ -43,4 +43,4 @@ jobs:
       - name: Xác minh thay đổi sạch và SHA-256 chứng cứ
         run: |
           git diff --check HEAD^ HEAD
-          sha256sum src/index.js server-game/current/app.js server-game/src/40-battle-and-timeline.part server-game/src/45-online-chat.part
+          sha256sum src/index.js server-game/current/app.js server-game/src/40-battle-and-timeline/*.part server-game/src/45-online-chat/*.part

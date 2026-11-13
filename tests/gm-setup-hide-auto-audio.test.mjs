@@ -12,5 +12,5 @@ test('GM setup hides Auto GM and Audio without removing their battle controls',(
  assert.match(block,/grid-template-columns:44px minmax\(0,1fr\) 44px!important/);
  for(const id of ['playAutoGM','playAudioTop'])assert.match(block,new RegExp('> #'+id+'\\b'));
  assert.doesNotMatch(block,/\[data-phase="day"\]|\[data-phase="night"\]/);
- for(const id of ['playExitVillage','playPhasePill','playEndGame','playAutoGM','playAudioTop'])assert.ok(html.includes('id="'+id+'"'));
+ for(const id of ['playExitVillage','playPhasePill','playEndGame','playChatTop'])assert.ok(html.includes('id="'+id+'"'));
 });

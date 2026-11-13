@@ -1,0 +1,51 @@
+name: Check Player Room Template Layout
+on:
+  pull_request:
+    paths:
+      - 'src/player-web-src/37-player-rooms/**'
+      - 'src/gmww-members-live.js'
+      - 'src/player-page-src/00-head-and-style.part'
+      - 'tests/player-room-template-layout-browser.mjs'
+      - '.github/workflows/check-player-room-template-layout.yml'
+permissions:
+  contents: read
+jobs:
+  template-layout:
+    runs-on: ubuntu-24.04
+    container: mcr.microsoft.com/playwright:v1.58.2-noble
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm install --no-save --package-lock=false --no-audit --no-fund playwright@1.58.2
+      - name: Reproduce percentage height regression on base source when present
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git -c safe.directory="$GITHUB_WORKSPACE" cat-file -e "$BASE_SHA:src/player-web-src/37-player-rooms.part" 2>/dev/null; then
+            git -c safe.directory="$GITHUB_WORKSPACE" show "$BASE_SHA:src/player-web-src/37-player-rooms.part" > /tmp/template-layout-before.part
+          else
+            : > /tmp/template-layout-before.part
+            for f in $(git -c safe.directory="$GITHUB_WORKSPACE" ls-tree -r --name-only "$BASE_SHA" -- src/player-web-src/37-player-rooms/ | sort); do
+              git -c safe.directory="$GITHUB_WORKSPACE" show "$BASE_SHA:$f" >> /tmp/template-layout-before.part
+            done
+          fi
+          if grep -Fq 'min-width:0;height:100%;font-size:12px' /tmp/template-layout-before.part; then
+            node tests/player-room-template-layout-browser.mjs --source=/tmp/template-layout-before.part --expect-layout-failure
+          fi
+          if grep -Fq 'pr.busy)refresh();else renderDock()' /tmp/template-layout-before.part; then
+            node tests/player-room-template-layout-browser.mjs --source=/tmp/template-layout-before.part --expect-refresh-failure
+          fi
+      - name: Verify picker and designer layout and interactions on iPhone and iPad sizes
+        run: node tests/player-room-template-layout-browser.mjs
+      - name: Save browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: template-layout-screenshots
+          path: artifacts/template-layout

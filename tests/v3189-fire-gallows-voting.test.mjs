@@ -1,3 +1,5 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -51,9 +53,9 @@ test('GM mode never accepts web votes, and mode switch clears old election recei
  assert.equal(gallowsNominate(g,'player2','player3').error,'GM_MANUAL_MODE');
 });
 test('built Player Web has pirate drag and accessible double-tap listing, GM controls tally and bans',()=>{
- const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+ const player=playerWebSource('30-rooms-and-realtime');
  const frame=fs.readFileSync('assets/village/village.mjs','utf8');
- const host=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+ const host=playerWebSource('20-village-and-profile');
  const gm=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  for(const required of ['gmwwPirateNominate','pointermove','gmww:gallows-open-nominations','gmww:gallows-preview-nominate'])assert.ok(frame.includes(required));
@@ -62,5 +64,5 @@ test('built Player Web has pirate drag and accessible double-tap listing, GM con
  assert.ok(html.indexOf('data-gallows-command="open"')<html.indexOf('id="battleGallowsCandidate"'));
  assert.ok(html.includes('battleGallowsBanDetails'));
  assert.ok(gm.includes('battleGallowsSelectedCount')&&gm.includes('battleGallowsVotedCount'));
- assert.ok(fs.readFileSync('src/index.js','utf8').includes('gallowsAutomaticOutcome'));
+ assert.ok(workerSource().includes('gallowsAutomaticOutcome'));
 });

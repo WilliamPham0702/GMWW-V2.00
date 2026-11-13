@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ import {gmwwMembersPage} from '../src/gmww-members-page.js';
 import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 
 const page=gmwwMembersPage('TEST01');
-const source=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+const source=playerWebSource('20-village-and-profile');
 
 test('first paint is gated in the HTML head before any screen markup',()=>{
   const head=page.slice(0,page.indexOf('</head>'));

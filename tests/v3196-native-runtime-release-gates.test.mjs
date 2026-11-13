@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {compareReleaseVersions,verifyOtaVersionAdvance} from '../.github/scripts
 
 const read=p=>fs.readFileSync(p,'utf8');
 const pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.json'));
-const worker=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html');
+const worker=workerSource(),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html');
 const pipeline=read('.github/scripts/prepare-update-channel.mjs'),nativeCi=read('.github/workflows/build-server-game-ipa.yml');
 
 test('Runtime V3.207 is synchronized across Worker, GM, npm and cache keys; native shell stays V3.110',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{

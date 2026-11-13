@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -62,7 +63,7 @@ test('Fairy moves to next living seat; without a choice bite does not move',()=>
 });
 
 test('existing role cards migrate Snow/Guard/Alpha/Fairy limits without destroying artwork and audio',()=>{
-  const source=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+  const source=gmSource('00-core-and-library');
   const start=source.indexOf('function applyNight02Rules(s){');
   const end=source.indexOf('function applyV221AudioGuard(s){',start);
   assert.ok(start>=0&&end>start,'NIGHT-02 card migration must exist');

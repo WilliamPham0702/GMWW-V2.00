@@ -1,8 +1,9 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-const settings=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
-const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const village=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+const settings=gmSource('10-library-and-settings');
+const battle=gmSource('40-battle-and-timeline');
+const village=gmSource('30-village-and-setup');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 test('six icon size choices are 25..150 on exactly one row',()=>{

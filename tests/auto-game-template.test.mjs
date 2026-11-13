@@ -1,12 +1,13 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const part=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const part=gmSource('40-battle-and-timeline');
 const runtime=readFileSync('server-game/current/app.js','utf8');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
-const actions=readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const actions=gmSource('50-roles-and-artifacts');
 const begin='function gmAutoRankTemplates(',end='function gmAutoShowSummary(';
 const extract=text=>text.slice(text.indexOf(begin),text.indexOf(end));
 const context=vm.createContext({});
@@ -24,7 +25,7 @@ const sample=[
   ['role_fairy','Yêu Tinh','village'],['role_knight','Hiệp Sĩ','village'],
   ['role_bear_god','Thần Gấu','village'],
   ['role_assassin','Sát Thủ','third'],['role_destroyer','Kẻ Hủy Diệt','third']
-].map(([id,name,factionId])=>({id,name,factionId}));
+].concat(Array.from({length:20},(_,i)=>['role_extra_'+i,'Vai Dân '+i,'village'])).map(([id,name,factionId])=>({id,name,factionId}));
 
 test('role setup: exact count, two sides and third side from 10 players',()=>{
   for(const n of [3,4,5,6,7,8,9,10,11,12,15,20,25,30]){
@@ -33,6 +34,7 @@ test('role setup: exact count, two sides and third side from 10 players',()=>{
     assert.ok(generated.counts.wolf>=1,'wolf for '+n);
     assert.ok(generated.counts.village>generated.counts.wolf,'village majority for '+n);
     assert.equal(generated.counts.third,n>=10?1:0,'third side for '+n);
+    assert.ok(!generated.roles.some(r=>r.roleId==='role_villager'),'no plain villager for '+n);
     for(const role of generated.roles){
       const canonical=sample.find(r=>r.id===role.roleId);
       assert.ok(canonical,'unknown role '+role.roleId);

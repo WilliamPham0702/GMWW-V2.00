@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 // Isolated, local-only two-player Online chat and WebSocket reconnect acceptance.
 // Never point this test at Production, even accidentally.
 import assert from 'node:assert/strict';
@@ -48,7 +49,7 @@ async function waitOpen(c){
   await eventually(()=>c.socket.readyState===WebSocket.OPEN||c.socket.readyState===WebSocket.CLOSED&&(()=>{throw Error('Socket closed during handshake')})(),'open WebSocket');
   await eventually(()=>c.has('room_state'),'room_state after handshake');
 }
-const playerSource=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+const playerSource=playerWebSource('30-rooms-and-realtime');
 assert.match(playerSource,/new WebSocket\(proto\+'\/\/'\+location\.host\+'\/ws\//,'Player Web must connect on current hostname');
 assert.match(playerSource,/socket\.onclose=e=>[\s\S]*?setTimeout\(connectWS,1800\)/,'Player Web must reconnect after socket close');
 assert.match(playerSource,/d\.type==='chat_tick'[\s\S]*?gmwwChatRefresh\(\)/,'Chat tick must trigger authenticated refresh');

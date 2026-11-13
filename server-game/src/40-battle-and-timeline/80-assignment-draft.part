@@ -1,0 +1,38 @@
+function playRandomInt(max){if(max<=1)return 0;if(globalThis.crypto?.getRandomValues){const a=new Uint32Array(1),limit=Math.floor(0x100000000/max)*max;let n;do{crypto.getRandomValues(a);n=a[0]}while(n>=limit);return n%max}return Math.floor(Math.random()*max)}
+function playShuffle(items){const a=items.slice();for(let i=a.length-1;i>0;i--){const j=playRandomInt(i+1),t=a[i];a[i]=a[j];a[j]=t}return a}
+
+/* Step 5: GM-only assignment review. Only Step 6 calls /role-assets or /assignments. */
+function playAssignmentDraftStatus(){
+  const members=playLiveMembers().filter(m=>m?.loginId),rows=Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[],
+    deck=new Map(Object.entries(playSceneState.rolePlan||{}).filter(([,n])=>Number(n)>0).map(([id,n])=>[String(id),Number(n)])),
+    counts=new Map(),ids=new Set(members.map(m=>String(m.loginId))),seen=new Set();
+  if(!members.length)return{ok:false,message:'Chưa có Người Chơi trong phòng.'};
+  if(!playSceneRuntime.room?.seatsLocked)return{ok:false,message:'Hãy chốt vị trí trước khi Phân Vai.'};
+  if(playRolePlanTotal()!==members.length)return{ok:false,message:'Ván Mẫu có '+playRolePlanTotal()+' lá, phòng có '+members.length+' người.'};
+  if(rows.length!==members.length)return{ok:false,message:'Chưa phân đủ Vai Trò cho '+members.length+' người.'};
+  const artifacts=new Set(playTemplateSelectedArtifacts().map(a=>String(a.id)));
+  for(const row of rows){
+    const login=String(row.loginId||''),role=String(row.roleId||''),artifact=String(row.artifactId||'');
+    if(!ids.has(login)||seen.has(login))return{ok:false,message:'Danh sách người nhận Vai Trò không còn khớp phòng.'};
+    seen.add(login);counts.set(role,(counts.get(role)||0)+1);
+    if(!deck.has(role))return{ok:false,message:'Vai Trò không nằm trong Ván Mẫu đã chọn.'};
+    if(playSceneState.artifactsEnabled&&(!artifact||!artifacts.has(artifact)))return{ok:false,message:'Có Artifact chưa được phân hoặc không có trong Ván Mẫu.'};
+    if(!playSceneState.artifactsEnabled&&artifact)return{ok:false,message:'Ván Mẫu đang tắt Artifact nhưng kết quả còn Artifact.'};
+  }
+  for(const [id,n] of deck)if(counts.get(id)!==n)return{ok:false,message:'Số lượng Vai Trò đã phân không đúng cấu hình Ván Mẫu.'};
+  return{ok:true,message:'Đã phân đủ '+rows.length+'/'+members.length+' người. Chưa phát bài xuống Player Web.'};
+}
+function playAssignmentSwapRole(loginId,wantedId){
+  const rows=playSceneState.assignmentsPreview||[],index=rows.findIndex(r=>String(r.loginId)===String(loginId));
+  if(index<0||!playSceneState.rolePlan?.[wantedId])return;
+  if(String(rows[index].roleId)===String(wantedId))return;
+  // Swap existing cards instead of duplicating a role: preserve the exact template deck.
+  const donor=rows.findIndex((r,i)=>i!==index&&String(r.roleId)===String(wantedId));
+  if(donor<0){playFlashError('Không tìm thấy lá Vai Trò để hoán đổi.');return}
+  const keys=['roleId','roleName','faction','description'],a={...rows[index]},b={...rows[donor]};
+  for(const k of keys){rows[index][k]=b[k];rows[donor][k]=a[k]}
+  playSceneState.activePlayerId=String(loginId);
+  playSceneState.roleId=String(rows[index].roleId||'');
+  playSceneState.artifactId=String(rows[index].artifactId||'');
+  savePlayScene();renderPlayScene();
+}

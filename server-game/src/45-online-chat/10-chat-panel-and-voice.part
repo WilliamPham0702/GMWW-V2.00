@@ -1,0 +1,210 @@
+
+/* GM Chat monitor: available only with GM-authorized room API. No public history path. */
+let gmwwGMChatOpen=false,gmwwGMChatLastRoom='';
+// Poll only while GM keeps the Chat monitor open; no idle CPU/network loops.
+window.setInterval(()=>{if(gmwwGMChatOpen&&document.visibilityState!=='hidden'&&gmwwGMChatAvailable())void gmwwGMChatRefresh()},7000);
+function gmwwGMChatAvailable(){
+  return isLivePlayRoom()&&!!playSceneState.roomCode&&
+    ['seats','game','roles','deal','battle'].includes(playSceneState.step);
+}
+function gmwwGMChatMakeMovable(trigger){
+  let drag=null;
+  trigger.addEventListener('pointerdown',event=>{
+    if(event.button!==0&&event.pointerType!=='touch')return;
+    const rect=trigger.getBoundingClientRect();
+    drag={id:event.pointerId,x:event.clientX,y:event.clientY,left:rect.left,top:rect.top,moved:false};
+    trigger.setPointerCapture(event.pointerId);
+  });
+  trigger.addEventListener('pointermove',event=>{
+    if(!drag||drag.id!==event.pointerId)return;
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if(!drag.moved&&Math.hypot(dx,dy)<7)return;
+    drag.moved=true;
+    trigger.style.left=Math.max(0,Math.min(window.innerWidth-trigger.offsetWidth,drag.left+dx))+'px';
+    trigger.style.top=Math.max(0,Math.min(window.innerHeight-trigger.offsetHeight,drag.top+dy))+'px';
+    trigger.style.right='auto';
+  });
+  const finish=event=>{
+    if(!drag||drag.id!==event.pointerId)return;
+    if(drag.moved){trigger.dataset.dragged='1';try{localStorage.setItem('gmww-gm-chat-icon-position',JSON.stringify({left:trigger.style.left,top:trigger.style.top}))}catch{}}
+    drag=null;
+  };
+  trigger.addEventListener('pointerup',finish);trigger.addEventListener('pointercancel',finish);
+  try{const p=JSON.parse(localStorage.getItem('gmww-gm-chat-icon-position')||'null');if(p&&/^\\d+(?:\\.\\d+)?px$/.test(p.left)&&/^\\d+(?:\\.\\d+)?px$/.test(p.top)){trigger.style.left=p.left;trigger.style.top=p.top;trigger.style.right='auto'}}catch{}
+}
+
+const gmwwChatMicSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4m-4 0h8"/></svg>';
+const gmwwChatSendSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>';
+const gmwwChatStopSvg='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>';
+let gmwwGMVoiceMeterContext=null,gmwwGMVoiceMeterSource=null,gmwwGMVoiceMeterAnalyser=null,gmwwGMVoiceMeterFrame=null;
+function gmwwGMVoiceMeterStop(){
+ if(gmwwGMVoiceMeterFrame!==null)cancelAnimationFrame(gmwwGMVoiceMeterFrame);
+ gmwwGMVoiceMeterFrame=null;
+ try{gmwwGMVoiceMeterSource?.disconnect()}catch{}
+ try{gmwwGMVoiceMeterAnalyser?.disconnect()}catch{}
+ try{const closed=gmwwGMVoiceMeterContext?.close();closed?.catch?.(()=>{})}catch{}
+ gmwwGMVoiceMeterContext=null;gmwwGMVoiceMeterSource=null;gmwwGMVoiceMeterAnalyser=null;
+}
+function gmwwGMVoiceMeterStart(stream){
+ gmwwGMVoiceMeterStop();
+ const meter=document.querySelector('#gmwwGMRecording .gmww-live-meter');
+ const bars=[...(meter?.querySelectorAll('i')||[])];
+ const Audio=window.AudioContext||window.webkitAudioContext;
+ if(!Audio||!bars.length)return;
+ try{
+  const ctx=new Audio(),source=ctx.createMediaStreamSource(stream),analyser=ctx.createAnalyser();
+  analyser.fftSize=256;analyser.smoothingTimeConstant=.65;
+  source.connect(analyser); // Observe the mic only; never play it through speakers.
+  gmwwGMVoiceMeterContext=ctx;gmwwGMVoiceMeterSource=source;gmwwGMVoiceMeterAnalyser=analyser;
+  const signal=new Uint8Array(analyser.fftSize);
+  let lastFrame=0;
+  const animate=time=>{
+   if(gmwwGMVoiceRecorder?.state!=='recording'||document.visibilityState==='hidden')return;
+   if(time-lastFrame>=75){
+    lastFrame=time;analyser.getByteTimeDomainData(signal);
+    for(let i=0;i<bars.length;i++){
+     const offset=Math.floor((i+0.5)*signal.length/bars.length);
+     let energy=0;
+     for(let j=0;j<10;j++){const x=(signal[(offset+j)%signal.length]-128)/128;energy+=x*x}
+     const level=Math.min(1,Math.sqrt(energy/10)*3);
+     bars[i].style.height=Math.round(3+19*level)+'px';
+    }
+   }
+   gmwwGMVoiceMeterFrame=requestAnimationFrame(animate);
+  };
+  void ctx.resume().catch(()=>{});
+  gmwwGMVoiceMeterFrame=requestAnimationFrame(animate);
+ }catch(error){gmwwGMVoiceMeterStop();console.warn('GMWW_LIVE_VOICE_METER',error)}
+}
+let gmwwGMVoiceClock=null;
+function gmwwGMVoiceRecording(on,start){
+ const form=document.getElementById('gmwwGMChatVillage'),state=document.getElementById('gmwwGMRecording');
+ form?.classList.toggle('is-recording',on);if(state)state.hidden=!on;
+ clearInterval(gmwwGMVoiceClock);gmwwGMVoiceClock=null;
+ if(on){const tick=()=>{const time=state?.querySelector('time');if(time)time.textContent='0:'+String(Math.min(30,Math.floor((Date.now()-start)/1000))).padStart(2,'0')};tick();gmwwGMVoiceClock=setInterval(tick,500)}
+}
+function gmwwGMVoiceCard(msg){
+ const card=document.createElement('button');card.type='button';card.className='gmww-voice-card';card.setAttribute('aria-label','Phát tin nhắn thoại');
+ const play=document.createElement('span');play.className='gmww-voice-play';play.textContent='▶';
+ const wave=document.createElement('span');wave.className='gmww-voice-wave';wave.setAttribute('aria-hidden','true');
+ for(const h of [32,70,45,90,55,35,77,48,95,42,61,82,38,73]){const bar=document.createElement('i');bar.style.height=h+'%';wave.appendChild(bar)}
+ const time=document.createElement('span');time.textContent='0:'+String(Math.ceil(Number(msg.durationMs||0)/1000)).padStart(2,'0');time.className='gmww-voice-duration';
+ card.append(play,wave,time);card.onclick=()=>void gmwwGMVoicePlay(msg.voiceId,card);return card;
+}
+
+let gmwwGMVoiceRecorder=null,gmwwGMVoiceTimeout=null,gmwwGMVoiceDiscard=false;
+let gmwwGMVoiceGeneration=0;
+let gmwwGMVoiceDraft=null,gmwwGMVoicePendingSend=false,gmwwGMVoiceProcessing=false,gmwwGMVoiceStarting=false,gmwwGMVoiceBusy=false;
+let gmwwGMMicStream=null,gmwwGMMicIdleTimer=null;
+function gmwwGMMicRelease(){
+ gmwwGMVoiceMeterStop();
+ clearTimeout(gmwwGMMicIdleTimer);gmwwGMMicIdleTimer=null;
+ gmwwGMMicStream?.getTracks().forEach(track=>track.stop());gmwwGMMicStream=null;
+}
+async function gmwwGMMicAcquire(){
+ clearTimeout(gmwwGMMicIdleTimer);gmwwGMMicIdleTimer=null;
+ if(!gmwwGMMicStream?.getAudioTracks().some(track=>track.readyState==='live')){
+  gmwwGMMicRelease();gmwwGMMicStream=await navigator.mediaDevices.getUserMedia({audio:true});
+ }
+ gmwwGMMicStream.getAudioTracks().forEach(track=>{track.enabled=true});
+ return gmwwGMMicStream;
+}
+function gmwwGMMicPark(){
+ gmwwGMMicStream?.getAudioTracks().forEach(track=>{track.enabled=false});
+ clearTimeout(gmwwGMMicIdleTimer);gmwwGMMicIdleTimer=setTimeout(gmwwGMMicRelease,120000);
+ if(document.visibilityState==='hidden')gmwwGMMicRelease();
+}
+function gmwwGMVoiceButtonReset(){
+ const button=document.getElementById('gmwwGMChatVoice');
+ if(button){button.innerHTML=gmwwChatMicSvg;button.title='Ghi âm tối đa 30 giây';button.setAttribute('aria-pressed','false')}
+}
+function gmwwGMVoicePreview(){
+ const form=document.getElementById('gmwwGMChatVillage'),display=document.getElementById('gmwwGMRecording');
+ if(!form||!display)return;
+ const ready=!!gmwwGMVoiceDraft;
+ form.classList.toggle('is-recording',ready);display.hidden=!ready;
+ if(ready){
+  const label=document.getElementById('gmwwGMRecordingStatus');if(label)label.textContent='Đã ghi • nhấn ↑ để gửi';
+  const time=display.querySelector('time');if(time)time.textContent='0:'+String(Math.min(30,Math.ceil(gmwwGMVoiceDraft.voice.durationMs/1000))).padStart(2,'0');
+ }
+}
+async function gmwwGMVoiceSend(){
+ if(gmwwGMVoiceRecorder?.state==='recording'){
+  const label=document.getElementById('gmwwGMRecordingStatus');if(label)label.textContent='Đang xử lý thoại…';
+  gmwwGMVoicePendingSend=true;gmwwGMVoiceRecorder.stop();return}
+ if(gmwwGMVoiceStarting||gmwwGMVoiceProcessing||gmwwGMVoiceBusy)return;
+ const draft=gmwwGMVoiceDraft;if(!draft)return;
+ const target=document.getElementById('gmwwGMChatTarget')?.value||'room';
+ if(String(playSceneState.roomCode||'')!==draft.room||target!==draft.target){playFlashError('Phòng hoặc người nhận đã thay đổi. Hãy chọn lại đúng nơi nhận trước khi gửi.');return}
+ gmwwGMVoiceBusy=true;
+ const feedback=document.getElementById('gmwwGMRecordingStatus');if(feedback)feedback.textContent='Đang gửi thoại…';
+ const button=document.querySelector('#gmwwGMChatVillage [type="submit"]');if(button)button.disabled=true;
+ const discardButton=document.getElementById('gmwwGMChatDiscard');if(discardButton)discardButton.disabled=true;
+ try{
+  await playRoomApi('/chat',{method:'POST',body:JSON.stringify(draft.target==='room'?{channel:'room',voice:draft.voice}:{loginId:draft.target,voice:draft.voice})});
+  if(feedback)feedback.textContent='Đã gửi';
+  gmwwGMVoiceDraft=null;await gmwwGMChatRefresh();gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();
+ }catch(e){playFlashError('Không gửi được tin thoại: '+String(e?.message||e));gmwwGMVoicePreview()}
+ finally{gmwwGMVoiceBusy=false;if(button)button.disabled=false;if(discardButton)discardButton.disabled=false}
+}
+function gmwwGMVoiceCancel(){
+ if(gmwwGMVoiceBusy)return; // Once upload starts, a local cancel cannot retract the request.
+ gmwwGMVoiceGeneration++;
+ gmwwGMVoiceDiscard=true;gmwwGMVoicePendingSend=false;gmwwGMVoiceDraft=null;
+ if(gmwwGMVoiceRecorder?.state==='recording'){
+  gmwwGMVoiceProcessing=true;gmwwGMVoiceRecorder.stop();return;
+ }
+ gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();
+}
+async function gmwwGMVoiceToggle(){
+ if(gmwwGMVoiceRecorder?.state==='recording'){gmwwGMVoiceRecorder.stop();return}
+ if(gmwwGMVoiceBusy||gmwwGMVoiceStarting||gmwwGMVoiceProcessing)return;
+ if(!window.MediaRecorder||!navigator.mediaDevices?.getUserMedia){playFlashError('Trình duyệt chưa hỗ trợ ghi âm.');return}
+ const target=document.getElementById('gmwwGMChatTarget')?.value||'room',room=String(playSceneState.roomCode||'');
+ const recordingGeneration=++gmwwGMVoiceGeneration;
+ gmwwGMVoiceStarting=true;gmwwGMVoiceDraft=null;gmwwGMVoicePreview();
+ try{
+  const stream=await gmwwGMMicAcquire();
+  if(room!==String(playSceneState.roomCode||'')){gmwwGMMicPark();return}
+  const mime=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t=>MediaRecorder.isTypeSupported(t));
+  let recorder;try{recorder=new MediaRecorder(stream,{...(mime?{mimeType:mime}:{}),audioBitsPerSecond:40000})}
+  catch{recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined)}
+  const chunks=[],start=Date.now();
+  gmwwGMVoiceDiscard=false;gmwwGMVoiceRecorder=recorder;gmwwGMVoicePendingSend=false;
+  recorder.ondataavailable=event=>{if(event.data?.size)chunks.push(event.data)};
+  recorder.onerror=()=>{gmwwGMVoiceDiscard=true;playFlashError('Ghi âm bị gián đoạn.')};
+  recorder.onstop=async()=>{
+   const sendRequested=gmwwGMVoicePendingSend;gmwwGMVoicePendingSend=false;
+   gmwwGMVoiceProcessing=true;
+   clearTimeout(gmwwGMVoiceTimeout);gmwwGMVoiceMeterStop();gmwwGMVoiceRecorder=null;gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();gmwwGMMicPark();
+   try{
+    if(gmwwGMVoiceDiscard||recordingGeneration!==gmwwGMVoiceGeneration||String(playSceneState.roomCode||'')!==room||!chunks.length)return;
+    const blob=new Blob(chunks,{type:recorder.mimeType||chunks[0]?.type||'audio/mp4'});
+    const bytes=new Uint8Array(await blob.arrayBuffer());let binary='';
+    for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
+    if(gmwwGMVoiceDiscard||recordingGeneration!==gmwwGMVoiceGeneration)return;
+    gmwwGMVoiceDraft={room,target,voice:{mime:blob.type.split(';')[0],durationMs:Math.min(30000,Math.max(1,Date.now()-start)),base64:btoa(binary)}};
+    gmwwGMVoicePreview();
+   }catch(e){playFlashError('Không lưu được bản ghi âm: '+String(e?.message||e))}
+   finally{gmwwGMVoiceProcessing=false;if(sendRequested&&gmwwGMVoiceDraft)void gmwwGMVoiceSend()}
+  };
+  recorder.start(500);gmwwGMVoiceRecording(true,start);gmwwGMVoiceMeterStart(stream);
+  const label=document.getElementById('gmwwGMRecordingStatus');if(label)label.textContent='Đang ghi âm';
+  const button=document.getElementById('gmwwGMChatVoice');if(button){button.innerHTML=gmwwChatStopSvg;button.title='Dừng ghi âm (chưa gửi)';button.setAttribute('aria-pressed','true')}
+  gmwwGMVoiceTimeout=setTimeout(()=>{if(recorder.state==='recording')recorder.stop()},30000);
+ }catch(e){gmwwGMMicRelease();gmwwGMVoiceRecording(false);gmwwGMVoiceButtonReset();playFlashError('Không truy cập được microphone: '+String(e?.message||e))}
+ finally{gmwwGMVoiceStarting=false}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')gmwwGMMicRelease()});
+window.addEventListener('pagehide',gmwwGMMicRelease);
+async function gmwwGMVoicePlay(id,button){
+ try{
+  button.disabled=true;
+  const file=await playRoomApi('/chat/audio/'+encodeURIComponent(id),{method:'GET'});
+  const data=atob(file.base64),bytes=new Uint8Array(data.length);
+  for(let i=0;i<data.length;i++)bytes[i]=data.charCodeAt(i);
+  const uri=URL.createObjectURL(new Blob([bytes],{type:file.mime})),audio=new Audio(uri);
+  const done=()=>{button.disabled=false;button.classList.remove('is-playing');URL.revokeObjectURL(uri)};
+  audio.onended=done;audio.onerror=done;await audio.play();button.classList.add('is-playing');
+ }catch(e){button.disabled=false;button.classList.remove('is-playing');playFlashError('Không phát được tin thoại: '+String(e?.message||e))}
+}

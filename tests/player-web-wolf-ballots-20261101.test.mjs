@@ -1,3 +1,5 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -46,9 +48,9 @@ test('Alpha special blocked-pack rule remains in force when frozen',()=>{
  assert.equal(result.packDisabled,true);assert.deepEqual(result.victims,[]);
 });
 test('Player and GM share campfire icons; each wolf can act independently, never twice',async()=>{
- const server=readFileSync('src/index.js','utf8');
+ const server=workerSource();
  const demo=readFileSync('src/gmww-demo-runner.js','utf8');
- const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ const player=playerWebSource('35-online-chat');
  assert.match(server,/x\?\.actionId==="action_wolf_bite"&&normalizeLoginId\(x\?\.actorId\)===actorId/);
  assert.match(demo,/x\.actorId===actorId/);
  assert.match(demo,/\['role-group','wolf-pack-bite'\]\.includes\(turn\.kind\)/);
@@ -81,7 +83,7 @@ test('Player and GM share campfire icons; each wolf can act independently, never
 });
 
 test('Restore only permits the authenticated owner of latest Online night action',async()=>{
- const src=readFileSync('src/index.js','utf8');
+ const src=workerSource();
  const start=src.indexOf('  async playerPhaseUndo(body){');
  const end=src.indexOf('  async playerGallows(',start);
  assert.ok(start>0&&end>start);
@@ -108,7 +110,7 @@ test('Restore only permits the authenticated owner of latest Online night action
  state.set('battleLastAction:M1',last);
  assert.equal((await room.playerPhaseUndo(args)).undone,true);
  assert.equal(calls,1);
- const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+ const player=playerWebSource('35-online-chat');
  assert.match(player,/\/undo-action/);
  assert.match(player,/gmwwOnlineClearPositions\(\)/);
  assert.match(player,/gmwwOnlineCanRestore/);

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +8,7 @@ import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {reserveArtifactActivation} from '../src/gmww-game-scene-rules.js';
 
 // Phạm vi: luật hành động ban ngày của Hiệp Sĩ và Du Côn trên Durable Object thật (gmDayAction).
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 const begin=server.indexOf('  async gmDayAction(request,body){');
 const finish=server.indexOf('  /* V3.99:',begin);
 assert.ok(begin>=0&&finish>begin);

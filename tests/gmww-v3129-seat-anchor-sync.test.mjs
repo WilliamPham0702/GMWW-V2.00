@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import vm from 'node:vm';
 
 const read=file=>fs.readFileSync(file,'utf8');
 const runtimeVersion=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
-const gm=read('server-game/src/30-village-and-setup.part');
+const gm=gmSource('30-village-and-setup');
 const bundled=read('server-game/current/app.js');
 const player=read('assets/village/village.mjs');
 const ctx={};

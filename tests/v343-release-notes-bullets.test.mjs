@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import vm from 'node:vm';
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 test('Có gì mới shows each note in a dedicated safe bullet',()=>{
  assert.ok(html.includes('class="update-release-list"'));
  assert.ok(html.includes('id="updateReleaseNotes"'));

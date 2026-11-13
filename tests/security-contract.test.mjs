@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const server=read('src/index.js');
+const server=workerSource();
 
 function sliceBetween(startNeedle,endNeedle){
   const start=server.indexOf(startNeedle);

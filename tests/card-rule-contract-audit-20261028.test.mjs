@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import vm from 'node:vm';
 import {sanitizePlayerRoleCard,sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 import {resolveRoleActionPolicy,checkBattleRoleActionUsage} from '../src/gmww-battle-action-policy.js';
 const raw={id:'fn',actionId:'power',phase:'both',usageMode:'custom',usageCount:4,targetCount:2,noSelf:true,allowDead:false,noTarget:false,passive:false,fromNight:1,toNight:5,cooldownNights:2,allowConsecutive:false,targetPreviousCycleOnly:true,perUserLimit:2,activation:'on_actor_death',pushToPlayerWeb:true,effectIds:['effect-power']};
-const source=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const source=gmSource('50-roles-and-artifacts');
 const begin=source.indexOf('function playFunctionRulePayload('),end=source.indexOf('async function playBlobDataUrl(',begin);
 const payload=vm.runInNewContext(source.slice(begin,end)+';({role:playRoleCardPayload,artifact:playArtifactCardPayload})',{state:{actions:{role:[{id:'power',name:'Power'}],artifacts:[{id:'power',name:'Power'}]}},playFactionLabel:()=> 'Phe Dân'});
 for(const kind of ['role','artifact'])test(kind+': GM/private DTO keeps complete configured function contract',()=>{
@@ -61,7 +62,7 @@ test('partial legacy functions do not invent target restrictions',()=>{
  const fn=sanitizePlayerArtifactCard({functions:[{actionId:'power'}]}).functions[0];assert.equal(fn.targetCount,undefined);assert.equal(fn.noSelf,undefined);
 });
 test('user ruling: Aura reads role name and Mirror/Swap grant fresh function uses without changing media',()=>{
- const core=fs.readFileSync('server-game/src/00-core-and-library.part','utf8'),a=core.indexOf('function applyApprovedRoleSettings(s){'),b=core.indexOf('function applyV221AudioGuard(s){',a);
+ const core=gmSource('00-core-and-library'),a=core.indexOf('function applyApprovedRoleSettings(s){'),b=core.indexOf('function applyV221AudioGuard(s){',a);
  const migrate=vm.runInNewContext(core.slice(a,b)+';applyApprovedRoleSettings',{DEFAULT_STATE:{cards:[]},clone:structuredClone});
  const s={cards:[{id:'role_aura_seer',information:'đọc chức năng',functions:[{actionId:'action_aura_read'}],media:{audio:'keep'}}],artifacts:[{id:'artifact_23',information:'old',media:{image:'keep'}},{id:'artifact_40',information:'old'}]};
  migrate(s);assert.match(s.cards[0].information,/tên Vai Trò/);assert.doesNotMatch(s.cards[0].information,/đọc chức năng/);
@@ -71,7 +72,7 @@ test('user ruling: Aura reads role name and Mirror/Swap grant fresh function use
 });
 
 test('approved 28/10: elder bell and seven Artifact rulings persist without changing action metadata or media',()=>{
- const core=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+ const core=gmSource('00-core-and-library');
  const a=core.indexOf('function applyApprovedRoleSettings(s){'),b=core.indexOf('function applyV221AudioGuard(s){',a);
  const apply=vm.runInNewContext(core.slice(a,b)+';applyApprovedRoleSettings',{DEFAULT_STATE:{cards:[]},clone:structuredClone});
  const role={id:'role_elder',functions:[{actionId:'18',phase:'night',effectIds:['effect-bell']}],media:{image:'elder-image'}};

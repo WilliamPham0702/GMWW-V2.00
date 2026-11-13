@@ -1,7 +1,8 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-const s=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
-const b=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const s=gmSource('10-library-and-settings');
+const b=gmSource('40-battle-and-timeline');
 const app=fs.readFileSync('server-game/current/app.js','utf8'),css=fs.readFileSync('server-game/current/style.css','utf8');
 const levels=[25,50,75,100,125,150];
 test('GM iCon size offers six approved levels in one row',()=>{

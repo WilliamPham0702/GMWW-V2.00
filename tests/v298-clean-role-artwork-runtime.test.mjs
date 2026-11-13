@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -24,6 +25,6 @@ test('runtime update ships exactly the canonical clean role artwork package',()=
 
 test('update endpoint uses revisioned runtime manifest to defeat stale asset caches',()=>{
   assert.ok(prep.includes("path.join(outRoot,'manifest-'+updateChannelRev+'.json')"));
-  const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+  const worker=workerSource();
   assert.ok(worker.includes('manifest-"+UPDATE_CHANNEL_REV+".json'));
 });

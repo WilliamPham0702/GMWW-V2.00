@@ -1,12 +1,14 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const contract=readFileSync('src/gmww-public-room-contract.js','utf8');
-const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const events=readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const setup=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
+const events=gmSource('50-roles-and-artifacts');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 
 test('Demo identity is an authoritative server flag, never inferred from room name',()=>{

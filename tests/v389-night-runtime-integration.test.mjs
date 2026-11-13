@@ -1,3 +1,5 @@
+import {gmSource as readGmGroup} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import * as gallowsRules from '../src/gmww-gallows-rules.js';
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from '../src/gmww-demo-runner.js';
@@ -22,10 +24,11 @@ import {drunkDeadCards,drunkDeckView,isPassiveInformationAction} from '../src/gm
 import {buildPrivateDeliverySnapshot,privateDeliveryArtifact} from '../src/gmww-delivery-snapshot.js';
 import {STATUS_DEFS as PRODUCTION_STATUS_DEFS} from '../src/gmww-public-room-contract.js';
 import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
+import {insertMirrorSteps,mirrorLinkKey,mirrorLinkPrefix,buildMirrorLink,mirrorFunctions} from '../src/gmww-mirror-rules.js';
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
 // or production credentials; method bodies are not copied into the fixture.
-const source=fs.readFileSync('src/index.js','utf8');
+const source=workerSource();
 const demoMethods=source.slice(source.indexOf('  async demoClockContext(meta){'),source.indexOf('  async gmAuto(request,body){'));
 const methods=source.slice(source.indexOf('  nightRuntimeKey('),source.indexOf('  async gmRename('));
 const drawMethod=source.slice(source.indexOf('  async playerDrunkDraw(body){'),source.indexOf('  async playerDeliveryReceived(body){'));
@@ -46,6 +49,7 @@ const Room=vm.runInNewContext(cycleHelper+'; (class { '+demoMethods+gallowsMetho
   partitionNightSpecialRoles,witchSaveTargetAllowed,inheritedRolePlans,buildPrivateDeliverySnapshot,
   drunkDeadCards,drunkDeckView,isPassiveInformationAction,
   gameLabelKey:vm.runInNewContext(source.match(/function gameLabelKey\(v\)\{[^\n]+/)[0]+";gameLabelKey"),
+  insertMirrorSteps,mirrorLinkKey,mirrorLinkPrefix,buildMirrorLink,mirrorFunctions,
   j:(data,status=200)=>Response.json(data,{status}),publicRoom:x=>structuredClone(x),publicPlayer:x=>x
 });
 const clone=x=>x===undefined?undefined:structuredClone(x);
@@ -243,7 +247,7 @@ test('ART-01 skip from night two when priority absent/exhausted; no Artifact mod
   assert.equal(first.queue[0].actions.length,0);
   const later=await unprioritized.room.getNightRuntime({...await unprioritized.meta(),cycleNight:2},2,true);
   assert.equal(later.queue.some(x=>x.kind==='early-artifact-window'),false);
-  const audio=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const audio=readGmGroup('30-village-and-setup');
   assert.match(audio,/audio_system_early_artifacts/);
 });
 

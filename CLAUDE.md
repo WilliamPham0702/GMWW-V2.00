@@ -38,7 +38,7 @@
 - Hồn Ma: tin nhắn tự đăng.
 - Sói Quỷ: người bị chuyển hoá được báo riêng vào đêm kế tiếp.
 - Người Đưa Tin: thông báo vai hiển thị cho cả làng.
-- Tráng Gương: mỗi artifact có đúng một chủ trong mỗi ván; sau lượt đêm của mục tiêu bị sao chép, chủ được gọi lại ("<vai B> ơi dậy đi", rồi "Tráng Gương ơi") và nhận mọi hành động của vai B; vẫn gọi dù chủ đã chết/không còn artifact để không lộ thông tin (giống vai đã chết vẫn giữ lượt trong timeline).
+- Tráng Gương: mỗi artifact có đúng một chủ trong mỗi ván; sau lượt đêm của mục tiêu bị sao chép, chủ được gọi lại ("<vai B> ơi dậy đi", rồi "Tráng Gương ơi") và nhận mọi hành động của vai B; vẫn gọi dù chủ đã chết/không còn artifact để không lộ thông tin (giống vai đã chết vẫn giữ lượt trong timeline). Dùng một lần nhưng liên kết giữ cho các đêm sau (chủ được gọi lại sau vai B mỗi đêm); không chép Cắn của Bầy Sói.
 
 ## 2D / 3D
 - Dự án Arena 3D đã HUỶ (06/11/2026). Chỉ giữ bản 2D.

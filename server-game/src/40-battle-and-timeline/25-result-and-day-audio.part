@@ -1,0 +1,215 @@
+let battleConfirmAudioGate=false;
+function battleAdvanceConfirmedTurn(){
+  const id=battleState.pendingNextTurnId;
+  if(!id||battleState.syncPending||battleState.busy||battleConfirmAudioGate||document.getElementById('battleResultPopup')?.hidden===false)return;
+  battleState.pendingNextTurnId='';
+  // Phù Thủy has two independent once-per-match potions. Keep this turn open
+  // after either confirmation; only GM navigation or turn deadline advances it.
+  const turn=battleTurn();
+  if(playSceneState.phase==='night'&&turn?.id===id&&
+     (turn.roleId==='role_witch'||(turn.roles||[]).some(x=>x.roleId==='role_witch')))return;
+  if(playSceneState.phase==='night'&&turn?.id===id)battleNavigateRelative(1);
+}
+function battleCloseResultPopup(){
+  const popup=document.getElementById('battleResultPopup');
+  if(!popup||popup.hidden)return;
+  popup.hidden=true;
+  battleAdvanceConfirmedTurn();
+}
+function battleShowResultPopup(title,message,scanOnly=false){
+  const popup=document.getElementById('battleResultPopup');if(!popup)return;
+  const headline=document.getElementById('battleResultTitle'),body=document.getElementById('battleResultMessage');
+  if(headline){headline.hidden=scanOnly;headline.textContent=String(title||'KẾT QUẢ')}
+  if(body)body.textContent=String(message||'');
+  popup.classList.toggle('is-wolf-result',String(title||'').includes('VẾT CẮN'));
+  popup.classList.toggle('is-scan-result',scanOnly);
+  const negative=/bị giết|bị cắn|sói cắn|vết cắn|bị chết|đầu độc|bị đóng băng|bị đuổi|thất bại|không thành công|tử vong|bị phạt/i.test(String(title||'')+' '+String(message||''));
+  popup.dataset.resultTone=negative?'negative':'positive';
+  popup.hidden=false;popup.dataset.turnKey=battleState.key;
+  // Function outcomes live directly under the GM's upper control menu, not
+  // over the status bar or an old fixed screen coordinate.
+  const menu=document.getElementById('playBattleDock'),bounds=menu?.getBoundingClientRect?.();
+  if(bounds&&bounds.height>0){
+    const viewport=globalThis.visualViewport,height=viewport?.height||innerHeight,offset=viewport?.offsetTop||0;
+    const wanted=bounds.bottom+8,maxTop=offset+height-(popup.offsetHeight||120)-8;
+    popup.style.top=Math.max(offset+8,Math.min(wanted,maxTop))+'px';
+    popup.style.left='50%';popup.style.right='auto';popup.style.bottom='auto';
+    popup.style.transform='translateX(-50%)';
+  }
+}
+/* Morning notices are derived only from committed interactions for this match and night.
+   They must never be synthesized from a selected target or a private role card. */
+let battleDayAudioQueue=null;
+function battleQueueDayAudio(cues){
+  if(playSceneState.phase!=='day'||!Array.isArray(cues)||!cues.length)return;
+  // ONE ordered queue for the whole day; Gallows stage changes must not drop
+  // unfinished morning/nomination/vote/result announcements.
+  const key=[playSceneRuntime.room?.matchId||'',playSceneState.night||0,
+    playSceneRuntime.room?.cycleStartedAt||''].join(':');
+  if(!battleDayAudioQueue||battleDayAudioQueue.key!==key)
+    battleDayAudioQueue={key,items:[],active:false};
+  const queue=battleDayAudioQueue;
+  queue.items.push(...cues);
+  const playNext=()=>{
+    if(queue!==battleDayAudioQueue||playSceneState.phase!=='day')return;
+    if(queue.active)return;
+    const next=queue.items.shift();if(!next)return;
+    queue.active=true;
+    const [id,label]=next;
+    let done=false,watchdog=null;
+    const complete=()=>{
+      if(done)return;
+      done=true;if(watchdog!==null)clearTimeout(watchdog);
+      queue.active=false;playNext();
+    };
+    // At fast DEMO speeds the ballot may advance in 6–15 real seconds.
+    // The old 45s per cue caused obsolete morning narration to pile up.
+    const speed=playSceneRuntime.room?.demo===true&&demoRunner.running?
+      Math.max(1,Number(demoRunner.speed)||1):1;
+    watchdog=setTimeout(complete,Math.max(2200,Math.round(15000/speed)));
+    const started=id==='__tts__'?battleSpeakCue(label,false,complete):
+      battlePlayConfiguredAudio('system',id,label,false,complete);
+    void Promise.resolve(started).then(ok=>{if(ok===false)complete()},complete);
+  };
+  playNext();
+}
+function battleMorningPlayAudio(){
+  const notices=battleMorningRows(),dead=notices.filter(x=>x.kind==='dead').length,queue=[];
+  // Guaranteed day-entry event: the server may skip the optional final
+  // village-wakeup NIGHT turn, so speak Làng ơi dậy đi HERE on Day transition.
+  queue.push(['audio_system_day_wakeup','Làng ơi dậy đi']);
+  // When nobody died, omit the whole death-count announcement. An absent
+  // number-0 clip could otherwise stall the iPhone queue after the intro.
+  if(dead>0){
+    queue.push(['audio_system_morning_deaths_intro','Đêm qua làng chúng ta có']);
+    queue.push(['audio_system_morning_number_'+dead,String(dead)]);
+    queue.push(['audio_system_morning_dead_noun','người chết']);
+  }
+  for(const row of notices){
+    if(row.kind==='expelled')queue.push(['audio_system_morning_expelled','Đêm qua '+row.name+' đã bị đuổi khỏi làng']);
+    else if(row.kind==='assassin_mark'||row.kind==='marked')
+      queue.push(['audio_system_morning_marked','Đêm qua '+row.name+' đã bị Sát Thủ chọn']);
+    else if(row.kind==='dead'&&row.role==='Thiếu Nữ')
+      queue.push([/nhà Sói/i.test(row.label)?'audio_system_morning_maiden_wolf':'audio_system_morning_maiden_follow',row.name+' '+row.label]);
+    else if(row.kind!=='dead')queue.push(['audio_system_morning_'+row.kind,row.name+' '+row.label]);
+  }
+  // Responses from Player Web are added by battleMorningShow when confirmed,
+  // not duplicated in this initial snapshot.
+  battleQueueDayAudio(queue);
+}
+function battleDivinationSystemAudioCue(actionId,result){
+  const action=String(actionId||'');
+  if(action==='action_aura_read')return 'audio_system_aura_read';
+  if(action==='action_destroyer_scry')return 'audio_system_destroyer_role';
+  if(action==='action_find_seer')return result?.found?'audio_system_find_seer_yes':'audio_system_find_seer_no';
+  if(action==='action_compare_faction')return result?.same?'audio_system_compare_same':'audio_system_compare_different';
+  const prefixes={action_seer:'seer',action_fox_scan:'fox',action_bear_scan:'bear',
+    action_scan_three:'piper',action_wolf_seer:'seer',action_rotten_seer:'seer'};
+  const prefix=prefixes[action];if(!prefix)return '';
+  const yes=!!result?.wolf;
+  return prefix==='seer'?(yes?'audio_system_seer_wolf':'audio_system_seer_not_wolf'):
+    'audio_system_'+prefix+(yes?'_wolf':'_no_wolf');
+}
+function battlePresentRevelation(actionId,revelation){
+  if(!revelation?.message)return;
+  battleShowResultPopup('',String(revelation.message||''),true);
+  const cue=battleDivinationSystemAudioCue(actionId,revelation);
+  if(actionId==='action_compare_faction'){
+    // Spiritualist knows only SAME/DIFFERENT; never play or speak roles.
+    if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
+  }else if(actionId==='action_aura_read'){
+    // V1.11: “Người bạn soi là” + the saved NAME-only cut from the role
+    // wake-up audio. No full “ơi dậy đi” and no competing speech synthesis.
+    const target=revelation?.targets?.[0]||{};
+    const roleName=String(target.roleName||revelation.message||'').trim();
+    const playName=()=>{if(roleName)void battlePlayConfiguredAudio('cards',target.roleId||'',roleName,false,null,1)};
+    if(cue&&battleFindAudio('system',cue,revelation.message))
+      void battlePlayConfiguredAudio('system',cue,'Người bạn soi là',false,playName);
+    else void battleSpeakCue('Người bạn soi là',false,playName);
+  }else if(cue)void battlePlayConfiguredAudio('system',cue,revelation.message);
+}
+async function battleWakeupToDay(expectedKey){
+  if(battleState.wakeAdvanceInFlight||battleState.key!==expectedKey||
+     playSceneState.step!=='battle'||playSceneState.phase!=='night'||battleTurn()?.kind!=='village-wakeup')return;
+  battleState.wakeAdvanceInFlight=expectedKey;
+  try{
+    await advancePlayPhase(); // Complete the actual wake-up turn on the Server.
+    if(playSceneState.step==='battle'&&playSceneState.phase==='night'&&
+       playSceneRuntime.nightRuntime?.completed)await advancePlayPhase(); // Day phase.
+  }finally{battleState.wakeAdvanceInFlight=''}
+}
+function battlePlayWakeupAndAdvance(turn,key){
+  if(battleState.wakeAudioStartedKey===key)return;
+  battleState.wakeAudioStartedKey=key;
+  // Daybreak narration belongs to the authoritative Day phase, never the
+  // optional terminal Night turn. This avoids missing or double wake-up cues.
+  void battleWakeupToDay(key);
+}
+// Say Rượu deck lives inside the game page, not document.body.
+function battleRenderDrunkDraw(turn){
+  let deck=document.getElementById('gmwwGmDrunkDeck');
+  const room=playSceneRuntime.room||{};
+  const active=playSceneState.step==='battle'&&playSceneState.phase==='night'&&
+    Number(playSceneState.night||0)===3&&String(room.phase||'')==='running'&&
+    document.getElementById('start')?.classList.contains('active')&&
+    turn?.roleId==='role_drunk';
+  const draws=active?(playSceneRuntime.drunkDraws||[]).filter(row=>
+    row?.status==='pending'&&String(row.matchId||'')===String(room.matchId||'')&&
+    (turn.loginIds||[]).map(String).includes(String(row.actorId||''))):[];
+  if(!draws.length){if(deck)deck.hidden=true;return}
+  const shell=document.getElementById('playShell');if(!shell)return;
+  if(!deck){
+    const style=document.createElement('style');style.id='gmwwGmDrunkDeckCss';
+    style.textContent='#gmwwGmDrunkDeck{position:absolute;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;pointer-events:none;background:transparent}'+
+      '#gmwwGmDrunkDeck[hidden]{display:none!important}'+
+      '#gmwwGmDrunkDeck .deck-row{max-width:96%;max-height:72dvh;overflow:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px}'+
+      '#gmwwGmDrunkDeck .deck-card{display:block;width:clamp(68px,25vw,145px);aspect-ratio:3/4;border:0;border-radius:9px;object-fit:cover;box-shadow:0 8px 20px #0018;pointer-events:none}';
+    document.head.appendChild(style);
+    deck=document.createElement('div');deck.id='gmwwGmDrunkDeck';shell.appendChild(deck);
+  }
+  deck.hidden=false;deck.replaceChildren();
+  const cards=document.createElement('div');cards.className='deck-row';
+  for(const draw of draws)for(const card of draw.cards||[]){
+    const img=document.createElement('img');img.className='deck-card';
+    img.src='role-card-back.webp';img.alt='Lá Vai Trò úp';img.draggable=false;
+    cards.appendChild(img);
+  }
+  deck.appendChild(cards);
+}
+// Nhãn MỤC TIÊU vẫn hiển thị; không mở popup Phù Thủy riêng.
+function battleBindResultPopup(){
+  const popup=document.getElementById('battleResultPopup');if(!popup||popup.dataset.dragReady)return;
+  popup.dataset.dragReady='1';
+  const grip=document.getElementById('battleResultGrip');if(!grip)return;
+  let drag=null;
+  grip.addEventListener('pointerdown',e=>{
+    if(e.target.closest('button')||(e.button!==0&&e.pointerType!=='touch'))return;
+    const r=popup.getBoundingClientRect();drag={x:e.clientX,y:e.clientY,left:r.left,top:r.top,id:e.pointerId};
+    try{grip.setPointerCapture(e.pointerId)}catch{}e.preventDefault();
+  });
+  grip.addEventListener('pointermove',e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    const left=Math.max(6,Math.min(innerWidth-popup.offsetWidth-6,drag.left+e.clientX-drag.x));
+    const top=Math.max(6,Math.min(innerHeight-popup.offsetHeight-6,drag.top+e.clientY-drag.y));
+    popup.style.left=left+'px';popup.style.top=top+'px';popup.style.right='auto';popup.style.bottom='auto';popup.style.transform='none';
+  });
+  const stop=()=>{drag=null};
+  for(const handle of [grip,document.getElementById('battleResultMessage')].filter(Boolean)){
+    if(handle!==grip){
+      handle.addEventListener('pointerdown',e=>{
+        if(!popup.classList.contains('is-scan-result')||(e.button!==0&&e.pointerType!=='touch'))return;
+        const r=popup.getBoundingClientRect();drag={x:e.clientX,y:e.clientY,left:r.left,top:r.top,id:e.pointerId};
+        try{handle.setPointerCapture(e.pointerId)}catch{}e.preventDefault();
+      });
+      handle.addEventListener('pointermove',e=>{
+        if(!drag||e.pointerId!==drag.id)return;
+        const left=Math.max(6,Math.min(innerWidth-popup.offsetWidth-6,drag.left+e.clientX-drag.x));
+        const top=Math.max(6,Math.min(innerHeight-popup.offsetHeight-6,drag.top+e.clientY-drag.y));
+        popup.style.left=left+'px';popup.style.top=top+'px';popup.style.right='auto';popup.style.bottom='auto';popup.style.transform='none';
+      });
+    }
+    handle.addEventListener('pointerup',stop);handle.addEventListener('pointercancel',stop);
+  }
+}
+/* Magnetic docking: align a dragged panel with the visible top/bottom GM menu.
+   Pure geometry from current layout; release farther than 32px detaches again. */

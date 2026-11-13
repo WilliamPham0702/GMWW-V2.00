@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ import {fetchCanonicalRoleArtwork} from '../src/gmww-template-artwork-source.js'
 
 // Use the Worker template-packaging implementation with synthetic member storage,
 // real repository WebP bytes, and Cloudflare's env.ASSETS fetch contract.
-const source = fs.readFileSync('src/index.js','utf8');
+const source = workerSource();
 const from = source.indexOf('async function gmPackageCanonicalTemplateRole(');
 const to = source.indexOf('async function gmPreloadTemplateAssets(',from);
 assert.ok(from > 0 && to > from);

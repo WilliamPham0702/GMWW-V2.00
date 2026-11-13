@@ -1,11 +1,12 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const realtime=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
-const village=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
-const chat=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const realtime=playerWebSource('30-rooms-and-realtime');
+const village=playerWebSource('20-village-and-profile');
+const chat=playerWebSource('35-online-chat');
 
 test('confirmed status refresh is debounced and authoritative, including cleared effects',async()=>{
  const begin=realtime.indexOf('let gmwwPublicStatusRefreshTimer=null;');
@@ -24,6 +25,7 @@ test('confirmed status refresh is debounced and authoritative, including cleared
   setTimeout(fn){pending.push(fn);return pending.length},
   api:async path=>{observed.push(path);return payload},
   syncVillageFrame:()=>observed.push('render'),
+  syncGallowsVoteTags:()=>observed.push('votes'),
   gmwwChatRefresh:()=>observed.push('chat')
  };
  vm.runInNewContext(realtime.slice(begin,end)+'globalThis.refresh=schedulePublicRoomSnapshot;',scope);
@@ -33,6 +35,7 @@ test('confirmed status refresh is debounced and authoritative, including cleared
  assert.deepEqual(Array.from(state.players[1].statusTags,x=>x.statusId),['marked']);
  assert.equal(observed.filter(x=>x==='/api/rooms/ROOM').length,1);
  assert.ok(observed.includes('render')&&observed.includes('chat'));
+ assert.ok(observed.indexOf('votes')>=0&&observed.indexOf('votes')<observed.indexOf('render'),'gallows vote tags re-applied before render');
  payload={room:{matchId:'M'},players:[
   {participantId:'member:a',statusTags:[]},{participantId:'member:b',statusTags:[]}
  ]};

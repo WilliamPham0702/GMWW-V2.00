@@ -1,10 +1,12 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const part=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
-const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+const part=gmSource('10-library-and-settings');
+const source=gmSource('30-village-and-setup');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
@@ -60,9 +62,9 @@ test('Battle day row is clock → Báo → actions → Lên Giàn, rainbow float
 });
 test('Runtime source bundle and OTA metadata are intact',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const pieces=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
- assert.equal(app,pieces.map(p=>fs.readFileSync('server-game/src/'+p,'utf8')).join(''));
+ assert.equal(app,pieces.map(p=>gmSource(p.replace(/\.part$/,''))).join(''));
  assert.match(app,/const VERSION='3\.235';/);
  assert.match(html,/<title>GMWW V3\.235<\/title>/);
- assert.match(fs.readFileSync('src/index.js','utf8'),/VERSION="V3\.235"/);
+ assert.match(workerSource(),/VERSION="V3\.235"/);
  assert.match(fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8'),/V3\.233: Sửa lỗi/);
 });

@@ -1,11 +1,13 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const worker=fs.readFileSync('src/index.js','utf8');
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const events=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const worker=workerSource();
+const setup=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
+const events=gmSource('50-roles-and-artifacts');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 
 test('PR367/369 reconciliation uses existing members, never fabricated account identifiers',()=>{

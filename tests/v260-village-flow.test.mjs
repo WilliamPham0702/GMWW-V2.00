@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,writeFile} from 'node:fs/promises';
@@ -11,8 +12,8 @@ const layout=globalThis.GMWW_VILLAGE_LAYOUT;
 
 async function loadWorker(){
   const srcDir=resolve(root,'src');
-  let source=await readFile(resolve(srcDir,'index.js'),'utf8');
-  source=source.replace('import { DurableObject } from "cloudflare:workers";','class DurableObject { constructor(ctx,env){this.ctx=ctx;this.env=env} }');
+  let source=workerSource();
+  source=source.replace('import {DurableObject} from "cloudflare:workers";','class DurableObject { constructor(ctx,env){this.ctx=ctx;this.env=env} }');
   source=source.replace(/from "(\.\/[^"]+)"/g,(_,spec)=>`from ${JSON.stringify(pathToFileURL(resolve(srcDir,spec)).href)}`);
   source=source.replace(/import "(\.\.\/assets\/[^"]+)";/g,(_,spec)=>`import ${JSON.stringify(pathToFileURL(resolve(srcDir,spec)).href)};`);
   const dir=await mkdtemp(join(tmpdir(),'gmww-v260-'));

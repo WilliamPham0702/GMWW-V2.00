@@ -1,0 +1,120 @@
+function playAssignmentSetArtifact(loginId,artifactId){
+  if(!playSceneState.artifactsEnabled)return;
+  const row=(playSceneState.assignmentsPreview||[]).find(r=>String(r.loginId)===String(loginId));
+  const item=playTemplateSelectedArtifacts().find(a=>String(a.id)===String(artifactId));
+  if(!row||!item)return;
+  row.artifactId=String(item.id);row.artifactName=String(item.name||'Artifact');
+  playSceneState.activePlayerId=String(loginId);playSceneState.roleId=String(row.roleId||'');
+  playSceneState.artifactId=row.artifactId;savePlayScene();renderPlayScene();
+}
+function playAssignmentSignature(){
+  // Identify exactly which GM-private distribution was explicitly saved.
+  return JSON.stringify({roomCode:playSceneState.roomCode||'',matchId:playSceneState.matchId||'',
+    rows:(playSceneState.assignmentsPreview||[]).map(r=>[r.loginId,r.roleId,r.artifactId||''])});
+}
+async function playSaveAssignments(){
+  const status=playAssignmentDraftStatus();
+  if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
+  if(playSceneRuntime.busy)return false;
+  // Save only GM-private assignments. Publishing the deal stage must NOT
+  // send cards; private delivery is still triggered solely by the Phát Vai step.
+  const formerStep=playSceneState.step;
+  playSceneRuntime.busy=true;renderPlayRoleAssignmentPanel();
+  try{
+    const ack=await playPublishStage('deal');
+    if(!ack)throw Error('Server chưa xác nhận chuyển sang Phát Vai.');
+    playSceneState.assignmentSavedSignature=playAssignmentSignature();
+    playSceneRuntime.assignmentPanelDismissed=true;
+    playSceneState.step='deal';playSceneState.phase='lobby';
+    savePlayScene();renderPlayScene();
+    return true;
+  }catch(err){
+    playSceneState.step=formerStep;
+    playSceneRuntime.assignmentPanelDismissed=false;
+    playFlashError('Không thể lưu Phân Vai: '+String(err?.message||err));
+    renderPlayRoleAssignmentPanel();return false;
+  }finally{playSceneRuntime.busy=false;renderPlayRoleAssignmentPanel()}
+}
+function playConfirmAssignments(){
+  const status=playAssignmentDraftStatus();
+  if(!status.ok){playFlashError(status.message);renderPlayRoleAssignmentPanel();return false}
+  playSceneState.step='deal';playSceneState.phase='lobby';
+  savePlayScene();void playPublishStage('deal');renderPlayScene();
+  return true;
+}
+function renderPlayRoleAssignmentPanel(){
+  const panel=document.getElementById('playRoleAssignmentPanel');if(!panel)return;
+  const visible=playSceneState.phase==='lobby'&&playSceneState.step==='roles'&&isLivePlayRoom()&&!playSceneRuntime.assignmentPanelDismissed;
+  panel.classList.toggle('hidden',!visible);panel.hidden=!visible;
+  if(!visible)return;
+  const members=playLiveMembers().filter(m=>m?.loginId).slice().sort((a,b)=>{
+    const aa=Number(a.seatId)||999,bb=Number(b.seatId)||999;
+    return aa-bb||String(a.displayName||a.loginId).localeCompare(String(b.displayName||b.loginId),'vi');
+  });
+  const rows=playSceneState.assignmentsPreview||[],assigned=new Map(rows.map(r=>[String(r.loginId),r])),
+    status=playAssignmentDraftStatus(),roleOptions=playTemplateSelectedRoles(),artifactOptions=playTemplateSelectedArtifacts(),
+    list=document.getElementById('playAssignmentRows'),count=document.getElementById('playAssignmentCount'),
+    notice=document.getElementById('playAssignmentNotice'),confirm=document.getElementById('playAssignmentConfirm');
+  if(count)count.textContent=rows.length+' / '+members.length+' người · '+playRolePlanTotal()+' lá Vai Trò';
+  if(notice){notice.textContent=status.ok&&playSceneState.assignmentSavedSignature===playAssignmentSignature()
+    ?'Đã LƯU Phân Vai trên thiết bị GM. Chưa phát bài xuống Player Web.'
+    :status.message;notice.classList.toggle('is-error',!status.ok)}
+  if(confirm)confirm.disabled=!status.ok||playSceneRuntime.busy;
+  for(const id of ['playAssignmentRandom','playAssignmentInOrder','playAssignmentArtifactShuffle']){
+    const button=document.getElementById(id);if(button)button.disabled=playSceneRuntime.busy||!members.length||playRolePlanTotal()!==members.length||(id==='playAssignmentArtifactShuffle'&&(!playSceneState.artifactsEnabled||!rows.length));
+  }
+  if(!list)return;
+  const scrollTop=list.scrollTop;list.replaceChildren();
+  for(const member of members){
+    const login=String(member.loginId),current=assigned.get(login),seat=Number(member.seatId||0),
+      role=roleOptions.find(r=>String(r.id)===String(current?.roleId)),artifact=artifactOptions.find(a=>String(a.id)===String(current?.artifactId));
+    const item=document.createElement('article');item.className='play-assignment-member';item.dataset.memberId=login;
+    item.innerHTML='<div class="play-assignment-identity"><span class="play-assignment-seat">'+(seat?'#'+seat:'—')+'</span><div class="play-assignment-person"><b>'+playEsc(member.displayName||login)+'</b><small>'+playEsc(login)+'</small></div><span class="play-assignment-presence '+(member.online?'on':'off')+'">'+(member.online?'●':'○')+'</span></div>'+
+      '<div class="play-assignment-fields"><label class="play-assignment-control"><img class="play-assignment-thumb role" alt="" loading="lazy"><span><small>VAI TRÒ</small><select data-assign-role aria-label="Đổi Vai Trò của '+playEsc(member.displayName||login)+'"></select></span></label>'+
+      '<label class="play-assignment-control"><img class="play-assignment-thumb artifact" alt="" loading="lazy"><span><small>ARTIFACT</small><select data-assign-artifact aria-label="Chọn Artifact của '+playEsc(member.displayName||login)+'"></select></span></label></div>';
+    const rs=item.querySelector('[data-assign-role]'),as=item.querySelector('[data-assign-artifact]');
+    if(!current)rs.add(new Option('Chưa phân Vai',''));
+    for(const r of roleOptions)rs.add(new Option(r.name||'Vai Trò',String(r.id)));
+    rs.value=String(current?.roleId||'');rs.disabled=!current||playSceneRuntime.busy;
+    rs.onchange=()=>playAssignmentSwapRole(login,rs.value);
+    as.add(new Option(playSceneState.artifactsEnabled?'Chưa có Artifact':'Không sử dụng',''));
+    if(playSceneState.artifactsEnabled)for(const a of artifactOptions)as.add(new Option(a.name||'Artifact',String(a.id)));
+    as.value=String(current?.artifactId||'');as.disabled=!current||!playSceneState.artifactsEnabled||playSceneRuntime.busy;
+    as.onchange=()=>playAssignmentSetArtifact(login,as.value);
+    const rt=item.querySelector('.play-assignment-thumb.role'),at=item.querySelector('.play-assignment-thumb.artifact');
+    if(role)void resolveArtwork('cards',role.id,'thumb').then(url=>{if(rt.isConnected)rt.src=url||'default-artwork.webp'}).catch(()=>{if(rt.isConnected)rt.src='default-artwork.webp'});
+    else rt.src='default-artwork.webp';
+    if(artifact)void resolveArtwork('artifacts',artifact.id,'thumb').then(url=>{if(at.isConnected)at.src=url||'default-artwork.webp'}).catch(()=>{if(at.isConnected)at.src='default-artwork.webp'});
+    else at.src='default-artwork.webp';
+    list.appendChild(item);
+  }
+  if(!members.length)list.innerHTML='<p class="play-assignment-empty">Chưa có người chơi. Quay lại bước Tập hợp để gọi thành viên.</p>';
+  list.scrollTop=scrollTop;
+}
+
+function playAssignArtifactsToRows(rows,{preserve=false}={}){
+  if(!playSceneState.artifactsEnabled)return rows.map(r=>({...r,artifactId:'',artifactName:''}));
+  const pool=playTemplateSelectedArtifacts();if(!pool.length)throw new Error('Chưa chọn Artifact nào cho trận này.');
+  const old=new Map((playSceneState.assignmentsPreview||[]).map(r=>[String(r.loginId),r])),shuffled=playShuffle(pool);
+  return rows.map((r,i)=>{
+    const keep=preserve?old.get(String(r.loginId)):null,artifact=keep?.artifactId?(state.artifacts||[]).find(a=>String(a.id)===String(keep.artifactId)):(shuffled[i%shuffled.length]||pool[i%pool.length]);
+    return {...r,artifactId:artifact?.id||'',artifactName:artifact?.name||''};
+  });
+}
+function playBuildAssignments(opts={}){
+  const members=playLiveMembers(),rolesById=new Map((state.cards||[]).map(r=>[String(r.id),r])),deck=[];
+  for(const [roleId,countRaw] of Object.entries(playSceneState.rolePlan||{})){const role=rolesById.get(String(roleId)),count=Math.max(0,Number(countRaw)||0);if(!role)continue;for(let i=0;i<count;i++)deck.push(role)}
+  if(deck.length!==members.length)throw new Error('Số Vai Trò không khớp số Thành Viên. Hãy quay lại Chọn Ván.');
+  const shuffled=opts.random===false?deck:playShuffle(deck),baseRows=members.map((m,i)=>({loginId:m.loginId,displayName:m.displayName,roleId:shuffled[i].id,roleName:shuffled[i].name,faction:playFactionLabel(shuffled[i]),description:shuffled[i].information||''})),rows=playAssignArtifactsToRows(baseRows,{preserve:opts.preserveArtifacts===true});
+  playSceneState.assignmentsPreview=rows;playSceneState.step='roles';if(rows[0]){playSceneState.activePlayerId=rows[0].loginId;playSceneState.roleId=rows[0].roleId;playSceneState.artifactId=rows[0].artifactId||''}savePlayScene();renderPlayScene();return rows;
+}
+function playRerollArtifacts(){
+  if(!playSceneState.artifactsEnabled){playFlashError('Artifact đang tắt trong Ván này.');return}
+  const rows=Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[];if(!rows.length)return;
+  playSceneState.assignmentsPreview=playAssignArtifactsToRows(rows,{preserve:false});const active=playSceneState.assignmentsPreview.find(r=>String(r.loginId)===String(playSceneState.activePlayerId));playSceneState.artifactId=active?.artifactId||'';savePlayScene();renderPlayScene();
+}
+function playCycleActiveArtifact(){
+  if(!playSceneState.artifactsEnabled){playFlashError('Artifact đang tắt trong Ván này.');return}
+  const pool=playFavoriteArtifacts(),rows=playSceneState.assignmentsPreview||[],idx=rows.findIndex(r=>String(r.loginId)===String(playSceneState.activePlayerId));if(idx<0||!pool.length){playFlashError('Hãy chọn Người Chơi trước.');return}
+  const current=String(rows[idx].artifactId||''),p=Math.max(-1,pool.findIndex(a=>String(a.id)===current)),next=pool[(p+1)%pool.length];rows[idx]={...rows[idx],artifactId:next.id,artifactName:next.name};playSceneState.assignmentsPreview=rows;playSceneState.artifactId=next.id;savePlayScene();renderPlayScene();
+}

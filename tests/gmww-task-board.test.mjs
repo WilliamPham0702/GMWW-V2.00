@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import {normalizeGmwwTasks,fetchGmwwTasks,GMWW_TASK_SOURCE} from "../src/gmww-task-board.js";
@@ -41,7 +42,7 @@ test("Source errors are explicit instead of fabricated progress",async()=>{
 
 test("Retired Workboard is no longer served or rendered",async()=>{
   const {readFileSync}=await import("node:fs");
-  const worker=readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
+  const worker=workerSource();
   const app=readFileSync(new URL("../server-game/current/app.js",import.meta.url),"utf8");
   const html=readFileSync(new URL("../server-game/current/GMWW.html",import.meta.url),"utf8");
   assert.doesNotMatch(worker,/\/api\/operations\/tasks/);
@@ -101,7 +102,7 @@ test("GitHub review reasons distinguish approval and intentional skip",()=>{
 test("Retired task function cannot expose stale data or public mutations",async()=>{
   const {readFileSync}=await import("node:fs");
   const app=readFileSync(new URL("../server-game/current/app.js",import.meta.url),"utf8");
-  const worker=readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
+  const worker=workerSource();
   assert.doesNotMatch(app,/function gmwwTaskReviewLink\(|XÁC NHẬN HOÀN THÀNH|BỎ QUA công việc/);
   assert.doesNotMatch(worker,/\/api\/operations\/tasks/);
 });

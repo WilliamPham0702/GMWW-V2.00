@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -23,7 +24,7 @@ test('V4 preview retains approved direction and action contracts',()=>{
  for(const c of characterV4Catalog())assert.deepEqual(Object.keys(c.views),['front','left','right','back']);
 });
 test('V4 preview has explicit separate API route and never replaces live character endpoint',()=>{
- const src=fs.readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+ const src=workerSource();
  assert.ok(src.includes('if(url.pathname==="/api/game-characters/v4"&&request.method==="GET")'));
  assert.ok(src.includes('return j(characterV4Status())'));
  assert.ok(src.includes('if(url.pathname==="/api/game-characters"&&request.method==="GET")'));

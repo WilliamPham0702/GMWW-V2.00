@@ -1,10 +1,12 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
 const read=file=>fs.readFileSync(file,'utf8');
-const source=read('server-game/src/40-battle-and-timeline.part');
+const source=gmSource('40-battle-and-timeline');
 const app=read('server-game/current/app.js');
 const css=read('server-game/current/style.css');
 const html=read('server-game/current/GMWW.html');
@@ -58,7 +60,7 @@ test('Gallows keeps all eligible members while showing five rows with vertical s
  assert.match(html,/id="battleGallowsBanDetails"/);
 });
 test('V3.235 Runtime only; Worker, source, HTML and OTA release notes agree',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- assert.match(read('src/index.js'),/VERSION="V3\.235"/);
+ assert.match(workerSource(),/VERSION="V3\.235"/);
  assert.match(app,/const VERSION='3\.235';/);
  assert.match(html,/<title>GMWW V3\.235<\/title>/);
  assert.match(read('package.json'),/"version": "3\.235\.0"/);

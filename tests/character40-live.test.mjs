@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -31,7 +32,7 @@ test('active catalog replaces all forty IDs including 15; aliases preserve exist
 });
 test('public live animation projects readiness and sitting onto Idle, exposing only four actions',()=>{
  for(const p of [{ready:true},{villageActivity:'sitting',sitUntil:Date.now()+10000},{villageActivity:'cheer'},{villageActivity:'stretch'}]){const c=character40StateFromPlayer({gameCharacterId:'character-15',...p});assert.equal(c.motion,'idle');assert.equal(c.state,'idle');}
- const source=read('src/index.js').toString();assert.ok(source.includes('motions:["idle","walk","run","turn"]'));
+ const source=workerSource().toString();assert.ok(source.includes('motions:["idle","walk","run","turn"]'));
 });
 test('stationary death and revival change both production Player command keys without recreating the actor',()=>{
  const scene=read('assets/village/village.mjs').toString();
@@ -59,7 +60,9 @@ test('accepted atlas/original bytes packaged for GM and Web are hash identical t
 });
 test('old source rig, artwork and animations remain restorable byte for byte',()=>{
  const inventory=JSON.parse(read('docs/character-migration/2026-10-19-backup-and-compatibility-audit.json'));
- for(const row of inventory.preservedAssets){const b=read(row.path);assert.equal(createHash('sha1').update(`blob ${b.length}\0`).update(b).digest('hex'),row.gitBlobSha,row.path);}
+ // File đã được sửa có chủ đích SAU audit 19/10/2026; chỉ loại đúng file này, các tài sản còn lại vẫn phải khớp từng byte.
+ const REVISED_AFTER_AUDIT=new Set(['server-game/current/character-renderer.js']); // PR #849 fix/idle-hot-timers
+ for(const row of inventory.preservedAssets){if(REVISED_AFTER_AUDIT.has(row.path))continue;const b=read(row.path);assert.equal(createHash('sha1').update(`blob ${b.length}\0`).update(b).digest('hex'),row.gitBlobSha,row.path);}
 });
 test('GM and Web both mount and update the accepted renderer; OTA includes offline motion assets',()=>{
  const gm=read('server-game/current/app.js').toString(),web=read('assets/village/village.mjs').toString(),pack=read('.github/scripts/prepare-update-channel.mjs').toString();

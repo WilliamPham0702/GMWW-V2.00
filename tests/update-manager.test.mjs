@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -37,7 +38,7 @@ test('Player Web has new-version reload notification',()=>{
 });
 
 test('Worker exposes update manifest endpoint',()=>{
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(worker,/\/api\/update\/manifest/);
   assert.match(worker,/webVersion:VERSION/);
   assert.match(worker,/\/api\/gm\/web-sync/);
@@ -139,7 +140,7 @@ test('Fast Runtime Snapshot reuses a verified native shell and never runs Xcode 
 
 test('Version bumps keep native update channel and web-sync self-heals',()=>{
   const script=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(script,/versionChanged/);
   assert.match(script,/versionChanged&&shell===version/);
   assert.match(worker,/source:"SERVER_DEPLOY"/);
@@ -179,7 +180,7 @@ test('Installed runtime newer than native shell persists across relaunches',{ski
 
 
 test('V3.17 channel stays aligned with the V3.17 native shell',()=>{
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const prepare=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
   assert.match(worker,/validRuntime=/);
   assert.match(worker,/RUNTIME_MANIFEST_NOT_READY/);
@@ -190,7 +191,7 @@ test('V3.17 channel stays aligned with the V3.17 native shell',()=>{
 
 
 test('Runtime update lookup prefers the immutable versioned manifest before latest.json',()=>{
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const route=worker.slice(worker.indexOf('if(url.pathname==="/api/update/manifest"'),worker.indexOf('if((url.pathname==="/favicon.svg"',worker.indexOf('if(url.pathname==="/api/update/manifest"')));
   const versioned=route.indexOf('const versioned=onlyNewNotes(await readVersionedManifest())');
   const latest=route.indexOf('manifestUrl.pathname="/updates/latest.json"');

@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -41,7 +43,7 @@ test('all four update actions occupy one row and old shells get an honest fallba
 });
 test('manual action never posts to an unsupported shell and blocks duplicate requests',async()=>{
  const {runInNewContext}=await import('node:vm');
- const source=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+ const source=gmSource('10-library-and-settings');
  const fn=source.slice(source.indexOf('function installManualRuntimeUpdate(){'),source.indexOf('async function installRuntimeUpdate(){'));
  const calls=[],ui=[];
  const ctx={window:{},gmwwUpdateBusy:false,gmwwNativePost:a=>{calls.push(a);return true},setUpdateUi:(...a)=>ui.push(a),gmwwSetUpdateProgress:()=>{}};
@@ -59,7 +61,7 @@ test('native asset validator skips the special about:blank document without hidi
 });
 
 test('the manual update native shell version matches the release and Xcode baseline',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
  const shell=worker.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
  const runtime=worker.match(/VERSION="V([0-9.]+)"/)?.[1];

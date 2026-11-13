@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - "server-game/GMWW-Server/GameView.swift"
-      - "server-game/src/10-library-and-settings.part"
+      - "server-game/src/10-library-and-settings/**"
       - "server-game/current/app.js"
       - ".github/scripts/ci-browser-scope.mjs"
       - ".github/workflows/check-player-web.yml"
@@ -18,7 +18,7 @@ on:
     branches: [main]
     paths:
       - "server-game/GMWW-Server/GameView.swift"
-      - "server-game/src/10-library-and-settings.part"
+      - "server-game/src/10-library-and-settings/**"
       - "server-game/current/app.js"
       - ".github/workflows/check-native-github-ota.yml"
   workflow_dispatch:

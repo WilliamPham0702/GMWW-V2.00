@@ -1,11 +1,13 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read=p=>fs.readFileSync(p,'utf8');
 const html=read('server-game/current/GMWW.html');
 const css=read('server-game/current/style.css');
-const battle=read('server-game/src/40-battle-and-timeline.part');
-const gm=read('server-game/src/50-roles-and-artifacts.part');
+const battle=gmSource('40-battle-and-timeline');
+const gm=gmSource('50-roles-and-artifacts');
 
 test('V3.237 GM hide toggle matches Artifact and Vai Trò ON/OFF styling',()=>{
  assert.match(html,/id="battleGMChromeToggle"[^>]*aria-pressed="true"[^>]*>Menu<\/button>/);
@@ -37,8 +39,8 @@ test('V3.237 footer has no outer frame and icon buttons show no labels',()=>{
 });
 test('V3.237 bundle and shell versions agree; Core and Player Web contracts unchanged',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'];
- assert.equal(read('server-game/current/app.js'),parts.map(n=>read('server-game/src/'+n+'.part')).join(''));
- assert.match(read('src/index.js'),/VERSION="V3\.238"/);
+ assert.equal(read('server-game/current/app.js'),parts.map(n=>gmSource(n)).join(''));
+ assert.match(workerSource(),/VERSION="V3\.238"/);
  assert.match(read('package.json'),/"version": "3\.238\.0"/);
  assert.match(read('server-game/current/GMWW.html'),/GMWW V3\.238/);
 });

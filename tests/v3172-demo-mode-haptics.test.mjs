@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=path=>readFileSync(path,'utf8');
 const html=read('server-game/current/GMWW.html'),
-  setup=read('server-game/src/30-village-and-setup.part'),
-  battle=read('server-game/src/40-battle-and-timeline.part'),
+  setup=gmSource('30-village-and-setup'),
+  battle=gmSource('40-battle-and-timeline'),
   swift=read('server-game/GMWW-Server/GameView.swift'),
   bundle=read('server-game/current/app.js');
 

@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -59,7 +61,7 @@ test('V3.194: reset restores the EXACT same geometry as the original 100% layout
 });
 
 test('V3.194: arrow and drag are whole-ring commands only; button reset also restores spacing',()=>{
-  const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const source=gmSource('30-village-and-setup');
   const bundled=fs.readFileSync('server-game/current/app.js','utf8');
   for(const code of [source,bundled]){
     assert.match(code,/seatOffset:\{x:0,y:0\},seatSpacing:100/);
@@ -71,7 +73,7 @@ test('V3.194: arrow and drag are whole-ring commands only; button reset also res
     assert.doesNotMatch(code,/GM may drag an occupied Seat onto another/);
     assert.doesNotMatch(code,/el\.addEventListener\('pointermove',[\s\S]{0,380}is-seat-dragging/);
   }
-  const server=fs.readFileSync('src/index.js','utf8');
+  const server=workerSource();
   const player=fs.readFileSync('assets/village/village.mjs','utf8');
   assert.match(server,/seatOffset=villageLayout\.resolveSeatOffset/);
   assert.match(player,/seat=3195-rigid/);

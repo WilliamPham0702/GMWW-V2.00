@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const gmCss=fs.readFileSync('server-game/current/style.css','utf8');
 const village=fs.readFileSync('assets/village/village.mjs','utf8');
 const villageCss=fs.readFileSync('assets/village/village.css','utf8');
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
 const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));

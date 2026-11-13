@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const server=readFileSync('src/index.js','utf8');
+const server=workerSource();
 const player=JSON.parse(readFileSync('src/gmww-members-live.js','utf8').split(' = ').slice(1).join(' = ').trim().replace(/;\s*$/,''));
 const method=server.slice(server.indexOf('  async gmParticipants(request,body){'),server.indexOf('  async gmRoomSettings(request,body){'));
 assert.ok(method.startsWith('  async gmParticipants')&&method.endsWith('\n'),'GM disband method exists');

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 // V3.305 (05/11/2026) — 7 yêu cầu chủ dự án:
 // 1 mục tiêu chạy tại chỗ trên Player Web · 2 icon hành động cao hơn (không che chat) · 3 vào ván bật Auto GM
 // 4 menu GM góc phải trên (Cứu/Giết/Cấm Chat/Auto GM) · 5 dải Thông cáo Làng trên menu trên Player
@@ -10,7 +11,7 @@ import {webcrypto} from 'node:crypto';
 import * as rules from '../src/gmww-gallows-rules.js';
 import {gmwwMembersLiveScript as live} from '../src/gmww-members-live.js';
 
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const gm=readFileSync('server-game/current/app.js','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');
 const village=readFileSync('assets/village/village.mjs','utf8');

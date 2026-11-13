@@ -1,13 +1,14 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const gmPart=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const gmPart=gmSource('40-battle-and-timeline');
 const gmCompiled=readFileSync('server-game/current/app.js','utf8');
 const gmCss=readFileSync('server-game/current/style.css','utf8');
 const statusCss=readFileSync('server-game/current/status-visuals.css','utf8');
 const statusJs=readFileSync('assets/status-visuals.js','utf8');
-const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const player=playerWebSource('35-online-chat');
 const bundled=readFileSync('src/gmww-members-live.js','utf8');
 const start=statusCss.indexOf('@keyframes gmwwSvVerticalOrbit{');
 const keyframe=start>=0?statusCss.slice(start).split('\n')[0]:null;

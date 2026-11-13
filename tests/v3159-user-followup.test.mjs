@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -9,7 +10,7 @@ const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('V3.160 release metadata is aligned and native shell stays V3.110',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   assertCurrentRelease();
-  const worker=read('src/index.js');
+  const worker=workerSource();
   assert.match(worker,/NATIVE_SHELL_VERSION="3\.110"/);
 });
 
@@ -43,7 +44,7 @@ test('fire menu has three concise pressed-state switches in SAME actions row',()
 });
 
 test('Artifact first window and Ván Mẫu default are both 30 seconds',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const html=read('server-game/current/GMWW.html'),gm=read('server-game/current/app.js'),worker=read('src/index.js');
+  const html=read('server-game/current/GMWW.html'),gm=read('server-game/current/app.js'),worker=workerSource();
   assert.match(html,/id="playEarlyArtifactSec"[^>]*value="30"/);
   assert.match(gm,/earlyArtifactSec:30/);
   assert.match(gm,/if\(earlySec\)earlySec\.value=30/);

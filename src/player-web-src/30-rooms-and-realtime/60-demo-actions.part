@@ -1,0 +1,66 @@
+/* Hybrid DEMO: only action offers from the authenticated /me response are rendered.
+ * The client never receives other roles' turns, GM tokens, or action ledgers. */
+function renderDemoActions(){
+  let panel=document.getElementById('gmwwDemoHumanActions');
+  const offered=state.room?.demo===true&&state.room?.phase==='running'?
+    (Array.isArray(state.demoActions)?state.demoActions:[]):[];
+  if(!offered.length){if(panel)panel.hidden=true;state.demoUiKey='';return}
+  if(!panel){
+    const style=document.createElement('style');style.id='gmwwDemoHumanStyle';
+    style.textContent='#gmwwDemoHumanActions{position:fixed;z-index:985;left:50%;bottom:max(86px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(94vw,420px);box-sizing:border-box;padding:11px;max-height:53dvh;overflow:auto;border-radius:16px;border:1px solid #d8ad66;background:rgba(10,37,51,.96);color:#fff;box-shadow:0 12px 32px #0009;font-size:13px}#gmwwDemoHumanActions[hidden]{display:none!important}#gmwwDemoHumanActions h3{font-size:15px;margin:0 0 7px}#gmwwDemoHumanActions label{display:block;margin:6px 0}#gmwwDemoHumanActions select{width:100%;margin-top:4px;min-height:39px;border-radius:9px;padding:5px;background:#123a4b;color:white;border:1px solid #679ba9}#gmwwDemoHumanActions button{width:100%;min-height:44px;background:#d6a052;color:#13262b;font-weight:900;border:0;border-radius:11px;margin-top:9px}#gmwwDemoHumanActions button:disabled{opacity:.55}';
+    document.head.appendChild(style);panel=document.createElement('section');
+    panel.id='gmwwDemoHumanActions';panel.setAttribute('aria-label','Hành động DEMO người chơi');
+    document.body.appendChild(panel);
+  }
+  panel.hidden=false;
+  const key=[state.roomCode,state.room?.matchId,state.room?.cycleKey,
+    ...offered.map(a=>a.key)].join('|');
+  if(state.demoUiKey===key)return;
+  state.demoUiKey=key;panel.replaceChildren();
+  const heading=document.createElement('h3');heading.textContent='🎮 DEMO · ĐẾN LƯỢT BẠN';panel.appendChild(heading);
+  const pick=document.createElement('select'),actionLabel=document.createElement('label');
+  actionLabel.textContent='Hành động';actionLabel.appendChild(pick);panel.appendChild(actionLabel);
+  for(const a of offered){const option=document.createElement('option');option.value=a.key;option.textContent=a.name||a.actionId;pick.appendChild(option)}
+  const inputs=document.createElement('div');panel.appendChild(inputs);
+  const submit=document.createElement('button');submit.type='button';submit.textContent='✓ XÁC NHẬN';panel.appendChild(submit);
+  const fill=()=>{
+    inputs.replaceChildren();const a=offered.find(x=>x.key===pick.value)||offered[0];
+    const count=Math.max(0,Math.min(30,Number(a.targetCount)||0));
+    for(let i=0;i<count;i++){
+      const label=document.createElement('label');label.textContent='Mục tiêu '+(i+1);
+      const select=document.createElement('select');select.dataset.target='1';
+      const initial=document.createElement('option');initial.value='';initial.textContent='Chọn người chơi';select.appendChild(initial);
+      for(const player of state.players||[]){
+        const id=String(player.loginId||'');if(!id||(a.noSelf&&id===state.member?.loginId))continue;
+        const option=document.createElement('option');option.value=id;option.textContent=player.displayName||id;select.appendChild(option);
+      }label.appendChild(select);inputs.appendChild(label);
+    }
+    if(a.actionId==='action_transfer_bite'||a.actionId==='action-fire-wolf-bite'||a.actionId==='action_assassin_mark'){
+      const label=document.createElement('label'),select=document.createElement('select');
+      select.dataset.special=(a.actionId==='action_transfer_bite'||a.actionId==='action-fire-wolf-bite')?'direction':'assassinChoice';
+      label.textContent=a.actionId==='action-fire-wolf-bite'?'Hướng Lửa Lan':a.actionId==='action_transfer_bite'?'Hướng dịch':'Dấu bí mật';
+      const choices=a.actionId==='action-fire-wolf-bite'?[['left','← Trái'],['right','Phải →']]:a.actionId==='action_transfer_bite'?[['left','← Trái'],['none','• Không dịch'],['right','Phải →']]:[['👍','👍'],['👎','👎']];
+      for(const [value,name] of choices){const option=document.createElement('option');option.value=value;option.textContent=name;select.appendChild(option)}
+      label.appendChild(select);inputs.appendChild(label);
+    }
+  };
+  pick.onchange=fill;fill();
+  submit.onclick=async()=>{
+    if(state.demoSubmitPending)return;
+    const a=offered.find(x=>x.key===pick.value);if(!a)return;
+    const targetIds=[...inputs.querySelectorAll('select[data-target]')].map(el=>el.value);
+    if(targetIds.some(id=>!id)||new Set(targetIds).size!==targetIds.length){toast('Hãy chọn đủ mục tiêu khác nhau.');return}
+    const direction=inputs.querySelector('[data-special="direction"]')?.value;
+    const assassinChoice=inputs.querySelector('[data-special="assassinChoice"]')?.value;
+    state.demoSubmitPending=true;submit.disabled=true;
+    try{
+      const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/demo-action',{
+        method:'POST',headers:auth(),body:JSON.stringify({matchId:state.room?.matchId,
+          cycleKey:state.room?.cycleKey,actionKey:a.key,targetIds,direction,assassinChoice})});
+      toast('Đã ghi nhận: '+(a.name||'Hành động'));
+      state.demoUiKey='';if(d.revelation)toast('Kết quả: '+JSON.stringify(d.revelation).slice(0,260));
+      await refreshPrivateRole(true);
+    }catch(e){toast(e?.message||'Hành động chưa được ghi nhận.');await refreshPrivateRole(true)}
+    finally{state.demoSubmitPending=false;submit.disabled=false}
+  };
+}

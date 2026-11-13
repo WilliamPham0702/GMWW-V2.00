@@ -30,3 +30,12 @@
 10. Mọi update Server/Runtime/IPA/Player Web phải kèm release notes/changelog. Được áp dụng AUTO-DELIVERY V3.0 theo phê duyệt thường trực cho phạm vi an toàn khi required CI cùng SHA SUCCESS; thay đổi nhạy cảm phải phê duyệt riêng, bảo toàn phòng/DO/lịch sử/IPA và có rollback.
 
 **Kết quả mong muốn:** Một task → một phạm vi tác động → các test cần thiết của task → báo cáo ngắn, chính xác. Không kiểm thử lan man.
+
+---
+
+# Cấu trúc mã (từ 13/11/2026)
+
+- Worker: `src/index.js` chỉ giữ hằng số phiên bản + ghép; mã nằm trong `src/worker/` (`http/`, `room/`, `support/`) — xem `src/worker/README.md`. Luật game vẫn ở `src/gmww-*-rules.js`.
+- GM Server: `server-game/src/<nhóm>/<NN-tên>.part` → `server-game/current/app.js` — xem `server-game/src/README.md`.
+- Player Web: `src/player-web-src/<nhóm>/<NN-tên>.part` → `src/gmww-members-live.js` — xem `src/player-web-src/README.md`.
+- Test/CI đọc nguồn qua `.github/scripts/worker-source.mjs` và `.github/scripts/source-groups.mjs`, không đọc thẳng đường dẫn file cũ.

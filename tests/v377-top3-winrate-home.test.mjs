@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -57,6 +58,6 @@ test('V3.76 to V3.77 safe three-file OTA upgrades the existing IPA without delet
  assert.deepEqual(patch?.delete,[]);
  for(const from of ['3.75','3.77','3.17',''])assert.equal(selectVerifiedRuntimeV377Delta(m(),from),null);
  const bad=m();bad.runtime.files[2].sha256='invalid';assert.equal(selectVerifiedRuntimeV377Delta(bad,'3.76'),null);
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  for(const k of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV377Delta('+k+',url.searchParams.get("current"))'));
 });

@@ -1,3 +1,5 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 import {peekPending,peekDecisionRows,peekDeaths} from '../src/gmww-swap-info-rules.js';
 import {publicChatNotices} from '../src/gmww-online-chat-policy.js';
@@ -30,7 +32,7 @@ test('Sói được chuyển hóa vào Bầy Sói thấy cảnh báo Ti Hí',()=
   assert.equal(isWolfRole(eff.find(x=>x.loginId==='c')),true);
 });
 test('Durable Object: Sói quyết định Ti Hí bằng endpoint Player Web',async()=>{
-  const src=fs.readFileSync('src/index.js','utf8');
+  const src=workerSource();
   const a=src.indexOf('  async playerPeekDecide(body){'),b=src.indexOf('  async playerGhostWord(body){');
   const data=new Map(),store={get:async k=>structuredClone(data.get(k)),put:async(k,v)=>{data.set(k,structuredClone(v))}};
   const ctx=vm.createContext({normalizeLoginId:x=>String(x||'').trim().toLowerCase(),j:(o,s=200)=>({body:o,status:s}),peekDecisionRows,effectiveAssignments,
@@ -45,11 +47,11 @@ test('Durable Object: Sói quyết định Ti Hí bằng endpoint Player Web',as
   assert.equal(data.get('interactions').some(x=>x.actionId==='action-peek-detect'&&x.detected===true),true);
 });
 test('Player Web: có ô quyết định Ti Hí, nhập chữ Hồn Ma và hướng Lửa Lan',()=>{
-  const ui=['30-rooms-and-realtime','35-online-chat'].map(n=>fs.readFileSync('src/player-web-src/'+n+'.part','utf8')).join('\n');
+  const ui=['30-rooms-and-realtime','35-online-chat'].map(n=>playerWebSource(n)).join('\n');
   assert.match(ui,/gmwwPeekAlert/);assert.match(ui,/\/peek\/decide/);
   assert.match(ui,/gmwwGhostWord/);assert.match(ui,/\/ghost\/word/);
   assert.match(ui,/action-fire-wolf-bite/);
-  const srv=fs.readFileSync('src/index.js','utf8');
+  const srv=workerSource();
   assert.match(srv,/\/player\/peek\/decide/);assert.match(srv,/\/player\/ghost\/word/);
   assert.match(srv,/round:2,stage:"ready"/);
 });

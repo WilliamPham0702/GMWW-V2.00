@@ -38,7 +38,7 @@ jobs:
           node --check src/index.js
           node --check tools/gr01-pitr-controller-worker.mjs
           node --check tools/gr01-live-staging-worker.mjs
-          if grep -q "onNextSessionRestoreBookmark" src/index.js; then
+          if grep -rq "onNextSessionRestoreBookmark" src/index.js src/worker; then
             echo "::error::Production Worker must not include a destructive PITR operation"
             exit 1
           fi

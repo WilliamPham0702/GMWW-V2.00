@@ -1,3 +1,5 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -49,13 +51,13 @@ test('No hanging in ready, nomination, resolved, stale target or mode-switch sta
 });
 test('Both UIs position a single Character above their fire without mutating Seat',()=>{
  const rules=fs.readFileSync('src/gmww-gallows-rules.js','utf8'),
-   worker=fs.readFileSync('src/index.js','utf8'),
+   worker=workerSource(),
    gm=fs.readFileSync('server-game/current/app.js','utf8'),
    gmCss=fs.readFileSync('server-game/current/gallows-hanging.css','utf8'),
-   player=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8'),
+   player=playerWebSource('20-village-and-profile'),
    village=fs.readFileSync('assets/village/village.mjs','utf8'),
    villageCss=fs.readFileSync('assets/village/village.css','utf8'),
-   live=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+   live=playerWebSource('30-rooms-and-realtime');
  assert.match(rules,/hanging:gallowsHangingState\(ballot,now\)/);
  assert.match(worker,/command==="hang"/);
  assert.match(worker,/this.broadcast\(\{type:"gallows_updated"/);

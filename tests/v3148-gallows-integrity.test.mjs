@@ -1,3 +1,5 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -35,9 +37,9 @@ test('new match/day cannot reuse old ballot or disclose old votes',()=>{
   assert.equal(gallowsSnapshot(ballot,{matchId:'m1',cycleKey:'morning-2'},1000+GALLOWS_VOTE_MS+1).stage,'closed');
 });
 test('gallows is connected to authenticated GM and player APIs and private room state',()=>{
-  const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
-  const gm=readFileSync(new URL('../server-game/src/40-battle-and-timeline.part',import.meta.url),'utf8');
-  const player=readFileSync(new URL('../src/player-web-src/30-rooms-and-realtime.part',import.meta.url),'utf8');
+  const server=workerSource();
+  const gm=gmSource('40-battle-and-timeline');
+  const player=playerWebSource('30-rooms-and-realtime');
   assert.match(server,/async gmGallows\(request,body\)/);
   assert.match(server,/async playerGallows\(body,authorizedDemo=false\)/);
   assert.match(server,/if\(meta\?\.demo===true&&!authorizedDemo\)\{/);

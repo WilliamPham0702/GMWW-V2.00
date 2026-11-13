@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ import {sanitizePlayerArtifactCard} from '../src/gmww-private-card-contract.js';
 
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const gm=fs.readFileSync('server-game/current/app.js','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('priority-first Artifact option is editable, visible, persisted and sent in shared card reference',()=>{
   assert.match(html,/id="artifactPriorityFirst"/);

@@ -1,10 +1,12 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {demoTaskAt,demoPlayerActions} from '../src/gmww-demo-runner.js';
 
-const worker=readFileSync('src/index.js','utf8');
-const web=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+const worker=workerSource();
+const web=playerWebSource('30-rooms-and-realtime');
 const runner=readFileSync('src/gmww-demo-runner.js','utf8');
 
 test('DEMO auto runs bots first and waits for human choices until the final window',()=>{

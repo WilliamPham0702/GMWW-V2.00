@@ -7,7 +7,7 @@ on:
       - 'src/index.js'
       - 'src/gmww-demo-runner.js'
       - 'src/gmww-members-live.js'
-      - 'src/player-web-src/30-rooms-and-realtime.part'
+      - 'src/player-web-src/30-rooms-and-realtime/**'
       - 'tests/demo-*.mjs'
       - 'tests/demo-*.test.mjs'
       - 'tests/gmww-player-web-source-modules.test.mjs'

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,6 +34,6 @@ test('ART-01 Production gate is scoped to server Core plus same-SHA CI, preserve
  assert.match(workflow,/test "\$CI_STATE" = 'success'/);
  assert.match(workflow,/test -s docs\/releases\/GMWW-V3\.238-uniform-gm-controls/);
  assert.match(workflow,/npx wrangler deploy/);
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  assert.match(worker,/ART-01: Night 1 always opens the Artifact stage/);
 });

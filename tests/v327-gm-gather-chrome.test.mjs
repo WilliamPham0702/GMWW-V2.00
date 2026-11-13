@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,13 +9,13 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('V3.37 keeps seven-stage timeline above a smaller four-icon GM dock',()=>{
  assert.match(html,/id="playSetupStrip"/);
  assert.ok(html.indexOf('id="playSetupStrip"')<html.indexOf('id="playWorld"'));
  assert.ok(html.indexOf('id="gmTopMenu"')>html.indexOf('id="playWorld"'));
- const controls=['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'];
+ const controls=['playExitVillage','playChatTop','playPhasePill','playEndGame'];
  for(const id of controls)assert.match(html,new RegExp('id="'+id+'"'));
  const menu=html.slice(html.indexOf('<nav class="gm-top-menu-v293'),html.indexOf('</nav>',html.indexOf('<nav class="gm-top-menu-v293'))+6);
  assert.doesNotMatch(menu,/<small>THOÁT<\/small>|<small>AUTO GM<\/small>|<small>AUDIO<\/small>|<small>KẾT THÚC<\/small>/);

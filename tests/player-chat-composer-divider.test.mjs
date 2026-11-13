@@ -1,9 +1,10 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 // Scope: UI-only divider for the Player Web Online chat composer.
-const source=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const source=playerWebSource('35-online-chat');
 const bundle=readFileSync('src/gmww-members-live.js','utf8');
 const rule='#gmwwChatPanel.open #gmwwChatForm{border-top:1px solid rgba(255,255,255,.48)}';
 

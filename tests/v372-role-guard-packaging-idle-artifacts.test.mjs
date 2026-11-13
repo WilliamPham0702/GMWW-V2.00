@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('Server packages role_guard canonical image without asking iOS WKWebView to fetch local artwork',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},async()=>{
   const start=worker.indexOf('async function gmPackageCanonicalTemplateRole(env,raw,request){');

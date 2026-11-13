@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,16 +9,17 @@ import {wolfPackMembers,shouldWakeWolfPack} from '../src/gmww-wolf-recognition.j
 import {partitionNightSpecialRoles} from '../src/gmww-witch-drunk-clone-rules.js';
 import {isWolfRole,packMembers,arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
 import {readNightAssignments,canSnowWolfBite} from '../src/gmww-wolf-night-resolution.js';
+import {insertMirrorSteps,mirrorLinkPrefix} from '../src/gmww-mirror-rules.js';
 
 // Exercise the actual Durable Object night scheduler, not a copied queue builder.
-const source=fs.readFileSync('src/index.js','utf8');
+const source=workerSource();
 const start=source.indexOf('  async buildNightRuntime(meta,night){');
 const end=source.indexOf('  async artifactUsedInNight(',start);
 assert.ok(start>=0&&end>start,'Production night scheduler must be found');
 const Room=vm.runInNewContext('(class {'+source.slice(start,end)+'})',{
   defaultPriorityFirst,combineConfiguredTurns,groupConfiguredRoleTurns,
   wolfPackMembers,shouldWakeWolfPack,partitionNightSpecialRoles,
-  isWolfRole,packMembers,arrangeNightRoles,readNightAssignments,canSnowWolfBite,
+  isWolfRole,packMembers,arrangeNightRoles,readNightAssignments,canSnowWolfBite,insertMirrorSteps,mirrorLinkPrefix,
   normalizeLoginId:x=>String(x||'').replace(/^member:/,'').trim().toLowerCase()
 });
 const villager={loginId:'alice',roleId:'role_villager',roleName:'Dân Làng',faction:'village'};
@@ -38,7 +40,8 @@ function harness(assignments,options={}){
   const room=new Room();
   room.ctx={storage:{
     get:async key=>structuredClone(db.get(key)),
-    put:async(key,value)=>db.set(key,structuredClone(value))
+    put:async(key,value)=>db.set(key,structuredClone(value)),
+    list:async({prefix=''}={})=>new Map([...db].filter(([k])=>String(k).startsWith(prefix)).map(([k,v])=>[k,structuredClone(v)]))
   }};
   room.applyNightRoleInheritance=async(_meta,_night,rows)=>({assignments:rows,drunkNotices:[]});
   room.getNightRuntime=async()=>null;

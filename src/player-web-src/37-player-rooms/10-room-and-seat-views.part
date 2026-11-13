@@ -1,0 +1,133 @@
+  // Keeps the strip every player sees in step with the owner's tab (ignored when the server refuses).
+  const STAGE={lobby:'room',room:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
+  function syncStage(k){if(!pr.own||!STAGE[k]||String(pr.state?.room?.phase||'lobby').toLowerCase()==='running')return;callOwner('stage','POST',{step:STAGE[k]}).then(refresh).catch(()=>{})}
+  function goStep(k){pr.view=k;pr.touched=true;syncStage(k);render()}
+  async function loadTemplates(){
+    pr.catalogStatus='loading';pr.catalogError='';
+    try{
+      const d=await api('/api/player-rooms/templates',{headers:auth()});pr.templates=Array.isArray(d.templates)?d.templates:[];
+      const available=new Map();for(const t of pr.templates){const cfg=t?.compiledConfig||t?.gameConfig||{};for(const r of Array.isArray(cfg.roles)?cfg.roles:[]){const id=String(r?.roleId||'');if(id&&!available.has(id))available.set(id,{roleId:id,roleName:String(r.roleName||r.name||id),faction:String(r.faction||''),order:Number(r.order)||0})}}
+      pr.roles=[...available.values()];
+      try{const r=await api('/api/player-rooms/roles',{headers:auth()});if(Array.isArray(r.roles)&&r.roles.length)pr.roles=r.roles;pr.artifacts=Array.isArray(r.artifacts)?r.artifacts:[];if(r.artifactError)pr.catalogError='Artifact chưa tải được.'}
+      catch(e){pr.catalogError=errText(e)}
+      pr.catalogStatus='ready';
+    }catch(e){pr.catalogStatus='error';pr.catalogError=errText(e);throw e}
+  }
+  const btn=(label,fn,cls,disabled)=>{const b=el('button',cls||null,label);b.type='button';if(disabled||pr.busy)b.disabled=true;b.addEventListener('click',()=>run(fn));return b};
+  const stat=(k,v)=>{const d=el('div','gmww-pr-stat');d.append(el('small',null,k),el('b',null,String(v)));return d};
+  // Step the server is on, mapped to the six tabs; the owner can still browse the other tabs.
+  function serverStep(room){const g=String(room.gmStage==='room'?'lobby':room.gmStage||'lobby');return STEPS.some(s=>s[0]===g)?g:'lobby'}
+  function seatedCount(players){return players.length}
+  function deckSize(cfg){return(cfg?.roles||[]).reduce((n,r)=>n+Math.max(1,Number(r.count)||1),0)}
+
+  function viewLobby(box,st,room,players){
+    const g=el('div','gmww-pr-grid');g.append(stat('Mã phòng',pr.own.code),stat('Người trong phòng',players.length+' / '+(room.seatCount||30)));box.append(g);
+    box.append(el('p','gmww-pr-help','Bạn chơi cùng mọi người, Quản Trò Tự Động điều hành ván. Bước đầu: gửi phòng cho bạn bè ở trang Phòng.'));
+    box.append(btn('TIẾP: PHÒNG →',async()=>goStep('room'),'gmww-pr-main'));
+  }
+  // v3.322 menu Phòng gọn (deploy lại sau khi CI main xanh).
+  // Quản lý phòng: mã phòng + Gửi phòng + Sao chép mã trên 1 dòng, rồi danh sách người đã vào (Xoá).
+  async function deleteRoom(){
+    const code=pr.own.code;
+    if(!confirm('Xoá phòng '+code+'? Mọi người trong phòng sẽ bị đưa ra ngoài.'))return;
+    await callOwner('close','POST',{});
+    pr.own=null;pr.state=null;pr.known=null;pr.view='room';pr.touched=true;save(null);
+    try{await handleRoomMembershipLost('Đã xoá phòng '+code+'.')}catch(_){}
+    say('Đã xoá phòng '+code+'.');
+  }
+  function roomDetails(box,st,room,players,locked){
+    const link=pr.own.joinUrl||(location.origin+'/?room='+pr.own.code),code=pr.own.code,total=Number(room.seatCount)||30;
+    const line1=el('div','gmww-pr-line');line1.append(el('b','gmww-pr-linecode',code),
+      btn('Sao chép mã',async()=>{try{await navigator.clipboard.writeText(code);say('Đã sao chép mã '+code+'.')}catch(_){say('Mã phòng: '+code)}}),
+      btn('Gửi phòng',async()=>{const text='Vào phòng Ma Sói của mình nhé! Mã phòng: '+code+'\n'+link;
+        if(navigator.share){try{await navigator.share({title:'Phòng Ma Sói '+code,text,url:link});return}catch(e){if(e&&e.name==='AbortError')return}}
+        try{await navigator.clipboard.writeText(text);say('Đã sao chép lời mời.')}catch(_){say(text)}},'gmww-pr-main'));box.append(line1);
+    box.append(el('div','gmww-pr-sub','ĐÃ VÀO PHÒNG • '+players.length+' / '+total));
+    const list=el('div','gmww-pr-list');
+    for(const p of players){const line=el('div','gmww-pr-player'),isOwner=String(p.loginId||'')===String(st?.ownerLoginId||'');
+      line.append(el('span',null,(p.displayName||p.loginId||'?')+(isOwner?'  ★':'')));
+      if(!isOwner&&!locked)line.append(btn('Xoá',async()=>{await callOwner('kick','POST',{loginId:p.loginId});await refresh()},'gmww-pr-kick'));
+      list.append(line)}
+    if(!players.length)list.append(el('p','gmww-pr-help','Chưa có ai trong phòng.'));
+    box.append(list);
+    const line2=el('div','gmww-pr-line');line2.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'),btn('Tập hợp →',async()=>goStep('seats'),'gmww-pr-main'));box.append(line2);
+  }
+  // "Phòng": 1) vào phòng bằng mã  2) tạo phòng riêng  3) quản lý phòng đã tạo.
+  function viewRoomHub(box,st,room,players){
+    box.append(el('div','gmww-pr-sub','1. QUẢN LÝ PHÒNG'));
+    if(!pr.own)box.append(el('p','gmww-pr-help','Bạn chưa tạo phòng nào.'));
+    else if(!inOwnRoom())box.append(btn('Vào lại phòng '+pr.own.code,async()=>{
+      if(await window.joinRoom(pr.own.code)===false)throw new Error('Không vào lại được phòng.');try{await enterVillage()}catch(_){}
+      await refresh()},'gmww-pr-main'),btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));
+    else roomDetails(box,st,room,players,room.seatsLocked===true);
+    box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG'));
+    box.append(btn('Tạo phòng riêng',create,'gmww-pr-main',!!pr.own));
+    box.append(el('div','gmww-pr-sub','3. VÀO PHÒNG'));
+    const row=el('div','gmww-pr-row'),inp=el('input');inp.id='gmwwPrJoin';inp.placeholder='Nhập mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.style.textTransform='uppercase';
+    // The panel is rebuilt on every refresh / button press, so the typed code lives in pr.joinCode, not only in the input.
+    inp.value=pr.joinCode||'';inp.addEventListener('input',()=>{pr.joinCode=inp.value});
+    row.append(inp,btn('Vào Game',async()=>{await joinByCode(pr.joinCode)}));box.append(row);
+  }
+  function viewSeats(box,st,room,players,locked){
+    box.append(el('div','gmww-pr-sub','PHÂN BỐ VỊ TRÍ • '+players.length+' người • '+(locked?'ĐÃ CHỐT':'Tự xếp')));
+    box.append(el('p','gmww-pr-help',locked?'Đã chốt chỗ. Bấm GIẢI TÁN nếu cần xếp lại.':'Mọi người ngồi quanh đống lửa. Kéo trên cảnh làng để dời cả khối, hai ngón để chỉnh khoảng cách.'));
+    const row=el('div','gmww-pr-line');
+    if(!locked)row.append(btn('Về giữa',async()=>{await callOwner('room-settings','POST',{seatOffset:{x:0,y:0},seatSpacing:100});await refresh()}));
+    row.append(btn(locked?'↩ GIẢI TÁN':'✓ CHỐT CHỖ',async()=>{await callOwner('seat-lock','POST',{locked:!locked});say(locked?'Đã giải tán, mở lại chỗ ngồi.':'Đã chốt chỗ ngồi.');await refresh()},locked?null:'gmww-pr-main'));
+    if(locked)row.append(btn('TIẾP: VÁN MẪU →',async()=>goStep('game'),'gmww-pr-main'));
+    box.append(row);
+    const det=el('details','gmww-pr-seatlist'),sum=el('summary',null,'Danh sách chỗ ngồi');det.append(sum);
+    if(pr.seatListOpen)det.open=true;det.addEventListener('toggle',()=>{pr.seatListOpen=det.open});
+    const list=el('div','gmww-pr-list');
+    for(const p of players){const line=el('div','gmww-pr-player'),isOwner=String(p.loginId||'')===String(st?.ownerLoginId||'');
+      line.append(el('span',null,(p.seatId?('#'+p.seatId+'  '):'')+(p.displayName||p.loginId||'?')+(isOwner?'  ★':'')));
+      if(!isOwner&&!locked){const k=btn('Kick',async()=>{await callOwner('kick','POST',{loginId:p.loginId});await refresh()},'gmww-pr-kick');line.append(k)}
+      list.append(line)}
+    if(!players.length)list.append(el('p','gmww-pr-help','Chưa có ai trong phòng.'));
+    det.append(list);box.append(det);
+  }
+  // Kéo cả khối seat trên cảnh làng (như GM Server): 1 ngón dời, 2 ngón chỉnh khoảng cách; chạm không kéo thì đóng trang.
+  // Như GM Server: ở bước Tập hợp, chủ phòng kéo/chụm trực tiếp trên cảnh làng, không cần mở trang.
+  const seatDragOn=()=>!!(pr.own&&inOwnRoom()&&stepNow()==='seats'&&pr.state?.room?.seatsLocked!==true&&String(pr.state?.room?.phase||'lobby').toLowerCase()!=='running');
+  function installSeatDrag(back){
+    const pts=new Map();let g=null,moved=false;
+    const frame=()=>document.getElementById('gmwwVillageFrame')?.getBoundingClientRect()||{width:innerWidth,height:innerHeight};
+    const room=()=>pr.state?.room||{},cur=()=>({x:Number(room().seatOffset?.x)||0,y:Number(room().seatOffset?.y)||0,sp:Number(room().seatSpacing)||100});
+    const dist=()=>{const [a,b]=[...pts.values()];return Math.hypot(a.x-b.x,a.y-b.y)};
+    const preview=v=>{window.gmwwSeatPreview=v;try{syncVillageFrame(true)}catch(_){}};
+    back.addEventListener('pointerdown',e=>{
+      if(!seatDragOn()||pts.size>=2)return;
+      pts.set(e.pointerId,{x:e.clientX,y:e.clientY});try{back.setPointerCapture(e.pointerId)}catch(_){}
+      const c=cur();g=pts.size===2?{pinch:true,d:Math.max(1,dist()),c}:{x:e.clientX,y:e.clientY,c};
+    });
+    back.addEventListener('pointermove',e=>{
+      if(!pts.has(e.pointerId)||!g)return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(g.pinch&&pts.size===2){moved=true;preview({x:g.c.x,y:g.c.y,sp:Math.max(50,Math.min(300,Math.round(g.c.sp*dist()/g.d)))});e.preventDefault();return}
+      if(g.pinch||pts.size!==1)return;
+      const dx=e.clientX-g.x,dy=e.clientY-g.y;if(!moved&&Math.hypot(dx,dy)<6)return;moved=true;
+      const f=frame();preview({x:g.c.x+dx/Math.max(1,f.width)*100,y:g.c.y+dy/Math.max(1,f.height)*100,sp:g.c.sp});e.preventDefault();
+    },{passive:false});
+    const end=async e=>{
+      if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);try{back.releasePointerCapture(e.pointerId)}catch(_){}
+      if(pts.size)return;
+      const was=moved,pv=window.gmwwSeatPreview;g=null;moved=false;
+      if(!was){return}
+      pr.suppressBackClick=true;setTimeout(()=>{pr.suppressBackClick=false},500);
+      if(e.type==='pointercancel'||!pv){preview(null);return}
+      try{await callOwner('room-settings','POST',{seatOffset:{x:pv.x,y:pv.y},seatSpacing:pv.sp});await refresh()}catch(err){say(errText(err))}
+      preview(null);
+    };
+    back.addEventListener('pointerup',end);back.addEventListener('pointercancel',end);
+  }
+  // Seats are filled by the server from the sample layout; nobody moves them by hand (online play).
+  function autoSeat(){
+    const st=pr.state;if(!st||pr.busy||pr.autoSeating||!pr.own||!inOwnRoom())return;
+    const room=st.room||{},ps=Array.isArray(st.players)?st.players:[];
+    if(room.seatsLocked===true||String(room.phase||'lobby').toLowerCase()==='running'||!ps.some(p=>!p.seatId))return;
+    if(!(pr.view==='seats'||stepNow()==='seats'))return;
+    pr.autoSeating=true;
+    (async()=>{try{
+      if(ps.length>(Number(room.seatCount)||0))await callOwner('room-settings','POST',{seatCount:Math.min(30,Math.max(6,ps.length))});
+      await callOwner('seats-randomize','POST',{});pr.state=await api(base()+'state',{headers:oh()});render();
+    }catch(_){}finally{pr.autoSeating=false}})();
+  }

@@ -1,11 +1,12 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const gm=readFileSync('server-game/current/app.js','utf8');
-const authored=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const gmMotion=readFileSync('server-game/src/30-village-and-setup.part','utf8');
+const authored=gmSource('40-battle-and-timeline');
+const gmMotion=gmSource('30-village-and-setup');
 const css=readFileSync('server-game/current/style.css','utf8');
 const village=readFileSync('assets/village/village.mjs','utf8');
 const playerCss=readFileSync('assets/village/village.css','utf8');

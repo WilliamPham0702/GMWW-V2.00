@@ -1,11 +1,13 @@
+import {gmSource as readGmGroup} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const read=path=>readFileSync(path,'utf8');
-const gmSource=read('server-game/src/00-core-and-library.part');
-const gmBattle=read('server-game/src/30-village-and-setup.part');
-const worker=read('src/index.js');
+const gmSource=readGmGroup('00-core-and-library');
+const gmBattle=readGmGroup('30-village-and-setup');
+const worker=workerSource();
 const village=read('assets/village/village.mjs');
 const scene=read('assets/village/scene-manager.mjs');
 
@@ -18,7 +20,7 @@ test('Treo độc lập menu GM: vị trí đã chọn dùng chính xác và có
   assert.deepEqual(resolve({gallowsAnchors:{day:{x:-8,y:132}}},{phase:'day'},()=>[45,58]),[0,100]);
   assert.match(gmSource,/gallowsAnchors:\{\[key\]:point\}/);
   assert.match(read('server-game/current/GMWW.html'),/id="battleGMGallowsAnchor"/);
-  assert.match(read('server-game/src/40-battle-and-timeline.part'),/villageCalibrateGallows\('day'\)/);
+  assert.match(readGmGroup('40-battle-and-timeline'),/villageCalibrateGallows\('day'\)/);
 });
 
 test('Worker lưu metadata tọa độ treo: phân quyền GM, kiểm tra 0–100, không reset ảnh và Seat',()=>{

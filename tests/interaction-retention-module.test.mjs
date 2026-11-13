@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {pruneInteractions, INTERACTION_BYTE_BUDGET, LIVE_EFFECT_TYPES} from '../src/gmww-interaction-retention.js';
@@ -27,8 +28,8 @@ test('retention: protected effects match persisted game contracts',()=>{
 });
 test('retention: Worker imports pruning module without duplicating implementation',async()=>{
   const {readFileSync}=await import('node:fs');
-  const source=readFileSync('src/index.js','utf8');
-  assert.match(source,/import \{ pruneInteractions \} from "\.\/gmww-interaction-retention\.js";/);
+  const source=workerSource();
+  assert.match(source,/import \{ ?pruneInteractions ?\} from "\.\/gmww-interaction-retention\.js";/);
   assert.doesNotMatch(source,/function pruneInteractions\(/);
   assert.match(source,/storage\.put\("interactions",pruneInteractions\(rows\)\)/);
 });

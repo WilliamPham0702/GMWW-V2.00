@@ -4,15 +4,15 @@ on:
     branches: [main]
     paths:
       - 'server-game/current/app.js'
-      - 'server-game/src/40-battle-and-timeline.part'
-      - 'server-game/src/45-online-chat.part'
+      - 'server-game/src/40-battle-and-timeline/**'
+      - 'server-game/src/45-online-chat/**'
       - 'src/index.js'
       - 'package.json'
   pull_request:
     branches: [main]
     paths:
-      - 'server-game/src/40-battle-and-timeline.part'
-      - 'server-game/src/45-online-chat.part'
+      - 'server-game/src/40-battle-and-timeline/**'
+      - 'server-game/src/45-online-chat/**'
       - 'server-game/current/app.js'
       - 'server-game/current/style.css'
       - 'tests/gm-admin-top-chat-20261028.test.mjs'

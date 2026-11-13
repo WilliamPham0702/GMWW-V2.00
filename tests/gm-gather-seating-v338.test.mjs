@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 test('V3.38 keeps gathering toolbar available and restores async controls',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  assert.ok(app.includes("if(playSceneState.step==='seats'&&playSceneState.phase==='lobby')hidden=false"));
  assert.ok(app.includes("bar.classList.remove('is-auto-hidden')"));

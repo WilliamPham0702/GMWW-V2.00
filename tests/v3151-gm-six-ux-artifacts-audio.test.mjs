@@ -1,11 +1,13 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const roles=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const gm=gmSource('40-battle-and-timeline');
+const setup=gmSource('30-village-and-setup');
+const roles=gmSource('50-roles-and-artifacts');
 const controls=fs.readFileSync('server-game/current/battle-controls.js','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 
@@ -79,8 +81,8 @@ test('V3.152 audio confirmation gate does not change a night turn or trigger nex
 test('V3.152 GM packaged Runtime and prior IPA shell remain stable',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
  '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
- assert.equal(parts.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join(''),fs.readFileSync('server-game/current/app.js','utf8'));
- const worker=fs.readFileSync('src/index.js','utf8');
+ assert.equal(parts.map(name=>gmSource(name.replace(/\.part$/,''))).join(''),fs.readFileSync('server-game/current/app.js','utf8'));
+ const worker=workerSource();
  const version=JSON.parse(fs.readFileSync('package.json','utf8')).version.replace(/\.0$/,'');
  assert.ok(worker.includes('VERSION="V'+version+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+version.replaceAll('.','')+'"'));
 });

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -20,7 +21,7 @@ test('V3.202 increases beyond Production V3.200; same-version changed bytes reje
 
 test('V3.206 leaves native shell V3.110 and already-published IPA V3.200 unchanged',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const notes=read('.github/scripts/prepare-update-channel.mjs');
- const worker=read('src/index.js'),html=read('server-game/current/GMWW.html');
+ const worker=workerSource(),html=read('server-game/current/GMWW.html');
  const proof=JSON.parse(read('update-system/published-ipa.json'));
  assert.match(notes,/releaseNotes:\["V3\.206: Cờ đề cử Player Web/);
  assert.match(notes,/V3\.200: PR #457/);

@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const src=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const roster=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
+const src=gmSource('40-battle-and-timeline');
+const roster=gmSource('50-roles-and-artifacts');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const controls=fs.readFileSync('server-game/current/battle-controls.js','utf8');
@@ -47,12 +48,12 @@ test('disabled daytime Artifact shows its configured action and preserves role a
 test('generated GM runtime retains exact source assembly',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
-  assert.equal(app,parts.map(n=>fs.readFileSync('server-game/src/'+n,'utf8')).join(''));
+  assert.equal(app,parts.map(n=>gmSource(n.replace(/\.part$/,''))).join(''));
 });
 
 
 test('Artifact foot label is compact and swipeable while preserving full name access',()=>{
-  const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const setup=gmSource('30-village-and-setup');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
   assert.match(setup,/play-player-artifact-text/);
   assert.match(setup,/title=".*playEsc\(assignment\.artifactName/);

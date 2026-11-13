@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,14 +25,14 @@ test('CI smoke covers password-free register, login and session restore',()=>{
 });
 
 test('Server disables legacy password enforcement when a member logs in',()=>{
-  const server=read('src/index.js');
+  const server=workerSource();
   const start=server.indexOf('async memberLogin(body)'),end=server.indexOf('async memberChangePassword',start),segment=server.slice(start,end);
   assert.ok(segment.includes('disableMemberPassword(member)'));
   assert.doesNotMatch(segment,/verifyPassword|PASSWORD_REQUIRED|INVALID_PASSWORD/);
 });
 
 test('V3.17 runtime metadata is aligned on the V3.17 native shell',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
+  const server=workerSource(),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   assertCurrentRelease();
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 3110;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.110;'));

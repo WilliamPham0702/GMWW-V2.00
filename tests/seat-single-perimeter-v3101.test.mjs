@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -26,7 +27,7 @@ test('V3.100 to V3.101 is a no-delete SHA-verified four-file overlay',()=>{
 });
 
 test('V3.104 preserves the V3.101 Smart Seat GM/Worker/Player contract together while preserving existing gameplay and assignments',()=>{
- const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
+ const worker=workerSource(),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),player=fs.readFileSync('assets/village/village.mjs','utf8');
  assertCurrentRelease();
  assert.match(player,/fire3101/);

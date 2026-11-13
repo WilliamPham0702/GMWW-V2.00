@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const html=fs.readFileSync('assets/village/gp2-qa.html','utf8');
 const js=fs.readFileSync('assets/village/gp2-qa.mjs','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('GP2 QA is an isolated Worker asset, not the live player game entry',()=>{
  assert.match(worker,/url\.pathname\.startsWith\("\/village\/"\)/);

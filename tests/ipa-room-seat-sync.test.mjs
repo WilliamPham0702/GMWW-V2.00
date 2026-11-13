@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import {readFileSync} from 'node:fs';
 const app=readFileSync(new URL('../server-game/current/app.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../server-game/current/GMWW.html',import.meta.url),'utf8');
 const css=readFileSync(new URL('../server-game/current/style.css',import.meta.url),'utf8');
-const server=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const server=workerSource();
 const workflow=readFileSync(new URL('../.github/workflows/build-server-game-ipa.yml',import.meta.url),'utf8');
 
 test('V3.17 runtime keeps offline/online room flow with GM-only seating',()=>{

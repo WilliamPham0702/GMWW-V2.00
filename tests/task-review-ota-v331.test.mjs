@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease,currentRuntimeVersion} from './release-metadata-helper.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -6,7 +7,7 @@ import fs from "node:fs";
 const read=path=>fs.readFileSync(path,"utf8");
 const app=read("server-game/current/app.js");
 const html=read("server-game/current/GMWW.html");
-const worker=read("src/index.js");
+const worker=workerSource();
 const deploy=read(".github/workflows/deploy-production.yml");
 const pkg=JSON.parse(read("package.json"));
 const lock=JSON.parse(read("package-lock.json"));

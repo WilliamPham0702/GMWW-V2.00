@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -68,6 +69,6 @@ test('shared character atlas still caps GM low power to 15 FPS',()=>{
  assert.ok(atlas.includes('[...roots].some(root=>!root._gmwwLowPower||!root._gmwwPaused)')||atlas.includes('[...roots].some(root=>root.isConnected&&(!root._gmwwLowPower||!root._gmwwPaused))'));
 });
 test('6 source modules assemble exactly to shipped GM app',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'].map(n=>readFileSync('server-game/src/'+n+'.part','utf8')).join('');
+ const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'].map(n=>gmSource(n)).join('');
  assert.equal(parts,app);
 });

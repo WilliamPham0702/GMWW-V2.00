@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const config=fs.readFileSync('wrangler.jsonc','utf8');
 const page=fs.readFileSync('src/gmww-members-live.js','utf8');
 const live=JSON.parse(page.slice(page.indexOf(' = ')+3).trim().replace(/;$/,''));

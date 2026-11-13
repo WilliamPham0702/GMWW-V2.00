@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,7 +22,7 @@ test('V3.70 overlay fails closed on tampering or unsupported base',()=>{
  ]){const x=manifest();change(x);assert.equal(selectVerifiedRuntimeV370Delta(x,'3.69'),null)}
 });
 test('Worker and IPA Runtime V3.94 declarations are aligned and retain native shell V3.17',()=>{
- const worker=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8');
+ const worker=workerSource(),app=fs.readFileSync('server-game/current/app.js','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8'),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
  for(const type of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV376Delta('+type+',url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta'));
  assertCurrentRelease();

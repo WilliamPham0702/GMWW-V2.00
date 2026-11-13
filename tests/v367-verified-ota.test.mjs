@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,7 +26,7 @@ test('Reject unsafe V3.67 manifests and unsupported IPA versions',()=>{
  ]){const m=mk();change(m);assert.equal(selectVerifiedRuntimeV367Delta(m,'3.66'),null)}
 });
 test('Both update manifest routes prioritize verified V3.67 overlay',()=>{
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  for(const k of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV367Delta('+k+',url.searchParams.get("current"))||selectVerifiedRuntimeV366Delta'));
  assertCurrentRelease();
 });

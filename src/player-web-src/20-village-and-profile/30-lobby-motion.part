@@ -1,0 +1,63 @@
+const LOBBY_MOTION_HOLD_MS=1400;
+function lobbyMotionEnabled(){return state.member?.lobbyMotionEnabled!==false}
+function currentVillageLobbyPlayer(){const id='member:'+String(state.member?.loginId||'');return state.lobbyPlayers.find(p=>String(p?.participantId||'')===id)||null}
+function currentLobbyMotionPlayer(){return state.roomCode?currentRoomPlayer():currentVillageLobbyPlayer()}
+function lobbyMotionEligible(){
+  if(!state.member||!lobbyMotionEnabled()||document.hidden||state.lobbyMotionPaused||Date.now()<Number(state.lobbyManualUntil||0))return false;
+  const p=currentLobbyMotionPlayer();if(!p||p.movementStatus==='moving'&&p.moveTargetSeatId)return false;
+  if(state.roomCode){const phase=String(state.room?.phase||'lobby').toLowerCase();return ['lobby','waiting','role_delivery'].includes(phase)&&!state.room?.seatsLocked&&!Number(p?.seatId||0)}
+  return true
+}
+function lobbyMotionHash(v){let h=2166136261;for(const ch of String(v||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function lobbyRandomPoint(){
+  const base=[[29,39],[49,35.5],[70,39],[81,53],[74,69],[62,82],[42,85],[27,76],[17,58]],p=base[Math.floor(Math.random()*base.length)],jx=(Math.random()-.5)*8,jy=(Math.random()-.5)*6;
+  return{x:p[0]+jx,y:p[1]+jy}
+}
+function buildLobbyMotionRoute(){return[lobbyRandomPoint()]}
+function clearLobbyMotionTimer(){if(state.lobbyMotionTimer){clearTimeout(state.lobbyMotionTimer);state.lobbyMotionTimer=null}}
+function resetLobbyMotionPlan(){state.lobbyMotionWaypoints=[];state.lobbyMotionIndex=0;state.lobbyMotionPhase='roam';state.lobbyMotionHoldUntil=0}
+function scheduleLobbyMotion(delay=500){clearLobbyMotionTimer();if(!state.member||!lobbyMotionEnabled())return;state.lobbyMotionTimer=setTimeout(runLobbyMotionStep,Math.max(120,Number(delay)||500))}
+function holdLobbyMotionForManualWalk(){
+  state.lobbyManualUntil=Date.now()+30000;clearLobbyMotionTimer();resetLobbyMotionPlan();scheduleLobbyMotion(30000);
+}
+function pauseLobbyMotionForSeat(){state.lobbyMotionPaused=true;clearLobbyMotionTimer();resetLobbyMotionPlan()}
+function resumeLobbyMotion(){state.lobbyMotionPaused=false;resetLobbyMotionPlan();scheduleLobbyMotion(350)}
+async function performLobbyAutoMove(point){
+  if(!point||!lobbyMotionEligible())return false;
+  try{
+    if(state.roomCode){
+      const p=currentRoomPlayer();if(!p||p.movementStatus==='moving'||p.seatId)return false;
+      const origin=movementViewerPosition(),d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/move',{method:'POST',headers:auth(),body:JSON.stringify({x:Number(point.x),y:Number(point.y),fromX:origin.x,fromY:origin.y,autoMotionPhase:'roam'})});
+      if(d?.room)state.room=d.room;if(Array.isArray(d?.players))state.players=d.players;syncVillageFrame();scheduleMovementCompletion(currentRoomPlayer());return true
+    }
+    const d=await api('/api/village/move',{method:'POST',headers:auth(),body:JSON.stringify({x:Number(point.x),y:Number(point.y),autoMotionPhase:'roam'})});state.lobbyPlayers=d.players||state.lobbyPlayers;syncVillageFrame();return true
+  }catch(e){console.warn('[GMWW lobby motion]',e);return false}
+}
+async function runLobbyMotionStep(){
+  state.lobbyMotionTimer=null;
+  if(!state.member||!lobbyMotionEnabled())return;
+  const p=currentLobbyMotionPlayer();
+  if(!lobbyMotionEligible()){if(p?.seatId)resetLobbyMotionPlan();scheduleLobbyMotion(document.hidden?5000:2200);return}
+  if(p?.movementStatus==='moving'){if(state.roomCode)scheduleMovementCompletion(p);scheduleLobbyMotion(700);return}
+  if(state.lobbyMotionPhase==='gather'){
+    state.lobbyMotionPhase='hold';state.lobbyMotionHoldUntil=Date.now()+LOBBY_MOTION_HOLD_MS;scheduleLobbyMotion(LOBBY_MOTION_HOLD_MS);return
+  }
+  if(state.lobbyMotionPhase==='hold'){
+    const remain=state.lobbyMotionHoldUntil-Date.now();if(remain>0){scheduleLobbyMotion(remain);return}
+    resetLobbyMotionPlan()
+  }
+  if(!state.lobbyMotionWaypoints.length){state.lobbyMotionWaypoints=buildLobbyMotionRoute();state.lobbyMotionIndex=0}
+  const target=state.lobbyMotionWaypoints[0];state.lobbyMotionPhase='gather';const ok=await performLobbyAutoMove(target);scheduleLobbyMotion(ok?650:1600)
+}
+function ensureLobbyMotionToggle(){
+  const profile=$('#profile');if(!profile||!state.member)return null;let row=$('#profileLobbyMotionRow');
+  if(!row){row=document.createElement('div');row.id='profileLobbyMotionRow';row.innerHTML='<div class="motion-copy"><b>Di chuyển trong sảnh</b><small>Tự đi ngẫu nhiên trong Làng, dừng một lát rồi tiếp tục di chuyển. Không ngồi.</small></div><button id="profileLobbyMotionToggle" type="button" role="switch" aria-label="Di chuyển trong sảnh"></button>';const anchor=profile.querySelector('.section-title')||profile.querySelector('.history-fold');if(anchor)anchor.parentNode.insertBefore(row,anchor);else profile.appendChild(row);row.querySelector('button').onclick=()=>setLobbyMotionEnabled(!lobbyMotionEnabled())}
+  const toggle=row.querySelector('button'),enabled=lobbyMotionEnabled();if(toggle){toggle.setAttribute('aria-checked',enabled?'true':'false');toggle.title=enabled?'Đang bật':'Đang tắt'}return row
+}
+async function setLobbyMotionEnabled(enabled){
+  if(!state.member)return;enabled=!!enabled;const previous=state.member.lobbyMotionEnabled!==false;state.member.lobbyMotionEnabled=enabled;ensureLobbyMotionToggle();localStorage.setItem('gmww_member',JSON.stringify(state.member));
+  if(enabled)resumeLobbyMotion();else{state.lobbyMotionPaused=false;clearLobbyMotionTimer();resetLobbyMotionPlan()}
+  try{const d=await api('/api/members/profile',{method:'POST',headers:auth(),body:JSON.stringify({lobbyMotionEnabled:enabled})});if(d?.member){state.member=d.member;localStorage.setItem('gmww_member',JSON.stringify(state.member))}ensureLobbyMotionToggle();toast(enabled?'Đã bật di chuyển trong sảnh.':'Đã tắt di chuyển trong sảnh.')}
+  catch(e){state.member.lobbyMotionEnabled=previous;localStorage.setItem('gmww_member',JSON.stringify(state.member));ensureLobbyMotionToggle();if(previous)resumeLobbyMotion();toast(e.message||'Không lưu được cài đặt di chuyển.')}
+}
+window.setLobbyMotionEnabled=setLobbyMotionEnabled;

@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +7,7 @@ import vm from 'node:vm';
 const read=p=>fs.readFileSync(p,'utf8');
 
 test('V3.139: tap and drag share validated single target-audio selection',()=>{
- const s=read('server-game/src/40-battle-and-timeline.part');
+ const s=gmSource('40-battle-and-timeline');
  assert.ok(s.includes('function battlePickTargetWithAudio(id,actionId)'));
  assert.ok(s.includes("if(selected)void battlePlayConfiguredAudio('actions',action.actionId,action.name)"));
  assert.ok(s.includes('battlePickTargetWithAudio(x.dataset.playPlayerId)'),'Direct character tap must play action audio');
@@ -14,8 +16,8 @@ test('V3.139: tap and drag share validated single target-audio selection',()=>{
  assert.ok(!s.includes('for(const id of targets)battleState.impacts.set(id,'));
 });
 test('V3.139: iOS finger-scroll unlocks audio and uses server-confirmed relative turn',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const battle=read('server-game/src/40-battle-and-timeline.part');
- const audio=read('server-game/src/30-village-and-setup.part');
+ const battle=gmSource('40-battle-and-timeline');
+ const audio=gmSource('30-village-and-setup');
  assert.ok(battle.includes('battleUnlockAudioFromGesture();cancel();'));
  assert.ok(battle.includes('timeline.gmwwCancelScrollNavigation=cancel'));
  assert.ok(battle.includes('if(!armed||!moved||playSceneState.step'));
@@ -27,7 +29,7 @@ test('V3.139: iOS finger-scroll unlocks audio and uses server-confirmed relative
  assert.ok(battle.includes("battleState.lastAudioTurnKey")&&battle.includes('battleAudioForTurn(t,true)'));
 });
 test('V3.143: GM patrol and manual movement no longer run',()=>{
- const source=read('server-game/src/10-library-and-settings.part');
+ const source=gmSource('10-library-and-settings');
  assert.doesNotMatch(source,/gmwwGmRoute\(/);
  assert.doesNotMatch(source,/gmwwGmWalkPoint\(/);
  assert.doesNotMatch(source,/gmwwGmKeepClear\(/);
@@ -59,9 +61,9 @@ test('V3.139: Player Web, preview and GM status cache versions are refreshed tog
 test('V3.139 gameplay regression retains synchronized current Runtime and OTA metadata',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
  const runtime=JSON.parse(read('package.json')).version.split('.').slice(0,2).join('.');
- assert.equal(read('server-game/current/app.js'),parts.map(p=>read('server-game/src/'+p)).join(''));
- assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+runtime+"'"));
- assert.ok(read('src/index.js').includes('VERSION="V'+runtime+'"'));
- assert.ok(read('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-'+runtime.replaceAll('.','')+'"'));
- assert.ok(read('src/index.js').includes('NATIVE_SHELL_VERSION="3.110"'));
+ assert.equal(read('server-game/current/app.js'),parts.map(p=>gmSource(p.replace(/\.part$/,''))).join(''));
+ assert.ok(gmSource('00-core-and-library').includes("const VERSION='"+runtime+"'"));
+ assert.ok(workerSource().includes('VERSION="V'+runtime+'"'));
+ assert.ok(workerSource().includes('UPDATE_CHANNEL_REV="runtime-'+runtime.replaceAll('.','')+'"'));
+ assert.ok(workerSource().includes('NATIVE_SHELL_VERSION="3.110"'));
 });

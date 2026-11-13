@@ -1,9 +1,10 @@
 #!/usr/bin/env node
+import {gmSource} from './source-groups.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const rd=p=>fs.readFileSync(p,'utf8');
 const pkg=JSON.parse(rd('package.json')),lock=JSON.parse(rd('package-lock.json'));
-const app=rd('server-game/current/app.js'),part=rd('server-game/src/40-battle-and-timeline.part'),css=rd('server-game/current/style.css');
+const app=rd('server-game/current/app.js'),part=gmSource('40-battle-and-timeline'),css=rd('server-game/current/style.css');
 const worker=rd('src/index.js'),html=rd('server-game/current/GMWW.html');
 const joined=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'].map(n=>rd('server-game/src/'+n+'.part')).join('');
 assert.equal(pkg.version,'3.259.0');assert.equal(lock.version,pkg.version);assert.equal(lock.packages[''].version,pkg.version);

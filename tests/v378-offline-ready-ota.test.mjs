@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,7 +18,7 @@ test('V3.78 rejects partial or tampered packages and wrong base versions',()=>{
  for(const modify of [m=>{m.releaseVersion='3.77'},m=>{m.runtimeVersion='3.77'},m=>{m.shellVersion='3.78'},m=>{m.delete=['artwork']},m=>{m.runtime.files.pop()},m=>{m.runtime.files[1].url='https://unsafe.invalid/app.js'},m=>{m.runtime.files[0].sha256='bad'},m=>{m.runtime.files.push({...m.runtime.files[0]})}]){const m=manifest();modify(m);assert.equal(selectVerifiedRuntimeV378Delta(m,'3.77'),null)}
 });
 test('V3.94 metadata and both OTA endpoints are aligned',()=>{
- const app=fs.readFileSync('server-game/current/app.js','utf8'),html=fs.readFileSync('server-game/current/GMWW.html','utf8'),worker=fs.readFileSync('src/index.js','utf8'),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+ const app=fs.readFileSync('server-game/current/app.js','utf8'),html=fs.readFileSync('server-game/current/GMWW.html','utf8'),worker=workerSource(),pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
  assertCurrentRelease();
  for(const kind of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV378Delta('+kind+',url.searchParams.get("current"))||selectVerifiedRuntimeV377Delta'));
 });

@@ -1,12 +1,14 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const source=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const source=gmSource('40-battle-and-timeline');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('V3.157: tapping the firepit opens an untitled menu with a usable drag grip',()=>{
   assert.match(html,/<div id="battleWolfMenu"[^>]*aria-label="Menu GM"/);
@@ -53,5 +55,5 @@ test('current: exactly assembled GM runtime and Worker version agree for OTA',{s
   assert.match(version,/^3\.\d+$/);
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
-  assert.equal(app,parts.map(name=>fs.readFileSync('server-game/src/'+name,'utf8')).join(''));
+  assert.equal(app,parts.map(name=>gmSource(name.replace(/\.part$/,''))).join(''));
 });

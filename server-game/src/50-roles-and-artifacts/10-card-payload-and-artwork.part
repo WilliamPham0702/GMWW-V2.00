@@ -1,0 +1,222 @@
+function playFunctionRulePayload(fn){
+  const out={};
+  for(const key of ['phase','usageMode','usageCount','targetCount','noSelf','allowDead','noTarget','passive','fromNight','toNight','cooldownNights','allowConsecutive','targetPreviousCycleOnly','perUserLimit','activation','pushToPlayerWeb','systemRequired','usesPackBite','requiresNoOtherLivingWolf','actorMayBeDead','allowFriendlyFaction','replacesWolfBite','effectIds'])
+    if(fn[key]!==undefined)out[key]=fn[key];
+  return out;
+}
+function playRoleCardPayload(role){
+  const actions=(role.functions||[]).map(fn=>{const act=(state.actions?.role||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:role.limits||null}});
+  return{version:7,name:role.name||'Vai Trò',faction:playFactionLabel(role),information:role.information||'',objective:role.winCondition||'',actions,
+    flags:{allowMultipleActions:role.flags?.allowMultipleActions===true,nightImmune:role.flags?.nightImmune===true},
+    functions:(role.functions||[]).map(fn=>({...playFunctionRulePayload(fn),id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||''),
+      usageMode:String(fn.usageMode||'eachNight'),usageCount:Math.max(1,Number(fn.usageCount)||1)})),
+    limits:role.limits||null,artworkAssetId:'role:'+role.id,artworkId:'role:'+role.id};
+}
+function playArtifactCardPayload(artifact){
+  const actions=(artifact?.functions||[]).map(fn=>{const act=(state.actions?.artifacts||[]).find(a=>a.id===fn.actionId);return{id:String(fn.actionId||act?.id||''),name:String(act?.name||fn.description||'Hành Động'),description:String(act?.description||fn.description||''),limits:artifact?.limits||null,...(fn.targetCount!==undefined?{targetCount:fn.targetCount}:{}),...(typeof fn.noSelf==='boolean'?{noSelf:fn.noSelf}:{}),...(typeof fn.allowDead==='boolean'?{allowDead:fn.allowDead}:{})}});
+  return{version:1,name:artifact?.name||'Artifact',information:artifact?.information||'',actions,functions:(artifact?.functions||[]).map(fn=>({...playFunctionRulePayload(fn),id:String(fn.id||fn.actionId||''),actionId:String(fn.actionId||'')})),limits:artifact?.limits||null,singleUse:typeof (artifact?.singleUse??artifact?.artifact?.singleUse)==='boolean'?(artifact.singleUse??artifact.artifact.singleUse):!!(artifact?.functions?.length===1&&artifact.functions[0].usageMode==='onceGame'&&Number(artifact.functions[0].usageCount||1)===1),priorityFirst:artifact?.artifact?.priorityFirst===true,artworkAssetId:'artifact:'+artifact?.id,artworkId:'artifact:'+artifact?.id};
+}
+
+async function playBlobDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=()=>reject(r.error||new Error('Không đọc được Artwork'));r.readAsDataURL(blob)})}
+async function playVerifiedArtworkData(kind,id){
+  // Player uses the same DISPLAY artwork as the GM library (not a cropped thumbnail).
+  // Decode first: an HTTP 200 response with invalid bytes is not a valid card.
+  let src=await resolveArtwork(kind,id,'display');
+  if(!src||String(src).includes('default-artwork.webp'))src=await resolveArtwork(kind,id,'full');
+  if(!src||String(src).includes('default-artwork.webp'))throw new Error('Artwork '+id+' chưa có ảnh thật. Hãy cập nhật trong Bộ Bài.');
+  // A bundled image can render in WKWebView <img> but fail fetch(file://...) with "Load failed".
+  // Only built-in role art may use the same-image CORS proxy; never substitute an unrelated image.
+  const original=String(src),builtin=kind==='cards'&&original===String(builtinRoleArtwork(id,'display')||'');
+  const nativeScheme=/^(?:file:|capacitor:|ionic:|app:)/i.test(String(location.protocol||''));
+  const serverCopy=GMWW_SERVER_BASE+'/api/gm/template-role-artwork/'+encodeURIComponent(String(id));
+  const candidates=builtin?(nativeScheme?[serverCopy,original]:[original,serverCopy]):[original];
+  let blob=null,lastImageError=null;
+  for(const url of [...new Set(candidates)]){
+    try{
+      const response=await fetch(url,{cache:'no-store'});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const candidate=await response.blob();
+      if(!candidate.type.startsWith('image/')||!candidate.size)throw new Error('Dữ liệu trả về không phải ảnh');
+      blob=candidate;break;
+    }catch(err){lastImageError=err}
+  }
+  if(!blob)throw new Error('Không đọc được Artwork '+id+' từ bộ ảnh IPA hoặc Server. '+String(lastImageError?.message||'Lỗi kết nối')+'. Kiểm tra kết nối và nhấn LƯU để tiếp tục.');
+  let bitmap=null;
+  try{
+    bitmap=await createImageBitmap(blob);
+    if(!bitmap.width||!bitmap.height)throw new Error('Hình không có kích thước');
+    const maxBytes=1300000;
+    if(blob.size>maxBytes||blob.type==='image/svg+xml'){
+      const scale=Math.min(1,1800/bitmap.width,1800/bitmap.height);
+      const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+      const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw new Error('Không thể tối ưu ảnh');
+      ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      let reduced=null;
+      for(const quality of [0.88,0.80,0.72,0.63]){
+        reduced=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+        if(reduced?.type==='image/webp'&&reduced.size<=maxBytes)break;
+      }
+      if(!reduced||reduced.size>maxBytes)throw new Error('Ảnh quá lớn để đóng gói');
+      blob=reduced;
+    }
+  }catch(err){throw new Error('Artwork '+id+' không thể kiểm tra/đóng gói: '+String(err?.message||err))}
+  finally{bitmap?.close?.()}
+  const data=await playBlobDataUrl(blob);
+  if(!/^data:image\/(?:webp|png|jpeg);base64,/i.test(data)||data.length>=1900000)throw new Error('Artwork '+id+' không đạt giới hạn gói dữ liệu.');
+  return data;
+}
+async function playRoleArtworkData(role){return playVerifiedArtworkData('cards',role.id)}
+async function playArtifactArtworkData(artifact){return playVerifiedArtworkData('artifacts',artifact.id)}
+function playTemplateAssetIds(cfg){
+  // Only selected Vai Trò belongs to the per-template, revisioned package.
+  return [...new Set((cfg?.roles||[]).map(r=>'role:'+String(r.roleId||'')).filter(x=>!x.endsWith(':')))];
+}
+function playMatchArtifactAssetIds(cfg){
+  return [...new Set((cfg?.artifacts||[]).map(a=>'artifact:'+String(a.artifactId||'')).filter(x=>!x.endsWith(':')))];
+}
+const playSharedArtifactUploads=new Map();
+async function playSharedArtifactSignature(artifact){
+  // Include the actual Sea-theme artwork bytes, not only card metadata. Otherwise
+  // an image-only edit retains the old server signature and never reaches Player Web.
+  // Hash local source bytes cheaply; only changed cards are decoded/encoded/uploaded.
+  const themeId=state.themes.activeId||'theme-sea',id=String(artifact?.id||'');
+  let artworkSha256='';
+  if(id&&themeId!=='theme-default'){
+    for(const kind of ['display','full']){
+      const record=await dbGet(cardBlobKey(themeId,'artifacts',id,kind)).catch(()=>null);
+      if(record?.blob&&typeof record.blob.arrayBuffer==='function'){
+        const bytes=await record.blob.arrayBuffer();
+        const fingerprint=await crypto.subtle.digest('SHA-256',bytes);
+        artworkSha256=[...new Uint8Array(fingerprint)].map(x=>x.toString(16).padStart(2,'0')).join('');
+        break;
+      }
+    }
+  }
+  const data=new TextEncoder().encode(JSON.stringify({card:playArtifactCardPayload(artifact),themeId,artworkSha256}));
+  const digest=await crypto.subtle.digest('SHA-256',data);
+  return [...new Uint8Array(digest)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+// Global server-side collection: sync missing/changed cards independently from Ván Mẫu saves.
+async function playSyncSharedArtifactLibrary({onlyIds=null,forceIds=[]}={}){
+  const library=(state.artifacts||[]).filter(a=>a?.id&&(!onlyIds||onlyIds.map(String).includes(String(a.id))));
+  if(!library.length)return{ok:true,synced:0,failed:[]};
+  const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+  const known=new Map((status?.artifacts||[]).map(x=>[String(x.assetId),x.signature]));
+  const forced=new Set(forceIds.map(String)),failed=[];
+  let synced=0;
+  for(const artifact of library){
+    const id=String(artifact.id),assetId='artifact:'+id;
+    try{
+      const signature=await playSharedArtifactSignature(artifact);
+      if(!forced.has(id)&&known.get(assetId)===signature)continue;
+      if(!playSharedArtifactUploads.has(id)){
+        const pending=(async()=>{
+          const imageDataUrl=await playArtifactArtworkData(artifact);
+          const payload={assetId,signature,force:forced.has(id),imageDataUrl,package:{roleCard:playArtifactCardPayload(artifact)}};
+          const result=await gmApi('/api/gm/artifacts/shared',{method:'PUT',timeoutMs:60000,body:JSON.stringify(payload)});
+          if(result?.ok!==true)throw new Error('Server không xác nhận bộ Artifact '+id);
+        })();
+        playSharedArtifactUploads.set(id,pending);
+        void pending.finally(()=>{if(playSharedArtifactUploads.get(id)===pending)playSharedArtifactUploads.delete(id)}).catch(()=>{});
+      }
+      await playSharedArtifactUploads.get(id);
+      synced++;
+    }catch(err){failed.push({id,error:String(err?.message||err)})}
+  }
+  return{ok:failed.length===0,synced,failed};
+}
+// Gentle, one-card-at-a-time background sync. Never compete with live rooms,
+// template creation, role assignment or an inactive tab for decoding resources.
+let playSharedArtifactBackgroundTimer=null,playSharedArtifactBackgroundCursor=0;
+function playScheduleSharedArtifactLibrarySync(waitMs=30000){
+  if(playSharedArtifactBackgroundTimer!==null)return;
+  playSharedArtifactBackgroundTimer=setTimeout(async()=>{
+    playSharedArtifactBackgroundTimer=null;
+    const library=(state.artifacts||[]).filter(a=>a?.id);
+    if(playSharedArtifactBackgroundCursor>=library.length)return;
+    const sheet=document.getElementById('playGameSheet');
+    const active=typeof document.visibilityState==='undefined'||document.visibilityState==='visible';
+    if(!active||playSceneRuntime.busy||isLivePlayRoom()||(sheet&&!sheet.classList.contains('hidden'))){
+      playScheduleSharedArtifactLibrarySync(30000);return;
+    }
+    const id=String(library[playSharedArtifactBackgroundCursor++].id);
+    try{await playSyncSharedArtifactLibrary({onlyIds:[id]})}catch(_){}
+    playScheduleSharedArtifactLibrarySync(30000);
+  },Math.max(1000,Number(waitMs)||30000));
+}
+async function playEnsureSharedArtifactPool(cfg){
+  const ids=playMatchArtifactAssetIds(cfg).map(id=>id.slice('artifact:'.length));
+  if(!ids.length)return;
+  const report=await playSyncSharedArtifactLibrary({onlyIds:ids});
+  if(report.failed.length)throw new Error('Không cập nhật được Artifact dùng chung: '+report.failed.map(x=>x.id).join(', ')+'. '+String(report.failed[0]?.error||''));
+  const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+  const ready=new Set((status?.artifacts||[]).map(x=>String(x.assetId)));
+  const missing=ids.filter(id=>!ready.has('artifact:'+id));
+  if(missing.length)throw new Error('Bộ Artifact dùng chung chưa sẵn sàng: '+missing.join(', ')+'. '+String(report.failed[0]?.error||'Hãy kiểm tra artwork trong Bộ Bài.'));
+}
+async function playEnsureSharedArtifactReferencesReady(cfg){
+  const ids=playMatchArtifactAssetIds(cfg);
+  if(!ids.length)return;
+  // Choose Ván Mẫu: verify lightweight metadata only; do not rehash/re-encode prepacked art.
+  const status=await gmApi('/api/gm/artifacts/shared',{timeoutMs:20000});
+  const ready=new Set((status?.artifacts||[]).map(a=>String(a.assetId)));
+  const missing=ids.filter(id=>!ready.has(id));
+  if(missing.length){
+    // A newly selected or removed Artifact is the only reason to lazily prepare here.
+    playGameStatus('Đang bổ sung '+missing.length+' Artifact chưa có trong kho chung…','progress');
+    await playEnsureSharedArtifactPool({artifacts:missing.map(id=>({artifactId:id.slice('artifact:'.length)}))});
+  }
+}
+async function playEnsureTemplateAssets(id,cfg){
+  const endpoint='/api/gm/game-templates/'+encodeURIComponent(id)+'/assets';
+  let status=await gmApi(endpoint+'/status');
+  if(status?.ready)return status;
+  const missing=new Set(status?.missing||playTemplateAssetIds(cfg));
+  let finished=0;
+  for(const assetId of missing){
+    const rawId=assetId.slice(5),model=(state.cards||[]).find(x=>String(x.id)===rawId);
+    if(!model)throw new Error('Thiếu Lá Vai Trò '+assetId+' trong Thư Viện. Không thể đóng gói Ván Mẫu.');
+    playGameStatus('Đang đóng gói Vai Trò '+(finished+1)+'/'+missing.size+': '+String(model.name||'Lá Bài'),'progress');
+    const pkg={roleId:rawId,roleName:model.name,faction:playFactionLabel(model),description:model.information||'',artworkAssetId:assetId,roleCard:playRoleCardPayload(model)};
+    // Canonical role artwork is packaged on the Worker. Native WKWebView must not
+    // fetch the bundled file:// image and upload it again for every Ván Mẫu.
+    if(builtinRoleArtwork(rawId,'display')){
+      const uploaded=await gmApi(endpoint+'/canonical',{method:'POST',timeoutMs:60000,
+        body:JSON.stringify({assetId,package:pkg})});
+      if(uploaded?.ok!==true||uploaded?.hasImage!==true)
+        throw new Error('Server chưa đóng gói được Vai Trò '+model.name+'.');
+    }else{
+      // Only truly custom artwork must use the device-owned image.
+      const imageDataUrl=await playRoleArtworkData(model);
+      const uploaded=await gmApi(endpoint,{method:'PUT',timeoutMs:60000,body:JSON.stringify({assetId,imageDataUrl,package:pkg})});
+      if(uploaded?.ok!==true||uploaded?.hasImage!==true)throw new Error('Không xác nhận được ảnh '+model.name+'.');
+    }
+    finished++;
+  }
+  status=await gmApi(endpoint+'/status');
+  if(!status?.ready)throw new Error('Ván Mẫu chưa đóng gói đủ ảnh: '+(status?.missing||[]).join(', '));
+  return status;
+}
+async function playPreloadSelectedArtwork(cfg){
+  const roles=playTemplateAssetIds(cfg),artifacts=playMatchArtifactAssetIds(cfg),expected=[...roles,...artifacts];
+  const manifest=await playRoomApi('/artwork-manifest',{method:'GET'});
+  const existing=new Set(manifest?.assetIds||[]);
+  // Roles are always registered in a single metadata-only request at Chọn Ván.
+  // Never fetch/re-encode their artwork on the phone a second time.
+  const missingRoles=roles.filter(assetId=>!existing.has(assetId));
+  if(missingRoles.length)throw new Error('Thiếu tham chiếu ảnh Vai Trò: '+missingRoles.join(', ')+'. Hãy chọn lại Ván Mẫu.');
+  // Artifact stays in the server-wide shared catalog and is referenced once
+  // per selected pool, with no per-game artwork serialization.
+  if(artifacts.length){
+    playGameStatus('Đang liên kết '+artifacts.length+' Artifact từ kho chung Server…','progress');
+    await playEnsureSharedArtifactReferencesReady(cfg);
+    const linked=await playRoomApi('/shared-artifacts',{method:'POST',timeoutMs:20000,
+      body:JSON.stringify({assetIds:artifacts})});
+    if(linked?.ready!==true||linked?.mode!=='reference'||!artifacts.every(id=>linked.assetIds?.includes(id)))
+      throw new Error('Server chưa liên kết đủ bộ Artifact.');
+  }
+  const verified=await playRoomApi('/artwork-manifest',{method:'GET'});
+  if(verified?.mode!=='reference'||!expected.every(id=>verified?.assetIds?.includes(id)))
+    throw new Error('Tham chiếu artwork Vai Trò/Artifact chưa đầy đủ. Chưa thể Phân Vai.');
+  return verified;
+}

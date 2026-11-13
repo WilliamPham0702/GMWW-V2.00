@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +8,7 @@ import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js'
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const player=patchPrivatePlayerCards(gmwwMembersLiveScript);
 
 test('Player uses GM-equivalent artwork, role name, faction and source information',()=>{
@@ -15,7 +16,7 @@ test('Player uses GM-equivalent artwork, role name, faction and source informati
  assert.match(player,/function renderGMWWPlayerCardFace\(kind\)/);
  assert.match(player,/const information=String\(pc\.information\?\?data\.description/);
  assert.match(player,/gmwwPlayerUnifiedCard/);
- assert.match(player,/grid-template-rows:8fr 1fr 3fr/);
+ assert.match(player,/grid-template-rows:minmax\(0,8fr\) minmax\(48px,1fr\) minmax\(0,3fr\)/);
  assert.match(player,/object-fit:contain/);
  assert.doesNotMatch(player,/<span class="mini-label"><b>VAI TRÒ<\/b><small>CHẠM ĐỂ XEM<\/small><\/span>/);
  assert.doesNotMatch(player,/<span class="mini-label"><b>ARTIFACT<\/b><small>CHẠM ĐỂ XEM<\/small><\/span>/);

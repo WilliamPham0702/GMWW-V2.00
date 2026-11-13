@@ -1,8 +1,9 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const part=fs.readFileSync(new URL('../server-game/src/40-battle-and-timeline.part',import.meta.url),'utf8');
+const part=gmSource('40-battle-and-timeline');
 const library=fs.readFileSync(new URL('../server-game/current/action-icon-library.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../server-game/current/GMWW.html',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../server-game/current/style.css',import.meta.url),'utf8');

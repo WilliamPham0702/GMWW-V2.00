@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,7 +28,7 @@ test('Invalid hashes/URLs, missing files, duplicates and wrong base version fall
  const deleted=manifest();deleted.delete=['storage'];assert.equal(selectVerifiedRuntimeV358Delta(deleted,'3.57'),null);
 });
 test('Worker uses verified V3.58 delta on both manifest routes',()=>{
- const s=readFileSync('src/index.js','utf8');
+ const s=workerSource();
  assert.ok(s.includes('selectVerifiedRuntimeV358Delta(versioned,url.searchParams.get("current"))'));
  assert.ok(s.includes('selectVerifiedRuntimeV358Delta(manifest,url.searchParams.get("current"))'));
  const html=readFileSync('server-game/current/GMWW.html','utf8');

@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
@@ -79,7 +80,7 @@ test('Player Web roaming avoids 30-second seated pauses and packaged source drif
     '00-bootstrap-and-session.part','10-role-card-artwork.part',
     '20-village-and-profile.part','30-rooms-and-realtime.part',
     '40-cards-and-game.part','50-privacy-and-runtime.part'
-  ].map(name=>read('src/player-web-src/'+name)).join('');
+  ].map(name=>playerWebSource(name.replace(/\.part$/,''))).join('');
   const bundled=read('src/gmww-members-live.js');
   assert.equal(bundled,'export const gmwwMembersLiveScript = '+JSON.stringify(parts)+';\n');
   assert.match(parts,/const LOBBY_MOTION_HOLD_MS=1400;/);

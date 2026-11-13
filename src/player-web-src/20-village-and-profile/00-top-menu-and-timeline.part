@@ -1,0 +1,214 @@
+function openVillageProfile(){try{renderProfile();const h=$('#profile .history-fold');if(h)h.open=false;const edit=$('#profileEditPanel');if(edit)edit.open=false}catch(e){console.warn('[GMWW profile render]',e)}go('profile');try{loadSetupTop3().then(()=>renderProfileTop3())}catch(e){console.warn('[GMWW top3]',e)}}
+let gmwwPlayerTopMenuTimer=null,gmwwPlayerTopMenuLastActivity=0;
+function playerScenePolicy(room={}){
+  const phase=String(room?.phase||'lobby').toLowerCase();
+  const playing=['running','started','playing','game'].includes(phase);
+  return {phase,mode:playing?'battle':'lobby',rolesReleased:playing||phase==='role_delivery'};
+}
+function playerTopMenuStatus(){
+  const room=state.room||{},cycle=state.villageCycle||{},phase=String(room.phase||'').toLowerCase(),cyclePhase=String(cycle.phase||room.cyclePhase||'').toLowerCase(),night=Math.max(0,Number(cycle.night||room.cycleNight||0)),day=Math.max(0,Number(cycle.day||room.cycleDay||0));
+  if(!state.roomCode)return'SẢNH CHỜ';
+  if(phase==='ended')return'KẾT THÚC VÁN';
+  if(playerScenePolicy(room).mode==='battle'){
+    if(cyclePhase==='night'||phase==='night')return'ĐÊM '+Math.max(1,night||1);
+    if(cyclePhase==='day'||cyclePhase==='morning'||phase==='day')return'BAN NGÀY'+(day||night?' '+Math.max(1,day||night):'');
+    return'ĐANG TRONG VÁN';
+  }
+  if(phase==='role_delivery')return'PHÒNG CHỜ · ĐÃ PHÁT VAI';
+  if(phase==='lobby'||phase==='waiting')return Number(currentRoomPlayer()?.seatId||0)>0?'PHÒNG CHỜ · ĐÃ XẾP VỊ TRÍ':'PHÒNG CHỜ · CHỜ GM';
+  return String(room.roomName||'PHÒNG CHỜ').trim()||'PHÒNG CHỜ';
+}
+function updatePlayerTopMenu(){
+  const menu=$('#gmwwPlayerTopMenu');if(!menu)return;
+  const info=menu.querySelector('.gmww-player-menu-info b');if(info)info.textContent=playerTopMenuStatus();const hint=menu.querySelector('.gmww-player-menu-info small');if(hint)hint.textContent=state.participantId?(Number(currentRoomPlayer()?.seatId||0)>0?'Vị trí '+currentRoomPlayer().seatId+' · Đã sẵn sàng':'Chờ Quản Trò xếp vị trí'):'Chờ Quản Trò gọi vào phòng';
+  const turn=menu.querySelector('.gmww-player-menu-turn');if(turn)turn.textContent=playerScenePolicy(state.room).mode==='battle'?String(state.audioCue?.label||'Đang theo dõi lượt GM').slice(0,120):'';
+  menu.hidden=!state.member;if(typeof renderPlayerTimeline==='function')renderPlayerTimeline();
+}
+
+/* One private dock only: role and artifact are compact shortcuts to the same full-size cards.
+ * Position is a UI preference, never a second copy of the role or an authoritative card state. */
+const GMWW_MINI_POSITIONS_KEY='gmww_online_mini_positions_v3';
+function gmwwMiniPositions(){try{return JSON.parse(localStorage.getItem(GMWW_MINI_POSITIONS_KEY)||'{}')||{}}catch{return{}}}
+function gmwwMiniPosition(button,type){
+  if(button.dataset.gmwwMiniDragging)return;
+  const stored=gmwwMiniPositions()[type],w=Math.min(39,Math.max(28,window.innerWidth*.095)),h=w/.72;
+  const frame=document.getElementById('gmwwVillageFrame')?.getBoundingClientRect();
+  const entryX=frame?frame.left+frame.width*.5:window.innerWidth*.5,entryY=frame?frame.top+frame.height*.23:window.innerHeight*.23;
+  let x=Number(stored?.x??(entryX+(type==='role'?-w-3:3))),y=Number(stored?.y??entryY);
+  const avatar=document.querySelector('#gmwwPlayerTopMenu .gmww-player-menu-account')?.getBoundingClientRect();
+  if(gmwwChatOpen&&avatar){x=avatar.right-w;y=avatar.bottom+5+(type==='artifact'?h+5:0)}
+  button.style.left=Math.max(4,Math.min(window.innerWidth-w-4,x))+'px';
+  button.style.top=Math.max(4,Math.min(window.innerHeight-h-45,y))+'px';
+}
+function gmwwMiniDrag(button,type){
+  if(button.dataset.gmwwMiniBound)return;button.dataset.gmwwMiniBound='1';
+  button.addEventListener('pointerdown',event=>{
+    if(event.button!==undefined&&event.button!==0)return;
+    // V3.308: while an action is on offer, dragging the card acts; otherwise it only repositions.
+    const cardActions=typeof gmwwOnlineCardActions==='function'?gmwwOnlineCardActions(type):[];
+    if(cardActions.length){gmwwOnlineIconDown(event,cardActions[0],{type,actions:cardActions});return}
+    event.preventDefault();button.dataset.gmwwMiniDragging='1';const startX=event.clientX,startY=event.clientY,rect=button.getBoundingClientRect();let moved=false;
+    const move=e=>{if(Math.hypot(e.clientX-startX,e.clientY-startY)<7&&!moved)return;moved=true;
+      button.style.left=Math.max(4,Math.min(window.innerWidth-rect.width-4,rect.left+e.clientX-startX))+'px';
+      button.style.top=Math.max(55,Math.min(window.innerHeight-rect.height-70,rect.top+e.clientY-startY))+'px'};
+    const end=e=>{delete button.dataset.gmwwMiniDragging;button.removeEventListener('pointermove',move);button.removeEventListener('pointerup',end);button.removeEventListener('pointercancel',end);
+      if(moved){button.dataset.gmwwMiniMoved='1';try{const positions=gmwwMiniPositions();positions[type]={x:parseFloat(button.style.left),y:parseFloat(button.style.top)};localStorage.setItem(GMWW_MINI_POSITIONS_KEY,JSON.stringify(positions))}catch{}
+        setTimeout(()=>{delete button.dataset.gmwwMiniMoved},250)}};
+    button.setPointerCapture?.(event.pointerId);button.addEventListener('pointermove',move);button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);
+  });
+}
+function syncPlayerMiniCards(){
+  let host=document.getElementById('gmwwPlayerMiniCards');
+  const allowed=!!(state.member&&state.roomCode&&state.participantId&&state.role&&
+    String(state.room?.roomMode||'online').toLowerCase()==='online'&&playerScenePolicy(state.room).rolesReleased);
+  if(!allowed){host?.remove();return}
+  if(!document.getElementById('gmwwPlayerMiniCardStyle')){
+    const st=document.createElement('style');st.id='gmwwPlayerMiniCardStyle';
+    st.textContent='#gmwwPlayerMiniCards{position:fixed;inset:0;z-index:234;pointer-events:none}'+
+      '#game:not(.active) #gmwwPlayerMiniCards,#game.gmww-card-expanded #gmwwPlayerMiniCards{display:none!important}'+
+      '#game .role-stage[hidden]{display:none!important}'+
+      '#gmwwPlayerMiniCards button{position:fixed;display:block;width:clamp(28px,9.5vw,39px);aspect-ratio:.72;padding:0;overflow:hidden;pointer-events:auto;touch-action:none;border:1px solid #d5af68;border-radius:9px;background:#07111b;box-shadow:0 4px 14px #000a;color:white}'+
+      '#gmwwPlayerMiniCards button.gmww-online-lifted{opacity:0!important;pointer-events:none}'+
+      '#gmwwPlayerMiniCards button[hidden]{display:none!important}#gmwwPlayerMiniCards img{display:block;width:100%;height:100%;object-fit:cover}'+
+      '#gmwwPlayerMiniCards .mini-label{position:absolute;inset:auto 0 0;background:#07131dc9;color:#f7e1a1;font:700 6px/1.3 system-ui;padding:1px;text-align:center}';
+    document.head.appendChild(st)
+  }
+  if(!host){
+    host=document.createElement('div');host.id='gmwwPlayerMiniCards';
+    host.innerHTML='<button type="button" data-mini="role" title="Xem Vai Trò của bạn"><img alt="" src="/card-backs/role-card-back-v1.png" data-back="/card-backs/role-card-back-v1.png"><span class="mini-label">Vai Trò</span></button><button type="button" data-mini="artifact" title="Xem Artifact của bạn"><img alt="" src="/card-backs/artifact-card-back-v1.png" data-back="/card-backs/artifact-card-back-v1.png"><span class="mini-label">Artifact</span></button>';
+    document.getElementById('game')?.appendChild(host);
+    for(const type of ['role','artifact']){
+      const button=host.querySelector('[data-mini="'+type+'"]');gmwwMiniPosition(button,type);gmwwMiniDrag(button,type);
+      button.onclick=()=>{if(button.dataset.gmwwMiniMoved)return;
+        if(type==='artifact'&&!state.artifact)return;
+        ensurePlayerPrivateDock();openPrivateCardViewer(type);
+      }
+    }
+  }
+  for(const type of ['role','artifact'])gmwwMiniPosition(host.querySelector('[data-mini="'+type+'"]'),type);
+  host.hidden=$('#game')?.classList.contains('gmww-card-expanded')===true;
+  const role=state.role||{},pc=role.roleCard||{},artifact=state.artifact||{},ac=artifact.artifactCard||{};
+  const base='/api/rooms/'+encodeURIComponent(state.roomCode)+'/role-assets/';
+  const roleAsset=String(role.artworkAssetId||role.artworkId||pc.artworkAssetId||pc.artworkId||role.roleId||'');
+  const artAsset=String(artifact.artworkAssetId||artifact.artworkId||ac.artworkAssetId||ac.artworkId||'');
+  const setImage=(selector,url)=>{const img=host?.querySelector(selector);if(!img)return;const back=img.dataset.back||'';if(!img.dataset.gmwwBackFallback){img.dataset.gmwwBackFallback='1';img.addEventListener('error',()=>{if(back&&img.getAttribute('src')!==back)img.src=back})}const next=url||back;if(next&&img.getAttribute('src')!==next)img.src=next};
+  setImage('[data-mini="role"] img',String(role.roleImage||(roleAsset?base+encodeURIComponent(roleAsset)+'/image':'')||''));
+  const artButton=host.querySelector('[data-mini="artifact"]');artButton.hidden=!state.artifact;
+  setImage('[data-mini="artifact"] img',state.artifact?String(artifact.artifactImage||(artAsset?base+encodeURIComponent(artAsset)+'/image':'')||''):'');
+}
+
+let gmwwSharedTimeline=null,gmwwSharedTimelineKey='',gmwwSharedTimelineReceivedAt=0;
+function renderPlayerTimeline(timeline){
+ const timelineKey=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join(':');
+ if(timelineKey!==gmwwSharedTimelineKey){gmwwSharedTimeline=null;gmwwSharedTimelineReceivedAt=0;gmwwSharedTimelineKey=timelineKey}
+ if(timeline!==undefined){gmwwSharedTimeline=timeline;gmwwSharedTimelineReceivedAt=performance.now()}
+ const menu=document.getElementById('gmwwPlayerTopMenu');if(!menu)return;
+ let strip=document.getElementById('gmwwPlayerTimeline');
+ if(!strip){
+  strip=document.createElement('div');strip.id='gmwwPlayerTimeline';
+  const root=strip.attachShadow({mode:'open'});
+  root.innerHTML='<style>'+GMWW_SERVER_MENU.css+' :host{display:block;min-width:0}:host #start #playShell #playSetupStrip,:host #start #playShell #playBattleTop{position:relative!important;inset:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important}button{cursor:default}</style><div id="start"><div id="playShell" class="play-shell">'+GMWW_SERVER_MENU.markup+'</div></div>';
+  menu.insertBefore(strip,menu.firstChild);
+ }
+ const room=state.room||{},stage=room.gmStage==='room'?'lobby':String(room.gmStage||'lobby');
+ const root=strip.shadowRoot,shell=root.querySelector('.play-shell');shell.dataset.step=stage;shell.dataset.phase=room.cyclePhase==='night'?'night':'lobby';
+ const buttons=[...root.querySelectorAll('[data-play-step]')],active=buttons.findIndex(b=>b.dataset.playStep===stage);
+ for(const [i,button] of buttons.entries()){
+  button.classList.toggle('active',i===active);button.classList.toggle('done',i<active);
+  button.setAttribute('aria-disabled','true');button.tabIndex=-1;
+  if(i===active)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current');
+ }
+ const battle=stage==='battle',setup=root.querySelector('#playSetupStrip'),battleTop=root.querySelector('#playBattleTop');
+ for(const bar of [setup,battleTop])for(const [key,value] of Object.entries({position:'relative',inset:'auto',width:'100%','max-width':'none',margin:'0',transform:'none'}))bar.style.setProperty(key,value,'important');
+ setup.style.setProperty('display','none','important'); // thanh bước phía trên do #gmwwStageStrip (37-player-rooms) đảm nhiệm, tránh hiện 2 menu
+ battleTop.hidden=!battle;battleTop.style.setProperty('display',battle?'grid':'none','important');
+ const publicSteps=gmwwSharedTimeline?.steps||[],list=root.querySelector('#battleTimeline');
+ const sig=JSON.stringify(publicSteps);
+ if(list.dataset.sig!==sig){list.dataset.sig=sig;list.replaceChildren();
+  for(const [i,step] of publicSteps.entries()){
+   const node=document.createElement('button');node.type='button';node.tabIndex=-1;node.setAttribute('aria-disabled','true');node.setAttribute('role','listitem');
+   node.className='play-battle-step is-'+(step.status==='done'?'completed':step.status==='active'?'active':'upcoming');
+   node.setAttribute('aria-current',step.status==='active'?'step':'false');
+   const num=document.createElement('span');num.className='battle-step-num';num.textContent=step.status==='done'?'✓':String(i+1);
+   const label=document.createElement('b');label.textContent=String(step.label||'Lượt');node.append(num,label);list.appendChild(node);
+  }
+  list.querySelector('.is-active')?.scrollIntoView({block:'nearest',inline:'center'});
+ }
+ for(const id of ['battleBack','battleAdvance']){const button=root.querySelector('#'+id);button.disabled=true;button.querySelector('b').textContent=(id==='battleBack'?'<Đêm ':'Ngày ')+Math.max(1,Number(room.cycleNight)||1)+(id==='battleAdvance'?'>':'')}
+ menu.querySelector('.gmww-player-menu-info')?.setAttribute('hidden','');
+ if(typeof gmwwTopTickerRender==='function')gmwwTopTickerRender();
+}
+
+function hidePlayerTopMenu(){
+  const menu=$('#gmwwPlayerTopMenu');if(menu&&state.member)menu.classList.add('is-idle-hidden');
+  document.getElementById('gmwwOnlineFooter')?.classList.add('is-idle-hidden');gmwwChatClosePanel();
+}
+function revealPlayerTopMenu(force=false){
+  const menu=$('#gmwwPlayerTopMenu');if(!menu||!state.member)return;
+  const now=Date.now();if(!force&&now-gmwwPlayerTopMenuLastActivity<450)return;gmwwPlayerTopMenuLastActivity=now;
+  menu.classList.remove('is-idle-hidden');document.getElementById('gmwwOnlineFooter')?.classList.remove('is-idle-hidden');clearTimeout(gmwwPlayerTopMenuTimer);gmwwPlayerTopMenuTimer=setTimeout(hidePlayerTopMenu,30000);
+}
+function ensurePlayerTopMenu(){
+  let menu=$('#gmwwPlayerTopMenu');
+  if(!menu){
+    menu=document.createElement('nav');menu.id='gmwwPlayerTopMenu';menu.setAttribute('aria-label','Menu Player Web');
+    menu.innerHTML='<div class="gmww-player-menu-info"><b>SẢNH CHỜ</b><small>Chờ Quản Trò gọi vào phòng</small><em class="gmww-player-menu-turn" aria-live="polite"></em></div>';
+    $('#game')?.appendChild(menu);
+  }
+  $('#gmwwVillageProfileButton')?.remove();
+  if(!$('#gmwwPlayerTopMenuStyle')){
+    const st=document.createElement('style');st.id='gmwwPlayerTopMenuStyle';st.textContent=`
+      #gmwwVillageProfileButton{display:none!important}
+      #gmwwVillageHud .status{display:none!important}
+      #gmwwPlayerTopMenu{position:fixed;z-index:235;left:10px;right:10px;top:max(7px,env(safe-area-inset-top));display:grid;grid-template-columns:minmax(0,1fr);gap:6px;align-items:stretch;pointer-events:auto;opacity:1;transform:translateY(0);transition:opacity .28s ease,transform .28s ease;filter:drop-shadow(0 6px 14px rgba(0,18,30,.24))}
+      #gmwwPlayerTopMenu .gmww-player-menu-info[hidden]{display:none!important}
+      #gmwwPlayerTopMenu.is-idle-hidden{opacity:0;transform:translateY(calc(-100% - 18px));pointer-events:none}
+      #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:44px;min-height:44px;color:#fff}
+      #gmwwPlayerTopMenu button{display:flex;align-items:center;justify-content:center;padding:0;font:900 10px/1 system-ui;cursor:pointer}
+      #gmwwPlayerTopMenu button span{font-size:20px;line-height:1}
+      #gmwwPlayerTopMenu .gmww-player-menu-exit{border:1px solid rgba(211,246,255,.18)!important;border-radius:14px!important;background:radial-gradient(circle at 48% 35%,rgba(196,246,255,.20),rgba(71,180,210,.08) 48%,rgba(5,42,57,.18) 76%)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035),0 4px 12px rgba(0,18,30,.12)!important;backdrop-filter:blur(9px) saturate(1.08);-webkit-backdrop-filter:blur(9px) saturate(1.08);overflow:visible!important}
+      #gmwwPlayerTopMenu .gmww-player-menu-exit span{font-size:24px;transform:translateX(-1px);color:rgba(239,253,255,.96);text-shadow:0 1px 7px rgba(99,222,255,.38)}
+      #gmwwPlayerTopMenu .gmww-player-menu-info{border:1px solid rgba(226,249,255,.10);border-radius:13px;background:rgba(5,39,53,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),0 3px 9px rgba(0,15,25,.08);backdrop-filter:blur(10px) saturate(1.05);-webkit-backdrop-filter:blur(10px) saturate(1.05)}
+      #gmwwPlayerTopMenu .gmww-player-menu-account{border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important}
+      #gmwwPlayerTopMenu .gmww-player-menu-account img{display:block;width:100%;height:100%;object-fit:contain;object-position:center bottom;background:transparent!important;border:0!important;border-radius:0!important;filter:drop-shadow(0 3px 4px rgba(0,18,30,.32))}
+      #gmwwPlayerTopMenu .gmww-player-menu-account img[hidden]{display:none!important}
+      #gmwwPlayerTopMenu .gmww-player-account-fallback{display:block;width:28px;height:28px;color:#e5f7ff;filter:drop-shadow(0 2px 5px rgba(0,20,34,.6))}
+      #gmwwPlayerTopMenu .gmww-player-menu-account.has-avatar .gmww-player-account-fallback{display:none!important}
+      #gmwwPlayerTopMenu .gmww-player-menu-info{display:flex;min-width:0;align-items:center;justify-content:center;padding:4px 10px;text-align:center}
+      #gmwwPlayerTopMenu .gmww-player-menu-info small{display:none!important}
+       #gmwwPlayerTopMenu .gmww-player-menu-info{flex-direction:column}
+       #gmwwPlayerTopMenu .gmww-player-menu-turn{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 9px/1.3 system-ui;color:#e4dba7;font-style:normal}
+      #gmwwPlayerTopMenu .gmww-player-menu-info b{display:block;max-width:100%;margin:0;font-size:13px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(246,252,247,.92);text-shadow:0 1px 3px rgba(0,20,30,.22)}
+      @media(max-width:420px){
+        #gmwwPlayerTopMenu{left:7px;right:7px;gap:5px;grid-template-columns:minmax(0,1fr)}
+        #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:42px;min-height:42px;border-radius:12px}
+        #gmwwPlayerTopMenu button{padding:0;font-size:8px;gap:0;flex-direction:column}
+        #gmwwPlayerTopMenu button span{font-size:18px}
+        #gmwwPlayerTopMenu .gmww-player-menu-info b{font-size:11px}
+      }
+      @media(min-width:900px){
+        html,body{width:100%!important;max-width:none!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;overflow:hidden!important}
+        #game.screen.active{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;transform:none!important}
+        #gmwwVillageShell{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;max-height:none!important;margin:0!important;border-radius:0!important}
+        #gmwwVillageFrame{display:block!important;width:100vw!important;max-width:none!important;height:100vh!important;min-height:100vh!important;border:0!important}
+        #gmwwPlayerTopMenu{left:50%!important;right:auto!important;top:14px!important;width:min(88vw,860px)!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;transform:translateX(-50%)!important}
+        #gmwwPlayerTopMenu.is-idle-hidden{transform:translate(-50%,calc(-100% - 26px))!important}
+        #gmwwPlayerTopMenu button,#gmwwPlayerTopMenu .gmww-player-menu-info{height:50px!important;min-height:50px!important;border-radius:14px!important}
+        #gmwwPlayerTopMenu button{font-size:11px!important}
+        #gmwwPlayerTopMenu button span{font-size:22px!important}
+        #gmwwPlayerTopMenu .gmww-player-menu-info small{font-size:8px!important}
+        #gmwwPlayerTopMenu .gmww-player-menu-info b{font-size:16px!important}
+        #game .role-stage{width:min(72vw,920px)!important;max-width:none!important;max-height:84vh!important}
+        #gmwwVillageReadyDock{left:50%!important;right:auto!important;width:min(92vw,1000px)!important;transform:translateX(-50%)!important}
+        #gmwwGameViewTabs{width:260px!important}
+      }
+    `;document.head.appendChild(st)
+  }
+  if(!document.documentElement.dataset.gmwwPlayerTopMenuActivity){
+    document.documentElement.dataset.gmwwPlayerTopMenuActivity='1';
+    const activity=()=>revealPlayerTopMenu();
+    ['pointerdown','mousemove','touchstart','keydown','wheel'].forEach(type=>document.addEventListener(type,activity,{passive:true,capture:true}));
+    window.addEventListener('focus',()=>revealPlayerTopMenu(true));
+  }
+  menu.querySelector('.gmww-player-menu-exit')?.remove();updatePlayerTopMenu();renderPlayerTimeline();if(!gmwwPlayerTopMenuTimer)revealPlayerTopMenu(true);return menu
+}

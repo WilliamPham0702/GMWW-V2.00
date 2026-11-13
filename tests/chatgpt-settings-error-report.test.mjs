@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ import {selectVerifiedRuntimeV385Delta,selectVerifiedRuntimeV386Delta} from '../
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('ChatGPT error reporting is absent from both settings UI and runtime handlers',()=>{
   for(const forbidden of ['settingsGroupErrorReport','gmwwReportComposer','gmwwReportToChatGPT',

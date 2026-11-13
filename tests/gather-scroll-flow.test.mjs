@@ -1,3 +1,4 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -11,7 +12,7 @@ test('Gathering toolbar exposes exactly six swipeable actions in order',()=>{
   assert.match(read('server-game/current/style.css'),/touch-action:pan-x!important/);
 });
 test('Mode clicks cycle Online, Offline, Demo',()=>{
-  const source=read('server-game/src/30-village-and-setup.part');
+  const source=gmSource('30-village-and-setup');
   const expr=source.match(/const PLAY_ROOM_MODE_CYCLE=[^\n]+;\nfunction nextPlayRoomMode\([^\n]+\{[\s\S]*?\n\}/)?.[0];
   assert.ok(expr,'mode cycle present');
   const next=Function(expr+'\nreturn nextPlayRoomMode')();
@@ -21,9 +22,9 @@ test('Mode clicks cycle Online, Offline, Demo',()=>{
   assert.equal(next('demo',true),'online');
 });
 test('Only explicit roster selection can add online members; seat progress gates next actions',()=>{
-  const battle=read('server-game/src/40-battle-and-timeline.part');
-  const setup=read('server-game/src/30-village-and-setup.part');
-  const roles=read('server-game/src/50-roles-and-artifacts.part');
+  const battle=gmSource('40-battle-and-timeline');
+  const setup=gmSource('30-village-and-setup');
+  const roles=gmSource('50-roles-and-artifacts');
   assert.match(battle,/await openPlayRosterSheet\(\); \/\/ GM chooses members/);
   assert.doesNotMatch(roles,/const online=\(memberAdminState\.members\|\|\[\]\)/);
   assert.match(setup,/if\(seat\)seat.disabled=blocked\|\|!hasMembers/);
@@ -33,5 +34,5 @@ test('Only explicit roster selection can add online members; seat progress gates
 });
 test('App bundle matches the seven ordered source parts',()=>{
   const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','45-online-chat','50-roles-and-artifacts'];
-  assert.equal(read('server-game/current/app.js'),parts.map(n=>read('server-game/src/'+n+'.part')).join(''));
+  assert.equal(read('server-game/current/app.js'),parts.map(n=>gmSource(n)).join(''));
 });

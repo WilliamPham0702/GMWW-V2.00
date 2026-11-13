@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -33,7 +34,7 @@ test('clock clamps to zero and a maximum of 24 hours',()=>{
 test('day dock has distinct icons, full action sheet, and synchronized API',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   const html=read('../server-game/current/GMWW.html');
   const app=read('../server-game/current/app.js');
-  const worker=read('../src/index.js');
+  const worker=workerSource();
   const css=read('../server-game/current/style.css');
   for(const id of ['battleDayNoticeToggle','battleDayGallowsToggle','battleDayActionMenu','battleDayActionList'])
     assert.match(html,new RegExp('id="'+id+'"'));

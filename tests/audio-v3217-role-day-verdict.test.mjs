@@ -1,12 +1,14 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
 const read=path=>fs.readFileSync(path,'utf8');
-const audio=read('server-game/src/30-village-and-setup.part');
-const battle=read('server-game/src/40-battle-and-timeline.part');
-const library=read('server-game/src/10-library-and-settings.part');
+const audio=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
+const library=gmSource('10-library-and-settings');
 const html=read('server-game/current/GMWW.html');
 
 test('V3.217 legacy source-18 resolves to the actual Old Witch voice slot',()=>{
@@ -43,7 +45,7 @@ test('V3.217 Chốt Sống/Chết are distinct System Audio slots, not Gallows u
 test('V3.217 audio release keeps six-part GM app exactly assembled',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
-  assert.equal(read('server-game/current/app.js'),parts.map(x=>read('server-game/src/'+x)).join(''));
-  assert.match(read('server-game/src/00-core-and-library.part'),/const VERSION='3\.217'/);
-  assert.match(read('src/index.js'),/VERSION="V3\.217"/);
+  assert.equal(read('server-game/current/app.js'),parts.map(x=>gmSource(x.replace(/\.part$/,''))).join(''));
+  assert.match(gmSource('00-core-and-library'),/const VERSION='3\.217'/);
+  assert.match(workerSource(),/VERSION="V3\.217"/);
 });

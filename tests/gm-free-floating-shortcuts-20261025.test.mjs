@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read=(p)=>fs.readFileSync(p,'utf8');
 const html=read('server-game/current/GMWW.html');
-const part=read('server-game/src/30-village-and-setup.part');
-const controls=read('server-game/src/40-battle-and-timeline.part');
+const part=gmSource('30-village-and-setup');
+const controls=gmSource('40-battle-and-timeline');
 const css=read('server-game/current/style.css');
 const from=part.indexOf('function gmwwSetupFreeBattleIcons(){');
 const to=part.indexOf('function battleMorningRows(){',from);

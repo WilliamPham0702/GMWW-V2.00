@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -24,7 +25,7 @@ test("gather positions are deterministic regardless of participant input order",
 });
 
 test("server redirects legacy gather motion to per-character random safe points",()=>{
-  const worker=fs.readFileSync("src/index.js","utf8");
+  const worker=workerSource();
   assert.match(worker,/villageAutoPoint\("member:"\+normalizeLoginId\(m\.loginId\),Math\.floor\(now\/1000\),villageLayout\)/);
   assert.match(worker,/autoMotionPhase==="gather"\?villageAutoPoint\(id,Math\.floor\(now\/1000\),villageLayout\)/);
   assert.doesNotMatch(worker,/villageGatherPoint\(id,gatherIds\)/);

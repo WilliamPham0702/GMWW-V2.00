@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const identity=read('src/gmww-player-identity-rules.js');
 
 test('V2.87 keeps six discrete character sizes and removes the slider',()=>{
-  const html=read('server-game/current/GMWW.html'),app=read('server-game/current/app.js'),css=read('server-game/current/style.css'),server=read('src/index.js');
+  const html=read('server-game/current/GMWW.html'),app=read('server-game/current/app.js'),css=read('server-game/current/style.css'),server=workerSource();
   assert.ok(html.includes('id="characterScaleChoices"'));
   for(const n of [75,100,125,150,175,200]) assert.ok(html.includes('data-character-scale="'+n+'"'));
   assert.doesNotMatch(html,/characterScaleRange/);
@@ -50,7 +51,7 @@ test('Player tapping their own character no longer opens information',{skip:'LEG
 });
 
 test('Player profile is compact, password-free, keeps stats and exposes collapsible history',()=>{
-  const live=read('src/gmww-members-live.js'),server=read('src/index.js');
+  const live=read('src/gmww-members-live.js'),server=workerSource();
   assert.ok(live.includes('#loginPasswordBlock,#registrationPasswordToggle,#registrationPasswordFields,#reset{display:none!important}'));
   assert.ok(live.includes('#profile .change-pass,#profile .profile-enter-room{display:none!important}'));
   assert.ok(live.includes('#profile .history-fold{display:block!important'));
@@ -66,7 +67,7 @@ test('Player profile is compact, password-free, keeps stats and exposes collapsi
 });
 
 test('Avatar selection persists and 20 animated characters load independently of legacy avatar API',()=>{
-  const live=read('src/gmww-members-live.js'),server=read('src/index.js');
+  const live=read('src/gmww-members-live.js'),server=workerSource();
   const loadStart=live.indexOf('async function loadAvatars()'),loadEnd=live.indexOf('function shuffleAvatarSuggestions',loadStart),load=live.slice(loadStart,loadEnd);
   assert.ok(load.includes('await loadGameCharacters()'));
   assert.ok(load.includes("state.gameCharacters.length+' Nhân vật động GMWW'"));
@@ -85,7 +86,7 @@ test('Manual login enters the village directly with no intermediate room restore
 });
 
 test('V3.17 runtime metadata is aligned with the V3.17 native shell',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
+  const server=workerSource(),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   assertCurrentRelease();
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 3110;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.110;'));

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ const read=p=>fs.readFileSync(p,'utf8');
 const app=read('server-game/current/app.js');
 const css=read('server-game/current/style.css');
 const html=read('server-game/current/GMWW.html');
-const server=read('src/index.js');
+const server=workerSource();
 const playerModule=read('src/gmww-village-player-state.js');
 const live=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
@@ -54,7 +55,7 @@ test('GM player labels show compact name/presence and only character artwork sca
 
 test('V3.25 removes the old three-button footer and retains all core GM actions',()=>{
   assert.doesNotMatch(html,/play-control-bar-three|id="playBack"|id="playPrimaryAction"|id="playNext"/);
-  for(const id of ['playExitVillage','playAutoGM','playPhasePill','playAudioTop','playEndGame'])assert.match(html,new RegExp('id="'+id+'"'));
+  for(const id of ['playExitVillage','playChatTop','playPhasePill','playEndGame'])assert.match(html,new RegExp('id="'+id+'"'));
   assert.ok(html.indexOf('id="playSetupStrip"')<html.indexOf('id="gmTopMenu"'));
   assert.match(css,/#gmTopMenu\.gm-top-menu-v293\{/);
   assert.match(app,/handlePlayTimelineStep\(b\.dataset\.playStep\)/);

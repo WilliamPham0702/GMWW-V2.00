@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -9,9 +11,9 @@ test('V3.182 runtime OTA identifies itself and preserves native IPA V3.110',{ski
  assert.equal(lock.version,pkg.version);
  assert.equal(lock.packages[''].version,pkg.version);
  const ver=pkg.version.replace(/\.0$/,'');
- assert.ok(read('src/index.js').includes('VERSION="V'+ver+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+ver.replaceAll('.','')+'"'));
+ assert.ok(workerSource().includes('VERSION="V'+ver+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+ver.replaceAll('.','')+'"'));
  assert.ok(read('server-game/current/app.js').includes("const VERSION='"+ver+"'"));
- assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+ver+"'"));
+ assert.ok(gmSource('00-core-and-library').includes("const VERSION='"+ver+"'"));
  const html=read('server-game/current/GMWW.html');
  assert.ok(html.includes('<title>GMWW V'+ver+'</title>'));
  assert.ok(html.includes('style.css?v='+ver));

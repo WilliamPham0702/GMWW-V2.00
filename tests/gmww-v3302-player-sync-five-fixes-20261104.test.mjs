@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 // V3.301 (04/11/2026) — 5 lỗi chủ dự án báo khi chơi Player Web trên iPhone.
 // Mỗi test gắn với đúng 1 lỗi; chỉ kiểm tra phạm vi đã sửa.
 import test from 'node:test';
@@ -5,7 +6,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {gmwwMembersLiveScript as live} from '../src/gmww-members-live.js';
 
-const index=readFileSync('src/index.js','utf8');
+const index=workerSource();
 const gm=readFileSync('server-game/current/app.js','utf8');
 const slice=(src,a,b)=>{const i=src.indexOf(a);assert.ok(i>=0,a+' missing');const j=src.indexOf(b,i+a.length);return src.slice(i,j<0?undefined:j)};
 
@@ -58,7 +59,7 @@ test('4. footer row: clock, collapsed chat and text-only Khôi phục share one 
 
 // Lỗi 5: GM app quay lại từ nền vẫn hiện lượt cũ cho tới khi socket tự nối lại (backoff tới 10 s).
 test('5. GM Runtime resyncs at once on resume and when the turn deadline passes silently',()=>{
-  assert.match(gm,/const VERSION='3\.(?:30[2-9]|31[0-9])'/);
+  assert.match(gm,/const VERSION='3\.(?:30[2-9]|3[12][0-9])'/);
   for(const ev of ["document.addEventListener('visibilitychange',playResumeRealtime)","window.addEventListener('pageshow',playResumeRealtime)","window.addEventListener('focus',playResumeRealtime)"])
     assert.ok(gm.includes(ev),ev);
   const resume=slice(gm,'function playResumeRealtime()','\ndocument.addEventListener');

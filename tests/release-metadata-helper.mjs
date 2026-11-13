@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 export const currentRuntimeVersion=fs.readFileSync('server-game/current/app.js','utf8').match(/const VERSION='([0-9.]+)'/)?.[1];
 export function assertCurrentRelease(){
   const app=fs.readFileSync('server-game/current/app.js','utf8');
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const runtime=app.match(/const VERSION='([0-9.]+)'/)?.[1];
   assert.match(String(runtime),/^\d+\.\d+$/);
   assert.equal(worker.match(/\bVERSION="V([0-9.]+)"/)?.[1],runtime);

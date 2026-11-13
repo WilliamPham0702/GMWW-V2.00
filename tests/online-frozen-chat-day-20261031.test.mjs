@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -22,7 +23,7 @@ test('frozen player is blocked in night group, but village chat reopens on morni
 });
 
 test('dead/exiled players cannot send public chat, but all statuses can contact GM privately',async()=>{
- const source=readFileSync('src/index.js','utf8');
+ const source=workerSource();
  const begin=source.indexOf('  async chatAccess(loginId,requestedChannel="room"){');
  const end=source.indexOf('  async playerChatRead(body){',begin);
  assert.ok(begin>=0&&end>begin,'Must test actual Room.chatAccess method');

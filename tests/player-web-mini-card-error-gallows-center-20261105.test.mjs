@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,7 +13,7 @@ test('Lá bài mini luôn có mặt lưng đã duyệt, không hiện ảnh vỡ
 });
 
 test('Lỗi hành động hiển thị tiếng Việt, không lộ mã DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN',()=>{
- const src=fs.readFileSync(new URL('../src/player-web-src/35-online-chat.part',import.meta.url),'utf8');
+ const src=playerWebSource('35-online-chat');
  assert.match(src,/catch\(e\)\{toast\(gmwwOnlineActionErrorText\(e\)\)\}/);
  assert.doesNotMatch(src,/toast\('Hành động chưa được chấp nhận: '\+String\(e\.message/);
  const fn=src.match(/function gmwwOnlineActionErrorText\(e\)\{[\s\S]*?\n\}\n/)[0];
