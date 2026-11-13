@@ -1,3 +1,5 @@
+
+
 /* V2.22 — Server Health in Cài Đặt */
 const GMWW_SERVER_BASE='https://gmww-v2-00.williampham0702.workers.dev';
 const GMWW_GM_AUTH="6AQz7J2llbfh6xRaamkzYAxuBA2Ik33mENTRQtOFqr8";
@@ -364,4 +366,3 @@ window.GMWWUpdateNative={
     if(result.ok===false){gmwwSetUpdateProgress('error',null,'Tác vụ không thành công');setUpdateUi('bad','CẬP NHẬT LỖI','Không thể hoàn tất cập nhật.',String(result.error||'Đã giữ nguyên phiên bản hiện tại.'));}
   }
 };
-

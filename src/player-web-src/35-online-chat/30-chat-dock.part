@@ -259,5 +259,3 @@ async function gmwwChatSend(){
   try{await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/chat',{method:'POST',headers:auth(),body:JSON.stringify({text,channel:gmwwChatTarget})});input.value='';await gmwwChatRefresh()}
   catch(error){toast('Chat: '+String(error.message||'Không thể gửi'));await gmwwChatRefresh()}
 }
-
-

@@ -1,3 +1,5 @@
+
+
 /* Online action offers are delivered privately and validated again on Server. */
 let gmwwOnlinePick=null,gmwwOnlineCanRestore=false,gmwwOnlineIconScope='';
 let gmwwOnlineWitchBite=null,gmwwOnlineConfirmedTargets=[],gmwwOnlineConfirmedUntil=0,gmwwOnlineRevealTimer=null;

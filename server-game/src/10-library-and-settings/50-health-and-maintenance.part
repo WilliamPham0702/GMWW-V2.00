@@ -1,3 +1,4 @@
+
 let serverHealthBusy=false;
 function setServerHealthState(kind,text,detail,data={}){
   const pill=document.getElementById('serverHealthPill'),dot=document.getElementById('serverHealthDot');
@@ -90,4 +91,3 @@ async function clearSafeRuntimeCache(){
 const auditLocalDataBtn=document.getElementById('auditLocalData');if(auditLocalDataBtn)auditLocalDataBtn.addEventListener('click',auditLocalData);
 const clearRuntimeCacheBtn=document.getElementById('clearRuntimeCache');if(clearRuntimeCacheBtn)clearRuntimeCacheBtn.addEventListener('click',clearSafeRuntimeCache);
 const reloadAppBtn=document.getElementById('reloadApp');if(reloadAppBtn)reloadAppBtn.addEventListener('click',()=>window.location.reload());
-

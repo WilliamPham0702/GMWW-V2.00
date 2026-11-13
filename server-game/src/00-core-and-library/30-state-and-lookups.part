@@ -15,4 +15,3 @@ function factionMeta(id){if(id==='wolf')return{id:'wolf',label:'Phe Sói',icon:'
 function selectOptions(items,selected){return items.map(([v,l])=>'<option value="'+esc(v)+'" '+(String(v)===String(selected)?'selected':'')+'>'+esc(l)+'</option>').join('')}
 function numOptions(min,max,selected){const a=[];for(let i=min;i<=max;i++)a.push([String(i),String(i)]);return selectOptions(a,String(selected))}
 function themeById(id){return state.themes.list.find(x=>x.id===id)||state.themes.list[0]}
-

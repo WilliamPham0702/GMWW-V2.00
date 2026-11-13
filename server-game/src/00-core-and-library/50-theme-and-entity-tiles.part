@@ -1,3 +1,4 @@
+
 // Exactly these slots have image consumers. Hidden legacy slot values are
 // preserved in state/IndexedDB; only nonfunctional *controls* disappear.
 const ACTIVE_THEME_BACKGROUND_TARGETS={

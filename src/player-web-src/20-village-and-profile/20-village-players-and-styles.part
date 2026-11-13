@@ -1,3 +1,4 @@
+
 const villageFrozenState=new Map();
 let wolfRecognitionExpiryTimer=null;
 function setPrivateWolfRecognition(value,room=state.room){

@@ -1,3 +1,5 @@
+
+
 /* Dedicated battle mode: in-match controls use the server's authoritative turn queue. */
 /* Isolated Demo playback. All decisions are sampled from currently legal GM
  * choices and submitted through the same server action/turn endpoints. */
@@ -331,4 +333,3 @@ async function demoStep(epoch){
     renderPlayBattle();
   }
 }
-

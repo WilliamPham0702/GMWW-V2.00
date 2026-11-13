@@ -1,3 +1,4 @@
+
 // A generic room_state WebSocket snapshot does not contain confirmed public
 // statusTags. Fetch the authoritative REST projection after a status/cycle update.
 // Debounce to avoid repeated DO reads and preserve gameplay responsiveness.

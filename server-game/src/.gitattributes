@@ -1,0 +1,3 @@
+# Dòng 182 của file này chỉ có khoảng trắng và là một phần của app.js đang phát hành;
+# sửa nó sẽ đổi byte của Runtime, nên chỉ riêng file này bỏ kiểm tra khoảng trắng cuối dòng.
+40-battle-and-timeline/50-battle-render-and-confirm.part whitespace=-blank-at-eol

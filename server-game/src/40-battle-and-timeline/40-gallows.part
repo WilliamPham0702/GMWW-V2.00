@@ -1,3 +1,4 @@
+
 function battleGallowsTick(){
   const g=playSceneRuntime.gallows,clock=document.getElementById('battleGallowsClock');
   if(!clock||playSceneState.phase!=='day')return;
@@ -272,4 +273,3 @@ async function battleGallowsCommand(command,targetId='',outcome='',extras={}){
     if(queued)void battleGallowsCommand(queued.command,queued.targetId,queued.outcome,queued.extras);
   }
 }
-

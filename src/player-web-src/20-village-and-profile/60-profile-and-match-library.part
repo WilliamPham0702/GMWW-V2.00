@@ -1,3 +1,4 @@
+
 function renderProfile(){
   const m=state.member;if(!m)return;ensureLobbyMotionToggle();
   const editing=!!$('#profileEditPanel')?.open,currentCharacter=String(m.gameCharacterId||state.gameCharacters[0]?.id||''),draftCharacter=String(state.profileDraftGameCharacterId||currentCharacter);
@@ -54,4 +55,3 @@ async function toggleMatchDetail(item,matchId){
     if(roster.length){const r=document.createElement('div');r.style.cssText='margin-top:4px;opacity:.9';r.textContent='Vai: '+roster.map(p=>p.name+(p.roleName?' ('+p.roleName+')':'')+(p.alive?'':' ✝')).join(', ');box.appendChild(r)}
   }catch(_){box.textContent='Không tải được chi tiết ván.'}
 }
-

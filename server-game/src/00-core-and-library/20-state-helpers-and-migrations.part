@@ -1,3 +1,4 @@
+
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const clone=v=>JSON.parse(JSON.stringify(v));

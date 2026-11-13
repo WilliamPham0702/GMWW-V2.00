@@ -44,9 +44,3 @@
 - Dự án Arena 3D đã HUỶ (06/11/2026). Chỉ giữ bản 2D.
 - Gỡ toàn bộ 3D khỏi main qua PR #838 (draft); người dùng tự xoá Cloudflare STAGING Workers, GitHub prereleases và nhánh PR #581.
 - Không đụng vào game 2D đang cài (Runtime, màn hình 2D); không cài Runtime thử nghiệm đè lên app thật.
-
-## Cấu trúc mã (từ 13/11/2026)
-- Worker: `src/index.js` chỉ giữ hằng số phiên bản + ghép; mã nằm trong `src/worker/` (`http/`, `room/`, `support/`) — xem `src/worker/README.md`. Luật game vẫn ở `src/gmww-*-rules.js`.
-- GM Server: `server-game/src/<nhóm>/<NN-tên>.part` → `server-game/current/app.js` — xem `server-game/src/README.md`.
-- Player Web: `src/player-web-src/<nhóm>/<NN-tên>.part` → `src/gmww-members-live.js` — xem `src/player-web-src/README.md`.
-- Test/CI đọc nguồn qua `.github/scripts/worker-source.mjs` và `.github/scripts/source-groups.mjs`, không đọc thẳng đường dẫn file cũ.

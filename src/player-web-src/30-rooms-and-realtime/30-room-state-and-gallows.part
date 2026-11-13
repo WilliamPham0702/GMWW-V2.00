@@ -243,4 +243,3 @@ async function sendGallowsChoice(command,targetId='',choice=''){
 
 function startRoomStateWatch(){if(state.gameStateTimer)clearInterval(state.gameStateTimer);if(!state.roomCode||!state.participantId)return;void pollRoomState();state.gameStateTimer=setInterval(()=>{if(document.visibilityState==='visible')void pollRoomState()},5000)}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){if(state.member)refreshGmPresence();if(state.roomCode&&state.participantId){void pollRoomState();if(!state.ws||state.ws.readyState===WebSocket.CLOSED)connectWS();}}});
-

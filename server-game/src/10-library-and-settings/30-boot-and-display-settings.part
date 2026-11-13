@@ -1,3 +1,4 @@
+
 function bindCore(){
   $$('.nav').forEach(n=>n.onclick=()=>{$$('.page').forEach(p=>p.classList.toggle('active',p.id===n.dataset.page));$$('.nav').forEach(x=>x.classList.toggle('active',x===n));const p=$('#'+n.dataset.page);if(p)p.scrollTop=0});
   $$('.libtab').forEach(b=>b.onclick=()=>{$$('.libtab').forEach(x=>x.classList.toggle('active',x===b));$$('.libpane').forEach(p=>p.classList.toggle('active',p.id==='lib-'+b.dataset.lib));$('#library').scrollTop=0;if(b.dataset.lib==='themes')renderTheme();if(b.dataset.lib==='audio')renderAudio();if(b.dataset.lib==='templates')loadPlayGameTemplates()});
@@ -104,5 +105,3 @@ function initActionIconScaleSetting(){
  });
 }
 setTimeout(initActionIconScaleSetting,0);
-
-

@@ -1,3 +1,4 @@
+
 function renderPlayScene(){
   const shell=document.getElementById('playShell');if(!shell)return;shell.dataset.phase=playSceneState.phase;shell.dataset.step=playSceneState.step;applyGMVillageScene();
   if(playSceneRuntime.setupPopupStep!==playSceneState.step){playSceneRuntime.setupPopupStep=playSceneState.step;playSceneRuntime.setupPopupClosed=false}
@@ -79,4 +80,3 @@ async function gmAutoPreviewGame(){
     await renderPlayGameRoles();renderPlayGameRoleTimings();updatePlayGameRoleCount();
   }catch(e){playFlashError(e?.message||'Không tạo được AUTO VÁN.')}
 }
-

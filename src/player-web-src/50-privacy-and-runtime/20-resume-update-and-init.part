@@ -1,3 +1,4 @@
+
 async function autoResumeActiveRoom({stayInVillage=false}={}){
   const saved=savedActiveRoom(),code=String(saved?.roomCode||state.member?.currentRoomCode||'').trim().toUpperCase();if(!code||!state.token)return false;
   rememberActiveRoom(code,saved?.participantId||'');

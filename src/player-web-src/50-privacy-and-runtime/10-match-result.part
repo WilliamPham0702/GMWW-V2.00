@@ -50,4 +50,3 @@ async function closeResult(){
 } window.closeResult=closeResult;
 
 document.documentElement.dataset.gmwwMembersVersion='0.40.23-player-simplified-lobby';
-

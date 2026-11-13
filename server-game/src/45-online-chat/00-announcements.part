@@ -76,4 +76,3 @@ battleQueueDayAudio=function(cues){
   if(playSceneState.phase==='day')gmwwPublishDayAnnouncement(cues);
   return gmwwLocalDayAudio(cues);
 };
-

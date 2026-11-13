@@ -1,3 +1,4 @@
+
 const battleState={assassinChoice:'',wakeAudioStartedKey:'',wakeAdvanceInFlight:'',dayCountdownCueKey:'',dayTimeupCueKey:'',morningOpen:false,morningDayKey:'',morningAudioKey:'',morningSig:'',gallowsOpen:false,dayActionsOpen:false,dayMenuSig:'',dayClockBusy:false,key:'',actionId:'',targets:[],roster:false,details:false,wolfOpen:false,clockOpen:false,quickType:'',timelineSig:'',actionSig:'',busy:false,syncPending:false,nonce:'',drag:null,targetSheet:false,targetMode:'list',lastTap:null,undoBusy:false,ignoreClick:0,intelShownForKey:'',confirmPosition:null,ignoreConfirmClickUntil:0,impacts:new Map()};
 // UI-only skill icon drag: server remains sole action authority. Uses the same
 // GM battleConfirm() and existing rollback token as manual target selection.

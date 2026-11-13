@@ -1,3 +1,4 @@
+
 async function api(path,opts={}){
   const headers={...(opts.headers||{})};
   if(opts.body!==undefined&&!headers['content-type'])headers['content-type']='application/json';
@@ -97,4 +98,3 @@ async function changePassword(){
   try{await api('/api/members/password',{method:'POST',headers:auth(),body:JSON.stringify({currentPassword:cur,newPassword:nw})});inputs.forEach(x=>x.value='');toast('Đã thay đổi mật khẩu.')}
   catch(e){toast(e.message)}
 }
-

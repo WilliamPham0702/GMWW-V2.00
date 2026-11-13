@@ -290,4 +290,3 @@ function initVillageSceneManager(){
  setInterval(()=>{if(document.visibilityState==='visible'&&document.getElementById('settings')?.classList.contains('active'))void refreshVillageScenePublished().catch(()=>{})},5000);
 }
 document.addEventListener('DOMContentLoaded',initVillageSceneManager);
-

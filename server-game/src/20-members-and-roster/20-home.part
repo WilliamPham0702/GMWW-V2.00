@@ -1,3 +1,4 @@
+
 /* V3.36 — Trang Chủ: cảm hứng bố cục V1, tất cả số liệu dựa trên máy chủ thật. */
 let gmwwHomeBusy=false,gmwwHomeLastLoaded=0,gmwwHomeAllRecent=false,gmwwHomeCachedRows=[];
 function gmwwHomeText(id,text){
@@ -182,6 +183,3 @@ document.getElementById('gmwwHomeTop3Ranking')?.addEventListener('click',gmwwHom
 document.getElementById('gmwwHomeRefresh')?.addEventListener('click',()=>gmwwHomeRefresh(true));
 document.querySelectorAll('#bottomNav .nav[data-page="home"]').forEach(el=>el.addEventListener('click',()=>setTimeout(()=>gmwwHomeRefresh(false),35)));
 setTimeout(()=>{if(document.getElementById('home')?.classList.contains('active'))gmwwHomeRefresh()},150);
-
-
-

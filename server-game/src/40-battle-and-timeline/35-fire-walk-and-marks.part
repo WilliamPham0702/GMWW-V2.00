@@ -200,4 +200,3 @@ function battleMarkPlayers(){
   gmwwFireWalkSync(ring,actors,motionOn&&!battleState.gmwwWalkExpired);
   for(const [id,x] of battleState.impacts)if(x.until<=now)battleState.impacts.delete(id)
 }
-

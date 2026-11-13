@@ -61,4 +61,3 @@ function maybeOpenGame(){
   syncPlayerPresentation();syncPlayerMiniCards();gmwwChatDockSync();
   ensureVillageReadyDock();syncVillageFrame();setTimeout(syncPlayerSetupState,0);return true
 }
-

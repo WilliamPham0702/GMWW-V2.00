@@ -1,3 +1,4 @@
+
 function avatarAssetSrc(a){const id=String(a?.id||'');return id.startsWith('character-')?gameCharacterImageUrl(id):String(a?.imageData||a?.imageUrl||avatarUrl(id))}
 function avatarButton(a){
   const b=document.createElement('button');b.type='button';b.dataset.gmwwAvatar=a.id;
@@ -64,4 +65,3 @@ async function saveProfile(){
 window.saveProfile=saveProfile;
 async function openProfileAvatarLibrary(){state.avatarPickerMode='profile';if(!state.gameCharacters.length)await loadGameCharacters();if(!state.gameCharacters.length){toast('Không tải được danh sách Avatar. Vui lòng thử lại.');return}state.profileDraftGameCharacterId=state.profileDraftGameCharacterId||state.member?.gameCharacterId||state.gameCharacters[0]?.id||'';state.avatarPickerDraftId=state.profileDraftGameCharacterId;const modal=$('#avatarLibraryModal');if(!modal)return;modal.classList.add('open');renderAvatarLibrary();ensureCharacterPreviewTicker()}
 window.openProfileAvatarLibrary=openProfileAvatarLibrary;
-

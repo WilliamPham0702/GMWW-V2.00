@@ -1,3 +1,4 @@
+
 async function openRooms(){
   if(!state.token){go('login');return}
   state.roomNavigationAuthorized=true;

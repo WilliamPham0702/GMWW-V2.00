@@ -223,4 +223,3 @@ window.addEventListener('message',event=>{
   }
 });
 window.GMWWVillage={ensure:ensureVillageGameView,sync:syncVillageFrame,setPane:setGameViewPane,getPerf:()=>state.villagePerf||null};
-

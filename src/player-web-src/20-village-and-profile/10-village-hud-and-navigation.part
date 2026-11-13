@@ -142,4 +142,3 @@ function toast(text){
   t.textContent=text||'';t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',15000);
 }
 window.toast=toast;
-
