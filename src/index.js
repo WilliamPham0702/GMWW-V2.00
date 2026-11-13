@@ -4907,13 +4907,9 @@ async function playerRoomOwnerApi(env,rawCode,action,request){
     const t=body.timing&&typeof body.timing==="object"?body.timing:{},timing={};
     for(const k of ["villageDiscussionSec","gallowsNominationSec","gallowsVoteSec","wolfDiscussionSec","earlyArtifactSec","defaultActionSec","artifactActionSec"])if(t[k]!=null&&t[k]!=="")timing[k]=Math.max(k.startsWith('gallows')?1:0,Math.min(3600,Math.trunc(Number(t[k])||0)));
     if(Object.prototype.hasOwnProperty.call(t,'autoAdvance'))timing.autoAdvance=t.autoAdvance!==false;
-    const artifactEnabled=body.artifactsEnabled===true,selectedArtifacts=[...new Map((Array.isArray(body.artifacts)?body.artifacts:[]).map((a,i)=>[String(a?.artifactId||''),{artifactId:String(a?.artifactId||''),order:Math.max(0,Math.trunc(Number(a?.order)||i+1))}]).filter(([id])=>id)).values()];
-    if(artifactEnabled&&!selectedArtifacts.length)return j({ok:false,error:"INVALID_ARTIFACT_SELECTION",message:"Chọn ít nhất một Artifact hoặc tắt Artifact."},400);
-    if(artifactEnabled){const availableArtifacts=await playerRoomSourceArtifacts(env);if(!availableArtifacts.ok)return availableArtifacts.res;
-      const allowedArtifacts=new Set(availableArtifacts.artifacts.map(x=>x.assetId.slice(9)));
-      if(selectedArtifacts.some(a=>!allowedArtifacts.has(a.artifactId)))return j({ok:false,error:"ARTIFACT_NOT_AVAILABLE",message:"Có Artifact chưa được phát hành trên Server."},400)}
+    const artifactEnabled=body.artifactsEnabled===true;
     const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(body.artifactLimitPerCycle??3)||0)));
-    const baseId=rows[0].templateId,base=src.bases.get(baseId)||{},compiledConfig={...base,name,playerCount:total,timing:{...(base.timing||{}),...timing},roles:rows.map(({templateId:_t,...r})=>r),artifactsEnabled:artifactEnabled,artifacts:artifactEnabled?selectedArtifacts:[],artifactLimitPerCycle};
+    const baseId=rows[0].templateId,base=src.bases.get(baseId)||{},compiledConfig={...base,name,playerCount:total,timing:{...(base.timing||{}),...timing},roles:rows.map(({templateId:_t,...r})=>r),artifactsEnabled:artifactEnabled,artifacts:[],artifactPool:"shared",artifactLimitPerCycle};
     return memberStore(env).fetch("https://member.internal/game-templates/player-save",{method:"PUT",headers:{"content-type":"application/json"},body:JSON.stringify({id:templateId||undefined,ownerLoginId,compiledConfig,copyAssets})})
   }
   if(action==="template"){
@@ -4943,8 +4939,14 @@ async function playerRoomOwnerApi(env,rawCode,action,request){
       const timing={...(cfg.timing||{})};for(const k of ["villageDiscussionSec","gallowsNominationSec","gallowsVoteSec","wolfDiscussionSec","earlyArtifactSec","defaultActionSec","artifactActionSec"]){const n=Number(override.timing?.[k]);if(Number.isFinite(n))timing[k]=Math.max(k.startsWith('gallows')?1:0,Math.min(3600,Math.trunc(n)))}
       const roleTimes=override.roleDurations&&typeof override.roleDurations==='object'?override.roleDurations:{};
       const roles=(Array.isArray(cfg.roles)?cfg.roles:[]).map(r=>Object.prototype.hasOwnProperty.call(roleTimes,String(r.roleId))?{...r,actionDurationSec:Math.max(0,Math.min(3600,Math.trunc(Number(roleTimes[r.roleId])||0)))}:r);
-      const artifactsEnabled=override.artifactsEnabled===true&&Array.isArray(cfg.artifacts)&&cfg.artifacts.length>0;
+      const artifactsEnabled=override.artifactsEnabled===true;
       cfg={...cfg,timing,roles,artifactsEnabled};template={...template,compiledConfig:cfg};
+    }
+    if(cfg.artifactsEnabled===true){
+      const pool=await playerRoomSourceArtifacts(env);if(!pool.ok)return pool.res;
+      if(!pool.artifacts.length)return j({ok:false,error:"SHARED_ARTIFACT_NOT_READY",message:"Kho Artifact chung của Server chưa có lá bài."},409);
+      cfg={...cfg,artifactPool:"shared",artifacts:pool.artifacts.map((a,i)=>({artifactId:a.assetId.slice(9),order:i+1}))};
+      template={...template,compiledConfig:cfg};
     }
     if(cfg.artifactsEnabled===true&&Array.isArray(cfg.artifacts)&&cfg.artifacts.length){
       const prep=await gmPreloadSharedArtifacts(env,code,new Request('https://room.internal/gm/shared-artifacts',{method:'POST',headers:{authorization:'Bearer '+GM_SYNC_TOKEN,'content-type':'application/json'},body:JSON.stringify({assetIds:cfg.artifacts.map(a=>'artifact:'+String(a?.artifactId||''))})}));

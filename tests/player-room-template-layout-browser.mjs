@@ -35,6 +35,13 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   },PLAYER_ROOM_ROLE_CATALOG);
   await page.addScriptTag({content:'const GMWW_SERVER_MENU='+menu+';\n'+source});
   await page.evaluate(roles=>{const f=roomFixture;f.mount();Object.assign(f.pr,{open:true,own:{code:'ABCDEF',token:'synthetic'},view:'game',catalogStatus:'ready',roles,state:{room:{phase:'lobby',seatsLocked:true},players:[{loginId:'test'},{loginId:'a'},{loginId:'b'}]}});f.render();},PLAYER_ROOM_ROLE_CATALOG);
+  if(!baseline&&!refreshBaseline){
+   await page.evaluate(()=>{window.joinAttempts=0;window.joinRoom=async()=>{joinAttempts++;return false};state.roomCode='';roomFixture.pr.open=false;roomFixture.render();});
+   await page.locator('#gmwwOwnerDock').getByRole('button').filter({has:page.locator('#playPhaseTitle')}).click();
+   assert.equal(await page.evaluate(()=>joinAttempts),0);
+   assert.equal(await page.evaluate(()=>roomFixture.pr.view),'room');
+   await page.evaluate(()=>{state.roomCode='ABCDEF';roomFixture.pr.view='game';roomFixture.pr.open=true;roomFixture.render();});
+  }
   const checkLayout=async()=>page.evaluate(()=>{
    const row=document.querySelector('.gmww-pr-game-actions'),footer=document.querySelector('.gmww-pr-game-footer');
    const r=row.getBoundingClientRect(),f=footer.getBoundingClientRect();
@@ -70,7 +77,10 @@ for(const [engine,type] of Object.entries({chromium,webkit})){
   assert.equal(explicit.after,explicit.top);assert.equal(explicit.open,true);
   await page.evaluate(()=>document.querySelector('.gmww-pr-selected-role .gmww-pr-step').click());
   console.log('PASS editor poll/focus/scroll and role count',engine,width);
+  await page.locator('#gmwwPrUseArtifacts').check();
+  assert.equal(await page.locator('.gmww-pr-designer-advanced #gmwwPrUseArtifacts').count(),0);
   await page.getByRole('button',{name:'LƯU',exact:true}).click();
+  const saved=await page.evaluate(()=>requests.findLast(r=>r.url.endsWith('/template-save')).data);assert.equal(saved.artifactsEnabled,true);assert.equal(saved.artifacts,undefined);
   await page.getByRole('combobox',{name:'Chọn Ván Mẫu',exact:true}).selectOption('saved');
   const selectedLayout=await checkLayout();assert.ok(selectedLayout.controlsFit&&selectedLayout.noHorizontalOverflow&&selectedLayout.footerTop>=selectedLayout.rowBottom,JSON.stringify(selectedLayout));
   await page.locator('.gmww-pr-body').evaluate(n=>{n.scrollTop=0;});

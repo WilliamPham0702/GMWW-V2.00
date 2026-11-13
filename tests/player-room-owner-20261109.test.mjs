@@ -145,18 +145,19 @@ test('a failing deal or start is returned as is and does not start night 1',asyn
 // ---- Worker owner API (real source) ----
 const fFrom=source.indexOf('async function playerRoomTemplates(env,request){'),fTo=source.indexOf('async function joinRoom(env,raw,request){',fFrom);
 assert.ok(fFrom>0&&fTo>fFrom,'find real Worker owner API');
-function worker({gate=200,roomOwner='nam01'}={}){
+function worker({gate=200,roomOwner='nam01',artifacts=[],preloadStatus=200}={}){
   const log={room:[],member:[]};
   const memberFetch=async(input,init)=>{const u=typeof input==='string'?input:input.url;log.member.push(u);
     if(u.endsWith('/members/session'))return j({ok:true,member:{loginId:'nam01'}});
-    if(u.endsWith('/artifacts/shared/status'))return j({ok:true,artifacts:[]});
+    if(u.endsWith('/artifacts/shared/status'))return j({ok:true,artifacts});
+    if(u.endsWith('/game-templates/player-save')){log.saved=JSON.parse(init.body);return j({ok:true});}
     if(u.endsWith('/game-templates/list'))return j({ok:true,templates:[{id:'t1',source:'PLAYER'}]});
     if(u.includes('/game-templates/get'))return u.includes('id=missing')?j({ok:false},404):j({ok:true,template:{id:'t1',source:'PLAYER',ownerLoginId:'nam01',compiledConfig:{roles:[{roleId:'wolf'},{roleId:'seer'},{roleId:'wolf'}]}}});
     if(u.includes('/game-templates/delete'))return j({ok:true,deleted:true});
     if(u.includes('/game-templates/assets'))return u.includes('role%3Aseer')?j({ok:false},404):j({ok:true,package:{roleCard:{name:'W'}}});
     throw new Error('unexpected '+u)};
   const roomFetch=async(u,init={})=>{log.room.push({u,method:init.method||'GET',auth:init.headers?.authorization,body:init.body});return u.endsWith('/owner/state')?j({ok:gate===200,ownerLoginId:roomOwner},gate):j({ok:true})};
-  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode','normalizeLoginId','PLAYER_ROOM_ROLE_CATALOG',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c),normalizeLoginId,PLAYER_ROOM_ROLE_CATALOG);
+  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode','normalizeLoginId','PLAYER_ROOM_ROLE_CATALOG','GM_SYNC_TOKEN','gmPreloadSharedArtifacts',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c),normalizeLoginId,PLAYER_ROOM_ROLE_CATALOG,'internal-test',async(env,code,request)=>{log.preload=await request.json();return j({ok:preloadStatus===200},preloadStatus)});
   return {...fn,log};
 }
 const wreq=(method,body)=>new Request('https://x/api',{method,headers:{authorization:'Bearer OWNER','content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
@@ -241,4 +242,18 @@ test('owner close: deletes the room, tells the sockets, frees the directory slot
   assert.deepEqual(closed,[[1000,'ROOM_CLOSED']]);
   assert.deepEqual(dir,[['https://member.internal/directory/rooms/delete',{code:'ABCDEF'}]]);
   assert.equal((await o.ownerAction('state',req('/owner/state',{method:'GET'}))).status,404,'a closed room is gone for its owner');
+});
+
+// Shared pool is resolved server-side, not accepted from a client's card selection.
+test('Artifact toggle saves without selected cards and keeps timing independent',async()=>{
+ const w=worker();
+ const r=await w.playerRoomOwnerApi({},'ABCDEF','template-save',wreq('POST',{roles:[{roleId:'wolf',count:3}],artifactsEnabled:true,timing:{defaultActionSec:45}}));
+ assert.equal(r.status,200);assert.equal(w.log.saved.compiledConfig.artifactsEnabled,true);assert.deepEqual(w.log.saved.compiledConfig.artifacts,[]);assert.equal(w.log.saved.compiledConfig.timing.defaultActionSec,45);
+});
+test('Artifact ON resolves every shared card and preloads before applying; OFF skips pool',async()=>{
+ const artifacts=['a','b'].map(id=>({assetId:'artifact:'+id,package:{roleCard:{name:id}}}));
+ const w=worker({artifacts});const r=await w.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{templateId:'t1',matchOverrides:{artifactsEnabled:true}}));
+ assert.equal(r.status,200);assert.deepEqual(w.log.preload.assetIds,['artifact:a','artifact:b']);assert.deepEqual(JSON.parse(w.log.room.at(-1).body).template.compiledConfig.artifacts.map(a=>a.artifactId),['a','b']);
+ const off=worker({artifacts});await off.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{templateId:'t1',matchOverrides:{artifactsEnabled:false}}));assert.equal(off.log.preload,undefined);assert.equal(off.log.member.some(u=>u.endsWith('/artifacts/shared/status')),false);
+ for(const setup of [{artifacts:[]},{artifacts,preloadStatus:409},{artifacts,gate:401}]){const bad=worker(setup);const res=await bad.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{templateId:'t1',matchOverrides:{artifactsEnabled:true}}));assert.ok(res.status>=400);assert.equal(bad.log.room.some(r=>r.u.endsWith('/apply-template')),false);}
 });
