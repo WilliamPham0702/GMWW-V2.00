@@ -1,4 +1,4 @@
-function openVillageProfile(){try{renderProfile();const h=$('#profile .history-fold');if(h)h.open=false;const edit=$('#profileEditPanel');if(edit)edit.open=false}catch(e){console.warn('[GMWW profile render]',e)}go('profile')}
+function openVillageProfile(){try{renderProfile();const h=$('#profile .history-fold');if(h)h.open=false;const edit=$('#profileEditPanel');if(edit)edit.open=false}catch(e){console.warn('[GMWW profile render]',e)}go('profile');try{loadSetupTop3().then(()=>renderProfileTop3())}catch(e){console.warn('[GMWW top3]',e)}}
 let gmwwPlayerTopMenuTimer=null,gmwwPlayerTopMenuLastActivity=0;
 function playerScenePolicy(room={}){
   const phase=String(room?.phase||'lobby').toLowerCase();
