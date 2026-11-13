@@ -70,6 +70,49 @@ jobs:
           const config=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
           if(config.name!=='gmww-v2-00'||config.durable_objects?.bindings?.[0]?.name!=='ROOMS')throw Error('Unexpected Production Worker/DO config');
           NODE
+      # A plain checkout ships src/gmww-release-catalog.js = null, so /api/update/manifest answered 503
+      # after every Worker-only publish until the next Runtime release. Rebuild the SAME package that is
+      # already published for this version and embed its catalog. Nothing new is released here.
+      - name: Rebuild the published Runtime catalog (same version, no new OTA)
+        id: catalog
+        if: steps.gate.outputs.deploy == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE="server-game/legacy-assets/v252"
+          ARCHIVE="$RUNNER_TEMP/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          URL="https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/legacy-assets-v252/GMWW-V2.52-legacy-assets-for-GitHub.zip"
+          EXPECTED="b9229b9b48f5fa3e63dfb831e0ac523cad0ec469d3e3b8c2dca59ef594616c36"
+          curl --fail --location --retry 4 --retry-delay 3 --silent --show-error --output "$ARCHIVE" "$URL"
+          echo "$EXPECTED  $ARCHIVE" | sha256sum --check
+          rm -rf "$SOURCE"
+          unzip -q "$ARCHIVE" -d .
+          test "$(find "$SOURCE/assets/role-artwork-v251/original" -type f -name '*.webp' | wc -l | tr -d ' ')" -eq 63
+          node .github/scripts/prepare-update-channel.mjs server_only > "$RUNNER_TEMP/v3-catalog.json"
+          VERSION=$(node -p "require('./assets/updates/latest.json').releaseVersion")
+          CANDIDATE="assets/updates/runtime/V$VERSION/manual-manifest.json"
+          test -s "$CANDIDATE"
+          ASSET=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/gmww-runtime-v$VERSION" --jq '.assets[] | select(.name=="manual-manifest.json") | .id')
+          test -n "$ASSET"
+          gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/$ASSET" > "$RUNNER_TEMP/v3-published-manifest.json"
+          node .github/scripts/verify-published-runtime-catalog.mjs "$CANDIDATE" "$RUNNER_TEMP/v3-published-manifest.json"
+          grep -q '^export const releaseCatalog={' src/gmww-release-catalog.js
+          npm run check
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Runtime catalog V$VERSION rebuilt and proven identical to the published GitHub package; OTA discovery stays available." >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the previous fail-closed catalog when the published package cannot be proven
+        if: steps.gate.outputs.deploy == 'true' && steps.catalog.outcome != 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout -- src/gmww-release-catalog.js src/gmww-release-bases.js assets/updates/latest.json
+          git clean -fdq -- assets/updates/runtime server-game/legacy-assets
+          test -z "$(git status --porcelain -- src assets server-game)"
+          echo "::warning::Runtime catalog could not be proven identical to the published package; publishing the Worker without it (update manifest stays fail-closed until the next Runtime release)."
+          echo "Runtime catalog NOT embedded: /api/update/manifest stays fail-closed until the next Runtime release." >> "$GITHUB_STEP_SUMMARY"
       - name: Snapshot previous Production Worker before change
         id: before
         if: steps.gate.outputs.deploy == 'true'
@@ -98,6 +141,8 @@ jobs:
         if: steps.publish.outcome == 'success'
         env:
           PREVIOUS_VERSION: ${{ steps.before.outputs.version }}
+          EXPECT_CATALOG: ${{ steps.catalog.outcome == 'success' }}
+          CATALOG_VERSION: ${{ steps.catalog.outputs.version }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         shell: bash
@@ -116,6 +161,17 @@ jobs:
             sleep 5
           done
           test "$PASS" = 1 || { echo "::error::V3 Production smoke failed"; exit 1; }
+          if [ "$EXPECT_CATALOG" = true ]; then
+            OTA=0
+            for i in $(seq 1 8); do
+              if curl -fsS --max-time 25 "$BASE/api/update/manifest?v3-ota=$(date +%s)-$i" -o "$RUNNER_TEMP/v3-manifest.json" &&
+                 node -e "const m=require(process.env.RUNNER_TEMP+'/v3-manifest.json');if(m.ok!==true||m.manifestSource!=='build-verified'||String(m.releaseVersion)!==process.env.CATALOG_VERSION||!(m.runtime?.files?.length>0))process.exit(1)" &&
+                 curl -fsS --max-time 25 -o /dev/null "$BASE/updates/runtime/V$CATALOG_VERSION/GMWW.html?v3-ota=$(date +%s)-$i"; then OTA=1; break; fi
+              sleep 5
+            done
+            test "$OTA" = 1 || { echo "::error::V3 Production update manifest is not served from the verified catalog"; exit 1; }
+            echo "Update manifest V$CATALOG_VERSION verified live (build-verified catalog)." >> "$GITHUB_STEP_SUMMARY"
+          fi
           curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/gmww-v2-00/deployments?per_page=1" > "$RUNNER_TEMP/v3-after.json"
           node - <<'NODE'
