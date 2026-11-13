@@ -215,12 +215,13 @@ export class RoomGmRoomControlMethods {
     const room=publicRoom(meta),publicPlayers=Object.values(players).map(publicPlayer);this.broadcast({type:"room_state",room,players:publicPlayers,seatUpdated:participantId});
     return j({ok:true,room,player:publicPlayer(player),displaced,players:publicPlayers})
   }
-  async gmRandomizeRemainingSeats(request){
+  async gmRandomizeRemainingSeats(request,{all=false}={}){
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;
     const meta=auth.meta,phase=String(meta.phase||"lobby").toLowerCase();
     if(meta.seatsLocked)return j({ok:false,error:"SEATS_LOCKED",message:"Ghế đã được GM khóa."},409);
     if(["running","started","game","playing"].includes(phase))return j({ok:false,error:"SEAT_LOCKED_IN_MATCH",message:"Chỉ phân ghế tại khu chuẩn bị vào trận."},409);
     const players=(await this.ctx.storage.get("players"))||{},entries=Object.entries(players),seatCount=normalizeSeatCount(meta.seatCount,Number(meta.playerCount||0)||12),used=new Set();
+    if(all)for(const [,player] of entries){player.seatId=null;clearPlayerMovement(player)}
     for(const [,player] of entries){const seatId=normalizeSeatId(player?.seatId,seatCount);if(seatId)used.add(seatId);if(player?.moveTargetSeatId)used.add(Number(player.moveTargetSeatId))}
     const remaining=entries.filter(([,player])=>!normalizeSeatId(player?.seatId,seatCount)&&!player?.moveTargetSeatId),free=[];
     for(let seatId=1;seatId<=seatCount;seatId++)if(!used.has(seatId))free.push(seatId);

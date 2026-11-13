@@ -41,7 +41,7 @@ export class RoomPlayerRoomMethods {
     const gate=await this.ownerGate(request);if(!gate.ok)return gate.response;
     const meta=gate.meta,body=await safeJson(request)||{},gm=this.ownerAsGm(request);
     if(action==="seat-lock")return this.gmSeatLock(gm,{locked:body.locked!==false});
-    if(action==="seats-randomize")return this.gmRandomizeRemainingSeats(gm);
+    if(action==="seats-randomize")return this.gmRandomizeRemainingSeats(gm,{all:body.all===true});
     if(action==="kick"){
       const target=normalizeLoginId(body.loginId);
       if(!target)return j({ok:false,error:"INVALID_REQUEST"},400);
@@ -56,6 +56,10 @@ export class RoomPlayerRoomMethods {
     if(action==="apply-template")return this.ownerApplyTemplate(gm,meta,body);
     if(action==="roles-shuffle")return this.ownerRolesShuffle(gm,meta);
     if(action==="start")return this.ownerStart(gm,meta,body);
+    if(action==="replay"&&meta.quickPlay===true&&meta.phase==="lobby"&&meta.endedAt){
+      return this.gmReset(gm,{postGame:true,preserveParticipants:true,transactionId:"quick-replay:"+meta.lastEndedMatchId});
+    }
+    if(action==="auto"&&meta.quickPlay===true&&meta.phase==="running")return this.gmAuto(gm,{enabled:body.enabled===true});
     if(action==="end")return this.ownerEnd(gm,meta);
     if(action==="close")return this.ownerClose(meta);
     if(action==="stage"){const step=String(body.step||"").toLowerCase();return["room","seats","game","roles","deal"].includes(step)?this.gmStage(gm,{step}):j({ok:false,error:"INVALID_GM_STAGE"},400)}
@@ -126,6 +130,13 @@ export class RoomPlayerRoomMethods {
     if(meta.seatsLocked!==true)return j({ok:false,error:"SEATS_NOT_LOCKED",message:"Hãy chốt chỗ ngồi trước khi bắt đầu."},409);
     const cfg=await this.ctx.storage.get("gameConfig");if(!cfg||!Array.isArray(cfg.roles)||!cfg.roles.length)return j({ok:false,error:"TEMPLATE_NOT_SELECTED",message:"Hãy chọn Ván Mẫu trước."},409);
     const players=(await this.ctx.storage.get("players"))||{},members=Object.values(players).filter(p=>p?.kind==="member").sort((a,b)=>Number(a.seatId||0)-Number(b.seatId||0));
+    if(Array.isArray(body?.quickPlayRoster)){
+      const roster=members.map(member=>member.loginId).sort();
+      if(JSON.stringify(roster)!==JSON.stringify(body.quickPlayRoster)||
+        !roster.includes(meta.ownerLoginId)||cfg.id!==body.templateId||meta.seatCount!==roster.length){
+        return j({ok:false,error:"QUICK_PLAY_ROSTER_CHANGED",message:"Danh sách phòng đã đổi. Hãy kiểm tra và bấm Bắt đầu lại."},409);
+      }
+    }
     const haveCards=new Set();for(const r of cfg.roles){const id=String(r.roleId||"");if(id&&!haveCards.has(id)&&await this.ctx.storage.get("roleCatalog:"+id))haveCards.add(id)}
     const missing=missingRoleCards(cfg.roles,id=>haveCards.has(id));
     if(missing.length)return j({ok:false,error:"TEMPLATE_ASSETS_MISSING",missing},409);

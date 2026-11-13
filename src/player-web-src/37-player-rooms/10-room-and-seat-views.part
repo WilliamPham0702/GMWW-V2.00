@@ -50,7 +50,57 @@
       list.append(line)}
     if(!players.length)list.append(el('p','gmww-pr-help','Chưa có ai trong phòng.'));
     box.append(list);
+    if(room.quickPlay&&String(room.phase||'lobby')==='lobby'){
+      if(room.endedAt)box.append(btn('Chơi lại',async()=>{await callOwner('replay','POST',{});await refresh()},'gmww-pr-main'));
+      else renderQuickPlay(box,players,st);
+    }
+    if(room.quickPlay&&room.phase==='running')box.append(btn(room.autoGM?'Tạm dừng':'Tiếp tục',async()=>{
+      await callOwner('auto','POST',{enabled:!room.autoGM});await refresh();
+    }));
+
     const line2=el('div','gmww-pr-line');line2.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'),btn('Tập hợp →',async()=>goStep('seats'),'gmww-pr-main'));box.append(line2);
+  }
+  function renderQuickPlay(box,players,st){
+    const members=players.filter(p=>p.kind==='member');
+    const count=members.length;
+    const defaults=pr.templates.filter(t=>t.quickPlayDefault===true&&t.source==='GM'&&t.compiledConfig?.roles?.length);
+    const template=defaults.find(t=>Number(t.playerCount)===count);
+    if(template){
+      const details=el('details');
+      details.open=pr.quickRolesOpen===true;
+      details.addEventListener('toggle',()=>{if(details.isConnected)pr.quickRolesOpen=details.open});
+      details.append(el('summary',null,template.name+' · Xem bộ vai'));
+      const roles=[...template.compiledConfig.roles].sort((a,b)=>String(a.faction).localeCompare(String(b.faction),'vi'));
+      const list=el('ul');
+      for(const role of roles)list.append(el('li',null,(role.faction?role.faction+' · ':'')+(role.roleName||role.roleId)+' × '+role.count));
+      details.append(list);box.append(details);
+    }else{
+      const next=Math.min(...defaults.filter(t=>t.playerCount>count).map(t=>t.playerCount));
+      const message=pr.catalogStatus==='error'?'Không tải được Ván Mẫu.':pr.catalogStatus!=='ready'?'Đang tải Ván Mẫu…':Number.isFinite(next)?'Mời thêm '+(next-count)+' người để bắt đầu.':'Chưa có Ván Mẫu Chơi nhanh cho '+count+' người.';
+      box.append(el('p','gmww-pr-help',message));
+      if(pr.catalogStatus==='error')box.append(btn('Tải lại Ván Mẫu',loadTemplates));
+    }
+    if(!st)return;
+    box.append(btn('Bắt đầu',async()=>{
+      const roster=members.map(p=>p.loginId).sort();
+      try{
+        await callOwner('template','POST',{templateId:template.id,quickPlayRevision:template.revision});
+      }catch(error){
+        if(error?.data?.error==='QUICK_PLAY_TEMPLATE_CHANGED')await loadTemplates();
+        throw error;
+      }
+      await callOwner('seat-lock','POST',{locked:false});
+      await callOwner('room-settings','POST',{seatCount:count});
+      await callOwner('seats-randomize','POST',{all:true});
+      try{
+        await callOwner('seat-lock','POST',{locked:true});
+        await callOwner('start','POST',{quickPlayRoster:roster,templateId:template.id});
+      }catch(error){
+        await callOwner('seat-lock','POST',{locked:false}).catch(()=>{});
+        throw error;
+      }finally{await refresh()}
+      pr.open=false;
+    },'gmww-pr-main',!template||!members.some(p=>p.loginId===st?.ownerLoginId)));
   }
   // "Phòng": 1) vào phòng bằng mã  2) tạo phòng riêng  3) quản lý phòng đã tạo.
   function viewRoomHub(box,st,room,players){
@@ -61,7 +111,7 @@
       await refresh()},'gmww-pr-main'),btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));
     else roomDetails(box,st,room,players,room.seatsLocked===true);
     box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG'));
-    box.append(btn('Tạo phòng riêng',create,'gmww-pr-main',!!pr.own));
+    box.append(btn('Chơi nhanh với bạn bè',()=>create(true),'gmww-pr-main',!!pr.own),btn('Tạo phòng riêng',()=>create(),null,!!pr.own));
     box.append(el('div','gmww-pr-sub','3. VÀO PHÒNG'));
     const row=el('div','gmww-pr-row'),inp=el('input');inp.id='gmwwPrJoin';inp.placeholder='Nhập mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.style.textTransform='uppercase';
     // The panel is rebuilt on every refresh / button press, so the typed code lives in pr.joinCode, not only in the input.

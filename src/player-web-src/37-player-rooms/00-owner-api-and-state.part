@@ -31,11 +31,12 @@
     catch(e){if(e?.status===404||e?.status===401){pr.own=null;pr.state=null;pr.known=null;save(null);say('Phòng đã đóng.')}}
     render({background:options.background===true});autoSeat();
   }
-  async function create(){
-        const d=await api('/api/player-rooms',{method:'POST',headers:auth(),body:JSON.stringify({})});
-    pr.own={code:d.roomCode,token:d.ownerToken,joinUrl:d.joinUrl};save(pr.own);pr.view='room';pr.touched=true;
+  async function create(quick=false){
+        const d=await api('/api/player-rooms',{method:'POST',headers:auth(),body:JSON.stringify(quick?{seatCount:30,quickPlay:true}:{})});
+    pr.own={code:d.roomCode,token:d.ownerToken,joinUrl:d.joinUrl,quick};save(pr.own);pr.view='room';pr.touched=true;
     try{await window.joinRoom(d.roomCode)}catch(_){}
     say('Đã tạo phòng '+d.roomCode+'.');await refresh();
     try{await enterVillage()}catch(_){}
     pr.open=true;pr.view='room';pr.touched=true;render();
+    if(quick)await loadTemplates();
   }
