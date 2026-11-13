@@ -17,7 +17,7 @@ test('Tập hợp: kéo cả khối seat, preview qua làng, lưu seatOffset/sea
 });
 test('Ván Mẫu: bỏ Tạo ván rút gọn; Web có editor đầy đủ và nạp mẫu Server',()=>{
   assert.doesNotMatch(rooms,/'Tạo ván'/);assert.match(rooms,/Thiết kế Ván Mẫu/);assert.match(rooms,/Ván Mẫu Server/);
-  assert.match(rooms,/ARTIFACT • chọn các lá/);assert.match(rooms,/artifactLimitPerCycle/);assert.match(rooms,/gallowsNominationSec/);
+  assert.match(rooms,/CÓ SỬ DỤNG ARTIFACT/);assert.match(rooms,/THỜI GIAN VÁN/);assert.doesNotMatch(rooms,/ARTIFACT • chọn các lá/);assert.match(rooms,/artifactLimitPerCycle/);assert.match(rooms,/gallowsNominationSec/);
   assert.match(rooms,/roleOrder/);assert.match(rooms,/Tự động chuyển vai khi hết giờ/);
   assert.match(rooms,/save\.textContent='LƯU'/);assert.match(rooms,/template-save/);assert.match(rooms,/template-delete/);
   assert.match(worker,/playerRoomSourceArtifacts/);assert.match(worker,/TEMPLATE_EDIT_FORBIDDEN/);
