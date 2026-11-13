@@ -63,7 +63,7 @@ html.gmww-ios-chrome body.play-immersive #start .play-shell{
 })();
 </script>
 
-<title>GMWW V3.321</title>
+<title>GMWW V3.322</title>
 <link rel="stylesheet" href="style.css?v=gmww-v3268-template-dock">
 <link rel="stylesheet" href="gallows-hanging.css?v=3.218-anchor">
 <link rel="stylesheet" href="character-renderer.css?v=ce2">
@@ -779,6 +779,26 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
           <small class="gmww-share-status" id="gmwwShareStatus" role="status">Đang dùng link Cloudflare hiện tại.</small>
         </section>
         <!-- END GMWW_PLAYER_SHARE_UI -->
+        </div>
+        <div class="settings-unified-box" id="settingsGroupPush">
+          <div class="settings-unified-heading"><span class="settings-unified-index">🔔</span><div><h3>Thông báo iPhone khi có phòng mới</h3></div></div>
+          <style>
+            .gm-push-card{display:flex;flex-direction:column;gap:10px}
+            .gm-push-help,.gm-push-status{display:block;line-height:1.45;opacity:.86}
+            .gm-push-input{width:100%;box-sizing:border-box;min-height:44px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(0,0,0,.28);color:inherit;font:inherit;font-size:16px}
+            .gm-push-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+            .gm-push-status[data-state="ok"]{color:#8fe3b4}.gm-push-status[data-state="error"]{color:#ff9d9d}
+          </style>
+          <div class="settings-tool-inner gm-push-card" id="gmPushCard">
+            <small class="gm-push-help">Cài app <b>Bark</b> từ App Store, mở app, bấm sao chép link thử đầu tiên rồi dán vào ô dưới. Khi người chơi tạo phòng trên Player Web, iPhone sẽ báo kể cả lúc đã tắt game; chạm thông báo để mở Quản lý phòng.</small>
+            <input class="gm-push-input" id="gmPushKey" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Dán mã hoặc link Bark vào đây" aria-label="Mã Bark">
+            <div class="health-v236-actions gm-push-actions">
+              <button class="settings-action settings-action-server" id="gmPushSave" type="button"><span>✓</span><b>LƯU</b></button>
+              <button class="settings-action settings-action-server" id="gmPushTest" type="button"><span>🔔</span><b>GỬI THỬ</b></button>
+              <button class="settings-action settings-action-server" id="gmPushOff" type="button"><span>✕</span><b>TẮT</b></button>
+            </div>
+            <small class="gm-push-status" id="gmPushStatus" role="status">Đang đọc cài đặt…</small>
+          </div>
         </div>
         <div class="settings-unified-box" id="settingsGroupHealth">
           <div class="settings-unified-heading"><span class="settings-unified-index">02</span><div><h3>Kiểm tra & bảo trì</h3></div></div>

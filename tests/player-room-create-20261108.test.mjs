@@ -90,10 +90,10 @@ function build({session={ok:true,loginId:'Nam01'},reserveStatuses=[201],initStat
     throw new Error('unexpected member call '+u);
   };
   const env={};
-  const fn=new Function('memberStore','j','normalizeLoginId','safeJson','randomToken','sha256','generateRoomCode','roomStub','syncRoomDirectory','normalizeRoomName',
+  const fn=new Function('memberStore','j','normalizeLoginId','safeJson','randomToken','sha256','generateRoomCode','roomStub','syncRoomDirectory','normalizeRoomName','notifyGmPlayerRoomCreated',
     playerRoomApi.slice(fFrom,fTo)+'\nreturn createPlayerRoom;')(()=>({fetch:memberFetch}),j,normalizeLoginId,async r=>r.json().catch(()=>null),()=>'OWNERTOKEN',sha256,()=>'CODE'+String(++codeN).padStart(2,'0'),
     ()=>({fetch:async(u,init)=>{calls.init.push(JSON.parse(init.body));const s=initStatuses.shift()??201;return s===201?j({ok:true,room:{roomName:'Phòng X'},gmToken:'SECRET-GM-TOKEN'},201):j({ok:false},s)}}),
-    async(_env,c)=>{calls.sync.push(c)},v=>String(v||'').trim().replace(/\s+/g,' ').slice(0,40));
+    async(_env,c)=>{calls.sync.push(c)},v=>String(v||'').trim().replace(/\s+/g,' ').slice(0,40),async()=>({ok:false,error:'PUSH_NOT_CONFIGURED'}));
   const call=(body={roomName:'Phòng X'})=>fn(env,new URL('https://gm.example/api/player-rooms'),new Request('https://gm.example/api/player-rooms',{method:'POST',headers:{authorization:'Bearer t','content-type':'application/json'},body:JSON.stringify(body)}));
   return {call,calls};
 }

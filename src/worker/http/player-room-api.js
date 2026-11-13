@@ -6,6 +6,7 @@ import { normalizeRoomName } from "../support/member-records.js";
 import { generateRoomCode, isValidRoomCode, memberStore, normalizeRoomCode, roomStub } from "../support/room-access.js";
 import { syncRoomDirectory } from "./gm-api.js";
 import { j, safeJson } from "./responses.js";
+import { notifyGmPlayerRoomCreated } from "./gm-push-api.js";
 import { normalizeLoginId } from "../../gmww-player-identity-rules.js";
 import { gmPreloadSharedArtifacts } from "./gm-assets-api.js";
 
@@ -23,7 +24,7 @@ export async function createPlayerRoom(env,url,request){
     if(rsv.status===409){const d=await rsv.clone().json().catch(()=>({}));if(d.error==="CODE_TAKEN")continue;return rsv}
     if(rsv.status!==201)return rsv;
     const r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:json,body:JSON.stringify({code,roomName:body.roomName||"",roomMode:"online",demo:false,enabled:true,seatMoveMode:"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:null,playerRoom:true,ownerLoginId,ownerTokenHash})});
-    if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);return j({ok:true,roomCode:code,roomName:data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code),ownerToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}
+    if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);const createdName=data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code);await notifyGmPlayerRoomCreated(env,{code,roomName:createdName,ownerName:own?.member?.displayName||own?.member?.name||ownerLoginId});return j({ok:true,roomCode:code,roomName:createdName,ownerToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}
     await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:json,body:JSON.stringify({code})});
     if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)
   }

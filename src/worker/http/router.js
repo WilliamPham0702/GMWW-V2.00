@@ -7,6 +7,7 @@ import { createRoom, gmLobbyResetAll, gmReset939, gmRoomConfig, gmRoomDelete, gm
 import { gmObserverApi } from "./gm-observer-api.js";
 import { avatarImage, playerPage } from "./pages.js";
 import { heartbeatRoom, joinRoom, leaveRoomApi, playerArtifactActivateApi, playerArtifactViewedApi, playerDeliveryReceivedApi, playerDemoActionApi, playerDrunkDrawApi, playerGallowsApi, playerInteractionRespondApi, playerOnlineActionApi, playerOnlineUndoApi, playerPrivateState, playerRoleViewedApi, playerRoomChatApi, playerRoomChatAudioApi, playerRoomMoveApi, playerRoomMoveCompleteApi, playerRoomPostApi, playerRoomSetupApi, playerSeatSwapApi, playerThiefChooseApi, publicRoomState, readyRoom } from "./player-api.js";
+import { gmPushSettingsGet, gmPushSettingsPut, gmPushTest } from "./gm-push-api.js";
 import { createPlayerRoom, playerRoomOwnerApi, playerRoomRoleList, playerRoomTemplates } from "./player-room-api.js";
 import { applyPublicEntryRateLimit } from "./rate-limit.js";
 import { bearer, corsHeaders, j, safeJson } from "./responses.js";
@@ -198,6 +199,14 @@ export default {async fetch(request,env){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
     const body=await safeJson(request)||{};
     const payload={online:body?.online!==false};if(Object.prototype.hasOwnProperty.call(body,"roomCode"))payload.roomCode=body.roomCode;return memberStore(env).fetch(new Request("https://member.internal/global-settings/gm-presence",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)}));
+  }
+  if(url.pathname==="/api/gm/push-settings"&&(request.method==="GET"||request.method==="PUT")){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return request.method==="GET"?gmPushSettingsGet(env):gmPushSettingsPut(env,request);
+  }
+  if(url.pathname==="/api/gm/push-test"&&request.method==="POST"){
+    if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
+    return gmPushTest(env);
   }
   if(url.pathname==="/api/gm/move"&&request.method==="POST"){
     if(bearer(request)!==GM_SYNC_TOKEN)return j({ok:false,error:"UNAUTHORIZED"},401);
