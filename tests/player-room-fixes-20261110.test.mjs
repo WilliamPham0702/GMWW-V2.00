@@ -32,7 +32,7 @@ test('typed room code survives panel re-renders and failures are shown inside th
 });
 test('owner can delete the room: UI button, Worker + Room route, running match blocked, players are told',()=>{
   assert.match(part,/btn\('Xoá phòng',deleteRoom,'gmww-pr-danger'\)/);assert.match(part,/callOwner\('close','POST',\{\}\)/);
-  assert.match(worker,/\|start\|end\|stage\|close\)\$/);assert.match(worker,/"stage","close"\]\.includes\(action\)/);
+  assert.match(worker,/\|start\|end\|replay\|auto\|stage\|close\)\$/);assert.match(worker,/"stage","close"\]\.includes\(action\)/);
   assert.match(worker,/if\(action==="close"\)return this\.ownerClose\(meta\)/);
   assert.match(worker,/async ownerClose\(meta\)\{[\s\S]*?"ROOM_RUNNING"[\s\S]*?this\.wipeRoom\(meta,"ROOM_CLOSED"\)/);
   assert.match(worker,/await this\.wipeRoom\(meta,"ROOM_EXPIRED"\)/);
