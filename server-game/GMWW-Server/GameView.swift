@@ -69,6 +69,26 @@ struct GameWebView: UIViewRepresentable {
                                                    name: UIApplication.willResignActiveNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(appDidBecomeActive(_:)),
                                                    name: UIApplication.didBecomeActiveNotification, object: nil)
+            NotificationCenter.default.addObserver(self, selector: #selector(deepLinkReceived(_:)),
+                                                   name: GMWWDeepLink.notification, object: nil)
+        }
+
+        @objc private func deepLinkReceived(_ notification: Notification) {
+            deliverPendingDeepLink(attempt: 0)
+        }
+
+        // Retries cover a cold start, where the runtime is still booting when the link arrives.
+        private func deliverPendingDeepLink(attempt: Int) {
+            guard GMWWDeepLink.pendingTarget == "rooms", let webView = webView else { return }
+            webView.evaluateJavaScript("typeof window.GMWWDeepLink==='function'&&window.GMWWDeepLink('rooms')===true") { [weak self] result, _ in
+                if (result as? Bool) == true { GMWWDeepLink.pendingTarget = nil; return }
+                guard attempt < 20 else { GMWWDeepLink.pendingTarget = nil; return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { self?.deliverPendingDeepLink(attempt: attempt + 1) }
+            }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            deliverPendingDeepLink(attempt: 0)
         }
 
         func stopObservingAppState() {
