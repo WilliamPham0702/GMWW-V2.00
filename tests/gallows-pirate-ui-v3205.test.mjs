@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -37,7 +38,7 @@ test('Player village shows ONLY one red pirate flag anchored at fire during nomi
 test('Double tap opens living nominees in separate cards, OK and reset above, Server validates',()=>{
  const player=read('src/player-web-src/30-rooms-and-realtime.part');
  const host=read('src/player-web-src/20-village-and-profile.part');
- const worker=read('src/index.js');
+ const worker=workerSource();
  const grid=player.indexOf('id="gmwwGallowsGrid"');
  const ok=player.indexOf('id="gmwwGallowsNominate"');
  const reset=player.indexOf('id="gmwwGallowsReset"');

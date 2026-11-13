@@ -1,7 +1,8 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const backend=readFileSync('src/index.js','utf8');
+const backend=workerSource();
 const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
 const playerWS=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
 const gmWS=readFileSync('server-game/src/30-village-and-setup.part','utf8');

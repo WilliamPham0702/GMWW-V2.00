@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -67,6 +68,6 @@ test('V3.83 IPA Runtime OTA from V3.82 accepts only two matching hashed files',(
   assert.equal(selectVerifiedRuntimeV383Delta(bad,'3.82'),null);
   const unsafe=structuredClone(manifest);unsafe.delete=['storage'];
   assert.equal(selectVerifiedRuntimeV383Delta(unsafe,'3.82'),null);
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(worker,/selectVerifiedRuntimeV383Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
 });

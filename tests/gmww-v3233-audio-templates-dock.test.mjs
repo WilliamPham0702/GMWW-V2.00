@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -63,6 +64,6 @@ test('Runtime source bundle and OTA metadata are intact',{skip:'LEGACY-QUARANTIN
  assert.equal(app,pieces.map(p=>fs.readFileSync('server-game/src/'+p,'utf8')).join(''));
  assert.match(app,/const VERSION='3\.235';/);
  assert.match(html,/<title>GMWW V3\.235<\/title>/);
- assert.match(fs.readFileSync('src/index.js','utf8'),/VERSION="V3\.235"/);
+ assert.match(workerSource(),/VERSION="V3\.235"/);
  assert.match(fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8'),/V3\.233: Sửa lỗi/);
 });

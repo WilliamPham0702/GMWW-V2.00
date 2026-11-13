@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -51,7 +52,7 @@ test('actual Player Web renderer handles sitting and visible idle sequence for a
 });
 
 test('server no longer sends gather motion to the fixed fire point',()=>{
-  const worker=fs.readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+  const worker=workerSource();
   const playerModule=fs.readFileSync(new URL('../src/gmww-village-player-state.js',import.meta.url),'utf8');
   assert.ok(worker.includes('villageAutoPoint("member:"'));
   assert.ok(playerModule.includes('villageAutoLife({id'));

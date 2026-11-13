@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {playerOfferedActions,demoPlayerActions} from '../src/gmww-demo-runner.js';
 import {onlineGmActionIcon,ONLINE_GM_ACTION_ICON_FILES} from '../src/gmww-online-action-icons.js';
-const server=readFileSync('src/index.js','utf8'),ui=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const server=workerSource(),ui=readFileSync('src/player-web-src/35-online-chat.part','utf8');
 const timeline=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
 const refresh=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
 

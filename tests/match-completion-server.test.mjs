@@ -1,5 +1,6 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';
-const source=fs.readFileSync('src/index.js','utf8'),fragment=source.slice(source.indexOf('  async gmEnd(request,body){'),source.indexOf('  async alarm(){'));
+const source=workerSource(),fragment=source.slice(source.indexOf('  async gmEnd(request,body){'),source.indexOf('  async alarm(){'));
 test('Server completion receipt is idempotent and cannot rewrite a confirmed winner',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},async()=>{
  const meta={matchId:'m1',phase:'running'},data=new Map([['meta',meta],['players',{'member:alice':{loginId:'alice',kind:'member'}}],['roles:alice',[{roleName:'Dân',faction:'Phe Dân'}]],['interactions',[]]]),events=[];
  const Room=vm.runInNewContext('(class {'+fragment+'})',{j:(x,status=200)=>Response.json(x,{status}),normalizeWinnerFaction:x=>String(x),publicRoom:x=>({...x}),publicPlayer:x=>x,playerSetupComplete:()=>true,normalizeLoginId:x=>x,pruneInteractions:x=>x,ROOM_IDLE_TTL:10000});

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -22,7 +23,7 @@ test('Player loads both published image revisions before switching backgrounds',
 test('GM Runtime V3.180 includes new scene camera without changing native shell',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const v=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
  assert.ok(v.localeCompare('3.180',undefined,{numeric:true})>=0);
- const worker=read('src/index.js'),gm=read('server-game/current/app.js');
+ const worker=workerSource(),gm=read('server-game/current/app.js');
  assert.ok(worker.includes('VERSION="V'+v+'"'));
  assert.ok(worker.includes('NATIVE_SHELL_VERSION="3.110"'));
  assert.ok(worker.includes('UPDATE_CHANNEL_REV="runtime-'+v.replaceAll('.','')+'"'));

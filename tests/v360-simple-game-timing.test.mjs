@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -6,7 +7,7 @@ import {sanitizeGameConfig} from '../src/gmww-room-config-rules.js';
 const app=readFileSync('server-game/current/app.js','utf8');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('Chọn Ván uses shared defaults and allows per-role overrides',()=>{
   const sheet=html.slice(html.indexOf('<div class="play-template-play-review">'),html.indexOf('<div class="sheet hidden" id="playEndSheet">'));

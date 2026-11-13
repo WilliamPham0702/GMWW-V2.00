@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -35,7 +36,7 @@ test('legacy rooms retain Seat IDs and odd room sizes without rewriting assignme
 test('GM and Player Web receive synchronized layout; Character size and scene preserved',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const gm=read('server-game/current/app.js'),part=read('server-game/src/30-village-and-setup.part');
  const html=read('server-game/current/GMWW.html'),player=read('assets/village/village.mjs');
- const worker=read('src/index.js');
+ const worker=workerSource();
  const version=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
  for(const source of [gm,part]){
   assert.match(source,/const counts=Array\.from\(layout\.seatTemplateCounts\)/);

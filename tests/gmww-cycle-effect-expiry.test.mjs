@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -48,7 +49,7 @@ test('ended states are never expired twice',()=>{
   assert.deepEqual(expire(rows,'night',3),[]);
 });
 test('Durable Object uses the shared lifecycle policy before writing interactions',()=>{
-  const source=fs.readFileSync('src/index.js','utf8');
-  assert.match(source,/import \{ expireCycleEffects \} from "\.\/gmww-cycle-effect-expiry\.js";/);
+  const source=workerSource();
+  assert.match(source,/import \{ ?expireCycleEffects ?\} from "\.\/gmww-cycle-effect-expiry\.js";/);
   assert.match(source,/expireCycleEffects\(rows,\{phase:p,night:n,cycleKey:key,matchId:meta\.matchId,statusDefs:STATUS_DEFS,now\}\)/);
 });

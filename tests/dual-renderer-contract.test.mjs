@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, existsSync} from 'node:fs';
@@ -74,7 +75,7 @@ test('Dual Renderer: production 2D files are untouched (Arena 3D removed)',()=>{
   assert.equal(existsSync('assets/village/arena-3d'),false);
   const projection=readFileSync('src/gmww-dual-renderer-projection.js','utf8');
   assert.match(projection,/gmww-public-room-contract\.js/);
-  assert.doesNotMatch(readFileSync('src/index.js','utf8'),/gmww-dual-renderer-projection\.js/);
+  assert.doesNotMatch(workerSource(),/gmww-dual-renderer-projection\.js/);
 });
 
 test('Dual Renderer: CI scope classifier recognizes ONLY the explicit new architecture files',async()=>{

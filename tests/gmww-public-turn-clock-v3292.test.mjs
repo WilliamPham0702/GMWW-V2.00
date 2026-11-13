@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {projectPublicTurnClock} from '../src/gmww-public-turn-clock.js';
@@ -17,7 +18,7 @@ test('Clock respects paused GM and authoritative deadline even when duration is 
 test('Player clock consumes public clock in the same timeline, with elapsed monotonic time',()=>{
  const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
  const timeline=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
- const server=readFileSync('src/index.js','utf8');
+ const server=workerSource();
  assert.match(server,/clock:projectPublicTurnClock\(wolfRuntime\)/);
  assert.match(timeline,/gmwwSharedTimelineReceivedAt=performance.now\(\)/);
  assert.match(player,/gmwwSharedTimeline\?\.clock/);

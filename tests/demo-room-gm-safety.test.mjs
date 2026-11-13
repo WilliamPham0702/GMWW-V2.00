@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const contract=readFileSync('src/gmww-public-room-contract.js','utf8');
 const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
 const battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readdir,readFile} from 'node:fs/promises';
@@ -7,7 +8,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const page=await readFile(resolve(root,'src/gmww-members-page.js'),'utf8');
 const live=await readFile(resolve(root,'src/gmww-members-live.js'),'utf8');
-const worker=await readFile(resolve(root,'src/index.js'),'utf8');
+const worker=workerSource();
 const villageCss=await readFile(resolve(root,'assets/village/village.css'),'utf8');
 await import(pathToFileURL(resolve(root,'assets/village/village-layout.js')));
 const layout=globalThis.GMWW_VILLAGE_LAYOUT;

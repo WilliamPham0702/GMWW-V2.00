@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -64,6 +65,6 @@ test('Existing saved theme images are only hidden, never deleted by slot list cl
 });
 test('Runtime version bumps and preserves native shell',()=>{
  assertCurrentRelease();
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  assertCurrentRelease();
 });

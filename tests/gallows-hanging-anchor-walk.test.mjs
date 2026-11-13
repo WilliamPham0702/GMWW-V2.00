@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ import {readFileSync} from 'node:fs';
 const read=path=>readFileSync(path,'utf8');
 const gmSource=read('server-game/src/00-core-and-library.part');
 const gmBattle=read('server-game/src/30-village-and-setup.part');
-const worker=read('src/index.js');
+const worker=workerSource();
 const village=read('assets/village/village.mjs');
 const scene=read('assets/village/scene-manager.mjs');
 

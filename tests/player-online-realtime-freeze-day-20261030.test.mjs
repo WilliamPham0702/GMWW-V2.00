@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -14,7 +15,7 @@ const gm=read('server-game/src/45-online-chat.part');
 const gmSocket=read('server-game/src/30-village-and-setup.part');
 const gmControls=read('server-game/src/40-battle-and-timeline.part');
 const gmHtml=read('server-game/current/GMWW.html');
-const server=read('src/index.js');
+const server=workerSource();
 
 test('Online action dock rests at the village entrance above the bottom menu (V3.304)',()=>{
   const code=chat.slice(chat.indexOf('function gmwwOnlinePlaceAtFire(dock){'));

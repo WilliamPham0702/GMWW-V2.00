@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -40,7 +41,7 @@ test('GM source bundle đồng nhất và release V3.230',{skip:'LEGACY-QUARANTI
   assert.equal(app,parts,'GM packed app must match 6 source parts byte-for-byte');
   assert.match(app,/const VERSION='3\.230'/);
   assert.match(html,/<title>GMWW V3\.230<\/title>/);
-  assert.match(fs.readFileSync('src/index.js','utf8'),/VERSION="V3\.230"/);
+  assert.match(workerSource(),/VERSION="V3\.230"/);
   assert.match(fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8'),/V3\.230: Cài đặt/);
   assert.ok(fs.existsSync('docs/releases/GMWW-V3.230-settings-notices-20261026.md'));
 });

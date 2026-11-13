@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -52,7 +53,7 @@ test('WITCH-01 GM target picker hides nonprevious deaths and disabled revive unt
  assert.equal(api.targetAllowed({...action,actionId:'action_exile',forbiddenTargets:['victim']},member('victim'),'online',[],2),false);
 });
 test('WITCH-01 integration source: isolated witch wake before all configured roles, Server validation before effects',()=>{
- const worker=fs.readFileSync('src/index.js','utf8'),gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+ const worker=workerSource(),gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
  assert.match(worker,/if\(specials\.oldWitch\)queue\.push\(specials\.oldWitch\)/);
  assert.match(worker,/groupConfiguredRoleTurns\(arranged\.rest\)/);
  assert.match(worker,/const checked=oldWitchActionCheck\(/);

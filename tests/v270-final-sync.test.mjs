@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import fs from 'node:fs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('V3.17 runtime and native shell are aligned',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
+  const server=workerSource(),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   assertCurrentRelease();
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 3110;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.110;'));
@@ -14,7 +15,7 @@ test('V3.17 runtime and native shell are aligned',{skip:'LEGACY-QUARANTINE 2026-
 });
 
 test('Auto GM pause and resume preserves authoritative remaining time',()=>{
-  const server=read('src/index.js');
+  const server=workerSource();
   assert.ok(server.includes('autoPausedRemainingMs'));
   assert.ok(server.includes('runtime.deadlineAt=null;runtime.autoAdvance=false'));
   assert.ok(server.includes('runtime.deadlineAt=remaining>0?new Date(nowMs+Math.max(100,remaining)).toISOString():null'));

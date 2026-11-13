@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { pruneInteractions } from '../src/gmww-interaction-retention.js';
 
-const src = fs.readFileSync('src/index.js', 'utf8');
+const src = workerSource();
 const big = 'x'.repeat(2000);
 
 test('V3.119 interactions are not trimmed to a fixed row count', () => {

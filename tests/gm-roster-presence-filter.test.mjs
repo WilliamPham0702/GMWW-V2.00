@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -159,7 +160,7 @@ test('V3.63 incremental OTA installs only verified GM UI files on V3.60/3.61/3.6
   // This exercises the retained historical rescue, not the new full-catalog path.
   const runningVersion='3.121';
   assert.ok(runningVersion,'GM app must expose a runtime version');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(worker,/selectVerifiedRuntimeV363Delta\(versioned,url\.searchParams\.get\("current"\)\)/);
   assert.match(worker,/selectVerifiedRuntimeV363Delta\(manifest,url\.searchParams\.get\("current"\)\)/);
   // Preserve legacy rescue coverage at its historical compatibility boundary.

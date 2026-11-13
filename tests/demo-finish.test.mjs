@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runServerDemo,serverDemoActive} from '../src/gmww-demo-runner.js';
 import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
 import vm from 'node:vm';
 import fs from 'node:fs';
-const source=fs.readFileSync('src/index.js','utf8');
+const source=workerSource();
 const Room=vm.runInNewContext('(class {'+source.slice(source.indexOf('  async demoClockContext(meta){'),source.indexOf('  async gmAuto(request,body){'))+'})',{projectDemoClock,nextDemoClock,serverDemoActive,j:(x,s=200)=>Response.json(x,{status:s}),Date,Request});
 test('Server winner stops autonomous execution and waits for explicit GM completion',async()=>{
  const room=new Room(),meta={demo:true,phase:'running',cyclePhase:'night',matchId:'m1',cycleKey:'night-1',autoGM:false},lease={engine:'server',matchId:'m1',running:true,startedAt:Date.now(),steps:1,speed:1};

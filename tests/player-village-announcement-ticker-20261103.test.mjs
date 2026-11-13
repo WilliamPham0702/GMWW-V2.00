@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -59,7 +60,7 @@ test('current cycle only and night secrecy stay authoritative',()=>{
 });
 
 test('Worker stores public-only per-day archive and serves it even when chatting is blocked',()=>{
- const source=readFileSync('src/index.js','utf8');
+ const source=workerSource();
  assert.match(source,/villagePublicBulletin:/);
  assert.match(source,/mergePublicChatNotices\(notices,latest\)/);
  assert.match(source,/this\.villageHistoryForMatch\(meta,rows\)/);

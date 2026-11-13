@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -82,7 +83,7 @@ test('G3.7: public room defaults remain compatible with old saved metadata',()=>
 });
 
 test('G3.7: public status policy is imported instead of duplicated in Worker',()=>{
-  const worker=readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(worker,/from "\.\/gmww-public-room-contract\.js"/);
   assert.doesNotMatch(worker,/^const STATUS_DEFS=/m);
   assert.doesNotMatch(worker,/^function publicRoom\(/m);

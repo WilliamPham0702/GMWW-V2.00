@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -38,7 +39,7 @@ test('V3.298 orbit remains correct across safe Runtime upgrades',{skip:'LEGACY-Q
  assert.match(version,/^3\.(298|299)\.0$/);
  assert.equal(JSON.parse(read('package-lock.json')).version,version);
  const minor=version.replace(/\.0$/,'');
- assert.ok(read('src/index.js').includes('VERSION="V'+minor+'"'));
+ assert.ok(workerSource().includes('VERSION="V'+minor+'"'));
  assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+minor+'</title>'));
  assert.ok(compiled.includes("const VERSION='"+minor+"'"));
  assert.ok(read('docs/releases/GMWW-RUNTIME-V3.298-GENIE-TURN-ICON-20261104.md').includes('Rollback'));

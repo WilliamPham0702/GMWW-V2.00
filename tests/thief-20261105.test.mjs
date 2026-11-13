@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 import {thiefPool,thiefCanChoose,thiefDeckView,thiefPlan} from '../src/gmww-thief-rules.js';
 import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
@@ -22,7 +23,7 @@ test('Quy tắc: từ Đêm 3, một lần, chỉ đúng Kẻ Trộm',()=>{
   assert.equal(thiefCanChoose({assignments:as,actorId:'x',night:3}).error,'THIEF_ROLE_NOT_OWNED');
 });
 test('Durable Object: đổi sang vai mới nhận phe/chức năng mới, quyết định 1 lần; giữ nguyên cũng khóa lại',async()=>{
-  const src=fs.readFileSync('src/index.js','utf8');
+  const src=workerSource();
   const a=src.indexOf('  async playerThiefChoose(body){'),b=src.indexOf('  async playerDrunkDraw(body){');
   const c=src.indexOf('  async applyNightRoleInheritance('),d=src.indexOf('  async applyNightRoleInheritance(')+src.slice(c).indexOf('\n  }\n')+4;
   const code='class R{'+src.slice(a,b)+src.slice(c,d)+'}';
@@ -51,7 +52,7 @@ test('Durable Object: đổi sang vai mới nhận phe/chức năng mới, quy�
 });
 
 test('Giữ nguyên: ghi nhận một lần, vai trò không đổi',async()=>{
-  const src=fs.readFileSync('src/index.js','utf8');
+  const src=workerSource();
   const a=src.indexOf('  async playerThiefChoose(body){'),b=src.indexOf('  async playerDrunkDraw(body){');
   const ctx=vm.createContext({normalizeLoginId:x=>String(x||'').trim().toLowerCase(),j:(o,s=200)=>({body:o,status:s}),thiefPool,thiefCanChoose,thiefDeckView,thiefPlan,
     isBattleActorBlocked,isWolfRole,STATUS_DEFS:{},Date,Number,String,Array,Object,Map,Set,JSON});

@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const gm=fs.readFileSync('server-game/src/45-online-chat.part','utf8');
 const player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
 const compiledGM=fs.readFileSync('server-game/current/app.js','utf8');

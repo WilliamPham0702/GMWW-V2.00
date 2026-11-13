@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -46,7 +47,7 @@ test('GP2 does not silently ship the rejected placeholder backgrounds',()=>{
 
 test('GM and Player Web anchor fire to the shared layout and preserve route guard',()=>{
  const gm=read('server-game/current/app.js'),gmSource=read('server-game/src/40-battle-and-timeline.part');
- const web=read('assets/village/village.mjs'),worker=read('src/index.js');
+ const web=read('assets/village/village.mjs'),worker=workerSource();
  for(const source of [gm,gmSource])assert.match(source,/fire=villageFirePosition\(\)/);
  assert.match(web,/screenPoint\(layout\.fire\)/);
  assert.match(web,/gmIdle\?\{x:layout\.fire\.x,y:layout\.fire\.y-7\.5\}/);

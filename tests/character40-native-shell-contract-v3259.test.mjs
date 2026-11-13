@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ const rd=p=>readFileSync(p,'utf8');
 test('V3.259: Verify Production uses native project/IPA, not legacy V3.110',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const v=rd('.github/scripts/verify-character40-production.mjs');
  const native=rd('server-game/GMWW-Server.xcodeproj/project.pbxproj');
- const index=rd('src/index.js');
+ const index=workerSource();
  assert.match(v,/nativeProject\.match\(\/MARKETING_VERSION/);
  assert.match(v,/published\.shellVersion,nativeShell/);
  assert.match(v,/published\.ipa\?\.version,nativeShell/);

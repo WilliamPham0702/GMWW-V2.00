@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -31,7 +32,7 @@ test('active catalog replaces all forty IDs including 15; aliases preserve exist
 });
 test('public live animation projects readiness and sitting onto Idle, exposing only four actions',()=>{
  for(const p of [{ready:true},{villageActivity:'sitting',sitUntil:Date.now()+10000},{villageActivity:'cheer'},{villageActivity:'stretch'}]){const c=character40StateFromPlayer({gameCharacterId:'character-15',...p});assert.equal(c.motion,'idle');assert.equal(c.state,'idle');}
- const source=read('src/index.js').toString();assert.ok(source.includes('motions:["idle","walk","run","turn"]'));
+ const source=workerSource().toString();assert.ok(source.includes('motions:["idle","walk","run","turn"]'));
 });
 test('stationary death and revival change both production Player command keys without recreating the actor',()=>{
  const scene=read('assets/village/village.mjs').toString();

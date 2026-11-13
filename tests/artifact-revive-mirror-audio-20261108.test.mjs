@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {reviveOwnerPlans} from '../src/gmww-artifact-rules.js';
 
-const src=fs.readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const src=workerSource();
 const dead=(loginId,extra={})=>({id:'d-'+loginId,type:'dead',loginId,matchId:'m1',effectActive:true,...extra});
 
 test('revive artifacts: owner who dies is revived once, others untouched',()=>{

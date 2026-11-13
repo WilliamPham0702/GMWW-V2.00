@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -6,7 +7,7 @@ await import('../server-game/current/battle-controls.js');
 
 const gm=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const chat=readFileSync('server-game/src/45-online-chat.part','utf8');
-const server=readFileSync('src/index.js','utf8');
+const server=workerSource();
 const app=readFileSync('server-game/current/app.js','utf8');
 const slice=(s,a,b)=>{
  const start=s.indexOf(a),end=s.indexOf(b,start+a.length);

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,7 +12,7 @@ import {readNightAssignments,canSnowWolfBite} from '../src/gmww-wolf-night-resol
 import {insertMirrorSteps,mirrorLinkPrefix} from '../src/gmww-mirror-rules.js';
 
 // Exercise the actual Durable Object night scheduler, not a copied queue builder.
-const source=fs.readFileSync('src/index.js','utf8');
+const source=workerSource();
 const start=source.indexOf('  async buildNightRuntime(meta,night){');
 const end=source.indexOf('  async artifactUsedInNight(',start);
 assert.ok(start>=0&&end>start,'Production night scheduler must be found');

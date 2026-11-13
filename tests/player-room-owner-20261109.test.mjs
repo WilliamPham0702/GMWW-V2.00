@@ -1,3 +1,4 @@
+import {workerSource,workerModuleSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ import {expandDeck,planPlayerRoomDeal,playerRoomConfigFromTemplate,missingRoleCa
 import {normalizeLoginId} from '../src/gmww-player-identity-rules.js';
 import {PLAYER_ROOM_ROLE_CATALOG} from '../src/player-room-role-catalog.js';
 
-const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const source=workerSource();
 const j=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json'}});
 const roles=[{roleId:'wolf',roleName:'Sói',faction:'wolf',count:2,order:2},{roleId:'seer',roleName:'Tiên Tri',faction:'village',count:1,order:1},{roleId:'villager',roleName:'Dân Làng',faction:'village',count:3}];
 const names=['a','b','c','d','e','f'];
@@ -143,7 +144,8 @@ test('a failing deal or start is returned as is and does not start night 1',asyn
 });
 
 // ---- Worker owner API (real source) ----
-const fFrom=source.indexOf('async function playerRoomTemplates(env,request){'),fTo=source.indexOf('async function joinRoom(env,raw,request){',fFrom);
+const playerRoomApi=workerModuleSource('http/player-room-api.js');
+const fFrom=playerRoomApi.indexOf('async function playerRoomTemplates(env,request){'),fTo=playerRoomApi.length;
 assert.ok(fFrom>0&&fTo>fFrom,'find real Worker owner API');
 function worker({gate=200,roomOwner='nam01',artifacts=[],preloadStatus=200}={}){
   const log={room:[],member:[]};
@@ -157,7 +159,7 @@ function worker({gate=200,roomOwner='nam01',artifacts=[],preloadStatus=200}={}){
     if(u.includes('/game-templates/assets'))return u.includes('role%3Aseer')?j({ok:false},404):j({ok:true,package:{roleCard:{name:'W'}}});
     throw new Error('unexpected '+u)};
   const roomFetch=async(u,init={})=>{log.room.push({u,method:init.method||'GET',auth:init.headers?.authorization,body:init.body});return u.endsWith('/owner/state')?j({ok:gate===200,ownerLoginId:roomOwner},gate):j({ok:true})};
-  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode','normalizeLoginId','PLAYER_ROOM_ROLE_CATALOG','GM_SYNC_TOKEN','gmPreloadSharedArtifacts',source.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c),normalizeLoginId,PLAYER_ROOM_ROLE_CATALOG,'internal-test',async(env,code,request)=>{log.preload=await request.json();return j({ok:preloadStatus===200},preloadStatus)});
+  const fn=new Function('memberStore','roomStub','j','safeJson','normalizeRoomCode','isValidRoomCode','normalizeLoginId','PLAYER_ROOM_ROLE_CATALOG','GM_SYNC_TOKEN','gmPreloadSharedArtifacts',playerRoomApi.slice(fFrom,fTo)+'\nreturn {playerRoomOwnerApi,playerRoomTemplates,playerRoomRoleList};')(()=>({fetch:memberFetch}),()=>({fetch:roomFetch}),j,async r=>r.json().catch(()=>null),v=>String(v||'').trim().toUpperCase(),c=>/^[A-HJ-NP-Z2-9]{6}$/.test(c),normalizeLoginId,PLAYER_ROOM_ROLE_CATALOG,'internal-test',async(env,code,request)=>{log.preload=await request.json();return j({ok:preloadStatus===200},preloadStatus)});
   return {...fn,log};
 }
 const wreq=(method,body)=>new Request('https://x/api',{method,headers:{authorization:'Bearer OWNER','content-type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});

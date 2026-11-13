@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ const read=p=>fs.readFileSync(p,'utf8');
 const native=read('.github/workflows/build-server-game-ipa.yml');
 const ota=read('.github/scripts/prepare-update-channel.mjs');
 const verifier=read('.github/scripts/verify-native-web.mjs');
-const worker=read('src/index.js');
+const worker=workerSource();
 const gm=read('server-game/current/app.js');
 const source=read('server-game/src/00-core-and-library.part');
 const audio=read('server-game/src/10-library-and-settings.part');

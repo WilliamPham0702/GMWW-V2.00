@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {serverDemoActive} from '../src/gmww-demo-runner.js';
 import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const fragment=worker.slice(worker.indexOf('  async demoClockContext(meta){'),worker.indexOf('  async gmAuto(request,body){'));
 function controlHarness(){
  const rows=new Map([['meta',{demo:true,phase:'running',cyclePhase:'night',cycleNight:1,matchId:'m',cycleKey:'n1',autoGM:false}]]);

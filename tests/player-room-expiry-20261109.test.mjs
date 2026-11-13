@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {playerRoomOccupied,nextEmptySince,playerRoomEmptyDue,PLAYER_ROOM_EMPTY_TTL_MS,PLAYER_ROOM_CHECK_MS} from '../src/gmww-player-room-policy.js';
 
-const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const source=workerSource();
 const NOW=Date.parse('2026-11-09T01:00:00Z'),iso=ms=>new Date(ms).toISOString();
 const ROOM_IDLE_TTL=72*60*60*1000;
 

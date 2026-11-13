@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -6,7 +7,7 @@ import {spawnSync} from 'node:child_process';
 
 const app=readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
 const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const between=(source,a,b)=>{
   const start=source.indexOf(a),end=source.indexOf(b,start+a.length);
   assert.ok(start>=0&&end>start,'Expected isolated function '+a);

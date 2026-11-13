@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { mapPublicPlayers } from '../assets/village/village.mjs';
 import { gmwwMembersLiveScript } from '../src/gmww-members-live.js';
 
-const server = fs.readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+const server = workerSource();
 const village = fs.readFileSync(new URL('../assets/village/village.mjs', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../assets/village/village.css', import.meta.url), 'utf8');
 const page = fs.readFileSync(new URL('../assets/village/index.html', import.meta.url), 'utf8');

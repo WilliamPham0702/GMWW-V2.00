@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ import vm from 'node:vm';
 
 const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
 const battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const events=readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
 const between=(source,a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,start+1);

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,7 +28,7 @@ test('Room reset dialog has legible newlines too',()=>{
 });
 
 test('V3.94 is a distinct downloadable Runtime on IPA shell V3.17',()=>{
-  const server=fs.readFileSync('src/index.js','utf8');
+  const server=workerSource();
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   assertCurrentRelease();
 });

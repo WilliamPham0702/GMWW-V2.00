@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,8 +34,8 @@ test('V3.178: independent draggable DEMO panel and action scrolling stay accessi
  assert.match(html,/id="battleActionBar"/);
 });
 test('V3.178: shell, GM, Player Worker versions match without native IPA changes',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- assert.ok(read('src/index.js').includes('VERSION="V'+version+'"'));
- assert.ok(read('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-'+version.replace('.','')+'"'));
+ assert.ok(workerSource().includes('VERSION="V'+version+'"'));
+ assert.ok(workerSource().includes('UPDATE_CHANNEL_REV="runtime-'+version.replace('.','')+'"'));
  assert.ok(gm.includes("const VERSION='"+version+"'"));
  assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+version+"'"));
  assert.ok(html.includes('<title>GMWW V'+version+'</title>'));

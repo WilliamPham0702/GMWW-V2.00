@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -62,5 +63,5 @@ test('built Player Web has pirate drag and accessible double-tap listing, GM con
  assert.ok(html.indexOf('data-gallows-command="open"')<html.indexOf('id="battleGallowsCandidate"'));
  assert.ok(html.includes('battleGallowsBanDetails'));
  assert.ok(gm.includes('battleGallowsSelectedCount')&&gm.includes('battleGallowsVotedCount'));
- assert.ok(fs.readFileSync('src/index.js','utf8').includes('gallowsAutomaticOutcome'));
+ assert.ok(workerSource().includes('gallowsAutomaticOutcome'));
 });

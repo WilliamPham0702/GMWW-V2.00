@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ import {statusTagsFor} from '../src/gmww-public-room-contract.js';
 import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js';
 
-const read=path=>readFileSync(path,'utf8'),worker=read('src/index.js'),
+const read=path=>readFileSync(path,'utf8'),worker=workerSource(),
   village=read('src/player-web-src/20-village-and-profile.part'),
   ws=read('src/player-web-src/30-rooms-and-realtime.part'),
   chat=read('src/player-web-src/35-online-chat.part'),

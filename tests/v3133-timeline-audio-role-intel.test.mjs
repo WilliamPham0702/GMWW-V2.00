@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -52,7 +53,7 @@ test('V3.133: other divination can show role abilities or group wolf status with
  assert.match(aura.message,/Tiên Tri/);assert.deepEqual(aura.targets[0].functions,['action_seer']);
  assert.equal(resolveNightReveal({actionId:'action_fox_scan',targetIds:['anna','chi','bao'],assignments:assigned}).wolf,true);
  assert.equal(resolveNightReveal({actionId:'action_witch_kill',targetIds:['anna'],assignments:assigned}),null);
- const worker=read('src/index.js');
+ const worker=workerSource();
  assert.match(worker,/const nightIntel=String\(meta\.cyclePhase/);
  assert.match(worker,/battleUndo,battleActionUsage,nightIntel,winProposal/);
  assert.match(worker,/resolveNightReveal\(\{actionId/);
@@ -90,7 +91,7 @@ test('V3.133: timeline numbers and GM movable controls retain role and effect sa
  const list=ctx.GMWW_BATTLE_CONTROLS.timeline('night',night,4);
  assert.equal(list[0].label,'Bầy sói ơi dậy đi');
  assert.equal(list[1].label,'Làng ơi dậy đi');
- const worker=read('src/index.js');
+ const worker=workerSource();
  assert.match(worker,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",\s*recognitionIds:/);
  assert.doesNotMatch(worker,/kind:"wolf-introduction",label:"Bầy sói ơi dậy đi",\s*loginIds:/);
  const runtime=read('server-game/current/app.js'),parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
@@ -103,5 +104,5 @@ test('V3.133: timeline numbers and GM movable controls retain role and effect sa
  assert.match(css,/grid-template-columns:none!important/);assert.match(css,/gmww-transfer-directions/);
  assert.match(css,/battleTargetConfirm\{\s*touch-action:none/);
  assert.ok(runtime.includes("const VERSION='"+runtimeVersion+"'"));
- assert.ok(read('src/index.js').includes('VERSION="V'+runtimeVersion+'"'));
+ assert.ok(workerSource().includes('VERSION="V'+runtimeVersion+'"'));
 });

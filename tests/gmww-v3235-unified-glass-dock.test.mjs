@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -31,7 +32,7 @@ test('V3.235: Cloudflare 1-line label and 16 tools',()=>{
 test('V3.235: assembled app and versions stay aligned',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const parts=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'];
  assert.equal(read('server-game/current/app.js'),parts.map(x=>read('server-game/src/'+x+'.part')).join(''));
- assert.match(read('src/index.js'),/VERSION="V3\.235"/);
+ assert.match(workerSource(),/VERSION="V3\.235"/);
  assert.match(read('server-game/current/app.js'),/const VERSION='3\.235'/);
  assert.match(read('package.json'),/"version": "3\.235\.0"/);
 });

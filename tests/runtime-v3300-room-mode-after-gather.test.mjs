@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -18,7 +19,7 @@ test('Server: ván đang chạy hoặc đã Phân Vai vẫn bị khóa DEMO',()=
  assert.equal(roomModeSwitchBlocked({phase:'role_delivery',roleDeliveredAt:'t'},[]),true);
  assert.equal(roomModeSwitchBlocked({phase:'lobby',roleDeliveredAt:'t'},[]),true);
  assert.equal(roomModeSwitchBlocked({phase:'lobby'},[{loginId:'a'}]),true);
- const worker=read('src/index.js');
+ const worker=workerSource();
  assert.match(worker,/if\(roomModeSwitchBlocked\(meta,assignments\)\)/);
  assert.match(worker,/\["demoLease","demoClock","demoPlan"\]\)await this\.ctx\.storage\.delete/);
 });

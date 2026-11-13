@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,14 +8,14 @@ const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('V3.160 runtime is consistent, IPA shell remains untouched',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   assertCurrentRelease();
-  const worker=read('src/index.js');
+  const worker=workerSource();
   assert.match(worker,/NATIVE_SHELL_VERSION="3\.110"/);
   // assertCurrentRelease verifies the current channel revision.
 });
 
 test('Opening Artifact time is 30 seconds in GM template and authoritative Worker',()=>{
   const html=read('server-game/current/GMWW.html'),
-    gm=read('server-game/current/app.js'),worker=read('src/index.js');
+    gm=read('server-game/current/app.js'),worker=workerSource();
   assert.match(html,/id="playEarlyArtifactSec"[^>]*value="30"/);
   assert.doesNotMatch(html,/id="playEarlyArtifactSec"[^>]*value="60"/);
   assert.match(gm,/earlyArtifactSec:30/);
@@ -45,7 +46,7 @@ test('First swipe from Wolves to early Artifact warms its cue before async turn 
 });
 
 test('Expelled actors cannot act; expelled people remain targetable with no applied night effects',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const gm=read('server-game/current/app.js'),worker=read('src/index.js'),
+  const gm=read('server-game/current/app.js'),worker=workerSource(),
     rules=read('server-game/current/battle-controls.js');
   assert.match(gm,/\['dead','frozen','expelled'\]\.includes\(playPlayerEffect\(loginId\)\)/);
   assert.match(gm,/function battlePickTarget\(id,actionId\)/);
@@ -57,7 +58,7 @@ test('Expelled actors cannot act; expelled people remain targetable with no appl
 });
 
 test('Expelled day target is permitted but has no action effect',()=>{
-  const worker=read('src/index.js');
+  const worker=workerSource();
   assert.match(worker,/effectiveTargets=targets\.filter\(id=>!affected\(id,"expelled"\)\)/);
   assert.match(worker,/if\(targets\.length&&effectiveTargets\.length===0\)/);
   assert.match(worker,/result=\{message,noEffect:true\}/);

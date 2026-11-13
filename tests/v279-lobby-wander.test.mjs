@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import fs from 'node:fs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('Player Web lobby motion chooses a random point, pauses briefly without sitting, and continues',()=>{
-  const live=read('src/gmww-members-live.js'),server=read('src/index.js'),village=read('assets/village/village.mjs'),playerModule=read('src/gmww-village-player-state.js');
+  const live=read('src/gmww-members-live.js'),server=workerSource(),village=read('assets/village/village.mjs'),playerModule=read('src/gmww-village-player-state.js');
   assert.ok(live.includes('const LOBBY_MOTION_HOLD_MS=1400'));
   assert.ok(live.includes("autoMotionPhase:'roam'"));
   assert.ok(live.includes('function lobbyRandomPoint()'));
@@ -15,14 +16,14 @@ test('Player Web lobby motion chooses a random point, pauses briefly without sit
   assert.ok(live.includes("state.lobbyMotionPhase='hold';state.lobbyMotionHoldUntil=Date.now()+LOBBY_MOTION_HOLD_MS"));
   assert.ok(live.includes('resetLobbyMotionPlan()'));
   assert.ok(live.includes('Tự đi ngẫu nhiên trong Làng, dừng một lát rồi tiếp tục di chuyển. Không ngồi.'));
-  assert.ok(server.includes('VILLAGE_AUTO_SIT_MS'));
+  assert.ok(read('src/gmww-village-autolife.js').includes('VILLAGE_AUTO_SIT_MS'));
   assert.ok(server.includes('villageAutoPoint("member:"'));
   assert.ok(playerModule.includes('return villageAutoLife({id,now,anchorAt,anchorPoint,stagger:false},villageLayout)'));
   assert.ok(village.includes('villageActivity==="sitting"&&Number(data?.sitUntil||0)>now'));
 });
 
 test('Automatic motion stops once the player has a seat and seat walking wins over roaming',()=>{
-  const live=read('src/gmww-members-live.js'),server=read('src/index.js');
+  const live=read('src/gmww-members-live.js'),server=workerSource();
   assert.ok(live.includes("!Number(p?.seatId||0)"));
   assert.ok(live.includes('function pauseLobbyMotionForSeat()'));
   assert.ok(live.includes('state.lobbySeatWalkPending={seatId:n,x:Number(x),y:Number(y)}'));
@@ -31,7 +32,7 @@ test('Automatic motion stops once the player has a seat and seat walking wins ov
 });
 
 test('Profile exposes a default-on lobby movement switch and persists it per member',()=>{
-  const live=read('src/gmww-members-live.js'),server=read('src/index.js');
+  const live=read('src/gmww-members-live.js'),server=workerSource();
   assert.ok(live.includes('Di chuyển trong sảnh'));
   assert.ok(live.includes('Tự đi ngẫu nhiên trong Làng, dừng một lát rồi tiếp tục di chuyển. Không ngồi.'));
   assert.ok(live.includes('role=\\\"switch\\\"'));
@@ -42,7 +43,7 @@ test('Profile exposes a default-on lobby movement switch and persists it per mem
 });
 
 test('V3.17 runtime metadata stays aligned on the V3.17 native shell',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
+  const server=workerSource(),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   assertCurrentRelease();
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 3110;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.110;'));

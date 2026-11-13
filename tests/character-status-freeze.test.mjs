@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import fs from 'node:fs';
 const html = fs.readFileSync(new URL('../server-game/current/GMWW.html', import.meta.url), 'utf8');
 const app = fs.readFileSync(new URL('../server-game/current/app.js', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../server-game/current/style.css', import.meta.url), 'utf8');
-const server = fs.readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+const server = workerSource();
 
 test('Trạng Thái is a separate library tab and Hiệu Ứng remains intact', () => {
   assert.match(html, /data-lib="effects"[^>]*>[\s\S]*?Hiệu Ứng/);

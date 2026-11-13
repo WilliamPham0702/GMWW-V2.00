@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -75,7 +76,7 @@ test('Player Web honors confirmed public labels and red authoritative notices',(
  const web=readFileSync('src/player-web-src/35-online-chat.part','utf8');
  const village=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
  const ws=readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
- const worker=readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  assert.match(worker,/publicVillageStatusTagsFor\(interactions,meta,p\?\.loginId,players\)/);
  assert.match(village,/showLegacy=id=>viewStatus\[id\]===true\|\|/);
  assert.match(ws,/d\.type==='player_interaction_response'/);

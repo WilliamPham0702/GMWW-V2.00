@@ -1,15 +1,16 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {playerServerMenuBundle} from '../.github/scripts/player-server-menu.mjs';
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('DEMO running remains in directory after normal lease expiry without exposing ordinary expired rooms',()=>{
- const worker=read('src/index.js');
+ const worker=workerSource();
  assert.match(worker,/activeDemo=r\?\.demo===true&&phase==="running"&&r\?\.enabled!==false/);
  assert.match(worker,/if\(!activeDemo&&\(\(lease&&nowMs>lease\)/);
 });
 test('late join requires authenticated member and cannot disable lock or change ordinary match rules',()=>{
- const worker=read('src/index.js');
+ const worker=workerSource();
  assert.match(worker,/if\(meta\.demo===true&&!body\?\.member\?\.loginId\)return j\(\{ok:false,error:"DEMO_LOGIN_REQUIRED"/);
  assert.match(worker,/if\(inProgress&&!known&&meta\.demo!==true\)return j\(\{ok:false,error:"ROOM_IN_PROGRESS"/);
  assert.match(worker,/if\(!inProgress\)meta\.locked=false/);

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ const gmCss=fs.readFileSync('server-game/current/style.css','utf8');
 const villageCss=fs.readFileSync('assets/village/village.css','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 const manifest=JSON.parse(fs.readFileSync('assets/updates/latest.json','utf8'));
 
 test('V3.17 GM empty seats use the supplied fantasy leaf artwork and no plus marker',()=>{

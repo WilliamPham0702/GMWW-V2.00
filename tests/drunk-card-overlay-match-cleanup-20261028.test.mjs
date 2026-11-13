@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ import vm from 'node:vm';
 const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const web=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
 const results=fs.readFileSync('src/player-web-src/50-privacy-and-runtime.part','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const card=fs.readFileSync('assets/role-card-back.webp');
 const artwork=fs.readFileSync('src/player-web-src/10-role-card-artwork.part','utf8');
 

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,7 +18,7 @@ test('V3.69 prevents partial/unsafe IPA patches',()=>{
  for(const mutate of [x=>{x.releaseVersion='3.68'},x=>{x.runtimeVersion='3.68'},x=>{x.shellVersion='3.69'},x=>{x.delete=['artwork']},x=>{x.runtime.files.pop()},x=>{x.runtime.files[0].sha256='invalid'},x=>{x.runtime.files[1].url='https://example.org/app.js'},x=>{x.runtime.files.push({...x.runtime.files[0]})}]){const x=manifest();mutate(x);assert.equal(selectVerifiedRuntimeV369Delta(x,'3.68'),null)}
 });
 test('Worker newest Runtime selector is V3.94 on both paths',()=>{
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  for(const kind of ['versioned','manifest'])assert.ok(worker.includes('selectVerifiedRuntimeV376Delta('+kind+',url.searchParams.get("current"))||selectVerifiedRuntimeV375Delta'));
  assertCurrentRelease();
  const app=fs.readFileSync('server-game/current/app.js','utf8');

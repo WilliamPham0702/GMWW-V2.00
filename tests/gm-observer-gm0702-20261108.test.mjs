@@ -1,15 +1,16 @@
+import {workerSource,workerModuleSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const read=(p)=>fs.readFileSync(p,'utf8');
-const index=read('src/index.js');
+const index=workerSource();
+const observerApi=workerModuleSource('http/gm-observer-api.js');
 const part=read('src/player-web-src/36-gm-observer.part');
 
 test('GM observer edge route only accepts the GM0702 member session', () => {
   assert.ok(index.includes('gm-observer\\/(state|action|interaction|day-action|chat-mute|auto)'));
   assert.match(index, /const GM_OBSERVER_LOGIN_ID="gm0702"/);
-  const from = index.indexOf('async function gmObserverApi');
-  const body = index.slice(from, index.indexOf('async function roomProxy', from));
+  const body = observerApi.slice(observerApi.indexOf('async function gmObserverApi'));
   assert.match(body, /members\/session/);
   assert.match(body, /!==GM_OBSERVER_LOGIN_ID\)return j\(\{ok:false,error:"GM_OBSERVER_FORBIDDEN"\},403\)/);
   // The member session check must come before the sync token is attached.
@@ -26,8 +27,7 @@ test('GM observer forwards only the whitelisted GM handlers', () => {
 });
 
 test('GM observer does not write the member into the room players roster', () => {
-  const from = index.indexOf('async function gmObserverApi');
-  const body = index.slice(from, index.indexOf('async function roomProxy', from));
+  const body = observerApi.slice(observerApi.indexOf('async function gmObserverApi'));
   assert.ok(!/\/join/.test(body));
   assert.ok(!/storage\.put\("players"/.test(body));
 });

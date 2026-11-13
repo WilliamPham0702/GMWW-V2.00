@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -59,7 +60,7 @@ test('native asset validator skips the special about:blank document without hidi
 });
 
 test('the manual update native shell version matches the release and Xcode baseline',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  const project=fs.readFileSync('server-game/GMWW-Server.xcodeproj/project.pbxproj','utf8');
  const shell=worker.match(/NATIVE_SHELL_VERSION="([0-9.]+)"/)?.[1];
  const runtime=worker.match(/VERSION="V([0-9.]+)"/)?.[1];

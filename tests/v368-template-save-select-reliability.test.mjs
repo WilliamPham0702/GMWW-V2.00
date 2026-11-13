@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import vm from 'node:vm';
 import {selectVerifiedRuntimeV368Delta} from '../src/gmww-ota-delta.js';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('Repeated Ván Mẫu save keeps revision and already packaged artwork; real change invalidates it',async()=>{
   const start=worker.indexOf('  async gameTemplateUpsert(body){');

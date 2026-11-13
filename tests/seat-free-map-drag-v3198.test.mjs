@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -61,7 +62,7 @@ test('Pinch spacing 50–300%, restore button and one-pointer drag coexist',()=>
     assert.match(js,/seatOffset:\{x:0,y:0\},seatSpacing:100/);
     assert.doesNotMatch(js,/const delta=\{left:/);
   }
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(worker,/seatOffset=villageLayout\.resolveSeatOffset/);
   assert.match(fs.readFileSync('assets/village/village.mjs','utf8'),/layout\.normalizeSeatOffset\(room\.seatOffset\)/);
 });

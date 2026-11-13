@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -40,7 +41,7 @@ test('index is idempotent on matchId, newest first, capped',()=>{
 });
 
 test('worker wires record, list, get and GM-only clear',()=>{
-  const src=readFileSync('src/index.js','utf8');
+  const src=workerSource();
   for(const route of ['"/matches/record"','"/matches/list"','"/matches/get"','"/matches/clear"','"/api/matches"','"/api/gm/matches"'])assert.ok(src.includes(route),route);
   assert.match(src,/async matchClear\(request\)\{\s*if\(bearer\(request\)!==GM_SYNC_TOKEN\)/,'clear must be GM-token only');
   assert.match(src,/matches\/clear[^;]*;?[\s\S]{0,200}members\/admin-clear-history/,'GM Xoá Lịch Sử also clears the library');

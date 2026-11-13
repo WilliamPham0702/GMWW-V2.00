@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -69,7 +70,7 @@ test('GM audio honors an excerpt instead of playing a full role wake-up file',as
  assert.equal(last.src,'role.m4a');assert.equal(last.paused,true);assert.equal(calls,1);
 });
 test('the real battle handler rejects incomplete multi-target scans before state writes',()=>{
- const src=fs.readFileSync('src/index.js','utf8');
+ const src=workerSource();
  const validate=src.indexOf('const expectedInspectCount='),write=src.indexOf('const usageKey="battleRoleUsage:"+matchId;');
  assert.ok(validate>0&&write>validate);
  const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ const source=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('V3.157: tapping the firepit opens an untitled menu with a usable drag grip',()=>{
   assert.match(html,/<div id="battleWolfMenu"[^>]*aria-label="Menu GM"/);

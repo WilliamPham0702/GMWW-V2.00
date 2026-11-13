@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
 const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const events=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');

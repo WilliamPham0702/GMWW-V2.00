@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +8,7 @@ import {pruneInteractions} from '../src/gmww-interaction-retention.js';
 import {reserveArtifactActivation} from '../src/gmww-game-scene-rules.js';
 
 const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
 const village=fs.readFileSync('assets/village/village.mjs','utf8');
 const villageCss=fs.readFileSync('assets/village/village.css','utf8');

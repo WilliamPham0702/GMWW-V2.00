@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const atlasPath=new URL('../assets/characters/v4/approved-two-characters.avif',import.meta.url);
-const worker=fs.readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const worker=workerSource();
 const page=fs.readFileSync(new URL('../assets/characters/v4/index.html',import.meta.url),'utf8');
 const manifest=JSON.parse(fs.readFileSync(new URL('../assets/characters/v4/manifest.json',import.meta.url),'utf8'));
 test('approved two-character transparent 4-way atlas is a real AVIF asset',()=>{

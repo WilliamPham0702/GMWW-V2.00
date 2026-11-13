@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -45,5 +46,5 @@ test('V3.217 audio release keeps six-part GM app exactly assembled',{skip:'LEGAC
     '30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
   assert.equal(read('server-game/current/app.js'),parts.map(x=>read('server-game/src/'+x)).join(''));
   assert.match(read('server-game/src/00-core-and-library.part'),/const VERSION='3\.217'/);
-  assert.match(read('src/index.js'),/VERSION="V3\.217"/);
+  assert.match(workerSource(),/VERSION="V3\.217"/);
 });

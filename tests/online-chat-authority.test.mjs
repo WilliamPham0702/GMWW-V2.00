@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -46,7 +47,7 @@ test('Night role-group composite turns never bridge unrelated roles; solo role h
 test('Messages are plain text, short, and private room chat never broadcasts content',()=>{
   assert.equal(chatNormalizeText('  hello\nworld  '),'hello world');
   assert.equal(chatNormalizeText('x'.repeat(1000)).length,280);
-  const worker=fs.readFileSync('src/index.js','utf8'),player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
+  const worker=workerSource(),player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
   assert.match(worker,/async playerChatSend\(/);
   assert.match(worker,/this\.broadcast\(\{type:"chat_tick",serverTime/);
   assert.doesNotMatch(worker,/this\.broadcast\(\{type:"chat_message"/);

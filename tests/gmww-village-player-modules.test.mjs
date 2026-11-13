@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -84,7 +85,7 @@ test('G3.6: Player Web payload retains TTL but never exposes private member fiel
   assert.equal(publicPlayer({...data,lastHeartbeatAt:recent-ROOM_PLAYER_TTL-1000}).online,false);
 });
 test('G3.6: Cloudflare Worker imports the production DTO and state functions exactly once',()=>{
-  const s=readFileSync('src/index.js','utf8');
+  const s=workerSource();
   assert.match(s,/from "\.\/gmww-player-identity-rules\.js"/);
   assert.match(s,/from "\.\/gmww-village-player-state\.js"/);
   for(const name of ['normalizeGameCharacterId','normalizeSeatId','clearPlayerMovement',

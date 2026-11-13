@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -5,7 +6,7 @@ import {readFileSync} from 'node:fs';
 import {serverDemoActive} from '../src/gmww-demo-runner.js';
 import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
 
-const worker=readFileSync('src/index.js','utf8'),battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const worker=workerSource(),battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const extract=(s,start,end)=>{const a=s.indexOf(start),b=s.indexOf(end,a+1);assert.ok(a>=0&&b>a);return s.slice(a,b)};
 
 function leaseHarness(){

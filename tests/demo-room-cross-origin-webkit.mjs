@@ -1,7 +1,8 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 // Actual cross-origin browser fetches to local workerd/SQLite. No Production writes.
 import assert from 'node:assert/strict';import fs from 'node:fs';import http from 'node:http';import {webkit} from 'playwright';
 const base=process.env.GMWW_TEST_URL||'http://127.0.0.1:8787';assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname));
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8'),battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8'),completionSource=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8'),membersSource=fs.readFileSync('server-game/src/20-members-and-roster.part','utf8'),worker=fs.readFileSync('src/index.js','utf8');
+const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8'),battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8'),completionSource=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8'),membersSource=fs.readFileSync('server-game/src/20-members-and-roster.part','utf8'),worker=workerSource();
 const auth=worker.match(/const GM_SYNC_TOKEN="([^"]+)"/)[1],serial=Date.now().toString(36);
 const between=(s,a,b)=>{const i=s.indexOf(a),j=s.indexOf(b,i+a.length);assert.ok(i>=0&&j>i,a);return s.slice(i,j)};
 const req=async(path,body,token=auth)=>{const r=await fetch(base+path,{method:body?'POST':'GET',headers:{authorization:'Bearer '+token,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const d=await r.json();assert.equal(r.ok,true,path+': '+JSON.stringify(d));return d};

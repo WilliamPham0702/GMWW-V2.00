@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,7 +12,7 @@ const vis=visualsCtx.GMWW_STATUS_VISUALS;
 const source=file('server-game/src/30-village-and-setup.part');
 const runtime=file('server-game/current/app.js');
 const village=file('assets/village/village.mjs');
-const worker=file('src/index.js');
+const worker=workerSource();
 const runtimeVersion=JSON.parse(file('package.json')).version.replace(/\.0$/,'');
 test('V3.126: twelve occupied seats use exactly 12 perimeter anchors around the campfire',()=>{
   assert.match(source,/seatCount=Math.min\(30,Math.max\(1,configured,players.length,highestSeat\)\)/);

@@ -1,5 +1,6 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8'),battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8'),worker=fs.readFileSync('src/index.js','utf8');
+const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8'),battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8'),worker=workerSource();
 const extract=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)+a.length));
 test('IPA cross-origin Demo owner header is accepted by real server CORS policy',()=>{
  const cors=vm.runInNewContext('('+worker.match(/function corsHeaders\(\)\{return\{[^}]+\}\}/)[0]+')')();

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -6,7 +7,7 @@ import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js';
 
 const player=patchPrivatePlayerCards(gmwwMembersLiveScript);
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('Player scripts remain valid after instant viewer patch',()=>{
   assert.doesNotThrow(()=>new vm.Script(player));

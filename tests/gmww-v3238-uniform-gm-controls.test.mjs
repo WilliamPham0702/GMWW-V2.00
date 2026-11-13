@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -56,7 +57,7 @@ test('V3.238 icon and menu changes remain UI-only; bundle, versions and release 
  const names=['00-core-and-library','10-library-and-settings','20-members-and-roster','30-village-and-setup','40-battle-and-timeline','50-roles-and-artifacts'];
  assert.equal(read('server-game/current/app.js'),names.map(n=>read('server-game/src/'+n+'.part')).join(''));
  assert.match(read('server-game/current/app.js'),/const VERSION='3\.238'/);
- assert.match(read('src/index.js'),/VERSION="V3\.238"/);
+ assert.match(workerSource(),/VERSION="V3\.238"/);
  assert.match(read('server-game/current/GMWW.html'),/GMWW V3\.238/);
  assert.match(read('package.json'),/"version": "3\.238\.0"/);
  assert.match(read('.github/scripts/prepare-update-channel.mjs'),/V3\.238: toàn bộ box Menu GM/);

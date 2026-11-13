@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -40,7 +41,7 @@ test('settings button links to auth-protected read-only DO stats and versions st
   const app=readFileSync('server-game/current/app.js','utf8');
   const part=readFileSync('server-game/src/20-members-and-roster.part','utf8');
   const html=readFileSync('server-game/current/GMWW.html','utf8');
-  const worker=readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(html,/id="settingsRunHealth".*id="settingsOptimizeDO"/s);
   assert.match(html,/id="settingsOptimizeDOStatus"/);
   assert.match(app,/gmApi\('\/api\/gm\/storage-optimizer'/);

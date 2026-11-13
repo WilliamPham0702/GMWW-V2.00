@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -41,7 +42,7 @@ test('Player Web supports smooth fallback position interpolation on every snapsh
 });
 
 test('Opening Artifact countdown is 30 seconds and absent without an assigned Artifact',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const worker=read('src/index.js'),gm=read('server-game/current/app.js');
+  const worker=workerSource(),gm=read('server-game/current/app.js');
   assert.match(worker,/earlyArtifactSec=30/);
   assert.match(worker,/if\(artifactRows\.length>0\)/);
   assert.match(gm,/earlyArtifactSec:30/);

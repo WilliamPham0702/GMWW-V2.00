@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ const read=p=>fs.readFileSync(p,'utf8');
 const scene={};vm.runInNewContext(read('assets/village/village-layout.js'),scene);
 const layout=scene.GMWW_VILLAGE_LAYOUT;
 const gmSource=read('server-game/src/30-village-and-setup.part');
-const worker=read('src/index.js'),web=read('assets/village/village.mjs');
+const worker=workerSource(),web=read('assets/village/village.mjs');
 const participants=()=>{
   const examples=['Safari','Chrome','EDGE',...Array.from({length:9},(_,i)=>'GM-'+(i+1))];
   return examples.map((name,i)=>({participantId:'member:'+name.toLowerCase(),

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -51,7 +52,7 @@ for(const path of paths){
  });
 }
 test('public scene image bytes are readable from IPA file origin, including errors',async()=>{
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  const route=worker.slice(worker.indexOf('  const sceneImagePath='),worker.indexOf('  if(url.pathname==="/api/gm/village-scene"'));
  for(const status of [200,404]){
  const run=new Function('memberStore','Response','return async function(url,request,env){'+route+'}')(()=>({fetch:async()=>new Response('pixels',{status,headers:{'content-type':'image/png'}})}),Response);

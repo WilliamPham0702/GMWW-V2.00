@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -61,7 +62,7 @@ test('V3.139 gameplay regression retains synchronized current Runtime and OTA me
  const runtime=JSON.parse(read('package.json')).version.split('.').slice(0,2).join('.');
  assert.equal(read('server-game/current/app.js'),parts.map(p=>read('server-game/src/'+p)).join(''));
  assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+runtime+"'"));
- assert.ok(read('src/index.js').includes('VERSION="V'+runtime+'"'));
- assert.ok(read('src/index.js').includes('UPDATE_CHANNEL_REV="runtime-'+runtime.replaceAll('.','')+'"'));
- assert.ok(read('src/index.js').includes('NATIVE_SHELL_VERSION="3.110"'));
+ assert.ok(workerSource().includes('VERSION="V'+runtime+'"'));
+ assert.ok(workerSource().includes('UPDATE_CHANNEL_REV="runtime-'+runtime.replaceAll('.','')+'"'));
+ assert.ok(workerSource().includes('NATIVE_SHELL_VERSION="3.110"'));
 });

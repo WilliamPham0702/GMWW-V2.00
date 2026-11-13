@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -18,7 +19,7 @@ test('V2.66 ships 20 characters with six real frames in both directions',()=>{
 });
 
 test('left walking uses raster assets and never runtime scaleX paper flipping',()=>{
-  const worker=read('src/index.js'),village=read('assets/village/village.mjs'),css=read('assets/village/village.css'),app=read('server-game/current/app.js');
+  const worker=workerSource(),village=read('assets/village/village.mjs'),css=read('assets/village/village.css'),app=read('server-game/current/app.js');
   assert.ok(worker.includes('walk-v266-left'));
   assert.ok(worker.includes('u.searchParams.get("dir")==="left"'));
   assert.ok(village.includes('dir=left'));
@@ -61,7 +62,7 @@ test('GM IPA consumes move WebSocket events and animates tokens with requestAnim
 });
 
 test('server movement broadcasts include server time for shared interpolation clock',()=>{
-  const server=read('src/index.js');
+  const server=workerSource();
   assert.ok(server.includes('type:"player_move",room,player:publicPlayer(p),players:publicPlayers,serverTime:Date.now()'));
   assert.ok(server.includes('type:"player_move_complete",room,player:publicPlayer(p),players:publicPlayers,seatUpdated:targetSeatId?id:null,serverTime:Date.now()'));
 });
@@ -85,7 +86,7 @@ test('IPA workflow bundles and verifies all 240 walk frames',()=>{
 });
 
 test('V2.66 movement contract remains packaged in the V3.17 runtime',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const server=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
+  const server=workerSource(),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html'),project=read('server-game/GMWW-Server.xcodeproj/project.pbxproj'),pkg=JSON.parse(read('package.json'));
   assertCurrentRelease();
   assert.ok(project.includes('CURRENT_PROJECT_VERSION = 3110;'));
   assert.ok(project.includes('MARKETING_VERSION = 3.110;'));

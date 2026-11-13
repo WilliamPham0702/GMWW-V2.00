@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -53,7 +54,7 @@ test('GM all-impact daily notice, negative-first colors and hidden persistent ti
   const app=readFileSync('server-game/current/app.js','utf8');
   const html=readFileSync('server-game/current/GMWW.html','utf8');
   const css=readFileSync('server-game/current/style.css','utf8');
-  const server=readFileSync('src/index.js','utf8');
+  const server=workerSource();
   const start=app.indexOf('function battleMorningRows(){'),end=app.indexOf('function battleMorningPlayAudio(){',start);
   assert.ok(start>0&&end>start);
   const context={playSceneState:{night:2},playSceneRuntime:{room:{matchId:'match'},villageHistory:[

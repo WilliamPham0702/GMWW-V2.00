@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,7 +11,7 @@ const gmCss=read('server-game/current/status-visuals.css');
 const webCss=read('assets/village/status-visuals.css');
 const app=read('server-game/current/app.js');
 const html=read('server-game/current/GMWW.html');
-const worker=read('src/index.js');
+const worker=workerSource();
 const statusPolicy=read('src/gmww-public-room-contract.js');
 const playerWeb=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');

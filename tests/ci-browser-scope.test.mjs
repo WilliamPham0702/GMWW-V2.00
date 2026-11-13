@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import test from 'node:test';
@@ -276,7 +277,7 @@ test('AUTO VÁN V3.222 release allows only exact metadata bump, notes and unchan
  const files=[
   modified('package.json',read('package.json'),read('package.json').replace('"version": "3.221.0"','"version": "3.222.0"')),
   modified('package-lock.json',read('package-lock.json'),read('package-lock.json').split('"version": "3.221.0"').join('"version": "3.222.0"')),
-  modified('src/index.js',read('src/index.js'),read('src/index.js').replace('VERSION="V3.221"','VERSION="V3.222"').replace('UPDATE_CHANNEL_REV="runtime-3221"','UPDATE_CHANNEL_REV="runtime-3222"')),
+  modified('src/index.js',workerSource(),workerSource().replace('VERSION="V3.221"','VERSION="V3.222"').replace('UPDATE_CHANNEL_REV="runtime-3221"','UPDATE_CHANNEL_REV="runtime-3222"')),
   modified('server-game/src/00-core-and-library.part',read('server-game/src/00-core-and-library.part'),read('server-game/src/00-core-and-library.part').replace("const VERSION='3.221'","const VERSION='3.222'")),
   modified('server-game/current/app.js',read('server-game/current/app.js'),read('server-game/current/app.js').replace("const VERSION='3.221'","const VERSION='3.222'")),
   modified('server-game/current/GMWW.html',read('server-game/current/GMWW.html'),read('server-game/current/GMWW.html').replace('<title>GMWW V3.221</title>','<title>GMWW V3.222</title>')),
@@ -906,7 +907,7 @@ test('PR652 V3.280 final selector ordering recovery: exact three CI-only files s
 });
 
 test('PR672 exact DEMO Online transport uses focused CI and rejects any extra gameplay edits',()=>{
-  const worker=readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
   const app=readFileSync('server-game/current/app.js','utf8');
   const modeOld="const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};";

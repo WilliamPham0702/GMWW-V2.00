@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -69,7 +70,7 @@ test('GM UI shows collapsible auto/manual, all roster counts and matching menu w
 
 test('Player Web keeps stage-scoped nomination and vote actions; configured audio upload IDs exist',()=>{
  const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
- const server=fs.readFileSync('src/index.js','utf8');
+ const server=workerSource();
  const audio=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  assert.ok(player.includes("stage==='nominating'"));

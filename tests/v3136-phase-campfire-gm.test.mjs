@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -37,5 +38,5 @@ test('V3.136: source parts and published runtime version remain consistent',{ski
  const v=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
  assert.ok(Number(v.split('.')[1])>=136);
  assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+v+'</title>'));
- assert.ok(read('src/index.js').includes('VERSION="V'+v+'"'));
+ assert.ok(workerSource().includes('VERSION="V'+v+'"'));
 });

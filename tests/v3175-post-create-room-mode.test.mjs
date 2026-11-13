@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {roomModeSwitchBlocked} from '../src/gmww-room-config-rules.js';
 
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const battle=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const css=readFileSync('server-game/current/style.css','utf8');

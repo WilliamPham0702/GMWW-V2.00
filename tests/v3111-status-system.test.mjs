@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {isBattleActorBlocked} from '../src/gmww-battle-actor-eligibility.js';
 import {expireCycleEffects} from '../src/gmww-cycle-effect-expiry.js';
 
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const statusPolicy=fs.readFileSync('src/gmww-public-room-contract.js','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');

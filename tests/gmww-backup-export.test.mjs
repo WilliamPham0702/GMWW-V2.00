@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -118,7 +119,7 @@ test('Worker route: 404 when unconfigured, forwards by hex id when authorized', 
 });
 
 test('Worker wiring present and fail-closed', () => {
-  const src = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
+  const src = workerSource();
   assert.match(src, /if\(path===BACKUP_EXPORT_DO_PATH\)return handleBackupExportInDo\(/);
   assert.match(src, /if\(url\.pathname===BACKUP_EXPORT_ROUTE\)return handleBackupExportRoute\(/);
   assert.doesNotMatch(readFileSync(new URL('../src/gmww-backup-export.js', import.meta.url), 'utf8'), /storage\.(put|delete|deleteAll)\(/);

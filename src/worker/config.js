@@ -1,0 +1,8 @@
+// Hằng số cấu hình của Worker.
+// Giá trị được khai báo tại src/index.js (công cụ phát hành đọc phiên bản ở đó) và nạp vào đây
+// một lần lúc khởi động. Các module khác chỉ import từ file này, không import ngược về index.js.
+export let PROJECT, VERSION, NATIVE_SHELL_VERSION, UPDATE_CHANNEL_REV, ROOM_IDLE_TTL, ROOM_RESULT_REOPEN_DELAY, ROOM_DIRECTORY_LEASE, ROOM_ALPHABET, ROOM_CODE_LENGTH, LOGIN_RE, SESSION_TTL, PBKDF2_ITERATIONS, MEMBER_STORE_NAME, PRESENCE_TTL, GM_SYNC_TOKEN, GM_PRESENCE_TTL;
+
+export function defineWorkerConfig(values) {
+  ({ PROJECT, VERSION, NATIVE_SHELL_VERSION, UPDATE_CHANNEL_REV, ROOM_IDLE_TTL, ROOM_RESULT_REOPEN_DELAY, ROOM_DIRECTORY_LEASE, ROOM_ALPHABET, ROOM_CODE_LENGTH, LOGIN_RE, SESSION_TTL, PBKDF2_ITERATIONS, MEMBER_STORE_NAME, PRESENCE_TTL, GM_SYNC_TOKEN, GM_PRESENCE_TTL } = values);
+}

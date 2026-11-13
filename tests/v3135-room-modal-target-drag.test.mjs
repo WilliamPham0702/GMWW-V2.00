@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -44,7 +45,7 @@ test('V3.135: target box dragging stays bounded within a phone viewport',()=>{
 test('V3.135: package, Worker, source runtime and HTML remain synchronized',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   const v=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
   assert.ok(Number(v.split('.')[1])>=135);
-  assert.ok(read('src/index.js').includes('VERSION="V'+v+'"'));
+  assert.ok(workerSource().includes('VERSION="V'+v+'"'));
   assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+v+"'"));
   assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+v+'</title>'));
   assert.ok(read('server-game/current/GMWW.html').includes('style.css?v='+v+'-compact-room'));

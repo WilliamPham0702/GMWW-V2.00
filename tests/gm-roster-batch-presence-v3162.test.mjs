@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const start=worker.indexOf('async function gmRoomParticipants(env,raw,request){');
 const end=worker.indexOf('async function gmRoomConfig(',start);
 assert.ok(start>=0&&end>start,'GM roster wrapper must be available');

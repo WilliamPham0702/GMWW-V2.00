@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 const raw=fs.readFileSync('src/gmww-members-live.js','utf8');
 const live=JSON.parse(raw.slice(raw.indexOf(' = ')+3).trim().replace(/;$/,''));
 const start=live.indexOf('let gmRoomCallWatchBusy=false');

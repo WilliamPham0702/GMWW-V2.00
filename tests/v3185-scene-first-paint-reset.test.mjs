@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -21,7 +22,7 @@ test('V3.185 scene is never visibly painted from bundled image before network se
  assert.match(gmCss,/#start #playWorld\.has-custom-scene > #playPlayerRing\{\s*position:absolute!important/);
 });
 test('V3.185 restore shares Apply PUT and is versioned with release notes',()=>{
- const worker=read('src/index.js'),gm=read('server-game/current/app.js');
+ const worker=workerSource(),gm=read('server-game/current/app.js');
  assert.match(worker,/if\(body\?\.resetToDefault===true\)/);
  assert.match(gm,/villageSceneRequest\('\/api\/gm\/village-scene','PUT',\{resetToDefault:true\}\)/);
  assert.doesNotMatch(gm,/villageSceneRequest\('\/api\/gm\/village-scene\/reset','POST'/);

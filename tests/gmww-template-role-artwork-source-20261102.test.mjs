@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -58,7 +59,7 @@ test('Role card assets for 3-player AUTO VÁN exist and retain WebP identity', (
 });
 
 test('Both GM preview endpoint and canonical template package resolve through the same source', () => {
-  const worker = fs.readFileSync('src/index.js','utf8');
+  const worker = workerSource();
   assert.match(worker,/fetchCanonicalRoleArtwork\(env\.ASSETS,request\.url,templateRoleArtwork\[1\],VERSION\)/);
   assert.match(worker,/fetchCanonicalRoleArtwork\(env\.ASSETS,request\.url,roleId,VERSION\)/);
   assert.match(worker,/CANONICAL_ROLE_ARTWORK_MISSING/);

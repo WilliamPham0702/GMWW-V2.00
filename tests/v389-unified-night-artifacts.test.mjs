@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -47,7 +48,7 @@ test("night timeline does not duplicate final village-wakeup step",()=>{
   assert.deepEqual(Array.from(controls.timeline("night",runtime,2),x=>x.kind),["wolf-introduction","early-artifact-window","village-wakeup"]);
 });
 test("server checks Artifact ownership and manual GM final turn triggers morning",()=>{
-  const worker=fs.readFileSync("src/index.js","utf8");
+  const worker=workerSource();
   const gm=fs.readFileSync("server-game/current/app.js","utf8");
   assert.match(worker,/claimedActor&&normalizeLoginId\(x\.loginId\)===claimedActor/);
   assert.match(worker,/\["role","role-group","wolf-pack-bite"\]\.includes\(step\.kind\)&&body\.artifactId/);

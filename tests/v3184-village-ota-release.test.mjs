@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,7 +9,7 @@ test('V3.184 and newer runtime version consistent across Worker, GM and package 
  assert.equal(lock.version,pkg.version);
  assert.equal(lock.packages[''].version,pkg.version);
  const ver=pkg.version.replace(/\.0$/,'');
- assert.ok(read('src/index.js').includes('VERSION="V'+ver+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+ver.replaceAll('.','')+'"'));
+ assert.ok(workerSource().includes('VERSION="V'+ver+'",NATIVE_SHELL_VERSION="3.110",UPDATE_CHANNEL_REV="runtime-'+ver.replaceAll('.','')+'"'));
  assert.ok(read('server-game/current/app.js').includes("const VERSION='"+ver+"'"));
  assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+ver+"'"));
  const html=read('server-game/current/GMWW.html');
@@ -21,7 +22,7 @@ test('V3.184 gives user-facing village editor notes and retains current seats',(
  assert.match(gm,/>ÁP DỤNG<\/button>/);
  assert.match(gm,/>KHÔI PHỤC MẶC ĐỊNH<\/button>/);
  assert.doesNotMatch(gm,/gmVillagePreview/);
- const worker=read('src/index.js');
+ const worker=workerSource();
  assert.match(worker,/sceneSettingsReset\(/);
  assert.match(worker,/scenePruneImages\(/);
  const notes=read('.github/scripts/prepare-update-channel.mjs');

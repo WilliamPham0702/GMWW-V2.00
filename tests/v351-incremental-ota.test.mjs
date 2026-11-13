@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -41,7 +42,7 @@ test('Missing required UI files, mismatched SHA/URL, deletion, and duplicates fa
   const duplicate=create();duplicate.runtime.files.push({...duplicate.runtime.files[0]});assert.equal(select(duplicate,'3.50'),null);
 });
 test('Worker applies the slim overlay to both versioned and latest manifest paths',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const matches=worker.match(/selectLegacyV350RuntimeDelta\((?:versioned|manifest),url\.searchParams\.get\("current"\)\)/g)||[];
   assert.equal(matches.length,2);
   const swift=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');

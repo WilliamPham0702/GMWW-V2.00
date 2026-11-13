@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -46,7 +47,7 @@ test('Gallows controls live in the GM panel, server-owned and visible on Player 
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
  const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  for(const id of ['playGallowsNominationSec','playGallowsVoteSec'])assert.doesNotMatch(html,new RegExp('id="'+id+'"'));
  assert.match(html,/id="battleGallowsSeconds"/);
  assert.doesNotMatch(html,/id="battleGallowsNominationSeconds"|id="battleGallowsVoteSeconds"/);

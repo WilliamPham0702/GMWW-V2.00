@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read = f => fs.readFileSync(new URL('../' + f, import.meta.url), 'utf8');
-const worker = read('src/index.js');
+const worker = workerSource();
 const part = read('src/player-web-src/20-village-and-profile.part');
 
 test('Worker: /api/members/top3 công khai, cache 60s, chỉ trả dữ liệu tối giản', () => {

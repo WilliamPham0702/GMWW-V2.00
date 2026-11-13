@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {inheritedRolePlans} from '../src/gmww-role-inheritance-rules.js';
 import {arrangeNightRoles} from '../src/gmww-pack-night-rules.js';
 import fs from 'node:fs';
@@ -93,7 +94,7 @@ test('saved GM cards migrate Witch, Drunk and Clone limits without losing artwor
   assert.equal(cards[3].limits,'unchanged');
 });
 test('Worker and GM implement authoritative Witch target and do not advance on first potion',()=>{
-  const worker=fs.readFileSync('src/index.js','utf8'),
+  const worker=workerSource(),
     gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
   assert.match(worker,/WITCH_SAVE_TARGET_INVALID/);
   assert.match(worker,/witchSaveTargetAllowed\(finalBite,targets\[0\]\)/);
@@ -150,7 +151,7 @@ test('Clone without selection, living target or mismatched match never inherits'
     {...mark,matchId}, {...dead,effectActive:false}],matchId,night:2}),[]);
 });
 test('Worker role transfer refreshes private delivery and never copies target artifact',()=>{
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(worker,/inheritedFromRoleId:plan.fromRoleId/);
   assert.match(worker,/artifact:own.artifact\|\|null/);
   assert.match(worker,/buildPrivateDeliverySnapshot\(\{matchId/);

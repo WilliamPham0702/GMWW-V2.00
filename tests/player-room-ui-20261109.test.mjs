@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -14,7 +15,7 @@ const artworkSource=/(?:img|image)\.src='\/api\/gm\/template-role-artwork\/'\+en
 const ownerSource=part.replace(artworkSource,'');
 test('panel keeps owner API calls isolated; public artwork is only an image GET',()=>{
   assert.equal([...part.matchAll(artworkSource)].length,2);
-  const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+  const worker=workerSource();
   assert.ok(worker.includes('if(templateRoleArtwork&&request.method==="GET")'));
 
   const urls=[...ownerSource.matchAll(/'(\/api\/[^']*)'/g)].map(m=>m[1]);

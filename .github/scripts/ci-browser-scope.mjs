@@ -2,6 +2,7 @@
 // Select the smallest SAFE browser scope on PRs. Unknown diffs run the full suite.
 // Verified main-push scopes use focused checks; icon policy also isolates legacy gallows/shortcut workflows.
 import fs from 'node:fs';
+import {workerSource} from './worker-source.mjs';
 // V3.277 Player lobby release scope checks exact version-only files; unknown diffs still use full CI.
 // PR641 is an exact CI-only shell printf correction.
 import {playerInteractionsScope} from './player-interactions-scope.mjs';
@@ -1852,7 +1853,7 @@ export function isTimeline244Scope(changes){
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const css=fs.readFileSync('server-game/current/style.css','utf8');
   const gm=fs.readFileSync('server-game/current/app.js','utf8');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const scoped=css.slice(css.indexOf('/* GMWW lobby stage: compact steps'));
   return pkg.version==='3.244.0'&&lock.version==='3.244.0'&&
    html.includes('<title>GMWW V3.244</title>')&&
@@ -1876,7 +1877,7 @@ export function isLobbyGather541Scope(changes){
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const gm=fs.readFileSync('server-game/current/app.js','utf8');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   return pkg.version==='3.243.0'&&html.includes('<title>GMWW V3.243</title>')&&
    gm.includes("const VERSION='3.243'")&&worker.includes('VERSION="V3.243"')&&
    fs.readFileSync('docs/releases/GMWW-V3.243-lobby-gather-assassin-20261027.md','utf8').includes('PR #541')&&
@@ -1955,7 +1956,7 @@ export function isFairy246Scope(changes){
   const p=JSON.parse(fs.readFileSync('package.json','utf8'));
   const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
   const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const image=fs.readFileSync('assets/action-icons/v3/51_yeu_tinh_three_way.webp');
   return p.version==='3.246.0'&&lock.version==='3.246.0'&&
    gm.includes("assetId:'51_yeu_tinh_three_way.png'")&&
@@ -1978,7 +1979,7 @@ export function isFairy246PostMergeScope(changes){
  try{
    const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
    const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-   const worker=fs.readFileSync('src/index.js','utf8');
+   const worker=workerSource();
    const art=fs.readFileSync('assets/action-icons/v3/51_yeu_tinh_three_way.webp');
    return pkg.version==='3.246.0'&&
       gm.includes("assetId:'51_yeu_tinh_three_way.png'")&&
@@ -2176,7 +2177,7 @@ function isGMFireWalk3256Scope(changes){
     const app=fs.readFileSync('server-game/current/app.js','utf8');
     const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
     const css=fs.readFileSync('server-game/current/style.css','utf8');
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.256.0'&&
       app.includes("const VERSION='3.256'")&&app.includes('function gmwwFireWalkSync(')&&
       app.includes('gmwwWalkExpired=expired;battleMarkPlayers()')&&
@@ -2206,7 +2207,7 @@ function isGMVote3259PostverifyScope(changes){
   try{
     const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
     const verifier=fs.readFileSync('.github/scripts/verify-character40-production.mjs','utf8');
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     return pkg.version==='3.259.0'&&verifier.includes('Runtime shell must match the unchanged signed IPA')&&
       !verifier.includes("published.shellVersion,'3.110'")&&
       worker.includes('VERSION="V3.259"')&&worker.includes('NATIVE_SHELL_VERSION="3.257"');
@@ -2218,7 +2219,7 @@ function isGMVote3259Scope(changes){
   if(!Array.isArray(changes)||changes.length!==allowed.size||changes.some(c=>!allowed.has(c.path)||!['A','M'].includes(c.status)))return false;
   try{
     const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-    const app=fs.readFileSync('server-game/current/app.js','utf8'),worker=fs.readFileSync('src/index.js','utf8'),css=fs.readFileSync('server-game/current/style.css','utf8');
+    const app=fs.readFileSync('server-game/current/app.js','utf8'),worker=workerSource(),css=fs.readFileSync('server-game/current/style.css','utf8');
     return pkg.version==='3.259.0'&&app.includes("const VERSION='3.259'")&&app.includes('function battleQueueDayAudio(')&&!app.includes('🐺 VẾT CẮN · PHÙ THỦY')&&css.includes('gmwwNominationVoteBounce')&&worker.includes('VERSION="V3.259"')&&worker.includes('NATIVE_SHELL_VERSION="3.257"')&&fs.readFileSync('server-game/current/GMWW.html','utf8').includes('<title>GMWW V3.259</title>');
   }catch{return false}
 }
@@ -2249,7 +2250,7 @@ function isGMWWAudio3258Scope(changes){
  try{
    const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
    const app=fs.readFileSync('server-game/current/app.js','utf8');
-   const worker=fs.readFileSync('src/index.js','utf8');
+   const worker=workerSource();
    return pkg.version==='3.258.0'&&
       app.includes("const VERSION='3.258'")&&
       app.includes('function battleFindAudioCandidates(')&&
@@ -2300,7 +2301,7 @@ function isDrunkCardOverlayScope(changes){
     const web=webFiles.map(x=>fs.readFileSync('src/player-web-src/'+x,'utf8')).join('');
     if('export const gmwwMembersLiveScript = '+JSON.stringify(web)+';\n'!==
        fs.readFileSync('src/gmww-members-live.js','utf8'))return false;
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     const ui=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
     const scene=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
     return worker.includes('VERSION="V3.260"')&&worker.includes('NATIVE_SHELL_VERSION="3.257"')&&
@@ -2441,7 +2442,7 @@ function isMorningAudio3267Scope(changes){
   try{
     const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
     const app=fs.readFileSync('server-game/current/app.js','utf8');
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     const ver=JSON.parse(fs.readFileSync('package.json','utf8')).version;
     return ver==='3.267.0'&&worker.includes('VERSION="V3.267"')&&
       app.includes("const VERSION='3.267'")&&
@@ -2514,7 +2515,7 @@ function isDemoAudioSync3270Scope(changes){
   try{
     return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.270.0'&&
       fs.readFileSync('server-game/current/app.js','utf8').includes("const VERSION='3.270'")&&
-      fs.readFileSync('src/index.js','utf8').includes('VERSION="V3.270"')&&
+      workerSource().includes('VERSION="V3.270"')&&
       fs.readFileSync('src/gmww-wolf-night-resolution.js','utf8').includes('expelledIds=[]')&&
       fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8').includes('gallowsStageAudioKey');
   }catch{return false}
@@ -2546,7 +2547,7 @@ function isDemoPlayerLive3271Scope(changes){
   if(!required.every(p=>changed.has(p)))return false;
   try{
     return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.271.0'&&
-      fs.readFileSync('src/index.js','utf8').includes('UPDATE_CHANNEL_REV="runtime-3271-demo-player-live-join"');
+      workerSource().includes('UPDATE_CHANNEL_REV="runtime-3271-demo-player-live-join"');
   }catch{return false}
 }
 
@@ -2594,7 +2595,7 @@ function isOnlineVillage3273Scope(changes){
  if(!mandatory.every(x=>paths.has(x)))return false;
  try{
   return JSON.parse(fs.readFileSync('package.json','utf8')).version==='3.273.0'&&
-   fs.readFileSync('src/index.js','utf8').includes('UPDATE_CHANNEL_REV="runtime-3273-player-online-village"');
+   workerSource().includes('UPDATE_CHANNEL_REV="runtime-3273-player-online-village"');
  }catch{return false}
 }
 
@@ -3077,7 +3078,7 @@ function isPR652FinalReleaseScope(changes){
   if(!changes.every(c=>c?.status==='M'&&markers.has(c.path)&&
     typeof c.before==='string'&&typeof c.after==='string'&&c.after.includes(markers.get(c.path))))return false;
   if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.280.0')return false;
-  return fs.readFileSync('src/index.js','utf8').includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
+  return workerSource().includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
     fs.readFileSync('server-game/current/app.js','utf8').includes('soi-can-canonical') &&
     fs.readFileSync('docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md','utf8').includes('ĐẠT');
 }
@@ -3096,7 +3097,7 @@ function isPR652PostmergeReleaseScope(changes){
      new Set(changes.map(c=>c?.path)).size!==markers.size)return false;
   if(!changes.every(c=>c?.status==='M'&&markers.has(c.path)&&
     typeof c.after==='string'&&typeof c.before==='string'&&c.after.includes(markers.get(c.path))))return false;
-  return fs.readFileSync('src/index.js','utf8').includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
+  return workerSource().includes('advanceNightRuntime(meta,"jump","gm-undo",undoIndex)') &&
     fs.readFileSync('server-game/current/app.js','utf8').includes('soi-can-canonical') &&
     fs.readFileSync('docs/releases/GMWW-ONLINE-WOLF-UNDO-CHAT-ICON-FIX-20261031.md','utf8').includes('ĐẠT');
 }
@@ -3706,7 +3707,7 @@ function isPR743ChatVoiceScope(changes){
     new Set(changes.map(c=>c.path)).size!==wanted.size||
     !changes.every(c=>wanted.get(c.path)===c.status))return false;
   try{
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     const gm=fs.readFileSync('server-game/src/45-online-chat.part','utf8');
     const player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
     const packagedGM=fs.readFileSync('server-game/current/app.js','utf8');
@@ -3734,7 +3735,7 @@ function isPR743ChatPostmergeScope(changes){
      changes.some(c=>expected.get(c.path)!==c.status))return false;
   try{
     if(!['3.289.0','3.290.0'].includes(JSON.parse(fs.readFileSync('package.json','utf8')).version))return false;
-    const worker=fs.readFileSync('src/index.js','utf8'),
+    const worker=workerSource(),
       deploy=fs.readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
     return worker.includes('async chatVoiceStore(')&&worker.includes('async chatVoiceRead(')&&
       worker.includes('async chatVoiceClear(')&&deploy.includes('7b981859d4f9171e47f4a7c0d7164b50f27d7bda')&&
@@ -3755,7 +3756,7 @@ function isPR743ChatPostmergeScopeV2(changes){
     changes.some(c=>expected.get(c.path)!==c.status))return false;
   try{
     const deploy=fs.readFileSync('.github/workflows/deploy-pr743-chat-worker.yml','utf8');
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     return deploy.includes('cc430dd97af48aba6afb1d415582d9e5818457dd')&&
       deploy.includes('Automatic rollback')&&worker.includes('async chatVoiceStore(')&&
       worker.includes('async chatVoiceRead(')&&
@@ -4026,7 +4027,7 @@ function isChatLiveV3294Scope(changes){
   const w=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
   const gm=fs.readFileSync('server-game/src/45-online-chat.part','utf8');
   const player=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   return w.includes("steps.scope.outputs.mode == 'gmww-chat-live-v3294'")&&
     w.includes('tests/gmww-chat-live-meter-fast-send-v3294.test.mjs')&&
     w.includes('tests/online-chat-authority.test.mjs')&&w.includes('tests/gmww-auto-gm-alarm-recovery.test.mjs')&&w.includes('tests/assassin-player-public-privacy-20261103.test.mjs')&&w.includes('npm run check')&&
@@ -4193,7 +4194,7 @@ function isPR778BulletinRecoveryScope(changes){
     const policy=fs.readFileSync('src/gmww-online-chat-policy.js','utf8');
     const checks=fs.readFileSync('.github/workflows/check-player-web.yml','utf8');
     const ticker=fs.readFileSync('src/player-web-src/35-online-chat.part','utf8');
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     const tests=fs.readFileSync('tests/player-village-announcement-ticker-20261103.test.mjs','utf8');
     return policy.includes('if(!byId.has(row.id))byId.set(row.id,')&&
       policy.includes("name+' đã bị Sát Thủ chọn.")&&
@@ -4414,7 +4415,7 @@ function isP0AutoGmAudio3297Scope(changes){
   if(read('package-lock.json')!==String(before('package-lock.json')).replaceAll('"version": "3.296.0"','"version": "3.297.0"'))return false;
   if(read('server-game/src/00-core-and-library.part')!==String(before('server-game/src/00-core-and-library.part')).replace("const VERSION='3.296';","const VERSION='3.297';"))return false;
   if(read('server-game/current/GMWW.html')!==String(before('server-game/current/GMWW.html')).replace('<title>GMWW V3.296</title>','<title>GMWW V3.297</title>'))return false;
-  if(read('src/index.js')!==String(before('src/index.js')).replace('VERSION="V3.296"','VERSION="V3.297"').replace(
+  if(workerSource()!==String(before('src/index.js')).replace('VERSION="V3.296"','VERSION="V3.297"').replace(
       'UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss"',
       'UPDATE_CHANNEL_REV="runtime-3297-auto-gm-audio-continuity"'))return false;
   // Pin the exact reviewed gameplay repair. Not a generic permission to edit GM.
@@ -4753,7 +4754,7 @@ function isDrunkV3260PostMergeScope(changes){
     changes.some(c=>exact.get(c.path)!==c.status))return false;
   try{
     const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     const gm=fs.readFileSync('server-game/current/app.js','utf8');
     const web=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
     const ota=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
@@ -4786,7 +4787,7 @@ function cardRule3263MainScope(){
     const files=changes.map(c=>c[1]);
     if(changes.length<10||changes.some(c=>!['M','A'].includes(c[0])||!allowed.has(c[1]))||
        !["src/index.js","server-game/current/app.js","server-game/src/00-core-and-library.part","server-game/src/40-battle-and-timeline.part","src/gmww-cycle-effect-expiry.js","src/gmww-delivery-snapshot.js","tests/v389-night-runtime-integration.test.mjs","package.json","package-lock.json","docs/releases/GMWW-V3.263-card-rule-executors-20261028.md"].every(p=>files.includes(p)))return false;
-    const worker=fs.readFileSync('src/index.js','utf8'),gm=fs.readFileSync('server-game/current/app.js','utf8');
+    const worker=workerSource(),gm=fs.readFileSync('server-game/current/app.js','utf8');
     return worker.includes('VERSION="V3.263"')&&gm.includes("const VERSION='3.263'")&&
        gm.includes('cy+Math.sin(angle)*radius')&&
        worker.includes('artifact_action_lock_function')&&
@@ -4826,7 +4827,7 @@ function isGatherPinch3265Scope(changes){
     'docs/releases/GMWW-V3.265-gather-pinch-spacing-20261028.md',
     '.github/scripts/ci-browser-scope.mjs','.github/workflows/check-player-web.yml'
   ])if(!touched.has(required))return false;
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   const layout=fs.readFileSync('assets/village/village-layout.js','utf8');
   const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
@@ -4866,7 +4867,7 @@ function isTemplateDock3268Scope(changes){
   ])if(!touched.has(required))return false;
   try{
     const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-    const worker=fs.readFileSync('src/index.js','utf8');
+    const worker=workerSource();
     const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
     const source=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
     return pkg.version==='3.268.0'&&
@@ -4994,7 +4995,7 @@ function isAssassinPublicWorkerSecurityScope(changes,base){
     new Set(changes.map(c=>c.path)).size!==expected.size)return false;
   if(JSON.parse(fs.readFileSync('package.json','utf8')).version!=='3.294.0')return false;
   const oldWorker=git('show',base+':src/index.js');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const oldImport='publicChatNotices,playerSafeInteraction} from "./gmww-online-chat-policy.js";';
   const newImport='publicChatNotices,playerSafeInteraction,publicInteractionReceipt} from "./gmww-online-chat-policy.js";';
   const oldBroadcast=`    // WebSocket broadcasts disclose neither Assassin identity nor choice.
@@ -5349,7 +5350,7 @@ function detect(){
           const afterNotes=fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8');
           const note='V3.285 PR677/PR694: Chuyển chế độ DEMO sang vận chuyển Online đồng bộ với người chơi thật; giữ các kiểm soát bot, phân quyền, chat và bảo toàn phòng. Đồng bộ Runtime/Worker V3.285, không đổi IPA Native V3.264, Oracle hoặc dữ liệu. Gói thủ công .gmwwupdate có SHA-256; rollback Runtime V3.280 và Worker version trước khi nâng cấp.';
           if(afterNotes!==beforeNotes.replace('releaseNotes:["V3.280','releaseNotes:["'+note+'","V3.280'))throw Error('Unbounded release notes edit');
-          const worker=fs.readFileSync('src/index.js','utf8');
+          const worker=workerSource();
           const gm=fs.readFileSync('server-game/current/app.js','utf8');
           const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
           if(!worker.includes('const roomMode=desiredDemo?"online":')||

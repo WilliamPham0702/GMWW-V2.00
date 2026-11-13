@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -65,7 +66,7 @@ test('WebSocket broadcasts a generic response receipt without secret role or cho
 });
 
 test('Worker strips Assassin actor details from /me, direct response and broadcast',()=>{
-  const source=readFileSync('src/index.js','utf8');
+  const source=workerSource();
   assert.match(source,/interactions=rows\.filter[\s\S]*?\.slice\(-10\)\.map\(playerSafeInteraction\)/);
   assert.match(source,/const effects=Object\.values\(latest\)\.map\(playerSafeInteraction\)/);
   assert.match(source,/if\(row\.status==="responded"\)return j\(\{ok:true,interaction:playerSafeInteraction\(row\)/);

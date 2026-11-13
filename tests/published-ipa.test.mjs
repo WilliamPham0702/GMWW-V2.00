@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {selectPublishedIpa} from '../.github/scripts/published-ipa.mjs';
@@ -44,7 +45,7 @@ test('GMWW V3.206 runtime advertises the verified V3.200 IPA without raising min
  const fs=await import('node:fs');
  const record=JSON.parse(fs.readFileSync('update-system/published-ipa.json','utf8'));
  const runtime=fs.readFileSync('server-game/current/app.js','utf8').match(/const VERSION='([^']+)'/)?.[1];
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  assert.equal(runtime,'3.206');
  assert.match(worker,/VERSION="V3\.206"/);
  assert.match(worker,/UPDATE_CHANNEL_REV="runtime-3206"/);

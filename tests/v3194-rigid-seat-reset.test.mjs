@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -71,7 +72,7 @@ test('V3.194: arrow and drag are whole-ring commands only; button reset also res
     assert.doesNotMatch(code,/GM may drag an occupied Seat onto another/);
     assert.doesNotMatch(code,/el\.addEventListener\('pointermove',[\s\S]{0,380}is-seat-dragging/);
   }
-  const server=fs.readFileSync('src/index.js','utf8');
+  const server=workerSource();
   const player=fs.readFileSync('assets/village/village.mjs','utf8');
   assert.match(server,/seatOffset=villageLayout\.resolveSeatOffset/);
   assert.match(player,/seat=3195-rigid/);

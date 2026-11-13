@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ import {publicRoom} from '../src/gmww-public-room-contract.js';
 
 const gm=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
 const client=gm.slice(gm.indexOf('/* Match completion is shared'),gm.indexOf('async function openPlayEndSheet(){'));
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const config=worker.slice(worker.indexOf('  async gmConfig(request,body){'),worker.indexOf('  async gmDayClock(request,body){'));
 assert.ok(client.includes('function playCompletionIsCurrentResult('));
 assert.ok(config.startsWith('  async gmConfig('));

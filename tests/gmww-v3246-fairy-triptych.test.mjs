@@ -1,7 +1,8 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import{createHash}from'node:crypto';
 const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 test('One approved binary icon exists at direct and OTA source with exact SHA-256',()=>{
  const a=fs.readFileSync('server-game/current/action-icons/v3/51_yeu_tinh_three_way.webp');
