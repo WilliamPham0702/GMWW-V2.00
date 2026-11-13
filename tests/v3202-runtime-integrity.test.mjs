@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +6,7 @@ import {compareReleaseVersions,verifyOtaVersionAdvance} from '../.github/scripts
 const read=p=>fs.readFileSync(p,'utf8');
 
 test('V3.206 nhất quán phiên bản, shell và release notes tiếng Việt',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const worker=read('src/index.js'),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html');
+  const worker=workerSource(),app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html');
   const pkg=JSON.parse(read('package.json')),lock=JSON.parse(read('package-lock.json'));
   const prep=read('.github/scripts/prepare-update-channel.mjs');
   assert.match(worker,/VERSION="V3\.206",NATIVE_SHELL_VERSION="3\.110",UPDATE_CHANNEL_REV="runtime-3206"/);

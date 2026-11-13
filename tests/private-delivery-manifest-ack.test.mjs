@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildPrivateDeliveryManifest,validPrivateDeliveryAcknowledgment,PRIVATE_DELIVERY_SCHEMA_VERSION} from '../src/gmww-delivery-manifest.js';
@@ -46,7 +47,7 @@ test('Multi-role assignments must arrive in full before receipt and preserve ori
 });
 
 test('No private delivery acknowledgements leak to public room endpoint or other accounts',()=>{
- const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+ const source=workerSource();
  assert.match(source,/if\(url.pathname==="\/player\/delivery-received"/);
  assert.match(source,/playerDeliveryReceived\(body\)/);
  assert.match(source,/validPrivateDeliveryAcknowledgment\(manifest,body\)/);

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -37,11 +38,11 @@ async function workerWith(catalog,bases=[]){
   const {resolve,join}=await import('node:path');
   const {pathToFileURL}=await import('node:url');
   const src=resolve('src');
-  let source=await readFile(join(src,'index.js'),'utf8');
+  let source=workerSource();
   source=source.replace(/VERSION="V[0-9.]+"/, 'VERSION="V3.121"');
   source=source.replace('import {releaseCatalog} from "./gmww-release-catalog.js";','const releaseCatalog='+JSON.stringify(catalog)+';');
   source=source.replace('import {releaseBases} from "./gmww-release-bases.js";','const releaseBases='+JSON.stringify(bases)+';');
-  source=source.replace('import { DurableObject } from "cloudflare:workers";','class DurableObject {}');
+  source=source.replace('import {DurableObject} from "cloudflare:workers";','class DurableObject {}');
   source=source.replace(/from "(\.\/[^"]+)"/g,(_,p)=>'from '+JSON.stringify(pathToFileURL(resolve(src,p)).href));
   source=source.replace(/import "(\.\.\/assets\/[^"]+)";/g,(_,p)=>'import '+JSON.stringify(pathToFileURL(resolve(src,p)).href)+';');
   const dir=await mkdtemp(join(tmpdir(),'gmww-catalog-'));const target=join(dir,'worker.mjs');await writeFile(target,source);

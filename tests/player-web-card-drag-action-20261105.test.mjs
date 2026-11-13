@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -6,8 +7,8 @@ const plain=x=>JSON.parse(JSON.stringify(x));
 import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 
 // V3.308: kéo lá Vai Trò / Artifact để thực hiện hành động (Player Web Online).
-const chat=fs.readFileSync(new URL('../src/player-web-src/35-online-chat.part',import.meta.url),'utf8');
-const mini=fs.readFileSync(new URL('../src/player-web-src/20-village-and-profile.part',import.meta.url),'utf8');
+const chat=playerWebSource('35-online-chat');
+const mini=playerWebSource('20-village-and-profile');
 const a=chat.indexOf('const gmwwCardLifted=new Set()'),b=chat.indexOf('function gmwwOnlineIconDown(event,action,card){'),
   c=chat.indexOf('// Only authenticated action offers trigger this local effect;');
 assert.ok(a>0&&b>a&&c>b,'Thiếu mã kéo lá trong Player Web');

@@ -1,12 +1,13 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {gmwwMembersLiveScript} from '../src/gmww-members-live.js';
 
-const boot=readFileSync('src/player-web-src/00-bootstrap-and-session.part','utf8');
+const boot=playerWebSource('00-bootstrap-and-session');
 const village=readFileSync('assets/village/village.css','utf8');
-const chat=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const chat=playerWebSource('35-online-chat');
 
 test('Player Web uses visible viewport on Safari, Chrome and Edge iOS, not a scrolling document',()=>{
   assert.match(boot,/installGmwwPlayerViewport/);

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -43,7 +44,7 @@ test('A real per-player snapshot produces an ACK-verifiable manifest without any
  assert.equal(unavailable.complete,false);assert.equal(unavailable.artifactExpected,true);
 });
 test('Durable Object does not release room before snapshot is persisted and private endpoints read snapshot',()=>{
- const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+ const source=workerSource();
  const assign=source.slice(source.indexOf('async gmAssign(request,body){'),source.indexOf('async gmStart(request,body){'));
  const state=source.slice(source.indexOf('async playerState(body){'),source.indexOf('async playerRoleViewed(body){'));
  assert.match(assign,/storage\.put\("deliverySnapshot:"\+loginId,buildPrivateDeliverySnapshot\(/);

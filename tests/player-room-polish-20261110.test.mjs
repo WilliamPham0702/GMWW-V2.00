@@ -1,8 +1,9 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const rooms=fs.readFileSync('src/player-web-src/37-player-rooms.part','utf8');
-const village=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+const rooms=playerWebSource('37-player-rooms');
+const village=playerWebSource('20-village-and-profile');
 test('Phòng hub order: Quản lý → Tạo → Vào phòng',()=>{
   const a=rooms.indexOf("'1. QUẢN LÝ PHÒNG'"),b=rooms.indexOf("'2. TẠO PHÒNG'"),c=rooms.indexOf("'3. VÀO PHÒNG'");
   assert.ok(a>0&&b>a&&c>b);

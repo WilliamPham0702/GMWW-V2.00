@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,7 +17,7 @@ test('V3.135: Create Room outer panel is compact while multiple room tiles stay 
 });
 
 test('V3.135: affected-character picker can move without invoking an action or closing it',()=>{
-  const part=read('server-game/src/40-battle-and-timeline.part'),html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css');
+  const part=gmSource('40-battle-and-timeline'),html=read('server-game/current/GMWW.html'),css=read('server-game/current/style.css');
   assert.match(html,/id="battleTargetGrip" title="Giữ và kéo/);
   assert.match(part,/function battleBindTargetSheetDrag\(\)/);
   assert.match(part,/grip\.addEventListener\('pointerdown'/);
@@ -29,7 +31,7 @@ test('V3.135: affected-character picker can move without invoking an action or c
 });
 
 test('V3.135: target box dragging stays bounded within a phone viewport',()=>{
-  const source=read('server-game/src/40-battle-and-timeline.part');
+  const source=gmSource('40-battle-and-timeline');
   const start=source.indexOf('function battleTargetClampPosition('),end=source.indexOf('function battlePlaceTargetSheet(',start);
   assert.ok(start>=0&&end>start);
   const ctx={};
@@ -44,8 +46,8 @@ test('V3.135: target box dragging stays bounded within a phone viewport',()=>{
 test('V3.135: package, Worker, source runtime and HTML remain synchronized',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   const v=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
   assert.ok(Number(v.split('.')[1])>=135);
-  assert.ok(read('src/index.js').includes('VERSION="V'+v+'"'));
-  assert.ok(read('server-game/src/00-core-and-library.part').includes("const VERSION='"+v+"'"));
+  assert.ok(workerSource().includes('VERSION="V'+v+'"'));
+  assert.ok(gmSource('00-core-and-library').includes("const VERSION='"+v+"'"));
   assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+v+'</title>'));
   assert.ok(read('server-game/current/GMWW.html').includes('style.css?v='+v+'-compact-room'));
   assert.ok(read('server-game/current/GMWW.html').includes('app.js?v='+v+'-compact-room'));

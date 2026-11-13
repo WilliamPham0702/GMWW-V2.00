@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -7,7 +8,7 @@ const village=fs.readFileSync("assets/village/village.mjs","utf8");
 const villageCss=fs.readFileSync("assets/village/village.css","utf8");
 const app=fs.readFileSync("server-game/current/app.js","utf8");
 const serverCss=fs.readFileSync("server-game/current/style.css","utf8");
-const worker=fs.readFileSync("src/index.js","utf8");
+const worker=workerSource();
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 
 test("Character-02 patch wires Character-02 seated asset on Player Web and GM",()=>{

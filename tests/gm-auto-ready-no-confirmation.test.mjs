@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const worker = fs.readFileSync('src/index.js', 'utf8');
+const worker = workerSource();
 const seatRules = fs.readFileSync('src/gmww-village-player-state.js', 'utf8');
 const wrappedPlayer = fs.readFileSync('src/gmww-members-live.js', 'utf8');
 const player = JSON.parse(wrappedPlayer.trim().replace(/^export const gmwwMembersLiveScript = /, '').replace(/;$/, ''));

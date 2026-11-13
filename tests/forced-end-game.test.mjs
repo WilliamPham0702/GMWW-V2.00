@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const app=readFileSync('server-game/current/app.js','utf8');
 const html=readFileSync('server-game/current/GMWW.html','utf8');
 const live=readFileSync('src/gmww-members-live.js','utf8');

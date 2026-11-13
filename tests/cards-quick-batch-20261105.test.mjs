@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -96,7 +97,7 @@ test('Tiên Tri Tập Sự: kế nhiệm khi mọi Tiên Tri đã chết hoặc 
 });
 
 // ----- Durable Object thật: Kỵ Sỹ / Hoàng Tử đâm ban ngày, Bà Da Đen chặn -----
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 const begin=server.indexOf('  async gmDayAction(request,body){'),finish=server.indexOf('  /* V3.99:',begin);
 assert.ok(begin>=0&&finish>begin);
 const Room=vm.runInNewContext('(class { '+server.slice(begin,finish)+' })',{

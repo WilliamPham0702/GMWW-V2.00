@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 // Real isolated workerd + Durable Object contract. Never contacts Production.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ const base=process.env.GMWW_TEST_URL||'http://127.0.0.1:8787';
 assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname),
   'Hybrid DEMO integration tests must never mutate Production');
 const serial=Date.now().toString(36),id='hybrid'+serial,codePrefix='d'+serial;
-const localGmSync=readFileSync('src/index.js','utf8').match(/const GM_SYNC_TOKEN="([^"]+)"/)?.[1];
+const localGmSync=workerSource().match(/const GM_SYNC_TOKEN="([^"]+)"/)?.[1];
 assert.ok(localGmSync,'Local Worker GM test token must be available');
 async function req(path,{method='GET',token,body}={}){
  const res=await fetch(base+path,{method,headers:{

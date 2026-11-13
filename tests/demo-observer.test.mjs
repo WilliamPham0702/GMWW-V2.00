@@ -1,5 +1,6 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+const setup=gmSource('30-village-and-setup');
 function harness(){const nodes=new Map(),scene={step:'battle',phase:'night',night:2},runtime={room:{demo:true,matchId:'m1'},nightRuntime:{cursor:1,queue:[{id:'wolf'},{id:'seer',label:'Tiên Tri'}]}},runner={running:true,paused:false,lastEvent:null,error:''};
  const node=id=>{if(!nodes.has(id))nodes.set(id,{hidden:true,textContent:'',dataset:{}});return nodes.get(id)};
  const start=setup.indexOf('function demoTurnDescription(');assert.ok(start>=0,'Demo observation must expose the current turn');

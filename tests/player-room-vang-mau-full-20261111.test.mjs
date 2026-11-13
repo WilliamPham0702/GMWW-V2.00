@@ -1,10 +1,12 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {PLAYER_ROOM_ROLE_CATALOG} from '../src/player-room-role-catalog.js';
 
-const part=readFileSync('src/player-web-src/37-player-rooms.part','utf8');
-const worker=readFileSync('src/index.js','utf8');
+const part=playerWebSource('37-player-rooms');
+const worker=workerSource();
 
 test('Chọn Ván reproduces the Server picker controls and keeps per-match settings separate',()=>{
   assert.match(part,/VÁN GỢI Ý/);

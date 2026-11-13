@@ -1,3 +1,5 @@
+import {gmSource as readGmGroup} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import * as gallowsRules from '../src/gmww-gallows-rules.js';
 import {serverDemoActive,nextServerDemoDue,runServerDemo,stopServerDemo} from '../src/gmww-demo-runner.js';
@@ -26,7 +28,7 @@ import {insertMirrorSteps,mirrorLinkKey,mirrorLinkPrefix,buildMirrorLink,mirrorF
 
 // Execute the real DO methods against isolated, clone-on-read storage. No network
 // or production credentials; method bodies are not copied into the fixture.
-const source=fs.readFileSync('src/index.js','utf8');
+const source=workerSource();
 const demoMethods=source.slice(source.indexOf('  async demoClockContext(meta){'),source.indexOf('  async gmAuto(request,body){'));
 const methods=source.slice(source.indexOf('  nightRuntimeKey('),source.indexOf('  async gmRename('));
 const drawMethod=source.slice(source.indexOf('  async playerDrunkDraw(body){'),source.indexOf('  async playerDeliveryReceived(body){'));
@@ -245,7 +247,7 @@ test('ART-01 skip from night two when priority absent/exhausted; no Artifact mod
   assert.equal(first.queue[0].actions.length,0);
   const later=await unprioritized.room.getNightRuntime({...await unprioritized.meta(),cycleNight:2},2,true);
   assert.equal(later.queue.some(x=>x.kind==='early-artifact-window'),false);
-  const audio=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const audio=readGmGroup('30-village-and-setup');
   assert.match(audio,/audio_system_early_artifacts/);
 });
 

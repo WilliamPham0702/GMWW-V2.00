@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,7 +9,7 @@ import {sanitizeGameConfig} from '../src/gmww-room-config-rules.js';
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
-const server=fs.readFileSync('src/index.js','utf8');
+const server=workerSource();
 
 test('V3.98 battle has one draggable clock, no fixed bottom row, wolf owns GM tools',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
   const clockIndex=html.indexOf('id="playBattleClockFloat"'),dockIndex=html.indexOf('id="playBattleDock"');

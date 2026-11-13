@@ -1,0 +1,29 @@
+function clearRolePrivacyTimer(){if(gmwwRolePrivacyTimer){clearTimeout(gmwwRolePrivacyTimer);gmwwRolePrivacyTimer=null}}
+function closeRoleForPrivacy(){
+  clearRolePrivacyTimer();
+  if(!state.roleOpen)return;
+  state.roleOpen=false;
+  $('#roleCard')?.classList.remove('revealed');
+  const hint=$('#roleHint');if(hint)hint.textContent='Vai Trò của bạn được giữ bí mật.';
+  playPageFlipSound(false);
+}
+function armRolePrivacyTimer(){
+  clearRolePrivacyTimer();
+  if(!state.roleOpen||!state.role)return;
+  gmwwRolePrivacyTimer=setTimeout(closeRoleForPrivacy,ROLE_PRIVACY_IDLE_MS);
+}
+function registerRoleActivity(){
+  if(state.roleOpen&&$('#game')?.classList.contains('active'))armRolePrivacyTimer();
+}
+function toggleRole(){
+  if(!state.role||roleIsEffectLocked())return;
+  const opening=!state.roleOpen;
+  state.artifactFocus='role';
+  playPageFlipSound(opening);
+  state.roleOpen=opening;
+  $('#roleCard')?.classList.toggle('revealed',state.roleOpen);
+  const hint=$('#roleHint');if(hint)hint.textContent=state.roleOpen?'Vai Trò đang hiển thị.':'Vai Trò của bạn được giữ bí mật.';
+  if(opening)armRolePrivacyTimer();else clearRolePrivacyTimer();
+  if(state.roleOpen&&!state.role.viewedAt)api('/api/rooms/'+state.roomCode+'/role/viewed',{method:'POST',headers:auth(),body:JSON.stringify({roleIndex:Number(state.roleIndex||0),roleId:String(state.role?.roleId||'')})}).then(d=>{state.role.viewedAt=d.viewedAt;if(state.roles[state.roleIndex])state.roles[state.roleIndex].viewedAt=d.viewedAt;state.artifactFocus='';renderArtifactStack()}).catch(()=>{})
+}
+window.toggleRole=toggleRole;

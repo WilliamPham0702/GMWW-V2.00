@@ -1,3 +1,5 @@
+import {gmSource,readSourceAtLegacyPath} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import test from 'node:test';
@@ -276,8 +278,8 @@ test('AUTO VÁN V3.222 release allows only exact metadata bump, notes and unchan
  const files=[
   modified('package.json',read('package.json'),read('package.json').replace('"version": "3.221.0"','"version": "3.222.0"')),
   modified('package-lock.json',read('package-lock.json'),read('package-lock.json').split('"version": "3.221.0"').join('"version": "3.222.0"')),
-  modified('src/index.js',read('src/index.js'),read('src/index.js').replace('VERSION="V3.221"','VERSION="V3.222"').replace('UPDATE_CHANNEL_REV="runtime-3221"','UPDATE_CHANNEL_REV="runtime-3222"')),
-  modified('server-game/src/00-core-and-library.part',read('server-game/src/00-core-and-library.part'),read('server-game/src/00-core-and-library.part').replace("const VERSION='3.221'","const VERSION='3.222'")),
+  modified('src/index.js',workerSource(),workerSource().replace('VERSION="V3.221"','VERSION="V3.222"').replace('UPDATE_CHANNEL_REV="runtime-3221"','UPDATE_CHANNEL_REV="runtime-3222"')),
+  modified('server-game/src/00-core-and-library.part',gmSource('00-core-and-library'),gmSource('00-core-and-library').replace("const VERSION='3.221'","const VERSION='3.222'")),
   modified('server-game/current/app.js',read('server-game/current/app.js'),read('server-game/current/app.js').replace("const VERSION='3.221'","const VERSION='3.222'")),
   modified('server-game/current/GMWW.html',read('server-game/current/GMWW.html'),read('server-game/current/GMWW.html').replace('<title>GMWW V3.221</title>','<title>GMWW V3.222</title>')),
   modified('.github/scripts/prepare-update-channel.mjs',read('.github/scripts/prepare-update-channel.mjs'),read('.github/scripts/prepare-update-channel.mjs').replace('releaseNotes:[','releaseNotes:["V3.222: AUTO VÁN đúng số người, lưu khi xác nhận; rollback V3.221.",')),
@@ -820,7 +822,7 @@ test('PR645 V3.279 postmerge CI repair: exactly five CI-only files use focused r
     '.github/workflows/check-player-card-browsers.yml',
     '.github/workflows/deploy-production.yml',
     'tests/ci-browser-scope.test.mjs'
-  ].map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  ].map(path=>modified(path,'previous CI',readSourceAtLegacyPath(path)));
   // Recreate the historical PR645 signature without the later PR652 selector.
   expected[1].after=expected[1].after.replace("steps.scope.outputs.mode == 'pr652-postmerge-release'",'legacy PR645 checks only');
   assert.equal(classifyBrowserScope(expected),'pr645-postmerge-release');
@@ -847,7 +849,7 @@ test('PR652 online hotfix: exact bounded production diff selects focused Worker 
   'tests/ci-browser-scope.test.mjs':'M'
  };
  const changes=Object.entries(paths).map(([path,status])=>{
-  const after=readFileSync(new URL('../'+path,import.meta.url),'utf8');
+  const after=readSourceAtLegacyPath(path);
   return{path,status,before:status==='M'?after:null,after};
  });
  // PR652's narrow selector was valid for its immutable V3.280 snapshot only.
@@ -872,7 +874,7 @@ test('PR652 V3.280 postmerge CI repair: only five audited CI-only files can sele
     '.github/workflows/deploy-production.yml',
     'tests/ci-browser-scope.test.mjs'
   ];
-  const changes=files.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  const changes=files.map(path=>modified(path,'previous CI',readSourceAtLegacyPath(path)));
   assert.equal(classifyBrowserScope(changes),'pr652-postmerge-release');
   assert.equal(classifyBrowserScope(changes.slice(1)),'full','missing source selector fails closed');
   assert.equal(classifyBrowserScope([...changes,modified('src/index.js','old','gameplay mutation')]),'full','gameplay mutation cannot be CI-only');
@@ -890,7 +892,7 @@ test('PR652 V3.280 final selector ordering recovery: exact three CI-only files s
     '.github/workflows/deploy-production.yml',
     'tests/ci-browser-scope.test.mjs'
   ];
-  const verified=paths.map(path=>modified(path,'previous CI',readFileSync(path,'utf8')));
+  const verified=paths.map(path=>modified(path,'previous CI',readSourceAtLegacyPath(path)));
   if(JSON.parse(readFileSync('package.json','utf8')).version==='3.280.0')assert.equal(classifyBrowserScope(verified),'pr652-postmerge-release');
   else assert.notEqual(classifyBrowserScope(verified),'pr652-postmerge-release','V3.280 release scope cannot authorize a newer Runtime');
   assert.equal(classifyBrowserScope(verified.slice(1)),'full','missing selector fails closed');
@@ -906,8 +908,8 @@ test('PR652 V3.280 final selector ordering recovery: exact three CI-only files s
 });
 
 test('PR672 exact DEMO Online transport uses focused CI and rejects any extra gameplay edits',()=>{
-  const worker=readFileSync('src/index.js','utf8');
-  const setup=readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const worker=workerSource();
+  const setup=gmSource('30-village-and-setup');
   const app=readFileSync('server-game/current/app.js','utf8');
   const modeOld="const patch={demo:target==='demo',roomMode:target==='online'?'online':'offline'};";
   const modeNew="const patch={demo:target==='demo',roomMode:(target==='online'||target==='demo')?'online':'offline'};";
@@ -1153,7 +1155,7 @@ test('PR749 Chat glass guard selects focused Worker gate only for strict V3.291 
     ['server-game/current/GMWW.html',['<title>GMWW V3.291</title>','<title>GMWW V3.290</title>']]
   ]);
   const changes=paths.map(([path,status])=>{
-    const after=readFileSync(path,'utf8');
+    const after=readSourceAtLegacyPath(path);
     const pair=rewrites.get(path);
     const before=pair?after.replaceAll(pair[0],pair[1]):status==='M'?'prior content':null;
     return {path,status,before,after};
@@ -1218,7 +1220,7 @@ test('PR753 voice and clock V3.292 exact guarded scope keeps mandatory privacy a
   ['server-game/src/00-core-and-library.part',["const VERSION='3.292'","const VERSION='3.291'"]]
  ]);
  const changes=files.map(([path,status])=>{
-  const after=readFileSync(path,'utf8'),pair=versionPairs.get(path);
+  const after=readSourceAtLegacyPath(path),pair=versionPairs.get(path);
   let before=pair?after.replaceAll(pair[0],pair[1]):'Prior unrelated scope preserved';
   if(path==='src/index.js'){
    before=after.replace('VERSION="V3.292"','VERSION="V3.291"')
@@ -1269,7 +1271,7 @@ test('PR761 V3.293 exact Online action, realtime, privacy and Runtime scope fail
   ['src/index.js',['VERSION="V3.293"','VERSION="V3.292"']]
  ]);
  const changes=paths.map(([path,status])=>{
-  const after=readFileSync(path,'utf8'),markers=oldMarkers.get(path);
+  const after=readSourceAtLegacyPath(path),markers=oldMarkers.get(path);
   const before=status==='M'?(markers?after.replaceAll(...markers):'unchanged baseline source') :null;
   return {path,status,after,before};
  });
@@ -1313,7 +1315,7 @@ test('V3.293 postmerge CI release guard rejects any non-CI gameplay, native or v
  ];
  const changes=scope.map(([path,status])=>({path,status,
   before:status==='M'?'old reviewed CI source':null,
-  after:readFileSync(path,'utf8')
+  after:readSourceAtLegacyPath(path)
  }));
  assert.equal(classifyBrowserScope(changes),'online-v3293-postmerge-ci');
  for(const ix of [0,1,2,3])assert.equal(classifyBrowserScope(changes.filter((_,i)=>i!==ix)),'full');
@@ -1332,7 +1334,7 @@ test('V3.293 early-main CI gate strict source safeguard rejects unknown or nativ
   ['docs/releases/GMWW-V3.293-CI-EARLY-GATE-20261103.md','A']
  ];
  const changes=rows.map(([path,status])=>({
-  path,status,before:status==='M'?'reviewed CI':null,after:readFileSync(path,'utf8')
+  path,status,before:status==='M'?'reviewed CI':null,after:readSourceAtLegacyPath(path)
  }));
  assert.equal(classifyBrowserScope(changes),'online-v3293-postmerge-ci');
  assert.equal(classifyBrowserScope(changes.slice(0,2)),'full');
@@ -1344,7 +1346,7 @@ test('V3.293 early-main CI gate strict source safeguard rejects unknown or nativ
 
 test('PR767 immutable V3.294 live microphone+fast private Chat CI-LITE remains fail-closed',()=>{
  const paths=[[".github/scripts/ci-browser-scope.mjs","M"],[".github/workflows/check-player-web.yml","M"],["tests/ci-browser-scope.test.mjs","M"],["docs/releases/GMWW-RUNTIME-V3.294-LIVE-VOICE-FAST-20261103.md","A"],["tests/gmww-chat-live-meter-fast-send-v3294.test.mjs","A"],["package.json","M"],["package-lock.json","M"],["server-game/src/00-core-and-library.part","M"],["server-game/src/45-online-chat.part","M"],["server-game/current/GMWW.html","M"],["server-game/current/app.js","M"],["src/index.js","M"],["src/player-web-src/35-online-chat.part","M"],["src/gmww-members-live.js","M"]];
- const changes=paths.map(([path,status])=>({path,status,after:readFileSync(path,'utf8'),before:status==='A'?null:'prior production content'}));
+ const changes=paths.map(([path,status])=>({path,status,after:readSourceAtLegacyPath(path),before:status==='A'?null:'prior production content'}));
  // The new SHA-1 pin is the reviewed V3.294 Worker plus already-merged PR766 Auto GM scheduler.
  // The 14-file exact-diff contract remains fail-closed for unreviewed edits.
  assert.equal(classifyBrowserScope(changes),'full','PR767 immutable scope cannot claim a newer security Worker is the original blob');
@@ -1368,7 +1370,7 @@ test('V3.294 postmerge CI-only recovery preserves immutable Chat, Auto GM, Assas
   ['docs/releases/GMWW-V3.294-POSTMERGE-CI-20261103.md','A']
  ];
  const changes=paths.map(([path,status])=>({
-   path,status,after:readFileSync(path,'utf8'),
+   path,status,after:readSourceAtLegacyPath(path),
    before:status==='M'?'previous CI policy':null
  }));
  // The immutable postmerge V3.294 source pin must reject a later, separately
@@ -1399,7 +1401,7 @@ test('PR765 visual-only body orbit scope rejects unrelated files',()=>{
  const css=readFileSync('server-game/current/style.css','utf8');
  const previousCss=css.slice(0,css.indexOf('/* PR follow-up: ⭐'));
  const changes=paths.map(([path,status])=>({
-   path,status,after:readFileSync(path,'utf8'),
+   path,status,after:readSourceAtLegacyPath(path),
    before:path==='server-game/current/style.css'?previousCss:
       path==='src/player-web-src/35-online-chat.part'?"'#players .player>.gmww-online-orbit{":'reviewed original file'
  }));
@@ -1513,14 +1515,14 @@ test('V3.296 exact comet-only CI scope is reviewed and fails closed for extras',
  ];
  const added=['docs/releases/GMWW-V3.296-comet-turn-orbit-20261104.md','tests/gmww-comet-turn-orbit-v3296.test.mjs'];
  const rows=[...modifiedPaths.map(path=>{
-  const after=readFileSync(path,'utf8');
+  const after=readSourceAtLegacyPath(path);
   let before=after;
   if(path==='server-game/src/40-battle-and-timeline.part'||path==='src/player-web-src/35-online-chat.part')
     before=after.replace("kind==='actor'?'☄️':'🐦‍🔥'","kind==='actor'?'🫧':'🐦‍🔥'");
   if(path.startsWith('tests/'))before=after.split('☄️').join('🫧');
   if(path.endsWith('status-visuals.css'))before=after.replace('V3.296: ☄️','V3.295: 🫧');
   return{path,status:'M',before,after};
- }),...added.map(path=>({path,status:'A',before:null,after:readFileSync(path,'utf8')}))];
+ }),...added.map(path=>({path,status:'A',before:null,after:readSourceAtLegacyPath(path)}))];
  assert.equal(classifyBrowserScope(rows),JSON.parse(readFileSync('package.json','utf8')).version==='3.296.0'?'comet-orbit-v3296':'full','V3.296 source classifier must fail closed after Runtime is upgraded');
  assert.equal(classifyBrowserScope(rows.slice(1)),'full');
  assert.equal(classifyBrowserScope([...rows,rows[0]]),'full');
@@ -1591,13 +1593,13 @@ test('P0 V3.297 Auto GM audio release selects focused Worker safety only for rev
    // Build a synthetic V3.296 baseline without a network fetch or git history.
    let before='';
    if(path==='package.json'||path==='package-lock.json')
-     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replaceAll('3.297.0','3.296.0');
+     before=readSourceAtLegacyPath(path).replaceAll('3.297.0','3.296.0');
    else if(path==='server-game/src/00-core-and-library.part')
-     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replace("const VERSION='3.297';","const VERSION='3.296';");
+     before=readSourceAtLegacyPath(path).replace("const VERSION='3.297';","const VERSION='3.296';");
    else if(path==='server-game/current/GMWW.html')
-     before=readFileSync(new URL('../'+path,import.meta.url),'utf8').replace('GMWW V3.297','GMWW V3.296');
+     before=readSourceAtLegacyPath(path).replace('GMWW V3.297','GMWW V3.296');
    else if(path==='src/index.js')
-     before=readFileSync(new URL('../'+path,import.meta.url),'utf8')
+     before=readSourceAtLegacyPath(path)
        .replace('VERSION="V3.297"','VERSION="V3.296"')
        .replace('UPDATE_CHANNEL_REV="runtime-3297-auto-gm-audio-continuity"',
          'UPDATE_CHANNEL_REV="runtime-3275-gm-card-fit-outside-dismiss"');
@@ -1630,7 +1632,7 @@ test('V3298 exact icon-only scope preserves wolf orbit and refuses extra files',
   ['tests/gmww-genie-turn-orbit-v3298.test.mjs','A']
  ];
  const changes=expected.map(([path,status])=>{
-  const after=readFileSync(path,'utf8');
+  const after=readSourceAtLegacyPath(path);
   let before=status==='A'?null:after;
   if(before){
    if(['server-game/src/40-battle-and-timeline.part','server-game/current/app.js',
@@ -1679,7 +1681,7 @@ test('PR786 scoped voice cancellation stays fail-closed for unreviewed Worker/na
  const changes=files.map(([path,status])=>({
   path,status,
   before:status==='M'&&pinnedAvailable?execFileSync('git',['show',prior+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):null,
-  after:pinnedAvailable?execFileSync('git',['show',reviewed+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):readFileSync(path,'utf8')
+  after:pinnedAvailable?execFileSync('git',['show',reviewed+':'+path],{encoding:'utf8',maxBuffer:4*1024*1024}):readSourceAtLegacyPath(path)
  }));
  if(!pinnedAvailable){
   // Shallow runners must fail closed rather than inventing an old blob.

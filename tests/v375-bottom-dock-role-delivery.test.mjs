@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ import {selectVerifiedRuntimeV376Delta} from '../src/gmww-ota-delta.js';
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('GM delivery confirmation is inside existing bottom action and has no floating overlay',()=>{
   assert.match(html,/<button[^>]+id="playPhasePill"[^>]*>[\s\S]*?id="playPhaseTitle"[\s\S]*?id="playPhaseHint"/);

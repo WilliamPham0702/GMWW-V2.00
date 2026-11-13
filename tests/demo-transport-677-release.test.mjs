@@ -1,9 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(p,'utf8');
 test('PR677 DEMO Online Server remains authoritative and no live rooms are rewritten',()=>{
- const core=read('src/index.js'),gm=read('server-game/src/30-village-and-setup.part');
+ const core=workerSource(),gm=gmSource('30-village-and-setup');
  assert.ok(core.includes('roomMode=b?.demo===true?"online":normalizeRoomMode(b?.roomMode)'));
  assert.ok(core.includes('const roomMode=desiredDemo?"online":'));
  assert.ok(core.includes('ROOM_MODE_REQUIRES_EMPTY_RESET'));

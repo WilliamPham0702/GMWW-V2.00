@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +9,7 @@ const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 
 test('V3.37 keeps seven-stage timeline above a smaller four-icon GM dock',()=>{
  assert.match(html,/id="playSetupStrip"/);

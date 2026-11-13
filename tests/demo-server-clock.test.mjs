@@ -1,5 +1,6 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
-const source=fs.readFileSync('src/index.js','utf8'),fragment=source.slice(source.indexOf('  async demoClockContext(meta){'),source.indexOf('  async gmDemo(request,body){'));
+const source=workerSource(),fragment=source.slice(source.indexOf('  async demoClockContext(meta){'),source.indexOf('  async gmDemo(request,body){'));
 test('Worker scales configured night/discussion/nomination/vote clocks and preserves paused remainder',async()=>{
  let now=1000;const meta={demo:true,matchId:'m1',cycleKey:'night-1',cyclePhase:'night',cycleNight:1},cfg={timing:{villageDiscussionSec:60}},rows=new Map([['gameConfig',cfg]]);
  class FakeDate extends Date {static now(){return now;}}

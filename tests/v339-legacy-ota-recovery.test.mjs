@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash,webcrypto} from 'node:crypto';
@@ -37,7 +38,7 @@ test('Rescue fails closed for absent or invalid files',async()=>{
  assert.equal(await recoverLegacyRuntimeManifest({...cfg,assets:mock(null,{'GMWW.html':Buffer.from('<title>GMWW V3.38</title>')})}),null);
 });
 test('Worker uses rescue if either normal manifest channel is unreadable',()=>{
- const code=readFileSync('src/index.js','utf8');
+ const code=workerSource();
  assert.match(code,/recoverOlderInstalledRuntime=async\(\)=>onlyNewNotes\(await recoverLegacyRuntimeManifest/);
  assert.match(code,/if\(!res\.ok\)\{\s*if\(!currentNativeShell\)\{const rescue=await recoverOlderInstalledRuntime\(\)/);
  assert.match(code,/if\(validRuntime\(manifest\)&&await runtimeReady\(manifest\)\)return j\(\{ok:true,/);

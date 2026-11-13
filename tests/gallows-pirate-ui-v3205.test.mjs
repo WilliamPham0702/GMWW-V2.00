@@ -1,3 +1,5 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,7 +18,7 @@ test('Gallows iPhone: shared toolbar keeps space for both seconds and Server clo
 
 test('Player village shows ONLY one red pirate flag anchored at fire during nomination',()=>{
  const village=read('assets/village/village.mjs');
- const player=read('src/player-web-src/30-rooms-and-realtime.part');
+ const player=playerWebSource('30-rooms-and-realtime');
  assert.match(village,/flag\.id='gmwwPirateNominate'/);
  assert.match(village,/gmww-gallows-nominate-b\.png/);
   assert.match(village,/flag\.replaceChildren\(icon\)/);
@@ -35,9 +37,9 @@ test('Player village shows ONLY one red pirate flag anchored at fire during nomi
 });
 
 test('Double tap opens living nominees in separate cards, OK and reset above, Server validates',()=>{
- const player=read('src/player-web-src/30-rooms-and-realtime.part');
- const host=read('src/player-web-src/20-village-and-profile.part');
- const worker=read('src/index.js');
+ const player=playerWebSource('30-rooms-and-realtime');
+ const host=playerWebSource('20-village-and-profile');
+ const worker=workerSource();
  const grid=player.indexOf('id="gmwwGallowsGrid"');
  const ok=player.indexOf('id="gmwwGallowsNominate"');
  const reset=player.indexOf('id="gmwwGallowsReset"');
@@ -56,7 +58,7 @@ test('Double tap opens living nominees in separate cards, OK and reset above, Se
 
 test('GM dead visibility only changes local render; revives and Server roster remain intact',()=>{
  const html=read('server-game/current/GMWW.html');
- const gm=read('server-game/src/40-battle-and-timeline.part');
+ const gm=gmSource('40-battle-and-timeline');
  const css=read('server-game/current/style.css');
  assert.match(html,/id="battleShowDead"/);
  assert.match(gm,/dead:saved\.dead!==false/);

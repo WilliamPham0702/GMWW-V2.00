@@ -1,0 +1,446 @@
+function playAudioMuted(){try{return localStorage.getItem(PLAY_AUDIO_MUTED_KEY)==='1'}catch{return false}}
+
+// Battle audio must be tied to a real action or wake-up event, not just a
+// library Preview button. IndexedDB tracks user-supplied audio per category.
+const battleAudioReady=new Map(),battleAudioLoading=new Map();
+let battleActiveAudio=null,battleAudioLast={key:'',at:0,turn:''},battleAudioRequestId=0;
+function battleInvalidateAudioCache(kind,id){
+  const key=String(kind||'')+':'+String(id||''),url=battleAudioReady.get(key);
+  if(String(url||'').startsWith('blob:'))try{URL.revokeObjectURL(url)}catch{}
+  battleAudioReady.delete(key);battleAudioLoading.delete(key);
+}
+function battleFindAudioCandidates(kind,targetId,name){
+  const list=Array.isArray(state?.audio?.[kind])?state.audio[kind]:[];
+  // Audio IDs are authoritative. Never guess a clip by a shared label:
+  // "Hết giờ", "Xác nhận", "Cứu" and "Giết" are different events.
+  const original=String(targetId||'').trim();
+  const target=kind==='cards'&&original==='source-18'?'role_old_witch':original;
+  if(!target)return [];
+  const found=list.filter(a=>
+    String(a?.targetId||'')===target||
+    (String(a?.id||'')===target&&!a?.targetId)||
+    (kind==='cards'&&target==='role_old_witch'&&a?.sourceKey==='ROLE:source-18'));
+  const score=a=>Number(!!a?.url)+Number(!!(a?.fileName&&a?.verifiedBinary))+
+    2*Number(!!(a?.sourceKey&&(
+      (typeof window!=='undefined'&&window.GMWW_V1_AUDIO?.[a.sourceKey]?.base64)||
+      (typeof gmwwBundledLegacyAudio!=='undefined'&&gmwwBundledLegacyAudio?.[a.sourceKey]?.base64))));
+  return found.sort((a,b)=>score(b)-score(a));
+}
+function battleFindAudio(kind,targetId,name){
+  // Keep legacy callers/tests that extract only this function functional.
+  // The canonical production path uses exhaustive exact-target candidates.
+  if(typeof battleFindAudioCandidates==='function')
+    return battleFindAudioCandidates(kind,targetId,name)[0]||null;
+  const target=kind==='cards'&&String(targetId)==='source-18'?'role_old_witch':String(targetId||'');
+  return (state?.audio?.[kind]||[]).find(item=>String(item.targetId||'')===target||
+    (kind==='cards'&&target==='role_old_witch'&&item.sourceKey==='ROLE:source-18'))||null;
+}
+async function battleWarmAudio(kind,item){
+  if(!item)return null;
+  const key=kind+':'+String(item.id||'');
+  if(battleAudioReady.has(key))return battleAudioReady.get(key);
+  if(battleAudioLoading.has(key))return battleAudioLoading.get(key);
+  const promise=(async()=>{
+    const rec=await dbGet(audioBlobKey(kind,item.id)).catch(()=>null);
+    // Legacy role_old_witch has one canonical bundled ROLE:source-18 sound;
+    // never let a stale filename or a mismatched local audio ID silence it.
+    const fallback=kind==='cards'&&String(item.targetId||'')==='role_old_witch'?
+      bundledAudioBlob({sourceKey:'ROLE:source-18'}):null;
+    const blob=(rec?.blob instanceof Blob&&rec.blob.size>0?rec.blob:null)||bundledAudioBlob(item)||fallback;
+    const url=blob?URL.createObjectURL(blob):(typeof item.url==='string'&&/^(https?:|data:audio\/)/i.test(item.url)?item.url:'');
+    if(url)battleAudioReady.set(key,url);
+    return url||null
+  })();
+  battleAudioLoading.set(key,promise);
+  try{return await promise}finally{battleAudioLoading.delete(key)}
+}
+function battleSpeakCue(message,showError=false,onFinished=null){
+  const speech=globalThis.speechSynthesis,Voice=globalThis.SpeechSynthesisUtterance;
+  const phrase=String(message||'').trim();
+  if(!phrase||!speech||!Voice){if(showError)playFlashError('Chưa có file Audio hoặc giọng tiếng Việt cho '+phrase+'.');onFinished?.();return false}
+  try{
+    const voices=typeof speech.getVoices==='function'?speech.getVoices():[];
+    const vi=voices.find(v=>/^vi(?:-|$)/i.test(String(v.lang||'')));
+    // iOS sometimes returns an empty voices list until voices load. If the
+    // returned list has ONLY another language, refuse gibberish pronunciation.
+    if(voices.length&&!vi){
+      if(showError)playFlashError('iPhone chưa có giọng tiếng Việt. Hãy nạp file Audio đúng hoặc cài giọng tiếng Việt.');
+      onFinished?.();return false;
+    }
+    speech.cancel();const cue=new Voice(phrase);cue.lang='vi-VN';
+    if(vi)cue.voice=vi;
+    cue.rate=.95;cue.onend=()=>onFinished?.();cue.onerror=()=>onFinished?.();
+    speech.speak(cue);return true;
+  }catch{if(showError)playFlashError('Không phát được Audio. Kiểm tra âm lượng iPhone và Thư Viện → Âm Thanh.');onFinished?.();return false}
+}
+let battleUnlockedAudioContext=null;
+function battleUnlockAudioFromGesture(){
+  if(playAudioMuted())return;
+  try{
+    const Ctx=globalThis.AudioContext||globalThis.webkitAudioContext;
+    if(!Ctx)return;
+    if(!battleUnlockedAudioContext)battleUnlockedAudioContext=new Ctx();
+    const context=battleUnlockedAudioContext;
+    if(context.state!=='running')void context.resume().catch(()=>{});
+    const silent=context.createBufferSource();
+    silent.buffer=context.createBuffer(1,1,context.sampleRate);
+    silent.connect(context.destination);silent.start();
+  }catch(_){}
+}
+// Reuse the audio context unlocked by the Auto GM gesture. iOS may refuse
+// a newly constructed HTMLAudioElement on later, unattended role transitions.
+const battleDecodedAudioCache=new Map();
+async function battlePlayWebAudioFallback(src,onFinished=null,requestId=battleAudioRequestId,excerpt=null){
+  const ctx=battleUnlockedAudioContext;
+  if(!ctx)return false;
+  if(ctx.state!=='running'){
+    try{void ctx.resume().catch(()=>{})}catch(_){}
+    return false; // Never wait indefinitely on a suspended iOS AudioContext.
+  }
+  try{
+    let decoded=battleDecodedAudioCache.get(src);
+    if(!decoded){
+      decoded=(async()=>{
+        const response=await fetch(src);
+        if(!response.ok)throw Error('Audio fetch '+response.status);
+        return ctx.decodeAudioData(await response.arrayBuffer());
+      })();
+      battleDecodedAudioCache.set(src,decoded);
+      // Bounded LRU-ish cache: reuse decoded clips without keeping every Ván file.
+      if(battleDecodedAudioCache.size>12)
+        battleDecodedAudioCache.delete(battleDecodedAudioCache.keys().next().value);
+    }
+    let buffer;
+    try{buffer=await decoded}catch(err){battleDecodedAudioCache.delete(src);return false}
+    if(requestId!==battleAudioRequestId){onFinished?.();return true}
+    if(ctx.state!=='running')return false;
+    const source=ctx.createBufferSource();source.buffer=buffer;
+    const speed=typeof demoRunner!=='undefined'&&demoRunner.running&&playSceneRuntime.room?.demo===true?
+      Math.max(1,Math.min(2,Number(demoRunner.speed)||1)):1;
+    source.playbackRate.value=excerpt?1:speed;
+    globalThis.gmwwBattleBufferSource=source;
+    source.onended=()=>{
+      if(globalThis.gmwwBattleBufferSource!==source)return;
+      globalThis.gmwwBattleBufferSource=null;onFinished?.();
+    };
+    source.connect(ctx.destination);
+    if(excerpt){
+      const start=Math.max(0,Math.min(buffer.duration,Number(excerpt.start)||0));
+      const end=Math.min(buffer.duration,Number(excerpt.end)||buffer.duration);
+      source.start(0,start,Math.max(.02,end-start));
+    }else source.start();
+    return true;
+  }catch(err){return false}
+}
+async function battlePlayConfiguredAudio(kind,targetId,name,showError=false,onFinished=null,maxSeconds=0){
+  if(playAudioMuted()){if(showError)playFlashError('Audio đang tắt. Hãy bật Audio trên Sói GM.');onFinished?.();return false}
+  let row=battleFindAudio(kind,targetId,name);
+  const key=kind+':'+String(targetId||name),now=Date.now();
+  if(!showError&&battleAudioLast.key===key&&battleAudioLast.turn===String(battleState?.key||'')&&now-battleAudioLast.at<350){onFinished?.();return false}
+  battleAudioLast={key,at:now,turn:String(battleState?.key||'')};
+  const requestId=++battleAudioRequestId;
+  if(battleActiveAudio){try{battleActiveAudio.onended=null;battleActiveAudio.onerror=null;battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}battleActiveAudio=null}
+  if(globalThis.gmwwBattleBufferSource){try{globalThis.gmwwBattleBufferSource.onended=null;globalThis.gmwwBattleBufferSource.stop()}catch{}globalThis.gmwwBattleBufferSource=null}
+  globalThis.speechSynthesis?.cancel();
+  // IndexedDB bytes are indexed by row.id, not row.targetId. Iterate all
+  // exact-ID candidate rows so a stale "verifiedBinary" placeholder cannot
+  // mask a real GM upload under an older alternate audio ID.
+  const candidates=typeof battleFindAudioCandidates==='function'
+    ?battleFindAudioCandidates(kind,targetId,name):[row].filter(Boolean);
+  // Name-only revelation must prefer the SAME audio row on which GM saved
+  // the complete Tên crop. Stale duplicate IDs often have an older/short cut.
+  if(Number(maxSeconds)>0)candidates.sort((a,b)=>
+    Number(Number(b.roleNameEnd)>Number(b.roleNameStart||0))-
+    Number(Number(a.roleNameEnd)>Number(a.roleNameStart||0)));
+  let src=null;
+  for(const candidate of candidates){
+    const found=battleAudioReady.get(kind+':'+String(candidate.id||''))||
+      await battleWarmAudio(kind,candidate);
+    if(requestId!==battleAudioRequestId){onFinished?.();return false}
+    if(found){row=candidate;src=found;break}
+  }
+  // The caller label is not a routing key. Never play an unrelated audio row
+  // based solely on similar names. Missing media falls back to the EXACT cue.
+  const safeSpeech=(()=>{
+    if(kind==='cards'){
+      if(targetId==='audio_group_wolves')return 'Bầy sói ơi dậy đi';
+      const canonical=targetId==='source-18'?'role_old_witch':targetId;
+      const card=(state.cards||[]).find(c=>String(c.id)===String(canonical));
+      if(Number(maxSeconds)>0)return String(name||card?.name||'').trim();
+      return card?card.name+' ơi dậy đi':String(name||'');
+    }
+    if(kind==='actions'){
+      const action=[...(state.actions?.role||[]),...(state.actions?.artifacts||[])].find(a=>a.id===targetId);
+      return String(action?.name||name||'').trim();
+    }
+    if(kind==='artifacts'){
+      const art=(state.artifacts||[]).find(a=>a.id===targetId);
+      return String(art?.name||name||'').trim();
+    }
+    if(kind!=='system')return '';
+    const systemScripts={
+      audio_system_confirm:'Xác nhận',
+      audio_system_countdown:'Còn ba mươi giây',
+      audio_system_time_up:'Hết giờ',
+      audio_system_day_wakeup:'Làng ơi dậy đi',
+      audio_system_gallows_day_long:'Ngày dài rồi',
+      audio_system_gallows_open_nomination:'Bắt đầu đề cử',
+      audio_system_gallows_open_vote:'Bắt đầu bỏ phiếu',
+      audio_system_gallows_nomination_result:'Công bố kết quả đề cử',
+      audio_system_gallows_vote_result:'Công bố kết quả bỏ phiếu',
+      audio_system_gallows_result_saved:'Người bị treo được cứu sống',
+      audio_system_gallows_result_dead:'Người bị treo đã chết',
+      audio_system_morning_expelled:'Đêm qua có người bị đuổi khỏi làng',
+      audio_system_morning_marked:'Người chơi bị Sát Thủ chọn',
+      audio_system_assassin_correct:'Sát Thủ đã chọn đúng, người chơi được sống',
+      audio_system_assassin_wrong:'Sát Thủ đã chọn sai, người chơi đã chết',
+      audio_system_morning_maiden_wolf:'Thiếu Nữ chết vì thăm nhà Sói',
+      audio_system_morning_maiden_follow:'Thiếu Nữ chết theo người được thăm',
+      audio_system_morning_frozen:'Người chơi bị đóng băng',
+      audio_system_morning_silenced:'Người chơi bị câm',
+      audio_system_morning_infected:'Người chơi bị nhiễm bệnh',
+      audio_system_morning_protected:'Người chơi được bảo vệ',
+      audio_system_morning_saved:'Người chơi đã được cứu',
+      audio_system_morning_healed:'Người chơi đã được hồi phục',
+      audio_system_morning_revived:'Người chơi đã hồi sinh',
+      audio_system_morning_blessed:'Người chơi được chúc phúc',
+      audio_system_morning_shielded:'Người chơi đã nhận khiên',
+      audio_system_morning_poisoned:'Người chơi bị đầu độc',
+      audio_system_morning_wolf_bite:'Người chơi bị Sói cắn',
+      audio_system_morning_cursed:'Người chơi bị nguyền rủa',
+      audio_system_morning_deaths_intro:'Đêm qua làng chúng ta có',
+      audio_system_morning_dead_noun:'người chết',
+      audio_system_early_artifacts:'Artifact đầu ván',
+      audio_system_seer_wolf:'Người bạn soi là Sói',
+      audio_system_seer_not_wolf:'Người bạn soi không phải là Sói',
+      audio_system_aura_read:'Người bạn soi là',
+      audio_system_destroyer_role:'Kết quả soi Vai Trò',
+      audio_system_fox_wolf:'Hồ Ly phát hiện có Sói',
+      audio_system_fox_no_wolf:'Hồ Ly không phát hiện Sói',
+      audio_system_bear_wolf:'Thần Gấu phát hiện có Sói',
+      audio_system_bear_no_wolf:'Thần Gấu không phát hiện Sói',
+      audio_system_piper_wolf:'Kẻ Thổi Sáo phát hiện có Sói',
+      audio_system_piper_no_wolf:'Kẻ Thổi Sáo không phát hiện Sói',
+      audio_system_find_seer_yes:'Có Tiên Tri',
+      audio_system_find_seer_no:'Không có Tiên Tri',
+      audio_system_compare_same:'Hai người cùng phe',
+      audio_system_compare_different:'Hai người khác phe'
+    };
+    const number=String(targetId||'').match(/^audio_system_morning_number_(\d+)$/);
+    if(number)return String(Math.max(0,Math.min(30,Number(number[1]))));
+    // Approved event ID is mandatory; a free-form label is never an audio route.
+    return Object.prototype.hasOwnProperty.call(systemScripts,targetId)?
+      String(name||'').trim()||systemScripts[targetId]:'';
+  })();
+  if(!src){if(!row&&showError)playFlashError('Chưa gắn file Audio: '+targetId);
+    return safeSpeech?battleSpeakCue(safeSpeech,showError,onFinished):(onFinished?.(),false)}
+  // Exact name clip: prefer decoded WebAudio with explicit offset and duration.
+  // WKWebView HTMLAudioElement timeupdate is not guaranteed to fire while hidden.
+  const nameStart=Math.max(0,Number(row.roleNameStart)||0);
+  const nameEnd=Number(row.roleNameEnd);
+  const hasExactCut=Number.isFinite(nameEnd)&&nameEnd>nameStart;
+  // Never read an arbitrary first five seconds as a ROLE NAME. The V1 wake-up
+  // clip may start with music, silence or "ơi dậy đi".
+  if(Number(maxSeconds)>0&&!hasExactCut){
+    return battleSpeakCue(String(name||'').trim(),showError,onFinished);
+  }
+  const requestedCut=Number(maxSeconds)>0?{start:nameStart,end:nameEnd}:null;
+  // Auto GM is unattended after the start gesture: use the already unlocked
+  // WebAudio transport for ALL cue clips, not only the wake-up sound.
+  if(typeof battleUnlockedAudioContext!=='undefined'&&battleUnlockedAudioContext){
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return true;
+  }
+  if(battleActiveAudio){try{battleActiveAudio.pause();battleActiveAudio.currentTime=0}catch{}}
+  const player=new Audio(src);player.muted=playAudioMuted();player.preload='auto';
+  // Fast DEMO must not retain a long, real-time clip after the Server has
+  // already advanced. Keep cropped role names intelligible at normal speed.
+  const demoRate=typeof demoRunner!=='undefined'&&demoRunner.running&&playSceneRuntime.room?.demo===true?
+    Math.max(1,Math.min(2,Number(demoRunner.speed)||1)):1;
+  player.playbackRate=Number(maxSeconds)>0?1:demoRate;
+  // WKWebView can reject media that has not yet left the pending state.
+  // The user-unlocked WebAudio channel is the fallback, then Vietnamese speech.
+  let fallbackStarted=false;
+  const recover=async()=>{
+    if(fallbackStarted||requestId!==battleAudioRequestId)return;
+    fallbackStarted=true;
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId,requestedCut))return;
+    battleSpeakCue(safeSpeech,showError||String(targetId)==='role_old_witch',onFinished);
+  };
+  let cutTimer=null,finished=false;
+  const finish=()=>{if(finished)return;finished=true;if(cutTimer!==null)clearTimeout(cutTimer);
+    if(battleActiveAudio===player)battleActiveAudio=null;onFinished?.()};
+  battleActiveAudio=player;player.onended=finish;
+  player.onerror=()=>{if(finished||requestId!==battleAudioRequestId)return;
+    finished=true;if(cutTimer!==null)clearTimeout(cutTimer);
+    if(battleActiveAudio===player)battleActiveAudio=null;
+    void recover()};
+  // A missing 'playing' event on iPhone is not successful playback.
+  // Avoid leaving a silent turn indefinitely when play() resolved on 'canplay'.
+  let began=false;
+  player.addEventListener('playing',()=>{began=true},{once:true});
+  const startupTimer=setTimeout(()=>{
+    if(!began&&!finished&&requestId===battleAudioRequestId){
+      try{player.pause()}catch(_){}
+      if(battleActiveAudio===player)battleActiveAudio=null;
+      finished=true;void recover();
+    }
+  },2400);
+  player.addEventListener('playing',()=>clearTimeout(startupTimer),{once:true});
+  player.addEventListener('ended',()=>clearTimeout(startupTimer),{once:true});
+  player.addEventListener('error',()=>clearTimeout(startupTimer),{once:true});
+  // Named V1.11 segment: the editor stores its start/end on the EXISTING
+  // role wake-up audio, without duplicating binary data or changing its source.
+  const excerpt=requestedCut;
+  if(excerpt){
+    const stop=()=>{if(finished||battleActiveAudio!==player)return;
+      try{player.pause()}catch(_){}finish()};
+    const seek=()=>{const end=Math.min(Number.isFinite(player.duration)?player.duration:excerpt.end,excerpt.end);
+      if(excerpt.start>=end){stop();return}
+      try{if(Math.abs(player.currentTime-excerpt.start)>.07)player.currentTime=excerpt.start}catch(_){}
+    };
+    player.onloadedmetadata=seek;
+    player.addEventListener('playing',()=>{
+      if(cutTimer!==null)clearTimeout(cutTimer);
+      // A seek/buffer delay must not truncate the final syllable of a name.
+      // Playback timeupdate is authoritative; timer is only a generous failsafe.
+      cutTimer=setTimeout(stop,Math.max(500,Math.ceil((excerpt.end-excerpt.start)*1000)+1800));
+    },{once:true});
+    player.ontimeupdate=()=>{if(player.currentTime>=excerpt.end-.02)stop()};
+    if(player.readyState>=1)seek();
+  }
+  try{await player.play();return true}
+  catch(err){
+    clearTimeout(startupTimer);
+    if(fallbackStarted)return true; // onerror/watchdog already owns recovery
+    fallbackStarted=true;finished=true;
+    if(battleActiveAudio===player)battleActiveAudio=null;
+    if(await battlePlayWebAudioFallback(src,onFinished,requestId,excerpt))return true;
+    return battleSpeakCue(safeSpeech,showError||['role_old_witch','source-18'].includes(String(targetId)),onFinished)
+  }
+}
+function battleTurnAudioCue(turn){
+  if(!turn)return null;
+  const roles=turn.kind==='role-group'?(turn.roles||[]):[turn],
+    wolfPack=turn.kind==='wolf-introduction'||turn.kind==='wolf-pack-bite'||roles.some(r=>['role_wolf','role_alpha_wolf'].includes(String(r?.roleId||'')));
+  if(wolfPack)return {kind:'cards',targetId:'audio_group_wolves',name:'Bầy sói ơi dậy đi'};
+  if(turn.kind==='village-wakeup')return {kind:'system',targetId:'audio_system_day_wakeup',name:'Làng ơi dậy đi'};
+  if(turn.kind==='early-artifact-window')return {kind:'system',targetId:'audio_system_early_artifacts',name:'Artifact đầu ván'};
+  const role=roles[0]||turn;
+  if(['artifact-main','early-artifact'].includes(turn.kind))
+    return {kind:'artifacts',targetId:turn.artifactId,name:String(turn.artifactName||turn.label||'Artifact')};
+  return {kind:'cards',targetId:role.roleId||'',name:String(role.label||turn.label||'Lượt vai trò')};
+}
+function battleAudioCuesForTurn(turn){
+  if(!turn)return [];
+  if(turn.kind!=='role-group')return [battleTurnAudioCue(turn)].filter(Boolean);
+  const roles=Array.isArray(turn.roles)?turn.roles:[],cues=[],seen=new Set();
+  const wolves=roles.some(r=>['role_wolf','role_alpha_wolf'].includes(String(r?.roleId||'')));
+  if(wolves){cues.push({kind:'cards',targetId:'audio_group_wolves',name:'Bầy sói ơi dậy đi'});seen.add('audio_group_wolves')}
+  for(const role of roles){
+    const id=String(role?.roleId||'');
+    if(!id||seen.has(id)||(wolves&&['role_wolf','role_alpha_wolf'].includes(id)))continue;
+    cues.push({kind:'cards',targetId:id,name:String(role?.label||role?.roleName||id)});
+    seen.add(id);
+  }
+  return cues.length?cues:[battleTurnAudioCue(turn)].filter(Boolean);
+}
+function battlePlayTurnAudioSequence(cues,expectedKey,showError=false,automatic=false){
+  let index=0;
+  const attempts=new Map();
+  const current=()=>battleState.key===expectedKey&&playSceneState.step==='battle'&&playSceneState.phase==='night';
+  const clearPending=()=>{
+    if(automatic&&battleState.audioPendingTurnKey===expectedKey)
+      battleState.audioPendingTurnKey='';
+  };
+  const next=()=>{
+    if(!current()){clearPending();return}
+    const cue=cues[index];
+    if(!cue){clearPending();return}
+    let finished=false,started=null;
+    const complete=()=>{
+      finished=true;
+      // A synchronous failed start may call onFinished; do not advance on silence.
+      if(started===true){index++;next()}
+    };
+    const failed=()=>{
+      if(!current()){clearPending();return}
+      const count=(attempts.get(index)||0)+1;attempts.set(index,count);
+      if(automatic&&!playAudioMuted()&&count<=3){
+        setTimeout(()=>{if(current())next();else clearPending()},850);
+      }else{
+        clearPending();
+        // Avoid an endless heartbeat loop after explicit iOS autoplay denial.
+        if(automatic)battleState.failedAudioTurnKey=expectedKey;
+        if(!playAudioMuted())playFlashError('Không phát được audio '+cue.name+'. Chạm 🔊 để thử lại hoặc kiểm tra nguồn âm thanh.');
+      }
+    };
+    void Promise.resolve(battlePlayConfiguredAudio(cue.kind,cue.targetId,cue.name,showError,complete)).then(ok=>{
+      if(!current()){clearPending();return}
+      started=ok===true;
+      // Mark the turn only after playback was scheduled (never on failed play()).
+      if(index===0&&automatic&&started){battleState.failedAudioTurnKey='';battleState.lastAudioTurnKey=expectedKey;}
+      if(!started){failed();return}
+      if(finished){index++;next()}
+    }).catch(error=>{
+      console.warn('GMWW audio cue failed',cue.targetId,error);
+      failed();
+    });
+  };
+  next();
+}
+function battleAudioForTurn(turn,auto=false){
+  const cues=battleAudioCuesForTurn(turn),cue=cues[0];if(!cue)return;
+  const {kind,targetId,name}=cue;
+  const audio=battleFindAudio(kind,targetId,name);
+  // Preload all unique role clips, not just the first role in a grouped turn.
+  const configured=battleRules()?.actionsForTurn(turn,Math.max(1,Number(playSceneState.night)||1),
+    state,playSceneRuntime.artifactCycle?.accepted)||[];
+  for(const action of configured){
+    const entry=battleFindAudio('actions',action.actionId,action.name);
+    if(entry)void battleWarmAudio('actions',entry);
+  }
+  for(const clip of cues){
+    const row=battleFindAudio(clip.kind,clip.targetId,clip.name);
+    if(row)void battleWarmAudio(clip.kind,row);
+  }
+  const rt=playSceneRuntime.nightRuntime,queue=rt?.queue||[],cursor=Number(rt?.cursor);
+  if(Number.isInteger(cursor)&&queue[cursor]?.id===turn.id&&queue[cursor+1]){
+    for(const nextCue of battleAudioCuesForTurn(queue[cursor+1])){
+      const nextAudio=battleFindAudio(nextCue.kind,nextCue.targetId,nextCue.name);
+      if(nextAudio)void battleWarmAudio(nextCue.kind,nextAudio);
+    }
+  }
+  if(auto){
+    const expectedKey=battleState.key;
+    if(battleState.audioPendingTurnKey===expectedKey)return;
+    if(battleState.key===expectedKey&&playSceneState.step==='battle'&&playSceneState.phase==='night'){
+      battleState.audioPendingTurnKey=expectedKey;
+      battlePlayTurnAudioSequence(cues,expectedKey,false,true);
+    }
+  }
+}
+function battleReplayAudio(){
+  const selected=battleAction();
+  if(selected){void battlePlayConfiguredAudio('actions',selected.actionId,selected.name,true);return}
+  battlePlayTurnAudioSequence(battleAudioCuesForTurn(battleTurn()),battleState.key,true);
+}
+
+function applyPlayAudioState(){
+  const muted=playAudioMuted(),btn=document.getElementById('playAudioTop'),glyph=btn?.querySelector('.gm-top-icon-audio-v293');
+  document.querySelectorAll('audio').forEach(a=>{a.muted=muted});
+  if(btn){btn.classList.toggle('is-muted',muted);btn.setAttribute('aria-pressed',String(!muted));btn.setAttribute('aria-label',muted?'Âm thanh đang tắt':'Âm thanh đang bật');btn.title=muted?'Audio: Tắt':'Audio: Bật'}
+  if(glyph)glyph.textContent=muted?'🔇':'🔊';
+}
+function togglePlayAudio(){
+  const muted=!playAudioMuted();try{localStorage.setItem(PLAY_AUDIO_MUTED_KEY,muted?'1':'0')}catch{}
+  if(!muted)battleUnlockAudioFromGesture();
+  applyPlayAudioState();
+  // Battle clips are created from local blobs and are not document <audio> tags.
+  if(battleActiveAudio)battleActiveAudio.muted=muted;
+  // Turning sound back on during a role should play that CURRENT role, not
+  // wait for the next timeline step (or replay an obsolete one).
+  if(!muted&&playSceneState.step==='battle'&&playSceneState.phase==='night'){
+    battleState.lastAudioTurnKey='';battleState.audioPendingTurnKey='';battleState.failedAudioTurnKey='';
+    battleAudioForTurn(battleTurn(),true);
+  }
+}

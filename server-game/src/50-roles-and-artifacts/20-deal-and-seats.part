@@ -1,0 +1,129 @@
+async function playDealRoles(){
+  if(playDeliveryProgress().success){setPlayStep('battle');return}
+  const review=playAssignmentDraftStatus();if(!review.ok){playFlashError(review.message);setPlayStep('roles');return}
+  const rows=Array.isArray(playSceneState.assignmentsPreview)?playSceneState.assignmentsPreview:[];
+  const uniqueIds=[...new Set(rows.map(r=>String(r.roleId)))],roles=uniqueIds.map(id=>(state.cards||[]).find(r=>String(r.id)===id)).filter(Boolean),artifactIds=[...new Set(rows.map(r=>String(r.artifactId||'')).filter(Boolean))],artifacts=artifactIds.map(id=>(state.artifacts||[]).find(a=>String(a.id)===id)).filter(Boolean);playSetBusy(true);
+  try{
+    const expected=[...playTemplateAssetIds({roles:roles.map(r=>({roleId:r.id}))}),...artifacts.map(a=>'artifact:'+String(a.id))];
+    const manifest=await playRoomApi('/artwork-manifest',{method:'GET'});
+    if(!expected.every(id=>manifest?.assetIds?.includes(id)))throw new Error('Artwork chưa sẵn sàng. Vui lòng chọn lại Ván Mẫu để nạp đầy đủ trước khi Phát Vai.');
+    const packages=roles.map(role=>({roleId:role.id,roleName:role.name,roleCard:playRoleCardPayload(role)}));
+    const pkgById=new Map(packages.map(p=>[String(p.roleId),p]));
+    const artifactById=new Map(artifacts.map(a=>[String(a.id),a]));
+    const assignments=rows.map(r=>{
+      const p=pkgById.get(String(r.roleId))||{},role=(state.cards||[]).find(x=>String(x.id)===String(r.roleId)),artifact=artifactById.get(String(r.artifactId||''))||null;
+      // The server already holds the full Artifact package; send a reference only.
+      const artifactPayload=artifact?{artifactId:String(artifact.id),artworkAssetId:'artifact:'+artifact.id}:null;
+      return{loginId:r.loginId,roleId:r.roleId,roleName:r.roleName,faction:r.faction,description:r.description,artworkAssetId:'role:'+r.roleId,roleCard:p.roleCard||playRoleCardPayload(role||r),...(artifactPayload?{artifact:artifactPayload}:{})};
+    });
+    const data=await playRoomApi('/assignments',{method:'POST',body:JSON.stringify({assignments,multiAssign:false,matchId:playSceneState.matchId||('match-'+Date.now().toString(36)),matchRevision:Number(playSceneRuntime.room?.matchRevision||1),deliveryVersion:Number(playSceneRuntime.room?.deliveryVersion||0)+1})});
+    if(data?.ok!==true||!data?.room?.roleDeliveredAt||!Array.isArray(data.assignments)||data.assignments.length!==assignments.length||data.assignments.some(a=>!a?.deliveredAt))
+      throw new Error('Server chưa xác nhận phát đủ Vai Trò. Vui lòng kiểm tra kết nối.');
+    playSceneRuntime.assignments=data.assignments;playSceneRuntime.room=data.room;playSceneState.step='deal';
+    savePlayScene();await playSyncRoom(true);renderPlayScene();
+  }catch(err){playFlashError(err.message)}
+  finally{playSetBusy(false)}
+}
+
+function selectPlayWinner(faction){
+  const value=String(faction||'');playSceneRuntime.selectedWinnerFaction=value;
+  document.querySelectorAll('[data-play-winner]').forEach(b=>b.classList.toggle('selected',b.dataset.playWinner===value));
+  const confirm=document.getElementById('playEndConfirm');if(confirm)confirm.disabled=!value||playSceneRuntime.busy;
+}
+function selectedPlayPlayer(){return playLiveMembers().find(p=>String(p?.loginId||'')===String(playSceneState.activePlayerId||''))||null}
+let playSeatAssignTarget=0,playSeatCandidateMode='online',playSeatManualOpen=false;
+function playSeatCandidateRows(mode=playSeatCandidateMode){
+  const seated=new Set(playLiveMembers().filter(p=>Number(p?.seatId||0)>0).map(p=>String(p.loginId||'')));
+  return (memberAdminState.members||[]).filter(m=>{
+    const id=String(m?.loginId||'');if(!id||seated.has(id))return false;
+    if(mode==='offline')return m?.online!==true;
+    if(m?.online!==true)return false;
+    const other=String(m?.currentRoomCode||'');return !other||other===String(playSceneState.roomCode||'')
+  })
+}
+async function ensureSeatCandidateInRoom(loginId){
+  loginId=String(loginId||'');let member=playLiveMembers().find(p=>String(p?.loginId||'')===loginId);if(member)return member;
+  const source=memberAdminState.members||[],ids=[...new Set([...playLiveMembers().map(p=>String(p.loginId||'')),loginId])],existing=new Map(playLiveMembers().map(p=>[String(p.loginId),p]));
+  const chosen=source.filter(m=>ids.includes(String(m.loginId))).map(m=>({loginId:m.loginId,displayName:m.displayName,avatarId:m.avatarId,gameCharacterId:m.gameCharacterId||existing.get(String(m.loginId))?.gameCharacterId||null,seatId:existing.get(String(m.loginId))?.seatId||null}));
+  const data=await playRoomApi('/participants',{method:'POST',body:JSON.stringify({members:chosen,replace:true})});
+  playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;playSceneState.selectedMemberIds=ids;savePlayScene();
+  return playLiveMembers().find(p=>String(p?.loginId||'')===loginId)||null
+}
+async function assignSeatCandidate(loginId){
+  if(!playSeatAssignTarget||playSceneRuntime.busy)return;playSetBusy(true);
+  try{
+    const member=await ensureSeatCandidateInRoom(loginId);if(!member)throw new Error('Không thêm được Thành Viên vào Phòng.');
+    const data=await playRoomApi('/seat',{method:'POST',body:JSON.stringify({participantId:member.participantId||('member:'+member.loginId),seatId:playSeatAssignTarget})});
+    playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;playSceneState.activePlayerId=String(member.loginId||'');savePlayScene();closePlaySeatSheet();renderPlayScene()
+  }catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
+}
+async function openPlaySeatAssignSheet(seatId){
+  playSeatManualOpen=false;playSeatAssignTarget=Math.max(1,Number(seatId)||0);playSeatCandidateMode='online';
+  try{if(!memberAdminState.loaded)await loadMembers(false)}catch{}
+  renderPlaySeatSheet();document.getElementById('playSeatSheet')?.classList.remove('hidden')
+}
+function renderPlaySeatSheet(){
+  const grid=document.getElementById('playSeatGrid'),label=document.getElementById('playSeatPlayerLabel'),summary=document.getElementById('playSeatSummary'),selected=selectedPlayPlayer(),stats=playSeatStats(),tabs=document.getElementById('playSeatMemberTabs'),manual=document.getElementById('playSeatManualMembers'),sheet=document.getElementById('playSeatSheet');if(!grid)return;
+  sheet?.classList.toggle('is-manual',playSeatManualOpen&&!playSeatAssignTarget);
+  grid.innerHTML='';
+  if(manual){manual.innerHTML='';if(playSeatManualOpen&&!playSeatAssignTarget){
+    for(const p of playLiveMembers()){
+      const lid=String(p?.loginId||''),b=document.createElement('button');b.type='button';b.className='play-seat-manual-member'+(selected&&String(selected.loginId)===lid?' is-selected':'');
+      b.innerHTML='<b>'+playEsc(p.displayName||lid)+'</b><small>'+(Number(p.seatId||0)?'Vị trí '+Number(p.seatId):'CHƯA XẾP')+'</small>';
+      b.onclick=()=>{playSceneState.activePlayerId=lid;savePlayScene();renderPlaySeatSheet();renderPlayPlayers()};manual.appendChild(b)
+    }
+    if(!manual.children.length)manual.innerHTML='<div class="member-empty">Chưa có người chơi. Hãy GỌI NGƯỜI trước.</div>';
+  }}
+  if(playSeatAssignTarget){
+    if(label)label.textContent='Vị trí '+playSeatAssignTarget+' • Chọn Thành Viên';
+    const rows=playSeatCandidateRows();if(summary)summary.textContent=(playSeatCandidateMode==='online'?'Đang Online':'Tài khoản Offline')+' • '+rows.length+' có thể chọn';
+    tabs?.classList.remove('hidden');tabs?.querySelectorAll('[data-play-seat-member-mode]').forEach(b=>b.classList.toggle('active',b.dataset.playSeatMemberMode===playSeatCandidateMode));
+    for(const m of rows){
+      const b=document.createElement('button'),initial=(String(m.displayName||m.loginId||'?').trim().charAt(0)||'?').toUpperCase();b.type='button';b.className='play-seat-member-choice';
+      b.innerHTML='<img alt=""><div><b>'+playEsc(m.displayName||m.loginId)+'</b><small>'+playEsc(m.loginId)+' • '+(m.online?'ONLINE':'OFFLINE')+'</small></div><span>›</span>';
+      const img=b.querySelector('img'),src=playCharacterUrl(m.gameCharacterId);img.src=src||memberAvatarUrl(m.gameCharacterId||m.avatarId);img.onerror=()=>{const s=document.createElement('i');s.textContent=initial;img.replaceWith(s)};
+      b.onclick=()=>assignSeatCandidate(m.loginId);grid.appendChild(b)
+    }
+    if(!rows.length)grid.innerHTML='<div class="member-empty">Không có Thành Viên phù hợp.</div>';
+    const release=document.getElementById('playSeatRelease');if(release)release.classList.add('hidden');return
+  }
+  tabs?.classList.add('hidden');if(label)label.textContent=selected?(selected.displayName+' • '+(selected.seatId?'Vị trí '+selected.seatId:'Chưa có vị trí')):'Chọn Người Chơi trên Làng';if(summary)summary.textContent=stats.occupied+'/'+stats.seatCount+' vị trí có người • '+stats.available+' vị trí trống';
+  const bySeat=new Map(playLiveMembers().map(p=>[Number(p?.seatId||0),p]));
+  for(let seatId=1;seatId<=stats.seatCount;seatId++){
+    const occupant=bySeat.get(seatId)||null,b=document.createElement('button');b.type='button';b.className='play-seat-choice'+(occupant?' occupied':'')+(selected&&Number(selected.seatId)===seatId?' current':'');b.innerHTML='<b>VỊ TRÍ '+seatId+'</b><small>'+playEsc(occupant?.displayName||'TRỐNG')+'</small>';b.onclick=()=>moveSelectedPlayerToSeat(seatId,occupant);grid.appendChild(b)
+  }
+  const release=document.getElementById('playSeatRelease');if(release){release.classList.remove('hidden');release.disabled=!selected?.seatId}
+}
+async function openPlaySeatSheet(){playSeatManualOpen=false;playSeatAssignTarget=0;if(!selectedPlayPlayer()){playFlashError('Hãy chạm vào một Người Chơi trên Làng trước.');return}renderPlaySeatSheet();document.getElementById('playSeatSheet')?.classList.remove('hidden')}
+function openPlaySeatManualSheet(){playSeatAssignTarget=0;playSeatManualOpen=true;renderPlaySeatSheet();document.getElementById('playSeatSheet')?.classList.remove('hidden')}
+function closePlaySeatSheet(){playSeatManualOpen=false;playSeatAssignTarget=0;document.getElementById('playSeatSheet')?.classList.remove('is-manual');document.getElementById('playSeatSheet')?.classList.add('hidden')}
+async function updateSelectedPlayerSeat(payload){
+  const selected=selectedPlayPlayer();if(!selected)return;playSetBusy(true);
+  try{const data=await playRoomApi('/seat',{method:'POST',body:JSON.stringify({participantId:selected.participantId||('member:'+selected.loginId),...payload})});playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;savePlayScene();renderPlayScene();renderPlaySeatSheet()}
+  catch(err){playFlashError(err.message)}finally{playSetBusy(false)}
+}
+async function moveSelectedPlayerToSeat(seatId,occupant){
+  const selected=selectedPlayPlayer();if(!selected){playFlashError('Chọn người chơi ở cột DANH SÁCH trước khi chọn vị trí.');return}if(String(occupant?.participantId||'')===String(selected.participantId||''))return;
+  if(occupant&&!confirm('Vị trí '+seatId+' đang có '+occupant.displayName+'. Đổi chỗ hai người?'))return;
+  await updateSelectedPlayerSeat({seatId,swap:!!occupant})
+}
+async function releaseSelectedPlayerSeat(){const selected=selectedPlayPlayer();if(!selected?.seatId)return;if(!confirm('Giải phóng Seat '+selected.seatId+' của '+selected.displayName+'?'))return;await updateSelectedPlayerSeat({seatId:null})}
+async function playCallOnlineMembers(){
+  // Keep legacy context actions safe: inviting members always requires explicit GM selection.
+  return openPlayRosterSheet();
+}
+async function playRandomSeatRemaining(){
+  if(!isLivePlayRoom())return false;const remaining=playLiveMembers().filter(m=>!Number(m?.seatId||0));if(!remaining.length){playFlashError('Tất cả Người Chơi đã có vị trí.');return false}
+  playSetBusy(true);
+  try{
+    const data=await playRoomApi('/seats/randomize-remaining',{method:'POST',body:'{}'});playSceneRuntime.room=data.room||playSceneRuntime.room;playSceneRuntime.players=Array.isArray(data.players)?data.players:playSceneRuntime.players;savePlayScene();renderPlayScene();return true
+  }catch(err){playFlashError(err.message);return false}finally{playSetBusy(false)}
+}
+async function playSetSeatLock(locked=true){
+  if(!isLivePlayRoom())return false;
+  try{const data=await playRoomApi('/seat-lock',{method:'POST',body:JSON.stringify({locked:locked!==false})});playSceneRuntime.room=data.room||playSceneRuntime.room;renderPlayScene();return !!data.seatsLocked}catch(err){playFlashError(err.message);return false}
+}
+async function playFinishSeating(){
+  const members=playLiveMembers(),missing=members.filter(m=>!Number(m?.seatId||0));if(missing.length){playFlashError('Còn '+missing.length+' Người Chơi chưa có vị trí. Dùng “Phân vị trí còn lại” hoặc chọn từng người.');return}
+  const locked=await playSetSeatLock(true);if(locked){playSceneState.step='game';playSceneState.activePlayerId='';savePlayScene();renderPlayScene();void playPublishStage('game')}
+}

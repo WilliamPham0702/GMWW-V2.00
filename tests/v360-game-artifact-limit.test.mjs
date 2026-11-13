@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import {reserveArtifactActivation} from "../src/gmww-game-scene-rules.js";
@@ -6,7 +7,7 @@ import {readFileSync} from "node:fs";
 const frontend=readFileSync(new URL("../server-game/current/app.js",import.meta.url),"utf8");
 const html=readFileSync(new URL("../server-game/current/GMWW.html",import.meta.url),"utf8");
 const css=readFileSync(new URL("../server-game/current/style.css",import.meta.url),"utf8");
-const backend=readFileSync(new URL("../src/index.js",import.meta.url),"utf8");
+const backend=workerSource();
 
 test("Artifact quota is enforced for each configured cycle",()=>{
   let state={cycleKey:"game:night:1",accepted:[]};

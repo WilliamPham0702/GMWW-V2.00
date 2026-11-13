@@ -1,3 +1,4 @@
+import {workerSource,workerModuleSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +6,7 @@ import {evaluatePlayerRoomCreate,isActivePlayerRoom,PLAYER_ROOM_MAX_ACTIVE,PLAYE
 import {normalizeLoginId} from '../src/gmww-player-identity-rules.js';
 import {normalizeSeatCount} from '../src/gmww-room-config-rules.js';
 
-const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const source=workerSource();
 const NOW=Date.parse('2026-11-08T12:00:00Z');
 const iso=ms=>new Date(ms).toISOString();
 const room=(code,owner,extra={})=>({code,playerRoom:true,ownerLoginId:owner,phase:'lobby',enabled:true,updatedAt:iso(NOW-60000),...extra});
@@ -75,7 +76,8 @@ test('reserve rejects invalid code or owner',async()=>{
 });
 
 // ---- Worker function createPlayerRoom (real source) ----
-const fFrom=source.indexOf('async function createPlayerRoom(env,url,request){'),fTo=source.indexOf('async function joinRoom(env,raw,request){',fFrom);
+const playerRoomApi=workerModuleSource('http/player-room-api.js');
+const fFrom=playerRoomApi.indexOf('async function createPlayerRoom(env,url,request){'),fTo=playerRoomApi.length;
 assert.ok(fFrom>0&&fTo>fFrom,'find real createPlayerRoom');
 const sha256=async v=>'h:'+v;
 function build({session={ok:true,loginId:'Nam01'},reserveStatuses=[201],initStatuses=[201]}={}){
@@ -89,7 +91,7 @@ function build({session={ok:true,loginId:'Nam01'},reserveStatuses=[201],initStat
   };
   const env={};
   const fn=new Function('memberStore','j','normalizeLoginId','safeJson','randomToken','sha256','generateRoomCode','roomStub','syncRoomDirectory','normalizeRoomName',
-    source.slice(fFrom,fTo)+'\nreturn createPlayerRoom;')(()=>({fetch:memberFetch}),j,normalizeLoginId,async r=>r.json().catch(()=>null),()=>'OWNERTOKEN',sha256,()=>'CODE'+String(++codeN).padStart(2,'0'),
+    playerRoomApi.slice(fFrom,fTo)+'\nreturn createPlayerRoom;')(()=>({fetch:memberFetch}),j,normalizeLoginId,async r=>r.json().catch(()=>null),()=>'OWNERTOKEN',sha256,()=>'CODE'+String(++codeN).padStart(2,'0'),
     ()=>({fetch:async(u,init)=>{calls.init.push(JSON.parse(init.body));const s=initStatuses.shift()??201;return s===201?j({ok:true,room:{roomName:'Phòng X'},gmToken:'SECRET-GM-TOKEN'},201):j({ok:false},s)}}),
     async(_env,c)=>{calls.sync.push(c)},v=>String(v||'').trim().replace(/\s+/g,' ').slice(0,40));
   const call=(body={roomName:'Phòng X'})=>fn(env,new URL('https://gm.example/api/player-rooms'),new Request('https://gm.example/api/player-rooms',{method:'POST',headers:{authorization:'Bearer t','content-type':'application/json'},body:JSON.stringify(body)}));

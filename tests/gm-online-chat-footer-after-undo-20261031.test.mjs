@@ -1,8 +1,9 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const html=readFileSync('server-game/current/GMWW.html','utf8');
-const gm=readFileSync('server-game/src/45-online-chat.part','utf8');
+const gm=gmSource('45-online-chat');
 const app=readFileSync('server-game/current/app.js','utf8');
 test('GM footer places Chat directly after Restore, without duplicate chat',()=>{
  const s=html.slice(html.indexOf('id="battleBottomControls"'),html.indexOf('id="battleTargetSheet"'));

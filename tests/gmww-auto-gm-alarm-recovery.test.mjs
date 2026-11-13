@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const source=workerSource();
 const from=source.indexOf('  async autoAdvanceDue(meta){');
 const to=source.indexOf('  async gmTurn(',from);
 assert.ok(from>0&&to>from,'Find actual Durable Object scheduler methods');

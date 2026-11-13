@@ -1,0 +1,41 @@
+
+/* Player-created online rooms: owner console modelled on the GM Server "Chơi" screen (six steps:
+   Sảnh chờ, Tập hợp, Ván Mẫu, Phân Vai, Phát Vai, Vào Trận). The owner sees seats and the deck
+   (role names and counts) but never who holds which role: the server deals blind at Phát Vai.
+   Routes: POST /api/player-rooms, GET /api/player-rooms/templates, /api/player-rooms/:code/owner/*. */
+(function gmwwPlayerRooms(){
+  const KEY='gmwwOwnedRoom',STEPS=[['lobby','Sảnh chờ'],['room','Phòng Game'],['seats','Tập hợp'],['game','Ván Mẫu'],['roles','Phân Vai'],['deal','Phát Vai'],['battle','Vào Trận']];
+  const pr={open:false,mounted:false,busy:false,timer:0,own:null,templates:[],roles:[],artifacts:[],catalogStatus:'idle',catalogError:'',deck:new Map(),deckName:'',state:null,msg:'',view:'',touched:false,joinCode:'',known:null,pos:null,chatOpen:false};
+  const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n};
+  const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.code&&v.token?v:null}catch(_){return null}};
+  const save=v=>{try{if(v)localStorage.setItem(KEY,JSON.stringify(v));else localStorage.removeItem(KEY)}catch(_){}};
+  const base=()=>'/api/player-rooms/'+encodeURIComponent(pr.own.code)+'/owner/';
+  const oh=()=>({Authorization:'Bearer '+pr.own.token});
+  const callOwner=(op,method,body)=>api(base()+op,{method,headers:oh(),body:body===undefined?undefined:JSON.stringify(body)});
+  const ERR={OWNER_ALREADY_HAS_ROOM:'Bạn đang có một phòng rồi.',PLAYER_ROOM_LIMIT:'Đã đủ số phòng người chơi cùng lúc. Hãy thử lại sau.',ROOM_NOT_IN_LOBBY:'Ván đã bắt đầu.',ROOM_NOT_FOUND:'Phòng không còn tồn tại.',UNAUTHORIZED:'Không có quyền chủ phòng.',TEMPLATE_NOT_FOUND:'Không tìm thấy Ván Mẫu.',ROLE_COUNT_MISMATCH:'Số lá bài không khớp số người ngồi.',SEATS_NOT_LOCKED:'Hãy chốt ghế trước khi phát vai.',MOVE_NOT_ACTIVE:'Chưa mở chuyển ghế.',NO_GAME_CONFIG:'Hãy chọn Ván Mẫu trước.',ROOM_NOT_RUNNING:'Ván chưa chạy.',CANNOT_KICK_OWNER:'Không thể đuổi chủ phòng.'};
+  const errText=e=>ERR[String(e?.data?.error||'')]||e?.message||'Có lỗi xảy ra.';
+  function say(t){pr.msg=t||'';const s=document.getElementById('gmwwPrStatus');if(s)s.textContent=pr.msg}
+  async function run(fn){if(pr.busy)return;pr.busy=true;render();try{await fn()}catch(e){
+    if(e?.status===404||e?.data?.error==='ROOM_NOT_FOUND'){if(pr.own){pr.own=null;save(null);pr.state=null}}
+    say(errText(e))}finally{pr.busy=false;render()}}
+  // The owner hears about each new arrival (first look only records who is already inside).
+  function noteJoins(st){
+    const ps=Array.isArray(st?.players)?st.players:[],ids=new Set(ps.map(p=>String(p.loginId||'')));
+    if(pr.known){const fresh=ps.filter(p=>p.loginId&&!pr.known.has(String(p.loginId))&&String(p.loginId)!==String(st?.ownerLoginId||''));
+      if(fresh.length){const t=fresh.map(p=>p.displayName||p.loginId).join(', ')+' đã vào phòng.';say(t);try{toast(t)}catch(_){}}}
+    pr.known=ids;
+  }
+  async function refresh(options={}){
+    if(!pr.own)return;
+    try{pr.state=await api(base()+'state',{headers:oh()});noteJoins(pr.state)}
+    catch(e){if(e?.status===404||e?.status===401){pr.own=null;pr.state=null;pr.known=null;save(null);say('Phòng đã đóng.')}}
+    render({background:options.background===true});autoSeat();
+  }
+  async function create(){
+        const d=await api('/api/player-rooms',{method:'POST',headers:auth(),body:JSON.stringify({})});
+    pr.own={code:d.roomCode,token:d.ownerToken,joinUrl:d.joinUrl};save(pr.own);pr.view='room';pr.touched=true;
+    try{await window.joinRoom(d.roomCode)}catch(_){}
+    say('Đã tạo phòng '+d.roomCode+'.');await refresh();
+    try{await enterVillage()}catch(_){}
+    pr.open=true;pr.view='room';pr.touched=true;render();
+  }

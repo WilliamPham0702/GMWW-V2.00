@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {normalizeLoginId} from '../src/gmww-player-identity-rules.js';
 
-const source=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const source=workerSource();
 const j=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json'}});
 const nw=s=>{const n=String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').toLowerCase();return n.includes('phe dan')?'Phe Dân':n.includes('phe soi')?'Phe Sói':n.includes('phe ba')?'Phe Ba':String(s||'')};
 const from=source.indexOf('  computeWinProposal(meta,assignments,interactions){'),to=source.indexOf('  // Immutable, unbounded action history',from);

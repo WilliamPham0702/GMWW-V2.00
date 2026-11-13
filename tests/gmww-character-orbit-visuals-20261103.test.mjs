@@ -1,11 +1,12 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const gm=readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const gm=gmSource('40-battle-and-timeline');
 const status=readFileSync('server-game/current/status-visuals.css','utf8');
 const webStatus=readFileSync('assets/village/status-visuals.css','utf8');
-const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const player=playerWebSource('35-online-chat');
 const bundled=readFileSync('src/gmww-members-live.js','utf8');
 
 test('PR765 superseded: GM 🧞‍♂️ and 🐦‍🔥 orbit uses original wolf status animation',()=>{

@@ -1,10 +1,11 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {sanitizePlayerRoleCard,mergePlayerRoleCard} from '../src/gmww-private-card-contract.js';
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const rules=fs.readFileSync('server-game/current/battle-controls.js','utf8');
 test('Actual battle action audio is wired to a matching assigned clip, not only Library Preview',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},async()=>{

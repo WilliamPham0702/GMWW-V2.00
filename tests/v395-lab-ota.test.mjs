@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,7 +22,7 @@ test('Lab OTA fails closed for unexpected base, modified url, missing file or de
 
 test('Worker publishes V3.109 to both OTA manifest paths and retains shell V3.17',async()=>{
   const fs=await import('node:fs');
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assertCurrentRelease();
   assert.equal(worker.split('selectVerifiedRuntimeV396Delta(').length-1,2);
 });

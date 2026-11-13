@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -40,7 +41,7 @@ test('countdown follows persisted per-turn duration and authoritative server dea
   assert.equal(battle.remainingSeconds({...rt,queue:[{id:'r',kind:'role',durationSec:0}]},now),null);
 });
 test('GM server rejects stale/invalid navigation and reused artifact effects',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const server=fs.readFileSync('src/index.js','utf8'),app=fs.readFileSync('server-game/current/app.js','utf8'),html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  const server=workerSource(),app=fs.readFileSync('server-game/current/app.js','utf8'),html=fs.readFileSync('server-game/current/GMWW.html','utf8');
   assert.match(server,/combineConfiguredTurns\(groupConfiguredRoleTurns\(roleTurns\),artifactTurns\)/);
   assert.match(server,/action==="jump"/);
   assert.match(server,/expectedTurnId/);

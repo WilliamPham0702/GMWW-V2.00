@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const src=fs.readFileSync('src/index.js','utf8');
+const src=workerSource();
 const start=src.indexOf('async function gmLobbyResetAll(env,request){');
 const end=src.indexOf('async function gmRoomsPurge(',start);
 assert.ok(start>=0&&end>start,'Global lobby reset handler exists');

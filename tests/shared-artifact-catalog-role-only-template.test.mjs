@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const method=(from,to)=>vm.runInNewContext('(class Tester {'+worker.slice(worker.indexOf(from),worker.indexOf(to,worker.indexOf(from)))+'}).prototype',
   {sanitizePlayerArtifactCard:x=>x,validImageDataUrl:x=>typeof x==='string'&&x.startsWith('data:image/'),j:x=>x});

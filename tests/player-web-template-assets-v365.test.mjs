@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +8,7 @@ import {patchPrivatePlayerCards} from '../src/gmww-player-private-card-patch.js'
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const player=patchPrivatePlayerCards(gmwwMembersLiveScript);
 
 test('Player uses GM-equivalent artwork, role name, faction and source information',()=>{

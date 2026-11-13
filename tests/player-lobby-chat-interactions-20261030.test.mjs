@@ -1,10 +1,11 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {chatPolicy,publicChatNotices,chatStorageScope} from '../src/gmww-online-chat-policy.js';
 const read=p=>fs.readFileSync(p,'utf8');
-const chat=read('src/player-web-src/35-online-chat.part');
+const chat=playerWebSource('35-online-chat');
 const players={'member:a':{loginId:'a'},'member:b':{loginId:'b'}};
 test('joined players can chat before seats and through role delivery, outsiders cannot',()=>{
  for(const phase of ['lobby','waiting','role_delivery']){
@@ -48,7 +49,7 @@ test('cancelling an icon drag restores idle timer and never dispatches action',{
 });
 
 test('room polling does not postpone the 30-second menu timeout; activity restores it',()=>{
- const village=read('src/player-web-src/20-village-and-profile.part');
+ const village=playerWebSource('20-village-and-profile');
  const code=village.slice(village.indexOf('function hidePlayerTopMenu('),village.indexOf('function ensureVillageHud('));
  const classes=new Set(),menu={querySelector:()=>null,classList:{add:x=>classes.add(x),remove:x=>classes.delete(x)}};
  let timer,scheduled=0,closed=0;
@@ -62,7 +63,7 @@ test('room polling does not postpone the 30-second menu timeout; activity restor
  context.revealPlayerTopMenu(true);assert.equal(scheduled,2);assert.ok(!classes.has('is-idle-hidden'));
 });
 test('mini cards default below entry, halve width, move under avatar with chat, and restore saved position',()=>{
- const village=read('src/player-web-src/20-village-and-profile.part');
+ const village=playerWebSource('20-village-and-profile');
  const code=village.slice(village.indexOf('function gmwwMiniPosition('),village.indexOf('function gmwwMiniDrag('));
  const button={dataset:{},style:{}};
  const context={gmwwChatOpen:false,gmwwMiniPositions:()=>({}),window:{innerWidth:400,innerHeight:800},document:{
@@ -74,7 +75,7 @@ test('mini cards default below entry, halve width, move under avatar with chat, 
 });
 
 test('footer chat overrides the legacy full-screen overlay and stays anchored to the visible iPhone viewport',()=>{
- const source=read('src/player-web-src/35-online-chat.part');
+ const source=playerWebSource('35-online-chat');
  assert.match(source,/html body #gmwwOnlineFooter\{top:calc\(var\(--gmww-player-visible-top/);
  assert.match(source,/bottom:auto!important;transform:translateY\(-100%\)!important/);
  assert.match(source,/html body #gmwwOnlineFooter #gmwwChatPanel\{position:relative!important;inset:auto!important/);

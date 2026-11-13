@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,7 +13,7 @@ test('V3.136: day/night lives outside timeline, village wake-up remains a real t
  assert.equal(rules.timeline('night',runtime,3)[0].label,'Bầy sói ơi dậy đi');
  assert.equal(rules.timeline('night',runtime,3)[1].label,'Làng ơi dậy đi');
  assert.equal(rules.timeline('day',runtime,3)[0].label,'Làng ơi dậy đi');
- const html=read('server-game/current/GMWW.html'),battle=read('server-game/src/40-battle-and-timeline.part');
+ const html=read('server-game/current/GMWW.html'),battle=gmSource('40-battle-and-timeline');
  const back=html.indexOf('id="battleBack"'),timeline=html.indexOf('id="battleTimeline"'),forward=html.indexOf('id="battleAdvance"');
  assert.ok(back>=0&&back<timeline&&timeline<forward);
  assert.ok(!html.includes('id="battlePeriodLabel"'));
@@ -25,7 +27,7 @@ test('V3.136: day/night lives outside timeline, village wake-up remains a real t
 test('V3.136: campfire uses setup-room selection before match and wolf GM tools during match',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const source=read('server-game/current/app.js');
  assert.ok(source.includes("document.querySelector('.play-core-pearl')?.addEventListener('click',()=>{if(playSceneState.step==='battle'){battleToggleWolfMenu();return}openPlayCreateRoomSheet()});"));
- const setup=read('server-game/src/30-village-and-setup.part');
+ const setup=gmSource('30-village-and-setup');
  assert.ok(setup.includes("if(playSceneState.step!=='battle'){playFlashError('Chỉ được thực hiện tác động sau khi vào trận.');return false}"));
  assert.ok(setup.includes("function openPlayGMSheet(){"));
  assert.ok(setup.includes("if(playSceneState.step!=='battle')return;\n  battleToggleWolfMenu();"));
@@ -33,9 +35,9 @@ test('V3.136: campfire uses setup-room selection before match and wolf GM tools 
 });
 test('V3.136: source parts and published runtime version remain consistent',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
  const p=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','50-roles-and-artifacts.part'];
- assert.equal(read('server-game/current/app.js'),p.map(name=>read('server-game/src/'+name)).join(''));
+ assert.equal(read('server-game/current/app.js'),p.map(name=>gmSource(name.replace(/\.part$/,''))).join(''));
  const v=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
  assert.ok(Number(v.split('.')[1])>=136);
  assert.ok(read('server-game/current/GMWW.html').includes('<title>GMWW V'+v+'</title>'));
- assert.ok(read('src/index.js').includes('VERSION="V'+v+'"'));
+ assert.ok(workerSource().includes('VERSION="V'+v+'"'));
 });

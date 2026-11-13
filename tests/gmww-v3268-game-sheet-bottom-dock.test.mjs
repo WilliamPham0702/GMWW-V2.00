@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
-const part=fs.readFileSync('server-game/src/50-roles-and-artifacts.part','utf8');
-const flow=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const part=gmSource('50-roles-and-artifacts');
+const flow=gmSource('40-battle-and-timeline');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const script=part.slice(part.indexOf("const GMWW_GAME_SHEET_DOCK_KEY="),part.indexOf('function initDraggablePlaySheets(){'));

@@ -1,8 +1,9 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const gm=readFileSync('server-game/src/45-online-chat.part','utf8');
-const player=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const gm=gmSource('45-online-chat');
+const player=playerWebSource('35-online-chat');
 test('GM and Player stage voice recording until explicit send',()=>{
  for(const [source,recorder,send,draft] of [[gm,'gmwwGMVoiceRecorder','gmwwGMVoiceSend','gmwwGMVoiceDraft'],[player,'gmwwChatVoiceRecorder','gmwwChatVoiceSend','gmwwChatVoiceDraft']]){
   assert.match(source,new RegExp('const sendRequested=.*VoicePendingSend'));

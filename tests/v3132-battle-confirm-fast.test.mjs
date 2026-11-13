@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,11 +7,11 @@ import vm from 'node:vm';
 
 const read=p=>fs.readFileSync(p,'utf8');
 const runtimeVersion=JSON.parse(read('package.json')).version.replace(/\.0$/,'');
-const part=read('server-game/src/40-battle-and-timeline.part');
+const part=gmSource('40-battle-and-timeline');
 const app=read('server-game/current/app.js');
 const html=read('server-game/current/GMWW.html');
 const css=read('server-game/current/style.css');
-const worker=read('src/index.js');
+const worker=workerSource();
 
 function harness(result={ok:true,undoToken:'undo-1',label:'Bảo Vệ',serverProcessingMs:45}){
   let requests=0,syncCalls=0,renders=0,syncResolve;

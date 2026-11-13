@@ -1,10 +1,11 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
 const native=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');
-const source=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const source=gmSource('40-battle-and-timeline');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const fragment=source.slice(source.indexOf('let demoScreenAwakeSent='),source.indexOf('const demoPick=rows=>'));
 assert.ok(fragment.startsWith('let demoScreenAwakeSent='),'Missing DEMO idle-timer helper');

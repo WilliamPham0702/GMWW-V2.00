@@ -1,0 +1,107 @@
+
+function bindCore(){
+  $$('.nav').forEach(n=>n.onclick=()=>{$$('.page').forEach(p=>p.classList.toggle('active',p.id===n.dataset.page));$$('.nav').forEach(x=>x.classList.toggle('active',x===n));const p=$('#'+n.dataset.page);if(p)p.scrollTop=0});
+  $$('.libtab').forEach(b=>b.onclick=()=>{$$('.libtab').forEach(x=>x.classList.toggle('active',x===b));$$('.libpane').forEach(p=>p.classList.toggle('active',p.id==='lib-'+b.dataset.lib));$('#library').scrollTop=0;if(b.dataset.lib==='themes')renderTheme();if(b.dataset.lib==='audio')renderAudio();if(b.dataset.lib==='templates')loadPlayGameTemplates()});
+  $$('[data-filter-kind]').forEach(row=>$$('.filter',row).forEach(b=>b.onclick=()=>{$$('.filter',row).forEach(x=>x.classList.toggle('active',x===b));if(row.dataset.filterKind==='cards')cardFilter=b.dataset.filter;else artifactFilter=b.dataset.filter;renderEntityGrid(row.dataset.filterKind)}));
+  const addGameTemplateBtn=$('#addGameTemplate');if(addGameTemplateBtn)addGameTemplateBtn.onclick=()=>openLibraryGameTemplate('');const exportLocalBtn=$('#exportLocalData');if(exportLocalBtn)exportLocalBtn.onclick=()=>exportLocalGameData();const exportSaveBtn=$('#exportSaveData');if(exportSaveBtn)exportSaveBtn.onclick=()=>exportGmwwSave();const importSaveBtn=$('#importSaveData');if(importSaveBtn)importSaveBtn.onclick=()=>importGmwwSave();
+  const topBack=$('#topBackEntity');if(topBack)topBack.onclick=closeEntityEditor;$('#backEntity').onclick=closeEntityEditor;$('#saveEntity').onclick=saveEntity;$('#hideEntity').onclick=toggleCurrentEntityHidden;$('#deleteEntity').onclick=deleteEntity;
+  $$('.face-switch button').forEach(b=>b.onclick=()=>setFace(b.dataset.face));
+  $('#entityName').oninput=()=>{if(editDraft){editDraft.name=$('#entityName').value;renderEntityFront()}};
+  $('#entityInformation').oninput=()=>{if(editDraft){editDraft.information=$('#entityInformation').value;renderEntityFront()}};
+  $('#entityLives').oninput=()=>{if(editDraft)editDraft.lives=Math.max(1,Number($('#entityLives').value||1))};
+  $$('#factionSeg button').forEach(b=>b.onclick=()=>{if(!editDraft||currentKind!=='cards')return;editDraft.factionId=b.dataset.faction;renderEntityBack();renderEntityFront()});
+  const flagMap={flagUseDay:'useDay',flagUseNight:'useNight',flagNightImmune:'nightImmune',flagAllowMultipleActions:'allowMultipleActions',flagPassive:'passive',flagSoloWolfOnly:'soloWolfOnly'};
+  for(const [id,k] of Object.entries(flagMap))$('#'+id).onchange=()=>{if(editDraft)editDraft.flags[k]=$('#'+id).checked};
+  $('#winCondition').oninput=()=>{if(editDraft)editDraft.winCondition=$('#winCondition').value};
+  $('#passiveRuleEnabled').onchange=()=>{if(editDraft)editDraft.passiveRule.enabled=$('#passiveRuleEnabled').checked};$('#passiveRuleType').onchange=()=>{if(editDraft)editDraft.passiveRule.type=$('#passiveRuleType').value};
+  $('#passiveFirstTime').onchange=()=>{if(editDraft)editDraft.passiveRule.firstTime=$('#passiveFirstTime').value};$('#passiveNextTime').onchange=()=>{if(editDraft)editDraft.passiveRule.nextTime=$('#passiveNextTime').value};$('#passiveOnDeath').onchange=()=>{if(editDraft)editDraft.passiveRule.onDeath=$('#passiveOnDeath').checked};$('#passiveSkipDead').onchange=()=>{if(editDraft)editDraft.passiveRule.skipIfTargetAlreadyDead=$('#passiveSkipDead').checked};
+  $('#groupGateEnabled').onchange=()=>{if(editDraft)editDraft.groupActionGate.enabled=$('#groupGateEnabled').checked};$('#groupGateAction').onchange=()=>{if(editDraft)editDraft.groupActionGate.actionId=$('#groupGateAction').value};$('#groupGateScope').onchange=()=>{if(editDraft)editDraft.groupActionGate.scope=$('#groupGateScope').value};
+  for(const id of ['gateExpelled','gateBlocked'])$('#'+id).onchange=()=>{if(!editDraft)return;const arr=[];if($('#gateExpelled').checked)arr.push('expelled');if($('#gateBlocked').checked)arr.push('blocked');editDraft.groupActionGate.blockOn=arr};
+  const specialMap={ruleSystemRequired:'systemRequired',ruleUsesPackBite:'usesPackBite',ruleRequiresSoloWolf:'requiresNoOtherLivingWolf',ruleActorMayBeDead:'actorMayBeDead',ruleAllowFriendlyFaction:'allowFriendlyFaction',ruleReplacesWolfBite:'replacesWolfBite'};for(const [id,k] of Object.entries(specialMap))$('#'+id).onchange=()=>{if(editDraft)editDraft.specialRules[k]=$('#'+id).checked};
+  $('#specialLimits').oninput=()=>{if(editDraft)editDraft.limits=$('#specialLimits').value};$('#specialConditions').oninput=()=>{if(editDraft)editDraft.conditions=$('#specialConditions').value};$('#specialAttributes').oninput=()=>{if(editDraft)editDraft.attributes=$('#specialAttributes').value};
+  for(const [id,k] of [['artifactOwnerSelection','ownerSelection'],['artifactPersistentOwner','persistentOwner'],['artifactRevealFollow','revealFollowTargetOnly'],['artifactPriorityFirst','priorityFirst']])$('#'+id).onchange=()=>{if(editDraft?.artifact)editDraft.artifact[k]=$('#'+id).checked};
+  $('#artifactWakeRole').onchange=()=>{if(editDraft?.artifact)editDraft.artifact.wakeWithRoleId=$('#artifactWakeRole').value};$('#artifactWakeAction').onchange=()=>{if(editDraft?.artifact)editDraft.artifact.wakeWithActionId=$('#artifactWakeAction').value};
+  $('#addFunction').onclick=()=>{if(!editDraft)return;const list=actionList(currentKind==='artifacts'?'artifacts':'role'),a=list[0];editDraft.functions.push({id:uid('fn'),actionId:a?.id||'',phase:'night',usageMode:'unlimited',usageCount:1,fromNight:1,toNight:null,cooldownNights:0,targetCount:1,noSelf:false,allowDead:false,noTarget:false,allowConsecutive:true,passive:false,activation:'',pushToPlayerWeb:false,targetPreviousCycleOnly:false,perUserLimit:0,description:'',systemRequired:false,usesPackBite:false,requiresNoOtherLivingWolf:false,actorMayBeDead:false,allowFriendlyFaction:false,replacesWolfBite:false,effectIds:[]});renderEntityBack()};
+  $$('#actionKindSeg button').forEach(b=>b.onclick=()=>{$$('#actionKindSeg button').forEach(x=>x.classList.toggle('active',x===b));actionKind=b.dataset.actionKind;renderActions()});$('#actionSearch').oninput=renderActions;$('#effectSearch').oninput=renderEffects;
+  $('#sheetClose').onclick=closeSheet;$('#sheetCancel').onclick=closeSheet;$('#sheetSave').onclick=saveSheet;$('#editSheet').onclick=e=>{if(e.target===$('#editSheet'))closeSheet()};
+  $('#addTheme').onclick=addTheme;
+  $$('#audioKindSeg button').forEach(b=>b.onclick=()=>{$$('#audioKindSeg button').forEach(x=>x.classList.toggle('active',x===b));audioKind=b.dataset.audioKind;renderAudio()});
+}
+async function seedBundledV1Audio(){try{const a=window.GMWW_V1_AUDIO?.['ROLE:source-18'];if(!a?.base64)return;const key=audioBlobKey('cards','audio_role_old_witch'),stamp='V1.08|ROLE:source-18|'+a.base64.length;if(localStorage.getItem('GMWW_V1_AUDIO_SEED_SOURCE18')===stamp&&await dbGet(key))return;const raw=atob(a.base64),u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);await dbPut(key,new Blob([u8],{type:a.type||'audio/mpeg'}));localStorage.setItem('GMWW_V1_AUDIO_SEED_SOURCE18',stamp)}catch(e){console.warn('V1 audio seed failed',e)}}
+async function boot(){try{await migrateLegacyV1Assets()}catch(e){console.warn('V1 settings migration failed',e)}bindCore();bindFaceSwipe();renderEntityGrid('cards');renderEntityGrid('artifacts');renderActions();renderEffects();renderAudio();try{await ensureDefaultThumb()}catch(e){console.warn('Default artwork init failed',e)}try{await renderTheme()}catch(e){console.warn('Theme render failed',e)}try{await applyActiveThemeUi()}catch(e){console.warn('Theme apply failed',e)}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+
+/* V2.76 — discrete actor-only character scale; UI geometry stays fixed */
+const CHARACTER_SCALE_OPTIONS=[75,100,125,150,175,200];
+function normalizeCharacterScale(value,fallback=100){
+  const n=Number(value);if(!Number.isFinite(n))return fallback;
+  return CHARACTER_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,CHARACTER_SCALE_OPTIONS[0])
+}
+function applyCharacterScale(value){
+  const n=normalizeCharacterScale(value,100),root=document.documentElement;
+  root?.style?.setProperty('--gmww-background-dim','0');
+  root?.style?.setProperty('--gmww-character-scale',String(n/100));
+  document.querySelectorAll('[data-character-scale]').forEach(btn=>{
+    const active=Number(btn.dataset.characterScale)===n;
+    btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',active?'true':'false')
+  });
+  const out=document.getElementById('characterScaleValue');if(out)out.textContent=n+'%';
+  return n
+}
+async function saveCharacterScale(value){
+  const n=applyCharacterScale(value);
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+'/api/gm/ui-settings',{method:'PUT',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},body:JSON.stringify({characterScale:n}),cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+  }catch(err){console.warn('GMWW_CHARACTER_SCALE_SAVE',err)}
+}
+async function initCharacterScaleSetting(){
+  const choices=document.getElementById('characterScaleChoices');if(!choices)return;
+  let n=100;
+  try{const res=await fetch(GMWW_SERVER_BASE+'/api/ui-settings?ts='+Date.now(),{cache:'no-store'}),d=await res.json();if(res.ok&&Number.isFinite(Number(d?.characterScale)))n=Number(d.characterScale)}catch(err){console.warn('GMWW_CHARACTER_SCALE_LOAD',err)}
+  applyCharacterScale(n);
+  choices.addEventListener('click',event=>{const btn=event.target.closest('[data-character-scale]');if(btn)saveCharacterScale(btn.dataset.characterScale)});
+}
+setTimeout(initCharacterScaleSetting,0);
+
+/* GMWW V3.247: device-local icon size uses the same six Character steps. */
+const ACTION_ICON_SCALE_STORAGE_KEY='GMWW_GM_ACTION_ICON_SCALE_V1';
+const ACTION_ICON_SCALE_OPTIONS=[25,50,75,100,125,150];
+function normalizeActionIconScale(value){
+ const n=Number(value);if(!Number.isFinite(n))return 100;
+ return ACTION_ICON_SCALE_OPTIONS.reduce((best,x)=>Math.abs(x-n)<Math.abs(best-n)?x:best,100);
+}
+function applyActionIconScale(value){
+ const n=normalizeActionIconScale(value);
+ document.documentElement?.style?.setProperty('--gmww-action-icon-scale',String(n/100));
+ document.querySelectorAll('[data-action-icon-scale]').forEach(btn=>{
+  const active=Number(btn.dataset.actionIconScale)===n;
+  btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));
+ });
+ const label=document.getElementById('actionIconScaleValue');if(label)label.textContent=n+'%';
+ const dock=document.getElementById('battleFireIconDock');if(dock)delete dock.dataset.sig;
+ return n;
+}
+async function saveActionIconScale(value){
+ const n=applyActionIconScale(value);
+ try{localStorage.setItem(ACTION_ICON_SCALE_STORAGE_KEY,String(n))}
+ catch(err){console.warn('GMWW_ICON_SCALE_SAVE',err)}
+ try{
+  const response=await fetch(GMWW_SERVER_BASE+'/api/gm/ui-settings',{
+   method:'PUT',headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH},
+   body:JSON.stringify({actionIconScale:n}),cache:'no-store'});
+  if(!response.ok)throw new Error('HTTP '+response.status);
+ }catch(err){console.warn('GMWW_ICON_SCALE_SYNC',err)}
+}
+function initActionIconScaleSetting(){
+ const choices=document.getElementById('actionIconScaleChoices');if(!choices)return;
+ let n=100;
+ try{const v=localStorage.getItem(ACTION_ICON_SCALE_STORAGE_KEY);if(v!==null)n=normalizeActionIconScale(v)}
+ catch(err){console.warn('GMWW_ICON_SCALE_LOAD',err)}
+ applyActionIconScale(n);
+ choices.addEventListener('click',event=>{
+  const btn=event.target.closest('[data-action-icon-scale]');
+  if(btn)saveActionIconScale(btn.dataset.actionIconScale);
+ });
+}
+setTimeout(initActionIconScaleSetting,0);

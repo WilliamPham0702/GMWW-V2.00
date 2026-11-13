@@ -8,8 +8,8 @@ on:
       - fix/gm-campfire-equal-radius-v3262-20261028
     paths:
       - 'server-game/current/**'
-      - 'server-game/src/30-village-and-setup.part'
-      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/30-village-and-setup/**'
+      - 'server-game/src/40-battle-and-timeline/**'
       - 'tests/gm-turn-motion-lowheat.test.mjs'
       - 'tests/gm-fire-walk-position.test.mjs'
       - '.github/scripts/build-gm-turn-motion-staging.mjs'

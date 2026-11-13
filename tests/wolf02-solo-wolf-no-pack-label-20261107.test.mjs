@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const src=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const src=workerSource();
 const block=src.slice(src.indexOf('WOLF-02:'),src.indexOf('WOLF-02:')+1400);
 
 test('WOLF-02 pack label follows the wolf count dealt at match start, not living wolves',()=>{

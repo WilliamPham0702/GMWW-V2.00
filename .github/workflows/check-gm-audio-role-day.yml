@@ -2,9 +2,9 @@ name: Check GM audio role/day/vote
 on:
   pull_request:
     paths:
-      - 'server-game/src/10-library-and-settings.part'
-      - 'server-game/src/30-village-and-setup.part'
-      - 'server-game/src/40-battle-and-timeline.part'
+      - 'server-game/src/10-library-and-settings/**'
+      - 'server-game/src/30-village-and-setup/**'
+      - 'server-game/src/40-battle-and-timeline/**'
       - 'server-game/current/app.js'
       - 'src/gmww-wolf-night-resolution.js'
       - 'src/gmww-demo-runner.js'

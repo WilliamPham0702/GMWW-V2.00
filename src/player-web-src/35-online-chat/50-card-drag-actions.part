@@ -1,0 +1,314 @@
+// V3.308: drag the Role / Artifact mini card to act. Same private offers, same /action API,
+// same Server validation; the card only chooses which offer a drop belongs to.
+const gmwwCardLifted=new Set();let gmwwCardRestoreTimer=0,gmwwCardSafetyTimer=0;
+function gmwwOnlineCardActions(type){
+ const room=state.room;
+ if(!room||room.demo===true||String(room.roomMode||'').toLowerCase()!=='online'||room.phase!=='running')return [];
+ const offers=Array.isArray(state.onlineActions)?state.onlineActions:[];
+ return offers.filter(a=>type==='artifact'?!!a.artifactId:!a.artifactId);
+}
+function gmwwCardLift(node){
+ node.classList?.add('gmww-online-lifted');gmwwCardLifted.add(node);
+ clearTimeout(gmwwCardSafetyTimer);gmwwCardSafetyTimer=setTimeout(()=>gmwwCardRestore(),9000);
+}
+function gmwwCardRestore(delay=0){
+ clearTimeout(gmwwCardRestoreTimer);
+ const run=()=>{clearTimeout(gmwwCardSafetyTimer);for(const n of gmwwCardLifted)n.classList?.remove('gmww-online-lifted');gmwwCardLifted.clear()};
+ if(delay>0)gmwwCardRestoreTimer=setTimeout(run,delay);else run();
+}
+// Which of the card's offers can legally take this drop. target='' means an empty drop on the village.
+function gmwwCardTargetActions(actions,target){
+ const self=String(state.member?.loginId||'').replace(/^member:/,'');
+ const bites=Array.isArray(gmwwOnlineWitchBite?.targetIds)?gmwwOnlineWitchBite.targetIds.map(x=>String(x||'').replace(/^member:/,'')):[];
+ return actions.filter(a=>{
+   if(a.blocked)return false;
+   if(!target)return !(Number(a.targetCount)>0);
+   if(!(Number(a.targetCount)>0))return false;
+   if(a.noSelf&&target===self)return false;
+   if(a.actionId==='action_witch_save'&&!a.artifactId&&bites.length&&!bites.includes(target))return false;
+   return true;
+ });
+}
+function gmwwCardChoose(list,target,done,cancel){
+ document.getElementById('gmwwOnlinePick')?.remove();
+ const box=document.createElement('section');box.id='gmwwOnlinePick';
+ const name=target?(gmwwOnlinePeople().find(p=>p.id===target)?.name||target):'';
+ const h=document.createElement('strong');h.textContent=name?'Chọn hành động với '+name:'Chọn hành động';box.appendChild(h);
+ const row=document.createElement('div');row.className='gmww-online-people';box.appendChild(row);
+ for(const a of list){
+   const b=document.createElement('button');b.type='button';b.textContent=String(a.name||'Hành động');
+   b.onclick=()=>{box.remove();done(a)};row.appendChild(b);
+ }
+ const c=document.createElement('button');c.type='button';c.textContent='✕ Hủy';c.onclick=()=>{box.remove();cancel()};box.appendChild(c);
+ document.body.appendChild(box);
+}
+function gmwwOnlineIconDown(event,action,card){
+ if(event.button!==undefined&&event.button!==0)return;
+ event.preventDefault();event.stopPropagation();
+ const node=event.currentTarget,startX=event.clientX,startY=event.clientY,pointerId=event.pointerId;
+ const cardActions=card?card.actions:null;
+ const lead=card?(cardActions.find(a=>!a.blocked)||cardActions[0]):action;
+ if(!lead||lead.blocked){toast(String(lead?.blockedReason||'Bạn đang bị hiệu ứng, không thể thực hiện hành động.'));return}
+ const excludeSelf=card?cardActions.every(a=>a.noSelf):!!action.noSelf;
+ clearTimeout(gmwwPlayerTopMenuTimer);gmwwChatClosePanel();
+ let ghost=null,finished=false,raf=0,lastX=startX,lastY=startY,baseX=startX,baseY=startY,ghostX=startX,ghostY=startY,hitList=null,hitAt=0;
+ const selfId=String(state.member?.loginId||'').replace(/^member:/,'');
+ const targetAt=(x,y)=>{
+   const id=gmwwOnlineTargetAt(x,y);
+   return excludeSelf&&id===selfId?'':id;
+ };
+ // Smooth drag (V3.301): read player geometry from the village iframe at most every
+ // 350 ms instead of on every pointermove, and paint once per animation frame with a
+ // GPU transform. Cross-iframe layout reads on each move made the icon stutter on iPhone.
+ const hitAtPoint=(x,y)=>{
+   const now=performance.now();
+   if(!hitList||now-hitAt>350){hitList=gmwwOnlineTargetSnapshot().filter(t=>!(excludeSelf&&t.id===selfId));hitAt=now}
+   const direct=hitList.find(t=>x>=t.left&&x<=t.right&&y>=t.top&&y<=t.bottom);if(direct)return direct;
+   let best=null,distance=Infinity;
+   for(const t of hitList){const d=Math.hypot(x-t.mx,y-t.my);if(d<t.radius&&d<distance){best=t;distance=d}}
+   return best;
+ };
+ const paint=()=>{
+   raf=0;if(!ghost||finished)return;
+   const hit=hitAtPoint(lastX,lastY),c=hit?{x:hit.cx,y:hit.cy}:null;
+   let x=lastX,y=lastY;
+   // Near a valid player the icon is sucked toward that player's centre.
+   if(c){x+=(c.x-x)*.7;y+=(c.y-y)*.7}
+   ghost.classList?.toggle('is-magnet',!!c);
+   ghostX=x;ghostY=y;
+   ghost.style.transform='translate3d('+(x-baseX)+'px,'+(y-baseY)+'px,0) translate(-50%,-50%)';
+ };
+ // Before a fly animation, commit the transform offset back to left/top.
+ const commitGhost=()=>{if(!ghost)return;if(raf){cancelAnimationFrame(raf);raf=0}ghost.style.left=ghostX+'px';ghost.style.top=ghostY+'px';ghost.style.transform=''};
+ const move=e=>{
+   if(e.pointerId!==pointerId||finished)return;
+   if(!ghost&&Math.hypot(e.clientX-startX,e.clientY-startY)>6){
+     // Lift the real icon off the campfire: the original hides and the carried copy follows the finger.
+     const box=node.getBoundingClientRect();
+     ghost=document.createElement('img');ghost.className='gmww-online-ghost'+(card?' is-card':'');
+     ghost.src=card?(node.querySelector('img')?.currentSrc||node.querySelector('img')?.src||''):(action.iconUrl||'');ghost.alt='';ghost.draggable=false;
+     if(card){const gw=Math.max(46,box.width*1.15);ghost.style.width=gw+'px';ghost.style.height=(gw/.72)+'px'}
+     else{ghost.style.width=Math.max(44,box.width)+'px';ghost.style.height=Math.max(44,box.height)+'px'}
+     baseX=ghostX=e.clientX;baseY=ghostY=e.clientY;
+     ghost.style.left=baseX+'px';ghost.style.top=baseY+'px';
+     document.body.appendChild(ghost);if(card)gmwwCardLift(node);else node.classList?.add('gmww-online-lifted');
+   }
+   if(ghost){
+     e.preventDefault();
+     lastX=e.clientX;lastY=e.clientY;
+     if(!raf)raf=requestAnimationFrame(paint);
+   }
+ };
+ const cleanup=()=>{
+   if(raf){cancelAnimationFrame(raf);raf=0}
+   document.removeEventListener('pointermove',move,true);document.removeEventListener('pointerup',end,true);document.removeEventListener('pointercancel',end,true);
+   window.removeEventListener('blur',cancel);try{node.releasePointerCapture?.(pointerId)}catch{}
+   revealPlayerTopMenu(true);
+ };
+ const settle=()=>{ghost?.remove();node.classList?.remove('gmww-online-lifted');if(card)gmwwCardLifted.delete(node)};
+ const cancel=()=>{if(finished)return;finished=true;cleanup();settle()};
+ const end=e=>{
+   if(e.pointerId!==pointerId||finished)return;
+   finished=true;const moved=!!ghost;
+   cleanup();
+   if(e.type==='pointercancel'){settle();return}
+   if(!moved){settle();if(!card)gmwwOnlinePickAction(action);return}
+   commitGhost();
+   if(card){
+     // A dragged card must not also count as a tap that opens the card viewer.
+     node.dataset.gmwwMiniMoved='1';setTimeout(()=>{delete node.dataset.gmwwMiniMoved},300);
+     cardDrop(e);return;
+   }
+   const target=targetAt(e.clientX,e.clientY);
+   if(target){
+     if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlinePick={action,targets:[]};
+     const c=gmwwOnlinePlayerCenter(target)||{x:e.clientX,y:e.clientY};
+     gmwwOnlineFlyGhost(ghost,c,true).then(()=>{
+       ghost.remove();
+       // More targets needed → the icon returns to the campfire for the next drag.
+       if(gmwwOnlinePick?.action.key===action.key&&gmwwOnlinePick.targets.length<Math.max(0,Number(action.targetCount)||0))node.classList?.remove('gmww-online-lifted');
+       else setTimeout(()=>node.classList?.remove('gmww-online-lifted'),2200);
+     });
+     gmwwOnlineTarget(target);
+   }
+   else{
+     const home=node.getBoundingClientRect();
+     gmwwOnlineFlyGhost(ghost,{x:home.left+home.width/2,y:home.top+home.height/2},false).then(settle);
+     // A missed drop never relocates the action icon: return it to the campfire.
+     // Previously the icon stayed at the finger's last position (often off-screen on iPhone).
+     gmwwOnlineIconPositions.delete(action.key);
+     node.style.transform='';
+   }
+ };
+ const cardDrop=e=>{
+   let pool=gmwwOnlineCardActions(card.type);
+   const pk=gmwwOnlinePick,continuing=!!(pk&&pk.targets.length>0);
+   if(continuing){const same=pool.find(a=>a.key===pk.action.key);if(same)pool=[same]}
+   const target=targetAt(e.clientX,e.clientY);
+   const fr=document.getElementById('gmwwVillageFrame')?.getBoundingClientRect();
+   const inVillage=!!fr&&e.clientX>=fr.left&&e.clientX<=fr.right&&e.clientY>=fr.top&&e.clientY<=fr.bottom;
+   const valid=target?gmwwCardTargetActions(pool,target):(inVillage?gmwwCardTargetActions(pool,''):[]);
+   const goHome=()=>{const h=node.getBoundingClientRect();gmwwOnlineFlyGhost(ghost,{x:h.left+h.width/2,y:h.top+h.height/2},false).then(settle)};
+   if(!valid.length){
+     if(!pool.length||!(target||inVillage)){goHome();return}
+     toast(pool.every(a=>a.blocked)?String(pool[0].blockedReason||'Bạn đang bị hiệu ứng, không thể thực hiện hành động.'):'Không có hành động hợp lệ cho vị trí vừa thả.');
+     goHome();return;
+   }
+   const c=target?(gmwwOnlinePlayerCenter(target)||{x:e.clientX,y:e.clientY}):{x:e.clientX,y:e.clientY};
+   const run=a=>{
+     if(Number(a.targetCount)>0&&target){gmwwOnlinePick={action:a,targets:[]};gmwwOnlineTarget(target)}
+     else gmwwOnlinePickAction(a);
+     // Still collecting targets: the card comes back for the next drag.
+     const now=gmwwOnlinePick;
+     if(now&&now.targets.length<Math.max(0,Number(now.action.targetCount)||0))gmwwCardRestore();
+   };
+   gmwwOnlineFlyGhost(ghost,c,true).then(()=>{
+     ghost.remove();
+     // Role/Artifact with 2+ actions (e.g. Witch save/poison): always confirm which one.
+     if(pool.length>1&&!continuing)gmwwCardChoose(valid,target,run,()=>{gmwwOnlineStop();gmwwCardRestore()});
+     else run(valid[0]);
+   });
+ };
+ // Capture on the source AND listen on the parent document: iOS may move over the iframe.
+ try{node.setPointerCapture?.(event.pointerId)}catch{}
+ document.addEventListener('pointermove',move,true);
+ document.addEventListener('pointerup',end,true);
+ document.addEventListener('pointercancel',end,true);
+ window.addEventListener('blur',cancel);
+}
+// Only authenticated action offers trigger this local effect; no private role is broadcast.
+// Use the exact GM labels and green/yellow target highlights; only the authenticated
+// player's own active role and privately confirmed choices are visible here.
+function gmwwOnlineTurnEffects(offers){
+ const active=Array.isArray(offers)&&offers.length>0&&state.room?.phase==='running';
+ const me=String(state.member?.loginId||'').replace(/^member:/,'');
+ const privateBites=Array.isArray(gmwwOnlineWitchBite?.targetIds)?gmwwOnlineWitchBite.targetIds:[];
+ const chosen=[...(gmwwOnlinePick?.targets||[]),...(Date.now()<gmwwOnlineConfirmedUntil?gmwwOnlineConfirmedTargets:[]),...privateBites];
+ const targets=new Set(chosen.map(id=>String(id||'').replace(/^member:/,'')));
+ document.getElementById('gmwwPlayerTopMenu')?.classList.toggle('gmww-my-action-turn',active);
+ gmwwOnlineRestoreHint();
+ try{
+  const doc=document.getElementById('gmwwVillageFrame')?.contentDocument;
+  if(!doc)return;
+  if(!doc.getElementById('gmwwMyActionGlowStyle')){
+   const css=doc.createElement('style');css.id='gmwwMyActionGlowStyle';
+   // Match the Server's battle-turn-mark/battle-target-mark placement and colors.
+   css.textContent='#players .player.is-battle-actor .portrait{filter:drop-shadow(0 0 3px #fff1b8) drop-shadow(0 0 9px #ffe39a)!important}'+
+    '#players .player.is-battle-target .portrait{filter:drop-shadow(0 0 5px #75efc9)!important}'+
+    '#players .player .player-over>.battle-turn-mark,#players .player .player-over>.battle-target-mark{display:block!important;position:static!important;transform:none!important;margin:0 auto 2px!important;width:max-content;max-width:100%;white-space:nowrap;line-height:1.1!important;padding:3px 7px!important;font-size:9px!important;font-weight:900;border-radius:6px;pointer-events:none;box-sizing:border-box;text-shadow:none;box-shadow:0 2px 6px #0007}'+
+    '#players .player .player-over>.battle-turn-mark{color:#0c3317;background:#7ee08a;order:-2}'+
+    '#players .player .player-over>.battle-target-mark{color:#3d0b05;background:#ff6b5b;order:-1}'+
+    '#players .player.is-battle-actor .portrait{animation:gmww-player-turn-pulse 1.2s ease-in-out infinite}'+
+    '#players .player.is-battle-target .portrait{animation:gmww-player-target-pulse 1.4s ease-in-out infinite}'+
+    '@keyframes gmww-player-turn-pulse{50%{filter:drop-shadow(0 0 15px #f5cf66) brightness(1.14)}}'+
+    '@keyframes gmww-player-target-pulse{50%{filter:drop-shadow(0 0 15px #67e9ca) brightness(1.16)}}'+
+    "#players .player .portrait{position:relative!important;overflow:visible!important}"+
+    "#players .player .portrait>.gmww-online-orbit.gmww-sv-orbit{position:absolute;inset:0;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:20;display:block;background:transparent;border:0;border-radius:0;padding:0;margin:0;--orbit-radius:30px;--orbit-height:9px;--orbit-icon-size:12px}"+
+    "#players .player .portrait>.gmww-online-orbit.gmww-sv-orbit>.gmww-sv-orbit-item{position:absolute;left:50%;top:50%;width:0;height:0;display:block;padding:0;margin:0;border:0;background:transparent;animation:gmwwSvVerticalOrbit 6s linear infinite;animation-delay:var(--orbit-delay,0s)}"+
+    "#players .player .portrait>.gmww-online-orbit.gmww-sv-orbit>.gmww-sv-orbit-item>span{display:block;position:static;width:auto;height:auto;padding:0;margin:0;border:0;border-radius:0;background:transparent;color:inherit;font:normal var(--orbit-icon-size,12px)/1 system-ui;white-space:nowrap;transform:translate(-50%,-50%);text-shadow:0 0 5px rgba(120,220,255,.55)}"+
+    "@keyframes gmwwSvVerticalOrbit{0%,100%{transform:translate(var(--orbit-radius),0)}12.5%{transform:translate(calc(var(--orbit-radius)*.707),calc(var(--orbit-height)*-.707))}25%{transform:translate(0,calc(-1*var(--orbit-height)))}37.5%{transform:translate(calc(var(--orbit-radius)*-.707),calc(var(--orbit-height)*-.707))}50%{transform:translate(calc(-1*var(--orbit-radius)),0)}62.5%{transform:translate(calc(var(--orbit-radius)*-.707),calc(var(--orbit-height)*.707))}75%{transform:translate(0,var(--orbit-height))}87.5%{transform:translate(calc(var(--orbit-radius)*.707),calc(var(--orbit-height)*.707))}}"+
+    "@media(prefers-reduced-motion:reduce){#players .player.is-battle-actor .portrait,#players .player.is-battle-target .portrait{animation:none!important}#players .player .portrait>.gmww-online-orbit.gmww-sv-orbit>.gmww-sv-orbit-item{animation-duration:24s!important}}";
+   doc.head.appendChild(css);
+  }
+  for(const node of doc.querySelectorAll('#players .player[data-player-id]')){
+   const id=String(node.dataset.playerId||'').replace(/^member:/,'');
+   const actor=active&&id===me,target=targets.has(id);
+   node.classList.toggle('is-battle-actor',actor);
+   node.classList.toggle('is-battle-target',target);
+   const portrait=node.querySelector(':scope>.portrait.game-character')||node.querySelector(':scope>.portrait')||node;
+   let orbit=node.querySelector('.gmww-online-orbit');
+   if(actor||target){
+     const kind=actor?'actor':'target',count=6;
+     if(!orbit){
+       orbit=doc.createElement('span');orbit.className='gmww-online-orbit gmww-sv-orbit';
+       orbit.setAttribute('aria-hidden','true');portrait.appendChild(orbit);
+     }else{
+       if(orbit.parentElement!==portrait)portrait.appendChild(orbit);
+       if(!orbit.classList.contains('gmww-sv-orbit'))orbit.classList.add('gmww-sv-orbit');
+     }
+     if(orbit.dataset.kind!==kind||orbit.childElementCount!==count){
+       orbit.dataset.kind=kind;orbit.replaceChildren();
+       for(let k=0;k<count;k++){
+         const item=doc.createElement('span');item.className='gmww-sv-orbit-item';
+         item.style.setProperty('--orbit-delay',(-6*k/count).toFixed(4)+'s');
+         const icon=doc.createElement('span');icon.textContent=kind==='actor'?'🧞‍♂️':'🐦‍🔥';
+         item.appendChild(icon);orbit.appendChild(item);
+       }
+     }
+   }else orbit?.remove();
+   const labels=node.querySelector('.player-over');
+   if(!labels)continue;
+   let mark=labels.querySelector(':scope>.battle-turn-mark');
+   if(actor){if(!mark){mark=doc.createElement('span');mark.className='battle-turn-mark';mark.textContent='★ ĐẾN LƯỢT';mark.setAttribute('aria-hidden','true')}
+     if(labels.firstElementChild!==mark)labels.prepend(mark);
+   }else mark?.remove();
+   let targetMark=labels.querySelector(':scope>.battle-target-mark');
+   if(target){if(!targetMark){targetMark=doc.createElement('span');targetMark.className='battle-target-mark';targetMark.textContent='MỤC TIÊU';targetMark.setAttribute('aria-hidden','true')}
+     if(actor&&mark?.parentElement===labels)mark.after(targetMark);
+     else if(labels.firstElementChild!==targetMark)labels.prepend(targetMark);
+   }else targetMark?.remove();
+  }
+ }catch{}
+}
+function renderOnlineActionDock(){
+ let dock=document.getElementById('gmwwOnlineDock');
+ const offers=state.room?.demo!==true&&String(state.room?.roomMode||'').toLowerCase()==='online'&&state.room?.phase==='running'?state.onlineActions||[]:[];
+ gmwwOnlineTurnEffects(offers);
+ if(!offers.length){dock?.remove();gmwwOnlineStop();gmwwOnlineWitchNotice();return}
+ if(!document.getElementById('gmwwOnlineDockStyle')){
+   const css=document.createElement('style');css.id='gmwwOnlineDockStyle';
+   css.textContent='#gmwwOnlineDock{position:fixed;z-index:100010;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;max-width:min(90vw,270px);overflow:visible;touch-action:none;user-select:none;scrollbar-width:none}'+
+     '#gmwwOnlineDock.is-idle-hidden{opacity:1;pointer-events:auto}'+
+     '#gmwwOnlineDock button[data-blocked="true"]{position:relative;opacity:.7;filter:grayscale(.55)}#gmwwOnlineDock button[data-blocked="true"]:after{content:attr(data-effect-icon);position:absolute;right:-3px;top:-5px;font-size:18px;text-shadow:0 1px 5px #000}'+
+     '#gmwwOnlineDock button{flex:0 0 auto;position:relative;will-change:transform;width:clamp(28px,calc(48px * var(--online-action-scale,1)),72px);height:clamp(28px,calc(48px * var(--online-action-scale,1)),72px);border:0;padding:0;background:transparent;touch-action:none}'+
+     '#gmwwOnlineDock img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;filter:drop-shadow(0 4px 8px #000b)}'+
+     '#game:not(.active)~#gmwwOnlineDock{display:none!important}'+
+     '.gmww-online-ghost{position:fixed;z-index:100060;width:56px;height:56px;transform:translate(-50%,-50%);object-fit:contain;pointer-events:none;will-change:transform;contain:layout paint;filter:drop-shadow(0 6px 10px #000c) drop-shadow(0 0 9px #f7d58a)}'+
+     '.gmww-online-ghost.is-card{object-fit:cover;border-radius:9px;border:1px solid #d5af68;background:#07111b}'+
+     '.gmww-online-ghost.is-magnet{filter:drop-shadow(0 0 14px #7effba) drop-shadow(0 0 28px #7effba)}'+
+     '#gmwwOnlineDock button.gmww-online-lifted{opacity:0!important;pointer-events:none}'+
+     '#gmwwOnlinePick{position:fixed;z-index:100050;left:50%;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 140px);transform:translateX(-50%);width:min(92vw,380px);max-height:48dvh;overflow:auto;display:grid;gap:8px;padding:12px;border:1px solid #deb56d;border-radius:15px;background:#092b40f2;color:white;box-shadow:0 12px 35px #000d}'+
+     '#gmwwOnlinePick strong{font-size:14px}#gmwwOnlinePick .gmww-online-people{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:26dvh;overflow:auto;gap:6px}'+
+     '#gmwwOnlinePick button{min-height:36px;background:#16506c;color:white;border:1px solid #7196a9;border-radius:9px;font-weight:700}';
+   document.head.appendChild(css)
+ }
+ if(!dock){dock=document.createElement('div');dock.id='gmwwOnlineDock';document.body.appendChild(dock)}
+ const scale=[25,50,75,100,125,150].includes(Number(state.actionIconScale))?Number(state.actionIconScale):100;
+ dock.style.setProperty('--online-action-scale',String(scale/100));
+ const scope=[state.roomCode,state.room?.matchId,state.room?.cycleKey].join('|');
+  if(gmwwOnlineIconScope!==scope){gmwwOnlineIconScope=scope;gmwwOnlineIconPositions.clear();gmwwOnlineCanRestore=false;gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0}
+  // Fail closed for any stale offsets from earlier drag logic, even if offers did not change.
+  if(gmwwOnlineIconPositions.size)gmwwOnlineIconPositions.clear();
+  for(const button of dock.querySelectorAll('button'))button.style.transform='';
+  const sig=[scope,...offers.map(a=>[a.key,a.iconUrl,a.blocked,a.blockedReason,a.targetCount,a.noSelf].join(':'))].join('|');
+ gmwwOnlineWitchNotice();gmwwOnlinePlaceAtFire(dock);setTimeout(()=>gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock')),450);
+ if(dock.dataset.sig===sig)return;dock.dataset.sig=sig;dock.replaceChildren();dock.classList.remove('is-idle-hidden');
+ for(const action of offers){
+   const btn=document.createElement('button');btn.type='button';btn.title=String(action.name||'Hành động')+(action.blocked?' • '+String(action.blockedReason||'Bị hiệu ứng chặn'):'');
+   if(action.blocked){btn.dataset.blocked='true';btn.dataset.effectIcon=action.blockedType==='frozen'?'❄️':action.blockedType==='expelled'?'🚪':'⛔';}
+   btn.setAttribute('aria-label',btn.title);
+   const img=document.createElement('img');img.src=String(action.iconUrl||'/action-icons/v3/49_sang_tao_artifact.webp');img.alt='';img.draggable=false;btn.appendChild(img);
+   // The entrance stairs are the only home of each action icon; never restore old drag offsets.
+    btn.onpointerdown=e=>gmwwOnlineIconDown(e,action);
+   btn.onclick=e=>{if(action.blocked){toast(String(action.blockedReason||'Bạn không thể thực hiện hành động ở lượt này.'));return}if(e.detail===0)gmwwOnlinePickAction(action)};
+   dock.appendChild(btn);
+ }
+}
+
+{const replace=()=>requestAnimationFrame(()=>gmwwOnlinePlaceAtFire(document.getElementById('gmwwOnlineDock')));window.addEventListener('resize',replace,{passive:true});window.visualViewport?.addEventListener?.('resize',replace,{passive:true});
+ // Follow the footer when the chat opens/closes, so icons stay above the chat box.
+ let watched=null;setInterval(()=>{const f=document.getElementById('gmwwOnlineFooter');if(f&&f!==watched&&typeof ResizeObserver==='function'){watched=f;new ResizeObserver(replace).observe(f)}},1500)}
+function gmwwOnlinePlaceAtFire(dock){
+ if(!dock)return;
+ // V3.304: action icons rest at the village entrance stairs, just above the bottom menu
+ // (same spot on GM and Player). Rows grow upward so nothing covers the footer.
+ const vw=window.innerWidth,vh=window.innerHeight,footer=document.getElementById('gmwwOnlineFooter');
+ // offsetTop ignores the idle-hide transform, so the icon does not jump when the menu hides.
+ const footerTop=footer&&footer.offsetHeight>0&&Number.isFinite(footer.offsetTop)&&footer.offsetTop>vh*.5?footer.offsetTop:vh-Math.max(84,vh*.11);
+ // V3.305: one notch higher so the icons never sit on the chat lines above the footer.
+ const x=vw/2,bottom=Math.max(140,Math.min(vh-24,footerTop-48));
+ dock.style.transform='translate(-50%,-100%)';
+ dock.style.left=Math.max(32,Math.min(vw-32,x))+'px';
+ dock.style.top=bottom+'px';
+ const intel=document.getElementById('gmwwOnlineWitchIntel');if(intel?.style){intel.style.left=dock.style.left;intel.style.top=Math.max(105,bottom-dock.offsetHeight-30)+'px'}
+}

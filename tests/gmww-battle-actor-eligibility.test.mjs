@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -39,8 +40,8 @@ test('actor case-folding and absence of data are backwards compatible',()=>{
   assert.equal(blocked([]),false);
 });
 test('Production Durable Object enforces this shared policy before applying the action',()=>{
-  const source=fs.readFileSync('src/index.js','utf8');
-  assert.match(source,/import \{ isBattleActorBlocked \} from "\.\/gmww-battle-actor-eligibility\.js";/);
+  const source=workerSource();
+  assert.match(source,/import \{ ?isBattleActorBlocked ?\} from "\.\/gmww-battle-actor-eligibility\.js";/);
   assert.match(source,/if\(isBattleActorBlocked\(interactions,\{actorId,matchId,statusDefs:STATUS_DEFS\}\)\)/);
   assert.match(source,/ACTOR_CANNOT_ACT/);
 });

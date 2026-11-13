@@ -1,9 +1,10 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {classifyBrowserScope} from '../.github/scripts/ci-browser-scope.mjs';
 
-const source=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+const source=playerWebSource('20-village-and-profile');
 const bundle=readFileSync('src/gmww-members-live.js','utf8');
 const baseline=JSON.parse(bundle.slice(bundle.indexOf('=')+1).trim().replace(/;$/,''));
 const begin=source.indexOf('let toastTimer;');

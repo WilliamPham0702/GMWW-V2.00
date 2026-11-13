@@ -2,8 +2,8 @@ name: Check AUTO VAN Game Templates
 on:
   pull_request:
     paths:
-      - 'server-game/src/40-battle-and-timeline.part'
-      - 'server-game/src/50-roles-and-artifacts.part'
+      - 'server-game/src/40-battle-and-timeline/**'
+      - 'server-game/src/50-roles-and-artifacts/**'
       - 'server-game/current/app.js'
       - 'server-game/current/GMWW.html'
       - 'tests/auto-game-template.test.mjs'

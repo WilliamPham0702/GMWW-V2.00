@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -44,7 +45,7 @@ test('Untrusted, incomplete, duplicated or wrong-version manifests fail closed',
     assert.equal(await ready(assets(),m),false);
 });
 test('Production Worker gates both latest and versioned Runtime manifest on asset readiness',()=>{
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(worker,/if\(validRuntime\(versioned\)&&await runtimeReady\(versioned\)\)/);
   assert.match(worker,/if\(validRuntime\(manifest\)&&await runtimeReady\(manifest\)\)/);
   assert.match(worker,/RUNTIME_MANIFEST_NOT_READY/);
@@ -61,7 +62,7 @@ test('Runtime downloads are served by the same Cloudflare ASSETS binding as read
   const config=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
   assert.ok(config.assets.run_worker_first.includes('/updates/runtime/*'));
   assert.ok(config.assets.run_worker_first.includes('/updates/latest.json'));
-  const worker=fs.readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   assert.match(worker,/url\.pathname\.startsWith\("\/updates\/runtime\/"\)/);
   assert.match(worker,/return env\.ASSETS\.fetch\(request\)/);
 });

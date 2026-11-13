@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -69,7 +70,7 @@ test('same-day GM UI includes separate auto/manual stages and percentage tally',
  const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
  const gm=fs.readFileSync('server-game/current/app.js','utf8');
  const css=fs.readFileSync('server-game/current/style.css','utf8');
- const backend=fs.readFileSync('src/index.js','utf8');
+ const backend=workerSource();
  assert.ok(html.includes('id="battleGallowsAutomatic"'));
  assert.ok(html.includes('id="battleGallowsMembers"'));
  assert.ok(gm.includes('nomEligible'));

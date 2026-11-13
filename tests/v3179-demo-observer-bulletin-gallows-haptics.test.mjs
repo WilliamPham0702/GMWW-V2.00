@@ -1,13 +1,14 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const setup=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const setup=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
-const library=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+const library=gmSource('00-core-and-library');
 const swift=fs.readFileSync('server-game/GMWW-Server/GameView.swift','utf8');
 const slice=(s,from,to)=>{const a=s.indexOf(from),b=s.indexOf(to,a+from.length);assert.ok(a>=0&&b>a,from);return s.slice(a,b)};
 

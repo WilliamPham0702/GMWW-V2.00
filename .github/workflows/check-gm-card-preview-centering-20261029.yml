@@ -4,12 +4,12 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "server-game/src/10-library-and-settings.part"
+      - "server-game/src/10-library-and-settings/**"
       - "server-game/current/app.js"
       - "package.json"
       - "package-lock.json"
       - "src/index.js"
-      - "server-game/src/00-core-and-library.part"
+      - "server-game/src/00-core-and-library/**"
       - "server-game/current/GMWW.html"
       - ".github/workflows/deploy-production.yml"
       - ".github/scripts/prepare-update-channel.mjs"
@@ -19,12 +19,12 @@ on:
   push:
     branches: [main]
     paths:
-      - "server-game/src/10-library-and-settings.part"
+      - "server-game/src/10-library-and-settings/**"
       - "server-game/current/app.js"
       - "package.json"
       - "package-lock.json"
       - "src/index.js"
-      - "server-game/src/00-core-and-library.part"
+      - "server-game/src/00-core-and-library/**"
       - "server-game/current/GMWW.html"
       - ".github/workflows/deploy-production.yml"
       - ".github/scripts/prepare-update-channel.mjs"

@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -62,7 +63,7 @@ test('GP2 preserves unique seats with extreme setup offsets and spacing',()=>{
 
 test('GM shows automatic shape, center fire icon and exact seat capacity; server sync remains authoritative',()=>{
   const app=read('server-game/current/app.js'),html=read('server-game/current/GMWW.html');
-  const worker=read('src/index.js'),player=read('assets/village/village.mjs');
+  const worker=workerSource(),player=read('assets/village/village.mjs');
   assert.match(app,/const shape=layout\.recommendedSeatShape\(n\)/);
   assert.match(app,/layout\.seatTemplatePositions\(n,shape\)/);
   assert.match(app,/const fire=document\.createElement\('span'\)/);

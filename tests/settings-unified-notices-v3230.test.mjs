@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +7,7 @@ import vm from 'node:vm';
 
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const app=fs.readFileSync('server-game/current/app.js','utf8');
-const part=fs.readFileSync('server-game/src/20-members-and-roster.part','utf8');
+const part=gmSource('20-members-and-roster');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const start='/* GMWW V3.230 — thông báo thống nhất';
 const end='/* END GMWW SETTINGS NOTICES V3.230 */';
@@ -36,11 +38,11 @@ test('GM source bundle đồng nhất và release V3.230',{skip:'LEGACY-QUARANTI
     '00-core-and-library.part','10-library-and-settings.part',
     '20-members-and-roster.part','30-village-and-setup.part',
     '40-battle-and-timeline.part','50-roles-and-artifacts.part'
-  ].map(x=>fs.readFileSync('server-game/src/'+x,'utf8')).join('');
+  ].map(x=>gmSource(x.replace(/\.part$/,''))).join('');
   assert.equal(app,parts,'GM packed app must match 6 source parts byte-for-byte');
   assert.match(app,/const VERSION='3\.230'/);
   assert.match(html,/<title>GMWW V3\.230<\/title>/);
-  assert.match(fs.readFileSync('src/index.js','utf8'),/VERSION="V3\.230"/);
+  assert.match(workerSource(),/VERSION="V3\.230"/);
   assert.match(fs.readFileSync('.github/scripts/prepare-update-channel.mjs','utf8'),/V3\.230: Cài đặt/);
   assert.ok(fs.existsSync('docs/releases/GMWW-V3.230-settings-notices-20261026.md'));
 });
@@ -83,7 +85,7 @@ test('Thông báo hiển thị an toàn: mới nhất trên đầu, trần 12, x
   assert.equal(elements.settingsNoticeCount.textContent,'0 thông báo');
 });
 test('Tất cả status đẩy vào box, không thay đổi Core hay endpoint DO',()=>{
-  const part10=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+  const part10=gmSource('10-library-and-settings');
   assert.match(part10,/gmwwSettingsNoticeFromActive\(\['auditLocalData','clearRuntimeCache'/);
   assert.match(part10,/gmwwSettingsNoticeFromActive\(\['runSystemDiagnostics'/);
   assert.match(part10,/gmwwSettingsNoticeFromActive\(\['checkServerHealth'/);

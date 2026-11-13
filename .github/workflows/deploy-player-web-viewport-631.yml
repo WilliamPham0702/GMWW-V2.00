@@ -5,7 +5,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "src/player-web-src/00-bootstrap-and-session.part"
+      - "src/player-web-src/00-bootstrap-and-session/**"
       - "src/gmww-members-live.js"
       - "assets/village/village.css"
       - "assets/village/index.html"

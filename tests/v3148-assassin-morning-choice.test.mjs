@@ -1,12 +1,14 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-const gm=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const gm=gmSource('40-battle-and-timeline');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const css=fs.readFileSync('server-game/current/style.css','utf8');
 const rule=fs.readFileSync('server-game/current/battle-controls.js','utf8');
-const doSource=fs.readFileSync('src/index.js','utf8');
-const player=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+const doSource=workerSource();
+const player=playerWebSource('30-rooms-and-realtime');
 
 test('Assassin GM must choose 👍 or 👎; correct role, target and turn enforced by Durable Object',()=>{
   assert.ok(rule.includes('return "assassin_mark"'));

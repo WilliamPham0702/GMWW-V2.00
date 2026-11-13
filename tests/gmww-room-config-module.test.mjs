@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -75,7 +76,7 @@ test('room setup: movement/online normalization and one-ring seat limits are unc
 });
 
 test('room setup: production Worker imports the shared contract exactly once',()=>{
-  const source=readFileSync('src/index.js','utf8');
+  const source=workerSource();
   assert.match(source,/from "\.\/gmww-room-config-rules\.js";/);
   assert.doesNotMatch(source,/function sanitizeGameConfig\(/);
   assert.doesNotMatch(source,/function normalizeSeatCount\(/);

@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-const source=readFileSync('src/index.js','utf8');
+const source=workerSource();
 const gm=source.slice(source.indexOf('  async gmParticipants(request,body){'),source.indexOf('  async gmRoomSettings(request,body){'));
 const presence=source.slice(source.indexOf('  async memberPresenceInternal(body){'),source.indexOf('  async memberRecordResult(body){'));
 const worker=source.slice(source.indexOf('async function gmRoomParticipants(env,raw,request){'),source.indexOf('async function gmRoomConfig(env,raw,request)'));

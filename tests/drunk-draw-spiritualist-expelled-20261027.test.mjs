@@ -1,3 +1,5 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -51,20 +53,20 @@ test('Exile blocks bad effects but never obstructs neutral faction comparison',(
  assert.equal(isPassiveInformationAction('action_compare_faction'),true);
  assert.equal(isPassiveInformationAction('action_witch_kill'),false);
  assert.equal(isPassiveInformationAction('action_wolf_bite'),false);
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  assert.match(worker,/const isFactionCompare=String\(body\?\.actionId\|\|''\)==='action_compare_faction'/);
  assert.match(worker,/effectiveTargets=isFactionCompare\?actionTargets:actionTargets\.filter/);
  assert.match(worker,/revealIds\.filter\(id=>players\[\"member:\"\+id\]&&\(isFactionCompare\|\|revealActionId==='action_seer'\|\|!isExpelled\(id\)\)\)/);
  assert.match(worker,/results\.push\(\{ok:true,loginId:id,observed:true\}\)/);
 });
 test('Authenticated room route never trusts Player Web actor or source role',()=>{
- const worker=fs.readFileSync('src/index.js','utf8');
+ const worker=workerSource();
  assert.match(worker,/loginId:me\.member\.loginId,cardId:body\.cardId/);
  assert.match(worker,/DRUNK_ALREADY_CHOSEN/);
  assert.match(worker,/DRUNK_WRONG_TURN/);
  assert.match(worker,/DRUNK_CARD_INVALID/);
  assert.match(worker,/blockConcurrencyWhile/);
- const client=fs.readFileSync('src/player-web-src/30-rooms-and-realtime.part','utf8');
+ const client=playerWebSource('30-rooms-and-realtime');
  assert.match(client,/drunk\/draw/);
  assert.match(client,/dd-card/);
  assert.match(client,/refreshPrivateRole\(true\)/);

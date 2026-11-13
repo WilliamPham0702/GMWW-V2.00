@@ -1,15 +1,17 @@
+import {gmSource as readGmGroup} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const gm=fs.readFileSync('server-game/current/app.js','utf8');
-const gmSource=fs.readFileSync('server-game/src/00-core-and-library.part','utf8');
+const gmSource=readGmGroup('00-core-and-library');
 const html=fs.readFileSync('server-game/current/GMWW.html','utf8');
 const player=fs.readFileSync('assets/village/scene-manager.mjs','utf8');
 const style=fs.readFileSync('assets/village/village-art.css','utf8');
 const gmStyle=fs.readFileSync('server-game/current/style.css','utf8');
-const gmPlaySource=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const gmPlaySource=readGmGroup('40-battle-and-timeline');
 
 test('GM only may apply or reset scenes, images stay readable',()=>{
  assert.match(worker,/\/api\/gm\/village-scene"&&request.method==="PUT"/);

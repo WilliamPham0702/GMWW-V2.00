@@ -1,9 +1,10 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
-const source=readFileSync('src/player-web-src/35-online-chat.part','utf8');
+const source=playerWebSource('35-online-chat');
 function extract(start,end){
  const a=source.indexOf(start),b=source.indexOf(end,a);
  assert.ok(a>=0&&b>a,'Missing Player Web implementation: '+start);

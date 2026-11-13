@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -59,7 +60,7 @@ test('does not touch role/artifact/OTA asset data', () => {
 
 test('release note filter remains connected to /api/update/manifest route', async () => {
  const fs=await import('node:fs/promises');
- const s=await fs.readFile(new URL('../src/index.js',import.meta.url),'utf8');
+ const s=workerSource();
  const start=s.indexOf('if(url.pathname==="/api/update/manifest"');
  const end=s.indexOf('if((url.pathname==="/favicon.svg"',start);
  assert.ok(start>0 && end>start);

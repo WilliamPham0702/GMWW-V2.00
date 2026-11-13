@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -59,7 +60,7 @@ test('V3.194 P0: compiled voting and nomination implementation survives HTTP pol
 });
 
 test('V3.194: heartbeat and websocket ping do not rebroadcast full room to all players',()=>{
-  const worker=readFileSync('src/index.js','utf8');
+  const worker=workerSource();
   const heartbeat=worker.slice(worker.indexOf('async heartbeat(body){'),worker.indexOf('async leave(body){'));
   const ping=worker.slice(worker.indexOf('async webSocketMessage(ws,message){'),worker.indexOf('async markSocketDisconnected(ws){'));
   const join=worker.slice(worker.indexOf('async websocket(request,url){'),worker.indexOf('async webSocketMessage(ws,message){'));

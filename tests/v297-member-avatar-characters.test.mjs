@@ -1,9 +1,10 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const app=readFileSync(new URL('../server-game/current/app.js',import.meta.url),'utf8');
-const worker=readFileSync(new URL('../src/index.js',import.meta.url),'utf8');
+const worker=workerSource();
 const identity=readFileSync(new URL('../src/gmww-player-identity-rules.js',import.meta.url),'utf8');
 
 test('Server member picker uses 40 game characters instead of artwork thumbnails',()=>{

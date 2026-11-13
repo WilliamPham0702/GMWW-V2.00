@@ -1,0 +1,233 @@
+/* Match completion is shared by ordinary rooms and DEMO. No room is reset until GM chooses. */
+const playCompletionState={key:'',dismissed:'',winner:'',completed:false,busy:false,matchId:'',roomCode:'',config:null,templateId:''};
+function renderPlayCompletion(){
+  const s=playCompletionState,title=document.getElementById('playCompletionTitle'),text=document.getElementById('playCompletionMessage');
+  if(title)title.textContent=s.completed&&s.winner?'🏆 '+s.winner.toUpperCase()+' CHIẾN THẮNG':s.winner?'XÁC NHẬN '+s.winner.toUpperCase():'KẾT QUẢ VÁN';
+  const ceremony=document.getElementById('playMatchCompletionSheet');
+  if(ceremony){ceremony.dataset.victory=String(!!s.completed);ceremony.dataset.faction=String(s.winner||'');}
+  const sparkle=ceremony?.querySelector('.gmww-winner-sea-glow');if(sparkle)sparkle.hidden=!s.completed;
+  if(text)text.textContent=s.completed?'Ván đã hoàn thành. Chọn bước tiếp theo.':'Xác nhận phe thắng rồi hoàn thành ván.';
+  for(const b of document.querySelectorAll('[data-completion-winner]')){b.setAttribute('aria-pressed',String(b.dataset.completionWinner===s.winner));b.disabled=s.completed||s.busy}
+  const confirm=document.getElementById('playCompletionConfirm');if(confirm){confirm.hidden=s.completed;confirm.disabled=!s.winner||s.busy}
+  const choices=document.getElementById('playCompletionChoices');if(choices)choices.hidden=!s.completed;
+  const abort=document.getElementById('playCompletionAbort');if(abort)abort.hidden=s.completed;
+  for(const b of document.querySelectorAll('[data-completion-next]'))b.disabled=s.busy;
+}
+function playCompletionIsCurrentResult(room){
+  const phase=String(room?.phase||'').toLowerCase();
+  const matchId=String(room?.matchId||''),endedMatchId=String(room?.lastEndedMatchId||'');
+  return ['lobby','ended'].includes(phase)&&!!room?.endedAt&&!!room?.winnerFaction&&
+    !!matchId&&matchId===endedMatchId&&
+    !['game','roles','deal'].includes(String(room?.gmStage||'').toLowerCase());
+}
+async function openPlayCompletionSheet(){
+  if(!isLivePlayRoom())return;
+  const currentRoom=playSceneRuntime.room||{};
+  if(String(currentRoom.phase||'').toLowerCase()!=='running'&&!playCompletionIsCurrentResult(currentRoom)){
+    await openPlayEndSheet();return;
+  }
+  const room=playSceneRuntime.room||{},s=playCompletionState,key=String(playSceneState.roomCode)+':'+String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
+  if(s.key!==key){
+    s.key=key;s.roomCode=String(playSceneState.roomCode);s.matchId=String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
+    s.config=playSceneRuntime.gameConfig;s.templateId=playSceneState.gameTemplateId||'';
+    s.winner=String(room.winnerFaction||playSceneRuntime.winProposal?.winnerFaction||'');s.completed=!!room.endedAt&&!!room.winnerFaction;
+  }
+  if(typeof demoStop==='function'&&demoRunner.running)await demoStop('winner_ready');
+  if(!s.completed&&room.autoGM===true&&room.phase==='running'){
+    const paused=await playRoomApi('/auto',{method:'POST',body:JSON.stringify({enabled:false})});playSceneRuntime.room=paused.room||room;playSceneState.autoGM=false;
+  }
+  renderPlayCompletion();document.getElementById('playMatchCompletionSheet')?.classList.remove('hidden');
+}
+function closePlayCompletionSheet(){playCompletionState.dismissed=playCompletionState.key;document.getElementById('playMatchCompletionSheet')?.classList.add('hidden')}
+async function playWatchCompletion(data){
+  const room=data?.room;if(!room)return;
+  const running=String(room.phase||'').toLowerCase()==='running',completed=playCompletionIsCurrentResult(room);
+  // A new match must never inherit the previous match's winner overlay.
+  if(!running&&!completed){document.getElementById('playMatchCompletionSheet')?.classList.add('hidden');return}
+  // Finished results remain readable on demand, but never pop up on room re-entry.
+  if(!running||!data.winProposal)return; // Running GM may still choose a winner manually.
+  const key=String(playSceneState.roomCode)+':'+String((room.endedAt?room.lastEndedMatchId:room.matchId)||room.matchId||'');
+  if(playCompletionState.key!==key&&playCompletionState.dismissed!==key)
+    await openPlayCompletionSheet();
+}
+async function confirmPlayCompletion(){
+  const s=playCompletionState;if(s.busy||s.completed||!s.winner||s.roomCode!==String(playSceneState.roomCode))return;
+  s.busy=true;renderPlayCompletion();
+  try{
+    if(demoRunner.running)await demoStop('winner_ready');
+    const data=await playRoomApi('/end',{method:'POST',body:JSON.stringify({matchId:s.matchId,winnerFaction:s.winner,winnerLabel:s.winner})});
+    if(data?.ok!==true)throw Error(data?.message||data?.error||'Server chưa xác nhận hoàn thành ván.');
+    playSceneRuntime.room=data.room||playSceneRuntime.room;s.completed=true;
+    await playSyncRoom(true);renderPlayCompletion();
+  }catch(err){playFlashError(err?.message||String(err))}
+  finally{s.busy=false;renderPlayCompletion()}
+}
+async function playCompletionNext(choice){
+  const s=playCompletionState;if(!s.completed||s.busy||s.roomCode!==String(playSceneState.roomCode))return;
+  if(!['replay','game','room','exit'].includes(choice))return;
+  s.busy=true;renderPlayCompletion();
+  try{
+    if(choice==='room'||choice==='exit'){
+      // Leave is a real server-side seat release, not a local screen reset.
+      // Match history and the already-recorded winner remain in matchCompletion storage.
+      const reset=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({
+        transactionId:'completed-leave-'+s.matchId,
+        expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),
+        postGame:false,preserveParticipants:false
+      })});
+      if(reset?.hardReset!==true||Number(reset?.playersCount||0)!==0||Number(reset?.assignmentsCount||0)!==0)
+        throw new Error('Server chưa giải phóng hết người chơi và Seat. Không thể rời ván.');
+      playSceneRuntime.room=reset.room||playSceneRuntime.room;
+      rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||{});
+      disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.step='lobby';playSceneState.phase='lobby';playSceneState.night=0;playSceneState.gameTemplateId='';playSceneState.assignmentsPreview=[];
+      // Otherwise playLiveMembers() reconstructs ghost Seat occupants from GM's stale selection.
+      playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';playSceneState.matchId='';
+      playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
+      closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='exit'){exitPlayImmersive({completed:true});return}return;
+    }
+    const data=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({postGame:true,preserveParticipants:true,expectedResetVersion:Number(playSceneRuntime.room?.resetVersion||0),transactionId:'next-'+s.matchId})});
+    if(data?.ok!==true||data.preserveParticipants!==true)throw Error('Server chưa xác nhận chuẩn bị ván tiếp theo.');
+    playSceneRuntime.room=data.room;playSceneRuntime.players=data.players||[];playSceneRuntime.assignments=[];playSceneRuntime.nightRuntime=null;playSceneRuntime.activeEffects=[];playSceneRuntime.winProposal=null;playSceneRuntime.dayActionUsage=[];playSceneRuntime.battleActionUsage=[];playSceneRuntime.gallows=null;playSceneRuntime.artifactCycle={count:0,max:Number(s.config?.artifactLimitPerCycle??3),accepted:[]};
+    playSceneState.phase='lobby';playSceneState.night=0;playSceneState.assignmentsPreview=[];playSceneState.artifactCount=0;
+    if(choice==='replay'){
+      if(!s.config)throw Error('Không tìm thấy Ván Mẫu của ván trước.');
+      const matchId='match-'+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36));
+      const configured=await playRoomApi('/config',{method:'POST',body:JSON.stringify({gameConfig:s.config,matchId,matchRevision:1})});
+      playSceneRuntime.room=configured.room||playSceneRuntime.room;playSceneRuntime.gameConfig=configured.gameConfig||s.config;
+      playSceneState.matchId=matchId;playSceneState.gameTemplateId=s.templateId;playSceneState.step='roles';
+      await playPublishStage('roles');playBuildAssignments({random:true});
+    }else{
+      playSceneState.matchId='';playSceneState.gameTemplateId='';playSceneState.rolePlan={};playSceneState.step='game';await playPublishStage('game');
+    }
+    closePlayCompletionSheet();savePlayScene();renderPlayScene();if(choice==='game')await openPlayGameStep();
+  }catch(err){playFlashError(err?.message||String(err))}
+  finally{s.busy=false;renderPlayCompletion()}
+}
+function initPlayCompletion(){
+  const sheet=document.getElementById('playMatchCompletionSheet');if(!sheet||sheet.dataset.bound)return;sheet.dataset.bound='1';
+  document.getElementById('playCompletionConfirm')?.addEventListener('click',()=>{void confirmPlayCompletion()});
+  document.getElementById('playCompletionClose')?.addEventListener('click',closePlayCompletionSheet);
+  document.getElementById('playCompletionAbort')?.addEventListener('click',()=>{closePlayCompletionSheet();void openPlayEndSheet()});
+  for(const button of sheet.querySelectorAll('[data-completion-winner]'))button.addEventListener('click',()=>{playCompletionState.winner=button.dataset.completionWinner;renderPlayCompletion()});
+  for(const button of sheet.querySelectorAll('[data-completion-next]'))button.addEventListener('click',()=>{void playCompletionNext(button.dataset.completionNext)});
+}
+
+async function openPlayEndSheet(){
+  // Forced end is available during room setup, seating, role delivery, day or night.
+  if(!isLivePlayRoom()){playFlashError('Chưa chọn Phòng để kết thúc ván.');return}
+  if(!playSceneRuntime.room)await playSyncRoom(true);
+  if(!isLivePlayRoom())return;
+  const sheet=document.getElementById('playEndSheet');if(!sheet)return;
+  const label=document.getElementById('playEndRoomLabel');
+  if(label)label.textContent='Phòng '+playSceneState.roomCode+' • '+(playSceneRuntime.room?.roomName||'GMWW');
+  const btn=document.getElementById('playEndConfirm');if(btn)btn.disabled=!!playSceneRuntime.busy;
+  sheet.classList.remove('hidden');
+}
+function closePlayEndSheet(){document.getElementById('playEndSheet')?.classList.add('hidden')}
+
+/* Shared Server GM outside-tap policy: dismiss the topmost visible floating
+   sheet, never submit a form, confirm a game action or discard saved data.
+   The active navigation pages remain navigable rather than auto-exiting play. */
+function gmwwDismissOutsidePointer(event){
+  if(event.pointerType==='mouse'&&event.button!==0)return;
+  const target=event.target;
+  if(!target?.closest)return;
+  const sheets=[...document.querySelectorAll('.sheet')].filter(el=>!el.hidden&&!el.classList.contains('hidden')&&getComputedStyle(el).display!=='none');
+  if(sheets.length){
+    // Respect z-index; for equal layers the last DOM node is topmost.
+    const sheet=sheets.map((el,index)=>({el,index,z:Number.parseInt(getComputedStyle(el).zIndex,10)||0}))
+      .sort((a,b)=>a.z-b.z||a.index-b.index).at(-1).el;
+    if(sheet.querySelector('.sheet-card')?.contains(target))return;
+    const close={
+      editSheet:()=>closeSheet(),
+      playGameSheet:()=>closePlayGameSheet(),
+      playMatchCompletionSheet:()=>closePlayCompletionSheet(),
+      playEndSheet:()=>closePlayEndSheet(),
+      playRosterSheet:()=>closePlayRosterSheet(),
+      playSeatSheet:()=>closePlaySeatSheet(),
+      playDisbandSheet:()=>closePlayDisbandSheet(),
+      memberSheet:()=>closeMemberSheet(),
+      playGMSheet:()=>closePlayGMSheet(),
+      playCreateRoomSheet:()=>document.getElementById('playCreateRoomClose')?.click()
+    }[sheet.id];
+    if(!close)return;
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    close();
+    return;
+  }
+  // Dynamically mounted GM chat is also a floating panel.
+  const chat=document.getElementById('gmwwGMChatPanel');
+  if(chat?.classList.contains('open')&&!chat.contains(target)&&
+     !target.closest('#gmwwGMChatLaunch,[data-gm-admin="open-chat"]')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    document.getElementById('gmwwGMChatClose')?.click();
+    return;
+  }
+  const cloudflare=document.getElementById('gmwwCloudflarePanel');
+  if(cloudflare&&!cloudflare.hidden&&!cloudflare.contains(target)&&
+     !target.closest('#gmwwCloudflareOpen,#gmwwServerTrashOpen')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    document.getElementById('gmwwCloudflareOpen')?.click();
+    return;
+  }
+  const assignment=document.getElementById('playRoleAssignmentPanel');
+  if(assignment&&!assignment.hidden&&!assignment.contains(target)&&
+     !target.closest('[data-play-step="roles"]')){
+    event.preventDefault?.();event.stopImmediatePropagation?.();
+    playSceneRuntime.assignmentPanelDismissed=true;
+    renderPlayRoleAssignmentPanel();
+    return;
+  }
+  const preset=document.getElementById('playSeatPresetPanel');
+  if(preset&&!preset.hidden&&!preset.contains(target)&&!target.closest('#playGatherSeatPreset')){
+    closePlaySeatPresetPanel();return;
+  }
+  // Front-of-card is a viewer, not an unsaved edit form. A tap in the blank
+  // library background closes it; Settings/back-face editing is left intact.
+  const editor=document.getElementById('entityEditor');
+  if(editor&&!editor.classList.contains('hidden')&&
+     document.getElementById('library')?.classList.contains('active')&&
+     document.getElementById('entityFront')?.classList.contains('active')&&
+     !target.closest('#playerCard,.editor-bar,#bottomNav')&&
+     (editor.contains(target)||document.getElementById('library')?.contains(target))){
+    closeEntityEditor();
+  }
+}
+function gmwwBindOutsideDismiss(){
+  const app=document.getElementById('app');
+  if(!app||app.dataset.outsideDismissReady==='1')return;
+  app.dataset.outsideDismissReady='1';
+  document.addEventListener('pointerdown',gmwwDismissOutsidePointer,true);
+}
+
+async function confirmPlayEndGame(){
+  if(playSceneRuntime.busy)return;
+  if(!isLivePlayRoom()){playFlashError('Chưa chọn Phòng để kết thúc ván.');return}
+  playSetBusy(true);const btn=document.getElementById('playEndConfirm');if(btn)btn.disabled=true;
+  try{
+    // Reuse the server's authenticated hard reset. This does not record a winner.
+    const resetVersion=Number(playSceneRuntime.room?.resetVersion||0);
+    const data=await playRoomApi('/reset',{method:'POST',body:JSON.stringify({
+      transactionId:'forced-end-'+Date.now(),expectedResetVersion:resetVersion,
+      forceEnd:true,postGame:false,preserveParticipants:false
+    })});
+    if(data?.hardReset!==true||Number(data?.playersCount||0)!==0)throw new Error('Server chưa xác nhận kết thúc cưỡng ép và giải phóng toàn bộ người chơi.');
+    playSceneRuntime.room=data.room||null;
+    playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;
+    playSceneRuntime.nightRuntime=null;playSceneRuntime.winProposal=null;
+    playSceneRuntime.activeEffects=[];playSceneRuntime.artifactCycle={count:0,max:3};
+    playSceneRuntime.selectedWinnerFaction='';
+    playSceneState.step='lobby';playSceneState.phase='lobby';playSceneState.night=0;
+    disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;
+    playSceneState.artifactCount=0;playSceneState.assignmentsPreview=[];
+    playSceneState.selectedMemberIds=[];playSceneState.activePlayerId='';
+    playSceneState.roleId='';playSceneState.artifactId='';
+    playSceneState.matchId='';playSceneState.gameName='Ván GMWW';
+    playSceneState.gameTemplateId='';playSceneState.rolePlan={};
+    playSceneState.roleDurations={};playSceneState.artifactsEnabled=false;
+    savePlayScene();closePlayEndSheet();
+    renderPlayScene();gmwwSendGmPresence(true);
+    playFlashError('Đã kết thúc ván. Trở về Sảnh chờ (bước 1).');
+  }catch(err){playFlashError(err.message||'Không thể kết thúc cưỡng ép.')}
+  finally{playSetBusy(false);if(btn)btn.disabled=false}
+}

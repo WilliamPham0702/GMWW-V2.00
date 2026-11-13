@@ -1,0 +1,46 @@
+
+function openDb(){return new Promise((resolve,reject)=>{const q=indexedDB.open(DB_NAME,1);q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains(DB_STORE))q.result.createObjectStore(DB_STORE,{keyPath:'key'})};q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)})}
+async function dbPut(key,blob){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put({key,blob,updatedAt:Date.now()});tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
+async function dbGet(key){const db=await openDb();const out=await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readonly');const q=tx.objectStore(DB_STORE).get(key);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error)});db.close();return out}
+async function dbDelete(key){const db=await openDb();await new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).delete(key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
+async function migrateLegacyV1Assets(){
+  const marker='GMWW_V1_ASSET_MIGRATION_V258';if(localStorage.getItem(marker)==='done'||typeof indexedDB?.databases!=='function')return;
+  const names=new Set((await indexedDB.databases()).map(x=>String(x?.name||'')));let copied=0;
+  for(const name of LEGACY_V1_ASSET_DBS){if(!names.has(name))continue;let legacy;
+    try{legacy=await new Promise((resolve,reject)=>{const q=indexedDB.open(name);q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)});for(const storeName of Array.from(legacy.objectStoreNames)){const rows=await new Promise((resolve,reject)=>{const tx=legacy.transaction(storeName,'readonly'),store=tx.objectStore(storeName),values=store.getAll(),keys=store.getAllKeys();tx.oncomplete=()=>resolve({values:values.result||[],keys:keys.result||[]});tx.onerror=()=>reject(tx.error)});for(let i=0;i<rows.values.length;i++){const value=rows.values[i],key=String(value?.key??rows.keys[i]??'');const blob=value instanceof Blob?value:value?.blob instanceof Blob?value.blob:null;if(key&&blob&&!(await dbGet(key))){await dbPut(key,blob);copied++}}}}catch(e){console.warn('V1 asset migration skipped',name,e)}finally{try{legacy?.close()}catch(_){}}
+  }
+  localStorage.setItem(marker,'done');localStorage.setItem(marker+'_COUNT',String(copied));
+}
+function cardBlobKey(themeId,kind,id,assetKind){return 'v225|'+themeId+'|'+kind+'|'+id+'|'+assetKind}
+function uiBlobKey(themeId,slotId){return themeId+'|ui|'+slotId}
+async function blobUrlFor(key){if(objectUrls.has(key))return objectUrls.get(key);try{const rec=await dbGet(key);if(rec&&rec.blob){const u=URL.createObjectURL(rec.blob);objectUrls.set(key,u);return u}}catch(_){}return''}
+function imageToThumb(src){return new Promise(resolve=>{const im=new Image();im.onload=()=>{const sw=im.naturalWidth||1024,sh=im.naturalHeight||936,tries=[[300,275,.72],[260,238,.66],[220,202,.58],[180,165,.52]];let last='';for(const [w,h,q] of tries){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle='#071421';g.fillRect(0,0,w,h);const scale=Math.max(w/sw,h/sh),dw=sw*scale,dh=sh*scale;g.drawImage(im,(w-dw)/2,(h-dh)/2,dw,dh);last=c.toDataURL('image/webp',q);if(last.length<=100000){resolve(last);return}}resolve(last)};im.onerror=()=>resolve('');im.src=src})}
+async function ensureDefaultThumb(){if(defaultThumb)return defaultThumb;defaultThumb='default-artwork.webp';return defaultThumb}
+function builtinRoleArtwork(id,assetKind){
+  const item=window.GMWW_BUILTIN_ROLE_ARTWORK?.[String(id)];
+  if(!item)return '';
+  if(assetKind==='thumb')return item.thumb;
+  if(assetKind==='delivery')return item.delivery||item.display;
+  return item.display;
+}
+async function resolveArtwork(kind,id,assetKind){
+  const builtIn=kind==='cards'?builtinRoleArtwork(id,assetKind):'';
+  if(builtIn)return builtIn;
+  // Built-in Vai Trò must never fall back to old persisted artwork. If the clean
+  // canonical package is missing, show the neutral placeholder instead of a stale card.
+  if(kind==='cards'&&DEFAULT_ROLE_ID_SET.has(String(id))){
+    if(assetKind==='thumb')return await ensureDefaultThumb();
+    return 'default-artwork.webp';
+  }
+  const active=state.themes.activeId||'theme-sea';
+  if(active!=='theme-default'){
+    const local=await blobUrlFor(cardBlobKey(active,kind,id,assetKind));if(local)return local;
+    if(assetKind==='thumb'||assetKind==='full'){
+      const displayLocal=await blobUrlFor(cardBlobKey(active,kind,id,'display'));if(displayLocal)return displayLocal;
+    }
+  }
+  if(assetKind==='thumb')return await ensureDefaultThumb();
+  return 'default-artwork.webp';
+}
+
+async function resolveUiSlot(themeId,slotId){const local=await blobUrlFor(uiBlobKey(themeId,slotId));if(local)return local;const t=themeById(themeId),u=String(t.ui?.[slotId]?.url||'').trim();return u}

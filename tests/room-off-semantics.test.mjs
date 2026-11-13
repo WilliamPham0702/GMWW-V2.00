@@ -1,8 +1,9 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const live=fs.readFileSync('src/gmww-members-live.js','utf8');
 
 test('OFF room rejects every join including previously known players',()=>{

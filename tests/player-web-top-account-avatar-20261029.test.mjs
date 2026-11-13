@@ -1,8 +1,9 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const player=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+const player=playerWebSource('20-village-and-profile');
 const village=fs.readFileSync('assets/village/village.mjs','utf8');
 
 test('Account avatar removed from top bar; status and GM timeline remain',()=>{

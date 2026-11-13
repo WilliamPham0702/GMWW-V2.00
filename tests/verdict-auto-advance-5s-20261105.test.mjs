@@ -1,12 +1,13 @@
+import {gmSource,playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const gm=fs.readFileSync(new URL('../server-game/src/40-battle-and-timeline.part',import.meta.url),'utf8');
+const gm=gmSource('40-battle-and-timeline');
 const html=fs.readFileSync(new URL('../server-game/current/GMWW.html',import.meta.url),'utf8');
 const app=fs.readFileSync(new URL('../server-game/current/app.js',import.meta.url),'utf8');
-const player=fs.readFileSync(new URL('../src/player-web-src/30-rooms-and-realtime.part',import.meta.url),'utf8');
+const player=playerWebSource('30-rooms-and-realtime');
 
 test('GM: không bấm thì sau 5 giây tự xác nhận phán quyết và qua bước kế',()=>{
  assert.match(gm,/battleVerdictTimer=setTimeout\(\(\)=>battleGallowsAcceptVerdict\(key\),Math\.max\(0,5000-elapsed\)\)/);

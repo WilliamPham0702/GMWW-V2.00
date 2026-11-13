@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import {assertCurrentRelease} from './release-metadata-helper.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ const read=p=>fs.readFileSync(p,'utf8');
 const html=read('server-game/current/GMWW.html');
 const css=read('server-game/current/style.css');
 const app=read('server-game/current/app.js');
-const worker=read('src/index.js');
+const worker=workerSource();
 const pkg=JSON.parse(read('package.json'));
 test('V3.30 presents the seven-stage timeline above the game, and five controls below',()=>{
  const timeline=html.indexOf('id="playSetupStrip"'),world=html.indexOf('id="playWorld"'),dock=html.indexOf('id="gmTopMenu"');

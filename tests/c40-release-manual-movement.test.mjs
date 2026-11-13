@@ -1,8 +1,9 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source=fs.readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+const source=playerWebSource('20-village-and-profile');
 const body=name=>source.slice(source.indexOf('async function '+name+'('),source.indexOf('\n}',source.indexOf('async function '+name+'('))+2);
 test('manual destination can replace an active walk without bypassing locked seats',async()=>{
  let posted=null;const ctx={state:{roomCode:'ROOM',room:{},players:[]},currentRoomPlayer:()=>({movementStatus:'moving'}),movementViewerPosition:()=>({x:40,y:50}),auth:()=>({}),api:async(url,opts)=>{posted=JSON.parse(opts.body);return{}},renderRoomSetup(){},syncVillageFrame(){},scheduleMovementCompletion(){},toast(){}};

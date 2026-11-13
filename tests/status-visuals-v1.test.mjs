@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,7 +12,7 @@ const gmCss=read('server-game/current/status-visuals.css');
 const webCss=read('assets/village/status-visuals.css');
 const app=read('server-game/current/app.js');
 const html=read('server-game/current/GMWW.html');
-const worker=read('src/index.js');
+const worker=workerSource();
 const statusPolicy=read('src/gmww-public-room-contract.js');
 const playerWeb=read('src/gmww-members-live.js');
 const village=read('assets/village/village.mjs');
@@ -197,5 +199,5 @@ test('V3.124: GM avoids continuous heavy DOM rewrites; animation and Player CSS 
   assert.equal(read('server-game/current/app.js'),
     ['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part',
     '30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part']
-     .map(x=>read('server-game/src/'+x)).join(''));
+     .map(x=>gmSource(x.replace(/\.part$/,''))).join(''));
 });

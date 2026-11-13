@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,8 +9,8 @@ const read=path=>fs.readFileSync(path,'utf8');
 const ctx={};
 vm.runInNewContext(read('assets/village/village-layout.js'),ctx);
 const layout=ctx.GMWW_VILLAGE_LAYOUT;
-const gm=read('server-game/src/30-village-and-setup.part');
-const worker=read('src/index.js');
+const gm=gmSource('30-village-and-setup');
+const worker=workerSource();
 const web=read('assets/village/village.mjs');
 
 test('V3.128: shared walk boundary strictly excludes sea, roofs, terraces and campfire',()=>{

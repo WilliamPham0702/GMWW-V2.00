@@ -1,3 +1,5 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -40,7 +42,7 @@ test('Seat formation moves above prior Y -10 limit without altering seat IDs or 
     '↑ must never move one Seat independently at 135%');
 });
 test('GM drag UI, canonical script and browser bundle implement synchronized preview and single Server commit',()=>{
-  const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
+  const source=gmSource('30-village-and-setup');
   const bundle=fs.readFileSync('server-game/current/app.js','utf8');
   for(const code of [source,bundle]){
     assert.match(code,/playSeatOffsetPreview/);
@@ -50,8 +52,8 @@ test('GM drag UI, canonical script and browser bundle implement synchronized pre
   }
 });
 test('Server DEMO history spans all cycles and village notice includes nonpersistent effects from archive',{skip:'LEGACY-QUARANTINE 2026-11-04: snapshot test of an older release no longer matches the current source; see tests/LEGACY-QUARANTINE.md'},()=>{
-  const server=fs.readFileSync('src/index.js','utf8');
-  const ui=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+  const server=workerSource();
+  const ui=gmSource('40-battle-and-timeline');
   assert.match(server,/async villageHistoryForMatch/);
   assert.match(server,/this\.villageHistoryForMatch\(meta,interactions\)/);
   assert.match(server,/history:\(Array\.isArray\(demoLease\?\.history\)/);

@@ -1,3 +1,4 @@
+import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -26,7 +27,7 @@ test('Postmerge scope fails closed for Worker, game, IPA, version, or unknown ch
 });
 
 test('Merged PR702 toast is present in source and served Player bundle without bottom dock overlap',()=>{
-  const source=readFileSync('src/player-web-src/20-village-and-profile.part','utf8');
+  const source=playerWebSource('20-village-and-profile');
   const bundle=readFileSync('src/gmww-members-live.js','utf8');
   assert.match(source,/function gmwwToastTop\(\)/);
   assert.match(source,/t\.style\.top=gmwwToastTop\(\)/);

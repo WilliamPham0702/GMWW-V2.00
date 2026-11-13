@@ -1,11 +1,12 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source=fs.readFileSync('server-game/src/30-village-and-setup.part','utf8');
-const battle=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
-const library=fs.readFileSync('server-game/src/10-library-and-settings.part','utf8');
+const source=gmSource('30-village-and-setup');
+const battle=gmSource('40-battle-and-timeline');
+const library=gmSource('10-library-and-settings');
 const between=(s,a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
 
 test('dawn cue plays before the number of night deaths; Ngày dài only on open selection',()=>{
@@ -69,7 +70,7 @@ test('audio replay still resolves Old Witch audio by canonical role and V1 sourc
 
 test('GM generated app remains the exact seven-part bundle',()=>{
   const parts=['00-core-and-library.part','10-library-and-settings.part','20-members-and-roster.part','30-village-and-setup.part','40-battle-and-timeline.part','45-online-chat.part','50-roles-and-artifacts.part'];
-  assert.equal(fs.readFileSync('server-game/current/app.js','utf8'),parts.map(p=>fs.readFileSync('server-game/src/'+p,'utf8')).join(''));
+  assert.equal(fs.readFileSync('server-game/current/app.js','utf8'),parts.map(p=>gmSource(p.replace(/\.part$/,''))).join(''));
 });
 
 test('serial day queue waits until previous narration ends before starting Player Web outcome',()=>{

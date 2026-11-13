@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -91,7 +92,7 @@ test('private delivery DTOs keep established response properties without leaking
 });
 
 test('private cards: production Worker uses one shared sanitizer module',()=>{
- const source=readFileSync('src/index.js','utf8');
+ const source=workerSource();
  assert.match(source,/from "\.\/gmww-private-card-contract\.js";/);
  for(const name of ['sanitizePlayerRoleCard','sanitizePlayerArtifactCard',
   'mergePlayerRoleCard','privateRole','privateArtifact']){

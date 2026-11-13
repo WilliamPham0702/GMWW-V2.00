@@ -1,10 +1,12 @@
+import {gmSource} from '../.github/scripts/source-groups.mjs';
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {serverDemoActive} from '../src/gmww-demo-runner.js';
 import {projectDemoClock,nextDemoClock} from '../src/gmww-demo-clock.js';
-const worker=fs.readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const fragment=worker.slice(worker.indexOf('  async demoClockContext(meta){'),worker.indexOf('  async gmAuto(request,body){'));
 function controlHarness(){
  const rows=new Map([['meta',{demo:true,phase:'running',cyclePhase:'night',cycleNight:1,matchId:'m',cycleKey:'n1',autoGM:false}]]);
@@ -22,7 +24,7 @@ test('Server DEMO remains running without a browser heartbeat and can be control
 test('Changing speed preserves configured virtual time instead of restarting a turn',async()=>{
  const h=controlHarness();await h.command({command:'start',speed:1});h.advance(10000);const s=await h.command({command:'speed',speed:5});assert.equal(s.clock.remainingMs,50000);assert.equal(s.clock.speed,5);h.advance(5000);assert.equal((await h.command({command:'status'})).clock.remainingMs,25000);
 });
-const frontend=fs.readFileSync('server-game/src/40-battle-and-timeline.part','utf8');
+const frontend=gmSource('40-battle-and-timeline');
 test('Server viewer confirms each new action once, including first action after an empty initial snapshot',()=>{
  const fragment=frontend.slice(frontend.indexOf('function demoApplyServerControl('),frontend.indexOf('function demoHoldForGM('));
  const runner={roomCode:'',lastEvent:null},ctx={demoRunner:runner,playSceneState:{roomCode:'ABCDEF',step:'seats'},playSceneRuntime:{room:{matchId:'m1'}},demoConfirmedFeedback:()=>{ctx.confirmations++},confirmations:0};

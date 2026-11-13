@@ -1,3 +1,4 @@
+import {workerSource} from '../.github/scripts/worker-source.mjs';
 // V3.304 (04/11/2026) — 3 yêu cầu chủ dự án: icon hành động ở lối cầu thang (GM + Player),
 // menu trên Player ban ngày bỏ Thông cáo Làng / Lên Giàn, audio ban ngày đồng bộ tới Player Web.
 import test from 'node:test';
@@ -7,7 +8,7 @@ import {readFileSync} from 'node:fs';
 import {webcrypto} from 'node:crypto';
 import {gmwwMembersLiveScript as live} from '../src/gmww-members-live.js';
 
-const worker=readFileSync('src/index.js','utf8');
+const worker=workerSource();
 const gm=readFileSync('server-game/current/app.js','utf8');
 const slice=(src,a,b)=>{const i=src.indexOf(a);assert.ok(i>=0,a+' missing');const j=src.indexOf(b,i+a.length);return src.slice(i,j<0?undefined:j)};
 
