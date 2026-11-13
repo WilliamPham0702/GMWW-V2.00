@@ -13,3 +13,12 @@ test('village re-layouts when the stage size settles (Safari first open)', () =>
 test('village still re-layouts on window resize', () => {
   assert.ok(src.includes("window.addEventListener('resize',()=>{render();placeFire();renderPortal()});"));
 });
+
+test('village re-layouts when the visual viewport resizes (Safari toolbar)', () => {
+  assert.ok(src.includes("window.visualViewport?.addEventListener('resize',()=>{render();placeFire();renderPortal()});"));
+});
+
+test('browser CI runs for village.mjs changes so Production is not blocked', () => {
+  const wf = readFileSync(new URL('../.github/workflows/check-player-card-browsers.yml', import.meta.url), 'utf8');
+  assert.ok(wf.includes('"assets/village/village.mjs"'));
+});

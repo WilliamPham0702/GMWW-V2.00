@@ -662,6 +662,8 @@ if(game){
     // often without a window resize. Re-run layout whenever the stage is measured
     // again, so names and sprites are placed from the same real size.
     if(typeof ResizeObserver==='function'&&stageElement)new ResizeObserver(()=>{render();placeFire();renderPortal()}).observe(stageElement);
+    // iOS Safari toolbar collapse changes only the visual viewport; re-lay then too.
+    window.visualViewport?.addEventListener('resize',()=>{render();placeFire();renderPortal()});
     window.addEventListener('gmww:village-fire-anchor',placeFire);
 
 
