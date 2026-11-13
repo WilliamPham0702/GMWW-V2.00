@@ -259,3 +259,28 @@ test('Artifact ON resolves every shared card and preloads before applying; OFF s
  const off=worker({artifacts});await off.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{templateId:'t1',matchOverrides:{artifactsEnabled:false}}));assert.equal(off.log.preload,undefined);assert.equal(off.log.member.some(u=>u.endsWith('/artifacts/shared/status')),false);
  for(const setup of [{artifacts:[]},{artifacts,preloadStatus:409},{artifacts,gate:401}]){const bad=worker(setup);const res=await bad.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{templateId:'t1',matchOverrides:{artifactsEnabled:true}}));assert.ok(res.status>=400);assert.equal(bad.log.room.some(r=>r.u.endsWith('/apply-template')),false);}
 });
+
+test('quick play requires the displayed roster, including the owner, before dealing',async()=>{
+  const o=room({meta:{quickPlay:true,ownerLoginId:'a',seatCount:6}});
+  const start=body=>o.ownerAction('start',req('/owner/start',{body}));
+  assert.equal((await (await start({})).json()).error,'QUICK_PLAY_ROSTER_REQUIRED');
+  assert.equal((await (await start({quickPlayRoster:[...names.slice(0,5),'z'],templateId:'t'})).json()).error,'QUICK_PLAY_ROSTER_CHANGED');
+  assert.equal(o.calls.length,0);
+  const response=await start({quickPlayRoster:names,templateId:'t'});
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).started,true);
+  assert.deepEqual(o.calls.map(call=>call.name),['gmAssign','gmStart','applyCycle']);
+});
+
+test('quick play reuses Auto GM and resets a completed match with the same participants',async()=>{
+  const o=room({meta:{quickPlay:true,phase:'running'}});
+  o.gmAuto=async(_,body)=>j(body);
+  const send=(action,body)=>o.ownerAction(action,req('/owner/'+action,{body}));
+  assert.deepEqual(await (await send('auto',{enabled:false})).json(),{enabled:false});
+  assert.equal((await send('replay',{})).status,404);
+  Object.assign(o.data.get('meta'),{phase:'lobby',endedAt:'2026-11-13',lastEndedMatchId:'match-1'});
+  o.gmReset=async(_,body)=>j(body);
+  assert.deepEqual(await (await send('replay',{})).json(),{
+    postGame:true,preserveParticipants:true,transactionId:'quick-replay:match-1'
+  });
+});
