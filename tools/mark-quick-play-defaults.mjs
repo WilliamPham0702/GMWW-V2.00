@@ -4,8 +4,11 @@
 // so its revision and packaged role artwork are kept.
 const origin = String(process.argv[2] || '').replace(/\/$/, '');
 const apply = process.argv.includes('--apply');
-const token = process.env.GMWW_GM_TOKEN;
-if (!token) throw new Error('GMWW_GM_TOKEN env required');
+import {readFileSync} from 'node:fs';
+// Same GM token the Worker itself uses (src/index.js); an env value overrides it.
+const token = process.env.GMWW_GM_TOKEN ||
+  readFileSync(new URL('../src/index.js', import.meta.url), 'utf8').match(/GM_SYNC_TOKEN="([^"]+)"/)?.[1];
+if (!token) throw new Error('GM token not found');
 if (!/^https?:\/\//.test(origin)) throw new Error('origin required');
 
 async function api(path, {method = 'GET', body} = {}) {

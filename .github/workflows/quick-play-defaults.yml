@@ -24,6 +24,4 @@ jobs:
         with:
           node-version: 22
       - name: Đánh dấu Ván Mẫu Chơi nhanh
-        env:
-          GMWW_GM_TOKEN: ${{ secrets.GMWW_GM_TOKEN }}
         run: node tools/mark-quick-play-defaults.mjs https://gmww-v2-00.williampham0702.workers.dev ${{ inputs.apply && '--apply' || '' }}

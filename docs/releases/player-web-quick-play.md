@@ -7,4 +7,4 @@
 
 Rollback về bản Worker đã xác minh trước PR. Tắt mẫu mặc định bằng `quickPlayDefault: false` qua API lưu mẫu nếu cần ngừng dùng một mẫu.
 
-Đánh dấu mẫu mặc định trên Production: chạy workflow **Quick Play Defaults** (bật `apply`, cần secret `GMWW_GM_TOKEN`). Mỗi số người lấy Ván Mẫu GM mới nhất có tổng vai đúng số người, bật Auto chuyển lượt và đủ ảnh thẻ vai; revision giữ nguyên.
+Đánh dấu mẫu mặc định trên Production: chạy workflow **Quick Play Defaults** (bật `apply`). Mỗi số người lấy Ván Mẫu GM mới nhất có tổng vai đúng số người, bật Auto chuyển lượt và đủ ảnh thẻ vai; revision giữ nguyên.
