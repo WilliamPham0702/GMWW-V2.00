@@ -104,7 +104,10 @@
     const panelTitle=pr.view==='game'?(pr.gameView==='design'?'Thiết kế Ván Mẫu':'Chọn Ván Mẫu'):pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng');
     head.append(el('b',null,panelTitle),close);panel.append(el('i','gmww-pr-grip'),head);
     const body=el('div','gmww-pr-body');
-    if(!pr.own||pr.view==='room'&&!inOwnRoom()){
+    if(state.room?.quickPlay&&state.room.phase==='lobby'&&!inOwnRoom()&&pr.view==='room'){
+      body.append(el('p','gmww-pr-help','Phòng '+state.roomCode+' · '+(state.players||[]).length+' người'));
+      renderQuickPlay(body,state.players||[],null);
+    }else if(!pr.own||pr.view==='room'&&!inOwnRoom()){
       viewRoomHub(body,pr.state,pr.state?.room||{},Array.isArray(pr.state?.players)?pr.state.players:[]);
     }else{
       const st=pr.state,room=st?.room||{},players=Array.isArray(st?.players)?st.players:[],running=String(room.phase||'lobby').toLowerCase()==='running';
@@ -160,6 +163,7 @@
     q('playPhasePill').addEventListener('click',()=>{
       if(!state?.roomCode){onTab('room');return}
       if(pr.own&&!owner()){run(async()=>{await rejoinOwn();pr.view='room';pr.touched=true;openSheet()});return}
+      if(state.room?.quickPlay&&state.room.phase==='lobby'){onTab('room');return}
       if(!owner()){try{toast('Chủ phòng điều hành ván; bạn chỉ cần chờ.')}catch(_){}return}
       const i=ORDER.indexOf(pr.open?pr.view:stepNow()),nxt=ORDER[Math.min(ORDER.length-1,i+1)];
       pr.view=nxt;pr.touched=true;syncStage(nxt);if(pr.open)render();else openSheet();
@@ -238,7 +242,7 @@
     document.addEventListener('pointerdown',dismissOutside,true);
     const replace=()=>{place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});try{visualViewport?.addEventListener('resize',replace,{passive:true})}catch(_){}
     pr.own=load();
-    clearInterval(pr.timer);pr.timer=setInterval(()=>{if(pr.own&&inOwnRoom()&&!document.hidden&&!pr.busy)refresh({background:true});else renderDock()},4000);
+    clearInterval(pr.timer);pr.timer=setInterval(()=>{if(pr.own&&inOwnRoom()&&!document.hidden&&!pr.busy)refresh({background:true});else if(pr.open&&state.room?.quickPlay&&pr.view==='room')render({background:true});else renderDock()},4000);
     setInterval(renderDock,1000);
   }
   setInterval(mount,1500);

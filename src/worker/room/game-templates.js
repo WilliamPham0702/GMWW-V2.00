@@ -5,7 +5,7 @@ import { sanitizeGameConfig } from "../../gmww-room-config-rules.js";
 
 export class RoomGameTemplateMethods {
   async gameTemplateList(){
-    const rows=await this.ctx.storage.list({prefix:"gameTemplate:"}),templates=[...rows.values()].filter(Boolean).map(x=>({id:x.id,name:x.name,playerCount:Number(x.playerCount||0),updatedAt:x.updatedAt||null,preloadedAt:x.preloadedAt||null,revision:Number(x.revision||1),source:x.source==="PLAYER"?"PLAYER":"GM"})).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+    const rows=await this.ctx.storage.list({prefix:"gameTemplate:"}),templates=[...rows.values()].filter(Boolean).map(x=>({id:x.id,name:x.name,playerCount:Number(x.playerCount||0),updatedAt:x.updatedAt||null,preloadedAt:x.preloadedAt||null,revision:Number(x.revision||1),source:x.source==="PLAYER"?"PLAYER":"GM",quickPlayDefault:x.quickPlayDefault===true})).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
     return j({ok:true,count:templates.length,templates});
   }
   async gameTemplateGet(id){
@@ -24,7 +24,7 @@ export class RoomGameTemplateMethods {
   // Only the newest few Ván Mẫu are kept server-wide; older ones (and their artwork) are removed.
   async pruneGameTemplates(keep,protectId){
     if(typeof this.ctx.storage.list!=='function')return[];
-    const rows=[...(await this.ctx.storage.list({prefix:"gameTemplate:"})).values()].filter(Boolean)
+    const rows=[...(await this.ctx.storage.list({prefix:"gameTemplate:"})).values()].filter(x=>x&&x.quickPlayDefault!==true)
       .sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||""))),gone=[];
     for(const x of rows.slice(keep)){if(x.id===protectId)continue;await this.removeGameTemplate(x.id);gone.push(x.id)}
     return gone;
@@ -67,8 +67,22 @@ export class RoomGameTemplateMethods {
     // Only an actual configuration change invalidates its previous per-revision packages.
     const unchanged=!!old?.compiledConfig&&JSON.stringify(old.compiledConfig)===JSON.stringify(compiledConfig);
     const revision=unchanged?Math.max(1,Number(old.revision||1)):Math.max(1,Number(old?.revision||0)+1);
-    const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:unchanged?(old.preloadedAt||now):now,compiledConfig,source:"GM_IPA"};
-    await this.ctx.storage.put(key,rec);
+    const quickPlayDefault=body?.quickPlayDefault===true||(body?.quickPlayDefault==null&&old?.quickPlayDefault===true);
+    if(quickPlayDefault&&(!Number.isInteger(cfg.playerCount)||cfg.playerCount<5||cfg.playerCount>30||
+      cfg.roles.some(role=>!role.roleId||!Number.isInteger(role.count))||
+      cfg.roles.reduce((total,role)=>total+role.count,0)!==cfg.playerCount||!cfg.timing.autoAdvance)){
+      return j({ok:false,error:"INVALID_QUICK_PLAY_TEMPLATE"},400);
+    }
+    const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:unchanged?(old.preloadedAt||now):now,compiledConfig,source:"GM_IPA",quickPlayDefault};
+    if(quickPlayDefault){
+      const templates=await this.ctx.storage.list({prefix:"gameTemplate:"}),updates={[key]:rec};
+      for(const [otherKey,other] of templates){
+        if(otherKey!==key&&other?.quickPlayDefault===true&&other.playerCount===rec.playerCount){
+          updates[otherKey]={...other,quickPlayDefault:false};
+        }
+      }
+      await this.ctx.storage.put(updates);
+    }else await this.ctx.storage.put(key,rec);
     if(typeof this.pruneGameTemplates==="function")await this.pruneGameTemplates(5,id);
     return j({ok:true,template:rec});
   }

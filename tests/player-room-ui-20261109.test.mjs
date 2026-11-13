@@ -26,7 +26,7 @@ test('panel keeps owner API calls isolated; public artwork is only an image GET'
 });
 test('owner actions used by the panel are exactly the ones the Worker whitelists',()=>{
   const used=[...part.matchAll(/callOwner\('([a-z-]+)'/g)].map(m=>m[1]);
-  const allowed=['template','seat-lock','seats-randomize','start','kick','end','stage','room-settings','roles-shuffle','close','template-save','template-delete'];
+  const allowed=['template','seat-lock','seats-randomize','start','kick','end','replay','auto','stage','room-settings','roles-shuffle','close','template-save','template-delete'];
   assert.ok(used.length>=7);for(const u of used)assert.ok(allowed.includes(u),u);
 });
 test('owner token is kept only under its own storage key and cleared when the room closes',()=>{

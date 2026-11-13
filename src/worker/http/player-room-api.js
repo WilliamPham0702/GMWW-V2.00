@@ -23,7 +23,7 @@ export async function createPlayerRoom(env,url,request){
     const code=generateRoomCode(),rsv=await memberStore(env).fetch("https://member.internal/directory/player-rooms/reserve",{method:"POST",headers:json,body:JSON.stringify({code,ownerLoginId,roomName:body.roomName||"",seatCount:body.seatCount})});
     if(rsv.status===409){const d=await rsv.clone().json().catch(()=>({}));if(d.error==="CODE_TAKEN")continue;return rsv}
     if(rsv.status!==201)return rsv;
-    const r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:json,body:JSON.stringify({code,roomName:body.roomName||"",roomMode:"online",demo:false,enabled:true,seatMoveMode:"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:null,playerRoom:true,ownerLoginId,ownerTokenHash})});
+    const r=await roomStub(env,code).fetch("https://room.internal/init",{method:"POST",headers:json,body:JSON.stringify({code,roomName:body.roomName||"",roomMode:"online",demo:false,enabled:true,seatMoveMode:"instant",seatCount:body.seatCount,gameConfig:body.gameConfig||null,cardBackImage:null,playerRoom:true,quickPlay:body.quickPlay===true,ownerLoginId,ownerTokenHash})});
     if(r.status===201){const data=await r.json(),p=url.protocol==="https:"?"wss:":"ws:";await syncRoomDirectory(env,code);const createdName=data.room?.roomName||normalizeRoomName(body.roomName)||("Phòng "+code);await notifyGmPlayerRoomCreated(env,{code,roomName:createdName,ownerName:own?.member?.displayName||own?.member?.name||ownerLoginId});return j({ok:true,roomCode:code,roomName:createdName,ownerToken,joinUrl:`${url.origin}/${code}`,websocketUrl:`${p}//${url.host}/ws/${code}`},201)}
     await memberStore(env).fetch("https://member.internal/directory/rooms/delete",{method:"POST",headers:json,body:JSON.stringify({code})});
     if(r.status!==409)return j({ok:false,error:"ROOM_CREATE_FAILED"},500)
@@ -70,7 +70,7 @@ export async function playerRoomRoleList(env,request){
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 export async function playerRoomOwnerApi(env,rawCode,action,request){
   const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
-  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","template-save","template-delete","roles-shuffle","start","end","stage","close"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
+  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","template-save","template-delete","roles-shuffle","start","end","replay","auto","stage","close"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
   const stub=roomStub(env,code),auth={authorization:request.headers.get("authorization")||""},json={...auth,"content-type":"application/json"};
   if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return stub.fetch("https://room.internal/owner/state",{headers:auth})}
   if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
@@ -124,6 +124,10 @@ export async function playerRoomOwnerApi(env,rawCode,action,request){
     const id=String(body.templateId||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const tr=await memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));if(!tr.ok)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     let template=(await tr.json().catch(()=>({}))).template;const packages=[];
+    if(body.quickPlayRevision!=null&&(template?.quickPlayDefault!==true||
+      Number(template.revision)!==Number(body.quickPlayRevision))){
+      return j({ok:false,error:"QUICK_PLAY_TEMPLATE_CHANGED",message:"Ván Mẫu đã đổi. Hãy tải lại danh sách Ván Mẫu."},409);
+    }
     let cfg=template?.compiledConfig||{};
     const override=body.matchOverrides&&typeof body.matchOverrides==='object'?body.matchOverrides:null;
     if(override){

@@ -93,7 +93,7 @@ test('position stage preserves occupied positions, supports swap/random remainde
   assert.match(app,/remaining=playLiveMembers\(\)\.filter\(m=>!Number\(m\?\.seatId\|\|0\)\)/);
   assert.match(app,/updateSelectedPlayerSeat\(\{seatId:Number\(m\.seatId\),swap:true\}\)/);
   assert.match(app,/\/seats\/randomize-remaining/);
-  assert.match(server,/async gmRandomizeRemainingSeats\(request\)/);
+  assert.match(server,/async gmRandomizeRemainingSeats\(request,\{all=false\}=\{\}\)/);
   assert.match(server,/remaining=entries\.filter\(\(\[,player\]\)=>!normalizeSeatId\(player\?\.seatId,seatCount\)&&!player\?\.moveTargetSeatId\)/);
   assert.match(server,/gmRandomSeatsRoute/);
   assert.match(server,/seatsRandomized:true/);
