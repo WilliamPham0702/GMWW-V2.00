@@ -130,6 +130,9 @@ export class RoomPlayerRoomMethods {
     if(meta.seatsLocked!==true)return j({ok:false,error:"SEATS_NOT_LOCKED",message:"Hãy chốt chỗ ngồi trước khi bắt đầu."},409);
     const cfg=await this.ctx.storage.get("gameConfig");if(!cfg||!Array.isArray(cfg.roles)||!cfg.roles.length)return j({ok:false,error:"TEMPLATE_NOT_SELECTED",message:"Hãy chọn Ván Mẫu trước."},409);
     const players=(await this.ctx.storage.get("players"))||{},members=Object.values(players).filter(p=>p?.kind==="member").sort((a,b)=>Number(a.seatId||0)-Number(b.seatId||0));
+    if(meta.quickPlay===true&&!Array.isArray(body?.quickPlayRoster)){
+      return j({ok:false,error:"QUICK_PLAY_ROSTER_REQUIRED",message:"Hãy bắt đầu từ phòng chờ Chơi nhanh."},409);
+    }
     if(Array.isArray(body?.quickPlayRoster)){
       const roster=members.map(member=>member.loginId).sort();
       if(JSON.stringify(roster)!==JSON.stringify(body.quickPlayRoster)||
