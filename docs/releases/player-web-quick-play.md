@@ -6,3 +6,5 @@
 - GM đánh dấu mẫu qua trường `quickPlayDefault` trong API lưu Ván Mẫu. Mỗi số người có một mẫu mặc định được bảo vệ khỏi tự dọn. Cần kiểm tra bộ vai, tài nguyên lá bài và chạy thử trọn ván trước khi bật mẫu trên Production.
 
 Rollback về bản Worker đã xác minh trước PR. Tắt mẫu mặc định bằng `quickPlayDefault: false` qua API lưu mẫu nếu cần ngừng dùng một mẫu.
+
+Đánh dấu mẫu mặc định trên Production: chạy workflow **Quick Play Defaults** (bật `apply`, cần secret `GMWW_GM_TOKEN`). Mỗi số người lấy Ván Mẫu GM mới nhất có tổng vai đúng số người, bật Auto chuyển lượt và đủ ảnh thẻ vai; revision giữ nguyên.
