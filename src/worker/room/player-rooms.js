@@ -40,6 +40,15 @@ export class RoomPlayerRoomMethods {
     if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
     const gate=await this.ownerGate(request);if(!gate.ok)return gate.response;
     const meta=gate.meta,body=await safeJson(request)||{},gm=this.ownerAsGm(request);
+    if(action==="room-lock"&&meta.quickPlay===true){
+      if(String(meta.phase||"lobby").toLowerCase()!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
+      meta.quickPlayJoinLocked=body.locked===true;
+      meta.updatedAt=new Date().toISOString();
+      await this.ctx.storage.put("meta",meta);
+      const players=(await this.ctx.storage.get("players"))||{};
+      this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});
+      return j({ok:true,locked:meta.quickPlayJoinLocked,room:publicRoom(meta)});
+    }
     if(action==="seat-lock")return this.gmSeatLock(gm,{locked:body.locked!==false});
     if(action==="seats-randomize")return this.gmRandomizeRemainingSeats(gm,{all:body.all===true});
     if(action==="kick"){
@@ -100,6 +109,7 @@ export class RoomPlayerRoomMethods {
       current.quickPlayTemplateId=cfg.id;
       current.quickPlayTemplateName=String(cfg.name||body?.template?.name||"Ván Mẫu").slice(0,120);
       current.quickPlayTemplatePlayerCount=cfg.roles.reduce((sum,r)=>sum+(Number(r.count)||1),0);
+      current.quickPlayArtifactsEnabled=cfg.artifactsEnabled===true;
       current.updatedAt=new Date().toISOString();
       await this.ctx.storage.put("meta",current);
       const participants=(await this.ctx.storage.get("players"))||{};
@@ -163,6 +173,8 @@ export class RoomPlayerRoomMethods {
     if(pending&&Array.isArray(pending.rows)&&pending.members?.join(",")===members.map(m=>String(m.loginId||"")).sort().join(",")&&pending.roleKey===cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(",")&&pending.artifactKey===artifactPool.map(a=>a.artifactId).sort().join(","))plan={ok:true,rows:pending.rows};
     await this.ctx.storage.delete("pendingDeal");
     const matchId="p"+Date.now().toString(36)+Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>b.toString(16).padStart(2,"0")).join("");
+    // Final authoritative lock: people outside the roster cannot join during role delivery.
+    if(meta.quickPlay===true){meta.quickPlayJoinLocked=true;await this.ctx.storage.put("meta",meta)}
     const assigned=await this.gmAssign(gm,{assignments:plan.rows,matchId,matchRevision:1,deliveryVersion:1});if(!assigned.ok)return assigned;
     const started=await this.gmStart(gm,{matchId});if(!started.ok)return started;
     const fresh=await this.ctx.storage.get("meta");await this.applyCycle(fresh,"night",1,"night-1","auto");
