@@ -8914,7 +8914,11 @@ function importGmwwSave(){
 }
 function renderGameTemplateLibrary(){
   const box=document.getElementById('gameTemplateLibraryList');if(!box)return;box.innerHTML='';
-  if(!playSceneRuntime.gameTemplates.length){box.innerHTML='<div class="member-empty">Chưa có Ván Mẫu. Nhấn + để tạo trước khi chơi.</div>';return}
+  const count=playSceneRuntime.gameTemplates.length,max=20,add=document.getElementById('addGameTemplate');
+  const header=document.querySelector('#lib-templates .template-library-head small');
+  if(header)header.textContent='Đã lưu '+count+'/'+max+' Ván Mẫu • chạm để sửa';
+  if(add){add.disabled=count>=max;add.title=count>=max?'Đã đủ 20 Ván Mẫu. Xóa một ván để tạo thêm.':'Tạo Ván Mẫu mới';}
+  if(!count){box.innerHTML='<div class="member-empty">Chưa có Ván Mẫu. Nhấn + để tạo trước khi chơi.</div>';return}
   for(const t of playSceneRuntime.gameTemplates){const b=document.createElement('button');b.type='button';b.className='template-library-item';b.innerHTML='<b>'+playEsc(t.name||'Ván Mẫu')+'</b><small>'+Number(t.playerCount||0)+' người • chạm để sửa</small>';b.onclick=()=>openLibraryGameTemplate(String(t.id||''));box.appendChild(b)}
 }
 async function applyPlayGameTemplate(id){
@@ -9081,6 +9085,9 @@ async function savePlayGame(){
     actionDurationSec:playRoleDurationSec(r.id,playSceneState.gameTiming?.defaultActionSec??30)})).sort((a,b)=>a.order-b.order);
   const gameName=(document.getElementById('playGameName')?.value.trim()||'Ván GMWW').slice(0,48),
     templateId=playSceneState.gameTemplateId||('template-'+Date.now().toString(36));
+  if(!playSceneState.gameTemplateId&&playSceneRuntime.gameTemplates.length>=20){
+    playFlashError('Đã lưu đủ 20 Ván Mẫu. Hãy xóa một Ván Mẫu không dùng trước khi tạo mới.');return;
+  }
   if(total>30){playFlashError('Ván Mẫu tối đa 30 người. Hãy giảm số lượng lá.');return}
   const timing={villageDiscussionSec:clamp(document.getElementById('playVillageDiscussionSec')?.value??300),gallowsNominationSec:Math.max(1,clamp(document.getElementById('playGallowsNominationSec')?.value??10)||10),gallowsVoteSec:Math.max(1,clamp(document.getElementById('playGallowsVoteSec')?.value??10)||10),wolfDiscussionSec:clamp(document.getElementById('playWolfDiscussionSec')?.value??30),earlyArtifactSec:clamp(document.getElementById('playEarlyArtifactSec')?.value??30),defaultActionSec:clamp(document.getElementById('playDefaultActionSec')?.value??30),artifactActionSec:clamp(document.getElementById('playArtifactActionSec')?.value??30),autoAdvance:!!document.getElementById('playAutoAdvance')?.checked};
   const artifactLimitPerCycle=Math.max(0,Math.min(30,Math.trunc(Number(document.getElementById('playArtifactLimitPerCycle')?.value??3)||0)));
