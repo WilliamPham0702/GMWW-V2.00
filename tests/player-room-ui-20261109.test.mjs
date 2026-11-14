@@ -53,7 +53,7 @@ test('creating a room enters the village so the bar shows, and players can join 
 
 test('Phòng Game page sits between Sảnh chờ and Tập hợp and offers send + joined list',()=>{
   assert.match(part,/\['lobby','Sảnh chờ'\],\['room','Phòng Game'\],\['seats','Tập hợp'\]/);
-  assert.match(part,/Gửi phòng/);assert.match(part,/Sao chép mã/);assert.match(part,/Tạo phòng riêng/);assert.match(part,/Vào Game/);assert.match(part,/ĐÃ VÀO PHÒNG/);assert.match(part,/navigator\.share/);
+  assert.match(part,/Gửi phòng/);assert.match(part,/Sao chép mã/);assert.doesNotMatch(part,/btn\('Tạo phòng riêng'/);assert.match(part,/Vào Game/);assert.match(part,/ĐÃ VÀO PHÒNG/);assert.match(part,/navigator\.share/);
 });
 test('GM Player Web list shows every room with kind and status; players list no longer shares the rooms container',()=>{
   const gm=playerWebSource('36-gm-observer');
@@ -79,7 +79,8 @@ test('Quick Play V2 removes the old three-section Phòng page from the default f
   assert.match(part,/function viewQuickEntry\(box\)/);
   assert.match(part,/MỞ PHÒNG/);
   assert.match(part,/Nhập mã phòng/);
-  assert.match(part,/TẠO PHÒNG RIÊNG/);
+  assert.doesNotMatch(part,/TẠO PHÒNG RIÊNG/);
+  assert.match(part,/MỞ PHÒNG/);
   assert.match(part,/if\(quickMode\(\)\)\{/);
   assert.match(part,/QUICK_ORDER\.some\(s=>s\[0\]===k\)/);
   assert.match(part,/pr\.view=QUICK_ORDER\.some/);
@@ -101,4 +102,18 @@ test('Quick Play V2 separates four stages, owner-only template selection and ato
   assert.match(part,/Cài đặt thời gian \(mặc định ẩn\)/);
   assert.match(part,/if\(!room\.quickPlay\)line2\.append/);
   assert.match(part,/strip\.hidden=!show\|\|quick/);
+});
+
+test('Quick Play V2 keyboard keeps chat composer in visible viewport without dock overlap',()=>{
+  assert.match(part,/function placeChat\(page\)/);
+  assert.match(part,/const vp=window\.visualViewport/);
+  assert.match(part,/visibleTop\+\(Number\(vp\?\.height\)\|\|innerHeight\)/);
+  assert.match(part,/if\(panel\.id==='gmwwPrChat'\)\{placeChat\(panel\);return\}/);
+  assert.match(part,/visualViewport\?\.addEventListener\('resize',replace/);
+  assert.match(part,/visualViewport\?\.addEventListener\('scroll',replace/);
+  assert.match(part,/dock\.hidden=!show\|\|pr\.chatOpen/);
+  assert.match(part,/\.gmww-pr-chatpage #gmwwChatLines\{[^}]*flex:1 1 auto!important/);
+  assert.match(part,/\.gmww-pr-chatpage #gmwwChatForm\{[^}]*flex:0 0 auto!important/);
+  assert.doesNotMatch(part,/document\.getElementById\('gmwwChatText'\)\?\.focus/);
+  assert.match(part,/chatPage\.addEventListener\('focusin',replace\)/);
 });
