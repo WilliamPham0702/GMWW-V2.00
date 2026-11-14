@@ -92,9 +92,6 @@
     inp.value=pr.joinCode||'';inp.addEventListener('input',()=>{pr.joinCode=inp.value});
     row.append(inp,btn('VÀO PHÒNG',()=>joinByCode(pr.joinCode),'gmww-pr-main'));
     box.append(row);
-    const advanced=el('details','gmww-pr-timing'),summary=el('summary',null,'Tạo phòng riêng (thiết lập nâng cao)');
-    advanced.append(summary,btn('TẠO PHÒNG RIÊNG',()=>create(false),null,!!pr.own));
-    box.append(advanced);
   }
   function viewQuickRoom(box,st,room,players){
     box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG • MỞ PHÒNG / MÃ / LINK / THÀNH VIÊN'));
@@ -117,7 +114,7 @@
     box.append(el('div','gmww-pr-sub','3. VÁN MẪU • CHỦ PHÒNG LỰA CHỌN'));
     if(pr.catalogStatus==='error')box.append(el('p','gmww-pr-note','Không tải được thư viện Ván Mẫu.'),btn('TẢI LẠI',loadTemplates));
     if(pr.catalogStatus!=='ready')box.append(el('p','gmww-pr-help','Đang tải thư viện Ván Mẫu…'));
-    if(pr.catalogStatus==='ready'&&!matching.length)box.append(el('p','gmww-pr-note','Chưa có Ván Mẫu cho '+count+' người. Mời thêm người hoặc thiết kế Ván Mẫu phù hợp trong Tạo phòng riêng.'));
+    if(pr.catalogStatus==='ready'&&!matching.length)box.append(el('p','gmww-pr-note','Chưa có Ván Mẫu cho '+count+' người. Mời thêm người hoặc bổ sung Ván Mẫu phù hợp trong thư viện.'));
     if(owner&&matching.length){
       const label=el('label','gmww-pr-suggest');label.append(el('b',null,'Tên Ván Mẫu'));
       const select=el('select');select.setAttribute('aria-label','Chọn Ván Mẫu cho Chơi nhanh');
@@ -190,7 +187,7 @@
       await refresh()},'gmww-pr-main'),btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));
     else roomDetails(box,st,room,players,room.seatsLocked===true);
     box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG'));
-    box.append(btn('Chơi nhanh với bạn bè',()=>create(true),'gmww-pr-main',!!pr.own),btn('Tạo phòng riêng',()=>create(),null,!!pr.own));
+    box.append(btn('MỞ PHÒNG',()=>create(true),'gmww-pr-main',!!pr.own));
     box.append(el('div','gmww-pr-sub','3. VÀO PHÒNG'));
     const row=el('div','gmww-pr-row'),inp=el('input');inp.id='gmwwPrJoin';inp.placeholder='Nhập mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.style.textTransform='uppercase';
     // The panel is rebuilt on every refresh / button press, so the typed code lives in pr.joinCode, not only in the input.
