@@ -45,3 +45,46 @@ test('Quick Play V2 preserves a large collection of different GM templates inste
  assert.equal(list.count,12);
  for(let i=1;i<=12;i++)assert.ok(list.templates.some(t=>t.id==='quick-alt-'+i));
 });
+
+
+test('shared Ván Mẫu library stores at most 20 without pruning defaults or artwork', async () => {
+  const data = new Map();
+  const store = new RoomGameTemplateMethods();
+  store.ctx = {storage: {
+    get: async key => data.get(key),
+    put: async (key, value) => {
+      for (const [k, v] of typeof key === 'string' ? [[key, value]] : Object.entries(key)) data.set(k, v);
+    },
+    list: async ({prefix}) => new Map([...data].filter(([key]) => key.startsWith(prefix))),
+    delete: async keys => {for (const key of Array.isArray(keys) ? keys : [keys]) data.delete(key)}
+  }};
+  const compiledConfig = {name:'Ván kiểm thử',playerCount:6,roles:[{roleId:'wolf',count:1},{roleId:'villager',count:5}]};
+  const saveGM = (id, quickPlayDefault=false) => store.gameTemplateUpsert({id,quickPlayDefault,gameConfig:compiledConfig});
+  for (let i=1;i<=19;i++) assert.equal((await saveGM('gm-'+i,i===1)).status,200);
+  const playerSaved=await store.gameTemplatePlayerSave({ownerLoginId:'player-one',compiledConfig});
+  assert.equal(playerSaved.status,200);
+  const playerId=(await playerSaved.json()).template.id;
+  assert.equal((await (await store.gameTemplateList()).json()).count,20);
+
+  // Rejected saves do not overwrite or silently delete any existing template or artwork.
+  data.set('gameTemplateAsset:gm-1:role:wolf',{package:'preserve'});
+  const rejectedGM=await saveGM('gm-21');
+  assert.equal(rejectedGM.status,409);
+  assert.equal((await rejectedGM.json()).error,'TEMPLATE_LIMIT_REACHED');
+  const rejectedPlayer=await store.gameTemplatePlayerSave({ownerLoginId:'player-two',compiledConfig});
+  assert.equal(rejectedPlayer.status,409);
+  assert.equal(data.has('gameTemplate:gm-1'),true);
+  assert.equal(data.get('gameTemplateAsset:gm-1:role:wolf').package,'preserve');
+  assert.equal(data.get('gameTemplate:gm-1').quickPlayDefault,true);
+  assert.equal((await (await store.gameTemplateList()).json()).count,20);
+
+  // Editing existing GM and PLAYER entries does not consume a new slot.
+  assert.equal((await saveGM('gm-2')).status,200);
+  assert.equal((await store.gameTemplatePlayerSave({id:playerId,ownerLoginId:'player-one',compiledConfig})).status,200);
+  assert.equal((await (await store.gameTemplateList()).json()).count,20);
+
+  // Only explicit deletion opens a slot for another template.
+  assert.equal((await store.gameTemplateDelete('gm-19')).status,200);
+  assert.equal((await saveGM('gm-21')).status,200);
+  assert.equal((await (await store.gameTemplateList()).json()).count,20);
+});
