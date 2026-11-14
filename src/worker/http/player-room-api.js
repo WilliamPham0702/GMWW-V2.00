@@ -70,7 +70,7 @@ export async function playerRoomRoleList(env,request){
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 export async function playerRoomOwnerApi(env,rawCode,action,request){
   const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
-  if(!["state","room-lock","seat-lock","seats-randomize","kick","room-settings","template","template-save","template-delete","roles-shuffle","start","end","replay","auto","stage","close"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
+  if(!["state","room-lock","quick-start","seat-lock","seats-randomize","kick","room-settings","template","template-save","template-delete","roles-shuffle","start","end","replay","auto","stage","close"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
   const stub=roomStub(env,code),auth={authorization:request.headers.get("authorization")||""},json={...auth,"content-type":"application/json"};
   if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return stub.fetch("https://room.internal/owner/state",{headers:auth})}
   if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
