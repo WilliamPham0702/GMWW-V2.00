@@ -8,3 +8,5 @@
 - Kết quả thắng vẫn được xử lý bởi `playerRoomAutoEnd` và `showResult`; cần nghiệm thu một ván thật.
 - Rollback: phục hồi Worker version ngay trước thay đổi trên Cloudflare; giữ DO/dữ liệu thật và URL không đổi.
 - Chỉ merge/deploy khi required CI SUCCESS cùng SHA và Production smoke/rollback an toàn.
+
+- Nút Lên Giàn gọi đúng bảng đề cử hoặc dock bỏ phiếu đã có, theo trạng thái server và quyền người chơi.
