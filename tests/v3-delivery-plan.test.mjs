@@ -69,3 +69,13 @@ test('V3: Arena 3D deletions pass only with the approved removal marker and an a
  const ok=v3DeliveryPlan([...del,'docs/releases/GMWW-RUNTIME-V3.310-REMOVE-ARENA3D-20261106.md','server-game/current/app.js','package.json','src/index.js']);
  assert.equal(ok.hold,false);assert.equal(ok.target,'runtime');
 });
+
+
+test('V3: Character-40 catalog generator repair is high-risk Runtime, unknown tools remain blocked',()=>{
+ const p=v3DeliveryPlan(['tools/build-character40-live.py','tests/c40-release-manual-movement.test.mjs','server-game/current/app.js','src/index.js']);
+ assert.equal(p.target,'runtime');
+ assert.equal(p.hold,false);
+ assert.equal(p.risk,'high');
+ assert.ok(p.tests.includes('tests/online-chat-authority.test.mjs'));
+ assert.equal(v3DeliveryPlan(['tools/unreviewed-generator.py']).target,'blocked');
+});
