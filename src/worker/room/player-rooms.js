@@ -98,7 +98,7 @@ export class RoomPlayerRoomMethods {
       const current=await this.ctx.storage.get("meta");
       if(String(current?.phase||"lobby").toLowerCase()!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
       current.quickPlayTemplateId=cfg.id;
-      current.quickPlayTemplateName=String(cfg.name||template?.name||"Ván Mẫu").slice(0,120);
+      current.quickPlayTemplateName=String(cfg.name||body?.template?.name||"Ván Mẫu").slice(0,120);
       current.quickPlayTemplatePlayerCount=cfg.roles.reduce((sum,r)=>sum+(Number(r.count)||1),0);
       current.updatedAt=new Date().toISOString();
       await this.ctx.storage.put("meta",current);
