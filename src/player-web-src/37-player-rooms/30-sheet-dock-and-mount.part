@@ -181,13 +181,14 @@
     document.body.appendChild(host);return host;
   }
   function renderChrome(){
-    const show=barScreen(),strip=ensureStrip(),dock=ensureDock();
-    strip.hidden=dock.hidden=!show;if(!show)return;
+    const show=barScreen(),strip=ensureStrip(),dock=ensureDock(),quick=state?.room?.quickPlay===true;
+    strip.hidden=!show||quick;dock.hidden=!show;if(!show)return;
     const now=stripNow(),idx=ORDER.indexOf(now),sroot=strip.shadowRoot;
     sroot.querySelectorAll('#playSetupStrip button').forEach(b=>{const k=b.dataset.playStep||'room',i=ORDER.indexOf(k);b.classList.toggle('active',i===idx);b.classList.toggle('done',i<idx);if(i===idx)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
     const root=dock.shadowRoot,title=root.getElementById('playPhaseTitle'),hint=root.getElementById('playPhaseHint'),
       owner=!!(pr.own&&inOwnRoom()),nxt=ORDER[idx+1],label=(owner||!state?.roomCode)&&nxt?LABEL[nxt]:(LABEL[now]||'SẢNH CHỜ'),h=!state?.roomCode?'CHẠM ĐỂ VÀO PHÒNG':!owner?'CHỦ PHÒNG ĐIỀU HÀNH':now==='battle'?'ĐANG CHƠI':'CHẠM ĐỂ TIẾP';
-    if(title.textContent!==label)title.textContent=label;if(hint.textContent!==h)hint.textContent=h;
+    const shownLabel=quick?(now==='battle'?'ĐANG CHƠI':'CHƠI NHANH'):label,shownHint=quick?(owner?'CHẠM ĐỂ MỞ PHÒNG':'XEM PHÒNG CHỜ'):h;
+    if(title.textContent!==shownLabel)title.textContent=shownLabel;if(hint.textContent!==shownHint)hint.textContent=shownHint;
     root.getElementById('playEndGame').style.opacity=owner&&now==='battle'?'1':'.35';
   }
   const renderDock=renderChrome,renderBar=renderChrome;
