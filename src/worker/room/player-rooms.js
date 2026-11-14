@@ -171,7 +171,9 @@ export class RoomPlayerRoomMethods {
     if(!seated.ok)return seated;
     const locked=await this.gmSeatLock(gm,{locked:true});
     if(!locked.ok)return locked;
-    const result=await this.ownerStart(gm,await this.ctx.storage.get("meta"),{quickPlayRoster:roster,templateId:cfg.id});
+    const readyMeta=await this.ctx.storage.get("meta");readyMeta.autoGM=true;
+    await this.ctx.storage.put("meta",readyMeta);
+    const result=await this.ownerStart(gm,readyMeta,{quickPlayRoster:roster,templateId:cfg.id});
     if(!result.ok)await this.gmSeatLock(gm,{locked:false}).catch(()=>{});
     return result;
   }
