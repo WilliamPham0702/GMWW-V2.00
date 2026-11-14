@@ -2,7 +2,7 @@
   const inOwnRoom=()=>!!(pr.own&&state?.roomCode&&String(state.roomCode).toUpperCase()===String(pr.own.code).toUpperCase());
   // The four-stage flow is the DEFAULT Player Web setup, even before a room exists.
   // The seven-stage GM strip remains available only inside a separately created advanced room.
-  const quickMode=()=>!state?.roomCode||(pr.own&&inOwnRoom()?(pr.state?.room?.quickPlay===true||pr.own.quick===true||state?.room?.quickPlay===true):state?.room?.quickPlay===true);
+  const quickMode=()=>!state?.roomCode||state?.room?.phase==='deleted'||(!state?.room&&!pr.own)||(pr.own&&inOwnRoom()?(pr.state?.room?.quickPlay===true||pr.own.quick===true||state?.room?.quickPlay===true):state?.room?.quickPlay===true);
   const QUICK_ORDER=[['lobby','Sảnh Chờ'],['room','Tạo Phòng'],['game','Ván Mẫu'],['deal','Bắt Đầu']];
   function openSheet(){closeChat();pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>render());refresh()}
   function closeSheet(){pr.open=false;render()}
