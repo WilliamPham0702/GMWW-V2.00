@@ -61,6 +61,30 @@ test('GM Player Web list shows every room with kind and status; players list no 
   assert.match(script,/gmww-gmobs-players/);
 });
 
+test('Quick Play V2 top bar replaces legacy seven-step menu even before a room exists',()=>{
+  assert.match(part,/const quickMode=\(\)=>!state\?\.roomCode/);
+  assert.match(part,/const QUICK_ORDER=\[\['lobby','Sảnh Chờ'\],\['room','Tạo Phòng'\],\['game','Ván Mẫu'\],\['deal','Bắt Đầu'\]\]/);
+  assert.match(part,/function ensureQuickStrip\(\)/);
+  assert.match(part,/host\.id='gmwwQuickStageStrip'/);
+  assert.match(part,/nav id="quickSetupStrip" aria-label="Chơi nhanh V2"/);
+  assert.match(part,/strip\.hidden=!show\|\|quick;quickStrip\.hidden=!show\|\|!quick/);
+  assert.match(part,/return\{top:rect\('gmwwQuickStageStrip','quickSetupStrip'\)\|\|rect\('gmwwStageStrip','playSetupStrip'\)/);
+  assert.doesNotMatch(part,/const tabs=el\('nav','gmww-pr-steps gmww-pr-quicksteps'\)/,
+    'the setup sheet must not contain a duplicate four-step menu');
+});
+
+test('Quick Play V2 removes the old three-section Phòng page from the default flow',()=>{
+  assert.match(part,/if\(isQuick\)\{/);
+  assert.match(part,/if\(!hasRoom\)viewQuickEntry\(sec\)/);
+  assert.match(part,/function viewQuickEntry\(box\)/);
+  assert.match(part,/MỞ PHÒNG/);
+  assert.match(part,/Nhập mã phòng/);
+  assert.match(part,/TẠO PHÒNG RIÊNG/);
+  assert.match(part,/if\(quickMode\(\)\)\{/);
+  assert.match(part,/QUICK_ORDER\.some\(s=>s\[0\]===k\)/);
+  assert.match(part,/pr\.view=QUICK_ORDER\.some/);
+  assert.match(part,/viewRoomHub\(body/,'the advanced, non-quick room still retains legacy controls');
+});
 test('Quick Play V2 separates four stages, owner-only template selection and atomic start',()=>{
   assert.match(part,/\['lobby','Sảnh chờ'\],\['room','Phòng Game'\]/);
   assert.match(part,/\['lobby','Sảnh Chờ'\],\['room','Tạo Phòng'\],\['game','Ván Mẫu'\],\['deal','Bắt Đầu'\]/);
