@@ -58,7 +58,7 @@
     const line2=el('div','gmww-pr-line');line2.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));if(!room.quickPlay)line2.append(btn('Tập hợp →',async()=>goStep('seats'),'gmww-pr-main'));box.append(line2);
   }
   // Chơi nhanh V2: Sảnh chờ → Tạo phòng → Ván Mẫu → Bắt đầu.
-  // No role assignments are ever rendered; only public deck names and quantities.
+  // The UI renders public deck names and quantities, never a player's private card.
   function quickTemplateOptions(){
     return (pr.templates||[]).filter(t=>{
       const cfg=t?.compiledConfig||{},n=Number(t.playerCount);
