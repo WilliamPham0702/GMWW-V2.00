@@ -58,49 +58,69 @@
       await callOwner('auto','POST',{enabled:!room.autoGM});await refresh();
     }));
 
-    const line2=el('div','gmww-pr-line');line2.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'),btn('Tập hợp →',async()=>goStep('seats'),'gmww-pr-main'));box.append(line2);
+    const line2=el('div','gmww-pr-line');line2.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));if(!room.quickPlay)line2.append(btn('Tập hợp →',async()=>goStep('seats'),'gmww-pr-main'));box.append(line2);
   }
+  // Quick Play stays inside Phòng: owner chooses a published template, everyone can preview the deck.
   function renderQuickPlay(box,players,st){
-    const members=players.filter(p=>p.kind==='member');
-    const count=members.length;
-    const defaults=pr.templates.filter(t=>t.quickPlayDefault===true&&t.source==='GM'&&t.compiledConfig?.roles?.length);
-    const template=defaults.find(t=>Number(t.playerCount)===count);
-    if(template){
-      const details=el('details');
-      details.open=pr.quickRolesOpen===true;
-      details.addEventListener('toggle',()=>{if(details.isConnected)pr.quickRolesOpen=details.open});
-      details.append(el('summary',null,template.name+' · Xem bộ vai'));
-      const roles=[...template.compiledConfig.roles].sort((a,b)=>String(a.faction).localeCompare(String(b.faction),'vi'));
-      const list=el('ul');
-      for(const role of roles)list.append(el('li',null,(role.faction?role.faction+' · ':'')+(role.roleName||role.roleId)+' × '+role.count));
-      details.append(list);box.append(details);
-    }else{
-      const next=Math.min(...defaults.filter(t=>t.playerCount>count).map(t=>t.playerCount));
-      const message=pr.catalogStatus==='error'?'Không tải được Ván Mẫu.':pr.catalogStatus!=='ready'?'Đang tải Ván Mẫu…':Number.isFinite(next)?'Mời thêm '+(next-count)+' người để bắt đầu.':'Chưa có Ván Mẫu Chơi nhanh cho '+count+' người.';
-      box.append(el('p','gmww-pr-help',message));
-      if(pr.catalogStatus==='error')box.append(btn('Tải lại Ván Mẫu',loadTemplates));
-    }
-    if(!st)return;
-    box.append(btn('Bắt đầu',async()=>{
-      const roster=members.map(p=>p.loginId).sort();
-      try{
-        await callOwner('template','POST',{templateId:template.id,quickPlayRevision:template.revision});
-      }catch(error){
-        if(error?.data?.error==='QUICK_PLAY_TEMPLATE_CHANGED')await loadTemplates();
-        throw error;
+    const members=players.filter(p=>p.kind==='member'),count=members.length;
+    const room=st?.room||state.room||{},owner=!!(st&&members.some(p=>p.loginId===st.ownerLoginId));
+    const templates=(pr.templates||[]).filter(t=>{
+      const cfg=t?.compiledConfig||{},n=Number(t.playerCount);
+      return Number.isInteger(n)&&n>=3&&n<=30&&Array.isArray(cfg.roles)&&cfg.roles.length>0&&
+        cfg.roles.every(r=>Number.isInteger(Number(r.count))&&Number(r.count)>0)&&deckSize(cfg)===n;
+    }).sort((a,b)=>Number(a.playerCount)-Number(b.playerCount)||String(a.name||'').localeCompare(String(b.name||''),'vi'));
+    const matching=templates.filter(t=>Number(t.playerCount)===count),others=templates.filter(t=>Number(t.playerCount)!==count);
+    const selected=templates.find(t=>String(t.id)===String(room.quickPlayTemplateId||''));
+    box.append(el('div','gmww-pr-sub','CHƠI NHANH • TẬP HỢP → CHỌN VÁN MẪU → BẮT ĐẦU'));
+    if(pr.catalogStatus==='error')box.append(el('p','gmww-pr-note','Không tải được thư viện Ván Mẫu.'),btn('Tải lại Ván Mẫu',loadTemplates));
+    else if(pr.catalogStatus!=='ready')box.append(el('p','gmww-pr-help','Đang tải thư viện Ván Mẫu…'));
+    else if(!matching.length)box.append(el('p','gmww-pr-note','Chưa có Ván Mẫu phù hợp với '+count+' người. Bạn có thể mời thêm người hoặc chọn số người theo một Ván Mẫu khác.'));
+    if(room.quickPlayTemplateId){
+      const valid=!!selected&&Number(selected.playerCount)===count;
+      box.append(el('p',valid?'gmww-pr-help':'gmww-pr-note',valid?'Đã chọn: '+selected.name+' • '+count+' người':'Danh sách người chơi hoặc Ván Mẫu đã thay đổi. Chủ phòng hãy chọn lại Ván Mẫu phù hợp.'));
+    }else box.append(el('p','gmww-pr-help',owner?'Chọn một Ván Mẫu để cả phòng xem trước khi bắt đầu.':'Đang chờ chủ phòng chọn Ván Mẫu.'));
+    const appendTemplate=(host,t)=>{
+      const compatible=Number(t.playerCount)===count,active=String(t.id)===String(room.quickPlayTemplateId||'');
+      const line=el('div','gmww-pr-template-choice');
+      line.append(el('b',null,(active?'✓ ':'')+(t.name||'Ván Mẫu')));
+      line.append(el('small',null,t.playerCount+' người • '+(t.compiledConfig.artifactsEnabled?'Có Artifact':'Không Artifact')+(compatible?'':' • Chưa khớp số người')));
+      if(owner&&compatible)line.append(btn(active?'Đang chọn':'Chọn Ván',async()=>{
+        try{await callOwner('template','POST',{templateId:t.id,quickPlayRevision:t.revision})}
+        catch(error){if(error?.data?.error==='QUICK_PLAY_TEMPLATE_CHANGED')await loadTemplates();throw error}
+        await refresh();
+      },active?null:'gmww-pr-main',active));
+      const detail=el('details'),summary=el('summary',null,'Xem vai trò và số lượng');detail.append(summary);
+      const roles=el('ul');
+      for(const r of [...t.compiledConfig.roles].sort((a,b)=>String(a.faction||'').localeCompare(String(b.faction||''),'vi')))
+        roles.append(el('li',null,(r.faction?r.faction+' · ':'')+(r.roleName||r.roleId)+' × '+r.count));
+      detail.append(roles);line.append(detail);host.append(line);
+    };
+    if(pr.catalogStatus==='ready'){
+      for(const t of matching)appendTemplate(box,t);
+      if(others.length){
+        const otherBox=el('details'),summary=el('summary',null,'Các Ván Mẫu khác ('+others.length+')');
+        otherBox.append(summary);for(const t of others)appendTemplate(otherBox,t);box.append(otherBox);
       }
+    }
+    if(!owner)return;
+    box.append(btn('BẮT ĐẦU GAME',async()=>{
+      if(!selected||Number(selected.playerCount)!==count)throw new Error('Hãy chọn Ván Mẫu phù hợp trước khi bắt đầu.');
+      const roster=members.map(p=>p.loginId).sort();
+      if(!roster.includes(st.ownerLoginId))throw new Error('Chủ phòng phải có mặt trong phòng để chơi.');
+      try{await callOwner('template','POST',{templateId:selected.id,quickPlayRevision:selected.revision})}
+      catch(error){if(error?.data?.error==='QUICK_PLAY_TEMPLATE_CHANGED')await loadTemplates();throw error}
       await callOwner('seat-lock','POST',{locked:false});
       await callOwner('room-settings','POST',{seatCount:count});
       await callOwner('seats-randomize','POST',{all:true});
       try{
         await callOwner('seat-lock','POST',{locked:true});
-        await callOwner('start','POST',{quickPlayRoster:roster,templateId:template.id});
+        await callOwner('start','POST',{quickPlayRoster:roster,templateId:selected.id});
       }catch(error){
         await callOwner('seat-lock','POST',{locked:false}).catch(()=>{});
         throw error;
       }finally{await refresh()}
       pr.open=false;
-    },'gmww-pr-main',!template||!members.some(p=>p.loginId===st?.ownerLoginId)));
+    },'gmww-pr-main',!selected||Number(selected.playerCount)!==count||count<3||!members.some(p=>p.loginId===st.ownerLoginId)));
   }
   // "Phòng": 1) vào phòng bằng mã  2) tạo phòng riêng  3) quản lý phòng đã tạo.
   function viewRoomHub(box,st,room,players){
