@@ -56,3 +56,10 @@ test('Audio button unlocks the existing player announcement player; does not fak
   assert.match(room,/gmwwPlayAnnouncement\(\)/);
   assert.match(room,/Phòng chưa có clip audio GM/);
 });
+
+test('Nút Lên Giàn thực sự mở đề cử và biểu quyết hiện có',()=>{
+  assert.match(room,/state\.gallowsNominationOpen=true;renderGallowsWidget\(\)/);
+  assert.match(room,/document\.getElementById\('gmwwGallowsPlayer'\)\?\.hidden/);
+  assert.match(room,/document\.getElementById\('gmwwGallowsDock'\)\?\.hidden/);
+  assert.match(room,/gallowsCurrentStage\(\)/);
+});
