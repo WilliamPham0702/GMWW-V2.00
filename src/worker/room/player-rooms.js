@@ -9,7 +9,7 @@ import { evaluatePlayerRoomCreate } from "../../gmww-player-room-policy.js";
 import { missingRoleCards, ownerDeckView, planPlayerRoomDeal, playerRoomConfigFromTemplate } from "../../gmww-player-room-setup.js";
 import { publicRoom } from "../../gmww-public-room-contract.js";
 import { normalizeSeatCount } from "../../gmww-room-config-rules.js";
-import { publicPlayer } from "../../gmww-village-player-state.js";
+import { clearPlayerMovement, publicPlayer } from "../../gmww-village-player-state.js";
 
 export class RoomPlayerRoomMethods {
   // Atomic check + reserve for a player-created room: one handler, storage-only awaits.
@@ -66,6 +66,7 @@ export class RoomPlayerRoomMethods {
     }
     if(action==="apply-template")return this.ownerApplyTemplate(gm,meta,body);
     if(action==="roles-shuffle")return this.ownerRolesShuffle(gm,meta);
+    if(action==="quick-start"&&meta.quickPlay===true)return this.ownerQuickStart(gm,meta,body);
     if(action==="start")return this.ownerStart(gm,meta,body);
     if(action==="replay"&&meta.quickPlay===true&&meta.phase==="lobby"&&meta.endedAt){
       return this.gmReset(gm,{postGame:true,preserveParticipants:true,transactionId:"quick-replay:"+meta.lastEndedMatchId});
@@ -146,6 +147,33 @@ export class RoomPlayerRoomMethods {
     const old=await this.ctx.storage.get("pendingDeal"),round=Number(old?.round||0)+1;
     await this.ctx.storage.put("pendingDeal",{round,rows:plan.rows,members:members.map(m=>String(m.loginId||"")).sort(),roleKey:cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(","),artifactKey:artifactPool.map(a=>a.artifactId).sort().join(",")});
     return j({ok:true,dealRound:round})
+  }
+  // Atomic Quick Play start: one owner request sizes and seats the ACTUAL roster
+  // around the central campfire. No transient 30-seat formation or manual step.
+  async ownerQuickStart(gm,meta,body){
+    if(String(meta.phase||"lobby").toLowerCase()!=="lobby"||meta.endedAt)return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
+    const players=(await this.ctx.storage.get("players"))||{},members=Object.values(players).filter(p=>p?.kind==="member");
+    const roster=members.map(p=>normalizeLoginId(p.loginId)).sort(),sent=Array.isArray(body?.quickPlayRoster)?body.quickPlayRoster.map(normalizeLoginId).sort():[];
+    const count=roster.length,cfg=await this.ctx.storage.get("gameConfig"),size=(cfg?.roles||[]).reduce((a,r)=>a+Number(r.count||1),0);
+    if(count<3||count>30||JSON.stringify(roster)!==JSON.stringify(sent)||!roster.includes(normalizeLoginId(meta.ownerLoginId))||
+       cfg?.id!==body?.templateId||size!==count||Object.values(players).length!==count){
+      return j({ok:false,error:"QUICK_PLAY_ROSTER_CHANGED",message:"Số người hoặc Ván Mẫu đã đổi. Hãy kiểm tra lại trước khi bắt đầu."},409);
+    }
+    await this.ctx.storage.delete("pendingDeal");
+    if(meta.seatsLocked===true){const unlocked=await this.gmSeatLock(gm,{locked:false});if(!unlocked.ok)return unlocked}
+    // Stale seats from an earlier setup can have IDs greater than the current
+    // headcount. Clear before resizing; gmRoomSettings would otherwise reject it.
+    for(const player of members){player.seatId=null;clearPlayerMovement(player);player.positionX=null;player.positionY=null}
+    await this.ctx.storage.put("players",players);
+    const settings=await this.gmRoomSettings(gm,{roomMode:"online",demo:false,seatCount:count,seatLayout:"circle",seatOffset:{x:0,y:0},seatSpacing:100,seatMoveMode:"instant"});
+    if(!settings.ok)return settings;
+    const seated=await this.gmRandomizeRemainingSeats(gm,{all:true});
+    if(!seated.ok)return seated;
+    const locked=await this.gmSeatLock(gm,{locked:true});
+    if(!locked.ok)return locked;
+    const result=await this.ownerStart(gm,await this.ctx.storage.get("meta"),{quickPlayRoster:roster,templateId:cfg.id});
+    if(!result.ok)await this.gmSeatLock(gm,{locked:false}).catch(()=>{});
+    return result;
   }
   // Seats must be locked; deals the template's roles at random, starts the match and the first night.
   async ownerStart(gm,meta,body){
