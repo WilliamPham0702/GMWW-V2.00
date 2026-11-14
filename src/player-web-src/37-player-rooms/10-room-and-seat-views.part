@@ -1,7 +1,7 @@
   // Keeps the strip every player sees in step with the owner's tab (ignored when the server refuses).
   const STAGE={lobby:'room',room:'room',seats:'seats',game:'game',roles:'roles',deal:'deal'};
   function syncStage(k){if(!pr.own||!STAGE[k]||String(pr.state?.room?.phase||'lobby').toLowerCase()==='running')return;callOwner('stage','POST',{step:STAGE[k]}).then(refresh).catch(()=>{})}
-  function goStep(k){pr.view=k;pr.touched=true;syncStage(k);render()}
+  function goStep(k){pr.view=k;pr.touched=true;if(!(pr.state?.room?.quickPlay||state.room?.quickPlay))syncStage(k);render()}
   async function loadTemplates(){
     pr.catalogStatus='loading';pr.catalogError='';
     try{
@@ -76,6 +76,11 @@
     box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG • MỞ PHÒNG / MÃ / LINK / THÀNH VIÊN'));
     if(!pr.own||!inOwnRoom())return;
     roomDetails(box,st,room,players,room.seatsLocked===true);
+    if(String(room.phase||'lobby')==='lobby'&&!room.endedAt)box.append(
+      btn(room.quickPlayJoinLocked?'🔒 MỞ KHÓA PHÒNG':'🔓 KHÓA PHÒNG',async()=>{
+        await callOwner('room-lock','POST',{locked:!room.quickPlayJoinLocked});
+        await refresh();
+      },room.quickPlayJoinLocked?'gmww-pr-main':null));
     if(String(room.phase||'lobby')==='lobby'&&!room.endedAt)box.append(
       btn('TIẾP: VÁN MẪU →',async()=>{await loadTemplates();goStep('game')},'gmww-pr-main'));
   }
