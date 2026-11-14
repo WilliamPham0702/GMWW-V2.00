@@ -101,10 +101,43 @@
     panel.dataset.viewKey=viewKey;
     panel.textContent='';
     const head=el('header','gmww-pr-head'),close=el('button','gmww-pr-close','×');close.type='button';close.setAttribute('aria-label','Đóng');close.addEventListener('click',closeSheet);
-    const panelTitle=pr.view==='game'?(pr.gameView==='design'?'Thiết kế Ván Mẫu':'Chọn Ván Mẫu'):pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng');
+    const isQuick=(pr.own&&inOwnRoom()&&pr.state?.room?.quickPlay)||state.room?.quickPlay;
+    const panelTitle=isQuick?(pr.view==='game'?'Ván Mẫu':pr.view==='deal'?'Bắt Đầu':pr.view==='lobby'?'Sảnh Chờ':'Tạo Phòng'):(pr.view==='game'?(pr.gameView==='design'?'Thiết kế Ván Mẫu':'Chọn Ván Mẫu'):pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng'));
     head.append(el('b',null,panelTitle),close);panel.append(el('i','gmww-pr-grip'),head);
     const body=el('div','gmww-pr-body');
-    if(state.room?.quickPlay&&state.room.phase==='lobby'&&!inOwnRoom()&&pr.view==='room'){
+    const quickRoom=(pr.own&&inOwnRoom()&&pr.state?.room?.quickPlay?pr.state.room:state.room?.quickPlay?state.room:null);
+    if(quickRoom){
+      if(pr.catalogStatus==='idle')loadTemplates().then(()=>render()).catch(()=>render());
+      const host=!!(pr.own&&inOwnRoom()&&pr.state?.room?.quickPlay),st=host?pr.state:null;
+      const room=st?.room||state.room||{},players=st?.players||state.players||[];
+      const quickOrder=[['lobby','Sảnh Chờ'],['room','Tạo Phòng'],['game','Ván Mẫu'],['deal','Bắt Đầu']];
+      if(!quickOrder.some(x=>x[0]===pr.view))pr.view='room';
+      const tabs=el('nav','gmww-pr-steps gmww-pr-quicksteps');tabs.setAttribute('aria-label','Quy trình Chơi nhanh');
+      for(const [index,entry] of quickOrder.entries()){
+        const button=el('button',pr.view===entry[0]?'is-now is-view':'');
+        button.type='button';button.append(el('span',null,String(index+1)),el('b',null,entry[1]));
+        button.addEventListener('click',()=>{pr.view=entry[0];pr.touched=true;render()});tabs.append(button);
+      }
+      body.append(tabs);
+      const sec=el('section','gmww-pr-sec'),running=String(room.phase||'lobby').toLowerCase()==='running';
+      if(running){
+        sec.append(el('p','gmww-pr-note','Ván đang diễn ra • Auto GM điều hành. Đã tự phát vai kín cho người chơi.'));
+        if(host)viewQuickRoom(sec,st,room,players);
+      }else if(pr.view==='lobby'){
+        if(host)viewLobby(sec,st,room,players);
+        else sec.append(el('p','gmww-pr-help','Sảnh chờ: đăng nhập, tạo phòng hoặc dùng mã/link tham gia. Bạn đã vào phòng '+(room.code||state.roomCode||'')+'.'));
+      }else if(pr.view==='room'){
+        if(host)viewQuickRoom(sec,st,room,players);
+        else {
+          sec.append(el('p','gmww-pr-note','Mã phòng: '+(room.code||state.roomCode||'')+' • '+players.length+' người'+(room.quickPlayJoinLocked?' • Đã khóa':' • Đang mở')));
+          const list=el('div','gmww-pr-list');
+          for(const p of players)list.append(el('div','gmww-pr-player',p.displayName||p.loginId||'Người chơi'));
+          sec.append(list,el('p','gmww-pr-help','Chỉ chủ phòng có quyền khóa/xóa phòng và chọn Ván Mẫu.'));
+        }
+      }else if(pr.view==='game')renderQuickPlay(sec,players,st);
+      else if(pr.view==='deal')viewQuickStart(sec,st,room,players);
+      body.append(sec);
+    }else if(state.room?.quickPlay&&state.room.phase==='lobby'&&!inOwnRoom()&&pr.view==='room'){
       body.append(el('p','gmww-pr-help','Phòng '+state.roomCode+' · '+(state.players||[]).length+' người'));
       renderQuickPlay(body,state.players||[],null);
     }else if(!pr.own||pr.view==='room'&&!inOwnRoom()){
@@ -222,6 +255,7 @@
       +'.gmww-pr-body{overflow:auto;padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 20px);display:flex;flex-direction:column;gap:10px}'
       +'.gmww-pr-steps{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.gmww-pr-panel .gmww-pr-steps button{font-size:9px;font-weight:600;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;border:1px solid #1d6fa5;background:#0b3a5e;color:#9fd6f5}.gmww-pr-steps span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#14598a;font-weight:700;font-size:12px}.gmww-pr-steps b{font-weight:600;white-space:nowrap;font-size:8.5px}'
       +'.gmww-pr-panel .gmww-pr-steps .is-now span{background:#4fc3f7;color:#032033}.gmww-pr-panel .gmww-pr-steps .is-view{border-color:#4fc3f7;color:#fff}'
+      +'.gmww-pr-quicksteps{grid-template-columns:repeat(4,minmax(0,1fr))!important}.gmww-pr-panel .gmww-pr-quicksteps button{font-size:12px;min-height:58px}.gmww-pr-quicksteps b{font-size:11px!important;white-space:normal!important;text-align:center}'
       +'.gmww-pr-sec{display:flex;flex-direction:column;gap:10px}.gmww-pr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gmww-pr-stat{background:#0b3a5e;border:1px solid #1d6fa5;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:2px}.gmww-pr-stat small{opacity:.7;font-size:11px}.gmww-pr-stat b{font-size:18px}'
       +'.gmww-pr-help{margin:0;font-size:13px;opacity:.85;line-height:1.45}.gmww-pr-note{margin:0;padding:10px;border-radius:10px;background:#0b3a5e;border:1px solid #4fc3f7;font-size:13px;line-height:1.45}'
       +'.gmww-pr-panel input,.gmww-pr-panel select{padding:11px;border-radius:10px;border:1px solid #1d6fa5;background:#eaf6ff;color:#06263d;width:100%;box-sizing:border-box;font-size:15px}'
