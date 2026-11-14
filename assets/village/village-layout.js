@@ -93,7 +93,9 @@
     const radiusY=radiusX/SCREEN_Y_SCALE;
     const result=[];
     for(let i=0;i<n;i++){
-      const p=ovalContour(i/n,radiusX,radiusY);
+      // Four players form a rectangle, centered on the actual fire, not a diamond.
+      // Three players retain the balanced triangle; other sizes share one regular perimeter.
+      const p=ovalContour((i+(n===4?0.5:0))/n,radiusX,radiusY);
       const x=fire.x+p.x,y=fire.y+p.y;
       if(!inside(x,y))throw Error('INVALID_SEAT_CIRCLE_'+n+'_'+i);
       result.push({x,y,ring:0,depth:Math.max(0,Math.min(5,Math.floor((y-29)/11)))});
