@@ -3,6 +3,8 @@ import { j } from "../http/responses.js";
 import { normalizeLoginId } from "../../gmww-player-identity-rules.js";
 import { sanitizeGameConfig } from "../../gmww-room-config-rules.js";
 
+const MAX_SAVED_GAME_TEMPLATES = 20;
+
 export class RoomGameTemplateMethods {
   async gameTemplateList(){
     const rows=await this.ctx.storage.list({prefix:"gameTemplate:"}),templates=[...rows.values()].filter(Boolean).map(x=>({id:x.id,name:x.name,playerCount:Number(x.playerCount||0),updatedAt:x.updatedAt||null,preloadedAt:x.preloadedAt||null,revision:Number(x.revision||1),source:x.source==="PLAYER"?"PLAYER":"GM",quickPlayDefault:x.quickPlayDefault===true})).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
@@ -21,20 +23,23 @@ export class RoomGameTemplateMethods {
       if(rows.size)await this.ctx.storage.delete([...rows.keys()]);
     }
   }
-  // Only the newest few Ván Mẫu are kept server-wide; older ones (and their artwork) are removed.
-  async pruneGameTemplates(keep,protectId){
-    if(typeof this.ctx.storage.list!=='function')return[];
-    const rows=[...(await this.ctx.storage.list({prefix:"gameTemplate:"})).values()].filter(x=>x&&x.quickPlayDefault!==true)
-      .sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||""))),gone=[];
-    for(const x of rows.slice(keep)){if(x.id===protectId)continue;await this.removeGameTemplate(x.id);gone.push(x.id)}
-    return gone;
+  // Shared library capacity includes GM defaults and player-created templates.
+  // Never silently delete older templates or artwork when the library is full.
+  async gameTemplateCapacityError(existing){
+    if(existing)return null; // Existing templates remain editable at capacity.
+    const rows=await this.ctx.storage.list({prefix:"gameTemplate:"});
+    if(rows.size<MAX_SAVED_GAME_TEMPLATES)return null;
+    return j({ok:false,error:"TEMPLATE_LIMIT_REACHED",
+      message:"Đã lưu đủ 20 Ván Mẫu. Hãy xóa một Ván Mẫu không dùng để tạo mới.",
+      count:rows.size,limit:MAX_SAVED_GAME_TEMPLATES},409);
   }
-  // A room owner saves their own Ván Mẫu: roles + timeline; role artwork is copied so it survives pruning of its source.
+  // A room owner saves their own Ván Mẫu: roles + timeline; role artwork is copied from its source.
   async gameTemplatePlayerSave(body){
     const cfg=sanitizeGameConfig(body?.compiledConfig);if(!cfg||!cfg.roles.length)return j({ok:false,error:"INVALID_GAME_CONFIG"},400);
     const ownerLoginId=normalizeLoginId(body?.ownerLoginId||''),requested=String(body?.id||'').trim().slice(0,120),old=requested?await this.ctx.storage.get("gameTemplate:"+requested):null;
     if(!ownerLoginId)return j({ok:false,error:"TEMPLATE_OWNER_REQUIRED"},400);
     if(requested&&(!old||old.source!=="PLAYER"||normalizeLoginId(old.ownerLoginId||'')!==ownerLoginId))return j({ok:false,error:"TEMPLATE_EDIT_FORBIDDEN"},403);
+    const capacityError=await this.gameTemplateCapacityError(old);if(capacityError)return capacityError;
     const id=requested||("player-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),now=new Date().toISOString();
     const rec={id,name:String(cfg.name||"Ván của tôi").slice(0,120),playerCount:Number(cfg.playerCount||0),revision:Math.max(1,Number(old?.revision||0)+1),updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"PLAYER",ownerLoginId};
     await this.ctx.storage.put("gameTemplate:"+id,rec);
@@ -74,6 +79,7 @@ export class RoomGameTemplateMethods {
       cfg.roles.reduce((total,role)=>total+role.count,0)!==cfg.playerCount||!cfg.timing.autoAdvance)){
       return j({ok:false,error:"INVALID_QUICK_PLAY_TEMPLATE"},400);
     }
+    const capacityError=await this.gameTemplateCapacityError(old);if(capacityError)return capacityError;
     const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:unchanged?(old.preloadedAt||now):now,compiledConfig,source:"GM_IPA",quickPlayDefault};
     if(quickPlayDefault){
       const templates=await this.ctx.storage.list({prefix:"gameTemplate:"}),updates={[key]:rec};
