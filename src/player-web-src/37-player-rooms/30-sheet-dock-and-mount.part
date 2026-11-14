@@ -262,14 +262,90 @@
     q('playEndGame').addEventListener('click',()=>{if(owner()&&stepNow()==='battle'&&confirm('Kết thúc ván ngay?'))run(async()=>{await callOwner('end','POST',{});say('Đã kết thúc ván.');await refresh()})});
     document.body.appendChild(host);return host;
   }
+
+  // Player-created matches reuse existing room state, private actions, voice,
+  // gallows and result handlers. This is only the phase-aware bottom controller.
+  function ensureQuickBattleDock(){
+    let host=document.getElementById('gmwwQuickBattleDock');if(host)return host;
+    host=el('nav');host.id='gmwwQuickBattleDock';host.hidden=true;host.setAttribute('aria-label','Menu dưới trong trận');
+    const style=el('style');style.textContent='#gmwwQuickBattleDock{position:fixed;box-sizing:border-box;z-index:9650;left:calc(var(--gmww-player-visible-left,0px) + 8px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));transform:translateY(-100%);width:calc(var(--gmww-player-visible-width,100vw) - 16px);display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px;border-radius:13px;background:linear-gradient(180deg,#0f4c75ee,#072a44f5);border:1px solid #5bc1e5;box-shadow:0 5px 22px #001b31a8}'+
+      '#gmwwQuickBattleDock[hidden]{display:none!important}#gmwwQuickBattleDock button{font:700 clamp(9px,1.8vw,12px)/1.2 system-ui;color:#f1fcff;background:#14598a;border:1px solid #4cb0d5;border-radius:9px;min-width:0;min-height:49px;padding:4px 2px;white-space:normal;overflow-wrap:anywhere}#gmwwQuickBattleDock button:disabled{opacity:.5}';
+    document.head.appendChild(style);
+    for(const key of ['clock','activity','chat','decision','audio','room']){
+      const button=el('button');button.type='button';button.dataset.battleControl=key;
+      button.addEventListener('click',()=>{
+        const room=(pr.own&&inOwnRoom()?pr.state?.room:state?.room)||{},night=room.cyclePhase==='night';
+        if(key==='clock'){revealPlayerTopMenu(true);return}
+        if(key==='chat'){pr.chatOpen?closeChat():openChat();return}
+        if(key==='activity'){
+          if(!night){openChat();return}
+          const offers=state.onlineActions||[];renderOnlineActionDock();
+          if(!offers.length)toast('Chưa đến lượt hành động của bạn.');
+          else if(offers.every(a=>a.blocked))toast(offers[0].blockedReason||'Bạn không thể hành động đêm nay.');
+          else toast('Chạm hoặc kéo icon hành động tại lối vào làng.');
+          return;
+        }
+        if(key==='decision'){
+          if(night){void gmwwOnlineRestore();return}
+          renderGallowsWidget();
+          if(!state.gallows||['ready','resolved'].includes(String(state.gallows.stage||'')))toast('Lên Giàn chưa mở hoặc đã kết thúc.');
+          return;
+        }
+        if(key==='audio'){
+          try{localStorage.removeItem('gmww_player_announcement_audio_off')}catch(_){}
+          unlockGmwwAudio();
+          const cue=gmwwAnnouncementPending?.cue;
+          if(!cue||!Array.isArray(cue.audio)||!cue.audio.length)toast('Phòng chưa có clip audio GM cho lượt này. Cần nạp thư viện từ GM Server.');
+          else{gmwwPlayerCueKey='';void gmwwPlayAnnouncement()}
+          return;
+        }
+        if(pr.own&&inOwnRoom()){onTab('room');return}
+        if(state.role)setGameViewPane('role',{persist:false});
+        else toast('Đang đồng bộ Vai Trò từ máy chủ.');
+      });
+      host.append(button);
+    }
+    document.body.appendChild(host);return host;
+  }
+  function quickBattleClock(room){
+    const night=room.cyclePhase==='night';let remain=NaN,paused=false;
+    if(night){
+      const clock=gmwwSharedTimeline?.clock;
+      if(clock&&gmwwSharedTimelineKey===[state.roomCode,room.matchId,room.cycleKey].join(':')){
+        remain=Number(clock.remainingMs);paused=clock.paused===true;
+        if(!paused)remain-=Math.max(0,performance.now()-gmwwSharedTimelineReceivedAt);
+      }
+    }else if(room.dayPausedRemainingMs!=null){remain=Number(room.dayPausedRemainingMs);paused=true}
+    else if(room.dayDeadlineAt)remain=Date.parse(room.dayDeadlineAt)-Date.now()-(Number(state.serverClockOffsetMs)||0);
+    if(!Number.isFinite(remain))return '--:--';
+    const secs=Math.max(0,Math.ceil(remain/1000));
+    return (paused?'⏸ ':'')+String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0');
+  }
+  function renderQuickBattleDock(host,room){
+    const night=room.cyclePhase==='night',owner=!!(pr.own&&inOwnRoom());
+    const labels={clock:'⏱ '+quickBattleClock(room),activity:night?'⚔ Hành động':'📣 Thông cáo',
+      chat:'💬 Chat',decision:night?'↶ Khôi phục':'🗳 Lên Giàn',
+      audio:'🔊 Audio',room:owner?'⚙ Điều hành':'🃏 Vai Trò'};
+    for(const button of host.querySelectorAll('button[data-battle-control]')){
+      const key=button.dataset.battleControl;if(button.textContent!==labels[key])button.textContent=labels[key];
+      if(key==='decision')button.disabled=night?!(gmwwOnlineCanRestore||gmwwOnlinePick):false;
+    }
+  }
   function renderChrome(){
-    const show=barScreen(),quick=quickMode(),strip=ensureStrip(),quickStrip=ensureQuickStrip(),dock=ensureDock();
+    const show=barScreen(),quick=quickMode(),strip=ensureStrip(),quickStrip=ensureQuickStrip(),dock=ensureDock(),battleDock=ensureQuickBattleDock();
     // The iOS keyboard is more important than the setup bar while composing a chat.
     const chatTyping=pr.chatOpen&&document.activeElement?.id==='gmwwChatText';
     const gameRunning=String((pr.own&&inOwnRoom()?pr.state?.room:state?.room)?.phase||'').toLowerCase()==='running';
     // Khi vào trận, ẩn menu thiết lập để engine Đêm/Ngày/Lên Giàn hiển thị.
     strip.hidden=!show||quick||chatTyping;quickStrip.hidden=!show||!quick||chatTyping||gameRunning;
-    dock.hidden=!show||pr.chatOpen;if(!show)return;
+    dock.hidden=!show||pr.chatOpen;
+    battleDock.hidden=!show||!quick||!gameRunning||pr.chatOpen;
+    if(quick&&gameRunning&&show){
+      document.getElementById('gmwwPlayerTopMenu')?.classList.remove('is-idle-hidden');
+      renderQuickBattleDock(battleDock,(pr.own&&inOwnRoom()?pr.state?.room:state?.room)||{});
+      dock.hidden=true;
+    }
+    if(!show)return;
     const now=stripNow(),idx=ORDER.indexOf(now),sroot=strip.shadowRoot;
     if(!quick)sroot.querySelectorAll('#playSetupStrip button').forEach(b=>{
       const k=b.dataset.playStep||'room',i=ORDER.indexOf(k);
