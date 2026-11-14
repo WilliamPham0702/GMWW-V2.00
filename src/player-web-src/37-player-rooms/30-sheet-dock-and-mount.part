@@ -91,6 +91,9 @@
     panel.hidden=!pr.open;back.hidden=!(pr.open||pr.chatOpen||pr.holdBack||seatDragOn());back.classList.toggle('seatdrag',seatDragOn());renderChrome();if(!pr.open)return;
     const viewKey=[pr.own?.code||'',pr.view,pr.gameView||'pick',pr.editTemplateId||''].join(':');
     const oldBody=panel.querySelector('.gmww-pr-body'),sameView=panel.dataset.viewKey===viewKey;
+    // iPhone keyboard: never tear down an active Quick Play selector/number field during polling.
+    if(options?.background&&sameView&&pr.view==='game'&&(pr.state?.room?.quickPlay||state.room?.quickPlay)&&
+       oldBody&&oldBody.contains(document.activeElement)&&/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName))return;
     // Poll room authority without replacing the editor DOM under a touch/keyboard gesture.
     if(options?.background&&sameView&&oldBody&&pr.view==='game'&&pr.gameView==='design'&&pr.own&&inOwnRoom()&&String(pr.state?.room?.phase||'lobby').toLowerCase()==='lobby'){
       const sum=document.getElementById('gmwwPrDeckSum'),people=pr.state?.players?.length||0,t=[...pr.deck.values()].reduce((a,b)=>a+b,0);
