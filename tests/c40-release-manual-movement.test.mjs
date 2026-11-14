@@ -29,7 +29,7 @@ test('rebuilding the Character-40 catalog preserves both optimized renderers and
  // Both variants retain the reviewed common controller API and authored core functions.
  for(const [label,source] of [['Player Web',player],['GM Server',gm]]){
    for(const name of ['supports','visualId','actionFor','apply','paint','mount','update'])
-     assert.match(source,new RegExp('function '+name+'\\\\('),label+' missing '+name);
+     assert.ok(source.includes('function '+name+'('),label+' missing '+name);
    const sandbox={};vm.runInNewContext(source,sandbox,{timeout:1000});
    const api=sandbox.GMWW_SHARED_MOTION;
    assert.equal(api.version,'c40-1',label);
