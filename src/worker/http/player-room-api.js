@@ -124,8 +124,7 @@ export async function playerRoomOwnerApi(env,rawCode,action,request){
     const id=String(body.templateId||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const tr=await memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));if(!tr.ok)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     let template=(await tr.json().catch(()=>({}))).template;const packages=[];
-    if(body.quickPlayRevision!=null&&(template?.quickPlayDefault!==true||
-      Number(template.revision)!==Number(body.quickPlayRevision))){
+    if(body.quickPlayRevision!=null&&Number(template?.revision)!==Number(body.quickPlayRevision)){
       return j({ok:false,error:"QUICK_PLAY_TEMPLATE_CHANGED",message:"Ván Mẫu đã đổi. Hãy tải lại danh sách Ván Mẫu."},409);
     }
     let cfg=template?.compiledConfig||{};
