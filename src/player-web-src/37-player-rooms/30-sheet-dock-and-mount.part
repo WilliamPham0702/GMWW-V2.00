@@ -29,7 +29,7 @@
     const vp=window.visualViewport,visibleTop=Math.max(0,Number(vp?.offsetTop)||0);
     const bottom=visibleTop+(Number(vp?.height)||innerHeight),bars=barRects();
     const menuBottom=bars.top?.bottom||visibleTop;
-    const minTop=Math.max(visibleTop+8,menuBottom+8),available=Math.max(140,bottom-minTop-8);
+    const minTop=Math.max(visibleTop+8,menuBottom+8),available=Math.max(96,bottom-minTop-8);
     const height=Math.min(350,available),top=Math.max(minTop,bottom-height-8);
     const width=Math.max(0,Math.min(innerWidth-16,bars.top?.width||innerWidth-16));
     const st=page.style;
@@ -264,7 +264,10 @@
   }
   function renderChrome(){
     const show=barScreen(),quick=quickMode(),strip=ensureStrip(),quickStrip=ensureQuickStrip(),dock=ensureDock();
-    strip.hidden=!show||quick;quickStrip.hidden=!show||!quick;dock.hidden=!show||pr.chatOpen;if(!show)return;
+    // The iOS keyboard is more important than the setup bar while composing a chat.
+    const chatTyping=pr.chatOpen&&document.activeElement?.id==='gmwwChatText';
+    strip.hidden=!show||quick||chatTyping;quickStrip.hidden=!show||!quick||chatTyping;
+    dock.hidden=!show||pr.chatOpen;if(!show)return;
     const now=stripNow(),idx=ORDER.indexOf(now),sroot=strip.shadowRoot;
     if(!quick)sroot.querySelectorAll('#playSetupStrip button').forEach(b=>{
       const k=b.dataset.playStep||'room',i=ORDER.indexOf(k);
@@ -339,7 +342,7 @@
     chatHead.append(el('b',null,'Chat phòng'),chatClose);chatPage.append(el('i','gmww-pr-grip'),chatHead,el('div','gmww-pr-chatbody'));document.body.append(chatPage);
     floatPage(panel); // Chat is viewport-anchored so its composer cannot be dragged behind the iPhone keyboard.
     document.addEventListener('pointerdown',dismissOutside,true);
-    const replace=()=>{place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});
+    const replace=()=>{renderChrome();place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});
     try{visualViewport?.addEventListener('resize',replace,{passive:true});visualViewport?.addEventListener('scroll',replace,{passive:true})}catch(_){}
     chatPage.addEventListener('focusin',replace);chatPage.addEventListener('focusout',replace);
     pr.own=load();
