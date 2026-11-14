@@ -100,7 +100,7 @@ test('Quick Play V2 separates four stages, owner-only template selection and ato
   assert.match(part,/Danh sách vai trò và số lượng/);
   assert.match(part,/Dùng Artifact/);
   assert.match(part,/Cài đặt thời gian \(mặc định ẩn\)/);
-  assert.match(part,/if\(!room\.quickPlay\)line2\.append/);
+  assert.match(part,/if\(!room\.quickPlay\)\{const line2=el/,'advanced rooms retain the original manual Seat route');
   assert.match(part,/strip\.hidden=!show\|\|quick/);
 });
 
