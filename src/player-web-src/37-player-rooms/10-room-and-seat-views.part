@@ -88,8 +88,8 @@
     const room=st?.room||state.room||{},members=players.filter(p=>p.kind==='member'),count=members.length;
     const owner=!!(st&&pr.own&&inOwnRoom());
     const templates=quickTemplateOptions(),matching=templates.filter(t=>Number(t.playerCount)===count);
-    const pickedId=String(pr.quickTemplateId||room.quickPlayTemplateId||'');
-    const chosen=matching.find(t=>String(t.id)===pickedId)||(!pickedId?matching[0]:null);
+    const pickedId=String(owner?(pr.quickTemplateId||room.quickPlayTemplateId||''):(room.quickPlayTemplateId||''));
+    const chosen=matching.find(t=>String(t.id)===pickedId)||(owner&&!pickedId?matching[0]:null);
     box.append(el('div','gmww-pr-sub','3. VÁN MẪU • CHỦ PHÒNG LỰA CHỌN'));
     if(pr.catalogStatus==='error')box.append(el('p','gmww-pr-note','Không tải được thư viện Ván Mẫu.'),btn('TẢI LẠI',loadTemplates));
     if(pr.catalogStatus!=='ready')box.append(el('p','gmww-pr-help','Đang tải thư viện Ván Mẫu…'));
