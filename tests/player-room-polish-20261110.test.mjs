@@ -10,6 +10,7 @@ test('Phòng hub order: Quản lý → Tạo → Vào phòng',()=>{
 });
 test('toast sits below the stage strip',()=>{
   assert.match(village,/getElementById\('gmwwStageStrip'\)[\s\S]*playSetupStrip[\s\S]*stripBottom\+8/);
+  assert.match(village,/getElementById\('gmwwQuickStageStrip'\)[\s\S]*quickSetupStrip[\s\S]*quickBottom\+8/);
 });
 test('strip and dock anchored to visible viewport',()=>{
   assert.match(rooms,/#gmwwStageStrip\{[^}]*--gmww-player-visible-top/);
