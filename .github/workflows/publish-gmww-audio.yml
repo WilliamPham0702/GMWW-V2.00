@@ -41,6 +41,14 @@ jobs:
           cd /tmp/gmww-audio-publish
           sha256sum -- * > checksums.sha256
           sha256sum --check checksums.sha256
+      - name: Verify every clip can actually decode (not just a valid filename/header)
+        run: |
+          command -v ffprobe >/dev/null || { echo 'ffprobe not installed' >&2; exit 1; }
+          find /tmp/gmww-audio-publish -maxdepth 1 -type f \( -name '*.mp3' -o -name '*.m4a' -o -name '*.ogg' -o -name '*.wav' \) -print0 |
+          while IFS= read -r -d '' audio; do
+            seconds=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$audio")
+            awk -v s="$seconds" 'BEGIN {if (!(s > 0.1 && s <= 180)) exit 1}' || { echo "Invalid audio: $audio" >&2; exit 1; }
+          done
       - name: Publish new version without overwriting old audio
         env:
           GH_TOKEN: ${{ github.token }}
