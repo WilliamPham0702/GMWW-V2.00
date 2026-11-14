@@ -37,19 +37,27 @@
   }
   function roomDetails(box,st,room,players,locked){
     const link=pr.own.joinUrl||(location.origin+'/?room='+pr.own.code),code=pr.own.code,total=Number(room.seatCount)||30;
-    // Quick Play: code/share on the first row, Copy + Delete side by side below.
-    // Standard room mode retains its original controls and order.
-    const line1=el('div',room.quickPlay?'gmww-pr-line gmww-pr-room-code-share':'gmww-pr-line');
+    // Quick Play: mã và ba hành động cùng một dòng; thứ tự kế tiếp là khóa/tiếp rồi thành viên.
+    const line1=el('div',room.quickPlay?'gmww-pr-room-toolbar':'gmww-pr-line');
     const copyCode=btn('Sao chép mã',async()=>{try{await navigator.clipboard.writeText(code);say('Đã sao chép mã '+code+'.')}catch(_){say('Mã phòng: '+code)}}),shareRoom=btn('Gửi phòng',async()=>{const text='Vào phòng Ma Sói của mình nhé! Mã phòng: '+code+'\n'+link;
         if(navigator.share){try{await navigator.share({title:'Phòng Ma Sói '+code,text,url:link});return}catch(e){if(e&&e.name==='AbortError')return}}
         try{await navigator.clipboard.writeText(text);say('Đã sao chép lời mời.')}catch(_){say(text)}},'gmww-pr-main');
-    line1.append(el('b','gmww-pr-linecode',code));
-    if(!room.quickPlay)line1.append(copyCode);
-    line1.append(shareRoom);box.append(line1);
     if(room.quickPlay){
-      const quickRoomActions=el('div','gmww-pr-quick-actions');
-      quickRoomActions.append(copyCode,btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));
-      box.append(quickRoomActions);
+      const codeBox=el('div','gmww-pr-room-codebox');
+      codeBox.append(el('small',null,'MÃ PHÒNG'),el('b',null,code));
+      line1.append(codeBox,copyCode,shareRoom,btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));
+    }else line1.append(el('b','gmww-pr-linecode',code),copyCode,shareRoom);
+    box.append(line1);
+    if(room.quickPlay&&String(room.phase||'lobby')==='lobby'&&!room.endedAt){
+      const nextActions=el('div','gmww-pr-quick-actions');
+      nextActions.append(
+        btn(room.quickPlayJoinLocked?'🔒 MỞ KHÓA PHÒNG':'🔓 KHÓA PHÒNG',async()=>{
+          await callOwner('room-lock','POST',{locked:!room.quickPlayJoinLocked});
+          await refresh();
+        },room.quickPlayJoinLocked?'gmww-pr-main':null),
+        btn('TIẾP: VÁN MẪU →',async()=>{await loadTemplates();goStep('game')},'gmww-pr-main')
+      );
+      box.append(nextActions);
     }
     box.append(el('div','gmww-pr-sub','ĐÃ VÀO PHÒNG • '+players.length+(room.quickPlay?' người':' / '+total)));
     const list=el('div','gmww-pr-list');
@@ -84,39 +92,27 @@
   // Entry screen for V2. Replaces the former combined "1. QUẢN LÝ PHÒNG /
   // 2. TẠO PHÒNG / 3. VÀO PHÒNG" page, which is not part of Quick Play.
   function viewQuickEntry(box){
-    box.append(el('div','gmww-pr-sub','TẠO PHÒNG • MỞ PHÒNG HOẶC NHẬP MÃ'));
+    box.append(el('div','gmww-pr-sub','TẠO PHÒNG • CHƠI VỚI BẠN BÈ'));
+    const row=el('div','gmww-pr-quick-entry');
     if(pr.own){
-      box.append(el('p','gmww-pr-note','Bạn đã có phòng '+pr.own.code+'.'));
-      box.append(btn('VÀO LẠI PHÒNG '+pr.own.code,async()=>{
+      row.append(btn('VÀO LẠI PHÒNG '+pr.own.code,async()=>{
         if(await window.joinRoom(pr.own.code)===false)throw new Error('Không vào lại được phòng.');
         await refresh();try{await enterVillage()}catch(_){}
         goStep('room');
       },'gmww-pr-main'));
-      box.append(btn('XÓA PHÒNG',deleteRoom,'gmww-pr-danger'));
-    }else{
-      box.append(btn('MỞ PHÒNG',()=>create(true),'gmww-pr-main'));
-    }
-    const row=el('div','gmww-pr-row'),inp=el('input');
+    }else row.append(btn('TẠO PHÒNG CHƠI VỚI BẠN BÈ',()=>create(true),'gmww-pr-main'));
+    const inputBox=el('label','gmww-pr-quick-code'),inp=el('input');
     inp.id='gmwwQuickJoinCode';inp.placeholder='Nhập mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.style.textTransform='uppercase';
     inp.value=pr.joinCode||'';inp.addEventListener('input',()=>{pr.joinCode=inp.value});
-    row.append(inp,btn('VÀO PHÒNG',()=>joinByCode(pr.joinCode),'gmww-pr-main'));
+    inputBox.append(inp,el('small',null,'Nhập mã phòng riêng của bạn bè'));
+    row.append(inputBox,btn('VÀO PHÒNG',()=>joinByCode(pr.joinCode),'gmww-pr-main'));
     box.append(row);
+    if(pr.own)box.append(btn('XÓA PHÒNG',deleteRoom,'gmww-pr-danger'));
   }
   function viewQuickRoom(box,st,room,players){
-    box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG • MỞ PHÒNG / MÃ / LINK / THÀNH VIÊN'));
+    box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG • MÃ / LINK / THÀNH VIÊN'));
     if(!pr.own||!inOwnRoom())return;
     roomDetails(box,st,room,players,room.seatsLocked===true);
-    if(String(room.phase||'lobby')==='lobby'&&!room.endedAt){
-      const nextActions=el('div','gmww-pr-quick-actions');
-      nextActions.append(
-        btn(room.quickPlayJoinLocked?'🔒 MỞ KHÓA PHÒNG':'🔓 KHÓA PHÒNG',async()=>{
-          await callOwner('room-lock','POST',{locked:!room.quickPlayJoinLocked});
-          await refresh();
-        },room.quickPlayJoinLocked?'gmww-pr-main':null),
-        btn('TIẾP: VÁN MẪU →',async()=>{await loadTemplates();goStep('game')},'gmww-pr-main')
-      );
-      box.append(nextActions);
-    }
   }
   function renderQuickPlay(box,players,st){
     const room=st?.room||state.room||{},members=players.filter(p=>p.kind==='member'),count=members.length;
@@ -186,8 +182,18 @@
       if(!valid||count<3)throw new Error('Chưa có Ván Mẫu hợp lệ hoặc chưa đủ người.');
       const roster=members.map(p=>p.loginId).sort();
       if(!roster.includes(st.ownerLoginId))throw new Error('Chủ phòng phải ở trong ván.');
-      try{await callOwner('quick-start','POST',{quickPlayRoster:roster,templateId:template.id})}
-      finally{await refresh()}
+      const started=await callOwner('quick-start','POST',{quickPlayRoster:roster,templateId:template.id});
+      if(started?.started!==true||String(started?.room?.phase||'').toLowerCase()!=='running')
+        throw new Error('Máy chủ chưa xác nhận trận đã bắt đầu.');
+      await refresh();
+      // API thay đổi trạng thái DO; đồng bộ ngay Vai Trò và giao diện trận đang có.
+      if(String(state.roomCode||'').toUpperCase()===String(pr.own.code).toUpperCase()){
+        try{
+          await pollRoomState();
+          if(!state.role)await ensureRoleGameView(5200);
+          maybeOpenGame();
+        }catch(e){say('Ván đã bắt đầu; chưa đồng bộ được giao diện trận. Kiểm tra kết nối phòng.')}
+      }
       pr.open=false;
     },'gmww-pr-main',!valid||count<3||!members.some(p=>p.loginId===st.ownerLoginId)));
   }
