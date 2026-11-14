@@ -33,9 +33,10 @@ test('Ván Mẫu: editor lấy Vai Trò dự phòng từ mẫu Server và không
   assert.match(rooms,/Không tải được danh sách Ván Mẫu Server/);
   assert.match(rooms,/TẢI LẠI DANH SÁCH/);
 });
-test('Server giữ tối đa 5 Ván Mẫu gần nhất',()=>{
-  assert.match(worker,/pruneGameTemplates\(5,id\)/);
+test('Ván Mẫu Chơi nhanh V2 không bị tự xóa khi chủ phòng tạo nhiều bộ vai',()=>{
+  assert.doesNotMatch(worker,/await this\.pruneGameTemplates\(5,id\)/);
   assert.match(worker,/"\/game-templates\/player-save"/);
+  assert.match(worker,/gameTemplateDelete/);
 });
 test('menu trên/dưới bám vùng nhìn thấy cả chiều ngang (Chrome iOS)',()=>{
   assert.match(boot,/--gmww-player-visible-width/);assert.match(boot,/--gmww-player-visible-left/);

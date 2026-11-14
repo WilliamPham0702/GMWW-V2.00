@@ -46,8 +46,9 @@ export class RoomGameTemplateMethods {
       await this.ctx.storage.put("gameTemplateAssetRevision:"+id+":role:"+roleId+":1",copy);
       await this.ctx.storage.put("gameTemplateAssetMeta:"+id+":role:"+roleId,{revision:1,verified:true,package:copy.package});
     }
-    const pruned=await this.pruneGameTemplates(5,id);
-    return j({ok:true,template:{id,name:rec.name,playerCount:rec.playerCount,updatedAt:now},pruned});
+    // Multiple selectable Quick Play decks must never disappear after unrelated saves.
+    // Keep templates until the owner explicitly deletes one.
+    return j({ok:true,template:{id,name:rec.name,playerCount:rec.playerCount,updatedAt:now},pruned:[]});
   }
   async gameTemplateDelete(id){
     id=String(id||"").trim().slice(0,120);
@@ -83,7 +84,7 @@ export class RoomGameTemplateMethods {
       }
       await this.ctx.storage.put(updates);
     }else await this.ctx.storage.put(key,rec);
-    if(typeof this.pruneGameTemplates==="function")await this.pruneGameTemplates(5,id);
+    // Publishing a new GM deck must not erase older decks in the Quick Play library.
     return j({ok:true,template:rec});
   }
 }

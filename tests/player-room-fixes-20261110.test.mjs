@@ -20,7 +20,7 @@ test('floating pages drag by grip/title, snap to the top/bottom menu within 32px
   assert.match(part,/SNAP_PX=32/);assert.match(part,/function snapFor\(/);assert.match(part,/function floatPage\(/);
   assert.match(part,/closest\('\.gmww-pr-grip,\.gmww-pr-head'\)/);assert.match(part,/gmww-dock-near/);assert.match(part,/gmww-dock-snapped/);
   assert.match(part,/addEventListener\('pointerdown',dismissOutside,true\)/);assert.match(part,/stopImmediatePropagation/);
-  assert.match(part,/#gmwwStageStrip,#gmwwOwnerDock/);
+  assert.match(part,/#gmwwStageStrip,#gmwwQuickStageStrip,#gmwwOwnerDock/);
   // the catcher behind the pages is visible for the sheet AND the chat page (the village iframe swallows taps otherwise)
   assert.match(part,/back\.hidden=!\(pr\.open\|\|pr\.chatOpen\|\|pr\.holdBack\|\|seatDragOn\(\)\)/);
 });

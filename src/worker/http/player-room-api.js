@@ -70,7 +70,7 @@ export async function playerRoomRoleList(env,request){
 // Owner-only set-up. The DO verifies the owner token itself; only the actions below exist for owners.
 export async function playerRoomOwnerApi(env,rawCode,action,request){
   const code=normalizeRoomCode(rawCode);if(!isValidRoomCode(code))return j({ok:false,error:"INVALID_ROOM_CODE"},400);
-  if(!["state","seat-lock","seats-randomize","kick","room-settings","template","template-save","template-delete","roles-shuffle","start","end","replay","auto","stage","close"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
+  if(!["state","room-lock","quick-start","seat-lock","seats-randomize","kick","room-settings","template","template-save","template-delete","roles-shuffle","start","end","replay","auto","stage","close"].includes(action))return j({ok:false,error:"NOT_FOUND"},404);
   const stub=roomStub(env,code),auth={authorization:request.headers.get("authorization")||""},json={...auth,"content-type":"application/json"};
   if(action==="state"){if(request.method!=="GET")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);return stub.fetch("https://room.internal/owner/state",{headers:auth})}
   if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
@@ -124,8 +124,7 @@ export async function playerRoomOwnerApi(env,rawCode,action,request){
     const id=String(body.templateId||"").trim().slice(0,120);if(!id)return j({ok:false,error:"INVALID_TEMPLATE_ID"},400);
     const tr=await memberStore(env).fetch("https://member.internal/game-templates/get?id="+encodeURIComponent(id));if(!tr.ok)return j({ok:false,error:"TEMPLATE_NOT_FOUND"},404);
     let template=(await tr.json().catch(()=>({}))).template;const packages=[];
-    if(body.quickPlayRevision!=null&&(template?.quickPlayDefault!==true||
-      Number(template.revision)!==Number(body.quickPlayRevision))){
+    if(body.quickPlayRevision!=null&&Number(template?.revision)!==Number(body.quickPlayRevision)){
       return j({ok:false,error:"QUICK_PLAY_TEMPLATE_CHANGED",message:"Ván Mẫu đã đổi. Hãy tải lại danh sách Ván Mẫu."},409);
     }
     let cfg=template?.compiledConfig||{};

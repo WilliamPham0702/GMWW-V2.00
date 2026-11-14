@@ -9,7 +9,7 @@ import { evaluatePlayerRoomCreate } from "../../gmww-player-room-policy.js";
 import { missingRoleCards, ownerDeckView, planPlayerRoomDeal, playerRoomConfigFromTemplate } from "../../gmww-player-room-setup.js";
 import { publicRoom } from "../../gmww-public-room-contract.js";
 import { normalizeSeatCount } from "../../gmww-room-config-rules.js";
-import { publicPlayer } from "../../gmww-village-player-state.js";
+import { clearPlayerMovement, publicPlayer } from "../../gmww-village-player-state.js";
 
 export class RoomPlayerRoomMethods {
   // Atomic check + reserve for a player-created room: one handler, storage-only awaits.
@@ -40,6 +40,17 @@ export class RoomPlayerRoomMethods {
     if(request.method!=="POST")return j({ok:false,error:"METHOD_NOT_ALLOWED"},405);
     const gate=await this.ownerGate(request);if(!gate.ok)return gate.response;
     const meta=gate.meta,body=await safeJson(request)||{},gm=this.ownerAsGm(request);
+    if(action==="room-lock"&&meta.quickPlay===true){
+      if(String(meta.phase||"lobby").toLowerCase()!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
+      meta.quickPlayJoinLocked=body.locked===true;
+      meta.updatedAt=new Date().toISOString();
+      await this.ctx.storage.put("meta",meta);
+      const players=(await this.ctx.storage.get("players"))||{};
+      meta.quickPlayJoinAllowed=meta.quickPlayJoinLocked?Object.values(players).filter(p=>p?.kind==="member").map(p=>normalizeLoginId(p.loginId)):[];
+      await this.ctx.storage.put("meta",meta);
+      this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});
+      return j({ok:true,locked:meta.quickPlayJoinLocked,room:publicRoom(meta)});
+    }
     if(action==="seat-lock")return this.gmSeatLock(gm,{locked:body.locked!==false});
     if(action==="seats-randomize")return this.gmRandomizeRemainingSeats(gm,{all:body.all===true});
     if(action==="kick"){
@@ -55,6 +66,7 @@ export class RoomPlayerRoomMethods {
     }
     if(action==="apply-template")return this.ownerApplyTemplate(gm,meta,body);
     if(action==="roles-shuffle")return this.ownerRolesShuffle(gm,meta);
+    if(action==="quick-start"&&meta.quickPlay===true)return this.ownerQuickStart(gm,meta,body);
     if(action==="start")return this.ownerStart(gm,meta,body);
     if(action==="replay"&&meta.quickPlay===true&&meta.phase==="lobby"&&meta.endedAt){
       return this.gmReset(gm,{postGame:true,preserveParticipants:true,transactionId:"quick-replay:"+meta.lastEndedMatchId});
@@ -93,6 +105,19 @@ export class RoomPlayerRoomMethods {
     const rows=packages.filter(x=>known.has(String(x?.roleId||"")));
     const done=await this.gmConfig(gm,{gameConfig:cfg});if(!done.ok)return done;
     if(rows.length){const assets=await this.gmRoleAssets(gm,{roles:rows});if(!assets.ok)return assets}
+    // All participants may see which quick-play template was chosen, never private assignments.
+    if(meta.quickPlay===true){
+      const current=await this.ctx.storage.get("meta");
+      if(String(current?.phase||"lobby").toLowerCase()!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
+      current.quickPlayTemplateId=cfg.id;
+      current.quickPlayTemplateName=String(cfg.name||body?.template?.name||"Ván Mẫu").slice(0,120);
+      current.quickPlayTemplatePlayerCount=cfg.roles.reduce((sum,r)=>sum+(Number(r.count)||1),0);
+      current.quickPlayArtifactsEnabled=cfg.artifactsEnabled===true;
+      current.updatedAt=new Date().toISOString();
+      await this.ctx.storage.put("meta",current);
+      const participants=(await this.ctx.storage.get("players"))||{};
+      this.broadcast({type:"room_state",room:publicRoom(current),players:Object.values(participants).map(publicPlayer),serverTime:Date.now()});
+    }
     return j({ok:true,config:ownerDeckView(await this.ctx.storage.get("gameConfig")),roleCards:rows.length})
   }
   // Player rooms end by themselves: when a winner is clear the match closes through gmEnd (no GM needed).
@@ -123,6 +148,35 @@ export class RoomPlayerRoomMethods {
     await this.ctx.storage.put("pendingDeal",{round,rows:plan.rows,members:members.map(m=>String(m.loginId||"")).sort(),roleKey:cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(","),artifactKey:artifactPool.map(a=>a.artifactId).sort().join(",")});
     return j({ok:true,dealRound:round})
   }
+  // Atomic Quick Play start: one owner request sizes and seats the ACTUAL roster
+  // around the central campfire. No transient 30-seat formation or manual step.
+  async ownerQuickStart(gm,meta,body){
+    if(String(meta.phase||"lobby").toLowerCase()!=="lobby"||meta.endedAt)return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
+    const players=(await this.ctx.storage.get("players"))||{},members=Object.values(players).filter(p=>p?.kind==="member");
+    const roster=members.map(p=>normalizeLoginId(p.loginId)).sort(),sent=Array.isArray(body?.quickPlayRoster)?body.quickPlayRoster.map(normalizeLoginId).sort():[];
+    const count=roster.length,cfg=await this.ctx.storage.get("gameConfig"),size=(cfg?.roles||[]).reduce((a,r)=>a+Number(r.count||1),0);
+    if(count<3||count>30||JSON.stringify(roster)!==JSON.stringify(sent)||!roster.includes(normalizeLoginId(meta.ownerLoginId))||
+       cfg?.id!==body?.templateId||size!==count||Object.values(players).length!==count){
+      return j({ok:false,error:"QUICK_PLAY_ROSTER_CHANGED",message:"Số người hoặc Ván Mẫu đã đổi. Hãy kiểm tra lại trước khi bắt đầu."},409);
+    }
+    await this.ctx.storage.delete("pendingDeal");
+    if(meta.seatsLocked===true){const unlocked=await this.gmSeatLock(gm,{locked:false});if(!unlocked.ok)return unlocked}
+    // Stale seats from an earlier setup can have IDs greater than the current
+    // headcount. Clear before resizing; gmRoomSettings would otherwise reject it.
+    for(const player of members){player.seatId=null;clearPlayerMovement(player);player.positionX=null;player.positionY=null}
+    await this.ctx.storage.put("players",players);
+    const settings=await this.gmRoomSettings(gm,{roomMode:"online",demo:false,seatCount:count,seatLayout:"circle",seatOffset:{x:0,y:0},seatSpacing:100,seatMoveMode:"instant"});
+    if(!settings.ok)return settings;
+    const seated=await this.gmRandomizeRemainingSeats(gm,{all:true});
+    if(!seated.ok)return seated;
+    const locked=await this.gmSeatLock(gm,{locked:true});
+    if(!locked.ok)return locked;
+    const readyMeta=await this.ctx.storage.get("meta");readyMeta.autoGM=true;
+    await this.ctx.storage.put("meta",readyMeta);
+    const result=await this.ownerStart(gm,readyMeta,{quickPlayRoster:roster,templateId:cfg.id});
+    if(!result.ok)await this.gmSeatLock(gm,{locked:false}).catch(()=>{});
+    return result;
+  }
   // Seats must be locked; deals the template's roles at random, starts the match and the first night.
   async ownerStart(gm,meta,body){
     const phase=String(meta.phase||"lobby").toLowerCase();
@@ -151,6 +205,8 @@ export class RoomPlayerRoomMethods {
     if(pending&&Array.isArray(pending.rows)&&pending.members?.join(",")===members.map(m=>String(m.loginId||"")).sort().join(",")&&pending.roleKey===cfg.roles.map(r=>String(r.roleId||"")+":"+(Number(r.count)||1)).sort().join(",")&&pending.artifactKey===artifactPool.map(a=>a.artifactId).sort().join(","))plan={ok:true,rows:pending.rows};
     await this.ctx.storage.delete("pendingDeal");
     const matchId="p"+Date.now().toString(36)+Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>b.toString(16).padStart(2,"0")).join("");
+    // Final authoritative lock: people outside the roster cannot join during role delivery.
+    if(meta.quickPlay===true){meta.quickPlayJoinLocked=true;meta.quickPlayJoinAllowed=members.map(p=>normalizeLoginId(p.loginId));await this.ctx.storage.put("meta",meta)}
     const assigned=await this.gmAssign(gm,{assignments:plan.rows,matchId,matchRevision:1,deliveryVersion:1});if(!assigned.ok)return assigned;
     const started=await this.gmStart(gm,{matchId});if(!started.ok)return started;
     const fresh=await this.ctx.storage.get("meta");await this.applyCycle(fresh,"night",1,"night-1","auto");

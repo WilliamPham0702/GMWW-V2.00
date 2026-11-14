@@ -32,7 +32,8 @@
     render({background:options.background===true});autoSeat();
   }
   async function create(quick=false){
-        const d=await api('/api/player-rooms',{method:'POST',headers:auth(),body:JSON.stringify(quick?{seatCount:30,quickPlay:true}:{})});
+        const d=await api('/api/player-rooms',{method:'POST',headers:auth(),body:JSON.stringify(quick?{seatCount:12,quickPlay:true}:{})});
+    pr.quickTemplateId='';pr.quickMatchTiming=null;pr.quickMatchRoleSeconds=null;pr.quickMatchArtifactEnabled=null;
     pr.own={code:d.roomCode,token:d.ownerToken,joinUrl:d.joinUrl,quick};save(pr.own);pr.view='room';pr.touched=true;
     try{await window.joinRoom(d.roomCode)}catch(_){}
     say('Đã tạo phòng '+d.roomCode+'.');await refresh();
