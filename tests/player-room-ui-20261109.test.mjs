@@ -118,3 +118,12 @@ test('Quick Play V2 keyboard keeps chat composer in visible viewport without doc
   assert.doesNotMatch(part,/document\.getElementById\('gmwwChatText'\)\?\.focus/);
   assert.match(part,/chatPage\.addEventListener\('focusin',replace\)/);
 });
+
+test('Quick Play V2: Copy code + Delete and Room lock + Ván Mẫu share paired action rows',()=>{
+  assert.match(part,/const quickRoomActions=el\('div','gmww-pr-quick-actions'\)/);
+  assert.match(part,/quickRoomActions\.append\(copyCode,btn\('Xoá phòng',deleteRoom,'gmww-pr-danger'\)\)/);
+  assert.match(part,/const nextActions=el\('div','gmww-pr-quick-actions'\)/);
+  assert.match(part,/nextActions\.append\([\s\S]*?room\.quickPlayJoinLocked\?'🔒 MỞ KHÓA PHÒNG':'🔓 KHÓA PHÒNG'[\s\S]*?TIẾP: VÁN MẪU →/);
+  assert.match(part,/\.gmww-pr-quick-actions\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/);
+  assert.match(part,/\.gmww-pr-quick-actions button\{min-width:0;min-height:48px/);
+});
