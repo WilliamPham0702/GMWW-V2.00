@@ -1674,7 +1674,7 @@ async function renderAudio(){
         '<button type="button" class="audio-name-cut" data-audio-name title="Nhấn đúp để chọn đoạn âm thanh chỉ đọc tên">Tên '+(gmwwAudioHasNameCut(a)?Number(a.roleNameStart||0).toFixed(1)+'–'+Number(a.roleNameEnd).toFixed(1)+'s':'· Chưa cắt')+'</button>':'';
       return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
     }).join('');
-  const exportAudioButton=document.getElementById('gmwwExportAudioOnly');if(exportAudioButton)exportAudioButton.onclick=()=>{void gmwwExportAudioOnly()};
+  const exportAudioButton=$('#gmwwExportAudioOnly');if(exportAudioButton)exportAudioButton.onclick=()=>{void gmwwExportAudioOnly()};
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
   $$('[data-audio-id]').forEach(row=>{
     const a=list.find(x=>String(x.id)===String(row.dataset.audioId));
