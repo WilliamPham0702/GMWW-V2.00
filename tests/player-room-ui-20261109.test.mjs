@@ -26,7 +26,7 @@ test('panel keeps owner API calls isolated; public artwork is only an image GET'
 });
 test('owner actions used by the panel are exactly the ones the Worker whitelists',()=>{
   const used=[...part.matchAll(/callOwner\('([a-z-]+)'/g)].map(m=>m[1]);
-  const allowed=['template','seat-lock','seats-randomize','start','kick','end','replay','auto','stage','room-settings','roles-shuffle','close','template-save','template-delete'];
+  const allowed=['template','room-lock','quick-start','seat-lock','seats-randomize','start','kick','end','replay','auto','stage','room-settings','roles-shuffle','close','template-save','template-delete'];
   assert.ok(used.length>=7);for(const u of used)assert.ok(allowed.includes(u),u);
 });
 test('owner token is kept only under its own storage key and cleared when the room closes',()=>{
@@ -61,15 +61,20 @@ test('GM Player Web list shows every room with kind and status; players list no 
   assert.match(script,/gmww-gmobs-players/);
 });
 
-test('Quick Play has a single owner-only template picker; manual Seat path remains only for normal rooms',()=>{
+test('Quick Play V2 separates four stages, owner-only template selection and atomic start',()=>{
+  assert.match(part,/\['lobby','Sảnh chờ'\],\['room','Phòng Game'\]/);
+  assert.match(part,/\['lobby','Sảnh Chờ'\],\['room','Tạo Phòng'\],\['game','Ván Mẫu'\],\['deal','Bắt Đầu'\]/);
   assert.match(part,/function renderQuickPlay\(box,players,st\)/);
-  assert.match(part,/const room=st\?\.room\|\|state\.room\|\|\{\},owner=!!\(st&&members\.some/);
-  assert.match(part,/quickPlayTemplateId/);
-  assert.match(part,/quickPlayRevision:t\.revision/);
+  assert.match(part,/function viewQuickStart\(box,st,room,players\)/);
+  assert.match(part,/function viewQuickRoom\(box,st,room,players\)/);
+  assert.match(part,/quickPlayRevision:chosen\.revision/);
   assert.match(part,/if\(!owner\)return;/);
-  assert.match(part,/BẮT ĐẦU GAME/);
+  assert.match(part,/callOwner\('room-lock','POST'/);
+  assert.match(part,/callOwner\('quick-start','POST'/);
+  assert.match(part,/quickPlayRoster:roster/);
+  assert.match(part,/Danh sách vai trò và số lượng/);
+  assert.match(part,/Dùng Artifact/);
+  assert.match(part,/Cài đặt thời gian \(mặc định ẩn\)/);
   assert.match(part,/if\(!room\.quickPlay\)line2\.append/);
   assert.match(part,/strip\.hidden=!show\|\|quick/);
-  assert.match(part,/room\.quickPlayTemplateId/);
-  assert.match(part,/Xem vai trò và số lượng/);
 });
