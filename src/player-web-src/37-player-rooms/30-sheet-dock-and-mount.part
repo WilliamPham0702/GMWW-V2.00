@@ -287,8 +287,16 @@
         }
         if(key==='decision'){
           if(night){void gmwwOnlineRestore();return}
-          renderGallowsWidget();
-          if(!state.gallows||['ready','resolved'].includes(String(state.gallows.stage||'')))toast('Lên Giàn chưa mở hoặc đã kết thúc.');
+          const stage=typeof gallowsCurrentStage==='function'?gallowsCurrentStage():'ready';
+          if(stage==='nominating'){
+            state.gallowsNominationOpen=true;renderGallowsWidget();
+            if(document.getElementById('gmwwGallowsPlayer')?.hidden)toast('Bạn không có lượt đề cử hợp lệ.');
+          }else if(stage==='voting'){
+            renderGallowsWidget();
+            if(document.getElementById('gmwwGallowsDock')?.hidden)toast('Bạn không có lượt bỏ phiếu hợp lệ.');
+          }else{
+            renderGallowsWidget();toast('Lên Giàn chưa mở hoặc đã kết thúc.');
+          }
           return;
         }
         if(key==='audio'){
