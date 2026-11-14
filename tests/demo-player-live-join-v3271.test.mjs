@@ -14,7 +14,9 @@ test('late join requires authenticated member and cannot disable lock or change 
  const worker=workerSource();
  assert.match(worker,/if\(meta\.demo===true&&!body\?\.member\?\.loginId\)return j\(\{ok:false,error:"DEMO_LOGIN_REQUIRED"/);
  assert.match(worker,/if\(inProgress&&!known&&meta\.demo!==true\)return j\(\{ok:false,error:"ROOM_IN_PROGRESS"/);
- assert.match(worker,/if\(!inProgress\)meta\.locked=false/);
+ assert.match(worker,/if\(!inProgress&&!meta\.quickPlay\)meta\.locked=false/,'ordinary room unlock-on-join remains unchanged');
+ assert.match(worker,/meta\.quickPlay===true&&meta\.quickPlayJoinLocked===true&&!players\[key\]/,'new Quick Play entrants are blocked when locked');
+ assert.match(worker,/quickPlayJoinAllowed\.includes\(normalizeLoginId\(m\.loginId\)\)/,'admitted Quick Play members can reconnect');
  assert.match(worker,/humanControlled:meta\.demo===true\|\|players\[key\]\?\.humanControlled===true/);
 });
 test('Player Web joins single live DEMO but never grants another role without an assignment',()=>{
