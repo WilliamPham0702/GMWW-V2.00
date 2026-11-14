@@ -154,7 +154,7 @@ function worker({gate=200,roomOwner='nam01',artifacts=[],preloadStatus=200}={}){
     if(u.endsWith('/artifacts/shared/status'))return j({ok:true,artifacts});
     if(u.endsWith('/game-templates/player-save')){log.saved=JSON.parse(init.body);return j({ok:true});}
     if(u.endsWith('/game-templates/list'))return j({ok:true,templates:[{id:'t1',source:'PLAYER'}]});
-    if(u.includes('/game-templates/get'))return u.includes('id=missing')?j({ok:false},404):j({ok:true,template:{id:'t1',source:'PLAYER',ownerLoginId:'nam01',compiledConfig:{roles:[{roleId:'wolf'},{roleId:'seer'},{roleId:'wolf'}]}}});
+    if(u.includes('/game-templates/get'))return u.includes('id=missing')?j({ok:false},404):j({ok:true,template:{id:'t1',source:'PLAYER',ownerLoginId:'nam01',revision:4,quickPlayDefault:false,compiledConfig:{roles:[{roleId:'wolf'},{roleId:'seer'},{roleId:'wolf'}]}}});
     if(u.includes('/game-templates/delete'))return j({ok:true,deleted:true});
     if(u.includes('/game-templates/assets'))return u.includes('role%3Aseer')?j({ok:false},404):j({ok:true,package:{roleCard:{name:'W'}}});
     throw new Error('unexpected '+u)};
@@ -186,6 +186,27 @@ test('template selection verifies the owner first, then sends the template and i
   assert.deepEqual(sent.packages.map(p=>p.roleId),['wolf'],'duplicate roles fetched once; roles without an asset are skipped');
   assert.equal((await w.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{templateId:'missing'}))).status,404);
   assert.equal((await w.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{}))).status,400);
+});
+test('quick play accepts any published saved template chosen by owner, but rejects outdated revisions',async()=>{
+  const w=worker();
+  const ok=await w.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{templateId:'t1',quickPlayRevision:4}));
+  assert.equal(ok.status,200,'selected template need not be the global quick-play default');
+  const stale=await w.playerRoomOwnerApi({},'ABCDEF','template',wreq('POST',{templateId:'t1',quickPlayRevision:3}));
+  assert.equal(stale.status,409);
+  assert.equal((await stale.json()).error,'QUICK_PLAY_TEMPLATE_CHANGED');
+  assert.equal(w.log.room.filter(x=>x.u.endsWith('/owner/apply-template')).length,1,'stale selection never reaches the room');
+});
+test('quick-play choice publishes only the selected deck name, id and count to the room',async()=>{
+  const o=room({meta:{quickPlay:true,ownerLoginId:'a',seatsLocked:false}});
+  const broadcasts=[];o.broadcast=payload=>broadcasts.push(payload);
+  const template={id:'other',compiledConfig:{name:'Bộ vai khác',playerCount:6,roles}};
+  const res=await o.ownerAction('apply-template',req('/owner/apply-template',{body:{template,packages:[]}}));
+  assert.equal(res.status,200);
+  const meta=o.data.get('meta');
+  assert.deepEqual([meta.quickPlayTemplateId,meta.quickPlayTemplateName,meta.quickPlayTemplatePlayerCount],['other','Bộ vai khác',6]);
+  assert.equal(broadcasts.length,1);
+  assert.equal(broadcasts[0].room.phase,'lobby');
+  assert.equal(JSON.stringify(broadcasts[0]).includes('assignments'),false);
 });
 test('template list needs a member session',async()=>{
   const w=worker(),res=await w.playerRoomTemplates({},new Request('https://x',{headers:{authorization:'Bearer t'}}));
