@@ -1,0 +1,61 @@
+name: Publish verified GMWW audio to GitHub Releases
+on:
+  workflow_dispatch:
+    inputs:
+      source_release_tag:
+        description: 'Release holding ONLY gmww-audio-pack.json (never device backup)'
+        required: true
+        default: gmww-audio-import-v1
+      target_release_tag:
+        description: 'New immutable audio release (e.g. gmww-audio-v1)'
+        required: true
+        default: gmww-audio-v1
+permissions:
+  contents: write
+concurrency:
+  group: gmww-audio-publish
+  cancel-in-progress: false
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download sanitized audio export only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_TAG: ${{ inputs.source_release_tag }}
+        run: |
+          mkdir -p /tmp/gmww-audio-source
+          gh release download "$SOURCE_TAG" --pattern 'gmww-audio-pack.json' --dir /tmp/gmww-audio-source
+          test -s /tmp/gmww-audio-source/gmww-audio-pack.json
+      - name: Verify media, deduplicate by SHA-256 and build catalog
+        env:
+          TARGET_TAG: ${{ inputs.target_release_tag }}
+        run: |
+          node --test tests/gmww-github-audio-packaging.test.mjs
+          node scripts/audio/package-gmww-audio.mjs /tmp/gmww-audio-source/gmww-audio-pack.json /tmp/gmww-audio-publish "$TARGET_TAG"
+          cd /tmp/gmww-audio-publish
+          sha256sum -- * > checksums.sha256
+          sha256sum --check checksums.sha256
+      - name: Publish new version without overwriting old audio
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_TAG: ${{ inputs.target_release_tag }}
+        run: |
+          if gh release view "$TARGET_TAG" >/dev/null 2>&1; then
+            echo 'Audio release already exists: refusing mutation.' >&2
+            exit 1
+          fi
+          gh release create "$TARGET_TAG" /tmp/gmww-audio-publish/* --target "$GITHUB_SHA" --title "GMWW Audio $TARGET_TAG" --notes "Original verified recordings with SHA-256 manifest; no player data."
+      - name: Verify all release assets exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_TAG: ${{ inputs.target_release_tag }}
+        run: |
+          expected=$(find /tmp/gmww-audio-publish -maxdepth 1 -type f | wc -l)
+          actual=$(gh release view "$TARGET_TAG" --json assets --jq '.assets | length')
+          test "$expected" -eq "$actual"
