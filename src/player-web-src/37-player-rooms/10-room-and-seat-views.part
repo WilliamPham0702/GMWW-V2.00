@@ -152,17 +152,8 @@
       if(!valid||count<3)throw new Error('Chưa có Ván Mẫu hợp lệ hoặc chưa đủ người.');
       const roster=members.map(p=>p.loginId).sort();
       if(!roster.includes(st.ownerLoginId))throw new Error('Chủ phòng phải ở trong ván.');
-      await callOwner('seat-lock','POST',{locked:false});
-      // Keep geometry centered at the actual village campfire, not the 30-seat preset.
-      await callOwner('room-settings','POST',{seatCount:count,seatLayout:'circle',seatOffset:{x:0,y:0},seatSpacing:100});
-      await callOwner('seats-randomize','POST',{all:true});
-      try{
-        await callOwner('seat-lock','POST',{locked:true});
-        await callOwner('start','POST',{quickPlayRoster:roster,templateId:template.id});
-      }catch(error){
-        await callOwner('seat-lock','POST',{locked:false}).catch(()=>{});
-        throw error;
-      }finally{await refresh()}
+      try{await callOwner('quick-start','POST',{quickPlayRoster:roster,templateId:template.id})}
+      finally{await refresh()}
       pr.open=false;
     },'gmww-pr-main',!valid||count<3||!members.some(p=>p.loginId===st.ownerLoginId)));
   }
