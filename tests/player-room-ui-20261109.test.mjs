@@ -60,3 +60,16 @@ test('GM Player Web list shows every room with kind and status; players list no 
   assert.match(gm,/PHÒNG GAME/);assert.match(gm,/NGƯỜI CHƠI/);assert.match(gm,/gmww-gmobs-players/);
   assert.match(script,/gmww-gmobs-players/);
 });
+
+test('Quick Play has a single owner-only template picker; manual Seat path remains only for normal rooms',()=>{
+  assert.match(part,/function renderQuickPlay\(box,players,st\)/);
+  assert.match(part,/const room=st\?\.room\|\|state\.room\|\|\{\},owner=!!\(st&&members\.some/);
+  assert.match(part,/quickPlayTemplateId/);
+  assert.match(part,/quickPlayRevision:t\.revision/);
+  assert.match(part,/if\(!owner\)return;/);
+  assert.match(part,/BẮT ĐẦU GAME/);
+  assert.match(part,/if\(!room\.quickPlay\)line2\.append/);
+  assert.match(part,/strip\.hidden=!show\|\|quick/);
+  assert.match(part,/room\.quickPlayTemplateId/);
+  assert.match(part,/Xem vai trò và số lượng/);
+});
