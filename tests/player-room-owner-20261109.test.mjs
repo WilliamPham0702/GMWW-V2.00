@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {expandDeck,planPlayerRoomDeal,playerRoomConfigFromTemplate,missingRoleCards,ownerDeckView} from '../src/gmww-player-room-setup.js';
 import {normalizeLoginId} from '../src/gmww-player-identity-rules.js';
+import {clearPlayerMovement} from '../src/gmww-village-player-state.js';
 import {PLAYER_ROOM_ROLE_CATALOG} from '../src/player-room-role-catalog.js';
 
 const source=workerSource();
@@ -55,8 +56,8 @@ assert.ok(from>0&&to>from,'find real owner methods');
 const GM='GM-TOKEN-FOR-TEST';
 const bearer=r=>{const m=/^Bearer\s+(.+)$/i.exec(r.headers.get('authorization')||'');return m?m[1]:''};
 const sha256=async v=>'h:'+v,timingSafeEqual=(a,b)=>a===b;
-const Owner=new Function('GM_SYNC_TOKEN','j','bearer','sha256','timingSafeEqual','safeJson','normalizeLoginId','publicRoom','publicPlayer','ownerDeckView','playerRoomConfigFromTemplate','missingRoleCards','planPlayerRoomDeal','secureShuffle','crypto','MEMBER_STORE_NAME',
-  'return class Owner {\n'+source.slice(from,to)+'\n}')(GM,j,bearer,sha256,timingSafeEqual,async r=>r.json().catch(()=>null),normalizeLoginId,m=>({code:m.code,phase:m.phase}),p=>({loginId:p.loginId,seatId:p.seatId}),ownerDeckView,playerRoomConfigFromTemplate,missingRoleCards,planPlayerRoomDeal,d=>[...d].reverse(),globalThis.crypto,'member-store');
+const Owner=new Function('GM_SYNC_TOKEN','j','bearer','sha256','timingSafeEqual','safeJson','normalizeLoginId','publicRoom','publicPlayer','ownerDeckView','playerRoomConfigFromTemplate','missingRoleCards','planPlayerRoomDeal','secureShuffle','crypto','MEMBER_STORE_NAME','clearPlayerMovement',
+  'return class Owner {\n'+source.slice(from,to)+'\n}')(GM,j,bearer,sha256,timingSafeEqual,async r=>r.json().catch(()=>null),normalizeLoginId,m=>({code:m.code,phase:m.phase}),p=>({loginId:p.loginId,seatId:p.seatId}),ownerDeckView,playerRoomConfigFromTemplate,missingRoleCards,planPlayerRoomDeal,d=>[...d].reverse(),globalThis.crypto,'member-store',clearPlayerMovement);
 
 function room({meta={},players,cfg,cards=['wolf','seer','villager']}={}){
   const data=new Map();
@@ -304,4 +305,52 @@ test('quick play reuses Auto GM and resets a completed match with the same parti
   assert.deepEqual(await (await send('replay',{})).json(),{
     postGame:true,preserveParticipants:true,transactionId:'quick-replay:match-1'
   });
+});
+
+test('Quick Play V2 only owner may lock joining, and previously joined accounts remain authorized',async()=>{
+ const o=room({meta:{quickPlay:true,ownerLoginId:'a',seatsLocked:false}});
+ o.broadcast=()=>{};
+ let res=await o.ownerAction('room-lock',req('/owner/room-lock',{token:'WRONG',body:{locked:true}}));
+ assert.equal(res.status,401);
+ res=await o.ownerAction('room-lock',req('/owner/room-lock',{body:{locked:true}}));
+ assert.equal(res.status,200);
+ assert.equal(o.data.get('meta').quickPlayJoinLocked,true);
+ assert.deepEqual(o.data.get('meta').quickPlayJoinAllowed,names);
+ const presence=readFileSync(new URL('../src/worker/room/presence.js',import.meta.url),'utf8');
+ assert.match(presence,/ROOM_JOIN_LOCKED/);
+ assert.match(presence,/quickPlayJoinAllowed\.includes\(normalizeLoginId\(m\.loginId\)\)/);
+ await o.ownerAction('room-lock',req('/owner/room-lock',{body:{locked:false}}));
+ assert.equal(o.data.get('meta').quickPlayJoinLocked,false);
+ assert.deepEqual(o.data.get('meta').quickPlayJoinAllowed,[]);
+});
+test('Quick Play V2 sizes seats to the ACTUAL roster, clears stale seat IDs and starts privately',async()=>{
+ const o=room({meta:{quickPlay:true,ownerLoginId:'a',seatCount:30,seatsLocked:false}});
+ o.data.get('players')['member:a'].seatId=25;
+ o.data.get('players')['member:b'].seatId=28;
+ const lock=o.gmSeatLock;
+ o.gmRoomSettings=async(req,opts)=>{
+   o.calls.push({name:'gmRoomSettings',body:opts});
+   Object.assign(o.data.get('meta'),{seatCount:opts.seatCount,seatLayout:opts.seatLayout,seatOffset:opts.seatOffset,seatSpacing:opts.seatSpacing});
+   return j({ok:true});
+ };
+ o.gmRandomizeRemainingSeats=async(req,opts)=>{
+   o.calls.push({name:'gmRandomizeRemainingSeats',body:opts});
+   const rows=Object.values(o.data.get('players'));for(let i=0;i<rows.length;i++)rows[i].seatId=i+1;
+   return j({ok:true});
+ };
+ o.gmSeatLock=async(req,opts)=>{o.calls.push({name:'gmSeatLock',body:opts});o.data.get('meta').seatsLocked=opts.locked;return j({ok:true})};
+ const before=await o.ownerAction('quick-start',req('/owner/quick-start',{body:{quickPlayRoster:['a','b','c'],templateId:'t'}}));
+ assert.equal(before.status,409);
+ assert.equal(o.calls.length,0,'invalid roster never touches seats, cards or start');
+ const res=await o.ownerAction('quick-start',req('/owner/quick-start',{body:{quickPlayRoster:names,templateId:'t'}}));
+ assert.equal(res.status,200);
+ const calls=o.calls.map(c=>c.name);
+ assert.deepEqual(calls,['gmRoomSettings','gmRandomizeRemainingSeats','gmSeatLock','gmAssign','gmStart','applyCycle']);
+ assert.equal(o.calls[0].body.seatCount,6);
+ assert.deepEqual(o.calls[0].body.seatOffset,{x:0,y:0});
+ assert.equal(o.calls[0].body.seatLayout,'circle');
+ assert.deepEqual(Object.values(o.data.get('players')).map(x=>x.seatId),[1,2,3,4,5,6]);
+ assert.equal(o.data.get('meta').quickPlayJoinLocked,true,'match automatically locks new joiners');
+ assert.deepEqual(o.data.get('meta').quickPlayJoinAllowed,names);
+ const txt=await res.text();assert.equal(txt.includes('assignments'),false);
 });
