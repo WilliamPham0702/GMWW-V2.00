@@ -107,6 +107,7 @@ function gmwwOnlineTargetAt(x,y){
  }catch{return ''}
 }
 function gmwwOnlinePickAction(action){
+ if(action?.blocked){toast(String(action.blockedReason||'❄️ Bị Đóng Băng: không thể hành động.'));return}
  if(gmwwOnlinePick?.action.key!==action.key)gmwwOnlineStop();
  if(!gmwwOnlinePick)gmwwOnlinePick={action,targets:[]};
  const box=document.getElementById('gmwwOnlinePick')||document.createElement('section');
