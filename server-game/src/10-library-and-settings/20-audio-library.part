@@ -83,6 +83,50 @@ async function gmwwOpenAudioNameEditor(a){
     saveState();close();renderAudio();
   };
 }
+
+/* Export ONLY the GM's recorded audio (never localStorage, accounts, rooms or chats).
+ * A one-time source package for publishing an immutable central audio library. */
+async function gmwwExportAudioOnly(){
+  const groups=['cards','artifacts','actions','system'],found=new Map(),expected=new Map();
+  const sha=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
+  const mimeOf=(bytes,type)=>{
+    const head=(a,b)=>String.fromCharCode(...bytes.slice(a,b));
+    if(head(0,3)==='ID3'||bytes[0]===255&&(bytes[1]&224)===224)return 'audio/mpeg';
+    if(head(4,8)==='ftyp')return 'audio/mp4';
+    if(head(0,4)==='OggS')return 'audio/ogg';
+    if(head(0,4)==='RIFF'&&head(8,12)==='WAVE')return 'audio/wav';
+    return '';
+  };
+  for(const kind of groups)for(const item of state.audio?.[kind]||[]){
+    const id=String(item?.id||'').trim(),targetId=String(item?.targetId||id).trim();
+    if(!id||!targetId)continue;
+    const key=kind+':'+targetId;
+    if(!expected.has(key))expected.set(key,{kind,targetId,name:String(item.name||'').slice(0,120)});
+    if(found.has(key))continue;
+    const rec=await dbGet(audioBlobKey(kind,id)).catch(()=>null);
+    const blob=(rec?.blob instanceof Blob&&rec.blob.size?rec.blob:null)||bundledAudioBlob(item);
+    if(!blob||blob.size>2*1024*1024)continue;
+    const bytes=new Uint8Array(await blob.arrayBuffer()),mime=mimeOf(bytes,blob.type);
+    if(!mime)continue;
+    let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
+    found.set(key,{kind,targetId,id,name:String(item.name||'').slice(0,120),
+      fileName:String(item.fileName||'').slice(0,160),mime,bytes:bytes.length,
+      sha256:await sha(bytes),base64:btoa(binary),
+      roleNameStart:Number(item.roleNameStart)||0,roleNameEnd:Number(item.roleNameEnd)||0});
+  }
+  const missing=[...expected].filter(([key])=>!found.has(key)).map(([,value])=>value);
+  if(!found.size){alert('Chưa tìm thấy file Audio gốc trong thiết bị này. Hãy mở GM Server trên thiết bị đã gán Audio.');return}
+  const payload={format:'gmww-audio-only-v1',exportedAt:new Date().toISOString(),
+    clips:[...found.values()],missing,summary:{found:found.size,missing:missing.length}};
+  const name='gmww-audio-only-'+new Date().toISOString().slice(0,10)+'.json',content=JSON.stringify(payload);
+  const file=new File([content],name,{type:'application/json'});
+  if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
+    try{await navigator.share({files:[file],title:'GMWW - Audio gốc'});return}
+    catch(err){if(err?.name==='AbortError')return;alert('Không chia sẻ được: '+String(err?.message||err));return}
+  }
+  showLocalExportViewer(content,name,'Audio gốc: '+found.size+' file • thiếu '+missing.length+' file. Chỉ chứa âm thanh, không có dữ liệu phòng hoặc tài khoản.');
+}
+
 async function renderAudio(){
   const kind=audioKind,list=state.audio[kind]||[];
   const resolved=await Promise.all(list.map(async a=>({a,status:typeof audioBindingStatus==='function'?await audioBindingStatus(a,kind):await audioHasFile(a,kind)?'local':'missing'})));
@@ -126,7 +170,7 @@ async function renderAudio(){
         return '<button type="button" data-system-sound-slot="'+esc(id)+'">'+
           esc(label)+' <small>'+(linked?'✓ CÓ FILE':online?'! URL CHƯA THỬ':'＋ CHƯA GÁN')+'</small></button>';
       }).join('')+'</div></section>':'';
-  $('#audioGrid').innerHTML=missingHtml+systemShortcuts+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
+  $('#audioGrid').innerHTML='<button type="button" id="gmwwExportAudioOnly" style="width:100%;margin:8px 0;padding:10px;border-radius:9px;font-weight:700">XUẤT TOÀN BỘ AUDIO GỐC (1 FILE)</button>'+missingHtml+systemShortcuts+'<button class="audio-add-row" id="addAudioBox" aria-label="Thêm">＋</button>'+
     resolved.map(({a,status})=>{
       const file=String(a.fileName||'').trim(),verified=status==='local'||status==='bundled';
       const evidence=verified?'CÓ FILE THỰC':status==='remote'?'URL CHƯA KIỂM TRA':'THIẾU FILE';
@@ -135,6 +179,7 @@ async function renderAudio(){
         '<button type="button" class="audio-name-cut" data-audio-name title="Nhấn đúp để chọn đoạn âm thanh chỉ đọc tên">Tên '+(gmwwAudioHasNameCut(a)?Number(a.roleNameStart||0).toFixed(1)+'–'+Number(a.roleNameEnd).toFixed(1)+'s':'· Chưa cắt')+'</button>':'';
       return '<article class="audio-row" data-audio-id="'+esc(a.id)+'"><div class="audio-row-main"><b>'+esc(a.name)+'</b><small>'+esc(meta)+'</small>'+nameBox+'</div><div class="audio-row-actions"><button data-audio-play title="Phát">▶</button><button class="replace-audio" data-audio-replace title="Thay thế">Thay thế</button><button class="delete-audio" data-audio-delete title="Xoá">🗑</button></div></article>';
     }).join('');
+  const exportAudioButton=$('#gmwwExportAudioOnly');if(exportAudioButton)exportAudioButton.onclick=()=>{void gmwwExportAudioOnly()};
   $('#addAudioBox').onclick=()=>{const name=prompt('Tên Âm Thanh');if(!String(name||'').trim())return;list.unshift({id:uid('audio'),name:String(name).trim(),fileName:'',verifiedBinary:false});saveState();renderAudio()};
   $$('[data-audio-id]').forEach(row=>{
     const a=list.find(x=>String(x.id)===String(row.dataset.audioId));
