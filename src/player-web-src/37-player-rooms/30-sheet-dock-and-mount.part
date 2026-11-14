@@ -22,8 +22,24 @@
     const ref=(edge==='top'?bars.top:bars.bottom)||bars.bottom||bars.top,width=Math.min(ref?ref.width:vw,vw-16),left=ref?ref.left+(ref.width-width)/2:(vw-width)/2;
     return{top,bot,width,left:Math.max(8,Math.min(vw-width-8,left)),maxH:Math.max(180,Math.min(bot-top,vh-290))};
   }
+  // iOS Safari/WebKit's keyboard shrinks visualViewport, not innerHeight.
+  // Keep the entire chat composer within the visible area and above the keyboard.
+  function placeChat(page){
+    if(!page||page.hidden||!pr.chatOpen)return;
+    const vp=window.visualViewport,visibleTop=Math.max(0,Number(vp?.offsetTop)||0);
+    const bottom=visibleTop+(Number(vp?.height)||innerHeight),bars=barRects();
+    const menuBottom=bars.top?.bottom||visibleTop;
+    const minTop=Math.max(visibleTop+8,menuBottom+8),available=Math.max(140,bottom-minTop-8);
+    const height=Math.min(350,available),top=Math.max(minTop,bottom-height-8);
+    const width=Math.max(0,Math.min(innerWidth-16,bars.top?.width||innerWidth-16));
+    const st=page.style;
+    st.left=Math.max(8,(innerWidth-width)/2)+'px';st.right='auto';st.width=width+'px';
+    st.top=top+'px';st.bottom='auto';st.height=height+'px';st.maxHeight=height+'px';
+    st.transform='none';page.classList.remove('gmww-dock-snapped','gmww-dock-near');
+  }
   function place(panel){
     if(!panel||panel.hidden||panel.dataset.prDragging==='1')return;
+    if(panel.id==='gmwwPrChat'){placeChat(panel);return}
     const bars=barRects(),saved=readDock()[panel.id],edge=pr.pos&&pr.pos[panel.id]?'free':(saved==='top'?'top':'bottom'),g=placeGeometry(panel,edge,bars),st=panel.style;
     st.right='auto';st.transform='none';panel.classList.remove('gmww-dock-near');
     if(edge==='free'){
@@ -68,19 +84,20 @@
     const page=document.getElementById('gmwwPrChat'),chat=document.getElementById('gmwwChatPanel');
     const was=pr.chatOpen;pr.chatOpen=false;if(page)page.hidden=true;
     if(chat&&page&&page.contains(chat)){chat.classList.remove('open');document.body.appendChild(chat)}
+    if(document.activeElement?.id==='gmwwChatText')document.activeElement.blur();
     if(was)render();
   }
   function openChat(){
     const page=document.getElementById('gmwwPrChat'),host=page?.querySelector('.gmww-pr-chatbody'),chat=document.getElementById('gmwwChatPanel');
     if(!page||!host)return;
     if(!state?.roomCode||!chat){try{toast('Box Chat mở được khi bạn đã ở trong phòng.')}catch(_){}return}
-    pr.open=false;render();host.appendChild(chat);chat.classList.add('open');pr.chatOpen=true;page.hidden=false;render();place(page);
-    try{document.getElementById('gmwwChatText')?.focus({preventScroll:true})}catch(_){}
+    pr.open=false;render();host.appendChild(chat);chat.classList.add('open');pr.chatOpen=true;page.hidden=false;render();placeChat(page);
+    // Do not auto-open the iPhone keyboard. Let people read chat before tapping the input.
   }
   // Bấm ra ngoài trang thì đóng trang trên cùng (như Server); thanh menu trên/dưới vẫn bấm được.
   function dismissOutside(e){
     const t=e.target;if(!t?.closest||(e.pointerType==='mouse'&&e.button!==0))return;
-    if(t.closest('#gmwwStageStrip,#gmwwOwnerDock,#gmwwToast'))return;
+    if(t.closest('#gmwwStageStrip,#gmwwQuickStageStrip,#gmwwOwnerDock,#gmwwToast'))return;
     const chatPage=document.getElementById('gmwwPrChat'),panel=document.getElementById('gmwwPrPanel');
     const chatUp=pr.chatOpen&&chatPage&&!chatPage.hidden&&!chatPage.contains(t),sheetUp=pr.open&&panel&&!panel.hidden&&!panel.contains(t);
     if(!chatUp&&!sheetUp)return;
@@ -247,7 +264,7 @@
   }
   function renderChrome(){
     const show=barScreen(),quick=quickMode(),strip=ensureStrip(),quickStrip=ensureQuickStrip(),dock=ensureDock();
-    strip.hidden=!show||quick;quickStrip.hidden=!show||!quick;dock.hidden=!show;if(!show)return;
+    strip.hidden=!show||quick;quickStrip.hidden=!show||!quick;dock.hidden=!show||pr.chatOpen;if(!show)return;
     const now=stripNow(),idx=ORDER.indexOf(now),sroot=strip.shadowRoot;
     if(!quick)sroot.querySelectorAll('#playSetupStrip button').forEach(b=>{
       const k=b.dataset.playStep||'room',i=ORDER.indexOf(k);
@@ -289,7 +306,8 @@
       +'#gmwwOwnerDock{position:fixed;left:calc(var(--gmww-player-visible-left,0px) + 8px);right:auto;width:calc(var(--gmww-player-visible-width,100vw) - 16px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));bottom:auto;transform:translateY(-100%);box-sizing:border-box;z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
       +'#gmwwStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}' 
       +'#gmwwQuickStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwQuickStageStrip[hidden]{display:none}'
-      +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex-direction:column;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
+      +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden;padding:8px 10px 10px!important}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:100%!important;max-height:100%!important;min-height:0!important;margin:0!important;display:flex!important;flex-direction:column!important}'
+      +'.gmww-pr-chatpage{min-height:0!important;overflow:hidden!important}.gmww-pr-chatpage #gmwwChatLines{display:block!important;flex:1 1 auto!important;height:auto!important;max-height:none!important;min-height:0!important;overflow-y:auto!important}.gmww-pr-chatpage #gmwwChatForm{display:flex!important;flex:0 0 auto!important;min-height:48px!important}.gmww-pr-chatpage #gmwwChatPanel header,.gmww-pr-chatpage #gmwwVillageTicker{flex:0 0 auto!important}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
       +'.gmww-pr-ctl{display:flex;align-items:center;gap:6px;flex-shrink:0}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-order{min-width:18px;text-align:center;opacity:.75}.gmww-pr-panel button.gmww-pr-step{padding:0;width:32px;height:32px;border-radius:50%;font-size:18px;line-height:1}.gmww-pr-tpldetail{display:block;max-width:62vw;white-space:normal!important;line-height:1.35;opacity:.78}'
       +'.gmww-pr-roomrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border-radius:12px;border:1px solid #4fc3f7!important;background:#0b3a5e!important;color:#e8f6ff;text-align:left}.gmww-pr-roomrow div{display:flex;flex-direction:column;gap:2px;min-width:0}.gmww-pr-roomrow small{opacity:.75;font-weight:500}.gmww-pr-roomrow span{font-size:24px}'
@@ -319,9 +337,11 @@
     const chatPage=el('div','gmww-pr-panel gmww-pr-chatpage');chatPage.id='gmwwPrChat';chatPage.hidden=true;
     const chatHead=el('header','gmww-pr-head'),chatClose=el('button','gmww-pr-close','×');chatClose.type='button';chatClose.setAttribute('aria-label','Đóng');chatClose.addEventListener('click',closeChat);
     chatHead.append(el('b',null,'Chat phòng'),chatClose);chatPage.append(el('i','gmww-pr-grip'),chatHead,el('div','gmww-pr-chatbody'));document.body.append(chatPage);
-    floatPage(panel);floatPage(chatPage);
+    floatPage(panel); // Chat is viewport-anchored so its composer cannot be dragged behind the iPhone keyboard.
     document.addEventListener('pointerdown',dismissOutside,true);
-    const replace=()=>{place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});try{visualViewport?.addEventListener('resize',replace,{passive:true})}catch(_){}
+    const replace=()=>{place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});
+    try{visualViewport?.addEventListener('resize',replace,{passive:true});visualViewport?.addEventListener('scroll',replace,{passive:true})}catch(_){}
+    chatPage.addEventListener('focusin',replace);chatPage.addEventListener('focusout',replace);
     pr.own=load();
     clearInterval(pr.timer);pr.timer=setInterval(()=>{if(pr.own&&inOwnRoom()&&!document.hidden&&!pr.busy)refresh({background:true});else if(pr.open&&state.room?.quickPlay&&pr.view==='room')render({background:true});else renderDock()},4000);
     setInterval(renderDock,1000);
