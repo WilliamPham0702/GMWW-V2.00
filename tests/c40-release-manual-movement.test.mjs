@@ -38,7 +38,7 @@ test('rebuilding the Character-40 catalog preserves both optimized renderers and
    assert.equal(api.supports('character-01'),true,label+' catalog must load');
    assert.equal(api.update(null,{state:'idle'}),false,label+' safe empty host');
  }
- assert.match(adapter,/function apply\\(/,'original authored adapter remains available');
+ assert.ok(adapter.includes('function apply('),'original authored adapter remains available');
  assert.match(gm,/GMWW_PERFORMANCE/,'GM low power policy must not be lost');
  assert.match(gm,/_gmwwLowPower/,'GM static actors must not consume idle frames');
  assert.match(player,/syncMotionLoop/,'Player idle loop must be suspended when no motion');
