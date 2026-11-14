@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {execFileSync} from 'node:child_process';
 const source=playerWebSource('20-village-and-profile');
 const body=name=>source.slice(source.indexOf('async function '+name+'('),source.indexOf('\n}',source.indexOf('async function '+name+'('))+2);
 test('manual destination can replace an active walk without bypassing locked seats',async()=>{
@@ -17,8 +18,35 @@ test('manual lobby command suspends automatic requests temporarily',async()=>{
  vm.runInContext(helper+'\n'+source.match(/async function walkInVillage[^\n]+/)[0]+'\nglobalThis.walk=walkInVillage',ctx);
  await ctx.walk(60,70);assert.equal(cleared,true);assert.ok(scheduled>=30000);assert.ok(ctx.state.lobbyManualUntil>Date.now());
 });
-test('rebuilding the motion bundle preserves the reviewed renderer adapter',{todo:'OPEN BUG 2026-11-04: bundle hoạt ảnh GM và Player Web đã tách nhau, build-character40-live.py ghi đè cả hai — xem tests/LEGACY-QUARANTINE.md'},()=>{
- const bundle=fs.readFileSync('assets/characters/gmww40/runtime.js','utf8');
+test('rebuilding the Character-40 catalog preserves both optimized renderers and their live API',()=>{
+ const playerPath='assets/characters/gmww40/runtime.js';
+ const gmPath='server-game/current/gmww-shared-motion.js';
+ const player=fs.readFileSync(playerPath,'utf8');
+ const gm=fs.readFileSync(gmPath,'utf8');
  const adapter=fs.readFileSync('server-game/shared/character40-adapter.js','utf8');
- assert.ok(bundle.includes(adapter),'authored adapter must match the deployed bundle');
+ assert.notEqual(player,gm,'GM low-power and Player idle loops intentionally differ');
+
+ // Both variants retain the reviewed common controller API and authored core functions.
+ for(const [label,source] of [['Player Web',player],['GM Server',gm]]){
+   for(const name of ['supports','visualId','actionFor','apply','paint','mount','update'])
+     assert.match(source,new RegExp('function '+name+'\\\\('),label+' missing '+name);
+   const sandbox={};vm.runInNewContext(source,sandbox,{timeout:1000});
+   const api=sandbox.GMWW_SHARED_MOTION;
+   assert.equal(api.version,'c40-1',label);
+   for(const method of ['supports','visualId','mount','update'])assert.equal(typeof api[method],'function',label+' '+method);
+   assert.deepEqual(Array.from(api.actions),['idle','walk','run','turn']);
+   assert.equal(api.supports('character-01'),true,label+' catalog must load');
+   assert.equal(api.update(null,{state:'idle'}),false,label+' safe empty host');
+ }
+ assert.match(adapter,/function apply\\(/,'original authored adapter remains available');
+ assert.match(gm,/GMWW_PERFORMANCE/,'GM low power policy must not be lost');
+ assert.match(gm,/_gmwwLowPower/,'GM static actors must not consume idle frames');
+ assert.match(player,/syncMotionLoop/,'Player idle loop must be suspended when no motion');
+ assert.match(player,/hasActiveMotion/,'Player render scheduling requires active movement');
+
+ // Execute generator's read-only verification; it must not mutate packaged Runtime.
+ const result=execFileSync('python3',['tools/build-character40-live.py','--verify'],{encoding:'utf8'});
+ assert.match(result,/PASS: independently optimized Character-40 renderers and catalog preserved/);
+ assert.equal(fs.readFileSync(playerPath,'utf8'),player);
+ assert.equal(fs.readFileSync(gmPath,'utf8'),gm);
 });
