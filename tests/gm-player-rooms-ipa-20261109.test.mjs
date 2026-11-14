@@ -19,7 +19,7 @@ test('IPA loads only playerRoom rooms from GM API and observes them',()=>{
 });
 test('assembled app.js contains the feature and version is synced',()=>{
   assert.ok(app.includes('function observePlayerRoom'));
-  const release=JSON.parse(fs.readFileSync('package.json','utf8')).version.replace(/\\.0$/,'');
+  const release=JSON.parse(fs.readFileSync('package.json','utf8')).version.replace(/[.]0$/,'');
   const worker=fs.readFileSync('src/index.js','utf8');
   assert.ok(core.includes("const VERSION='"+release+"'"),'GM source matches package Runtime');
   assert.ok(app.includes("const VERSION='"+release+"'"),'packaged GM app matches Runtime');
