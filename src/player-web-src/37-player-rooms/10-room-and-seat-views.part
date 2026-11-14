@@ -72,6 +72,30 @@
     const list=el('ul');for(const role of template.compiledConfig.roles)list.append(el('li',null,(role.roleName||role.roleId)+' × '+role.count+(role.faction?' · '+role.faction:'')));
     roles.append(list);box.append(roles);
   }
+  // Entry screen for V2. Replaces the former combined "1. QUẢN LÝ PHÒNG /
+  // 2. TẠO PHÒNG / 3. VÀO PHÒNG" page, which is not part of Quick Play.
+  function viewQuickEntry(box){
+    box.append(el('div','gmww-pr-sub','TẠO PHÒNG • MỞ PHÒNG HOẶC NHẬP MÃ'));
+    if(pr.own){
+      box.append(el('p','gmww-pr-note','Bạn đã có phòng '+pr.own.code+'.'));
+      box.append(btn('VÀO LẠI PHÒNG '+pr.own.code,async()=>{
+        if(await window.joinRoom(pr.own.code)===false)throw new Error('Không vào lại được phòng.');
+        await refresh();try{await enterVillage()}catch(_){}
+        goStep('room');
+      },'gmww-pr-main'));
+      box.append(btn('XÓA PHÒNG',deleteRoom,'gmww-pr-danger'));
+    }else{
+      box.append(btn('MỞ PHÒNG',()=>create(true),'gmww-pr-main'));
+    }
+    const row=el('div','gmww-pr-row'),inp=el('input');
+    inp.id='gmwwQuickJoinCode';inp.placeholder='Nhập mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.style.textTransform='uppercase';
+    inp.value=pr.joinCode||'';inp.addEventListener('input',()=>{pr.joinCode=inp.value});
+    row.append(inp,btn('VÀO PHÒNG',()=>joinByCode(pr.joinCode),'gmww-pr-main'));
+    box.append(row);
+    const advanced=el('details','gmww-pr-timing'),summary=el('summary',null,'Tạo phòng riêng (thiết lập nâng cao)');
+    advanced.append(summary,btn('TẠO PHÒNG RIÊNG',()=>create(false),null,!!pr.own));
+    box.append(advanced);
+  }
   function viewQuickRoom(box,st,room,players){
     box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG • MỞ PHÒNG / MÃ / LINK / THÀNH VIÊN'));
     if(!pr.own||!inOwnRoom())return;
