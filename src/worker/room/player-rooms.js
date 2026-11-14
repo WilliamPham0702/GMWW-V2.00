@@ -93,6 +93,18 @@ export class RoomPlayerRoomMethods {
     const rows=packages.filter(x=>known.has(String(x?.roleId||"")));
     const done=await this.gmConfig(gm,{gameConfig:cfg});if(!done.ok)return done;
     if(rows.length){const assets=await this.gmRoleAssets(gm,{roles:rows});if(!assets.ok)return assets}
+    // All participants may see which quick-play template was chosen, never private assignments.
+    if(meta.quickPlay===true){
+      const current=await this.ctx.storage.get("meta");
+      if(String(current?.phase||"lobby").toLowerCase()!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
+      current.quickPlayTemplateId=cfg.id;
+      current.quickPlayTemplateName=String(cfg.name||template?.name||"Ván Mẫu").slice(0,120);
+      current.quickPlayTemplatePlayerCount=cfg.roles.reduce((sum,r)=>sum+(Number(r.count)||1),0);
+      current.updatedAt=new Date().toISOString();
+      await this.ctx.storage.put("meta",current);
+      const participants=(await this.ctx.storage.get("players"))||{};
+      this.broadcast({type:"room_state",room:publicRoom(current),players:Object.values(participants).map(publicPlayer),serverTime:Date.now()});
+    }
     return j({ok:true,config:ownerDeckView(await this.ctx.storage.get("gameConfig")),roleCards:rows.length})
   }
   // Player rooms end by themselves: when a winner is clear the match closes through gmEnd (no GM needed).
