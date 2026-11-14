@@ -46,6 +46,8 @@ export class RoomPlayerRoomMethods {
       meta.updatedAt=new Date().toISOString();
       await this.ctx.storage.put("meta",meta);
       const players=(await this.ctx.storage.get("players"))||{};
+      meta.quickPlayJoinAllowed=meta.quickPlayJoinLocked?Object.values(players).filter(p=>p?.kind==="member").map(p=>normalizeLoginId(p.loginId)):[];
+      await this.ctx.storage.put("meta",meta);
       this.broadcast({type:"room_state",room:publicRoom(meta),players:Object.values(players).map(publicPlayer)});
       return j({ok:true,locked:meta.quickPlayJoinLocked,room:publicRoom(meta)});
     }
@@ -174,7 +176,7 @@ export class RoomPlayerRoomMethods {
     await this.ctx.storage.delete("pendingDeal");
     const matchId="p"+Date.now().toString(36)+Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>b.toString(16).padStart(2,"0")).join("");
     // Final authoritative lock: people outside the roster cannot join during role delivery.
-    if(meta.quickPlay===true){meta.quickPlayJoinLocked=true;await this.ctx.storage.put("meta",meta)}
+    if(meta.quickPlay===true){meta.quickPlayJoinLocked=true;meta.quickPlayJoinAllowed=members.map(p=>normalizeLoginId(p.loginId));await this.ctx.storage.put("meta",meta)}
     const assigned=await this.gmAssign(gm,{assignments:plan.rows,matchId,matchRevision:1,deliveryVersion:1});if(!assigned.ok)return assigned;
     const started=await this.gmStart(gm,{matchId});if(!started.ok)return started;
     const fresh=await this.ctx.storage.get("meta");await this.applyCycle(fresh,"night",1,"night-1","auto");
