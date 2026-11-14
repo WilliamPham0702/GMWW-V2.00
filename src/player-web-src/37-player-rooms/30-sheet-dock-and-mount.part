@@ -225,7 +225,7 @@
     root.innerHTML='<style>'+GMWW_SERVER_MENU.css+SHADOW_BASE+'#start #playShell #gmTopMenu.gm-top-menu-v293{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;top:auto!important;width:100%!important;max-width:520px;margin:0 auto!important;transform:none!important;height:62px!important;min-height:62px!important;border:0!important;outline:0!important;background:transparent!important;grid-template-columns:48px 48px minmax(0,1fr) 48px!important}</style><div id="start"><div id="playShell" class="play-shell" data-phase="lobby" style="position:relative;height:auto;min-height:0;padding:0;background:none;overflow:visible">'+GMWW_SERVER_MENU.dock+'</div></div>';
     const q=id=>root.getElementById(id),owner=()=>!!(pr.own&&inOwnRoom());
     q('playPhasePill').addEventListener('click',()=>{
-      if(quickMode()){onTab(QUICK_ORDER.some(s=>s[0]===pr.view)?pr.view:'room');return}
+      if(quickMode()){onTab(!state?.roomCode?'room':(QUICK_ORDER.some(s=>s[0]===pr.view)?pr.view:'room'));return}
       if(!state?.roomCode){onTab('room');return}
       if(pr.own&&!owner()){run(async()=>{await rejoinOwn();pr.view='room';pr.touched=true;openSheet()});return}
       if(state.room?.quickPlay&&state.room.phase==='lobby'){onTab('room');return}
@@ -262,8 +262,7 @@
       if(active)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');
     });
     const root=dock.shadowRoot,title=root.getElementById('playPhaseTitle'),hint=root.getElementById('playPhaseHint'),
-      owner=!!(pr.own&&inOwnRoom()),nxt=ORDER[idx+1],
-      label=(owner||!state?.roomCode)&&nxt?LABEL[nxt]:(LABEL[now]||'SẢNH CHỜ'),
+      owner=!!(pr.own&&inOwnRoom()),nxt=ORDER[idx+1],label=(owner||!state?.roomCode)&&nxt?LABEL[nxt]:(LABEL[now]||'SẢNH CHỜ'),
       h=!state?.roomCode?'CHẠM ĐỂ VÀO PHÒNG':!owner?'CHỦ PHÒNG ĐIỀU HÀNH':now==='battle'?'ĐANG CHƠI':'CHẠM ĐỂ TIẾP';
     const shownLabel=quick?(String(room.phase||'').toLowerCase()==='running'?'ĐANG CHƠI':QUICK_ORDER.find(s=>s[0]===qkey)?.[1]?.toUpperCase()||'TẠO PHÒNG'):label;
     const shownHint=quick?(!state?.roomCode?'CHẠM ĐỂ TẠO/VÀO PHÒNG':owner?'CHỦ PHÒNG ĐIỀU HÀNH':'ĐANG Ở TRONG PHÒNG'):h;
@@ -288,7 +287,8 @@
     if(pr.mounted)return;pr.mounted=true;
     document.head.appendChild(el('style',null,'#gmwwSetupTop3{display:none!important}'
       +'#gmwwOwnerDock{position:fixed;left:calc(var(--gmww-player-visible-left,0px) + 8px);right:auto;width:calc(var(--gmww-player-visible-width,100vw) - 16px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));bottom:auto;transform:translateY(-100%);box-sizing:border-box;z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
-      +'#gmwwStageStrip,#gmwwQuickStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden],#gmwwQuickStageStrip[hidden]{display:none}'
+      +'#gmwwStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}' 
+      +'#gmwwQuickStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwQuickStageStrip[hidden]{display:none}'
       +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex-direction:column;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:300px!important;max-height:300px!important;margin:0!important;display:flex!important;flex-direction:column}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'
       +'.gmww-pr-ctl{display:flex;align-items:center;gap:6px;flex-shrink:0}.gmww-pr-ctl b{min-width:20px;text-align:center}.gmww-pr-order{min-width:18px;text-align:center;opacity:.75}.gmww-pr-panel button.gmww-pr-step{padding:0;width:32px;height:32px;border-radius:50%;font-size:18px;line-height:1}.gmww-pr-tpldetail{display:block;max-width:62vw;white-space:normal!important;line-height:1.35;opacity:.78}'
