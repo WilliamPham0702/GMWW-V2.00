@@ -223,7 +223,7 @@ test('only the creator can delete a player-made Ván Mẫu',async()=>{
 // ---- wiring guards ----
 test('routes: owner API is under /api/player-rooms and the DO route list matches the Worker whitelist',()=>{
   assert.ok(source.includes('const ownerApi=url.pathname.match(/^\\/api\\/player-rooms\\/([A-Za-z0-9]+)\\/owner\\/([a-z-]+)$/);if(ownerApi)return playerRoomOwnerApi('));
-  assert.ok(source.includes('/^\\/owner\\/(state|seat-lock|seats-randomize|kick|room-settings|apply-template|roles-shuffle|start|end|replay|auto|stage|close)$/'));
+  assert.ok(source.includes('/^\\/owner\\/(state|room-lock|quick-start|seat-lock|seats-randomize|kick|room-settings|apply-template|roles-shuffle|start|end|replay|auto|stage|close)$/'));
   assert.ok(source.includes('if(url.pathname==="/api/rooms"&&request.method==="POST")return createRoom(env,url,request);'),'GM room creation unchanged');
 });
 
