@@ -18,7 +18,8 @@ function category(path){
   if(/^infra\/pages\/gamemasoi\//.test(path))return 'pages';
   if(/^server-game\/(current|shared|src)\//.test(path)||/^update-system\//.test(path)||
      /^assets\/(village|backgrounds|characters|role-artwork|gm)\//.test(path)||
-     path==='.github/scripts/prepare-update-channel.mjs')return 'runtime';
+     path==='.github/scripts/prepare-update-channel.mjs'||
+     path==='tools/build-character40-live.py')return 'runtime';
   if(/^src\//.test(path)||/^assets\/(action-icons|avatars)\//.test(path))return 'worker';
   if(/^infra\/(cloudflare-standby|oracle-staging)\//.test(path)||/^oracle-staging\//.test(path))return 'ci';
   if(path==='AGENTS.md'||path==='README.md'||/^docs\//.test(path)||/^tests\//.test(path)||/^\.github\//.test(path))return 'ci';
