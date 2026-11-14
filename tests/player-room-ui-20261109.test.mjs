@@ -67,7 +67,7 @@ test('Quick Play V2 top bar replaces legacy seven-step menu even before a room e
   assert.match(part,/function ensureQuickStrip\(\)/);
   assert.match(part,/host\.id='gmwwQuickStageStrip'/);
   assert.match(part,/nav id="quickSetupStrip" aria-label="Chơi nhanh V2"/);
-  assert.match(part,/strip\.hidden=!show\|\|quick;quickStrip\.hidden=!show\|\|!quick/);
+  assert.match(part,/strip\.hidden=!show\|\|quick\|\|chatTyping;quickStrip\.hidden=!show\|\|!quick\|\|chatTyping/);
   assert.match(part,/return\{top:rect\('gmwwQuickStageStrip','quickSetupStrip'\)\|\|rect\('gmwwStageStrip','playSetupStrip'\)/);
   assert.doesNotMatch(part,/const tabs=el\('nav','gmww-pr-steps gmww-pr-quicksteps'\)/,
     'the setup sheet must not contain a duplicate four-step menu');
@@ -112,6 +112,7 @@ test('Quick Play V2 keyboard keeps chat composer in visible viewport without doc
   assert.match(part,/visualViewport\?\.addEventListener\('resize',replace/);
   assert.match(part,/visualViewport\?\.addEventListener\('scroll',replace/);
   assert.match(part,/dock\.hidden=!show\|\|pr\.chatOpen/);
+  assert.match(part,/chatTyping=pr\.chatOpen&&document\.activeElement\?\.id==='gmwwChatText'/);
   assert.match(part,/\.gmww-pr-chatpage #gmwwChatLines\{[^}]*flex:1 1 auto!important/);
   assert.match(part,/\.gmww-pr-chatpage #gmwwChatForm\{[^}]*flex:0 0 auto!important/);
   assert.doesNotMatch(part,/document\.getElementById\('gmwwChatText'\)\?\.focus/);
