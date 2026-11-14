@@ -37,11 +37,20 @@
   }
   function roomDetails(box,st,room,players,locked){
     const link=pr.own.joinUrl||(location.origin+'/?room='+pr.own.code),code=pr.own.code,total=Number(room.seatCount)||30;
-    const line1=el('div','gmww-pr-line');line1.append(el('b','gmww-pr-linecode',code),
-      btn('Sao chép mã',async()=>{try{await navigator.clipboard.writeText(code);say('Đã sao chép mã '+code+'.')}catch(_){say('Mã phòng: '+code)}}),
-      btn('Gửi phòng',async()=>{const text='Vào phòng Ma Sói của mình nhé! Mã phòng: '+code+'\n'+link;
+    // Quick Play: code/share on the first row, Copy + Delete side by side below.
+    // Standard room mode retains its original controls and order.
+    const line1=el('div',room.quickPlay?'gmww-pr-line gmww-pr-room-code-share':'gmww-pr-line');
+    const copyCode=btn('Sao chép mã',async()=>{try{await navigator.clipboard.writeText(code);say('Đã sao chép mã '+code+'.')}catch(_){say('Mã phòng: '+code)}}),shareRoom=btn('Gửi phòng',async()=>{const text='Vào phòng Ma Sói của mình nhé! Mã phòng: '+code+'\n'+link;
         if(navigator.share){try{await navigator.share({title:'Phòng Ma Sói '+code,text,url:link});return}catch(e){if(e&&e.name==='AbortError')return}}
-        try{await navigator.clipboard.writeText(text);say('Đã sao chép lời mời.')}catch(_){say(text)}},'gmww-pr-main'));box.append(line1);
+        try{await navigator.clipboard.writeText(text);say('Đã sao chép lời mời.')}catch(_){say(text)}},'gmww-pr-main');
+    line1.append(el('b','gmww-pr-linecode',code));
+    if(!room.quickPlay)line1.append(copyCode);
+    line1.append(shareRoom);box.append(line1);
+    if(room.quickPlay){
+      const quickRoomActions=el('div','gmww-pr-quick-actions');
+      quickRoomActions.append(copyCode,btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));
+      box.append(quickRoomActions);
+    }
     box.append(el('div','gmww-pr-sub','ĐÃ VÀO PHÒNG • '+players.length+(room.quickPlay?' người':' / '+total)));
     const list=el('div','gmww-pr-list');
     for(const p of players){const line=el('div','gmww-pr-player'),isOwner=String(p.loginId||'')===String(st?.ownerLoginId||'');
@@ -55,7 +64,7 @@
       await callOwner('auto','POST',{enabled:!room.autoGM});await refresh();
     }));
 
-    const line2=el('div','gmww-pr-line');line2.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'));if(!room.quickPlay)line2.append(btn('Tập hợp →',async()=>goStep('seats'),'gmww-pr-main'));box.append(line2);
+    if(!room.quickPlay){const line2=el('div','gmww-pr-line');line2.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'),btn('Tập hợp →',async()=>goStep('seats'),'gmww-pr-main'));box.append(line2)}
   }
   // Chơi nhanh V2: Sảnh chờ → Tạo phòng → Ván Mẫu → Bắt đầu.
   // The UI renders public deck names and quantities, never a player's private card.
@@ -97,13 +106,17 @@
     box.append(el('div','gmww-pr-sub','2. TẠO PHÒNG • MỞ PHÒNG / MÃ / LINK / THÀNH VIÊN'));
     if(!pr.own||!inOwnRoom())return;
     roomDetails(box,st,room,players,room.seatsLocked===true);
-    if(String(room.phase||'lobby')==='lobby'&&!room.endedAt)box.append(
-      btn(room.quickPlayJoinLocked?'🔒 MỞ KHÓA PHÒNG':'🔓 KHÓA PHÒNG',async()=>{
-        await callOwner('room-lock','POST',{locked:!room.quickPlayJoinLocked});
-        await refresh();
-      },room.quickPlayJoinLocked?'gmww-pr-main':null));
-    if(String(room.phase||'lobby')==='lobby'&&!room.endedAt)box.append(
-      btn('TIẾP: VÁN MẪU →',async()=>{await loadTemplates();goStep('game')},'gmww-pr-main'));
+    if(String(room.phase||'lobby')==='lobby'&&!room.endedAt){
+      const nextActions=el('div','gmww-pr-quick-actions');
+      nextActions.append(
+        btn(room.quickPlayJoinLocked?'🔒 MỞ KHÓA PHÒNG':'🔓 KHÓA PHÒNG',async()=>{
+          await callOwner('room-lock','POST',{locked:!room.quickPlayJoinLocked});
+          await refresh();
+        },room.quickPlayJoinLocked?'gmww-pr-main':null),
+        btn('TIẾP: VÁN MẪU →',async()=>{await loadTemplates();goStep('game')},'gmww-pr-main')
+      );
+      box.append(nextActions);
+    }
   }
   function renderQuickPlay(box,players,st){
     const room=st?.room||state.room||{},members=players.filter(p=>p.kind==='member'),count=members.length;
