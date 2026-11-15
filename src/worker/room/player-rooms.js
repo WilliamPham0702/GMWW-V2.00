@@ -10,6 +10,7 @@ import { missingRoleCards, ownerDeckView, planPlayerRoomDeal, playerRoomConfigFr
 import { publicRoom } from "../../gmww-public-room-contract.js";
 import { normalizeSeatCount } from "../../gmww-room-config-rules.js";
 import { clearPlayerMovement, publicPlayer } from "../../gmww-village-player-state.js";
+import { GMWW_SHARED_AUDIO_DEFAULT,pinnedAudioReleaseTag } from "../support/shared-release-audio.js";
 
 export class RoomPlayerRoomMethods {
   // Atomic check + reserve for a player-created room: one handler, storage-only awaits.
@@ -110,6 +111,8 @@ export class RoomPlayerRoomMethods {
       const current=await this.ctx.storage.get("meta");
       if(String(current?.phase||"lobby").toLowerCase()!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
       current.quickPlayTemplateId=cfg.id;
+      // Store only the immutable Release tag selected by the Ván Mẫu; never copy MP3 bytes.
+      current.quickPlayAudioReleaseTag=pinnedAudioReleaseTag(body?.template?.audioReleaseTag)||GMWW_SHARED_AUDIO_DEFAULT;
       current.quickPlayTemplateName=String(cfg.name||body?.template?.name||"Ván Mẫu").slice(0,120);
       current.quickPlayTemplatePlayerCount=cfg.roles.reduce((sum,r)=>sum+(Number(r.count)||1),0);
       current.quickPlayArtifactsEnabled=cfg.artifactsEnabled===true;
