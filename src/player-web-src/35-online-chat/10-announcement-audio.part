@@ -13,7 +13,7 @@ function gmwwStopAnnouncement(){
 function gmwwAnnouncementUrls(pending){
   const base='/api/rooms/'+encodeURIComponent(pending?.room||'')+'/announcement-audio?a=',cue=pending?.cue||{};
   const list=Array.isArray(cue.audio)?cue.audio:(cue.audioUrl?[cue.audioUrl]:[]);
-  return list.filter(u=>typeof u==='string'&&u.startsWith(base)&&/^[a-f0-9]{32}$/.test(u.slice(base.length))).slice(0,12);
+  return list.filter(u=>typeof u==='string'&&u.startsWith(base)&&/^(?:[a-f0-9]{32}|s[a-f0-9]{64})$/.test(u.slice(base.length))).slice(0,12);
 }
 // Seconds since the Server started this turn: every device joins the clip at the same point.
 function gmwwAnnouncementOffset(cue){

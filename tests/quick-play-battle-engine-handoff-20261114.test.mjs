@@ -54,7 +54,8 @@ test('Winner and night/day engine are still the original server paths',()=>{
 test('Audio button unlocks the existing player announcement player; does not fake clips',()=>{
   assert.match(room,/unlockGmwwAudio\(\)/);
   assert.match(room,/gmwwPlayAnnouncement\(\)/);
-  assert.match(room,/Phòng chưa có clip audio GM/);
+  assert.match(room,/Lượt này chưa có clip Audio phù hợp/);
+  assert.doesNotMatch(room,/Cần nạp thư viện từ GM Server/);
 });
 
 test('Nút Lên Giàn thực sự mở đề cử và biểu quyết hiện có',()=>{
