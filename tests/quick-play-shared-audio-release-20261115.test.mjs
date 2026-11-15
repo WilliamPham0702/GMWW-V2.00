@@ -62,3 +62,11 @@ test('template metadata pinned and existing game rules unchanged',()=>{
  assert.match(room,/computeWinProposal/);
  assert.match(room,/ownerQuickStart/);
 });
+
+test('Quick Play daytime system cue resolves published audio while old rooms still require uploads',()=>{
+ const ann=readFileSync('src/worker/room/announcements.js','utf8');
+ assert.match(ann,/if\(!targets\.some\(t=>lib\[t\]\)\)\{/);
+ assert.match(ann,/const shared=meta\?\.quickPlay===true\?await getSharedAudioCatalog\(\):null;/);
+ assert.match(ann,/if\(!sharedAudioTargetsForCue\(meta,targets,shared\)\.length\)return j\(\{ok:false,error:'DAY_AUDIO_NOT_UPLOADED'\},409\)/);
+ assert.equal(sharedAudioTargetsForCue({...meta,quickPlay:false},['system:audio_system_countdown'],verifiedSharedAudioCatalog(doc)).length,0);
+});
