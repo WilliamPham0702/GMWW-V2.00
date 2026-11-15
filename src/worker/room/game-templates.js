@@ -2,10 +2,11 @@
 import { j } from "../http/responses.js";
 import { normalizeLoginId } from "../../gmww-player-identity-rules.js";
 import { sanitizeGameConfig } from "../../gmww-room-config-rules.js";
+import { GMWW_SHARED_AUDIO_DEFAULT,pinnedAudioReleaseTag } from "../support/shared-release-audio.js";
 
 export class RoomGameTemplateMethods {
   async gameTemplateList(){
-    const rows=await this.ctx.storage.list({prefix:"gameTemplate:"}),templates=[...rows.values()].filter(Boolean).map(x=>({id:x.id,name:x.name,playerCount:Number(x.playerCount||0),updatedAt:x.updatedAt||null,preloadedAt:x.preloadedAt||null,revision:Number(x.revision||1),source:x.source==="PLAYER"?"PLAYER":"GM",quickPlayDefault:x.quickPlayDefault===true})).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+    const rows=await this.ctx.storage.list({prefix:"gameTemplate:"}),templates=[...rows.values()].filter(Boolean).map(x=>({id:x.id,name:x.name,playerCount:Number(x.playerCount||0),updatedAt:x.updatedAt||null,preloadedAt:x.preloadedAt||null,revision:Number(x.revision||1),source:x.source==="PLAYER"?"PLAYER":"GM",quickPlayDefault:x.quickPlayDefault===true,audioReleaseTag:pinnedAudioReleaseTag(x.audioReleaseTag)||GMWW_SHARED_AUDIO_DEFAULT})).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
     return j({ok:true,count:templates.length,templates});
   }
   async gameTemplateGet(id){
@@ -34,7 +35,7 @@ export class RoomGameTemplateMethods {
         count,limit:20},409);
     }
     const id=requested||("player-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),now=new Date().toISOString();
-    const rec={id,name:String(cfg.name||"Ván của tôi").slice(0,120),playerCount:Number(cfg.playerCount||0),revision:Math.max(1,Number(old?.revision||0)+1),updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"PLAYER",ownerLoginId};
+    const rec={id,name:String(cfg.name||"Ván của tôi").slice(0,120),playerCount:Number(cfg.playerCount||0),revision:Math.max(1,Number(old?.revision||0)+1),updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"PLAYER",ownerLoginId,audioReleaseTag:pinnedAudioReleaseTag(body?.audioReleaseTag)||pinnedAudioReleaseTag(old?.audioReleaseTag)||GMWW_SHARED_AUDIO_DEFAULT};
     await this.ctx.storage.put("gameTemplate:"+id,rec);
     for(const c of Array.isArray(body?.copyAssets)?body.copyAssets.slice(0,100):[]){
       const from=String(c?.from||"").slice(0,120),roleId=String(c?.roleId||"").slice(0,120);if(!from||!roleId)continue;
@@ -78,7 +79,7 @@ export class RoomGameTemplateMethods {
         message:"Đã lưu đủ 20 Ván Mẫu. Hãy xóa một Ván Mẫu không dùng để tạo mới.",
         count,limit:20},409);
     }
-    const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:unchanged?(old.preloadedAt||now):now,compiledConfig,source:"GM_IPA",quickPlayDefault};
+    const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:unchanged?(old.preloadedAt||now):now,compiledConfig,source:"GM_IPA",quickPlayDefault,audioReleaseTag:pinnedAudioReleaseTag(body?.audioReleaseTag)||pinnedAudioReleaseTag(old?.audioReleaseTag)||GMWW_SHARED_AUDIO_DEFAULT};
     if(quickPlayDefault){
       const templates=await this.ctx.storage.list({prefix:"gameTemplate:"}),updates={[key]:rec};
       for(const [otherKey,other] of templates){
