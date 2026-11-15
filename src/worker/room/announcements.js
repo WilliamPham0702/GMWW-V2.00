@@ -20,7 +20,7 @@ export class RoomAnnouncementMethods {
     const shared=needShared?await getSharedAudioCatalog():null;
     const urls=cue.targets.flatMap(target=>{
       if(lib[target])return ['/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a='+lib[target]];
-      const clip=sharedAudioTargetsForCue(meta,[target],shared)[0];
+      const clip=shared?sharedAudioTargetsForCue(meta,[target],shared)[0]:null;
       return clip?['/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a=s'+clip.sha256]:[];
     });
     const out={key:cue.key,label:cue.label,startedAt:cue.startedAt};
