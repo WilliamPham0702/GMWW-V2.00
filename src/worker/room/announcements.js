@@ -33,7 +33,7 @@ export class RoomAnnouncementMethods {
     const cue=await this.currentAnnouncement(meta,runtime);if(!cue)return null;
     const lib=await announcementLibrary(this.ctx.storage);
     const manifest=meta?.quickPlay===true&&cue.targets.some(t=>!lib[t])?await this.sharedReleaseManifest(meta):null;
-    const hashes=cue.targets.map(t=>lib[t]||audioHashForTarget(manifest,t)).filter(Boolean);
+    const hashes=cue.targets.map(t=>lib[t]||(manifest?audioHashForTarget(manifest,t):'')).filter(Boolean);
     const out={key:cue.key,label:cue.label,startedAt:cue.startedAt};
     if(hashes.length){out.audio=hashes.map(h=>'/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a='+h);out.audioUrl=out.audio[0]}
     return out;
