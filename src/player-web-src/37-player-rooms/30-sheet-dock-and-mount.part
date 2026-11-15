@@ -318,7 +318,7 @@
           try{localStorage.removeItem('gmww_player_announcement_audio_off')}catch(_){}
           unlockGmwwAudio();
           const cue=gmwwAnnouncementPending?.cue;
-          if(!cue||!Array.isArray(cue.audio)||!cue.audio.length)toast('Phòng chưa có clip audio GM cho lượt này. Cần nạp thư viện từ GM Server.');
+          if(!cue||!Array.isArray(cue.audio)||!cue.audio.length)toast('Lượt này chưa có clip Audio phù hợp. Hãy kiểm tra Ván Mẫu và kho Audio chung.');
           else{gmwwPlayerCueKey='';void gmwwPlayAnnouncement()}
           return;
         }

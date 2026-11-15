@@ -38,3 +38,24 @@ test('source corrections are included in compiled Player Web',()=>{
  assert.ok(payload.includes(move),'movement fix must be packaged');
  assert.ok(payload.includes(sheet),'keyboard/viewport fix must be packaged');
 });
+
+
+test('valid shared SHA-256 audio URL is not discarded by legacy 32-hex client filter',async()=>{
+ const {runInNewContext}=await import('node:vm');
+ const source=readFileSync('src/player-web-src/35-online-chat/10-announcement-audio.part','utf8');
+ const method=source.slice(source.indexOf('function gmwwAnnouncementUrls('),source.indexOf('// Seconds since the Server'));
+ assert.ok(method.startsWith('function gmwwAnnouncementUrls('));
+ const fn=runInNewContext(method+';gmwwAnnouncementUrls');
+ const base='/api/rooms/73KRBR/announcement-audio?a=';
+ const legacy='a'.repeat(32),shared='s'+'b'.repeat(64);
+ const pending={room:'73KRBR',cue:{audio:[base+legacy,base+shared,
+    base+'s'+'b'.repeat(63),'/api/rooms/OTHER/announcement-audio?a='+shared,
+    base+'https://evil.invalid',base+'s'+'b'.repeat(65)]}};
+ assert.deepEqual(Array.from(fn(pending)),[base+legacy,base+shared]);
+ assert.deepEqual(Array.from(fn({room:'73KRBR',cue:{audioUrl:base+shared}})),[base+shared]);
+});
+test('manual audio control does not demand a GM upload when shared catalog is enabled',()=>{
+ const source=readFileSync('src/player-web-src/37-player-rooms/30-sheet-dock-and-mount.part','utf8');
+ assert.doesNotMatch(source,/Cần nạp thư viện từ GM Server/);
+ assert.match(source,/kho Audio chung/);
+});
