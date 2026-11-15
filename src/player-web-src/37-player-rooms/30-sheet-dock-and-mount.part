@@ -17,10 +17,23 @@
       const r=(h.shadowRoot?.getElementById(innerId)||h).getBoundingClientRect();return r.width>40&&r.height>10?r:null};
     return{top:rect('gmwwQuickStageStrip','quickSetupStrip')||rect('gmwwStageStrip','playSetupStrip'),bottom:rect('gmwwOwnerDock','gmTopMenu')};
   }
+  function visiblePanelViewport(){
+    // iOS keyboard can pan/shrink the visual viewport without changing innerWidth.
+    const v=window.visualViewport;
+    const width=Math.max(1,Math.min(innerWidth,Number(v?.width)||innerWidth));
+    const height=Math.max(1,Number(v?.height)||innerHeight);
+    const left=Math.max(0,Number(v?.offsetLeft)||0),top=Math.max(0,Number(v?.offsetTop)||0);
+    return{left,top,width,height,right:left+width,bottom:top+height};
+  }
   function placeGeometry(panel,edge,bars){
-    const gap=5,vw=innerWidth,vh=innerHeight,top=bars.top?bars.top.bottom+gap:8,bot=bars.bottom?bars.bottom.top-gap:vh-8;
-    const ref=(edge==='top'?bars.top:bars.bottom)||bars.bottom||bars.top,width=Math.min(ref?ref.width:vw,vw-16),left=ref?ref.left+(ref.width-width)/2:(vw-width)/2;
-    return{top,bot,width,left:Math.max(8,Math.min(vw-width-8,left)),maxH:Math.max(180,Math.min(bot-top,vh-290))};
+    const v=visiblePanelViewport(),gap=5;
+    const top=Math.max(v.top+8,bars.top?bars.top.bottom+gap:v.top+8);
+    const bot=Math.min(v.bottom-8,bars.bottom?bars.bottom.top-gap:v.bottom-8);
+    const ref=(edge==='top'?bars.top:bars.bottom)||bars.bottom||bars.top;
+    const width=Math.max(1,Math.min(ref?ref.width:v.width,v.width-16));
+    const preferred=ref?ref.left+(ref.width-width)/2:v.left+(v.width-width)/2;
+    const left=Math.max(v.left+8,Math.min(v.right-width-8,preferred));
+    return{top,bot,width,left,maxH:Math.max(100,Math.min(bot-top,v.height-20))};
   }
   // iOS Safari/WebKit's keyboard shrinks visualViewport, not innerHeight.
   // Keep the entire chat composer within the visible area and above the keyboard.
@@ -43,8 +56,10 @@
     const bars=barRects(),saved=readDock()[panel.id],edge=pr.pos&&pr.pos[panel.id]?'free':(saved==='top'?'top':'bottom'),g=placeGeometry(panel,edge,bars),st=panel.style;
     st.right='auto';st.transform='none';panel.classList.remove('gmww-dock-near');
     if(edge==='free'){
-      const q=pr.pos[panel.id],w=Math.min(q.width||g.width,innerWidth-12),h=panel.offsetHeight||200;
-      st.width=w+'px';st.left=Math.max(6,Math.min(innerWidth-w-6,q.left))+'px';st.top=Math.max(6,Math.min(innerHeight-h-6,q.top))+'px';st.bottom='auto';st.maxHeight=Math.max(180,innerHeight-parseFloat(st.top)-8)+'px';panel.classList.remove('gmww-dock-snapped');return;
+      const v=visiblePanelViewport(),q=pr.pos[panel.id],w=Math.max(1,Math.min(q.width||g.width,v.width-12)),h=Math.min(panel.offsetHeight||200,v.height-16);
+      st.width=w+'px';st.left=Math.max(v.left+6,Math.min(v.right-w-6,q.left))+'px';
+      st.top=Math.max(v.top+6,Math.min(v.bottom-h-6,q.top))+'px';
+      st.bottom='auto';st.maxHeight=Math.max(100,v.bottom-parseFloat(st.top)-8)+'px';panel.classList.remove('gmww-dock-snapped');return;
     }
     st.width=g.width+'px';st.left=g.left+'px';st.maxHeight=g.maxH+'px';panel.classList.add('gmww-dock-snapped');
     if(edge==='top'){st.top=g.top+'px';st.bottom='auto'}else{st.top='auto';st.bottom=(innerHeight-g.bot)+'px'}
@@ -113,8 +128,8 @@
     const viewKey=[pr.own?.code||'',pr.view,pr.gameView||'pick',pr.editTemplateId||''].join(':');
     const oldBody=panel.querySelector('.gmww-pr-body'),sameView=panel.dataset.viewKey===viewKey;
     // iPhone keyboard: never tear down an active Quick Play selector/number field during polling.
-    if(options?.background&&sameView&&pr.view==='game'&&(pr.state?.room?.quickPlay||state.room?.quickPlay)&&
-       oldBody&&oldBody.contains(document.activeElement)&&/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName))return;
+    if(options?.background&&sameView&&oldBody&&oldBody.contains(document.activeElement)&&
+       /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName))return;
     // Poll room authority without replacing the editor DOM under a touch/keyboard gesture.
     if(options?.background&&sameView&&oldBody&&pr.view==='game'&&pr.gameView==='design'&&pr.own&&inOwnRoom()&&String(pr.state?.room?.phase||'lobby').toLowerCase()==='lobby'){
       const sum=document.getElementById('gmwwPrDeckSum'),people=pr.state?.players?.length||0,t=[...pr.deck.values()].reduce((a,b)=>a+b,0);
@@ -415,7 +430,7 @@
       +'.gmww-pr-panel button{padding:12px;border-radius:12px;border:1px solid #4fc3f7;background:#14598a;color:#fff;font-weight:700;font-size:14px}.gmww-pr-panel button:disabled{opacity:.45}.gmww-pr-panel button.gmww-pr-main{background:#2f8f4e;border-color:#3fb868;color:#fff}.gmww-pr-panel button.gmww-pr-danger{background:#8c2b2b;border-color:#c24646;color:#fff}'
       +'.gmww-pr-row{display:grid;grid-template-columns:1fr auto;gap:8px}.gmww-pr-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gmww-pr-line{display:flex;flex-wrap:nowrap;align-items:center;gap:8px}.gmww-pr-line button{white-space:nowrap;padding:8px 10px}.gmww-pr-linecode{flex:1;text-align:center;font-size:22px;letter-spacing:4px;min-width:0}'
       +'.gmww-pr-quick-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:stretch;width:100%;min-width:0}.gmww-pr-quick-actions button{min-width:0;min-height:48px;width:100%;padding:8px 6px!important;white-space:normal;overflow-wrap:anywhere;line-height:1.2}.gmww-pr-room-code-share{justify-content:space-between}.gmww-pr-room-code-share .gmww-pr-linecode{font-size:20px;letter-spacing:2px;text-align:left}.gmww-pr-room-code-share button{flex:0 0 auto}'
-      +'.gmww-pr-quick-entry{display:grid;grid-template-columns:minmax(0,1.48fr) minmax(0,1.12fr) minmax(0,.72fr);gap:6px;width:100%;align-items:stretch}.gmww-pr-quick-entry>button{min-width:0;padding:8px 4px;font-size:clamp(9px,1.8vw,13px);white-space:normal;overflow-wrap:anywhere;line-height:1.15}.gmww-pr-quick-code{display:flex;flex-direction:column;min-width:0;gap:4px}.gmww-pr-panel .gmww-pr-quick-code input{width:100%;min-width:0;height:42px;padding:6px;font-size:12px}.gmww-pr-quick-code small{font-size:10px;line-height:1.2;opacity:.86}.gmww-pr-room-toolbar{display:grid;grid-template-columns:minmax(0,1.08fr) repeat(3,minmax(0,1fr));gap:5px;width:100%;align-items:stretch}.gmww-pr-room-toolbar button{min-width:0;min-height:46px;padding:7px 3px;font-size:clamp(9px,1.7vw,12px);white-space:normal;overflow-wrap:anywhere;line-height:1.12}.gmww-pr-room-codebox{display:flex;flex-direction:column;justify-content:center;min-width:0;gap:4px;padding:4px;border-radius:10px;border:1px solid #4fc3f7;text-align:center}.gmww-pr-room-codebox small{font-size:9px}.gmww-pr-room-codebox b{font-size:clamp(12px,2vw,17px);letter-spacing:.6px;overflow-wrap:anywhere}'
+      +'.gmww-pr-quick-entry{display:grid;grid-template-columns:minmax(0,1.48fr) minmax(0,1.12fr) minmax(0,.72fr);gap:6px;width:100%;align-items:stretch}.gmww-pr-quick-entry>button{min-width:0;padding:8px 4px;font-size:clamp(9px,1.8vw,13px);white-space:normal;overflow-wrap:anywhere;line-height:1.15}.gmww-pr-quick-code{display:flex;flex-direction:column;min-width:0;gap:4px}.gmww-pr-panel .gmww-pr-quick-code input{width:100%;min-width:0;height:42px;padding:6px;font-size:12px}.gmww-pr-quick-code small{font-size:10px;line-height:1.2;opacity:.86} .gmww-pr-panel{box-sizing:border-box;max-width:calc(var(--gmww-player-visible-width,100vw) - 16px)!important;overflow-x:hidden}.gmww-pr-body{min-width:0;overflow-x:hidden}.gmww-pr-quick-entry>*{min-width:0}@media(max-width:560px){.gmww-pr-quick-entry{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.gmww-pr-quick-entry>button:first-child{grid-column:1 / -1}.gmww-pr-quick-code{grid-column:1}.gmww-pr-quick-entry>button:last-child{grid-column:2}}.gmww-pr-room-toolbar{display:grid;grid-template-columns:minmax(0,1.08fr) repeat(3,minmax(0,1fr));gap:5px;width:100%;align-items:stretch}.gmww-pr-room-toolbar button{min-width:0;min-height:46px;padding:7px 3px;font-size:clamp(9px,1.7vw,12px);white-space:normal;overflow-wrap:anywhere;line-height:1.12}.gmww-pr-room-codebox{display:flex;flex-direction:column;justify-content:center;min-width:0;gap:4px;padding:4px;border-radius:10px;border:1px solid #4fc3f7;text-align:center}.gmww-pr-room-codebox small{font-size:9px}.gmww-pr-room-codebox b{font-size:clamp(12px,2vw,17px);letter-spacing:.6px;overflow-wrap:anywhere}'
       +'.gmww-pr-list{display:flex;flex-direction:column;gap:6px}.gmww-pr-player{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#0b3a5e;border:1px solid #1d6fa5}.gmww-pr-player button.gmww-pr-kick{padding:6px 12px;background:#7f1d1d;font-size:12px}'
       +'.gmww-pr-tpl{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px;border-radius:12px;background:#0b3a5e;border:1px solid #1d6fa5}.gmww-pr-tpl.is-on{border-color:#4fc3f7}.gmww-pr-tpl div{display:flex;flex-direction:column;gap:2px}.gmww-pr-tpl small{opacity:.75}.gmww-pr-tpl button{padding:8px 14px}'
       +'.gmww-pr-deck{background:#0b3a5e;border:1px solid #1d6fa5;border-radius:12px;padding:8px 10px}.gmww-pr-deck small{opacity:.7}.gmww-pr-deckrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #1f2944}.gmww-pr-deckrow:first-of-type{border-top:0}'
@@ -433,6 +448,7 @@
     const replace=()=>{renderChrome();place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});
     try{visualViewport?.addEventListener('resize',replace,{passive:true});visualViewport?.addEventListener('scroll',replace,{passive:true})}catch(_){}
     chatPage.addEventListener('focusin',replace);chatPage.addEventListener('focusout',replace);
+    panel.addEventListener('focusin',replace);panel.addEventListener('focusout',replace);
     pr.own=load();
     clearInterval(pr.timer);pr.timer=setInterval(()=>{if(pr.own&&inOwnRoom()&&!document.hidden&&!pr.busy)refresh({background:true});else if(pr.open&&state.room?.quickPlay&&pr.view==='room')render({background:true});else renderDock()},4000);
     setInterval(renderDock,1000);
