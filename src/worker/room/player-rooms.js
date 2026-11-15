@@ -5,7 +5,6 @@ import { sha256, timingSafeEqual } from "../support/crypto.js";
 import { normalizeRoomName } from "../support/member-records.js";
 import { isValidRoomCode, normalizeRoomCode, secureShuffle } from "../support/room-access.js";
 import { normalizeLoginId } from "../../gmww-player-identity-rules.js";
-import { GMWW_SHARED_AUDIO_TAG } from "../support/shared-audio-release.js";
 import { evaluatePlayerRoomCreate } from "../../gmww-player-room-policy.js";
 import { missingRoleCards, ownerDeckView, planPlayerRoomDeal, playerRoomConfigFromTemplate } from "../../gmww-player-room-setup.js";
 import { publicRoom } from "../../gmww-public-room-contract.js";
@@ -112,8 +111,8 @@ export class RoomPlayerRoomMethods {
       if(String(current?.phase||"lobby").toLowerCase()!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
       // Metadata only. The runtime activates it solely when a published
       // SHA-256-checked release is reachable; old room audio remains first.
-      const selectedAudioTag=String(body?.template?.audioReleaseTag||GMWW_SHARED_AUDIO_TAG);
-      current.quickPlayAudioReleaseTag=selectedAudioTag===GMWW_SHARED_AUDIO_TAG?selectedAudioTag:'';
+      const selectedAudioTag=String(body?.template?.audioReleaseTag||"gmww-audio-v1");
+      current.quickPlayAudioReleaseTag=selectedAudioTag==="gmww-audio-v1"?selectedAudioTag:'';
       current.quickPlayTemplateId=cfg.id;
       current.quickPlayTemplateName=String(cfg.name||body?.template?.name||"Ván Mẫu").slice(0,120);
       current.quickPlayTemplatePlayerCount=cfg.roles.reduce((sum,r)=>sum+(Number(r.count)||1),0);
