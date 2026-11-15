@@ -56,8 +56,8 @@ test('existing room-uploaded audio and privacy admission retain precedence',()=>
 test('template metadata pinned and existing game rules unchanged',()=>{
  const tpl=readFileSync('src/worker/room/game-templates.js','utf8');
  const room=readFileSync('src/worker/room/player-rooms.js','utf8');
- assert.match(tpl,/audioReleaseTag:GMWW_SHARED_AUDIO_TAG/);
- assert.match(room,/current\.quickPlayAudioReleaseTag=selectedAudioTag===GMWW_SHARED_AUDIO_TAG/);
+ assert.match(tpl,/audioReleaseTag:"gmww-audio-v1"/);
+ assert.match(room,/current\.quickPlayAudioReleaseTag=selectedAudioTag==="gmww-audio-v1"/);
  assert.match(room,/await this\.applyCycle\(fresh,"night",1,"night-1","auto"\)/);
  assert.match(room,/computeWinProposal/);
  assert.match(room,/ownerQuickStart/);
