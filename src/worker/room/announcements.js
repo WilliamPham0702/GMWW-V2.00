@@ -2,8 +2,27 @@
 import { j } from "../http/responses.js";
 import { DAY_COUNTDOWN_MS, announcementCue, announcementLibrary, dayAnnouncementTargets, decodeRecording, readAnnouncementBlob, saveAnnouncementTarget } from "../support/announcement-audio.js";
 import { normalizeLoginId } from "../../gmww-player-identity-rules.js";
+import { pinnedAudioReleaseTag,fetchSharedAudioManifest,audioHashForTarget,sharedClipForCue,fetchVerifiedSharedAudio } from "../support/shared-release-audio.js";
 
 export class RoomAnnouncementMethods {
+  // Cache only verified manifest references in memory. The Durable Object never
+  // copies any GitHub MP3 into its SQLite storage; inactive rooms do not fetch it.
+  async sharedReleaseManifest(meta){
+    if(meta?.quickPlay!==true)return null;
+    const tag=pinnedAudioReleaseTag(meta.quickPlayAudioReleaseTag);
+    if(!tag)return null;
+    const now=Date.now();
+    if(this.gmwwAudioManifestTag===tag&&now<this.gmwwAudioManifestExpiresAt)return this.gmwwAudioManifest||null;
+    if(this.gmwwAudioManifestPromise&&this.gmwwAudioManifestTag===tag)return this.gmwwAudioManifestPromise;
+    this.gmwwAudioManifestTag=tag;
+    const pending=fetchSharedAudioManifest(tag).then(manifest=>{
+      this.gmwwAudioManifest=manifest;
+      this.gmwwAudioManifestExpiresAt=Date.now()+(manifest?10*60*1000:60*1000);
+      return manifest;
+    }).catch(()=>{this.gmwwAudioManifest=null;this.gmwwAudioManifestExpiresAt=Date.now()+60000;return null});
+    this.gmwwAudioManifestPromise=pending;
+    try{return await pending}finally{if(this.gmwwAudioManifestPromise===pending)this.gmwwAudioManifestPromise=null}
+  }
   async currentAnnouncement(meta,runtime){
     if(runtime===undefined)runtime=meta?.cyclePhase==='night'?await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
     const day=meta&&meta.cyclePhase!=='night'?await this.ctx.storage.get('annDay'):null;
@@ -12,7 +31,9 @@ export class RoomAnnouncementMethods {
   // Public cue for Players: label, Server start time and opaque clip URLs only.
   async announcementWithAudio(meta,runtime){
     const cue=await this.currentAnnouncement(meta,runtime);if(!cue)return null;
-    const lib=await announcementLibrary(this.ctx.storage),hashes=cue.targets.map(t=>lib[t]).filter(Boolean);
+    const lib=await announcementLibrary(this.ctx.storage);
+    const manifest=meta?.quickPlay===true&&cue.targets.some(t=>!lib[t])?await this.sharedReleaseManifest(meta):null;
+    const hashes=cue.targets.map(t=>lib[t]||(manifest?audioHashForTarget(manifest,t):'')).filter(Boolean);
     const out={key:cue.key,label:cue.label,startedAt:cue.startedAt};
     if(hashes.length){out.audio=hashes.map(h=>'/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a='+h);out.audioUrl=out.audio[0]}
     return out;
@@ -36,7 +57,8 @@ export class RoomAnnouncementMethods {
     const deadline=Date.parse(meta.dayDeadlineAt||'');if(!Number.isFinite(deadline)||Date.now()>=deadline)return 0;
     const key=String(meta.matchId||'')+':'+String(meta.cycleKey||'');
     if((await this.ctx.storage.get('annCountdown'))===key)return 0;
-    const lib=await announcementLibrary(this.ctx.storage);if(!lib['system:audio_system_countdown'])return 0;
+    const lib=await announcementLibrary(this.ctx.storage);
+    if(!lib['system:audio_system_countdown']&&!(meta?.quickPlay===true&&audioHashForTarget(await this.sharedReleaseManifest(meta),'system:audio_system_countdown')))return 0;
     return Math.max(Date.now(),deadline-DAY_COUNTDOWN_MS);
   }
   async dayCountdownCue(meta){
@@ -71,7 +93,8 @@ export class RoomAnnouncementMethods {
     if(meta?.phase!=='running'||!['morning','day'].includes(String(meta?.cyclePhase||'')))return j({ok:false,error:'DAY_AUDIO_NOT_ACTIVE'},409);
     if(!targets.length)return j({ok:false,error:'INVALID_AUDIO_TARGET'},400);
     const lib=await announcementLibrary(this.ctx.storage);
-    if(!targets.some(t=>lib[t]))return j({ok:false,error:'DAY_AUDIO_NOT_UPLOADED'},409);
+    const manifest=meta?.quickPlay===true&&targets.some(t=>!lib[t])?await this.sharedReleaseManifest(meta):null;
+    if(!targets.some(t=>lib[t]||audioHashForTarget(manifest,t)))return j({ok:false,error:'DAY_AUDIO_NOT_UPLOADED'},409);
     const prev=await this.ctx.storage.get('annDay'),same=prev&&prev.matchId===String(meta.matchId||'')&&prev.cycleKey===String(meta.cycleKey||'');
     // GM reports how long ago its local queue started; no device clock is trusted.
     const lag=Math.max(0,Math.min(20000,Number(body?.elapsedMs)||0)),now=Date.now();
@@ -90,6 +113,13 @@ export class RoomAnnouncementMethods {
     // Only clips of the turn that is live right now are readable by Players.
     const cue=await this.announcementWithAudio(meta),hash=String(body?.a||'');
     if(!cue?.audio?.some(u=>u.endsWith('?a='+hash)))return new Response(null,{status:404});
-    return readAnnouncementBlob(this.ctx.storage,hash);
+    const local=await readAnnouncementBlob(this.ctx.storage,hash);
+    if(local.status!==404||meta.quickPlay!==true)return local;
+    // A player may request ONLY the audio hash in the current public cue.
+    // Resolve the pinned template manifest, never client-supplied external URLs.
+    const manifest=await this.sharedReleaseManifest(meta);
+    const clip=sharedClipForCue(manifest,(await this.currentAnnouncement(meta))?.targets,hash);
+    if(!clip)return new Response(null,{status:404});
+    return fetchVerifiedSharedAudio(manifest.releaseTag,clip);
   }
 }

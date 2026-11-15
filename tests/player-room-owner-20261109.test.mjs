@@ -6,6 +6,7 @@ import {expandDeck,planPlayerRoomDeal,playerRoomConfigFromTemplate,missingRoleCa
 import {normalizeLoginId} from '../src/gmww-player-identity-rules.js';
 import {clearPlayerMovement} from '../src/gmww-village-player-state.js';
 import {PLAYER_ROOM_ROLE_CATALOG} from '../src/player-room-role-catalog.js';
+import {pinnedAudioReleaseTag,GMWW_SHARED_AUDIO_DEFAULT} from '../src/worker/support/shared-release-audio.js';
 
 const source=workerSource();
 const j=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'content-type':'application/json'}});
@@ -56,8 +57,8 @@ assert.ok(from>0&&to>from,'find real owner methods');
 const GM='GM-TOKEN-FOR-TEST';
 const bearer=r=>{const m=/^Bearer\s+(.+)$/i.exec(r.headers.get('authorization')||'');return m?m[1]:''};
 const sha256=async v=>'h:'+v,timingSafeEqual=(a,b)=>a===b;
-const Owner=new Function('GM_SYNC_TOKEN','j','bearer','sha256','timingSafeEqual','safeJson','normalizeLoginId','publicRoom','publicPlayer','ownerDeckView','playerRoomConfigFromTemplate','missingRoleCards','planPlayerRoomDeal','secureShuffle','crypto','MEMBER_STORE_NAME','clearPlayerMovement',
-  'return class Owner {\n'+source.slice(from,to)+'\n}')(GM,j,bearer,sha256,timingSafeEqual,async r=>r.json().catch(()=>null),normalizeLoginId,m=>({code:m.code,phase:m.phase}),p=>({loginId:p.loginId,seatId:p.seatId}),ownerDeckView,playerRoomConfigFromTemplate,missingRoleCards,planPlayerRoomDeal,d=>[...d].reverse(),globalThis.crypto,'member-store',clearPlayerMovement);
+const Owner=new Function('GM_SYNC_TOKEN','j','bearer','sha256','timingSafeEqual','safeJson','normalizeLoginId','publicRoom','publicPlayer','ownerDeckView','playerRoomConfigFromTemplate','missingRoleCards','planPlayerRoomDeal','secureShuffle','crypto','MEMBER_STORE_NAME','clearPlayerMovement','pinnedAudioReleaseTag','GMWW_SHARED_AUDIO_DEFAULT',
+  'return class Owner {\n'+source.slice(from,to)+'\n}')(GM,j,bearer,sha256,timingSafeEqual,async r=>r.json().catch(()=>null),normalizeLoginId,m=>({code:m.code,phase:m.phase}),p=>({loginId:p.loginId,seatId:p.seatId}),ownerDeckView,playerRoomConfigFromTemplate,missingRoleCards,planPlayerRoomDeal,d=>[...d].reverse(),globalThis.crypto,'member-store',clearPlayerMovement,pinnedAudioReleaseTag,GMWW_SHARED_AUDIO_DEFAULT);
 
 function room({meta={},players,cfg,cards=['wolf','seer','villager']}={}){
   const data=new Map();
