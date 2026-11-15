@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {selectVerifiedRuntimeV368Delta} from '../src/gmww-ota-delta.js';
+import {pinnedAudioReleaseTag,GMWW_SHARED_AUDIO_DEFAULT} from '../src/worker/support/shared-release-audio.js';
 
 const app=fs.readFileSync('server-game/current/app.js','utf8');
 const worker=workerSource();
@@ -12,7 +13,7 @@ test('Repeated Ván Mẫu save keeps revision and already packaged artwork; real
   const start=worker.indexOf('  async gameTemplateUpsert(body){');
   const end=worker.indexOf('  // Artifact artwork is a reusable server-wide catalog',start);
   assert.ok(start>0&&end>start);
-  const api=vm.runInNewContext('({'+worker.slice(start,end)+'})',{sanitizeGameConfig:x=>x,j:x=>x});
+  const api=vm.runInNewContext('({'+worker.slice(start,end)+'})',{sanitizeGameConfig:x=>x,j:x=>x,pinnedAudioReleaseTag,GMWW_SHARED_AUDIO_DEFAULT});
   const store=new Map(),storage={get:async key=>store.get(key),put:async(key,value)=>{store.set(key,value)}};
   const ctx={ctx:{storage}};
   const input={id:'gm-test',gameConfig:{id:'gm-test',name:'GM Test',playerCount:3,roles:[{roleId:'wolf',count:1},{roleId:'witch',count:1},{roleId:'seer',count:1}],artifacts:[]}};
