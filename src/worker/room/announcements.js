@@ -48,7 +48,8 @@ export class RoomAnnouncementMethods {
     if((await this.ctx.storage.get('annCountdown'))===key)return 0;
     const lib=await announcementLibrary(this.ctx.storage);
     if(!lib['system:audio_system_countdown']){
-      const shared=meta.quickPlay===true?await getSharedAudioCatalog():null;
+      if(meta.quickPlay!==true)return 0;
+      const shared=await getSharedAudioCatalog();
       if(!sharedAudioTargetsForCue(meta,['system:audio_system_countdown'],shared).length)return 0;
     }
     return Math.max(Date.now(),deadline-DAY_COUNTDOWN_MS);
