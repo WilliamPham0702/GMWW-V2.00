@@ -109,6 +109,10 @@ export class RoomPlayerRoomMethods {
     if(meta.quickPlay===true){
       const current=await this.ctx.storage.get("meta");
       if(String(current?.phase||"lobby").toLowerCase()!=="lobby")return j({ok:false,error:"ROOM_NOT_IN_LOBBY"},409);
+      // Metadata only. The runtime activates it solely when a published
+      // SHA-256-checked release is reachable; old room audio remains first.
+      const selectedAudioTag=String(body?.template?.audioReleaseTag||"gmww-audio-v1");
+      current.quickPlayAudioReleaseTag=selectedAudioTag==="gmww-audio-v1"?selectedAudioTag:'';
       current.quickPlayTemplateId=cfg.id;
       current.quickPlayTemplateName=String(cfg.name||body?.template?.name||"Ván Mẫu").slice(0,120);
       current.quickPlayTemplatePlayerCount=cfg.roles.reduce((sum,r)=>sum+(Number(r.count)||1),0);

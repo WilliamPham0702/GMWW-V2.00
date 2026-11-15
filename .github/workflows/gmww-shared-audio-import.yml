@@ -55,7 +55,7 @@ jobs:
         run: |
           node --check .github/scripts/audio-catalog-core.mjs
           node --check .github/scripts/import-shared-audio.mjs
-          node --test tests/shared-audio-import.test.mjs tests/shared-audio-source-audit.test.mjs
+          node --test tests/shared-audio-import.test.mjs tests/quick-play-shared-audio-release-20261115.test.mjs
   audited-source-proof:
     name: Verify verified ZIP audit record (read only)
     needs: verify

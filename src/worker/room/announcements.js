@@ -2,6 +2,7 @@
 import { j } from "../http/responses.js";
 import { DAY_COUNTDOWN_MS, announcementCue, announcementLibrary, dayAnnouncementTargets, decodeRecording, readAnnouncementBlob, saveAnnouncementTarget } from "../support/announcement-audio.js";
 import { normalizeLoginId } from "../../gmww-player-identity-rules.js";
+import { getSharedAudioCatalog, readSharedAudioClip, sharedAudioTargetsForCue } from "../support/shared-audio-release.js";
 
 export class RoomAnnouncementMethods {
   async currentAnnouncement(meta,runtime){
@@ -12,9 +13,18 @@ export class RoomAnnouncementMethods {
   // Public cue for Players: label, Server start time and opaque clip URLs only.
   async announcementWithAudio(meta,runtime){
     const cue=await this.currentAnnouncement(meta,runtime);if(!cue)return null;
-    const lib=await announcementLibrary(this.ctx.storage),hashes=cue.targets.map(t=>lib[t]).filter(Boolean);
+    const lib=await announcementLibrary(this.ctx.storage);
+    // Existing room-owned clips win; missing Quick Play clips can be read from
+    // the immutable, verified template catalog without copying them to this DO.
+    const needShared=meta?.quickPlay===true&&cue.targets.some(t=>!lib[t]);
+    const shared=needShared?await getSharedAudioCatalog():null;
+    const urls=cue.targets.flatMap(target=>{
+      if(lib[target])return ['/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a='+lib[target]];
+      const clip=shared?sharedAudioTargetsForCue(meta,[target],shared)[0]:null;
+      return clip?['/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a=s'+clip.sha256]:[];
+    });
     const out={key:cue.key,label:cue.label,startedAt:cue.startedAt};
-    if(hashes.length){out.audio=hashes.map(h=>'/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a='+h);out.audioUrl=out.audio[0]}
+    if(urls.length){out.audio=urls;out.audioUrl=urls[0]}
     return out;
   }
   scheduleAnnouncementSync(){
@@ -36,7 +46,12 @@ export class RoomAnnouncementMethods {
     const deadline=Date.parse(meta.dayDeadlineAt||'');if(!Number.isFinite(deadline)||Date.now()>=deadline)return 0;
     const key=String(meta.matchId||'')+':'+String(meta.cycleKey||'');
     if((await this.ctx.storage.get('annCountdown'))===key)return 0;
-    const lib=await announcementLibrary(this.ctx.storage);if(!lib['system:audio_system_countdown'])return 0;
+    const lib=await announcementLibrary(this.ctx.storage);
+    if(!lib['system:audio_system_countdown']){
+      if(meta.quickPlay!==true)return 0;
+      const shared=await getSharedAudioCatalog();
+      if(!sharedAudioTargetsForCue(meta,['system:audio_system_countdown'],shared).length)return 0;
+    }
     return Math.max(Date.now(),deadline-DAY_COUNTDOWN_MS);
   }
   async dayCountdownCue(meta){
@@ -71,7 +86,13 @@ export class RoomAnnouncementMethods {
     if(meta?.phase!=='running'||!['morning','day'].includes(String(meta?.cyclePhase||'')))return j({ok:false,error:'DAY_AUDIO_NOT_ACTIVE'},409);
     if(!targets.length)return j({ok:false,error:'INVALID_AUDIO_TARGET'},400);
     const lib=await announcementLibrary(this.ctx.storage);
-    if(!targets.some(t=>lib[t]))return j({ok:false,error:'DAY_AUDIO_NOT_UPLOADED'},409);
+    if(!targets.some(t=>lib[t])){
+      // Quick Play can play the verified, pinned shared system cues without
+      // requiring an active GM client to upload day announcements to the room.
+      // Older/non-Quick-Play rooms preserve their upload-only behavior.
+      const shared=meta?.quickPlay===true?await getSharedAudioCatalog():null;
+      if(!sharedAudioTargetsForCue(meta,targets,shared).length)return j({ok:false,error:'DAY_AUDIO_NOT_UPLOADED'},409);
+    }
     const prev=await this.ctx.storage.get('annDay'),same=prev&&prev.matchId===String(meta.matchId||'')&&prev.cycleKey===String(meta.cycleKey||'');
     // GM reports how long ago its local queue started; no device clock is trusted.
     const lag=Math.max(0,Math.min(20000,Number(body?.elapsedMs)||0)),now=Date.now();
@@ -90,6 +111,10 @@ export class RoomAnnouncementMethods {
     // Only clips of the turn that is live right now are readable by Players.
     const cue=await this.announcementWithAudio(meta),hash=String(body?.a||'');
     if(!cue?.audio?.some(u=>u.endsWith('?a='+hash)))return new Response(null,{status:404});
+    if(/^s[a-f0-9]{64}$/.test(hash)){
+      const live=await this.currentAnnouncement(meta);
+      return readSharedAudioClip(meta,live?.targets||[],hash.slice(1));
+    }
     return readAnnouncementBlob(this.ctx.storage,hash);
   }
 }
