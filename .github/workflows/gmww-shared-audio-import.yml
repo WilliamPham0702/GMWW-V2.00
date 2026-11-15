@@ -1,0 +1,100 @@
+name: GMWW Shared Audio Import (manual / fail closed)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/scripts/audio-catalog-core.mjs"
+      - ".github/scripts/import-shared-audio.mjs"
+      - ".github/workflows/gmww-shared-audio-import.yml"
+      - "tests/shared-audio-import.test.mjs"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Validate only (default), publish audio catalog, or rollback manifest"
+        required: true
+        type: choice
+        options: [validate, publish, rollback]
+        default: validate
+      source_release_id:
+        description: "Draft import Release ID; default existing GMWW import draft"
+        required: true
+        type: string
+        default: "445512358"
+      rollback_revision:
+        description: "Revision to restore, only when action=rollback"
+        type: string
+        required: false
+        default: ""
+      confirm_publish:
+        description: "For publish/rollback type exactly: PUBLISH GMWW AUDIO"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gmww-shared-audio-import
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Shared Audio import integrity tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Static validation and focused regression
+        run: |
+          node --check .github/scripts/audio-catalog-core.mjs
+          node --check .github/scripts/import-shared-audio.mjs
+          node --test tests/shared-audio-import.test.mjs tests/quick-play-shared-audio-release-20261115.test.mjs
+  import:
+    name: Validate import or explicitly approve catalog release
+    needs: verify
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SOURCE_RELEASE_ID: ${{ inputs.source_release_id }}
+      ROLLBACK_REVISION: ${{ inputs.rollback_revision }}
+      AUDIO_PUBLISH_APPROVED: ${{ inputs.confirm_publish == 'PUBLISH GMWW AUDIO' && 'YES' || 'NO' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify checkout still matches main HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main --depth=1
+          test "$(git rev-parse HEAD)" = "$(git rev-parse refs/remotes/origin/main)"
+      - name: Validate draft ZIP / MP3 without publishing
+        if: inputs.action == 'validate'
+        run: node .github/scripts/import-shared-audio.mjs
+      - name: Publish only after explicit approval
+        if: inputs.action == 'publish'
+        run: node .github/scripts/import-shared-audio.mjs --publish
+      - name: Roll back by publishing a new manifest revision
+        if: inputs.action == 'rollback'
+        run: node .github/scripts/import-shared-audio.mjs --rollback
+      - name: Retain SHA-256 candidate manifest / report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gmww-audio-import-audit-${{ github.run_id }}
+          path: |
+            audio-candidate-manifest.json
+            audio-import-report.json
+          if-no-files-found: ignore
