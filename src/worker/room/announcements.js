@@ -86,7 +86,13 @@ export class RoomAnnouncementMethods {
     if(meta?.phase!=='running'||!['morning','day'].includes(String(meta?.cyclePhase||'')))return j({ok:false,error:'DAY_AUDIO_NOT_ACTIVE'},409);
     if(!targets.length)return j({ok:false,error:'INVALID_AUDIO_TARGET'},400);
     const lib=await announcementLibrary(this.ctx.storage);
-    if(!targets.some(t=>lib[t]))return j({ok:false,error:'DAY_AUDIO_NOT_UPLOADED'},409);
+    if(!targets.some(t=>lib[t])){
+      // Quick Play can play the verified, pinned shared system cues without
+      // requiring an active GM client to upload day announcements to the room.
+      // Older/non-Quick-Play rooms preserve their upload-only behavior.
+      const shared=meta?.quickPlay===true?await getSharedAudioCatalog():null;
+      if(!sharedAudioTargetsForCue(meta,targets,shared).length)return j({ok:false,error:'DAY_AUDIO_NOT_UPLOADED'},409);
+    }
     const prev=await this.ctx.storage.get('annDay'),same=prev&&prev.matchId===String(meta.matchId||'')&&prev.cycleKey===String(meta.cycleKey||'');
     // GM reports how long ago its local queue started; no device clock is trusted.
     const lag=Math.max(0,Math.min(20000,Number(body?.elapsedMs)||0)),now=Date.now();
