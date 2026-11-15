@@ -61,3 +61,16 @@ test('manual write gate and no Production/Runtime deploy',()=>{
   assert.doesNotMatch(workflow,/wrangler deploy|cloudflare deploy|deploy-production/);
   assert.equal(TAG,'gmww-audio-v1');
 });
+
+test('checksum supplement validates the actual ZIP report naming contract',()=>{
+ const src=readFileSync('.github/scripts/audio-catalog-core.mjs','utf8');
+ assert.match(src,/checksums\.sha256/);
+ assert.match(src,/SOURCE_CHECKSUM_MISMATCH/);
+ assert.match(src,/missing-audio\.csv/);
+ const bad=new Map(mapped);
+ bad.set('checksums.sha256',Buffer.from('f'.repeat(64)+'  wolf.mp3\n'));
+ assert.throws(()=>prepareCatalog(bad),/SOURCE_CHECKSUM_MISMATCH/);
+ const good=new Map(mapped);
+ good.set('checksums.sha256',Buffer.from(sha+'  wolf.mp3\n'));
+ assert.doesNotThrow(()=>prepareCatalog(good));
+});

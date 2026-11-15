@@ -25,3 +25,8 @@ Phạm vi: hoàn thiện công cụ nhập cho PR #926; KHÔNG tự merge, deplo
 ## Điều kiện còn thiếu
 
 GitHub draft Release ID 445512358 đang có 0 asset tại thời điểm kiểm tra. Không thể nghiệm thu 74 MP3 hay publish catalog khi thiếu file thực. Workflow mới chỉ có thể Run workflow trên main sau khi đã merge an toàn; riêng PR phải chạy unit tests và toàn bộ required checks trên HEAD cuối, không bỏ qua. Không merge/deploy Production chỉ dựa trên unit tests.
+
+## Kiểm tra ZIP thật ngày 15/11/2026
+Đã đối chiếu bản ZIP trong Library của chủ sở hữu với GitHub Asset ID 749540150 theo SHA-256 chính thức (xem `gmww-audio-source-audit-20261115.json`). 74/74 MP3 khớp hash, 133 cue hợp lệ, ffprobe đọc được cả 74 file, 141 mục CSV thiếu nguồn vẫn giữ nguyên. `checksums.sha256` và `missing-audio.csv` nay được importer nhận diện; checksum list được kiểm thực thay vì bỏ qua.
+
+**Giới hạn xác thực GitHub Actions:** `pull_request` với `contents: read` bị GitHub trả 403 khi gọi API Release draft. Vì vậy PR CI chỉ xác minh mã nguồn, unit tests và bằng chứng SHA-256 đã kiểm tra độc lập, **không tuyên bố đã tải ZIP bằng CI**. Kiểm tra tải ZIP thật cần chạy workflow thủ công `validate` trên `main` với quyền Release cần thiết, sau khi mã nhập được đưa lên main bằng một thay đổi riêng an toàn. Không cấp quyền ghi cho workflow chạy mã PR để tránh lộ token. Chưa phát hành Worker/Production.

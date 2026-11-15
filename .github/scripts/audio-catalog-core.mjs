@@ -62,10 +62,25 @@ export function prepareCatalog(entries,previous=null){
   for(const [name,bytes] of files){
     if(!validPath(name)||!(bytes instanceof Uint8Array))throw Error('INVALID_INPUT_FILE: '+name);
     if(bytes.length>MAX_CLIP&&name.endsWith('.mp3'))throw Error('CLIP_TOO_LARGE: '+name);
-    if(!name.endsWith('.mp3')&&!['audio-map.json','manifest.json','SHA256SUMS','README.txt'].includes(name))throw Error('UNEXPECTED_INPUT_FILE: '+name);
+    if(!name.endsWith('.mp3')&&!['audio-map.json','manifest.json','checksums.sha256','missing-audio.csv','SHA256SUMS','README.txt'].includes(name))throw Error('UNEXPECTED_INPUT_FILE: '+name);
   }
   const previousCatalog=previous?validateCatalog(previous):null;
   const mapping=getMapping(files);
+  // Archive metadata from the verified GMWW source ZIP is evidence, not an audio cue.
+  // Never silently ignore a tampered checksums list.
+  if(files.has('checksums.sha256')){
+    const manifest=files.get('checksums.sha256').toString('utf8');
+    const rows=manifest.split(/\r?\n/).filter(Boolean);
+    const allMp3=new Set([...files.keys()].filter(n=>n.endsWith('.mp3')));
+    if(rows.length!==allMp3.size)throw Error('CHECKSUM_COUNT_MISMATCH');
+    const seen=new Set();
+    for(const line of rows){
+      const match=/^([a-f0-9]{64})  (\*?)([A-Za-z0-9_./-]+\.mp3)$/.exec(line);
+      if(!match||!validPath(match[3])||!allMp3.has(match[3])||seen.has(match[3])||
+         hash(files.get(match[3]))!==match[1])throw Error('SOURCE_CHECKSUM_MISMATCH');
+      seen.add(match[3]);
+    }
+  }
   const clips={...(previousCatalog?.clips||{})}, newFiles=new Map();
   let added=0;
   for(const [target,row] of Object.entries(mapping)){

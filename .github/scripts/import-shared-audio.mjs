@@ -57,6 +57,12 @@ async function sourceEntries(source){
     const name=asset.name;
     required(validPath(name),'UNSAFE_SOURCE_ASSET_NAME: '+name);
     const bytes=await assetBytes(asset);
+    // Verify GitHub's digest when provided; pin the approved initial source ZIP.
+    const digest=String(asset.digest||'');
+    if(digest&&digest!=='sha256:'+hash(bytes))throw Error('GITHUB_ASSET_SHA256_MISMATCH: '+name);
+    if(source.id===445512358&&name==='gmww-audio-v1-verified.zip'&&
+      hash(bytes)!=='4e95cdc06f35f540cbb5eba299b7cb326092e89888a93c43e59ba07bf495cfe2')
+      throw Error('INITIAL_SOURCE_ZIP_SHA256_MISMATCH');
     let files;
     if(name.endsWith('.zip')){
       const local=path.join(temp,'input-'+asset.id+'.zip');
