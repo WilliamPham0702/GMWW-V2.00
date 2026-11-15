@@ -2,6 +2,7 @@
 import { j } from "../http/responses.js";
 import { normalizeLoginId } from "../../gmww-player-identity-rules.js";
 import { sanitizeGameConfig } from "../../gmww-room-config-rules.js";
+import { GMWW_SHARED_AUDIO_TAG } from "../support/shared-audio-release.js";
 
 export class RoomGameTemplateMethods {
   async gameTemplateList(){
@@ -34,7 +35,7 @@ export class RoomGameTemplateMethods {
         count,limit:20},409);
     }
     const id=requested||("player-"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),now=new Date().toISOString();
-    const rec={id,name:String(cfg.name||"Ván của tôi").slice(0,120),playerCount:Number(cfg.playerCount||0),revision:Math.max(1,Number(old?.revision||0)+1),updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"PLAYER",ownerLoginId};
+    const rec={id,name:String(cfg.name||"Ván của tôi").slice(0,120),playerCount:Number(cfg.playerCount||0),revision:Math.max(1,Number(old?.revision||0)+1),updatedAt:now,preloadedAt:now,compiledConfig:{...cfg,id},source:"PLAYER",ownerLoginId,audioReleaseTag:GMWW_SHARED_AUDIO_TAG};
     await this.ctx.storage.put("gameTemplate:"+id,rec);
     for(const c of Array.isArray(body?.copyAssets)?body.copyAssets.slice(0,100):[]){
       const from=String(c?.from||"").slice(0,120),roleId=String(c?.roleId||"").slice(0,120);if(!from||!roleId)continue;
@@ -78,7 +79,7 @@ export class RoomGameTemplateMethods {
         message:"Đã lưu đủ 20 Ván Mẫu. Hãy xóa một Ván Mẫu không dùng để tạo mới.",
         count,limit:20},409);
     }
-    const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:unchanged?(old.preloadedAt||now):now,compiledConfig,source:"GM_IPA",quickPlayDefault};
+    const rec={id,name:String(cfg.name||"Ván Mẫu").slice(0,120),playerCount:Number(cfg.playerCount||0),revision,updatedAt:now,preloadedAt:unchanged?(old.preloadedAt||now):now,compiledConfig,source:"GM_IPA",quickPlayDefault,audioReleaseTag:GMWW_SHARED_AUDIO_TAG};
     if(quickPlayDefault){
       const templates=await this.ctx.storage.list({prefix:"gameTemplate:"}),updates={[key]:rec};
       for(const [otherKey,other] of templates){
