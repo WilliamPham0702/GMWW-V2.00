@@ -1,0 +1,26 @@
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GMWW - Xuất bộ Audio gốc</title><style>body{max-width:700px;margin:auto;padding:24px;background:#0b2d42;color:white;font:16px system-ui}input,button{display:block;margin:16px 0;padding:12px}button{background:#36ddaa;border:0;border-radius:8px}pre{white-space:pre-wrap}</style><h2>GMWW: Xuất bộ Audio gốc</h2><p>Chọn GMWW Save JSON đã xuất từ iPhone/iPad đang lưu audio. Chạy hoàn toàn trên thiết bị, không gửi dữ liệu lên mạng. <b>Không tải Save gốc lên GitHub.</b></p><input id="input" type="file" accept=".json"><button id="export" disabled>Tách Audio (không kèm dữ liệu cá nhân)</button><pre id="result">Chưa chọn file.</pre><script>
+const i=document.getElementById('input'),b=document.getElementById('export'),o=document.getElementById('result');
+i.onchange=()=>b.disabled=!i.files?.length;
+function kindOf(x){const s=(a,n)=>String.fromCharCode(...x.slice(a,a+n));return s(0,3)==='ID3'||x[0]===255&&(x[1]&224)===224?'audio/mpeg':s(4,4)==='ftyp'?'audio/mp4':s(0,4)==='OggS'?'audio/ogg':s(0,4)==='RIFF'&&s(8,4)==='WAVE'?'audio/wav':''}
+b.onclick=async()=>{b.disabled=true;try{
+ const save=JSON.parse(await i.files[0].text());if(save?.schema!=='gmww-save-v1')throw Error('Không phải file Save GMWW.');
+ const stateKey=Object.keys(save.localStorage||{}).filter(s=>/^GMWW_V\d+_STATE$/.test(s)).sort((a,z)=>Number(z.match(/V(\d+)/)[1])-Number(a.match(/V(\d+)/)[1]))[0];
+ const library=JSON.parse(save.localStorage?.[stateKey]||'null')?.audio;if(!library)throw Error('Không tìm thấy thư viện Audio.');
+ const stored=new Map();
+ for(const db of save.indexedDB||[])for(const store of db.stores||[])for(const record of store.records||[]){const key=typeof record.key==='string'?record.key:record.value?.key;if(String(key).startsWith('audio|'))stored.set(key,record.value)}
+ const clips=[],missing=[],seen=new Set();
+ for(const kind of ['cards','artifacts','actions','system'])for(const row of Array.isArray(library[kind])?library[kind]:[]){
+  const target=kind+':'+String(row.targetId||row.id||'');
+  if(!/^(cards|artifacts|actions|system):[A-Za-z0-9_.:-]{1,120}$/.test(target)||seen.has(target)){missing.push('ID không hợp lệ/trùng '+target);continue}
+  const rec=stored.get('audio|'+kind+'|'+row.id),base64=rec?.blob?.$t==='blob'?rec.blob.v:null;
+  if(typeof base64!=='string'||base64.length>2796208){missing.push(target);continue}
+  let bytes;try{bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0))}catch{missing.push(target);continue}
+  const mime=kindOf(bytes);if(!mime||!bytes.length||bytes.length>2*1024*1024){missing.push(target);continue}
+  clips.push({target,mime,size:bytes.length,base64});seen.add(target);
+ }
+ if(!clips.length)throw Error('Không có file audio cục bộ hợp lệ để xuất.');
+ const pack=new Blob([JSON.stringify({format:'gmww-audio-pack-v1',clips})],{type:'application/json'});
+ const url=URL.createObjectURL(pack),a=document.createElement('a');a.href=url;a.download='gmww-audio-pack.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ o.textContent='Đã xuất '+clips.length+' audio gốc; còn '+missing.length+' mục thiếu file.\nFile chỉ có audio, loại âm thanh, ID; KHÔNG có tài khoản, mật khẩu hoặc dữ liệu ván.\n'+missing.slice(0,30).join('\n');
+ }catch(e){o.textContent='LỖI: '+String(e?.message||e)}finally{b.disabled=false}};
+</script></html>
