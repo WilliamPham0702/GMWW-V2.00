@@ -29,7 +29,7 @@
 ## 3. BACKUP THÁNG
 
 - **GMWW-Backup-ipa-2026-10-V3.275.ipa** — [Tải backup gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-backup-2026-10/GMWW-Backup-ipa-2026-10-V3.275.ipa) · [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-backup-2026-10)
-**Runtime backup:** hiện chưa có file trong các Release backup.
+- **GMWW-Backup-runtime-2026-10-V3.285.gmwwupdate** — [Tải backup gốc](https://github.com/WilliamPham0702/GMWW-V2.00/releases/download/gmww-backup-2026-10/GMWW-Backup-runtime-2026-10-V3.285.gmwwupdate) · [Chi tiết](https://github.com/WilliamPham0702/GMWW-V2.00/releases/tag/gmww-backup-2026-10)
 
 ## 4. QA — CHỈ KIỂM THỬ, KHÔNG CÀI TRÊN PRODUCTION
 
@@ -45,4 +45,4 @@ Không có gói QA còn hiệu lực.
 
 **5 Runtime mới nhất, 3 IPA mới nhất** được đưa lên đầu để dễ tải. Các file cũ vẫn có thể tồn tại vì chính sách bảo vệ 14 ngày, rollback và tag tham chiếu. Việc ẩn khỏi kho tải nhanh **không xóa file trên GitHub**.
 
-**59 phiên bản Runtime duy nhất** đã được tìm thấy trên Releases.
+**39 phiên bản Runtime duy nhất** đã được tìm thấy trên Releases.
