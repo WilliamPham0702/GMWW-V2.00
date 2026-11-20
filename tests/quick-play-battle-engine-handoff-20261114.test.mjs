@@ -14,9 +14,10 @@ test('Quick Play uses existing battle timeline and a visible bottom menu rather 
   assert.match(room,/dock\.hidden=true;/);
   assert.match(room,/function renderQuickBattleDock\(host,room\)/);
   assert.match(top,/if\(state\.room\?\.quickPlay===true&&String\(state\.room\.phase\|\|''\)\.toLowerCase\(\)==='running'\)return/);
-  for(const label of ['Hành động','Chat','Khôi phục','Thông cáo','Lên Giàn','Điều hành']) assert.ok(room.includes(label),label);
-  // The old client/server handlers are reused; no second match engine.
-  for(const api of ['renderOnlineActionDock()','renderGallowsWidget()','gmwwOnlineRestore()','openChat()']) assert.ok(room.includes(api),api);
+  // 20/11/2026: màn trận Player Web = bố cục Server phía người chơi: [đồng hồ] [ô chat] (+ ô hành động khi có việc).
+  assert.match(room,/for\(const key of \['clock','chat','action'\]\)/);
+  for(const gm of ['Khôi phục','Điều hành','🔊 Audio']) assert.ok(!room.slice(room.indexOf('function ensureQuickBattleDock'),room.indexOf('function renderChrome')).includes(gm),'không có menu GM: '+gm);
+  for(const api of ['renderOnlineActionDock()','renderGallowsWidget()','openChat()']) assert.ok(room.includes(api),api);
   assert.doesNotMatch(room,/callOwner\('gm-turn'/);
 });
 test('Battle countdown uses matching server match/cycle and pauses without local drift',()=>{
@@ -51,15 +52,15 @@ test('Winner and night/day engine are still the original server paths',()=>{
   assert.match(worker,/await this\.applyCycle\(fresh,"night",1,"night-1","auto"\)/);
   assert.match(worker,/this\.computeWinProposal\(meta/);
 });
-test('Audio button unlocks the existing player announcement player; does not fake clips',()=>{
+test('Màn trận Player Web: timeline chỉ số thứ tự, không có nút Đêm/Ngày; chạm dock mở khoá audio',()=>{
   assert.match(room,/unlockGmwwAudio\(\)/);
-  assert.match(room,/gmwwPlayAnnouncement\(\)/);
-  assert.match(room,/Phòng chưa có clip audio GM/);
+  assert.match(top,/node\.append\(num\);list\.appendChild\(node\)/);
+  assert.doesNotMatch(top,/label\.textContent=String\(step\.label/);
+  assert.match(top,/for\(const id of \['battleBack','battleAdvance'\]\)\{const button=root\.querySelector\('#'\+id\);if\(button\)\{button\.hidden=true/);
 });
 
-test('Nút Lên Giàn thực sự mở đề cử và biểu quyết hiện có',()=>{
+test('Ô hành động mở đề cử / biểu quyết Lên Giàn hiện có, chỉ hiện khi có việc',()=>{
   assert.match(room,/state\.gallowsNominationOpen=true;renderGallowsWidget\(\)/);
-  assert.match(room,/document\.getElementById\('gmwwGallowsPlayer'\)\?\.hidden/);
-  assert.match(room,/document\.getElementById\('gmwwGallowsDock'\)\?\.hidden/);
   assert.match(room,/gallowsCurrentStage\(\)/);
+  assert.match(room,/action\.hidden=!stage/);
 });
