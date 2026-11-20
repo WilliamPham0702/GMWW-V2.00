@@ -4,6 +4,9 @@
   // The seven-stage GM strip remains available only inside a separately created advanced room.
   const quickMode=()=>!state?.roomCode||state?.room?.phase==='deleted'||(!state?.room&&!pr.own)||(pr.own&&inOwnRoom()?(pr.state?.room?.quickPlay===true||pr.own.quick===true||state?.room?.quickPlay===true):state?.room?.quickPlay===true);
   const QUICK_ORDER=[['lobby','Sảnh Chờ'],['room','Tạo Phòng'],['game','Ván Mẫu'],['deal','Bắt Đầu']];
+  // Chỉ chủ phòng (đã tạo phòng và đang ở trong phòng đó) mới thấy Ván Mẫu / Bắt Đầu.
+  // Chưa có phòng hoặc vào phòng người khác: chỉ Sảnh Chờ · Tạo Phòng.
+  const quickSteps=()=>pr.own&&inOwnRoom()?QUICK_ORDER:QUICK_ORDER.slice(0,2);
   function openSheet(){closeChat();pr.open=true;pr.touched=false;render();loadTemplates().then(render).catch(()=>render());refresh()}
   function closeSheet(){pr.open=false;render()}
   window.gmwwOpenCreateRoom=()=>{if(pr.own&&!inOwnRoom()){/* own room exists but the player is elsewhere */}openSheet()};
@@ -134,7 +137,7 @@
       const host=!!(pr.own&&inOwnRoom()&&pr.state?.room?.quickPlay),st=host?pr.state:null;
       const room=st?.room||(state?.room?.quickPlay?state.room:{}),players=st?.players||state.players||[],hasRoom=room.quickPlay===true;
       if(hasRoom&&pr.catalogStatus==='idle')loadTemplates().then(()=>render()).catch(()=>render());
-      if(!QUICK_ORDER.some(x=>x[0]===pr.view))pr.view=hasRoom?'room':'lobby';
+      if(!quickSteps().some(x=>x[0]===pr.view))pr.view=hasRoom?'room':'lobby';
       const sec=el('section','gmww-pr-sec'),running=String(room.phase||'lobby').toLowerCase()==='running';
       if(running){
         sec.append(el('p','gmww-pr-note','Ván đang diễn ra • Auto GM đang điều hành.'));
@@ -151,8 +154,7 @@
           sec.append(el('p','gmww-pr-note','Mã phòng: '+(room.code||state.roomCode||'')+' • '+players.length+' người'+(room.quickPlayJoinLocked?' • Đã khóa':' • Đang mở')));
           const list=el('div','gmww-pr-list');
           for(const p of players)list.append(el('div','gmww-pr-player',p.displayName||p.loginId||'Người chơi'));
-          sec.append(list,el('p','gmww-pr-help','Chủ phòng quản lý thành viên và khóa/mở phòng.'));
-          sec.append(btn('TIẾP: VÁN MẪU →',()=>onTab('game'),'gmww-pr-main'));
+          sec.append(list);
         }
       }else if(!hasRoom){
         sec.append(el('p','gmww-pr-note','Bạn cần tạo hoặc tham gia phòng trước khi chọn Ván Mẫu và bắt đầu.'));
@@ -202,10 +204,12 @@
     host=el('div');host.id='gmwwQuickStageStrip';host.hidden=true;
     const root=host.attachShadow({mode:'open'});
     root.innerHTML='<style>'+
-      ':host{display:block;box-sizing:border-box;background:linear-gradient(180deg,rgba(5,39,58,.46),rgba(7,69,87,.30));-webkit-backdrop-filter:blur(10px) saturate(140%);backdrop-filter:blur(10px) saturate(140%);border-bottom:1px solid rgba(186,240,250,.30);border-radius:0 0 18px 18px;box-shadow:0 6px 18px rgba(0,22,34,.18),inset 0 -1px 0 rgba(255,255,255,.08)}#quickSetupStrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;width:100%;padding:8px 6px 11px;box-sizing:border-box;background:transparent;font-family:system-ui,-apple-system,sans-serif}'+
-      '#quickSetupStrip button{appearance:none;background:transparent;border:0;color:#d7ecfc;display:flex;align-items:center;flex-direction:column;gap:6px;min-width:0;min-height:61px;padding:3px 1px;cursor:pointer;font-family:inherit}'+
-      '#quickSetupStrip .number{display:grid;place-items:center;width:35px;height:35px;flex:none;box-sizing:border-box;border:1.5px solid #80bde4;border-radius:50%;font-weight:700;font-size:15px}'+
-      '#quickSetupStrip .label{font-weight:700;font-size:11px;white-space:nowrap;max-width:100%;letter-spacing:-.1px}'+
+      // Menu trên gọn bằng menu dưới (cao 62px, tối đa 520px, canh giữa), không nền.
+      ':host{display:block;box-sizing:border-box;background:transparent;border:0;box-shadow:none}#quickSetupStrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;width:100%;max-width:520px;height:62px;margin:0 auto;padding:4px 6px;box-sizing:border-box;background:transparent;font-family:system-ui,-apple-system,sans-serif}'+
+      '#quickSetupStrip button{appearance:none;background:transparent;border:0;color:#eef8ff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;min-width:0;height:54px;padding:0 1px;cursor:pointer;font-family:inherit}'+
+      '#quickSetupStrip button[hidden]{display:none}'+
+      '#quickSetupStrip .number{display:grid;place-items:center;width:28px;height:28px;flex:none;box-sizing:border-box;border:1.5px solid #9fd2f0;border-radius:50%;font-weight:700;font-size:13px;background:rgba(6,44,66,.55);box-shadow:0 1px 4px rgba(0,0,0,.35)}'+
+      '#quickSetupStrip .label{font-weight:700;font-size:10.5px;white-space:nowrap;max-width:100%;letter-spacing:-.1px;text-shadow:0 1px 3px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6)}'+
       '#quickSetupStrip button.active .number{background:#f4d16d;color:#544400;border-color:#ffe39b;box-shadow:0 0 9px #ffe39099}'+
       '#quickSetupStrip button.active .label{color:#fff1bd}'+
       '#quickSetupStrip button.done .number{background:#148178;border-color:#55d5c7;color:white}'+
@@ -227,7 +231,7 @@
   }
   function onTab(k){
     if(quickMode()){
-      pr.view=QUICK_ORDER.some(s=>s[0]===k)?k:'room';pr.touched=true;
+      pr.view=quickSteps().some(s=>s[0]===k)?k:'room';pr.touched=true;
       if(pr.open)render();else openSheet();
       return;
     }
@@ -243,7 +247,7 @@
     root.innerHTML='<style>'+GMWW_SERVER_MENU.css+SHADOW_BASE+'#start #playShell #gmTopMenu.gm-top-menu-v293{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;top:auto!important;width:100%!important;max-width:520px;margin:0 auto!important;transform:none!important;height:62px!important;min-height:62px!important;border:0!important;outline:0!important;background:transparent!important;grid-template-columns:48px 48px minmax(0,1fr) 48px!important}#start #playShell #gmTopMenu .gm-top-info-copy-v293 b{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;font-size:11.5px!important;line-height:13px!important;letter-spacing:0!important;word-break:keep-all}#start #playShell #gmTopMenu .gm-top-info-copy-v293 small{white-space:normal!important;letter-spacing:.02em!important;line-height:9px!important}</style><div id="start"><div id="playShell" class="play-shell" data-phase="lobby" style="position:relative;height:auto;min-height:0;padding:0;background:none;overflow:visible">'+GMWW_SERVER_MENU.dock+'</div></div>';
     const q=id=>root.getElementById(id),owner=()=>!!(pr.own&&inOwnRoom());
     q('playPhasePill').addEventListener('click',()=>{
-      if(quickMode()){const cur=QUICK_ORDER.findIndex(s=>s[0]===pr.view),nxt=QUICK_ORDER[Math.min(QUICK_ORDER.length-1,cur+1)];onTab(!state?.roomCode?'room':(cur>=0?nxt[0]:'room'));return}
+      if(quickMode()){const qs=quickSteps(),cur=qs.findIndex(s=>s[0]===pr.view),nxt=qs[Math.min(qs.length-1,cur+1)];onTab(!state?.roomCode?'room':(cur>=0?nxt[0]:'room'));return}
       if(!state?.roomCode){onTab('room');return}
       if(pr.own&&!owner()){run(async()=>{await rejoinOwn();pr.view='room';pr.touched=true;openSheet()});return}
       if(state.room?.quickPlay&&state.room.phase==='lobby'){onTab('room');return}
@@ -349,8 +353,11 @@
       if(i===idx)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');
     });
     const room=(pr.own&&inOwnRoom()?pr.state?.room:state?.room)||{};
-    const qkey=QUICK_ORDER.some(s=>s[0]===pr.view)?pr.view:(!state?.roomCode?'lobby':'room');
+    const qkey=quickSteps().some(s=>s[0]===pr.view)?pr.view:(!state?.roomCode?'lobby':'room');
+    const qsteps=quickSteps();
+    if(quick){const qnav=quickStrip.shadowRoot.getElementById('quickSetupStrip'),cols='repeat('+qsteps.length+',minmax(0,1fr))';if(qnav.style.gridTemplateColumns!==cols)qnav.style.gridTemplateColumns=cols}
     if(quick)quickStrip.shadowRoot.querySelectorAll('#quickSetupStrip button').forEach(b=>{
+      b.hidden=!qsteps.some(s=>s[0]===b.dataset.quickStep);
       const i=QUICK_ORDER.findIndex(s=>s[0]===b.dataset.quickStep),active=b.dataset.quickStep===qkey;
       b.classList.toggle('active',active);b.classList.toggle('done',i<QUICK_ORDER.findIndex(s=>s[0]===qkey));
       if(active)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');
@@ -358,10 +365,10 @@
     const root=dock.shadowRoot,title=root.getElementById('playPhaseTitle'),hint=root.getElementById('playPhaseHint'),
       owner=!!(pr.own&&inOwnRoom()),nxt=ORDER[idx+1],label=(owner||!state?.roomCode)&&nxt?LABEL[nxt]:(LABEL[now]||'SẢNH CHỜ'),
       h=!state?.roomCode?'CHẠM ĐỂ VÀO PHÒNG':!owner?'CHỦ PHÒNG ĐIỀU HÀNH':now==='battle'?'ĐANG CHƠI':'CHẠM ĐỂ TIẾP';
-    const qi=QUICK_ORDER.findIndex(s=>s[0]===qkey),qnext=QUICK_ORDER[Math.min(QUICK_ORDER.length-1,qi+1)];
+    const qi=qsteps.findIndex(s=>s[0]===qkey),qlast=qi===qsteps.length-1&&qsteps.length<QUICK_ORDER.length&&!!state?.roomCode,qnext=qsteps[Math.min(qsteps.length-1,qi+1)];
     // Nút giữa luôn ghi tên BƯỚC TIẾP THEO (Sảnh Chờ → Tạo Phòng → Ván Mẫu → Bắt Đầu).
-    const shownLabel=quick?(String(room.phase||'').toLowerCase()==='running'?'ĐANG CHƠI':(qnext?.[1]||'Tạo Phòng').toUpperCase()):label;
-    const shownHint=quick?(!state?.roomCode?'CHẠM ĐỂ TẠO/VÀO PHÒNG':'CHẠM ĐỂ TIẾP'):h;
+    const shownLabel=quick?(String(room.phase||'').toLowerCase()==='running'?'ĐANG CHƠI':(qlast?'CHỜ CHỦ PHÒNG':(qnext?.[1]||'Tạo Phòng').toUpperCase())):label;
+    const shownHint=quick?(!state?.roomCode?'CHẠM ĐỂ TẠO/VÀO PHÒNG':qlast?'CHỦ PHÒNG ĐIỀU HÀNH':'CHẠM ĐỂ TIẾP'):h;
     if(title.textContent!==shownLabel)title.textContent=shownLabel;if(hint.textContent!==shownHint)hint.textContent=shownHint;
     root.getElementById('playEndGame').style.opacity=owner&&now==='battle'?'1':'.35';
   }
@@ -384,7 +391,7 @@
     document.head.appendChild(el('style',null,'#gmwwSetupTop3{display:none!important}'
       +'#gmwwOwnerDock{position:fixed;left:calc(var(--gmww-player-visible-left,0px) + 8px);right:auto;width:calc(var(--gmww-player-visible-width,100vw) - 16px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));bottom:auto;transform:translateY(-100%);box-sizing:border-box;z-index:9650}#gmwwOwnerDock[hidden]{display:none}'
       +'#gmwwStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwStageStrip[hidden]{display:none}' 
-      +'#gmwwQuickStageStrip{position:fixed;left:var(--gmww-player-visible-left,0px);right:auto;top:var(--gmww-player-visible-top,0px);width:var(--gmww-player-visible-width,100vw);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650}#gmwwQuickStageStrip[hidden]{display:none}'
+      +'#gmwwQuickStageStrip{position:fixed;left:calc(var(--gmww-player-visible-left,0px) + 8px);right:auto;top:calc(var(--gmww-player-visible-top,0px) + 6px);width:calc(var(--gmww-player-visible-width,100vw) - 16px);max-width:100vw;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);z-index:9650;background:transparent}#gmwwQuickStageStrip[hidden]{display:none}'
       +'body>#gmwwChatPanel{display:none!important}.gmww-pr-chatbody{display:flex;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden;padding:8px 10px 10px!important}.gmww-pr-chatbody #gmwwChatPanel{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;height:100%!important;max-height:100%!important;min-height:0!important;margin:0!important;display:flex!important;flex-direction:column!important}'
       +'.gmww-pr-chatpage{min-height:0!important;overflow:hidden!important}.gmww-pr-chatpage #gmwwChatLines{display:block!important;flex:1 1 auto!important;height:auto!important;max-height:none!important;min-height:0!important;overflow-y:auto!important}.gmww-pr-chatpage #gmwwChatForm{display:flex!important;flex:0 0 auto!important;min-height:48px!important}.gmww-pr-chatpage #gmwwChatPanel header,.gmww-pr-chatpage #gmwwVillageTicker{flex:0 0 auto!important}'
       +'#gmwwOnlineFooter{display:none!important}#gmwwGameViewTabs{bottom:calc(86px + env(safe-area-inset-bottom))!important}'

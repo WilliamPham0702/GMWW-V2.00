@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {playerWebSource} from '../.github/scripts/source-groups.mjs';
 import {workerSource} from '../.github/scripts/worker-source.mjs';
 const web=playerWebSource('37-player-rooms'),worker=workerSource();
-test('Chơi nhanh: Tạo phòng / nhập mã / Vào phòng đúng một hàng, có ghi chú',()=>{
-  const a=web.indexOf("btn('TẠO PHÒNG CHƠI VỚI BẠN BÈ'");
-  const b=web.indexOf("inp.placeholder='Nhập mã phòng'");
+test('Chơi nhanh: Tạo Phòng / Nhập Mã Phòng Khác / Vào Phòng đúng một hàng, không ghi chú',()=>{
+  const a=web.indexOf("btn('TẠO PHÒNG'");
+  const b=web.indexOf("inp.placeholder='Nhập Mã Phòng Khác'");
   const c=web.indexOf("btn('VÀO PHÒNG'");
   assert.ok(a>0&&b>a&&c>b);
-  assert.match(web,/Nhập mã phòng riêng của bạn bè/);
+  assert.doesNotMatch(web,/Nhập mã phòng riêng của bạn bè|TẠO PHÒNG • CHƠI VỚI BẠN BÈ|MÃ \/ LINK \/ THÀNH VIÊN/);
   assert.match(web,/gmww-pr-quick-entry\{display:grid;grid-template-columns:/);
 });
 test('Bắt đầu xác nhận RUNNING rồi đồng bộ trò chơi cũ, vai và giao diện',()=>{
