@@ -78,12 +78,12 @@ test('Quick Play V2 removes the old three-section Phòng page from the default f
   assert.match(part,/if\(!hasRoom\)viewQuickEntry\(sec\)/);
   assert.match(part,/function viewQuickEntry\(box\)/);
   assert.match(part,/MỞ PHÒNG/);
-  assert.match(part,/Nhập mã phòng/);
+  assert.match(part,/Nhập Mã Phòng Khác/);
   assert.doesNotMatch(part,/TẠO PHÒNG RIÊNG/);
   assert.match(part,/MỞ PHÒNG/);
   assert.match(part,/if\(quickMode\(\)\)\{/);
-  assert.match(part,/QUICK_ORDER\.some\(s=>s\[0\]===k\)/);
-  assert.match(part,/pr\.view=QUICK_ORDER\.some/);
+  assert.match(part,/quickSteps\(\)\.some\(s=>s\[0\]===k\)/);
+  assert.match(part,/pr\.view=quickSteps\(\)\.some/);
   assert.match(part,/viewRoomHub\(body/,'the advanced, non-quick room still retains legacy controls');
 });
 test('Quick Play V2 separates four stages, owner-only template selection and atomic start',()=>{

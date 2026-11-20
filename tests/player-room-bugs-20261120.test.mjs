@@ -29,5 +29,5 @@ test('Trang Tạo Phòng: 3 ô bằng nhau, nền mờ, chặn phóng chữ củ
   assert.match(w,/gmww-pr-panel\{background:linear-gradient\(155deg,rgba\(5,39,58,\.62\)/);
   assert.match(w,/backdrop-filter:blur\(14px\)/);
   assert.match(w,/html\{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important\}/);
-  assert.match(w,/box\.append\(row,el\('small','gmww-pr-quick-help','Nhập mã phòng riêng của bạn bè'\)\)/);
+  assert.doesNotMatch(w,/gmww-pr-quick-help','Nhập mã phòng riêng/);
 });
