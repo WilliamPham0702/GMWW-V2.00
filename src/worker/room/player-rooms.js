@@ -10,6 +10,7 @@ import { missingRoleCards, ownerDeckView, planPlayerRoomDeal, playerRoomConfigFr
 import { publicRoom } from "../../gmww-public-room-contract.js";
 import { normalizeSeatCount } from "../../gmww-room-config-rules.js";
 import { clearPlayerMovement, publicPlayer } from "../../gmww-village-player-state.js";
+import { villageLayout } from "../support/village-layout.js";
 
 export class RoomPlayerRoomMethods {
   // Atomic check + reserve for a player-created room: one handler, storage-only awaits.
@@ -169,7 +170,7 @@ export class RoomPlayerRoomMethods {
     // headcount. Clear before resizing; gmRoomSettings would otherwise reject it.
     for(const player of members){player.seatId=null;clearPlayerMovement(player);player.positionX=null;player.positionY=null}
     await this.ctx.storage.put("players",players);
-    const settings=await this.gmRoomSettings(gm,{roomMode:"online",demo:false,seatCount:count,seatLayout:"circle",seatOffset:{x:0,y:0},seatSpacing:100,seatMoveMode:"instant"});
+    const settings=await this.gmRoomSettings(gm,{roomMode:"online",demo:false,seatCount:count,seatLayout:"circle",seatOffset:await this.quickPlayFireOffset(),seatSpacing:100,seatMoveMode:"instant"});
     if(!settings.ok)return settings;
     const seated=await this.gmRandomizeRemainingSeats(gm,{all:true});
     if(!seated.ok)return seated;
@@ -180,6 +181,18 @@ export class RoomPlayerRoomMethods {
     const result=await this.ownerStart(gm,readyMeta,{quickPlayRoster:roster,templateId:cfg.id});
     if(!result.ok)await this.gmSeatLock(gm,{locked:false}).catch(()=>{});
     return result;
+  }
+  // Vòng ghế Chơi nhanh đặt quanh đống lửa GM đã đánh dấu trên ảnh làng (giống GM Server
+  // kéo vòng ghế vào lửa). Ván bắt đầu ban đêm nên ưu tiên mốc đêm; không có ảnh riêng: giữ mốc gốc.
+  async quickPlayFireOffset(){
+    try{
+      const res=await this.env.ROOMS.get(this.env.ROOMS.idFromName(MEMBER_STORE_NAME)).fetch("https://member.internal/global-settings/village-scene");
+      const scene=(await res.json())?.scene||{},fire=villageLayout.fire;
+      let a=scene.fireAnchors?.night||scene.fireAnchors?.day;
+      if(!(a&&Number.isFinite(Number(a.x))&&Number.isFinite(Number(a.y))))a=(scene.night||scene.day)?{x:50,y:50}:null;
+      if(!a)return {x:0,y:0};
+      return villageLayout.normalizeSeatOffset({x:Number(a.x)-fire.x,y:Number(a.y)-fire.y});
+    }catch(_){return {x:0,y:0}}
   }
   // Seats must be locked; deals the template's roles at random, starts the match and the first night.
   async ownerStart(gm,meta,body){
