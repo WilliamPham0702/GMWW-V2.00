@@ -104,9 +104,10 @@
     const inputBox=el('label','gmww-pr-quick-code'),inp=el('input');
     inp.id='gmwwQuickJoinCode';inp.placeholder='Nhập mã phòng';inp.maxLength=8;inp.autocapitalize='characters';inp.style.textTransform='uppercase';
     inp.value=pr.joinCode||'';inp.addEventListener('input',()=>{pr.joinCode=inp.value});
-    inputBox.append(inp,el('small',null,'Nhập mã phòng riêng của bạn bè'));
+    inputBox.append(inp);
     row.append(inputBox,btn('VÀO PHÒNG',()=>joinByCode(pr.joinCode),'gmww-pr-main'));
-    box.append(row);
+    // Ghi chú nằm dưới cả hàng để 3 ô luôn bằng nhau (rộng, cao).
+    box.append(row,el('small','gmww-pr-quick-help','Nhập mã phòng riêng của bạn bè'));
     if(pr.own)box.append(btn('XÓA PHÒNG',deleteRoom,'gmww-pr-danger'));
   }
   function viewQuickRoom(box,st,room,players){

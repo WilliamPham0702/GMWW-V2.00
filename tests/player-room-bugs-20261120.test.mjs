@@ -23,3 +23,11 @@ test('Phòng cũ đã lưu bị xoá im lặng; chỉ báo "Phòng đã đóng."
 test('Trang rời luôn nằm trong vùng nhìn thấy (visualViewport)',()=>{
   assert.match(web,/vl=Number\(vv\?\.offsetLeft\)\|\|0/);
 });
+test('Trang Tạo Phòng: 3 ô bằng nhau, nền mờ, chặn phóng chữ của Chrome/Edge',()=>{
+  const w=playerWebSource('37-player-rooms');
+  assert.match(w,/gmww-pr-quick-entry\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)!important/);
+  assert.match(w,/gmww-pr-panel\{background:linear-gradient\(155deg,rgba\(5,39,58,\.62\)/);
+  assert.match(w,/backdrop-filter:blur\(14px\)/);
+  assert.match(w,/html\{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important\}/);
+  assert.match(w,/box\.append\(row,el\('small','gmww-pr-quick-help','Nhập mã phòng riêng của bạn bè'\)\)/);
+});
