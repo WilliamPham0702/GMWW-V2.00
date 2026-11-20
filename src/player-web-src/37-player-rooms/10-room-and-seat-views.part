@@ -13,6 +13,8 @@
       pr.catalogStatus='ready';
     }catch(e){pr.catalogStatus='error';pr.catalogError=errText(e);throw e}
   }
+  // Nút Lưu / Bắt đầu luôn ở đầu trang (ngay dưới tiêu đề mục), không bị đẩy xuống cuối.
+  const pinTop=(box,node)=>{const sub=box.querySelector(':scope>.gmww-pr-sub');if(sub)sub.after(node);else box.prepend(node);return node};
   const btn=(label,fn,cls,disabled)=>{const b=el('button',cls||null,label);b.type='button';if(disabled||pr.busy)b.disabled=true;b.addEventListener('click',()=>run(fn));return b};
   const stat=(k,v)=>{const d=el('div','gmww-pr-stat');d.append(el('small',null,k),el('b',null,String(v)));return d};
   // Step the server is on, mapped to the six tabs; the owner can still browse the other tabs.
@@ -159,7 +161,7 @@
         for(const t of others)fold.append(el('p','gmww-pr-help',(t.name||'Ván Mẫu')+' • '+t.playerCount+' người'));box.append(fold)}
     }
     if(!owner)return;
-    box.append(btn('LƯU THIẾT LẬP → BẮT ĐẦU',async()=>{
+    pinTop(box,btn('LƯU THIẾT LẬP → BẮT ĐẦU',async()=>{
       if(!chosen||Number(chosen.playerCount)!==count)throw new Error('Chọn Ván Mẫu phù hợp số người trước.');
       const overrides={artifactsEnabled:pr.quickMatchArtifactEnabled??(chosen.compiledConfig.artifactsEnabled===true),
         timing:pr.quickMatchTiming||{},roleDurations:pr.quickMatchRoleSeconds||{}};
@@ -179,7 +181,7 @@
     box.append(el('p','gmww-pr-help','Hệ thống tự phân bố '+count+' ghế quanh đống lửa, khóa ghế, xáo vai và phát kín cho từng người rồi mở Đêm 1.'));
     if(!valid)box.append(el('p','gmww-pr-note','Số lá bài phải bằng số thành viên hiện tại. Vui lòng quay lại Ván Mẫu.'));
     if(!pr.own||!inOwnRoom()||room.endedAt)return;
-    box.append(btn('BẮT ĐẦU GAME',async()=>{
+    pinTop(box,btn('BẮT ĐẦU GAME',async()=>{
       if(!valid||count<3)throw new Error('Chưa có Ván Mẫu hợp lệ hoặc chưa đủ người.');
       const roster=members.map(p=>p.loginId).sort();
       if(!roster.includes(st.ownerLoginId))throw new Error('Chủ phòng phải ở trong ván.');

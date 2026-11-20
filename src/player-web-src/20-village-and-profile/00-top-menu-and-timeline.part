@@ -107,7 +107,7 @@ function renderPlayerTimeline(timeline){
  if(!strip){
   strip=document.createElement('div');strip.id='gmwwPlayerTimeline';
   const root=strip.attachShadow({mode:'open'});
-  root.innerHTML='<style>'+GMWW_SERVER_MENU.css+' :host{display:block;min-width:0}:host #start #playShell #playSetupStrip,:host #start #playShell #playBattleTop{position:relative!important;inset:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important}button{cursor:default}#start .play-battle-step{min-width:46px;justify-content:center;padding:5px 12px}#start .play-battle-step .battle-step-num{font-size:16px}</style><div id="start"><div id="playShell" class="play-shell">'+GMWW_SERVER_MENU.markup+'</div></div>';
+  root.innerHTML='<style>'+GMWW_SERVER_MENU.css+' :host{display:block;min-width:0}:host #start #playShell #playSetupStrip,:host #start #playShell #playBattleTop{position:relative!important;inset:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important}button{cursor:default}#start .play-battle-step{min-width:46px;justify-content:center;padding:5px 12px;gap:6px}#start .play-battle-step .battle-step-num{font-size:15px}#start .play-battle-step b{font-size:14px;font-weight:800;max-width:150px}#start .play-battle-step.is-completed .battle-step-num{color:#9fd8c8}</style><div id="start"><div id="playShell" class="play-shell">'+GMWW_SERVER_MENU.markup+'</div></div>';
   menu.insertBefore(strip,menu.firstChild);
  }
  const room=state.room||{},stage=room.gmStage==='room'?'lobby':String(room.gmStage||'lobby');
@@ -130,8 +130,9 @@ function renderPlayerTimeline(timeline){
    node.className='play-battle-step is-'+(step.status==='done'?'completed':step.status==='active'?'active':'upcoming');
    node.setAttribute('aria-current',step.status==='active'?'step':'false');
    const num=document.createElement('span');num.className='battle-step-num';num.textContent=step.status==='done'?'✓':String(i+1);
-   // Player Web không hiện tên vai trong timeline (chỉ số thứ tự lượt).
-   node.setAttribute('aria-label','Lượt '+(i+1));node.append(num);list.appendChild(node);
+   // Hiện tên lượt như Server: "✓ Bảo Vệ", "3 Sói Tuyết", "4 Phù Thủy" (chỉ tên lượt gọi công khai, không lộ ai giữ vai).
+   const name=document.createElement('b');name.textContent=String(step.label||'Lượt '+(i+1)).trim()||('Lượt '+(i+1));
+   node.setAttribute('aria-label','Lượt '+(i+1)+': '+name.textContent);node.append(num,name);list.appendChild(node);
   }
   list.querySelector('.is-active')?.scrollIntoView({block:'nearest',inline:'center'});
  }
