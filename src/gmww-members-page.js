@@ -2,7 +2,7 @@ const HTML=`<!doctype html>
 <html lang="vi" data-gmww-boot="pending">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#050711">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=wolf1">
 <link rel="shortcut icon" href="/favicon.svg?v=wolf1">
