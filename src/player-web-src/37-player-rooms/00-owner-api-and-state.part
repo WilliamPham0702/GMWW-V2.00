@@ -28,7 +28,7 @@
   async function refresh(options={}){
     if(!pr.own)return;
     try{pr.state=await api(base()+'state',{headers:oh()});noteJoins(pr.state)}
-    catch(e){if(e?.status===404||e?.status===401){pr.own=null;pr.state=null;pr.known=null;save(null);say('Phòng đã đóng.')}}
+    catch(e){if(e?.status===404||e?.status===401){const inside=inOwnRoom();pr.own=null;pr.state=null;pr.known=null;save(null);say(inside?'Phòng đã đóng.':'')}}
     render({background:options.background===true});autoSeat();
   }
   async function create(quick=false){

@@ -20,7 +20,8 @@
   function placeGeometry(panel,edge,bars){
     const gap=5,vw=innerWidth,vh=innerHeight,top=bars.top?bars.top.bottom+gap:8,bot=bars.bottom?bars.bottom.top-gap:vh-8;
     const ref=(edge==='top'?bars.top:bars.bottom)||bars.bottom||bars.top,width=Math.min(ref?ref.width:vw,vw-16),left=ref?ref.left+(ref.width-width)/2:(vw-width)/2;
-    return{top,bot,width,left:Math.max(8,Math.min(vw-width-8,left)),maxH:Math.max(180,Math.min(bot-top,vh-290))};
+    const vv=window.visualViewport,vl=Number(vv?.offsetLeft)||0,vwv=Math.min(vw,Number(vv?.width)||vw),w2=Math.min(width,vwv-16);
+    return{top,bot,width:w2,left:Math.max(vl+8,Math.min(vl+vwv-w2-8,left+(width-w2)/2)),maxH:Math.max(180,Math.min(bot-top,vh-290))};
   }
   // iOS Safari/WebKit's keyboard shrinks visualViewport, not innerHeight.
   // Keep the entire chat composer within the visible area and above the keyboard.
@@ -239,10 +240,10 @@
     let host=document.getElementById('gmwwOwnerDock');if(host)return host;
     host=el('div');host.id='gmwwOwnerDock';host.hidden=true;
     const root=host.attachShadow({mode:'open'});
-    root.innerHTML='<style>'+GMWW_SERVER_MENU.css+SHADOW_BASE+'#start #playShell #gmTopMenu.gm-top-menu-v293{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;top:auto!important;width:100%!important;max-width:520px;margin:0 auto!important;transform:none!important;height:62px!important;min-height:62px!important;border:0!important;outline:0!important;background:transparent!important;grid-template-columns:48px 48px minmax(0,1fr) 48px!important}</style><div id="start"><div id="playShell" class="play-shell" data-phase="lobby" style="position:relative;height:auto;min-height:0;padding:0;background:none;overflow:visible">'+GMWW_SERVER_MENU.dock+'</div></div>';
+    root.innerHTML='<style>'+GMWW_SERVER_MENU.css+SHADOW_BASE+'#start #playShell #gmTopMenu.gm-top-menu-v293{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;top:auto!important;width:100%!important;max-width:520px;margin:0 auto!important;transform:none!important;height:62px!important;min-height:62px!important;border:0!important;outline:0!important;background:transparent!important;grid-template-columns:48px 48px minmax(0,1fr) 48px!important}#start #playShell #gmTopMenu .gm-top-info-copy-v293 b{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;font-size:11.5px!important;line-height:13px!important;letter-spacing:0!important;word-break:keep-all}#start #playShell #gmTopMenu .gm-top-info-copy-v293 small{white-space:normal!important;letter-spacing:.02em!important;line-height:9px!important}</style><div id="start"><div id="playShell" class="play-shell" data-phase="lobby" style="position:relative;height:auto;min-height:0;padding:0;background:none;overflow:visible">'+GMWW_SERVER_MENU.dock+'</div></div>';
     const q=id=>root.getElementById(id),owner=()=>!!(pr.own&&inOwnRoom());
     q('playPhasePill').addEventListener('click',()=>{
-      if(quickMode()){onTab(!state?.roomCode?'room':(QUICK_ORDER.some(s=>s[0]===pr.view)?pr.view:'room'));return}
+      if(quickMode()){const cur=QUICK_ORDER.findIndex(s=>s[0]===pr.view),nxt=QUICK_ORDER[Math.min(QUICK_ORDER.length-1,cur+1)];onTab(!state?.roomCode?'room':(cur>=0?nxt[0]:'room'));return}
       if(!state?.roomCode){onTab('room');return}
       if(pr.own&&!owner()){run(async()=>{await rejoinOwn();pr.view='room';pr.touched=true;openSheet()});return}
       if(state.room?.quickPlay&&state.room.phase==='lobby'){onTab('room');return}
@@ -357,8 +358,10 @@
     const root=dock.shadowRoot,title=root.getElementById('playPhaseTitle'),hint=root.getElementById('playPhaseHint'),
       owner=!!(pr.own&&inOwnRoom()),nxt=ORDER[idx+1],label=(owner||!state?.roomCode)&&nxt?LABEL[nxt]:(LABEL[now]||'SẢNH CHỜ'),
       h=!state?.roomCode?'CHẠM ĐỂ VÀO PHÒNG':!owner?'CHỦ PHÒNG ĐIỀU HÀNH':now==='battle'?'ĐANG CHƠI':'CHẠM ĐỂ TIẾP';
-    const shownLabel=quick?(String(room.phase||'').toLowerCase()==='running'?'ĐANG CHƠI':QUICK_ORDER.find(s=>s[0]===qkey)?.[1]?.toUpperCase()||'TẠO PHÒNG'):label;
-    const shownHint=quick?(!state?.roomCode?'CHẠM ĐỂ TẠO/VÀO PHÒNG':owner?'CHỦ PHÒNG ĐIỀU HÀNH':'ĐANG Ở TRONG PHÒNG'):h;
+    const qi=QUICK_ORDER.findIndex(s=>s[0]===qkey),qnext=QUICK_ORDER[Math.min(QUICK_ORDER.length-1,qi+1)];
+    // Nút giữa luôn ghi tên BƯỚC TIẾP THEO (Sảnh Chờ → Tạo Phòng → Ván Mẫu → Bắt Đầu).
+    const shownLabel=quick?(String(room.phase||'').toLowerCase()==='running'?'ĐANG CHƠI':(qnext?.[1]||'Tạo Phòng').toUpperCase()):label;
+    const shownHint=quick?(!state?.roomCode?'CHẠM ĐỂ TẠO/VÀO PHÒNG':'CHẠM ĐỂ TIẾP'):h;
     if(title.textContent!==shownLabel)title.textContent=shownLabel;if(hint.textContent!==shownHint)hint.textContent=shownHint;
     root.getElementById('playEndGame').style.opacity=owner&&now==='battle'?'1':'.35';
   }
