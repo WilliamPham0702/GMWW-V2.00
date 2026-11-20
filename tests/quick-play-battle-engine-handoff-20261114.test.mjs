@@ -52,10 +52,10 @@ test('Winner and night/day engine are still the original server paths',()=>{
   assert.match(worker,/await this\.applyCycle\(fresh,"night",1,"night-1","auto"\)/);
   assert.match(worker,/this\.computeWinProposal\(meta/);
 });
-test('Màn trận Player Web: timeline chỉ số thứ tự, không có nút Đêm/Ngày; chạm dock mở khoá audio',()=>{
+test('Màn trận Player Web: timeline số + tên lượt như Server, không có nút Đêm/Ngày; chạm dock mở khoá audio',()=>{
   assert.match(room,/unlockGmwwAudio\(\)/);
-  assert.match(top,/node\.append\(num\);list\.appendChild\(node\)/);
-  assert.doesNotMatch(top,/label\.textContent=String\(step\.label/);
+  assert.match(top,/node\.append\(num,name\);list\.appendChild\(node\)/);
+  assert.match(top,/name\.textContent=String\(step\.label/);
   assert.match(top,/for\(const id of \['battleBack','battleAdvance'\]\)\{const button=root\.querySelector\('#'\+id\);if\(button\)\{button\.hidden=true/);
 });
 
