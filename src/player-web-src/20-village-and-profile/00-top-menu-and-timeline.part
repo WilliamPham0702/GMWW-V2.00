@@ -107,7 +107,7 @@ function renderPlayerTimeline(timeline){
  if(!strip){
   strip=document.createElement('div');strip.id='gmwwPlayerTimeline';
   const root=strip.attachShadow({mode:'open'});
-  root.innerHTML='<style>'+GMWW_SERVER_MENU.css+' :host{display:block;min-width:0}:host #start #playShell #playSetupStrip,:host #start #playShell #playBattleTop{position:relative!important;inset:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important}button{cursor:default}</style><div id="start"><div id="playShell" class="play-shell">'+GMWW_SERVER_MENU.markup+'</div></div>';
+  root.innerHTML='<style>'+GMWW_SERVER_MENU.css+' :host{display:block;min-width:0}:host #start #playShell #playSetupStrip,:host #start #playShell #playBattleTop{position:relative!important;inset:auto!important;width:100%!important;max-width:none!important;margin:0!important;transform:none!important}button{cursor:default}#start .play-battle-step{min-width:46px;justify-content:center;padding:5px 12px}#start .play-battle-step .battle-step-num{font-size:16px}</style><div id="start"><div id="playShell" class="play-shell">'+GMWW_SERVER_MENU.markup+'</div></div>';
   menu.insertBefore(strip,menu.firstChild);
  }
  const room=state.room||{},stage=room.gmStage==='room'?'lobby':String(room.gmStage||'lobby');
@@ -130,11 +130,14 @@ function renderPlayerTimeline(timeline){
    node.className='play-battle-step is-'+(step.status==='done'?'completed':step.status==='active'?'active':'upcoming');
    node.setAttribute('aria-current',step.status==='active'?'step':'false');
    const num=document.createElement('span');num.className='battle-step-num';num.textContent=step.status==='done'?'✓':String(i+1);
-   const label=document.createElement('b');label.textContent=String(step.label||'Lượt');node.append(num,label);list.appendChild(node);
+   // Player Web không hiện tên vai trong timeline (chỉ số thứ tự lượt).
+   node.setAttribute('aria-label','Lượt '+(i+1));node.append(num);list.appendChild(node);
   }
   list.querySelector('.is-active')?.scrollIntoView({block:'nearest',inline:'center'});
  }
- for(const id of ['battleBack','battleAdvance']){const button=root.querySelector('#'+id);button.disabled=true;button.querySelector('b').textContent=(id==='battleBack'?'<Đêm ':'Ngày ')+Math.max(1,Number(room.cycleNight)||1)+(id==='battleAdvance'?'>':'')}
+ // Nút <Đêm / Ngày> là điều khiển của GM: Player Web bỏ hẳn, thanh trên chỉ còn timeline.
+ for(const id of ['battleBack','battleAdvance']){const button=root.querySelector('#'+id);if(button){button.hidden=true;button.style.setProperty('display','none','important')}}
+ if(battle)battleTop.style.setProperty('grid-template-columns','minmax(0,1fr)','important');
  menu.querySelector('.gmww-player-menu-info')?.setAttribute('hidden','');
  if(typeof gmwwTopTickerRender==='function')gmwwTopTickerRender();
 }

@@ -265,51 +265,41 @@
 
   // Player-created matches reuse existing room state, private actions, voice,
   // gallows and result handlers. This is only the phase-aware bottom controller.
+  // Màn trận Player Web = bố cục trận của Server, phần dành cho người chơi:
+  // dưới cùng chỉ có [đồng hồ] [ô chat]; ô hành động chỉ hiện khi bạn có việc phải làm.
+  // Không có menu GM (Khôi phục, Điều hành, Audio, icon Cứu/Giết/Câm…).
+  function quickActionStage(room){
+    if(room.cyclePhase==='night'){
+      const offers=state.onlineActions||[];
+      return offers.length&&!offers.every(a=>a.blocked)?'night':'';
+    }
+    const stage=typeof gallowsCurrentStage==='function'?gallowsCurrentStage():'ready';
+    return stage==='nominating'||stage==='voting'?stage:'';
+  }
   function ensureQuickBattleDock(){
     let host=document.getElementById('gmwwQuickBattleDock');if(host)return host;
     host=el('nav');host.id='gmwwQuickBattleDock';host.hidden=true;host.setAttribute('aria-label','Menu dưới trong trận');
-    const style=el('style');style.textContent='#gmwwQuickBattleDock{position:fixed;box-sizing:border-box;z-index:9650;left:calc(var(--gmww-player-visible-left,0px) + 8px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));transform:translateY(-100%);width:calc(var(--gmww-player-visible-width,100vw) - 16px);display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;padding:6px;border-radius:13px;background:linear-gradient(180deg,#0f4c75ee,#072a44f5);border:1px solid #5bc1e5;box-shadow:0 5px 22px #001b31a8}'+
-      '#gmwwQuickBattleDock[hidden]{display:none!important}#gmwwQuickBattleDock button{font:700 clamp(9px,1.8vw,12px)/1.2 system-ui;color:#f1fcff;background:#14598a;border:1px solid #4cb0d5;border-radius:9px;min-width:0;min-height:49px;padding:4px 2px;white-space:normal;overflow-wrap:anywhere}#gmwwQuickBattleDock button:disabled{opacity:.5}';
+    const style=el('style');style.textContent='#gmwwQuickBattleDock{position:fixed;box-sizing:border-box;z-index:9650;left:calc(var(--gmww-player-visible-left,0px) + 8px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));transform:translateY(-100%);width:calc(var(--gmww-player-visible-width,100vw) - 16px);max-width:760px;display:grid;grid-template-columns:74px minmax(0,1fr);gap:8px;padding:0;background:transparent;border:0}'+
+      '#gmwwQuickBattleDock.has-action{grid-template-columns:74px minmax(0,1fr) 74px}'+
+      '#gmwwQuickBattleDock[hidden]{display:none!important}#gmwwQuickBattleDock button{font:800 15px/1.15 system-ui,-apple-system,sans-serif;color:#eefaff;background:#123b52e6;border:1.5px solid #6fa9bdaa;border-radius:16px;min-width:0;min-height:58px;padding:4px 6px;box-shadow:0 4px 14px #00182b66;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}'+
+      '#gmwwQuickBattleDock [data-battle-control="clock"]{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:19px;font-variant-numeric:tabular-nums}#gmwwQuickBattleDock [data-battle-control="clock"] i{font-style:normal;font-size:16px;line-height:1}'+
+      '#gmwwQuickBattleDock [data-battle-control="chat"]{text-align:left;padding:0 18px;font-weight:600;font-size:16px;color:#d9eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+      '#gmwwQuickBattleDock [data-battle-control="action"]{background:#1c6a4ae6;border-color:#8ee0b0;font-size:12px}#gmwwQuickBattleDock [data-battle-control="action"][hidden]{display:none}';
     document.head.appendChild(style);
-    for(const key of ['clock','activity','chat','decision','audio','room']){
+    for(const key of ['clock','chat','action']){
       const button=el('button');button.type='button';button.dataset.battleControl=key;
+      if(key==='clock')button.setAttribute('aria-label','Thời gian lượt');
+      if(key==='chat')button.textContent='Nhắn cho phòng…';
       button.addEventListener('click',()=>{
-        const room=(pr.own&&inOwnRoom()?pr.state?.room:state?.room)||{},night=room.cyclePhase==='night';
+        try{unlockGmwwAudio()}catch(_){}
+        const room=(pr.own&&inOwnRoom()?pr.state?.room:state?.room)||{};
         if(key==='clock'){revealPlayerTopMenu(true);return}
         if(key==='chat'){pr.chatOpen?closeChat():openChat();return}
-        if(key==='activity'){
-          if(!night){openChat();return}
-          const offers=state.onlineActions||[];renderOnlineActionDock();
-          if(!offers.length)toast('Chưa đến lượt hành động của bạn.');
-          else if(offers.every(a=>a.blocked))toast(offers[0].blockedReason||'Bạn không thể hành động đêm nay.');
-          else toast('Chạm hoặc kéo icon hành động tại lối vào làng.');
-          return;
-        }
-        if(key==='decision'){
-          if(night){void gmwwOnlineRestore();return}
-          const stage=typeof gallowsCurrentStage==='function'?gallowsCurrentStage():'ready';
-          if(stage==='nominating'){
-            state.gallowsNominationOpen=true;renderGallowsWidget();
-            if(document.getElementById('gmwwGallowsPlayer')?.hidden)toast('Bạn không có lượt đề cử hợp lệ.');
-          }else if(stage==='voting'){
-            renderGallowsWidget();
-            if(document.getElementById('gmwwGallowsDock')?.hidden)toast('Bạn không có lượt bỏ phiếu hợp lệ.');
-          }else{
-            renderGallowsWidget();toast('Lên Giàn chưa mở hoặc đã kết thúc.');
-          }
-          return;
-        }
-        if(key==='audio'){
-          try{localStorage.removeItem('gmww_player_announcement_audio_off')}catch(_){}
-          unlockGmwwAudio();
-          const cue=gmwwAnnouncementPending?.cue;
-          if(!cue||!Array.isArray(cue.audio)||!cue.audio.length)toast('Phòng chưa có clip audio GM cho lượt này. Cần nạp thư viện từ GM Server.');
-          else{gmwwPlayerCueKey='';void gmwwPlayAnnouncement()}
-          return;
-        }
-        if(pr.own&&inOwnRoom()){onTab('room');return}
-        if(state.role)setGameViewPane('role',{persist:false});
-        else toast('Đang đồng bộ Vai Trò từ máy chủ.');
+        const stage=quickActionStage(room);
+        if(stage==='night'){renderOnlineActionDock();toast('Chạm hoặc kéo icon hành động vào người chơi.');return}
+        if(stage==='nominating'){state.gallowsNominationOpen=true;renderGallowsWidget();return}
+        if(stage==='voting'){renderGallowsWidget();return}
+        toast('Chưa đến lượt hành động của bạn.');
       });
       host.append(button);
     }
@@ -330,14 +320,11 @@
     return (paused?'⏸ ':'')+String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0');
   }
   function renderQuickBattleDock(host,room){
-    const night=room.cyclePhase==='night',owner=!!(pr.own&&inOwnRoom());
-    const labels={clock:'⏱ '+quickBattleClock(room),activity:night?'⚔ Hành động':'📣 Thông cáo',
-      chat:'💬 Chat',decision:night?'↶ Khôi phục':'🗳 Lên Giàn',
-      audio:'🔊 Audio',room:owner?'⚙ Điều hành':'🃏 Vai Trò'};
-    for(const button of host.querySelectorAll('button[data-battle-control]')){
-      const key=button.dataset.battleControl;if(button.textContent!==labels[key])button.textContent=labels[key];
-      if(key==='decision')button.disabled=night?!(gmwwOnlineCanRestore||gmwwOnlinePick):false;
-    }
+    const clock=host.querySelector('[data-battle-control="clock"]'),action=host.querySelector('[data-battle-control="action"]');
+    const t=quickBattleClock(room).replace('--:--','00:00'),html='<i>🕒</i>'+t;
+    if(clock.dataset.t!==t){clock.dataset.t=t;clock.innerHTML=html}
+    const stage=quickActionStage(room),label=stage==='night'?'⚔ Hành động':stage==='nominating'?'🗳 Đề cử':stage==='voting'?'🗳 Bỏ phiếu':'';
+    action.hidden=!stage;host.classList.toggle('has-action',!!stage);if(action.textContent!==label)action.textContent=label;
   }
   function renderChrome(){
     const show=barScreen(),quick=quickMode(),strip=ensureStrip(),quickStrip=ensureQuickStrip(),dock=ensureDock(),battleDock=ensureQuickBattleDock();
