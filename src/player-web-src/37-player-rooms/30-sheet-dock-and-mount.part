@@ -375,9 +375,11 @@
     const chatTyping=pr.chatOpen&&document.activeElement?.id==='gmwwChatText';
     const gameRunning=String((pr.own&&inOwnRoom()?pr.state?.room:state?.room)?.phase||'').toLowerCase()==='running';
     // Khi vào trận, ẩn menu thiết lập để engine Đêm/Ngày/Lên Giàn hiển thị.
-    strip.hidden=!show||quick||chatTyping;quickStrip.hidden=!show||!quick||chatTyping||gameRunning;
+    strip.hidden=!show||quick||chatTyping||gameRunning;quickStrip.hidden=!show||!quick||chatTyping||gameRunning;
     dock.hidden=!show||pr.chatOpen;
     battleDock.hidden=!show||!quick||!gameRunning||pr.chatOpen;
+    // Đang trong trận (mọi loại phòng): menu trên là timeline + Thông cáo Làng 📢, không bị ẩn.
+    if(gameRunning&&show)document.getElementById('gmwwPlayerTopMenu')?.classList.remove('is-idle-hidden');
     if(quick&&gameRunning&&show){
       document.getElementById('gmwwPlayerTopMenu')?.classList.remove('is-idle-hidden');
       renderQuickBattleDock(battleDock,(pr.own&&inOwnRoom()?pr.state?.room:state?.room)||{});

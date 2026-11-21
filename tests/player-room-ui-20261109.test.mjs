@@ -67,7 +67,7 @@ test('Quick Play V2 top bar replaces legacy seven-step menu even before a room e
   assert.match(part,/function ensureQuickStrip\(\)/);
   assert.match(part,/host\.id='gmwwQuickStageStrip'/);
   assert.match(part,/nav id="quickSetupStrip" aria-label="Chơi nhanh V2"/);
-  assert.match(part,/strip\.hidden=!show\|\|quick\|\|chatTyping;quickStrip\.hidden=!show\|\|!quick\|\|chatTyping/);
+  assert.match(part,/strip\.hidden=!show\|\|quick\|\|chatTyping\|\|gameRunning;quickStrip\.hidden=!show\|\|!quick\|\|chatTyping/);
   assert.match(part,/return\{top:rect\('gmwwQuickStageStrip','quickSetupStrip'\)\|\|rect\('gmwwStageStrip','playSetupStrip'\)/);
   assert.doesNotMatch(part,/const tabs=el\('nav','gmww-pr-steps gmww-pr-quicksteps'\)/,
     'the setup sheet must not contain a duplicate four-step menu');
@@ -128,4 +128,10 @@ test('Quick Play V2: four controls share a row, followed by lock/next and member
   assert.ok(row>0&&step>row&&joined>step);
   assert.match(part,/TIẾP: VÁN MẪU →/);
   assert.match(part,/\.gmww-pr-room-toolbar\{display:grid;grid-template-columns:/);
+});
+test('21/11/2026: phòng GM đang trận trên Web: ẩn menu bước để hiện timeline + Thông cáo Làng 📢',()=>{
+  const src=playerWebSource('37-player-rooms'),top=playerWebSource('20-village-and-profile');
+  assert.match(src,/strip\.hidden=!show\|\|quick\|\|chatTyping\|\|gameRunning;/);
+  assert.match(src,/if\(gameRunning&&show\)document\.getElementById\('gmwwPlayerTopMenu'\)\?\.classList\.remove\('is-idle-hidden'\)/);
+  assert.match(top,/toLowerCase\(\)==='running'&&String\(state\.room\?\.roomMode\|\|'online'\)\.toLowerCase\(\)==='online'\)return;/);
 });

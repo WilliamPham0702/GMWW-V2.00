@@ -145,6 +145,7 @@ function renderPlayerTimeline(timeline){
 
 function hidePlayerTopMenu(){
   if(state.room?.quickPlay===true&&String(state.room.phase||'').toLowerCase()==='running')return;
+  if(String(state.room?.phase||'').toLowerCase()==='running'&&String(state.room?.roomMode||'online').toLowerCase()==='online')return;
   const menu=$('#gmwwPlayerTopMenu');if(menu&&state.member)menu.classList.add('is-idle-hidden');
   document.getElementById('gmwwOnlineFooter')?.classList.add('is-idle-hidden');gmwwChatClosePanel();
 }
