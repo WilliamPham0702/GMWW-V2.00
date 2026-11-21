@@ -46,8 +46,9 @@ test('downloaded MP3 bytes are re-hashed and streamed only for current turn targ
 test('existing room-uploaded audio and privacy admission retain precedence',()=>{
  const ann=readFileSync('src/worker/room/announcements.js','utf8');
  assert.match(ann,/if\(lib\[target\]\)return \[/);
- assert.match(ann,/if\(!cue\?\.audio\?\.some\(u=>u\.endsWith\('\?a='\+hash\)\)\)return new Response\(null,\{status:404\}\)/);
- assert.match(ann,/readSharedAudioClip\(meta,live\?\.targets\|\|\[\],hash\.slice\(1\)\)/);
+ assert.match(ann,/if\(!cue\?\.audio\?\.some\(u=>u\.endsWith\('\?a='\+hash\)\)&&!recentOk\)return new Response\(null,\{status:404\}\)/);
+ assert.match(ann,/meta\.quickPlay===true&&hash\.startsWith\('s'\)\?this\.recentAnnClips/);
+ assert.match(ann,/readSharedAudioClip\(meta,targets,hash\.slice\(1\)\)/);
  assert.match(ann,/sharedAudioTargetsForCue\(meta,\['system:audio_system_countdown'\],shared\)/);
  const worker=workerSource();
  assert.match(worker,/members\/session/);

@@ -12,7 +12,7 @@ export class RoomAnnouncementMethods {
     if(cue&&meta?.quickPlay===true&&meta.cyclePhase==='night'){
       const x=await this.ctx.storage.get('annNightExtra'),turn=runtime?.queue?.[runtime.cursor];
       if(x&&x.matchId===String(meta.matchId||'')&&x.cycleKey===String(meta.cycleKey||'')&&turn&&x.turnId===String(turn.id||''))
-        return {...cue,key:cue.key+':confirm:'+Number(x.seq||1),targets:x.targets,startedAt:Number(x.startedAt)||0};
+        return {...cue,key:cue.key+':confirm:'+Number(x.seq||1),targets:[...cue.targets,...x.targets].slice(0,12),startedAt:Number(x.startedAt)||0};
     }
     return cue;
   }
@@ -31,6 +31,10 @@ export class RoomAnnouncementMethods {
     });
     const out={key:cue.key,label:cue.label,startedAt:cue.startedAt};
     if(urls.length){out.audio=urls;out.audioUrl=urls[0]}
+    // Clip vừa phát (lượt trước / gọi vai trước tiếng Xác nhận) vẫn tải được thêm 2 phút: máy tải chậm không bị 404.
+    const until=Date.now()+120000;this.recentAnnClips=this.recentAnnClips||new Map();
+    for(const u of urls){const h=u.slice(u.indexOf('?a=')+3);this.recentAnnClips.set(h,{until,targets:cue.targets.slice()})}
+    if(this.recentAnnClips.size>80)for(const [h,v] of this.recentAnnClips)if(v.until<Date.now())this.recentAnnClips.delete(h);
     return out;
   }
   // Chơi nhanh (không có app GM): máy chủ tự xếp audio công khai như GM Server
@@ -158,10 +162,12 @@ export class RoomAnnouncementMethods {
     if(!meta||meta.enabled===false||!players['member:'+normalizeLoginId(body?.loginId)])return j({ok:false,error:'PLAYER_NOT_IN_ROOM'},403);
     // Only clips of the turn that is live right now are readable by Players.
     const cue=await this.announcementWithAudio(meta),hash=String(body?.a||'');
-    if(!cue?.audio?.some(u=>u.endsWith('?a='+hash)))return new Response(null,{status:404});
+    const recent=meta.quickPlay===true&&hash.startsWith('s')?this.recentAnnClips?.get(hash):null,recentOk=!!recent&&recent.until>Date.now();
+    if(!cue?.audio?.some(u=>u.endsWith('?a='+hash))&&!recentOk)return new Response(null,{status:404});
     if(/^s[a-f0-9]{64}$/.test(hash)){
       const live=await this.currentAnnouncement(meta);
-      return readSharedAudioClip(meta,live?.targets||[],hash.slice(1));
+      const targets=[...new Set([...(live?.targets||[]),...(recentOk?recent.targets:[])])];
+      return readSharedAudioClip(meta,targets,hash.slice(1));
     }
     return readAnnouncementBlob(this.ctx.storage,hash);
   }
