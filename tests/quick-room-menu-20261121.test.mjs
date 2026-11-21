@@ -104,3 +104,8 @@ test('Web: nút Chat nhấp nháy khi có tin mới',()=>{
   assert.match(web,/#gmwwQuickBattleDock \[data-battle-control="chat"\]\.gmww-chat-unread\{animation:gmwwChatBlink/);
   assert.match(web,/pr\.chatOpen=true;try\{gmwwChatUnread\(false\)\}catch\(_\)\{\}/);
 });
+test('Audio bị iPhone chặn → hiện nút Chạm để bật âm thanh',()=>{
+  const chat=playerWebSource('35-online-chat');
+  assert.match(chat,/function gmwwAudioLockedPrompt\(show\)/);
+  assert.match(chat,/catch\(e\)\{if\(generation===gmwwAnnouncementGeneration&&!gmwwChatAudioOff\(\)\)gmwwAudioLockedPrompt\(true\)\}/);
+});
