@@ -145,7 +145,7 @@ test('V3.303: every turn change pushes the live clip + start time; Players read 
   assert.ok(worker.includes("['night_turn','room_cycle','room_state','auto_gm','demo_control','room_reset','room_hard_reset','game_result'].includes(safe.type))this.scheduleAnnouncementSync()"),'turn/phase broadcasts trigger the audio push');
 });
 
-test('V3.303: Player joins the clip at the Server position, skips finished clips, reuses cached clips and rejects foreign URLs',async()=>{
+test('V3.303/21-11: Player plays the full clip from the start, skips stale clips, reuses cached clips and rejects foreign URLs',async()=>{
   const starts=[],requests=[];let now=1_000_000;
   class Ctx{constructor(){this.state='running';this.currentTime=5}resume(){return Promise.resolve()}
     decodeAudioData(d,ok){const b={duration:4};ok(b);return Promise.resolve(b)}
@@ -163,12 +163,12 @@ test('V3.303: Player joins the clip at the Server position, skips finished clips
   context.actions.announce({key:'m:n1:t1',label:'Tiên Tri',startedAt:now-1500,audio:[url]});
   await tick();await tick();
   assert.equal(requests[0].opts.headers.Authorization,'Bearer player');
-  assert.ok(Math.abs(starts[0]-1.5)<0.01,'late device seeks to where everyone else is');
+  assert.equal(starts[0],0,'late download still plays the whole clip (no cut start)');
   context.actions.announce({key:'m:n2:t1',label:'Tiên Tri',startedAt:now,audio:[url]});
   await tick();await tick();
   assert.equal(requests.length,1,'same clip next night comes from cache');
   assert.equal(starts[1],0,'on-time device starts from the beginning');
-  context.actions.announce({key:'m:n2:t2',label:'Bảo Vệ',startedAt:now-9000,audio:[url]});
+  context.actions.announce({key:'m:n2:t2',label:'Bảo Vệ',startedAt:now-13000,audio:[url]});
   await tick();await tick();
   assert.equal(starts.length,2,'a clip already finished elsewhere is not replayed late');
   context.actions.announce({key:'m:n2:t3',label:'X',startedAt:now,audio:['https://other.example/a.mp3']});

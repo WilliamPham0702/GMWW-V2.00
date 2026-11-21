@@ -8,7 +8,13 @@ export class RoomAnnouncementMethods {
   async currentAnnouncement(meta,runtime){
     if(runtime===undefined)runtime=meta?.cyclePhase==='night'?await this.getNightRuntime(meta,Number(meta.cycleNight),false):null;
     const day=meta&&meta.cyclePhase!=='night'?await this.ctx.storage.get('annDay'):null;
-    return announcementCue(meta,runtime,day);
+    const cue=announcementCue(meta,runtime,day);
+    if(cue&&meta?.quickPlay===true&&meta.cyclePhase==='night'){
+      const x=await this.ctx.storage.get('annNightExtra'),turn=runtime?.queue?.[runtime.cursor];
+      if(x&&x.matchId===String(meta.matchId||'')&&x.cycleKey===String(meta.cycleKey||'')&&turn&&x.turnId===String(turn.id||''))
+        return {...cue,key:cue.key+':confirm:'+Number(x.seq||1),targets:x.targets,startedAt:Number(x.startedAt)||0};
+    }
+    return cue;
   }
   // Public cue for Players: label, Server start time and opaque clip URLs only.
   async announcementWithAudio(meta,runtime){
@@ -26,6 +32,48 @@ export class RoomAnnouncementMethods {
     const out={key:cue.key,label:cue.label,startedAt:cue.startedAt};
     if(urls.length){out.audio=urls;out.audioUrl=urls[0]}
     return out;
+  }
+  // Chơi nhanh (không có app GM): máy chủ tự xếp audio công khai như GM Server
+  // (sáng: Làng ơi dậy đi + số người chết…, Lên Giàn: mở đề cử/bỏ phiếu/kết quả).
+  async quickPlayDayAudio(meta,targets,tag){
+    if(meta?.quickPlay!==true||meta?.phase!=='running'||!['morning','day'].includes(String(meta?.cyclePhase||'')))return false;
+    const list=dayAnnouncementTargets(targets);if(!list.length)return false;
+    const dedupe=String(meta.matchId||'')+':'+String(tag||'');
+    if((await this.ctx.storage.get('annQuickTag'))===dedupe)return false;
+    await this.ctx.storage.put('annQuickTag',dedupe);
+    const prev=await this.ctx.storage.get('annDay'),same=prev&&prev.matchId===String(meta.matchId||'')&&prev.cycleKey===String(meta.cycleKey||'');
+    await this.ctx.storage.put('annDay',{matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),seq:same?Number(prev.seq||0)+1:1,targets:list,startedAt:Date.now()});
+    await this.syncAnnouncementCue(false);
+    return true;
+  }
+  quickPlayMorningTargets(meta,rows,night){
+    const mine=(Array.isArray(rows)?rows:[]).filter(x=>x&&x.effectActive!==false&&(!x.matchId||String(x.matchId)===String(meta.matchId||''))&&Number(x.night)===Number(night));
+    const dead=new Set(mine.filter(x=>String(x.type)==='dead').map(x=>normalizeLoginId(x.loginId)).filter(Boolean)).size;
+    const out=['system:audio_system_day_wakeup'];
+    if(dead>0)out.push('system:audio_system_morning_deaths_intro','system:audio_system_morning_number_'+Math.min(5,dead),'system:audio_system_morning_dead_noun');
+    if(mine.some(x=>String(x.type)==='expelled'))out.push('system:audio_system_morning_expelled');
+    if(mine.some(x=>['assassin_mark','marked'].includes(String(x.type))))out.push('system:audio_system_morning_marked');
+    return out;
+  }
+  async quickPlayGallowsAudio(meta,ballot){
+    if(meta?.quickPlay!==true||!ballot?.id)return false;
+    const now=Date.now(),raw=String(ballot.stage||'ready');
+    const stage=raw==='nominating'&&now>=Number(ballot.nominationDeadlineAt||Infinity)?'selecting':raw;
+    const targets=stage==='nominating'?['system:audio_system_gallows_day_long','system:audio_system_gallows_open_nomination']:
+      stage==='voting'?['system:audio_system_gallows_open_vote']:
+      stage==='resolved'?[ballot.outcome==='dead'?'system:audio_system_gallows_result_dead':'system:audio_system_gallows_result_saved']:[];
+    if(!targets.length)return false;
+    return this.quickPlayDayAudio(meta,targets,'gallows:'+ballot.id+':'+stage);
+  }
+  // Ban đêm: người chơi xác nhận hành động → phát "xác nhận" cho cả phòng (như loa GM).
+  async quickPlayConfirmCue(){
+    const meta=await this.ctx.storage.get('meta');
+    if(meta?.quickPlay!==true||meta?.phase!=='running'||String(meta?.cyclePhase||'')!=='night')return false;
+    const prev=await this.ctx.storage.get('annNightExtra'),turnId=String(meta.currentNightTurnId||'');
+    const same=prev&&prev.matchId===String(meta.matchId||'')&&prev.cycleKey===String(meta.cycleKey||'')&&prev.turnId===turnId;
+    await this.ctx.storage.put('annNightExtra',{matchId:String(meta.matchId||''),cycleKey:String(meta.cycleKey||''),turnId,seq:same?Number(prev.seq||0)+1:1,targets:['system:audio_system_confirm'],startedAt:Date.now()});
+    await this.syncAnnouncementCue(false);
+    return true;
   }
   scheduleAnnouncementSync(){
     if(this.announcementSyncTimer)return;

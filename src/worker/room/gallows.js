@@ -95,6 +95,7 @@ export class RoomGallowsMethods {
       await this.ctx.storage.put(key,current);
       this.broadcast({type:"gallows_updated",gallows:gallowsSnapshot(current,meta,t),room:publicRoom(meta),serverTime:t});
     }
+    if(meta.quickPlay===true&&String(meta.phase)==="running"&&String(meta.cyclePhase)==="morning")await this.quickPlayGallowsAudio(meta,current).catch(()=>false);
     return {key,ballot:current,eligible};
   }
   async gmGallows(request,body){

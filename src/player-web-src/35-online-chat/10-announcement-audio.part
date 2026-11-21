@@ -17,11 +17,12 @@ function gmwwAnnouncementUrls(pending){
   return list.filter(u=>typeof u==='string'&&u.startsWith(base)&&/^(?:[a-f0-9]{32}|s[a-f0-9]{64})$/.test(u.slice(base.length))).slice(0,12);
 }
 // Seconds since the Server started this turn: every device joins the clip at the same point.
-function gmwwAnnouncementOffset(cue){
+// Phát trọn clip từ đầu (không cắt mấy giây đầu do tải chậm); chỉ bỏ khi clip đã hết hẳn trên máy khác.
+function gmwwAnnouncementLag(cue){
   const at=Number(cue?.startedAt)||0;if(!at)return 0;
-  const lag=(Date.now()+(Number(state.serverClockOffsetMs)||0)-at)/1000;
-  return lag<0.3?0:lag;
+  return Math.max(0,(Date.now()+(Number(state.serverClockOffsetMs)||0)-at)/1000);
 }
+function gmwwAnnouncementOffset(cue){return 0}
 function gmwwChatAnnounce(cue){
   state.audioCue=cue?.key&&cue?.label?{key:String(cue.key),label:String(cue.label).slice(0,120)}:null;
   updatePlayerTopMenu();
@@ -73,6 +74,7 @@ async function gmwwPlayAnnouncementBuffers(blobs,generation,pending){
     const total=buffers.reduce((n,b)=>n+b.duration,0);
     gmwwStopAnnouncementSources();gmwwPlayerCueKey=pending.key;
     if(skip>=total-0.15)return true; // already finished on every other device
+    if(gmwwAnnouncementLag(pending.cue)>total+8)return true; // cue cũ (vào lại giữa chừng): không phát lại
     for(const buf of buffers){
       if(skip>=buf.duration){skip-=buf.duration;continue}
       const src=c.createBufferSource(),g=c.createGain();src.buffer=buf;g.gain.value=.85;src.connect(g);g.connect(gmwwAudioMaster);

@@ -50,3 +50,12 @@ test('Phòng người chơi: đủ điều kiện thắng thì báo alarm ngay',
   assert.match(worker,/winDue=meta\.playerRoom===true&&meta\.autoGM!==false&&String\(meta\.phase\|\|""\)\.toLowerCase\(\)==="running"&&this\.computeWinProposal\(/);
   assert.match(worker,/winDue\|\|Infinity\)/);
 });
+test('Chơi nhanh: máy chủ tự phát audio sáng / Lên Giàn / xác nhận; client phát trọn clip',()=>{
+  assert.match(worker,/async quickPlayDayAudio\(meta,targets,tag\)/);
+  assert.match(worker,/system:audio_system_morning_deaths_intro/);
+  assert.match(worker,/system:audio_system_gallows_open_nomination/);
+  assert.match(worker,/targets:\['system:audio_system_confirm'\]/);
+  assert.match(worker,/await this\.quickPlayConfirmCue\(\)/);
+  const chat=playerWebSource('35-online-chat');
+  assert.match(chat,/function gmwwAnnouncementOffset\(cue\)\{return 0\}/);
+});
