@@ -15,7 +15,7 @@ test('Quick Play uses existing battle timeline and a visible bottom menu rather 
   assert.match(room,/function renderQuickBattleDock\(host,room\)/);
   assert.match(top,/if\(state\.room\?\.quickPlay===true&&String\(state\.room\.phase\|\|''\)\.toLowerCase\(\)==='running'\)return/);
   // 20/11/2026: màn trận Player Web = bố cục Server phía người chơi: [đồng hồ] [ô chat] (+ ô hành động khi có việc).
-  assert.match(room,/for\(const key of \['clock','chat','action'\]\)/);
+  assert.match(room,/for\(const key of \['clock','chat','action','end'\]\)/);
   for(const gm of ['Khôi phục','Điều hành','🔊 Audio']) assert.ok(!room.slice(room.indexOf('function ensureQuickBattleDock'),room.indexOf('function renderChrome')).includes(gm),'không có menu GM: '+gm);
   for(const api of ['renderOnlineActionDock()','renderGallowsWidget()','openChat()']) assert.ok(room.includes(api),api);
   assert.doesNotMatch(room,/callOwner\('gm-turn'/);

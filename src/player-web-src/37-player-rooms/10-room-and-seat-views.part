@@ -28,7 +28,7 @@
     box.append(btn('TIẾP: PHÒNG →',async()=>goStep('room'),'gmww-pr-main'));
   }
   // v3.322 menu Phòng gọn (deploy lại sau khi CI main xanh).
-  // Quản lý phòng: mã phòng + Gửi phòng + Sao chép mã trên 1 dòng, rồi danh sách người đã vào (Xoá).
+  // Quản lý phòng: mã phòng + Gửi phòng + Sao chép trên 1 dòng, rồi danh sách người đã vào (Xoá).
   async function deleteRoom(){
     const code=pr.own.code;
     if(!confirm('Xoá phòng '+code+'? Mọi người trong phòng sẽ bị đưa ra ngoài.'))return;
@@ -41,7 +41,7 @@
     const link=pr.own.joinUrl||(location.origin+'/?room='+pr.own.code),code=pr.own.code,total=Number(room.seatCount)||30;
     // Quick Play: mã và ba hành động cùng một dòng; thứ tự kế tiếp là khóa/tiếp rồi thành viên.
     const line1=el('div',room.quickPlay?'gmww-pr-room-toolbar':'gmww-pr-line');
-    const copyCode=btn('Sao chép mã',async()=>{try{await navigator.clipboard.writeText(code);say('Đã sao chép mã '+code+'.')}catch(_){say('Mã phòng: '+code)}}),shareRoom=btn('Gửi phòng',async()=>{const text='Vào phòng Ma Sói của mình nhé! Mã phòng: '+code+'\n'+link;
+    const copyCode=btn('Sao chép',async()=>{try{await navigator.clipboard.writeText(code);say('Đã sao chép mã '+code+'.')}catch(_){say('Mã phòng: '+code)}}),shareRoom=btn('Gửi phòng',async()=>{const text='Vào phòng Ma Sói của mình nhé! Mã phòng: '+code+'\n'+link;
         if(navigator.share){try{await navigator.share({title:'Phòng Ma Sói '+code,text,url:link});return}catch(e){if(e&&e.name==='AbortError')return}}
         try{await navigator.clipboard.writeText(text);say('Đã sao chép lời mời.')}catch(_){say(text)}},'gmww-pr-main');
     if(room.quickPlay){
@@ -70,9 +70,6 @@
     if(!players.length)list.append(el('p','gmww-pr-help','Chưa có ai trong phòng.'));
     box.append(list);
     if(room.quickPlay&&room.endedAt&&String(room.phase||'lobby')==='lobby')box.append(btn('Chơi lại',async()=>{await callOwner('replay','POST',{});await refresh();goStep('game')},'gmww-pr-main'));
-    if(room.quickPlay&&room.phase==='running')box.append(btn(room.autoGM?'Tạm dừng':'Tiếp tục',async()=>{
-      await callOwner('auto','POST',{enabled:!room.autoGM});await refresh();
-    }));
 
     if(!room.quickPlay){const line2=el('div','gmww-pr-line');line2.append(btn('Xoá phòng',deleteRoom,'gmww-pr-danger'),btn('Tập hợp →',async()=>goStep('seats'),'gmww-pr-main'));box.append(line2)}
   }

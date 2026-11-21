@@ -14,3 +14,19 @@ test('Chỉ chủ phòng thấy Ván Mẫu / Bắt Đầu; người vào phòng 
   assert.match(web,/if\(!quickSteps\(\)\.some\(x=>x\[0\]===pr\.view\)\)/);
   assert.doesNotMatch(web,/Chủ phòng quản lý thành viên và khóa\/mở phòng/);
 });
+import {workerSource} from '../.github/scripts/worker-source.mjs';
+const worker=workerSource();
+test('Tên phòng mặc định "Làng của <người tạo>", nút Sao chép',()=>{
+  assert.match(worker,/body\.roomName=normalizeRoomName\("Làng của "\+String\(own\?\.member\?\.displayName\|\|ownerLoginId\)\)/);
+  assert.match(web,/btn\('Sao chép',/);assert.doesNotMatch(web,/btn\('Sao chép mã'/);
+});
+test('Vòng ghế Chơi nhanh lấy đống lửa làm tâm ngay từ sảnh',()=>{
+  assert.match(worker,/if\(meta\.quickPlay===true\)\{meta\.seatLayout="circle";meta\.seatSpacing=100;meta\.seatOffset=await this\.quickPlayFireOffset\("day"\)\}/);
+  assert.match(worker,/seatOffset:await this\.quickPlayFireOffset\("night"\)/);
+});
+test('Vào trận: đóng trang thiết lập, chủ phòng chỉ thêm nút Kết thúc ván',()=>{
+  assert.match(web,/for\(const key of \['clock','chat','action','end'\]\)/);
+  assert.match(web,/end\.hidden=!isOwner/);
+  assert.doesNotMatch(web,/btn\(room\.autoGM\?'Tạm dừng':'Tiếp tục'/);
+  assert.match(web,/toLowerCase\(\)==='running'\)pr\.open=false;/);
+});
