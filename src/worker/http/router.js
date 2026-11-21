@@ -29,6 +29,14 @@ import { fetchCanonicalRoleArtwork } from "../../gmww-template-artwork-source.js
 import { isRuntimePackageReady } from "../../gmww-update-readiness.js";
 import { gmwwManifestNotesForInstalled } from "../../gmww-update-release-notes.js";
 import { gmPackageCanonicalTemplateRole, gmPreloadSharedArtifacts, gmPreloadTemplateAssets } from "./gm-assets-api.js";
+// Mã bản dựng Player Web (FNV-1a của script): đổi mỗi lần deploy Web, kể cả khi VERSION giữ nguyên.
+let gmwwWebBuild="";
+function webBuild(){
+  if(gmwwWebBuild)return gmwwWebBuild;
+  let h=0x811c9dc5;const t=gmwwMembersLiveScript;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)>>>0}
+  return gmwwWebBuild=VERSION+"-"+h.toString(36);
+}
+
 
 export default {async fetch(request,env){
   const url=new URL(request.url);if(request.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders()});
@@ -75,8 +83,8 @@ export default {async fetch(request,env){
     const admissionResponse=await applyPublicEntryRateLimit(env,request,admissionPolicy);
     if(admissionResponse)return admissionResponse;
   }
-  if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(patchPrivatePlayerCards(gmwwMembersLiveScript).replaceAll("__GMWW_WEB_VERSION__",VERSION),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
-  if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,serverVersion:VERSION,webVersion:VERSION,runtimeVersion:VERSION});
+  if(url.pathname==="/gmww-members-live.js"&&request.method==="GET")return new Response(patchPrivatePlayerCards(gmwwMembersLiveScript).replaceAll("__GMWW_WEB_VERSION__",VERSION).replaceAll("__GMWW_WEB_BUILD__",webBuild()),{headers:{"content-type":"application/javascript; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate","pragma":"no-cache","expires":"0","x-content-type-options":"nosniff"}});
+  if(url.pathname==="/api/health"&&request.method==="GET")return j({ok:true,project:PROJECT,service:"GMWW Online",status:"online",version:VERSION,serverVersion:VERSION,webVersion:VERSION,webBuild:webBuild(),runtimeVersion:VERSION});
   if(url.pathname==="/api/health/deep"&&request.method==="GET"){
     try{
       const ready=await memberStore(env).fetch("https://member.internal/health/storage");
