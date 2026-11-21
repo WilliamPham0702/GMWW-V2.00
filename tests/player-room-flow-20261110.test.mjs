@@ -7,8 +7,8 @@ const rooms=playerWebSource('37-player-rooms');
 const boot=playerWebSource('00-bootstrap-and-session');
 const village=playerWebSource('20-village-and-profile');
 const worker=workerSource();
-test('Quản lý phòng: mã – Sao chép mã – Gửi phòng, rồi Xoá phòng + Tập hợp',()=>{
-  const i=rooms.indexOf("'Sao chép mã'"),j=rooms.indexOf("'Gửi phòng'"),k=rooms.indexOf("'Xoá phòng',deleteRoom"),l=rooms.indexOf("'Tập hợp →',async()=>goStep('seats')");
+test('Quản lý phòng: mã – Sao chép – Gửi phòng, rồi Xoá phòng + Tập hợp',()=>{
+  const i=rooms.indexOf("'Sao chép'"),j=rooms.indexOf("'Gửi phòng'"),k=rooms.indexOf("'Xoá phòng',deleteRoom"),l=rooms.indexOf("'Tập hợp →',async()=>goStep('seats')");
   assert.ok(i>0&&j>i&&k>j&&l>k);
 });
 test('Tập hợp: kéo cả khối seat, preview qua làng, lưu seatOffset/seatSpacing bởi chủ phòng',()=>{

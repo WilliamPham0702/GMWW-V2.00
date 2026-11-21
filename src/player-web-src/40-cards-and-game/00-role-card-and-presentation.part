@@ -55,7 +55,7 @@ function syncPlayerPresentation(){
 function maybeOpenGame(){
   if(!state.roomCode||!state.participantId)return false;
   const phase=String(state.room?.phase||'lobby').toLowerCase();if(['ended','deleted','closed','archived'].includes(phase))return false;
-  ensureVillageHud();if(!['game','profile','rooms'].includes(state.activeScreenId))go('game');const title=$('#game .page-title');if(title)title.textContent='Làng Asahi';
+  ensureVillageHud();if(!['game','profile','rooms'].includes(state.activeScreenId))go('game');const title=$('#game .page-title');if(title)title.textContent=String(state.room?.roomName||'Làng Asahi');
   ensureVillageGameView();
   if(state.role&&playerScenePolicy(state.room).rolesReleased)renderRole();
   syncPlayerPresentation();syncPlayerMiniCards();gmwwChatDockSync();

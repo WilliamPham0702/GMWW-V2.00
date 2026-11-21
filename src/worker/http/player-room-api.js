@@ -18,7 +18,10 @@ export async function createPlayerRoom(env,url,request){
   if(!session.ok)return session;
   const own=await session.json().catch(()=>({})),ownerLoginId=normalizeLoginId(own?.member?.loginId);
   if(!ownerLoginId)return j({ok:false,error:"UNAUTHORIZED"},401);
-  const body=await safeJson(request)||{},ownerToken=randomToken(32),ownerTokenHash=await sha256(ownerToken),json={"content-type":"application/json"};
+  const body=await safeJson(request)||{};
+  // Tên phòng mặc định: "Làng của <tên người tạo>" (không dùng chung "Làng Asahi").
+  if(!normalizeRoomName(body.roomName))body.roomName=normalizeRoomName("Làng của "+String(own?.member?.displayName||ownerLoginId));
+  const ownerToken=randomToken(32),ownerTokenHash=await sha256(ownerToken),json={"content-type":"application/json"};
   for(let i=0;i<8;i++){
     const code=generateRoomCode(),rsv=await memberStore(env).fetch("https://member.internal/directory/player-rooms/reserve",{method:"POST",headers:json,body:JSON.stringify({code,ownerLoginId,roomName:body.roomName||"",seatCount:body.seatCount})});
     if(rsv.status===409){const d=await rsv.clone().json().catch(()=>({}));if(d.error==="CODE_TAKEN")continue;return rsv}
