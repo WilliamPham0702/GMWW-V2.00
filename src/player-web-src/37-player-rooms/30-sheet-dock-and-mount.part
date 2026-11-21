@@ -289,6 +289,7 @@
     const style=el('style');style.textContent='#gmwwQuickBattleDock{position:fixed;box-sizing:border-box;z-index:9650;left:calc(var(--gmww-player-visible-left,0px) + 8px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));transform:translateY(-100%);width:calc(var(--gmww-player-visible-width,100vw) - 16px);max-width:760px;display:grid;grid-template-columns:74px minmax(0,1fr);gap:8px;padding:0;background:transparent;border:0}'+
       '#gmwwQuickBattleDock.has-action{grid-template-columns:74px minmax(0,1fr) 74px}'+
       '#gmwwQuickBattleDock.has-end{grid-template-columns:74px minmax(0,1fr) 64px}#gmwwQuickBattleDock.has-action.has-end{grid-template-columns:74px minmax(0,1fr) 74px 64px}'+
+      '#gmwwQuickBattleDock [data-battle-control="chat"].is-icon{text-align:center;padding:0;font-size:22px}#gmwwQuickBattleDock [data-battle-control="tray"].is-empty{opacity:.55;justify-content:center}#gmwwQuickBattleDock [data-battle-control="tray"].is-empty::before{content:"—";color:#d7ecfc;font:700 14px system-ui}'+
       '#gmwwQuickBattleDock [data-battle-control="restore"]{font-size:12px;line-height:1.2}#gmwwQuickBattleDock [data-battle-control="restore"].gmww-restore-ready{background:#7a5a12e6;border-color:#f4d16d;color:#fff4cf}'+
       '#gmwwQuickBattleDock [data-battle-control="tray"]{min-width:0;min-height:58px;display:flex;align-items:center;border:1.5px solid #f4d16daa;border-radius:16px;background:#123b52e6;box-shadow:0 4px 14px #00182b66;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:3px 6px;overflow:hidden}#gmwwQuickBattleDock [data-battle-control="tray"][hidden]{display:none}'+
       '#gmwwOnlineDock.in-tray{position:static!important;transform:none!important;left:auto!important;top:auto!important;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;max-width:none;width:100%;overflow-x:auto;overflow-y:hidden}'+
@@ -344,13 +345,17 @@
     const t=quickBattleClock(room).replace('--:--','00:00');
     if(clock.dataset.t!==t){clock.dataset.t=t;clock.textContent=t}
     // Hộp hành động như Server: icon + tên hành động, kéo lên người chơi.
-    const tray=host.querySelector('[data-battle-control="tray"]'),hasTray=!!tray?.querySelector('#gmwwOnlineDock button');
-    if(tray)tray.hidden=!hasTray;
+    // Bố cục CỐ ĐỊNH theo pha (không co giãn khi hành động xong → menu dưới không giật).
+    const night=room.cyclePhase==='night',tray=host.querySelector('[data-battle-control="tray"]'),hasTray=!!tray?.querySelector('#gmwwOnlineDock button');
     const stage=quickActionStage(room),gallows=stage==='nominating'||stage==='voting',label=stage==='nominating'?'🗳 Đề cử':stage==='voting'?'🗳 Bỏ phiếu':'';
-    action.hidden=!gallows;host.classList.toggle('has-action',gallows||hasTray);if(action.textContent!==label)action.textContent=label;
+    if(tray){tray.hidden=gallows&&!hasTray;tray.classList.toggle('is-empty',!hasTray)}
+    action.hidden=!gallows||hasTray;host.classList.toggle('has-action',true);if(action.textContent!==label)action.textContent=label;
+    // Ban đêm: Chat thu thành icon 💬 để hộp hành động rộng hơn.
+    const chat=host.querySelector('[data-battle-control="chat"]'),chatLabel=night?'💬':'Nhắn cho phòng…';
+    if(chat&&chat.textContent!==chatLabel){chat.textContent=chatLabel;chat.classList.toggle('is-icon',night)}
     const end=host.querySelector('[data-battle-control="end"]'),isOwner=!!(pr.own&&inOwnRoom());
     if(end){end.hidden=!isOwner;host.classList.toggle('has-end',isOwner)}
-    const cols=['58px','minmax(0,1fr)'];if(hasTray)cols.push('minmax(0,1.3fr)');if(gallows)cols.push('70px');cols.push('66px');if(isOwner)cols.push('60px');
+    const cols=night?['58px','52px','minmax(0,1fr)','66px']:['58px','minmax(0,1fr)','minmax(0,1fr)','66px'];if(isOwner)cols.push('60px');
     const grid=cols.join(' ');if(host.style.gridTemplateColumns!==grid)host.style.gridTemplateColumns=grid;
     if(typeof gmwwOnlineRestoreHint==='function')gmwwOnlineRestoreHint();
   }

@@ -275,7 +275,7 @@ function renderOnlineActionDock(){
  if(!dock){dock=document.createElement('div');dock.id='gmwwOnlineDock';document.body.appendChild(dock)}
  // Chơi nhanh: icon nằm trong hộp hành động ở thanh dưới (như Server), kèm tên hành động.
  const quickTray=state.room?.quickPlay===true?document.querySelector('#gmwwQuickBattleDock [data-battle-control="tray"]'):null;
- if(quickTray){if(dock.parentNode!==quickTray)quickTray.appendChild(dock);dock.classList.add('in-tray');quickTray.hidden=false}
+ if(quickTray){if(dock.parentNode!==quickTray)quickTray.appendChild(dock);dock.classList.add('in-tray');}
  else{if(dock.parentNode!==document.body)document.body.appendChild(dock);dock.classList.remove('in-tray')}
  const scale=[25,50,75,100,125,150].includes(Number(state.actionIconScale))?Number(state.actionIconScale):100;
  dock.style.setProperty('--online-action-scale',String(scale/100));
