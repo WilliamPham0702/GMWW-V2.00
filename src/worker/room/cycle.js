@@ -6,7 +6,7 @@ import { newsBearerNotices, oldManLifespanDeaths, strongmanDawn } from "../../gm
 import { expireCycleEffects } from "../../gmww-cycle-effect-expiry.js";
 import { projectDemoClock } from "../../gmww-demo-clock.js";
 import { nextServerDemoDue } from "../../gmww-demo-runner.js";
-import { AUTO_GALLOWS_LOCK_PAUSE_MS, autoGallowsDue, gallowsAutomaticNominee, gallowsBegin, gallowsCloseNomination, gallowsMode, gallowsOpen, gallowsSnapshot } from "../../gmww-gallows-rules.js";
+import { AUTO_GALLOWS_LOCK_PAUSE_MS, autoGallowsDue, gallowsAutomaticNominee, gallowsVerdictHoldMs, gallowsBegin, gallowsCloseNomination, gallowsMode, gallowsOpen, gallowsSnapshot } from "../../gmww-gallows-rules.js";
 import { pruneInteractions } from "../../gmww-interaction-retention.js";
 import { cultKillDeaths, elderBell } from "../../gmww-night-cult-rules.js";
 import { jumpTarget } from "../../gmww-night-turn-rules.js";
@@ -26,7 +26,7 @@ export class RoomCycleMethods {
     if(p==="night"&&String(meta.cyclePhase||"")==="morning"&&n===Number(meta.cycleNight||0)+1&&!meta.demo){
       const ballot=await this.ctx.storage.get("gallows:"+String(meta.matchId||"")+":"+String(meta.cycleKey||""));
       const at=Number(ballot?.resolvedAt||0);
-      if(ballot?.stage==="resolved"&&at>0&&!ballot.acknowledgedAt&&Date.now()<at+30000)
+      if(ballot?.stage==="resolved"&&at>0&&!ballot.acknowledgedAt&&Date.now()<at+gallowsVerdictHoldMs(meta))
         return {ok:false,error:"GALLOWS_VERDICT_PENDING",message:"Đang công bố kết quả Lên Giàn; GM xác nhận hoặc chờ đủ 30 giây."};
     }
     // Replayed completion must not restart day timers or expire effects twice.
@@ -222,7 +222,7 @@ export class RoomCycleMethods {
   }
   async autoGallowsStep(meta){
     const {key,ballot}=await this.gallowsState(meta),now=Date.now(),stage=String(ballot.stage||"ready");
-    if(stage==="resolved")return Number(ballot.acknowledgedAt||0)>0||now>=Number(ballot.resolvedAt||0)+30000?"night":"wait";
+    if(stage==="resolved")return Number(ballot.acknowledgedAt||0)>0||now>=Number(ballot.resolvedAt||0)+gallowsVerdictHoldMs(meta)?"night":"wait";
     if(gallowsMode(ballot)!=="auto")return "wait";
     let result=null;
     if(stage==="ready")result=gallowsOpen(ballot,now);

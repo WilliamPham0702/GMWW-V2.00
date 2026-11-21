@@ -86,3 +86,15 @@ test('Menu trên không viền trắng, nền menu mờ; tab cũ tự nhận b�
   const u=playerWebSource('50-privacy-and-runtime');
   assert.match(u,/buildChanged=!!build&&!GMWW_WEB_BUILD\.startsWith\('__'\)&&build!==GMWW_WEB_BUILD/);
 });
+test('Lượt đêm xong → 5 giây rồi qua lượt; Lên Giàn: đủ phiếu thì chốt sớm, Chơi nhanh giữ kết quả 8 giây; đồng hồ theo Lên Giàn; cảnh ngày/đêm theo phòng',async()=>{
+  assert.match(worker,/async shortenNightTurnAfterAction\(\)/);
+  assert.match(worker,/target=Date\.now\(\)\+5000/);
+  assert.match(worker,/await this\.shortenNightTurnAfterAction\(\)/);
+  assert.match(worker,/gallowsVerdictHoldMs\(meta\)/);
+  assert.match(worker,/need\.every\(id=>Object\.prototype\.hasOwnProperty\.call\(b\.votes\|\|\{\},id\)\)/);
+  const {gallowsVerdictHoldMs}=await import('../src/gmww-gallows-rules.js');
+  assert.equal(gallowsVerdictHoldMs({quickPlay:true}),8000);assert.equal(gallowsVerdictHoldMs({}),30000);
+  assert.match(web,/stage==='voting'\?Number\(g\.deadlineAt\)/);
+  const v=playerWebSource('20-village-and-profile');
+  assert.match(v,/cyclePhase=String\(room\.cyclePhase\|\|cycle\.phase\|\|''\)/);
+});
