@@ -34,3 +34,11 @@ test('MOVE_NOT_ACTIVE không hiện mã lỗi thô',()=>{
   const v=playerWebSource('20-village-and-profile');
   assert.match(v,/if\(String\(e\?\.data\?\.error\|\|''\)==='MOVE_NOT_ACTIVE'\)\{try\{await pollRoomState\(\)\}catch\(_\)\{\}syncVillageFrame\(\);return\}/);
 });
+test('Chơi nhanh: trang không có dòng tiêu đề + nút ×',()=>{
+  assert.match(web,/panel\.append\(el\('i','gmww-pr-grip'\)\);if\(!isQuick\)panel\.append\(head\);/);
+});
+test('Danh mục audio chung: không chia sẻ promise đang tải giữa các request (tránh treo DO → không nhận vai)',async()=>{
+  const fs=await import('node:fs');const src=fs.readFileSync(new URL('../src/worker/support/shared-audio-release.js',import.meta.url),'utf8');
+  assert.doesNotMatch(src,/if\(loading\)return loading/);
+  assert.doesNotMatch(src,/let cached=null,cachedUntil=0,loading=null/);
+});
