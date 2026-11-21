@@ -57,10 +57,10 @@ function gmwwOnlineFlyGhost(ghost,to,absorb){
  return ghost.animate(frames,{duration:absorb?360:240,easing:absorb?'cubic-bezier(.5,0,.7,.4)':'cubic-bezier(.2,.8,.3,1)',fill:'forwards'}).finished.catch(()=>{});
 }
 function gmwwOnlineRestoreHint(){
- const b=document.getElementById('gmwwPlayerRestore');if(!b)return;
  const ready=!!(gmwwOnlinePick||(gmwwOnlineCanRestore&&state.room?.phase==='running'&&state.room?.cyclePhase==='night'));
+ for(const b of [document.getElementById('gmwwPlayerRestore'),document.getElementById('gmwwQuickRestore')]){if(!b)continue;
  b.classList.toggle('gmww-restore-ready',ready);
- b.title=ready?'Bấm Khôi phục để hoàn tác hành động/lựa chọn vừa làm':'Khôi phục lựa chọn hoặc hành động gần nhất của bạn';
+ b.title=ready?'Bấm Khôi phục để hoàn tác hành động/lựa chọn vừa làm':'Khôi phục lựa chọn hoặc hành động gần nhất của bạn';}
 }
 // One batched read of every valid player's hit box/centre in parent-page pixels (V3.301 drag).
 function gmwwOnlineTargetSnapshot(){

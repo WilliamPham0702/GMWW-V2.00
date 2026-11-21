@@ -25,7 +25,7 @@ test('Vòng ghế Chơi nhanh lấy đống lửa làm tâm ngay từ sảnh',()
   assert.match(worker,/seatOffset:await this\.quickPlayFireOffset\("night"\)/);
 });
 test('Vào trận: đóng trang thiết lập, chủ phòng chỉ thêm nút Kết thúc ván',()=>{
-  assert.match(web,/for\(const key of \['clock','chat','action','end'\]\)/);
+  assert.match(web,/for\(const key of \['clock','chat','tray','action','restore','end'\]\)/);
   assert.match(web,/end\.hidden=!isOwner/);
   assert.doesNotMatch(web,/btn\(room\.autoGM\?'Tạm dừng':'Tiếp tục'/);
   assert.match(web,/toLowerCase\(\)==='running'\)pr\.open=false;/);
@@ -35,7 +35,7 @@ test('MOVE_NOT_ACTIVE không hiện mã lỗi thô',()=>{
   assert.match(v,/if\(String\(e\?\.data\?\.error\|\|''\)==='MOVE_NOT_ACTIVE'\)\{try\{await pollRoomState\(\)\}catch\(_\)\{\}syncVillageFrame\(\);return\}/);
 });
 test('Chơi nhanh: trang không có dòng tiêu đề + nút ×',()=>{
-  assert.match(web,/panel\.append\(el\('i','gmww-pr-grip'\)\);if\(!isQuick\)panel\.append\(head\);/);
+  assert.match(web,/panel\.append\(el\('i','gmww-pr-grip'\)\);void head;/);
 });
 test('Danh mục audio chung: không chia sẻ promise đang tải giữa các request (tránh treo DO → không nhận vai)',async()=>{
   const fs=await import('node:fs');const src=fs.readFileSync(new URL('../src/worker/support/shared-audio-release.js',import.meta.url),'utf8');
@@ -58,4 +58,16 @@ test('Chơi nhanh: máy chủ tự phát audio sáng / Lên Giàn / xác nhận;
   assert.match(worker,/await this\.quickPlayConfirmCue\(\)/);
   const chat=playerWebSource('35-online-chat');
   assert.match(chat,/function gmwwAnnouncementOffset\(cue\)\{return 0\}/);
+});
+test('Không tên trang / nút × trên Web và Server; thanh trận Web có hộp hành động + Khôi phục, đồng hồ không icon',async()=>{
+  assert.match(web,/panel\.append\(el\('i','gmww-pr-grip'\)\);void head;/);
+  assert.match(web,/chatPage\.append\(el\('i','gmww-pr-grip'\),el\('div','gmww-pr-chatbody'\)\)/);
+  assert.match(web,/\['clock','chat','tray','action','restore','end'\]/);
+  assert.match(web,/clock\.textContent=t/);
+  const chat=playerWebSource('35-online-chat');
+  assert.match(chat,/function gmwwPlayerRestoreClick\(\)/);
+  assert.match(chat,/dock\.classList\.add\('in-tray'\)/);
+  assert.match(chat,/className='gmww-act-name'/);
+  const fs=await import('node:fs');const css=fs.readFileSync(new URL('../server-game/current/style.css',import.meta.url),'utf8');
+  assert.match(css,/\.sheet:not\(#playGameSheet\) \.sheet-card>\.sheet-head\{display:none!important\}/);
 });
