@@ -109,3 +109,10 @@ test('Audio bị iPhone chặn → hiện nút Chạm để bật âm thanh',()=
   assert.match(chat,/function gmwwAudioLockedPrompt\(show\)/);
   assert.match(chat,/catch\(e\)\{if\(generation===gmwwAnnouncementGeneration&&!gmwwChatAudioOff\(\)\)gmwwAudioLockedPrompt\(true\)\}/);
 });
+test('Tiếng Xác nhận không cắt tiếng gọi vai; clip vừa phát vẫn tải được',()=>{
+  const chat=playerWebSource('35-online-chat');
+  assert.match(chat,/append=!!key&&!!gmwwAnnouncementPending&&\/:confirm:\\d\+\$\/\.test\(key\)/);
+  assert.match(chat,/if\(pending\.append&&gmwwAnnouncementSources\.length\)at=Math\.max\(at,gmwwAnnouncementTailAt\|\|0\)/);
+  assert.match(worker,/this\.recentAnnClips\.set\(h,\{until,targets:cue\.targets\.slice\(\)\}\)/);
+  assert.match(worker,/targets:\[\.\.\.cue\.targets,\.\.\.x\.targets\]\.slice\(0,12\)/);
+});

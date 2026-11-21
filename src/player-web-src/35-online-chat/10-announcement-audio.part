@@ -1,5 +1,5 @@
 const gmwwChatAudioOff=()=>{try{return localStorage.getItem('gmww_player_announcement_audio_off')==='1'}catch{return false}};
-let gmwwAnnouncementAudio=null,gmwwAnnouncementUrl='',gmwwAnnouncementRequest=null,gmwwAnnouncementPending=null,gmwwAnnouncementGeneration=0,gmwwAnnouncementSources=[];
+let gmwwAnnouncementTailAt=0,gmwwAnnouncementAudio=null,gmwwAnnouncementUrl='',gmwwAnnouncementRequest=null,gmwwAnnouncementPending=null,gmwwAnnouncementGeneration=0,gmwwAnnouncementSources=[];
 // V3.303: clips are content-addressed by the Server, so a role's clip is fetched once and
 // reused every night; decoded buffers are cached per Blob.
 const gmwwAnnouncementClips=new Map(),gmwwAnnouncementDecoded=new WeakMap();
@@ -27,7 +27,9 @@ function gmwwChatAnnounce(cue){
   state.audioCue=cue?.key&&cue?.label?{key:String(cue.key),label:String(cue.label).slice(0,120)}:null;
   updatePlayerTopMenu();
   const key=cue?.key&&state.roomCode&&state.participantId?state.roomCode+':'+cue.key:'';
-  if(gmwwAnnouncementPending?.key!==key){gmwwStopAnnouncement();gmwwAnnouncementPending=key?{key,cue,room:state.roomCode}:null}
+  // Tiếng "Xác nhận" của cùng lượt: KHÔNG cắt tiếng gọi vai đang phát/đang tải, phát nối tiếp sau đó.
+  const base=k=>String(k||'').replace(/:confirm:\d+$/,''),append=!!key&&!!gmwwAnnouncementPending&&/:confirm:\d+$/.test(key)&&base(key)===base(gmwwAnnouncementPending.key);
+  if(gmwwAnnouncementPending?.key!==key){if(!append)gmwwStopAnnouncement();gmwwAnnouncementPending=key?{key,cue,room:state.roomCode,append,skipUrls:append?gmwwAnnouncementUrls(gmwwAnnouncementPending):[]}:null}
   else if(gmwwAnnouncementPending)gmwwAnnouncementPending.cue={...gmwwAnnouncementPending.cue,...cue};
   if(!key||key===gmwwPlayerCueKey||gmwwChatAudioOff())return;
   // A missing clip is retryable: the Server pushes the cue again once the GM uploads it.
@@ -36,7 +38,8 @@ function gmwwChatAnnounce(cue){
 }
 async function gmwwPlayAnnouncement(){
   const pending=gmwwAnnouncementPending;if(!pending||gmwwChatAudioOff()||pending.key===gmwwPlayerCueKey)return;
-  const urls=gmwwAnnouncementUrls(pending);if(!urls.length)return;
+  // Cue Xác nhận gồm [gọi vai…, xác nhận]: máy đã có tiếng gọi vai thì chỉ phát phần còn lại.
+  const all=gmwwAnnouncementUrls(pending),urls=pending.append?all.filter(u=>!(pending.skipUrls||[]).includes(u)):all;if(!urls.length)return;
   const generation=gmwwAnnouncementGeneration,controller=new AbortController();gmwwAnnouncementRequest=controller;
   try{
     const blobs=[];
@@ -57,7 +60,9 @@ async function gmwwPlayAnnouncement(){
     if(await gmwwPlayAnnouncementBuffers(blobs,generation,pending)){gmwwAudioLockedPrompt(false);return}
     try{await gmwwPlayAnnouncementHtml(blobs,generation,pending);gmwwAudioLockedPrompt(false)}
     catch(e){if(generation===gmwwAnnouncementGeneration&&!gmwwChatAudioOff())gmwwAudioLockedPrompt(true)}
-  }catch{}finally{if(gmwwAnnouncementRequest===controller)gmwwAnnouncementRequest=null}
+  }catch{}finally{if(gmwwAnnouncementRequest===controller)gmwwAnnouncementRequest=null;
+    // Cue mới (vd. Xác nhận) đến trong lúc đang tải: phát tiếp ngay khi xong.
+    const next=gmwwAnnouncementPending;if(next&&next!==pending&&next.key!==gmwwPlayerCueKey&&!gmwwChatAudioOff())setTimeout(()=>void gmwwPlayAnnouncement(),0)}
 }
 function gmwwDecodeAnnouncement(c,blob){
   const cached=gmwwAnnouncementDecoded.get(blob);if(cached)return Promise.resolve(cached);
@@ -73,7 +78,8 @@ async function gmwwPlayAnnouncementBuffers(blobs,generation,pending){
     if(generation!==gmwwAnnouncementGeneration||gmwwChatAudioOff()||state.roomCode!==pending.room)return true;
     let skip=gmwwAnnouncementOffset(pending.cue),at=c.currentTime+0.02;
     const total=buffers.reduce((n,b)=>n+b.duration,0);
-    gmwwStopAnnouncementSources();gmwwPlayerCueKey=pending.key;
+    if(pending.append&&gmwwAnnouncementSources.length)at=Math.max(at,gmwwAnnouncementTailAt||0);else gmwwStopAnnouncementSources();
+    gmwwPlayerCueKey=pending.key;
     if(skip>=total-0.15)return true; // already finished on every other device
     if(gmwwAnnouncementLag(pending.cue)>total+8)return true; // cue cũ (vào lại giữa chừng): không phát lại
     for(const buf of buffers){
@@ -82,6 +88,7 @@ async function gmwwPlayAnnouncementBuffers(blobs,generation,pending){
       src.onended=()=>{gmwwAnnouncementSources=gmwwAnnouncementSources.filter(x=>x!==src)};
       src.start(at,skip);at+=buf.duration-skip;skip=0;gmwwAnnouncementSources.push(src);
     }
+    gmwwAnnouncementTailAt=at;
     return true;
   }catch{return false}
 }
