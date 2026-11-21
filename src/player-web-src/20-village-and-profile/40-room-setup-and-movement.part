@@ -158,7 +158,7 @@ function villageSceneSignature(payload){
 }
 function syncVillageFrame(force=false){
   const iframe=$('#gmwwVillageFrame');if(!iframe?.contentWindow||!state.member)return;
-  const room=state.room||{},cycle=state.villageCycle||{},cyclePhase=String(cycle.phase||room.cyclePhase||'').toLowerCase(),cycleNight=Number(cycle.night||room.cycleNight||0);
+  const room=state.room||{},cycle=state.villageCycle||{},cyclePhase=String(room.cyclePhase||cycle.phase||'').toLowerCase(),cycleNight=Number(room.cycleNight||cycle.night||0);
   const portal=null;
   const publicPlayers=villagePublicPlayers(state.roomCode?state.players:state.lobbyPlayers);
   const playerView=playerScenePolicy(room);

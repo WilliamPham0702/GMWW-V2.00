@@ -335,6 +335,13 @@
       }
     }else if(room.dayPausedRemainingMs!=null){remain=Number(room.dayPausedRemainingMs);paused=true}
     else if(room.dayDeadlineAt)remain=Date.parse(room.dayDeadlineAt)-Date.now()-(Number(state.serverClockOffsetMs)||0);
+    // Hết giờ thảo luận → đồng hồ chạy theo Lên Giàn (đề cử / chốt / bỏ phiếu / công bố kết quả).
+    if(!night&&!paused&&(!Number.isFinite(remain)||remain<=0)){
+      const g=state.gallows||{},t=Date.now()+(Number(state.serverClockOffsetMs)||0),stage=String(g.stage||'');
+      const end=stage==='nominating'?Number(g.nominationDeadlineAt):stage==='selecting'?Number(g.hanging?.startedAt||g.nominationDeadlineAt)+5000:
+        stage==='voting'?Number(g.deadlineAt):stage==='resolved'?Number(g.resolvedAt)+(room.quickPlay===true?8000:30000):NaN;
+      if(Number.isFinite(end)&&end>0)remain=end-t;
+    }
     if(!Number.isFinite(remain))return '--:--';
     const secs=Math.max(0,Math.ceil(remain/1000));
     return (paused?'⏸ ':'')+String(Math.floor(secs/60)).padStart(2,'0')+':'+String(secs%60).padStart(2,'0');
@@ -358,6 +365,8 @@
     const cols=night?['58px','52px','minmax(0,1fr)','66px']:['58px','minmax(0,1fr)','minmax(0,1fr)','66px'];if(isOwner)cols.push('60px');
     const grid=cols.join(' ');if(host.style.gridTemplateColumns!==grid)host.style.gridTemplateColumns=grid;
     if(typeof gmwwOnlineRestoreHint==='function')gmwwOnlineRestoreHint();
+    // Ngày/đêm của cảnh làng luôn theo pha phòng mới nhất (một số trình duyệt lỡ tin room_cycle).
+    if(typeof syncVillageFrame==='function')try{syncVillageFrame()}catch(_){}
   }
   function renderChrome(){
     const show=barScreen(),quick=quickMode(),strip=ensureStrip(),quickStrip=ensureQuickStrip(),dock=ensureDock(),battleDock=ensureQuickBattleDock();

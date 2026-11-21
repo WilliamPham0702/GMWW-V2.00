@@ -6,7 +6,7 @@ function playerScenePolicy(room={}){
   return {phase,mode:playing?'battle':'lobby',rolesReleased:playing||phase==='role_delivery'};
 }
 function playerTopMenuStatus(){
-  const room=state.room||{},cycle=state.villageCycle||{},phase=String(room.phase||'').toLowerCase(),cyclePhase=String(cycle.phase||room.cyclePhase||'').toLowerCase(),night=Math.max(0,Number(cycle.night||room.cycleNight||0)),day=Math.max(0,Number(cycle.day||room.cycleDay||0));
+  const room=state.room||{},cycle=state.villageCycle||{},phase=String(room.phase||'').toLowerCase(),cyclePhase=String(room.cyclePhase||cycle.phase||'').toLowerCase(),night=Math.max(0,Number(cycle.night||room.cycleNight||0)),day=Math.max(0,Number(cycle.day||room.cycleDay||0));
   if(!state.roomCode)return'SẢNH CHỜ';
   if(phase==='ended')return'KẾT THÚC VÁN';
   if(playerScenePolicy(room).mode==='battle'){

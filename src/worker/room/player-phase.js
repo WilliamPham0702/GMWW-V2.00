@@ -110,7 +110,19 @@ export class RoomPlayerPhaseMethods {
     }
     else return j({ok:false,error:"INVALID_GALLOWS_COMMAND"},400);
     if(!result.ok)return j({ok:false,error:result.error},409);
+    // Mọi người đã đề cử / bỏ phiếu xong → không chờ hết giờ, chốt sau 1,5 giây.
+    if(!meta.demo&&gallowsMode(result.value)==="auto"){
+      const b=result.value,soon=now+1500;
+      if(command==="nominate"&&String(b.stage)==="nominating"){
+        const need=eligible.filter(id=>!gallowsBlockedNomination(b).includes(id));
+        if(need.length&&need.every(id=>Object.prototype.hasOwnProperty.call(b.nominations||{},id))&&Number(b.nominationDeadlineAt||0)>soon)b.nominationDeadlineAt=soon;
+      }else if(command==="vote"&&String(b.stage)==="voting"){
+        const need=eligible.filter(id=>id!==String(b.candidateId||"")&&!gallowsBlockedVotes(b).includes(id));
+        if(need.length&&need.every(id=>Object.prototype.hasOwnProperty.call(b.votes||{},id))&&Number(b.deadlineAt||0)>soon)b.deadlineAt=soon;
+      }
+    }
     await this.ctx.storage.put(key,result.value);
+    if(!meta.demo&&typeof this.scheduleRoomAlarm==="function")await this.scheduleRoomAlarm(meta);
     if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     const publicBallot=gallowsSnapshot(meta.demo?await this.ctx.storage.get(key):result.value,meta,now);
     this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:publicBallot,serverTime:now});

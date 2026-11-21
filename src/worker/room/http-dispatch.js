@@ -184,7 +184,7 @@ export class RoomHttpDispatchMethods {
     if(url.pathname==="/gm/artwork-manifest"&&request.method==="GET")return this.gmArtworkManifest(request);
     const roleAssetImage=url.pathname.match(/^\/role-assets\/([^/]+)\/image$/);if(roleAssetImage&&request.method==="GET")return this.roleAssetImage(decodeURIComponent(roleAssetImage[1]));
     if(url.pathname==="/gm/interaction"&&request.method==="POST")return this.gmInteraction(request,await safeJson(request));
-    if(url.pathname==="/gm/battle-action"&&request.method==="POST")return this.gmBattleAction(request,await safeJson(request));
+    if(url.pathname==="/gm/battle-action"&&request.method==="POST"){const res=await this.gmBattleAction(request,await safeJson(request));if(res&&res.status<300)await this.shortenNightTurnAfterAction().catch(()=>false);return res}
     if(url.pathname==="/gm/day-action"&&request.method==="POST")return this.gmDayAction(request,await safeJson(request));
     if(url.pathname==="/gm/day-clock"&&request.method==="POST")return this.gmDayClock(request,await safeJson(request));
     if(url.pathname==="/gm/battle-undo"&&request.method==="POST")return this.gmBattleUndo(request,await safeJson(request));
@@ -219,7 +219,7 @@ export class RoomHttpDispatchMethods {
     if(url.pathname==="/player/interaction/respond"&&request.method==="POST")return this.playerInteractionRespond(await safeJson(request));
     if(url.pathname==="/player/gallows"&&request.method==="POST")return this.playerGallows(await safeJson(request));
     if(url.pathname==="/player/demo-action"&&request.method==="POST")return this.playerDemoAction(await safeJson(request));
-    if(url.pathname==="/player/action"&&request.method==="POST"){const res=await this.playerPhaseAction(await safeJson(request),true);if(res&&res.status<300)await this.quickPlayConfirmCue().catch(()=>false);return res}
+    if(url.pathname==="/player/action"&&request.method==="POST"){const res=await this.playerPhaseAction(await safeJson(request),true);if(res&&res.status<300){await this.quickPlayConfirmCue().catch(()=>false);await this.shortenNightTurnAfterAction().catch(()=>false)}return res}
     if(url.pathname==="/player/undo-action"&&request.method==="POST")return this.playerPhaseUndo(await safeJson(request));
     if(url.pathname==="/player/setup"&&request.method==="POST")return this.playerSetup(await safeJson(request));
     if(url.pathname==="/player/move"&&request.method==="POST")return this.playerMove(await safeJson(request));

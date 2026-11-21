@@ -16,6 +16,7 @@ import { maidSuccession } from "../../gmww-swap-info-rules.js";
 import { thiefPlan } from "../../gmww-thief-rules.js";
 import { partitionNightSpecialRoles } from "../../gmww-witch-drunk-clone-rules.js";
 import { canSnowWolfBite, readNightAssignments } from "../../gmww-wolf-night-resolution.js";
+import { nightTurnRoleActionsRemaining } from "../../gmww-demo-runner.js";
 import { shouldWakeWolfPack, wolfPackMembers } from "../../gmww-wolf-recognition.js";
 
 export class RoomNightRuntimeMethods {
@@ -321,6 +322,23 @@ export class RoomNightRuntimeMethods {
     runtime.autoAdvance=meta.autoGM!==false;runtime.updatedAt=now;await this.ctx.storage.put(this.nightRuntimeKey(meta,night),runtime);meta.currentNightTurnId=runtime.currentId;meta.updatedAt=now;meta.lastUsedAt=now;await this.ctx.storage.put("meta",meta);
     if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     this.broadcast({type:"night_turn",night,runtime,source,room:publicRoom(meta),serverTime:Date.now()});return runtime
+  }
+  // 21/11/2026: lượt đêm đã hành động xong (sau tiếng Xác nhận) → chờ 5 giây (để Khôi phục) rồi qua lượt mới.
+  // Thời gian cài đặt là tối đa; nếu còn ≤5 giây thì giữ nguyên, KHÔNG cộng thêm 5 giây.
+  async shortenNightTurnAfterAction(){
+    const meta=await this.ctx.storage.get("meta");
+    if(!meta||meta.demo===true||meta.autoGM===false||String(meta.phase||"").toLowerCase()!=="running"||String(meta.cyclePhase||"").toLowerCase()!=="night")return false;
+    const night=Math.max(1,Number(meta.cycleNight||1)),runtime=await this.getNightRuntime(meta,night,true);
+    if(!runtime||runtime.completed)return false;
+    const turn=runtime.queue?.[runtime.cursor];if(!turn||turn.kind==="village-wakeup")return false;
+    const deadline=Date.parse(runtime.deadlineAt||""),target=Date.now()+5000;
+    if(!Number.isFinite(deadline)||deadline<=target)return false;
+    if(await nightTurnRoleActionsRemaining(this,meta,turn)>0)return false;
+    runtime.deadlineAt=new Date(target).toISOString();runtime.earlyFinishTurnId=String(turn.id||"");runtime.updatedAt=new Date().toISOString();
+    await this.ctx.storage.put(this.nightRuntimeKey(meta,night),runtime);
+    this.broadcast({type:"night_turn",night,runtime,source:"action-done",room:publicRoom(meta),serverTime:Date.now()});
+    await this.scheduleRoomAlarm(meta);
+    return true;
   }
   // Trượng Luân Hồi / Quyền Trượng Phục Sinh: khi chủ chết, lá tự lật và chủ tiếp tục sống (dùng 1 lần, kể cả đã chết).
   async reviveArtifactSweep(meta,rows,now){

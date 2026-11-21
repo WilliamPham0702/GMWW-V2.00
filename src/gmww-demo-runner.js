@@ -76,6 +76,11 @@ function dayActions(ctx,meta,usage,ballot,showBlocked=false){
 }
 // Only the authenticated actor's current, unused powers reach Player Web.
 // The private response does not expose other actors or the full night queue.
+// Lượt đêm đã làm xong: không còn hành động Vai Trò nào (bỏ qua Artifact) cho người trong lượt.
+export async function nightTurnRoleActionsRemaining(room,meta,turn){
+ const ctx=await context(room,meta),usage=await ctx.store.get('battleRoleUsage:'+meta.matchId)||[];
+ return nightActions(ctx,meta,turn,usage,false).filter(a=>!a.artifactId).length;
+}
 export async function playerOfferedActions(room,meta,loginId){
  if(meta?.phase!=='running'||!loginId||(!meta.demo&&String(meta.roomMode||'').toLowerCase()!=='online'))return [];
  const ctx=await context(room,meta);
