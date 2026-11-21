@@ -42,3 +42,11 @@ test('Danh mục audio chung: không chia sẻ promise đang tải giữa các r
   assert.doesNotMatch(src,/if\(loading\)return loading/);
   assert.doesNotMatch(src,/let cached=null,cachedUntil=0,loading=null/);
 });
+test('Audio Chơi nhanh: chấp nhận URL clip chung ?a=s<sha256>',()=>{
+  const chat=playerWebSource('35-online-chat');
+  assert.match(chat,/\/\^\(\?:\[a-f0-9\]\{32\}\|s\[a-f0-9\]\{64\}\)\$\/\.test\(u\.slice\(base\.length\)\)/);
+});
+test('Phòng người chơi: đủ điều kiện thắng thì báo alarm ngay',()=>{
+  assert.match(worker,/winDue=meta\.playerRoom===true&&meta\.autoGM!==false&&String\(meta\.phase\|\|""\)\.toLowerCase\(\)==="running"&&this\.computeWinProposal\(/);
+  assert.match(worker,/winDue\|\|Infinity\)/);
+});
