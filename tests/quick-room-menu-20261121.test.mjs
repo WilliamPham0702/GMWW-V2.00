@@ -77,3 +77,12 @@ test('Chơi lại: Bắt Đầu tự replay ván đã kết thúc; thanh trận 
   assert.match(web,/chatLabel=night\?'💬':'Nhắn cho phòng…'/);
   assert.match(web,/const cols=night\?\['58px','52px','minmax\(0,1fr\)','66px'\]/);
 });
+test('Menu trên không viền trắng, nền menu mờ; tab cũ tự nhận bản Web mới (webBuild)',()=>{
+  const v=playerWebSource('20-village-and-profile');
+  assert.match(v,/#playBattleTop\{border:0!important;outline:0!important;box-shadow:none!important;background:rgba\(5,39,58,\.30\)!important/);
+  assert.match(web,/gm-top-menu-v293>\*\{-webkit-backdrop-filter:blur\(12px\)/);
+  assert.match(worker,/webBuild:webBuild\(\)/);
+  assert.match(worker,/replaceAll\("__GMWW_WEB_BUILD__",webBuild\(\)\)/);
+  const u=playerWebSource('50-privacy-and-runtime');
+  assert.match(u,/buildChanged=!!build&&!GMWW_WEB_BUILD\.startsWith\('__'\)&&build!==GMWW_WEB_BUILD/);
+});

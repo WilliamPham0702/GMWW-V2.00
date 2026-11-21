@@ -41,7 +41,10 @@ async function checkWebUpdate(){
     try{known=Math.max(0,Number(localStorage.getItem(GMWW_WEB_SYNC_KEY)||0))}catch{}
     if(syncRes.ok){try{const sync=await syncRes.json();generation=Math.max(0,Number(sync?.generation||0))}catch{}}
     const syncChanged=generation>0&&known>0&&generation!==known;if(generation>0)try{localStorage.setItem(GMWW_WEB_SYNC_KEY,String(generation))}catch{}
-    if((latest&&latest!==GMWW_WEB_VERSION)||syncChanged){gmwwWebUpdateVersion=latest||GMWW_WEB_VERSION;ensureWebUpdateBanner().style.display='flex'}
+    // Bản Player Web mới cùng số phiên bản (Chrome/Edge iOS giữ tab cũ): so mã bản dựng.
+    const build=String(d.webBuild||'').trim(),buildChanged=!!build&&!GMWW_WEB_BUILD.startsWith('__')&&build!==GMWW_WEB_BUILD;
+    if(buildChanged&&!(state.roomCode&&String(state.room?.phase||'').toLowerCase()==='running')){try{location.reload()}catch{}return}
+    if((latest&&latest!==GMWW_WEB_VERSION)||syncChanged||buildChanged){gmwwWebUpdateVersion=latest||GMWW_WEB_VERSION;ensureWebUpdateBanner().style.display='flex'}
   }catch{}
 }
 function startWebUpdateWatch(){if(gmwwWebUpdateTimer)return;checkWebUpdate();gmwwWebUpdateTimer=setInterval(()=>{if(!document.hidden)checkWebUpdate()},60000)}
