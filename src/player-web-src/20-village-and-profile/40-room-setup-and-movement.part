@@ -95,7 +95,10 @@ function scheduleMovementCompletion(player=currentRoomPlayer()){
 async function completeVillageMove(moveId){
   const me=currentRoomPlayer();if(!state.roomCode||!moveId||String(me?.moveId||'')!==String(moveId))return;
   try{const d=await api('/api/rooms/'+encodeURIComponent(state.roomCode)+'/move/complete',{method:'POST',headers:auth(),body:JSON.stringify({moveId})});if(d?.room)state.room=d.room;if(Array.isArray(d?.players))state.players=d.players;const next=currentRoomPlayer();state.selectedSeatId=Number(next?.seatId||next?.moveTargetSeatId||0)||null;state.ready=!!next?.ready;if(next?.setupComplete){state.lobbySeatWalkPending=null;closeRoomSetup();ensureVillageReadyDock()}else renderRoomSetup();syncVillageFrame();if(!next?.seatId&&state.lobbySeatWalkPending){const q=state.lobbySeatWalkPending;state.lobbySeatWalkPending=null;setTimeout(()=>startSeatWalk(q.seatId,q.x,q.y),120)}else if(!next?.seatId&&!state.lobbyMotionPaused)scheduleLobbyMotion(420)}
-  catch(e){if(String(e?.data?.error||'')==='MOVE_NOT_ARRIVED'){state.movementCompleteTimer=setTimeout(()=>completeVillageMove(moveId),Math.max(80,Number(e?.data?.remainingMs||180)));return}toast(e.message);renderRoomSetup()}
+  catch(e){if(String(e?.data?.error||'')==='MOVE_NOT_ARRIVED'){state.movementCompleteTimer=setTimeout(()=>completeVillageMove(moveId),Math.max(80,Number(e?.data?.remainingMs||180)));return}
+    // Bước đi đã bị máy chủ huỷ/thay (vd. vừa tạo/vào phòng): không hiện mã lỗi thô, chỉ đồng bộ lại.
+    if(String(e?.data?.error||'')==='MOVE_NOT_ACTIVE'){try{await pollRoomState()}catch(_){}syncVillageFrame();return}
+    toast(e.message);renderRoomSetup()}
 }
 function ensureVillageReadyDock(){
   // The player seat/ready state belongs in the existing top information box.

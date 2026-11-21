@@ -30,3 +30,7 @@ test('Vào trận: đóng trang thiết lập, chủ phòng chỉ thêm nút K�
   assert.doesNotMatch(web,/btn\(room\.autoGM\?'Tạm dừng':'Tiếp tục'/);
   assert.match(web,/toLowerCase\(\)==='running'\)pr\.open=false;/);
 });
+test('MOVE_NOT_ACTIVE không hiện mã lỗi thô',()=>{
+  const v=playerWebSource('20-village-and-profile');
+  assert.match(v,/if\(String\(e\?\.data\?\.error\|\|''\)==='MOVE_NOT_ACTIVE'\)\{try\{await pollRoomState\(\)\}catch\(_\)\{\}syncVillageFrame\(\);return\}/);
+});
