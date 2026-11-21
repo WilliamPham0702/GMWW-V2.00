@@ -8948,3 +8948,9 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
 .sheet:not(#playGameSheet) .sheet-card>.sheet-head{display:none!important}
 #playGameSheet .sheet-card>.sheet-head>div{display:none!important}
 #gmwwGMChatPanel>header>strong,#gmwwGMChatClose{display:none!important}
+
+/* V3.325: ô 💬 (battleGMChatFloat) đã được thay bằng ô Chat ở thanh dưới; luật ban ngày
+   display:flex!important của .battle-day-icon-float làm nó hiện lại. Ẩn hẳn và tôn trọng [hidden]. */
+body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls .battle-day-icon-float[hidden],
+body.play-immersive #start #playShell #battleBottomControls #battleGMChatFloat,
+#start #playShell #battleGMChatFloat{display:none!important}
