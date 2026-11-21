@@ -175,11 +175,13 @@
     if(template)quickRoleList(box,template);
     box.append(el('p','gmww-pr-help','Hệ thống tự phân bố '+count+' ghế quanh đống lửa, khóa ghế, xáo vai và phát kín cho từng người rồi mở Đêm 1.'));
     if(!valid)box.append(el('p','gmww-pr-note','Số lá bài phải bằng số thành viên hiện tại. Vui lòng quay lại Ván Mẫu.'));
-    if(!pr.own||!inOwnRoom()||room.endedAt)return;
+    if(!pr.own||!inOwnRoom())return;
     pinTop(box,btn('BẮT ĐẦU GAME',async()=>{
       if(!valid||count<3)throw new Error('Chưa có Ván Mẫu hợp lệ hoặc chưa đủ người.');
       const roster=members.map(p=>p.loginId).sort();
       if(!roster.includes(st.ownerLoginId))throw new Error('Chủ phòng phải ở trong ván.');
+      // Chơi lại sau ván đã kết thúc: dọn ván cũ (giữ người + Ván Mẫu) rồi mới bắt đầu.
+      if((pr.state?.room||room).endedAt){await callOwner('replay','POST',{});await refresh()}
       const started=await callOwner('quick-start','POST',{quickPlayRoster:roster,templateId:template.id});
       if(started?.started!==true||String(started?.room?.phase||'').toLowerCase()!=='running')
         throw new Error('Máy chủ chưa xác nhận trận đã bắt đầu.');

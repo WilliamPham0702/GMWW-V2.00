@@ -71,3 +71,9 @@ test('Không tên trang / nút × trên Web và Server; thanh trận Web có h�
   const fs=await import('node:fs');const css=fs.readFileSync(new URL('../server-game/current/style.css',import.meta.url),'utf8');
   assert.match(css,/\.sheet:not\(#playGameSheet\) \.sheet-card>\.sheet-head\{display:none!important\}/);
 });
+test('Chơi lại: Bắt Đầu tự replay ván đã kết thúc; thanh trận cố định, ban đêm chat là 💬',()=>{
+  assert.match(web,/if\(\(pr\.state\?\.room\|\|room\)\.endedAt\)\{await callOwner\('replay','POST',\{\}\);await refresh\(\)\}/);
+  assert.doesNotMatch(web,/if\(!pr\.own\|\|!inOwnRoom\(\)\|\|room\.endedAt\)return;/);
+  assert.match(web,/chatLabel=night\?'💬':'Nhắn cho phòng…'/);
+  assert.match(web,/const cols=night\?\['58px','52px','minmax\(0,1fr\)','66px'\]/);
+});
