@@ -54,8 +54,9 @@ async function gmwwPlayAnnouncement(){
     }
     if(generation!==gmwwAnnouncementGeneration||gmwwChatAudioOff()||state.roomCode!==pending.room)return;
     // Shared WebAudio context (unlocked by any earlier tap) avoids iOS autoplay blocks.
-    if(await gmwwPlayAnnouncementBuffers(blobs,generation,pending))return;
-    await gmwwPlayAnnouncementHtml(blobs,generation,pending);
+    if(await gmwwPlayAnnouncementBuffers(blobs,generation,pending)){gmwwAudioLockedPrompt(false);return}
+    try{await gmwwPlayAnnouncementHtml(blobs,generation,pending);gmwwAudioLockedPrompt(false)}
+    catch(e){if(generation===gmwwAnnouncementGeneration&&!gmwwChatAudioOff())gmwwAudioLockedPrompt(true)}
   }catch{}finally{if(gmwwAnnouncementRequest===controller)gmwwAnnouncementRequest=null}
 }
 function gmwwDecodeAnnouncement(c,blob){
@@ -94,8 +95,19 @@ async function gmwwPlayAnnouncementHtml(blobs,generation,pending){
   await audio.play();
   if(generation===gmwwAnnouncementGeneration)gmwwPlayerCueKey=pending.key;
 }
+// iPhone chặn phát tiếng tới khi người chơi chạm màn hình (nhất là sau khi trang tự tải bản mới):
+// hiện nút "Chạm để bật âm thanh"; chạm bất kỳ đâu sẽ mở khoá và phát lại lượt hiện tại.
+function gmwwAudioLockedPrompt(show){
+  let b=document.getElementById('gmwwAudioUnlock');
+  if(!show){if(b)b.hidden=true;return}
+  if(!b){b=document.createElement('button');b.type='button';b.id='gmwwAudioUnlock';b.textContent='🔊 Chạm để bật âm thanh';
+    b.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);z-index:100100;padding:10px 18px;border-radius:999px;border:1.5px solid #f4d16d;background:rgba(18,59,82,.78);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff4cf;font:800 14px system-ui,-apple-system,sans-serif;box-shadow:0 6px 18px #0008';
+    b.addEventListener('click',()=>{try{unlockGmwwAudio()}catch{}b.hidden=true;void gmwwPlayAnnouncement()});document.body.appendChild(b)}
+  b.hidden=false;
+}
 // Retry a blocked autoplay on a real tap; playback still joins at the Server's position.
 document.addEventListener('pointerdown',()=>{
+  const lock=document.getElementById('gmwwAudioUnlock');if(lock&&!lock.hidden)lock.hidden=true;
   if(gmwwChatAudioOff()||!gmwwAnnouncementPending||gmwwAnnouncementPending.key===gmwwPlayerCueKey||gmwwAnnouncementRequest)return;
   void gmwwPlayAnnouncement();
 },{passive:true});
