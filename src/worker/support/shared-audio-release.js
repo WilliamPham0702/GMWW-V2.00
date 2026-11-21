@@ -6,7 +6,7 @@ const TARGET=/^(cards|system|artifacts|actions):[A-Za-z0-9_.:-]{1,120}$/;
 const SHA=/^[a-f0-9]{64}$/;
 const MIMES={'audio/mpeg':'mp3','audio/mp4':'m4a','audio/ogg':'ogg','audio/wav':'wav'};
 const LIMIT=2*1024*1024;
-let cached=null,cachedUntil=0,loading=null;
+let cached=null,cachedUntil=0;
 export function verifiedSharedAudioCatalog(doc){
   if(!doc||doc.format!=='gmww-shared-audio-v1'||doc.version!==1||doc.releaseTag!==GMWW_SHARED_AUDIO_TAG||
       !doc.clips||typeof doc.clips!=='object'||Array.isArray(doc.clips))return null;
@@ -24,20 +24,19 @@ export function verifiedSharedAudioCatalog(doc){
 }
 export async function getSharedAudioCatalog(fetcher=fetch,now=Date.now()){
   if(now<cachedUntil)return cached;
-  if(loading)return loading;
-  loading=(async()=>{
-    let next=null;
-    try{
-      const response=await fetcher(GMWW_SHARED_AUDIO_BASE+'manifest.json',{redirect:'follow',signal:AbortSignal.timeout(5000)});
-      if(response.ok&&Number(response.headers.get('content-length')||0)<200000){
-        const raw=await response.text();
-        if(raw.length<200000)next=verifiedSharedAudioCatalog(JSON.parse(raw));
-      }
-    }catch(_){}
-    cached=next;cachedUntil=Date.now()+(next?600000:30000);loading=null;
-    return cached;
-  })();
-  return loading;
+  // KHÔNG dùng chung một promise đang tải giữa các request: trong Durable Object,
+  // await promise của request khác (vd. alarm Auto GM ↔ /me của người chơi) bị treo
+  // tới khi blockConcurrencyWhile hết 30 giây → DO reset → /me 500 → người chơi không nhận vai.
+  let next=null;
+  try{
+    const response=await fetcher(GMWW_SHARED_AUDIO_BASE+'manifest.json',{redirect:'follow',signal:AbortSignal.timeout(5000)});
+    if(response.ok&&Number(response.headers.get('content-length')||0)<200000){
+      const raw=await response.text();
+      if(raw.length<200000)next=verifiedSharedAudioCatalog(JSON.parse(raw));
+    }
+  }catch(_){}
+  if(Date.now()>=cachedUntil||next){cached=next;cachedUntil=Date.now()+(next?600000:30000)}
+  return cached;
 }
 export function sharedAudioTargetsForCue(meta,targets,catalog){
   if(meta?.quickPlay!==true||meta?.quickPlayAudioReleaseTag!==GMWW_SHARED_AUDIO_TAG||!catalog)return [];

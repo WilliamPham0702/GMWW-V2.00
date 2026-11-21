@@ -133,7 +133,8 @@
     const head=el('header','gmww-pr-head'),close=el('button','gmww-pr-close','×');close.type='button';close.setAttribute('aria-label','Đóng');close.addEventListener('click',closeSheet);
     const isQuick=quickMode();
     const panelTitle=isQuick?(pr.view==='game'?'Ván Mẫu':pr.view==='deal'?'Bắt Đầu':pr.view==='lobby'?'Sảnh Chờ':'Tạo Phòng'):(pr.view==='game'?(pr.gameView==='design'?'Thiết kế Ván Mẫu':'Chọn Ván Mẫu'):pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng'));
-    head.append(el('b',null,panelTitle),close);panel.append(el('i','gmww-pr-grip'),head);
+    // Chơi nhanh: bỏ dòng tiêu đề + nút × (menu trên đã ghi tên bước; chạm ra ngoài để đóng, kéo bằng thanh nắm).
+    head.append(el('b',null,panelTitle),close);panel.append(el('i','gmww-pr-grip'));if(!isQuick)panel.append(head);
     const body=el('div','gmww-pr-body');
     if(isQuick){
       const host=!!(pr.own&&inOwnRoom()&&pr.state?.room?.quickPlay),st=host?pr.state:null;
