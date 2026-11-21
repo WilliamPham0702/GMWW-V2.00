@@ -200,7 +200,10 @@ export class RoomCycleMethods {
   }
   async scheduleRoomAlarm(meta=null){
     meta=meta||await this.ctx.storage.get("meta");if(!meta||String(meta.phase||"").toLowerCase()==="deleted")return 0;
-    const expiryDue=this.roomExpiryDue(meta),autoDue=await this.autoAdvanceDue(meta),demoDue=meta.demo?await nextServerDemoDue(this,meta):0,countdownDue=typeof this.dayCountdownDue==="function"?await this.dayCountdownDue(meta):0,presenceDue=meta.playerRoom===true?Date.now()+PLAYER_ROOM_CHECK_MS:0,due=Math.min(expiryDue,autoDue||Infinity,demoDue||Infinity,countdownDue||Infinity,presenceDue||Infinity),next=Math.max(Date.now()+25,due);
+    const expiryDue=this.roomExpiryDue(meta),autoDue=await this.autoAdvanceDue(meta),demoDue=meta.demo?await nextServerDemoDue(this,meta):0,countdownDue=typeof this.dayCountdownDue==="function"?await this.dayCountdownDue(meta):0,presenceDue=meta.playerRoom===true?Date.now()+PLAYER_ROOM_CHECK_MS:0,
+      // Phòng người chơi: đã đủ điều kiện thắng thì kết thúc ngay (không chờ hết giờ thảo luận / 5 phút kiểm tra).
+      winDue=meta.playerRoom===true&&meta.autoGM!==false&&String(meta.phase||"").toLowerCase()==="running"&&this.computeWinProposal(meta,(await this.ctx.storage.get("assignments"))||[],(await this.ctx.storage.get("interactions"))||[])?Date.now()+300:0,
+      due=Math.min(expiryDue,autoDue||Infinity,demoDue||Infinity,countdownDue||Infinity,presenceDue||Infinity,winDue||Infinity),next=Math.max(Date.now()+25,due);
     try{await this.ctx.storage.setAlarm(next)}catch(error){console.error("GMWW_ROOM_ALARM_SCHEDULE",error);if(meta.demo)throw error}
     return next
   }
