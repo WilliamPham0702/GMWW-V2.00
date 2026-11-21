@@ -98,3 +98,9 @@ test('Lượt đêm xong → 5 giây rồi qua lượt; Lên Giàn: đủ phiế
   const v=playerWebSource('20-village-and-profile');
   assert.match(v,/cyclePhase=String\(room\.cyclePhase\|\|cycle\.phase\|\|''\)/);
 });
+test('Web: nút Chat nhấp nháy khi có tin mới',()=>{
+  const chat=playerWebSource('35-online-chat');
+  assert.match(chat,/\[data-battle-control="chat"\]'\)\?\.classList\.toggle\('gmww-chat-unread',!!unread\)/);
+  assert.match(web,/#gmwwQuickBattleDock \[data-battle-control="chat"\]\.gmww-chat-unread\{animation:gmwwChatBlink/);
+  assert.match(web,/pr\.chatOpen=true;try\{gmwwChatUnread\(false\)\}catch\(_\)\{\}/);
+});

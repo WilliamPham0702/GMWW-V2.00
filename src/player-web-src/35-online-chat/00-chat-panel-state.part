@@ -7,6 +7,9 @@ function gmwwChatUnread(unread){
  const panel=document.getElementById('gmwwChatPanel'),footer=document.getElementById('gmwwOnlineFooter');
  panel?.classList.toggle('gmww-chat-unread',!!unread);footer?.classList.toggle('gmww-chat-unread',!!unread);
  panel?.setAttribute('aria-label',unread?'Chat Làng • Có tin mới':'Chat Làng');
+ // Nút Chat ở thanh dưới (sảnh + trận) nhấp nháy khi có tin mới, như Server.
+ document.querySelector('#gmwwQuickBattleDock [data-battle-control="chat"]')?.classList.toggle('gmww-chat-unread',!!unread);
+ document.getElementById('gmwwOwnerDock')?.shadowRoot?.getElementById('playChatTop')?.classList.toggle('gmww-chat-unread',!!unread);
 }
 function gmwwChatClosePanel(){
  gmwwChatOpen=false;clearTimeout(gmwwChatIdleTimer);

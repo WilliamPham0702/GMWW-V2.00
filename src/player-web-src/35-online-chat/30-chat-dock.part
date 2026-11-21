@@ -227,7 +227,7 @@ async function gmwwChatRefresh(){
     const last=items.filter(x=>!x.system).at(-1)||null;
     const lastId=String(last?.id||'');const previous=gmwwChatLatestByChannel.get(key);
     if(lastId){
-      if(previous!==undefined&&previous!==lastId&&!gmwwChatOpen&&String(last?.senderId||'')!==String(state.member?.loginId||''))gmwwChatUnread(true);
+      if(previous!==undefined&&previous!==lastId&&!gmwwChatOpen&&!(document.getElementById('gmwwPrChat')&&!document.getElementById('gmwwPrChat').hidden)&&String(last?.senderId||'')!==String(state.member?.loginId||''))gmwwChatUnread(true);
     }
     gmwwChatLatestByChannel.set(key,lastId);
     if(gmwwChatOpen)gmwwChatUnread(false);
