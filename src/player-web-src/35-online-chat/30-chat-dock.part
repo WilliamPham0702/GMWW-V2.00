@@ -120,6 +120,8 @@ html body #gmwwOnlineFooter #gmwwChatPanel{max-height:min(52dvh,440px)!important
  gmwwChatAudioButton();gmwwChatVoiceReset();document.getElementById('gmwwChatForm').onsubmit=e=>{e.preventDefault();gmwwChatTouch();if(gmwwChatVoiceRecorder?.state==='recording'||gmwwChatVoiceDraft||gmwwChatVoiceProcessing){void gmwwChatVoiceSend();return}void gmwwChatSend()};
  void gmwwChatRefresh();
 }
+// Khôi phục: dùng chung cho thanh dưới cũ và thanh dưới Chơi nhanh.
+function gmwwPlayerRestoreClick(){const pending=!!gmwwOnlinePick;gmwwOnlineStop();gmwwOnlineClearPositions();state.gallowsSelectedId='';setGameViewPane('village',{persist:false});renderGallowsWidget();if(pending){toast('Đã khôi phục lựa chọn chưa gửi.');return}void gmwwOnlineRestore()}
 function gmwwChatDockSync(){
   const inGame=!!(state.roomCode&&state.participantId&&['running'].includes(state.room?.phase)&&
     String(state.room?.roomMode||'online').toLowerCase()==='online');
@@ -130,7 +132,7 @@ function gmwwChatDockSync(){
     footer=document.createElement('div');footer.id='gmwwOnlineFooter';footer.setAttribute('aria-label','Menu dưới Player Web');
     const clock=document.createElement('button');clock.type='button';clock.className='gmww-foot-button';clock.id='gmwwPlayerClock';clock.title='Đồng hồ đồng bộ GM';clock.disabled=true;clock.textContent='--:--';
     const undo=document.createElement('button');undo.type='button';undo.className='gmww-foot-button';undo.id='gmwwPlayerRestore';undo.textContent='Khôi phục';undo.title='Khôi phục lựa chọn hoặc hành động gần nhất của bạn';undo.setAttribute('aria-label','Khôi phục hành động');
-    undo.onclick=()=>{const pending=!!gmwwOnlinePick;gmwwOnlineStop();gmwwOnlineClearPositions();state.gallowsSelectedId='';setGameViewPane('village',{persist:false});renderGallowsWidget();if(pending){toast('Đã khôi phục lựa chọn chưa gửi.');return}void gmwwOnlineRestore()};
+    undo.onclick=()=>gmwwPlayerRestoreClick();
     footer.append(clock,panel,undo);document.body.appendChild(footer);
   }
   gmwwOnlineRestoreHint();

@@ -134,7 +134,7 @@
     const isQuick=quickMode();
     const panelTitle=isQuick?(pr.view==='game'?'Ván Mẫu':pr.view==='deal'?'Bắt Đầu':pr.view==='lobby'?'Sảnh Chờ':'Tạo Phòng'):(pr.view==='game'?(pr.gameView==='design'?'Thiết kế Ván Mẫu':'Chọn Ván Mẫu'):pr.view==='room'||!pr.own?'Phòng':(pr.state?.room?.roomName||LABEL[pr.view]||'Phòng'));
     // Chơi nhanh: bỏ dòng tiêu đề + nút × (menu trên đã ghi tên bước; chạm ra ngoài để đóng, kéo bằng thanh nắm).
-    head.append(el('b',null,panelTitle),close);panel.append(el('i','gmww-pr-grip'));if(!isQuick)panel.append(head);
+    head.append(el('b',null,panelTitle),close);panel.append(el('i','gmww-pr-grip'));void head;// Mọi trang rời: không tên trang, không nút × (chạm ra ngoài để đóng).
     const body=el('div','gmww-pr-body');
     if(isQuick){
       const host=!!(pr.own&&inOwnRoom()&&pr.state?.room?.quickPlay),st=host?pr.state:null;
@@ -289,22 +289,30 @@
     const style=el('style');style.textContent='#gmwwQuickBattleDock{position:fixed;box-sizing:border-box;z-index:9650;left:calc(var(--gmww-player-visible-left,0px) + 8px);top:calc(var(--gmww-player-visible-top,0px) + var(--gmww-player-visible-height,100dvh) - max(8px,env(safe-area-inset-bottom,0px)));transform:translateY(-100%);width:calc(var(--gmww-player-visible-width,100vw) - 16px);max-width:760px;display:grid;grid-template-columns:74px minmax(0,1fr);gap:8px;padding:0;background:transparent;border:0}'+
       '#gmwwQuickBattleDock.has-action{grid-template-columns:74px minmax(0,1fr) 74px}'+
       '#gmwwQuickBattleDock.has-end{grid-template-columns:74px minmax(0,1fr) 64px}#gmwwQuickBattleDock.has-action.has-end{grid-template-columns:74px minmax(0,1fr) 74px 64px}'+
+      '#gmwwQuickBattleDock [data-battle-control="restore"]{font-size:12px;line-height:1.2}#gmwwQuickBattleDock [data-battle-control="restore"].gmww-restore-ready{background:#7a5a12e6;border-color:#f4d16d;color:#fff4cf}'+
+      '#gmwwQuickBattleDock [data-battle-control="tray"]{min-width:0;min-height:58px;display:flex;align-items:center;border:1.5px solid #f4d16daa;border-radius:16px;background:#123b52e6;box-shadow:0 4px 14px #00182b66;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);padding:3px 6px;overflow:hidden}#gmwwQuickBattleDock [data-battle-control="tray"][hidden]{display:none}'+
+      '#gmwwOnlineDock.in-tray{position:static!important;transform:none!important;left:auto!important;top:auto!important;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:6px;max-width:none;width:100%;overflow-x:auto;overflow-y:hidden}'+
+      '#gmwwOnlineDock.in-tray button{width:auto!important;height:auto!important;min-width:52px;display:flex;flex-direction:column;align-items:center;gap:1px;background:transparent!important;border:0!important;box-shadow:none!important;padding:0 2px!important;min-height:0!important}'+
+      '#gmwwOnlineDock.in-tray img{width:34px!important;height:34px!important}#gmwwOnlineDock .gmww-act-name{display:none}#gmwwOnlineDock.in-tray .gmww-act-name{display:block;font:700 10px/1.15 system-ui,-apple-system,sans-serif;color:#fff1bd;white-space:nowrap;max-width:84px;overflow:hidden;text-overflow:ellipsis;pointer-events:none}'+
       '#gmwwQuickBattleDock [data-battle-control="end"]{background:#6b2430e6;border-color:#e59aa5;font-size:12px;line-height:1.2}#gmwwQuickBattleDock [data-battle-control="end"][hidden]{display:none}'+
       '#gmwwQuickBattleDock[hidden]{display:none!important}#gmwwQuickBattleDock button{font:800 15px/1.15 system-ui,-apple-system,sans-serif;color:#eefaff;background:#123b52e6;border:1.5px solid #6fa9bdaa;border-radius:16px;min-width:0;min-height:58px;padding:4px 6px;box-shadow:0 4px 14px #00182b66;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}'+
       '#gmwwQuickBattleDock [data-battle-control="clock"]{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:19px;font-variant-numeric:tabular-nums}#gmwwQuickBattleDock [data-battle-control="clock"] i{font-style:normal;font-size:16px;line-height:1}'+
       '#gmwwQuickBattleDock [data-battle-control="chat"]{text-align:left;padding:0 18px;font-weight:600;font-size:16px;color:#d9eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
       '#gmwwQuickBattleDock [data-battle-control="action"]{background:#1c6a4ae6;border-color:#8ee0b0;font-size:12px}#gmwwQuickBattleDock [data-battle-control="action"][hidden]{display:none}';
     document.head.appendChild(style);
-    for(const key of ['clock','chat','action','end']){
+    for(const key of ['clock','chat','tray','action','restore','end']){
+      if(key==='tray'){const tray=el('div');tray.dataset.battleControl='tray';tray.hidden=true;tray.setAttribute('aria-label','Hành động của lượt');host.append(tray);continue}
       const button=el('button');button.type='button';button.dataset.battleControl=key;
       if(key==='clock')button.setAttribute('aria-label','Thời gian lượt');
       if(key==='chat')button.textContent='Nhắn cho phòng…';
+      if(key==='restore'){button.textContent='Khôi phục';button.id='gmwwQuickRestore';button.setAttribute('aria-label','Khôi phục hành động')}
       if(key==='end'){button.textContent='⏹ Kết thúc';button.hidden=true;button.setAttribute('aria-label','Kết thúc ván (chủ phòng)')}
       button.addEventListener('click',()=>{
         try{unlockGmwwAudio()}catch(_){}
         const room=(pr.own&&inOwnRoom()?pr.state?.room:state?.room)||{};
         if(key==='clock'){revealPlayerTopMenu(true);return}
         if(key==='chat'){pr.chatOpen?closeChat():openChat();return}
+        if(key==='restore'){gmwwPlayerRestoreClick();return}
         if(key==='end'){if(pr.own&&inOwnRoom()&&confirm('Kết thúc ván ngay?'))run(async()=>{await callOwner('end','POST',{});say('Đã kết thúc ván.');await refresh()});return}
         const stage=quickActionStage(room);
         if(stage==='night'){renderOnlineActionDock();toast('Chạm hoặc kéo icon hành động vào người chơi.');return}
@@ -332,12 +340,19 @@
   }
   function renderQuickBattleDock(host,room){
     const clock=host.querySelector('[data-battle-control="clock"]'),action=host.querySelector('[data-battle-control="action"]');
-    const t=quickBattleClock(room).replace('--:--','00:00'),html='<i>🕒</i>'+t;
-    if(clock.dataset.t!==t){clock.dataset.t=t;clock.innerHTML=html}
-    const stage=quickActionStage(room),label=stage==='night'?'⚔ Hành động':stage==='nominating'?'🗳 Đề cử':stage==='voting'?'🗳 Bỏ phiếu':'';
-    action.hidden=!stage;host.classList.toggle('has-action',!!stage);if(action.textContent!==label)action.textContent=label;
+    // Đồng hồ chỉ còn 00:00 (không icon).
+    const t=quickBattleClock(room).replace('--:--','00:00');
+    if(clock.dataset.t!==t){clock.dataset.t=t;clock.textContent=t}
+    // Hộp hành động như Server: icon + tên hành động, kéo lên người chơi.
+    const tray=host.querySelector('[data-battle-control="tray"]'),hasTray=!!tray?.querySelector('#gmwwOnlineDock button');
+    if(tray)tray.hidden=!hasTray;
+    const stage=quickActionStage(room),gallows=stage==='nominating'||stage==='voting',label=stage==='nominating'?'🗳 Đề cử':stage==='voting'?'🗳 Bỏ phiếu':'';
+    action.hidden=!gallows;host.classList.toggle('has-action',gallows||hasTray);if(action.textContent!==label)action.textContent=label;
     const end=host.querySelector('[data-battle-control="end"]'),isOwner=!!(pr.own&&inOwnRoom());
     if(end){end.hidden=!isOwner;host.classList.toggle('has-end',isOwner)}
+    const cols=['58px','minmax(0,1fr)'];if(hasTray)cols.push('minmax(0,1.3fr)');if(gallows)cols.push('70px');cols.push('66px');if(isOwner)cols.push('60px');
+    const grid=cols.join(' ');if(host.style.gridTemplateColumns!==grid)host.style.gridTemplateColumns=grid;
+    if(typeof gmwwOnlineRestoreHint==='function')gmwwOnlineRestoreHint();
   }
   function renderChrome(){
     const show=barScreen(),quick=quickMode(),strip=ensureStrip(),quickStrip=ensureQuickStrip(),dock=ensureDock(),battleDock=ensureQuickBattleDock();
@@ -433,7 +448,7 @@
     const panel=el('div','gmww-pr-panel');panel.id='gmwwPrPanel';panel.hidden=true;document.body.append(back,panel);
     const chatPage=el('div','gmww-pr-panel gmww-pr-chatpage');chatPage.id='gmwwPrChat';chatPage.hidden=true;
     const chatHead=el('header','gmww-pr-head'),chatClose=el('button','gmww-pr-close','×');chatClose.type='button';chatClose.setAttribute('aria-label','Đóng');chatClose.addEventListener('click',closeChat);
-    chatHead.append(el('b',null,'Chat phòng'),chatClose);chatPage.append(el('i','gmww-pr-grip'),chatHead,el('div','gmww-pr-chatbody'));document.body.append(chatPage);
+    chatHead.append(el('b',null,'Chat phòng'),chatClose);chatPage.append(el('i','gmww-pr-grip'),el('div','gmww-pr-chatbody'));document.body.append(chatPage);
     floatPage(panel); // Chat is viewport-anchored so its composer cannot be dragged behind the iPhone keyboard.
     document.addEventListener('pointerdown',dismissOutside,true);
     const replace=()=>{renderChrome();place(panel);place(chatPage)};addEventListener('resize',replace,{passive:true});

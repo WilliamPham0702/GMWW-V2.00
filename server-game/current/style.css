@@ -8942,3 +8942,9 @@ body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls 
 body.play-immersive #start #playShell[data-step="battle"] #battleBottomControls #battleMainActionSlot #battleActionTray:not([hidden]){
  flex:0 1 54%!important;width:auto!important;max-width:54%!important;margin:0!important
 }
+
+/* V3.324: mọi trang rời của Server không còn tên trang và nút × — chạm ra ngoài để đóng
+   (gmwwDismissOutsidePointer). Nút × vẫn trong DOM để mã đóng trang gọi .click(). */
+.sheet:not(#playGameSheet) .sheet-card>.sheet-head{display:none!important}
+#playGameSheet .sheet-card>.sheet-head>div{display:none!important}
+#gmwwGMChatPanel>header>strong,#gmwwGMChatClose{display:none!important}

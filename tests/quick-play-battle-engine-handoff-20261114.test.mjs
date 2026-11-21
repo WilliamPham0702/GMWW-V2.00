@@ -15,8 +15,9 @@ test('Quick Play uses existing battle timeline and a visible bottom menu rather 
   assert.match(room,/function renderQuickBattleDock\(host,room\)/);
   assert.match(top,/if\(state\.room\?\.quickPlay===true&&String\(state\.room\.phase\|\|''\)\.toLowerCase\(\)==='running'\)return/);
   // 20/11/2026: màn trận Player Web = bố cục Server phía người chơi: [đồng hồ] [ô chat] (+ ô hành động khi có việc).
-  assert.match(room,/for\(const key of \['clock','chat','action','end'\]\)/);
-  for(const gm of ['Khôi phục','Điều hành','🔊 Audio']) assert.ok(!room.slice(room.indexOf('function ensureQuickBattleDock'),room.indexOf('function renderChrome')).includes(gm),'không có menu GM: '+gm);
+  assert.match(room,/for\(const key of \['clock','chat','tray','action','restore','end'\]\)/);
+  // 21/11/2026: chủ dự án yêu cầu thêm nút Khôi phục (hoàn tác hành động của chính người chơi) vào thanh trận Web.
+  for(const gm of ['Điều hành','🔊 Audio']) assert.ok(!room.slice(room.indexOf('function ensureQuickBattleDock'),room.indexOf('function renderChrome')).includes(gm),'không có menu GM: '+gm);
   for(const api of ['renderOnlineActionDock()','renderGallowsWidget()','openChat()']) assert.ok(room.includes(api),api);
   assert.doesNotMatch(room,/callOwner\('gm-turn'/);
 });
@@ -62,5 +63,5 @@ test('Màn trận Player Web: timeline số + tên lượt như Server, không c
 test('Ô hành động mở đề cử / biểu quyết Lên Giàn hiện có, chỉ hiện khi có việc',()=>{
   assert.match(room,/state\.gallowsNominationOpen=true;renderGallowsWidget\(\)/);
   assert.match(room,/gallowsCurrentStage\(\)/);
-  assert.match(room,/action\.hidden=!stage/);
+  assert.match(room,/action\.hidden=!gallows/);
 });
