@@ -219,7 +219,7 @@ export class RoomHttpDispatchMethods {
     if(url.pathname==="/player/interaction/respond"&&request.method==="POST")return this.playerInteractionRespond(await safeJson(request));
     if(url.pathname==="/player/gallows"&&request.method==="POST")return this.playerGallows(await safeJson(request));
     if(url.pathname==="/player/demo-action"&&request.method==="POST")return this.playerDemoAction(await safeJson(request));
-    if(url.pathname==="/player/action"&&request.method==="POST")return this.playerPhaseAction(await safeJson(request),true);
+    if(url.pathname==="/player/action"&&request.method==="POST"){const res=await this.playerPhaseAction(await safeJson(request),true);if(res&&res.status<300)await this.quickPlayConfirmCue().catch(()=>false);return res}
     if(url.pathname==="/player/undo-action"&&request.method==="POST")return this.playerPhaseUndo(await safeJson(request));
     if(url.pathname==="/player/setup"&&request.method==="POST")return this.playerSetup(await safeJson(request));
     if(url.pathname==="/player/move"&&request.method==="POST")return this.playerMove(await safeJson(request));

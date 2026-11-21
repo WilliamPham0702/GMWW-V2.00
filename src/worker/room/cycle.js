@@ -167,6 +167,7 @@ export class RoomCycleMethods {
     if(meta.demo)await this.syncDemoClock(meta,await this.ctx.storage.get("demoLease")||{});
     const room=publicRoom(meta);this.broadcast({type:"room_cycle",cycleKey:key,phase:p,night:n,matchId:String(meta.matchId||""),expired,nightRuntime,room,source,serverTime:Date.now()});
     this.broadcast({type:"room_state",room,players:Object.values((await this.ctx.storage.get("players"))||{}).map(publicPlayer),serverTime:Date.now()});
+    if(meta.quickPlay===true&&p==="morning"&&n>0)await this.quickPlayDayAudio(meta,this.quickPlayMorningTargets(meta,rows,n),"morning:"+key).catch(()=>false);
     await this.scheduleRoomAlarm(meta);
     return{ok:true,cycleKey:key,phase:p,night:n,expired,wolfResolution,matchId:String(meta.matchId||""),nightRuntime,room}
   }
@@ -232,6 +233,7 @@ export class RoomCycleMethods {
     if(!result?.ok)return "wait";
     await this.ctx.storage.put(key,result.value);
     this.broadcast({type:"gallows_updated",room:publicRoom(meta),gallows:gallowsSnapshot(result.value,meta,now),serverTime:now});
+    if(meta.quickPlay===true)await this.quickPlayGallowsAudio(meta,result.value).catch(()=>false);
     return "gallows";
   }
   async gmTurn(request,body){
