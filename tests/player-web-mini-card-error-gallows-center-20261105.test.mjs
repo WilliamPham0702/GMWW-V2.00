@@ -14,7 +14,7 @@ test('Lá bài mini luôn có mặt lưng đã duyệt, không hiện ảnh vỡ
 
 test('Lỗi hành động hiển thị tiếng Việt, không lộ mã DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN',()=>{
  const src=playerWebSource('35-online-chat');
- assert.match(src,/catch\(e\)\{toast\(gmwwOnlineActionErrorText\(e\)\)\}/);
+ assert.match(src,/catch\(e\)\{toast\(gmwwOnlineActionErrorText\(e\)\);/);
  assert.doesNotMatch(src,/toast\('Hành động chưa được chấp nhận: '\+String\(e\.message/);
  const fn=src.match(/function gmwwOnlineActionErrorText\(e\)\{[\s\S]*?\n\}\n/)[0];
  const f=new Function(fn+';return gmwwOnlineActionErrorText;')();

@@ -171,8 +171,13 @@ async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
    setTimeout(()=>gmwwOnlineTurnEffects(state.onlineActions||[]),5600);
    gmwwOnlineStop();gmwwOnlineCanRestore=state.room?.cyclePhase==='night';gmwwOnlineRestoreHint();toast('Đã thực hiện: '+String(action.name||'Hành động')+(gmwwOnlineCanRestore?' · bấm Khôi phục ở menu dưới nếu cần làm lại':''));
    if(d.revelation?.message)gmwwOnlineShowRevelation(d.revelation);
- }catch(e){toast(gmwwOnlineActionErrorText(e))}
- finally{state.onlineBusy=false;gmwwCardRestore(700);await refreshPrivateRole(true)}
+ }catch(e){toast(gmwwOnlineActionErrorText(e));
+   // Bị từ chối (vd. chọn 1 người 2 đêm liên tiếp): không có tác động. Bỏ mục tiêu đã chọn,
+   // trả icon về để kéo sang người khác.
+   if(gmwwOnlinePick===pick){gmwwOnlinePick=null;document.getElementById('gmwwOnlinePick')?.remove()}
+   gmwwOnlineConfirmedTargets=[];gmwwOnlineConfirmedUntil=0;
+ }
+ finally{state.onlineBusy=false;gmwwCardRestore(700);gmwwOnlineTurnEffects(state.onlineActions||[]);await refreshPrivateRole(true)}
 }
 function gmwwOnlineActionErrorText(e){
  if(e?.name==='TimeoutError'||e?.name==='AbortError')return 'Máy chủ phản hồi chậm, hãy thử lại.';
