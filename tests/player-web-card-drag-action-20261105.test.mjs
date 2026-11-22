@@ -141,7 +141,7 @@ test('Không có hành động thì lá vẫn chỉ dời chỗ như cũ; có h�
 });
 
 test('Lá hiện lại sau khi gửi xong hoặc bị từ chối, và Player Web biên dịch được',()=>{
- assert.match(chat,/finally\{state\.onlineBusy=false;gmwwCardRestore\(700\);await refreshPrivateRole\(true\)\}/);
+ assert.match(chat,/finally\{state\.onlineBusy=false;gmwwCardRestore\(700\);gmwwOnlineTurnEffects\(state\.onlineActions\|\|\[\]\);await refreshPrivateRole\(true\)\}/);
  assert.match(chat,/function gmwwOnlineStop\(\)\{[^}]*if\(!state\.onlineBusy\)gmwwCardRestore\(\)/);
  assert.doesNotThrow(()=>new vm.Script(gmwwMembersLiveScript));
  assert.ok(gmwwMembersLiveScript.includes('gmwwCardChoose'));

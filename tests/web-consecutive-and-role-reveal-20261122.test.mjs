@@ -13,3 +13,7 @@ test('22/11/2026: bảng chiến thắng nền mờ + Công bố vai trò',()=>{
   assert.match(sock,/d\.history\?\.summary,d\.history\?\.players\)/);
   assert.match(readFileSync('src/worker/room/lifecycle.js','utf8'),/history:matchHistory\?\{summary:matchHistory\.summary,players:matchHistory\.players\}:null/);
 });
+test('22/11/2026: hành động bị từ chối thì bỏ mục tiêu, trả icon để chọn người khác',()=>{
+  const src=playerWebSource('35-online-chat');
+  assert.match(src,/catch\(e\)\{toast\(gmwwOnlineActionErrorText\(e\)\);[\s\S]{0,260}if\(gmwwOnlinePick===pick\)\{gmwwOnlinePick=null;document\.getElementById\('gmwwOnlinePick'\)\?\.remove\(\)\}\s*gmwwOnlineConfirmedTargets=\[\];gmwwOnlineConfirmedUntil=0;/);
+});
