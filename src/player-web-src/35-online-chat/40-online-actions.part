@@ -176,6 +176,8 @@ async function gmwwOnlineSubmit(confirmedAssassinChoice=''){
 }
 function gmwwOnlineActionErrorText(e){
  if(e?.name==='TimeoutError'||e?.name==='AbortError')return 'Máy chủ phản hồi chậm, hãy thử lại.';
+ const code=String(e?.data?.error||'').trim();
+ if(['CONSECUTIVE_NIGHT_TARGET_FORBIDDEN','WITCH_CONSECUTIVE_EXILE'].includes(code))return 'Bạn không được chọn 1 người 2 đêm liên tiếp';
  const raw=String(e?.message||e||'').trim();
  const map={
   DEMO_ACTION_ALREADY_USED_OR_NOT_YOUR_TURN:'Bạn đã dùng hành động này hoặc chưa đến lượt của bạn.',
