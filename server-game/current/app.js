@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.326';
+const VERSION='3.327';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -4001,7 +4001,7 @@ function connectPlaySocket(){
   ws.onmessage=e=>{try{
     if(playSceneRuntime.socket===ws)playSceneRuntime.socketMessageAt=Date.now();
     const d=JSON.parse(e.data||'{}');
-    if(d.type==='chat_tick'&&String(playSceneState.roomCode)===code){if(typeof gmwwGMChatRefresh==='function'&&gmwwGMChatOpen)void gmwwGMChatRefresh();return}
+    if(d.type==='chat_tick'&&String(playSceneState.roomCode)===code){if(typeof gmwwCbPoll==='function')void gmwwCbPoll();if(typeof gmwwGMChatRefresh==='function'&&gmwwGMChatOpen)void gmwwGMChatRefresh();return}
     if(d.type==='live_line'&&String(playSceneState.roomCode)===code){liveShowBubble(d.line);return}
     if(['demo_event','demo_control','demo_winner'].includes(d.type)&&String(playSceneState.roomCode)===code){void playSyncRoom(true);return}
     if(d.type==='gallows_updated'&&String(playSceneState.roomCode)===code){
@@ -9606,6 +9606,69 @@ async function gmwwGMChatRefresh(){
       content.appendChild(box)
     }
   }catch(error){const el=document.getElementById('gmwwGMChatContent');if(el)el.textContent='Lỗi đồng bộ Chat: '+String(error.message||error)}
+}
+// Bong bóng chat/voice trên đầu nhân vật (Online). Nội dung lấy từ chính khung chat người xem được quyền đọc.
+const gmwwCbLive=new Map(),gmwwCbSeen=new Set(),gmwwCbBase=new Map();
+function gmwwCbCss(){
+  if(document.getElementById('gmwwChatBubbleCss'))return;
+  const st=document.createElement('style');st.id='gmwwChatBubbleCss';
+  st.textContent='#gmwwChatBubbleLayer{position:fixed;inset:0;pointer-events:none;z-index:9000}'
+   +'.gmww-cb{position:fixed;max-width:min(62vw,230px);padding:6px 10px;border-radius:14px;background:rgba(255,255,255,.96);color:#1c1530;font:600 12px/1.3 system-ui,-apple-system,sans-serif;box-shadow:0 3px 12px rgba(0,0,0,.35);border:1.5px solid rgba(80,160,255,.85);opacity:0;transition:opacity .15s;word-break:break-word}'
+   +'.gmww-cb.is-voice{pointer-events:auto;padding:4px 8px}'
+   +'.gmww-cb .gmww-voice-card{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:#1c1530;padding:2px;cursor:pointer;font:inherit}'
+   +'.gmww-cb .gmww-voice-wave{display:flex;align-items:center;gap:2px;height:22px}'
+   +'.gmww-cb .gmww-voice-wave i{display:block;width:3px;border-radius:2px;background:#3a8dff;min-height:3px}'
+   +'.gmww-cb .gmww-voice-card.is-playing .gmww-voice-wave i{animation:gmwwCbWave .6s ease-in-out infinite alternate}'
+   +'.gmww-cb .gmww-voice-card.is-playing .gmww-voice-wave i:nth-child(odd){animation-delay:.2s}'
+   +'@keyframes gmwwCbWave{from{transform:scaleY(.4)}to{transform:scaleY(1.15)}}';
+  document.head.appendChild(st);
+}
+function gmwwCbToken(loginId){
+  const n=document.querySelector('.play-player-token[data-play-player-id="'+String(loginId).replace(/"/g,'')+'"]');
+  if(!n)return null;const a=n.getBoundingClientRect();return a.width||a.height?{x:a.left+a.width/2,y:a.top}:null;
+}
+function gmwwCbShow(item){
+  const id=String(item.senderId||'').replace(/^member:/,'');if(!id)return;
+  const voice=item.kind==='voice'&&item.voiceId,text=String(item.text||'').slice(0,160);if(!voice&&!text)return;
+  gmwwCbCss();
+  let layer=document.getElementById('gmwwChatBubbleLayer');
+  if(!layer){layer=document.createElement('div');layer.id='gmwwChatBubbleLayer';document.body.appendChild(layer)}
+  const old=gmwwCbLive.get(id);if(old){old.el.remove();cancelAnimationFrame(old.raf)}
+  const el=document.createElement('div');el.className='gmww-cb'+(voice?' is-voice':'');
+  if(voice)el.appendChild(gmwwGMVoiceCard(item));else el.textContent=text;
+  layer.appendChild(el);
+  const born=performance.now(),life=voice?Math.max(9000,Number(item.durationMs||0)+7000):Math.min(9000,3800+text.length*60),entry={el,raf:0};gmwwCbLive.set(id,entry);
+  const tick=now=>{
+    const found=gmwwCbToken(id),age=now-born;
+    if(age>life){el.remove();if(gmwwCbLive.get(id)===entry)gmwwCbLive.delete(id);return}
+    if(found){
+      const r=found,w=el.offsetWidth||140;
+      el.style.left=Math.max(6,Math.min(window.innerWidth-w-6,r.x-w/2))+'px';
+      el.style.top=Math.max(6,r.y-el.offsetHeight-6)+'px';
+      el.style.opacity=age<200?String(age/200):age>life-400?String(Math.max(0,(life-age)/400)):'1';
+    }else el.style.opacity='0';
+    entry.raf=requestAnimationFrame(tick)};
+  entry.raf=requestAnimationFrame(tick);
+}
+// Nhận danh sách tin của một kênh; lần đầu chỉ ghi mốc, các tin mới sau đó mới hiện bong bóng.
+function gmwwCbFeed(scopeKey,items){
+  const list=(Array.isArray(items)?items:[]).filter(x=>x&&x.id&&!x.system&&x.isGM!==true&&x.senderId&&x.senderId!=='gm');
+  if(!gmwwCbBase.has(scopeKey)){gmwwCbBase.set(scopeKey,Date.now());for(const x of list)gmwwCbSeen.add(x.id);return}
+  const now=Date.now();
+  for(const x of list){
+    if(gmwwCbSeen.has(x.id))continue;
+    gmwwCbSeen.add(x.id);
+    if(now-Number(x.at||0)<20000)gmwwCbShow(x);
+  }
+  if(gmwwCbSeen.size>600){const keep=[...gmwwCbSeen].slice(-300);gmwwCbSeen.clear();for(const k of keep)gmwwCbSeen.add(k)}
+}
+
+let gmwwCbPolling=false,gmwwCbLastPoll=0;
+async function gmwwCbPoll(){
+  if(gmwwCbPolling||Date.now()-gmwwCbLastPoll<700||typeof playRoomApi!=='function')return;
+  gmwwCbPolling=true;gmwwCbLastPoll=Date.now();
+  try{const res=await playRoomApi('/chat',{method:'GET'});for(const ch of (res.channels||[]))gmwwCbFeed(String(playSceneState.roomCode)+'|'+ch.channel,ch.messages)}
+  catch{}finally{gmwwCbPolling=false}
 }
 function playAssignmentSetArtifact(loginId,artifactId){
   if(!playSceneState.artifactsEnabled)return;
