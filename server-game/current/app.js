@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.327';
+const VERSION='3.328';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -3939,7 +3939,14 @@ async function playRoomApi(path='',opts={}){
   // While the Demo bot owns a lease, all its writes carry the same owner ID.
   const headers=playSceneRuntime.room?.demo===true&&typeof demoRunner!=='undefined'&&demoRunner.owner&&demoRunner.roomCode===String(playSceneState.roomCode)
     ?{...(opts.headers||{}),'x-gmww-demo-owner':demoRunner.owner}:opts.headers;
-  return gmApi('/api/gm/rooms/'+encodeURIComponent(playSceneState.roomCode)+path,{...opts,headers});
+  // V3.328: khóa điều khiển theo thiết bị (iPhone + PC).
+  gmDeviceLeaseNoteRoom();
+  const write=String(opts.method||'GET').toUpperCase()!=='GET';
+  try{
+    const data=await gmApi('/api/gm/rooms/'+encodeURIComponent(playSceneState.roomCode)+path,{...opts,headers:{...(headers||{}),'x-gmww-device':gmDeviceId()}});
+    if(write)gmDeviceLeaseNoteWrite();
+    return data;
+  }catch(err){if(err?.code==='GM_DEVICE_LEASE_OWNED')gmDeviceLeaseBlocked();throw err}
 }
 function disconnectPlaySocket(){if(playSceneRuntime.socketReconnect){clearTimeout(playSceneRuntime.socketReconnect);playSceneRuntime.socketReconnect=0}if(playSceneRuntime.roomSyncTimer){clearTimeout(playSceneRuntime.roomSyncTimer);playSceneRuntime.roomSyncTimer=0}if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}try{playSceneRuntime.socket?.close(1000,'GM_ROOM_CHANGED')}catch{}playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode=''}
 function stopPlayGlobalVillagePoll(){if(playSceneRuntime.villagePollTimer){clearInterval(playSceneRuntime.villagePollTimer);playSceneRuntime.villagePollTimer=0}}
@@ -4080,6 +4087,86 @@ function renderPlayRealtimeHeader(){
   if(next)next.setAttribute('aria-label','Bước hiện tại '+label+' · Chạm để tiếp tục');
 }
 function clearStalePlayRoom(){disconnectPlaySocket();playSceneState.roomCode='—';playSceneState.gmToken='';playSceneState.roomEnabled=false;playSceneState.selectedMemberIds=[];playSceneState.step='lobby';playSceneState.phase='lobby';playSceneRuntime.room=null;playSceneRuntime.players=[];playSceneRuntime.assignments=[];playSceneRuntime.gameConfig=null;savePlayScene();gmwwSendGmPresence(true);renderPlayScene()}
+/* V3.328 — Khóa điều khiển GM theo thiết bị (iPhone + PC cùng quản lý một phòng online).
+   Mỗi lệnh phòng gửi x-gmww-device. Thiết bị vừa ghi thành công sẽ giữ khóa (60 giây, gia hạn khi còn mở app).
+   Thiết bị khác bị chặn sẽ thấy ai đang điều khiển + nút Giành quyền. Chỉ gọi /device-lease khi cần. */
+const gmDeviceLease={room:'',mine:false,owner:'',renewedAt:0,timer:0,busy:false};
+function gmDeviceId(){
+  const KEY='GMWW_GM_DEVICE_ID';
+  try{let id=localStorage.getItem(KEY)||'';if(!/^[A-Za-z0-9_-]{12,64}$/.test(id)){const b=new Uint8Array(12);crypto.getRandomValues(b);id='gm-'+Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');localStorage.setItem(KEY,id)}return id}
+  catch{if(!gmDeviceLease.fallbackId)gmDeviceLease.fallbackId='gm-'+Math.random().toString(36).slice(2)+Date.now().toString(36);return gmDeviceLease.fallbackId}
+}
+function gmDeviceLabel(){
+  const ua=String(navigator.userAgent||'');
+  if(/iPad/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1))return 'iPad';
+  if(/iPhone|iPod/.test(ua))return 'iPhone';
+  if(/Windows/.test(ua))return 'PC Windows';
+  if(/Android/.test(ua))return 'Android';
+  return 'Máy tính';
+}
+function gmDeviceLeaseReset(room){
+  if(gmDeviceLease.timer){clearInterval(gmDeviceLease.timer);gmDeviceLease.timer=0}
+  Object.assign(gmDeviceLease,{room:String(room||''),mine:false,owner:'',renewedAt:0});
+}
+async function gmDeviceLeaseCall(action,{keepalive=false}={}){
+  const room=gmDeviceLease.room;if(!room)return null;
+  try{
+    const res=await fetch(GMWW_SERVER_BASE+'/api/gm/rooms/'+encodeURIComponent(room)+'/device-lease',{method:'POST',keepalive,cache:'no-store',
+      headers:{'content-type':'application/json',Authorization:'Bearer '+GMWW_GM_AUTH,'x-gmww-device':gmDeviceId()},
+      body:JSON.stringify({action,deviceId:gmDeviceId(),label:gmDeviceLabel()})});
+    const d=await res.json().catch(()=>({}));
+    if(room!==gmDeviceLease.room)return d;
+    if(res.ok||d?.error==='GM_DEVICE_LEASE_OWNED'){
+      gmDeviceLease.mine=d.mine===true;gmDeviceLease.owner=gmDeviceLease.mine?'':String(d.owner||'');
+      if(gmDeviceLease.mine)gmDeviceLease.renewedAt=Date.now();
+      gmDeviceLeaseSchedule();renderGmDeviceLease();
+    }
+    return d;
+  }catch(err){console.warn('GMWW_GM_DEVICE_LEASE',err);return null}
+}
+// Gia hạn khi đang giữ khóa và app đang mở; ẩn app (iPhone khóa màn hình) thì để khóa tự hết hạn.
+function gmDeviceLeaseSchedule(){
+  const want=gmDeviceLease.mine&&document.visibilityState!=='hidden';
+  if(want&&!gmDeviceLease.timer)gmDeviceLease.timer=setInterval(()=>{if(gmDeviceLease.mine&&document.visibilityState!=='hidden'&&isLivePlayRoom())gmDeviceLeaseCall('acquire');else gmDeviceLeaseSchedule()},30000);
+  if(!want&&gmDeviceLease.timer){clearInterval(gmDeviceLease.timer);gmDeviceLease.timer=0}
+}
+// Gọi trước mỗi lệnh phòng: phát hiện đổi phòng và kiểm tra trạng thái khóa một lần.
+function gmDeviceLeaseNoteRoom(){
+  const room=String(playSceneState.roomCode||'');
+  if(room===gmDeviceLease.room)return;
+  gmDeviceLeaseReset(room);
+  if(room)gmDeviceLeaseCall('status');
+}
+function gmDeviceLeaseNoteWrite(){
+  if(gmDeviceLease.mine&&Date.now()-gmDeviceLease.renewedAt<20000)return;
+  gmDeviceLeaseCall('acquire');
+}
+function gmDeviceLeaseBlocked(){gmDeviceLease.mine=false;gmDeviceLeaseSchedule();gmDeviceLeaseCall('status')}
+async function gmDeviceLeaseTakeover(){if(gmDeviceLease.busy)return;gmDeviceLease.busy=true;renderGmDeviceLease();try{await gmDeviceLeaseCall('takeover')}finally{gmDeviceLease.busy=false;renderGmDeviceLease()}}
+async function gmDeviceLeaseRelease(){if(gmDeviceLease.busy)return;gmDeviceLease.busy=true;renderGmDeviceLease();try{await gmDeviceLeaseCall('release')}finally{gmDeviceLease.busy=false;renderGmDeviceLease()}}
+function renderGmDeviceLease(){
+  let el=document.getElementById('gmDeviceLeaseChip');
+  const show=isLivePlayRoom()&&gmDeviceLease.room===String(playSceneState.roomCode||'')&&(gmDeviceLease.mine||!!gmDeviceLease.owner);
+  if(!show){if(el)el.hidden=true;return}
+  if(!el){
+    el=document.createElement('div');el.id='gmDeviceLeaseChip';
+    el.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:10px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;font:600 12px/1.2 system-ui,-apple-system,sans-serif;color:#eaf6ff;background:rgba(8,28,44,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(140,200,255,.28);box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:calc(100vw - 20px)';
+    el.innerHTML='<span data-lease-text style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span><button type="button" data-lease-btn style="border:0;border-radius:999px;padding:5px 10px;font:700 12px system-ui,-apple-system,sans-serif;cursor:pointer"></button>';
+    el.querySelector('[data-lease-btn]').addEventListener('click',()=>gmDeviceLease.mine?gmDeviceLeaseRelease():gmDeviceLeaseTakeover());
+    document.body.appendChild(el);
+  }
+  el.hidden=false;
+  const text=el.querySelector('[data-lease-text]'),btn=el.querySelector('[data-lease-btn]');
+  text.textContent=gmDeviceLease.mine?'🎮 Bạn đang điều khiển':'🔒 '+gmDeviceLease.owner+' đang điều khiển';
+  btn.textContent=gmDeviceLease.busy?'…':gmDeviceLease.mine?'Nhả':'Giành quyền';
+  btn.disabled=gmDeviceLease.busy;
+  btn.style.background=gmDeviceLease.mine?'rgba(255,255,255,.18)':'#ffb547';btn.style.color=gmDeviceLease.mine?'#eaf6ff':'#2a1600';
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){gmDeviceLeaseSchedule();return}
+  if(isLivePlayRoom()&&gmDeviceLease.room)gmDeviceLeaseCall('status');
+});
+window.addEventListener('pagehide',()=>{if(gmDeviceLease.mine&&gmDeviceLease.room)gmDeviceLeaseCall('release',{keepalive:true})});
 const PLAY_ROOM_REGISTRY_KEY='gmww_v306_room_registry';
 const playRoomUiState={stage:'rooms',selectedCode:'',editorMode:'',lastTapCode:'',lastTapAt:0,modeTouched:false,pendingMode:'',modeSaving:false};
 const PLAY_ROOM_MODE_CYCLE=['online','offline','demo','live'];
