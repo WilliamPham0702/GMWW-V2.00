@@ -15,6 +15,20 @@ import { normalizeRoomMode, normalizeSeatCount, normalizeSeatMoveMode, sanitizeG
 import { PUBLIC_ENTRY_LIMITS, stepPublicEntryWindow } from "../../gmww-security-admission.js";
 
 export class RoomHttpDispatchMethods {
+  // Khóa điều khiển GM theo thiết bị (cho phòng online). Hết 60 giây không gia hạn thì tự nhả.
+  // action: status | acquire (giữ/gia hạn nếu đang rảnh hoặc của mình) | takeover (giành quyền) | release.
+  async gmDeviceLease(b){
+    const LEASE_MS=60000,now=Date.now();
+    const deviceId=String(b?.deviceId||"").slice(0,64),label=String(b?.label||"Thiết bị GM").slice(0,40),action=String(b?.action||"status");
+    if(deviceId.length<8)return j({ok:false,error:"INVALID_DEVICE"},400);
+    let lease=await this.ctx.storage.get("gmDeviceLease");
+    const active=!!lease?.owner&&Number(lease.until)>now;
+    const view=()=>({ok:true,mine:!!lease?.owner&&lease.owner===deviceId&&active,owner:active?(lease.label||"thiết bị khác"):"",until:active?lease.until:0});
+    if(action==="release"){if(lease?.owner===deviceId)await this.ctx.storage.delete("gmDeviceLease");return j({ok:true,mine:false,owner:"",until:0})}
+    if(action==="acquire"&&active&&lease.owner!==deviceId)return j({...view(),ok:false,error:"GM_DEVICE_LEASE_OWNED"},409);
+    if(action==="acquire"||action==="takeover"){lease={owner:deviceId,label,until:now+LEASE_MS};await this.ctx.storage.put("gmDeviceLease",lease);return j({ok:true,mine:true,owner:label,until:lease.until})}
+    return j(view())
+  }
   // In-memory diagnostics only: counting saved writes must NOT create writes.
   gmwwWriteSkipped(kind){
     if(!this._gmwwWriteSavings)this._gmwwWriteSavings={startedAt:new Date().toISOString(),counts:{memberHeartbeat:0,memberSession:0,gmHeartbeat:0,roomDirectory:0}};
@@ -194,6 +208,7 @@ export class RoomHttpDispatchMethods {
     if(url.pathname==="/gm/stage"&&request.method==="POST")return this.gmStage(request,await safeJson(request));
     if(url.pathname==="/gm/seat"&&request.method==="POST")return this.gmSeat(request,await safeJson(request));
     if(url.pathname==="/gm/seats/randomize-remaining"&&request.method==="POST")return this.gmRandomizeRemainingSeats(request);
+    if(url.pathname==="/gm/device-lease"&&request.method==='POST'){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;return this.gmDeviceLease(await safeJson(request))}
     if(url.pathname==="/gm/move"&&request.method==='POST'){const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const b=await safeJson(request),players=await this.ctx.storage.get('players')||{},p=players[String(b?.participantId||'')];if(!p)return j({ok:false,error:'PLAYER_NOT_FOUND'},404);return this.playerMove({...b,loginId:p.loginId})}
     if(url.pathname==="/gm/seat-lock"&&request.method==="POST")return this.gmSeatLock(request,await safeJson(request));
     if(url.pathname==="/gm/cycle"&&request.method==="POST")return this.gmCycle(request,await safeJson(request));
