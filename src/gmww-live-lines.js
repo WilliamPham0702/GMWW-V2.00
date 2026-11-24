@@ -204,8 +204,8 @@ export const LIVE_BANK={
 };
 const hash=s=>{let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0};
 export const liveTone=loginId=>hash(loginId)%3;
-export function liveLine(label,loginId,vars={},rnd=Math.random){
+export function liveLine(label,loginId,vars={},rnd=Math.random,toneIndex=liveTone(loginId)){
  const rows=LIVE_BANK[label];if(!rows)return '';
- const tone=rows[liveTone(loginId)]||rows[1]||rows[0],text=tone[Math.floor(rnd()*tone.length)]||'';
+ const tone=rows[toneIndex]||rows[1]||rows[0],text=tone[Math.floor(rnd()*tone.length)]||'';
  return text.replace(/\{(t|s)\}/g,(_,k)=>vars[k]??'');
 }

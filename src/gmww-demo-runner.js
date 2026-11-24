@@ -4,6 +4,7 @@ import '../server-game/current/battle-controls.js';
 import {checkBattleRoleActionUsage} from './gmww-battle-action-policy.js';
 import {appendDemoHistory} from './gmww-demo-history.js';
 import {liveLine} from './gmww-live-lines.js';
+import {createBotProfile,decideTalk} from './gmww-live-bot-brain.js';
 import {artifactCycleKey} from './gmww-game-scene-rules.js';
 import {STATUS_DEFS} from './gmww-public-room-contract.js';
 import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
@@ -15,11 +16,18 @@ const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
 async function liveSay(room,meta,lease,actorId,label,vars={}){
  if(meta.live!==true||!actorId)return;
  const players=await room.ctx.storage.get('players')||{},me=players['member:'+actorId];if(!me)return;
- const text=liveLine(label,actorId,vars);if(!text)return;
+ const profile=liveProfileOf(lease,actorId,meta.matchId),text=liveLine(label,actorId,vars,Math.random,profile.tone);if(!text)return;
  const line={id:'live-'+crypto.randomUUID(),matchId:meta.matchId,loginId:actorId,seatId:Number(me.seatId||0),name:me.displayName||'',text,label,at:Date.now()};
  lease.liveLines=[...(Array.isArray(lease.liveLines)?lease.liveLines:[]),line].slice(-12);
  await room.ctx.storage.put('demoLease',lease);
  room.broadcast({type:'live_line',line,serverTime:line.at});
+}
+// Hồ sơ bot (7 chỉ số ẩn + tin cậy) lưu trong lease theo từng ván: ván mới = cá tính mới.
+function liveProfileOf(lease,loginId,matchId){
+ lease.liveProfiles=lease.liveProfiles||{};
+ const key=String(matchId||'')+':'+loginId;
+ if(!lease.liveProfiles[key])lease.liveProfiles[key]=createBotProfile(loginId,matchId);
+ return lease.liveProfiles[key];
 }
 const seatTag=(players,id)=>{const m=players['member:'+id];return m?.seatId?'ghế '+m.seatId:(m?.displayName||'người đó')};
 // Catalogued divination rules take precedence over stale saved-card targetCount.
@@ -240,11 +248,10 @@ export async function runServerDemo(room,meta,budget=32){
   if(task.kind){
    if(task.kind==='talk'){
     const {eligible}=await room.gallowsState(meta),others=eligible.filter(id=>id!==task.actorId),prev=lease.liveLines?.[lease.liveLines.length-1];
-    const roll=Math.random(),target=others.length?pick(others):'',tag=target?seatTag(ctx.players,target):'',prevSeat=prev?.seatId?'ghế '+prev.seatId:'bạn';
-    let label='filler',vars={};
-    if(prev&&prev.matchId===meta.matchId&&Date.now()-prev.at<120000&&roll<.35)label=Math.random()<.6?'agree':'disagree',vars={s:prevSeat};
-    else if(target&&roll<.8)label=Math.random()<.2?'defend_other':'accuse',vars={t:tag};
-    else if(roll<.9)label='defend_self';
+    const target=others.length?pick(others):'',recentPrev=prev&&prev.matchId===meta.matchId&&Date.now()-prev.at<120000?prev:null;
+    const profile=liveProfileOf(lease,task.actorId,meta.matchId),prevProfile=recentPrev?liveProfileOf(lease,recentPrev.loginId,meta.matchId):null;
+    const {label,vars:raw}=decideTalk(profile,{prev:recentPrev,prevSeat:recentPrev?.seatId?'ghế '+recentPrev.seatId:'bạn',prevTrust:prevProfile?.trust,target},Math.random);
+    const vars=raw.t?{t:seatTag(ctx.players,target)}:raw;
     await liveSay(room,meta,lease,task.actorId,label,vars);
    }else if(task.kind==='assassin-response'){
     const mark=ctx.rows.find(row=>row.id===task.interactionId&&row.type==='assassin_mark'&&row.status==='pending');
