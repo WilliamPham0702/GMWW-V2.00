@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.329';
+const VERSION='3.330';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -5214,6 +5214,7 @@ function renderPlayPlayers(){
     // A template switch must invalidate the DOM even if seat IDs are unchanged.
     globalThis.GMWW_VILLAGE_LAYOUT.normalizeSeatLayout(playSceneRuntime.room?.seatLayout),
     playSceneRuntime.room?.seatOffset,playSeatOffsetPreview,playGatherSpacing(),
+    playSceneRuntime.room?.live===true,
     (playSceneRuntime.assignments?.length?playSceneRuntime.assignments:playSceneState.assignmentsPreview||[])
       .map(a=>[a.loginId,a.roleId,a.roleName,a.artifactId]),
     !!gmwwGmPresenceState?.online,gmwwGmPresenceState?.sessionId||'',
@@ -5256,6 +5257,8 @@ function renderPlayPlayers(){
     const gmAssignments=(playSceneRuntime.assignments||[]).length?playSceneRuntime.assignments:(playSceneState.assignmentsPreview||[]);
     const assignment=m?gmAssignments.find(a=>String(a?.loginId||'')===String(m.loginId||'')):null,roleLabel=assignment?.roleName||assignment?.roleId||'',showRole=!!roleLabel&&PLAY_STEPS.indexOf(playSceneState.step)>=PLAY_STEPS.indexOf('roles');const factionRaw=String(assignment?.faction||assignment?.roleCard?.factionId||(state.cards||[]).find(c=>String(c.id)===String(assignment?.roleId))?.factionId||'').toLowerCase(),roleFaction=factionRaw.includes('wolf')||factionRaw.includes('sói')?'wolf':factionRaw.includes('third')||factionRaw.includes('phe ba')?'third':'village';el.innerHTML=(m?'<div class="play-player-over"><b class="play-name-with-presence"><span class="play-name-text">'+playEsc(name)+'</span><span class="play-presence-dot" data-online="'+(m.online===false?'false':'true')+'" aria-hidden="true"></span></b>'+(showRole?'<span class="play-player-role" data-faction="'+roleFaction+'">'+playEsc(roleLabel)+'</span>':'')+'</div>':'')+'<div class="play-player-avatar">'+(m?'<img alt="">':'<img class="play-seat-leaf-art" src="village/seat-leaf.webp?v=320" alt="" aria-hidden="true">')+'</div>'+(m&&assignment?.artifactId&&playSceneState.artifactsEnabled?
       '<span class="play-player-artifact" aria-label="Artifact: '+playEsc(assignment.artifactName||(state.artifacts||[]).find(a=>String(a.id)===String(assignment.artifactId))?.name||'Artifact')+'"><span class="play-player-artifact-text" title="'+playEsc(assignment.artifactName||(state.artifacts||[]).find(a=>String(a.id)===String(assignment.artifactId))?.name||'Artifact')+'">'+playEsc(assignment.artifactName||(state.artifacts||[]).find(a=>String(a.id)===String(assignment.artifactId))?.name||'Artifact')+'</span></span>':'')+(!m?'<b>Vị trí '+seatId+'</b>':'');
+    // V3.330 LIVE: số ghế dưới chân để người xem bình luận theo số.
+    const liveSeatNo=m&&playSceneRuntime.room?.live===true?Number(seatId||m.seatId||0):0;if(liveSeatNo>0)el.insertAdjacentHTML('beforeend','<span class="play-seat-number" aria-hidden="true">'+liveSeatNo+'</span>');
     if(m&&globalThis.GMWW_STATUS_VISUALS){
       const statusVisuals=globalThis.GMWW_STATUS_VISUALS.resolveRows(playSceneRuntime.activeEffects,m.loginId,playNow());
       el.dataset.gmwwStatuses=statusVisuals.join('|');
@@ -5994,9 +5997,11 @@ function demoRenderControls(){
   const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
     wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
     field=document.getElementById('battleDemoSpeed');
-  if(button){button.hidden=!enabled;button.dataset.runState=demoRunner.running?'running':'paused';button.title=demoRunner.error||demoRunner.status||'DEMO';button.setAttribute('aria-label',demoRunner.running?'Đang chạy DEMO, chạm để tạm dừng':'Đã tạm dừng DEMO, chạm để tiếp tục');button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
-  const orbit=button?.querySelector('.demo-clockwise-orbit');if(orbit)orbit.textContent=demoRunner.running?'↻':'Ⅱ';
-  if(wrap)wrap.hidden=!enabled;
+  // V3.330: LIVE tách khỏi DEMO — phòng Live hiện nút LIVE riêng (đỏ, chạy thời gian thật), không có ×1/×2/×5/×10.
+  const live=enabled&&playSceneRuntime.room?.live===true,modeName=live?'LIVE':'DEMO';
+  if(button){button.hidden=!enabled;button.classList.toggle('is-live-mode',live);const label=button.querySelector('b');if(label&&label.textContent!==modeName)label.textContent=modeName;button.dataset.runState=demoRunner.running?'running':'paused';button.title=demoRunner.error||demoRunner.status||modeName;button.setAttribute('aria-label',demoRunner.running?'Đang chạy '+modeName+', chạm để tạm dừng':'Đã tạm dừng '+modeName+', chạm để tiếp tục');button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  const orbit=button?.querySelector('.demo-clockwise-orbit');if(orbit)orbit.textContent=live?(demoRunner.running?'●':'Ⅱ'):(demoRunner.running?'↻':'Ⅱ');
+  if(wrap)wrap.hidden=!enabled||live;
   if(auto)auto.hidden=false;
   if(field){field.dataset.speed=String(demoRunner.speed);field.textContent='×'+String(demoRunner.speed);field.setAttribute('aria-label','Tốc độ DEMO: '+demoRunner.speed+' lần. Chạm để thay đổi.');}
   const matchKey=[playSceneState.roomCode,playSceneRuntime.room?.matchId].join(':');
@@ -6593,6 +6598,10 @@ function battleTickCountdown(){
   const serverNow=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0);
   const rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase;
   let seconds=phase==='night'?battleRules()?.remainingSeconds(rt,serverNow):null;
+  // V3.330: Demo/Live chạy trên server — đồng hồ hành động lấy hạn của đồng hồ Demo khi đang chạy (trước đây luôn 00:00).
+  const demoClock=playSceneRuntime.room?.demo===true?playSceneRuntime.demoControl?.clock:null;
+  if(phase==='night'&&demoClock?.kind==='night'&&demoClock.running&&Number(demoClock.deadlineAt)>0&&(!Number.isFinite(seconds)||seconds<=0))
+    seconds=Math.max(0,Math.ceil((Number(demoClock.deadlineAt)-serverNow)/1000));
   if(phase==='day'){
     const room=playSceneRuntime.room||{},duration=Number(playSceneRuntime.gameConfig?.timing?.villageDiscussionSec),
       deadline=Date.parse(room.dayDeadlineAt||''),started=Date.parse(room.cycleStartedAt||'');

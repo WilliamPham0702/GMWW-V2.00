@@ -5,6 +5,7 @@ import {checkBattleRoleActionUsage} from './gmww-battle-action-policy.js';
 import {appendDemoHistory} from './gmww-demo-history.js';
 import {liveLine} from './gmww-live-lines.js';
 import {createBotProfile,decideTalk} from './gmww-live-bot-brain.js';
+import {applyClaimEffect,claimLine,isWolfFaction,killChance,planClaimScript,weightedPick} from './gmww-live-claims.js';
 import {artifactCycleKey} from './gmww-game-scene-rules.js';
 import {STATUS_DEFS} from './gmww-public-room-contract.js';
 import {isBattleActorBlocked} from './gmww-battle-actor-eligibility.js';
@@ -13,10 +14,10 @@ import {canSnowWolfBite,resolveWolfNight} from './gmww-wolf-night-resolution.js'
 const rules=globalThis.GMWW_BATTLE_CONTROLS;
 const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
 // LIVE: câu thoại bot chỉ dùng thông tin công khai (ghế, đề cử, phiếu). Phát qua WebSocket + giữ vài câu cuối cho người vào sau.
-async function liveSay(room,meta,lease,actorId,label,vars={}){
+async function liveSay(room,meta,lease,actorId,label,vars={},override=''){
  if(meta.live!==true||!actorId)return;
  const players=await room.ctx.storage.get('players')||{},me=players['member:'+actorId];if(!me)return;
- const profile=liveProfileOf(lease,actorId,meta.matchId),text=liveLine(label,actorId,vars,Math.random,profile.tone);if(!text)return;
+ const profile=liveProfileOf(lease,actorId,meta.matchId),text=override||liveLine(label,actorId,vars,Math.random,profile.tone);if(!text)return;
  const line={id:'live-'+crypto.randomUUID(),matchId:meta.matchId,loginId:actorId,seatId:Number(me.seatId||0),name:me.displayName||'',text,label,at:Date.now()};
  lease.liveLines=[...(Array.isArray(lease.liveLines)?lease.liveLines:[]),line].slice(-12);
  await room.ctx.storage.put('demoLease',lease);
@@ -29,7 +30,26 @@ function liveProfileOf(lease,loginId,matchId){
  if(!lease.liveProfiles[key])lease.liveProfiles[key]=createBotProfile(loginId,matchId);
  return lease.liveProfiles[key];
 }
-const seatTag=(players,id)=>{const m=players['member:'+id];return m?.seatId?'ghế '+m.seatId:(m?.displayName||'người đó')};
+const seatTag=(players,id)=>{const m=players['member:'+id];return m?.seatId?'số '+m.seatId:(m?.displayName||'người đó')};
+// LIVE: điểm nghi của cả làng trong ván (từ nhận vai / phản biện) — bot dùng để đề cử và bỏ phiếu.
+function liveSuspicion(lease,meta){
+ if(lease.liveSuspicion?.matchId!==String(meta.matchId||''))lease.liveSuspicion={matchId:String(meta.matchId||''),scores:{}};
+ return lease.liveSuspicion.scores;
+}
+function liveProfilesById(lease,meta,ids){const out={};for(const id of ids)out[id]=liveProfileOf(lease,id,meta.matchId);return out}
+const SEER_ACTIONS=['action_seer','action_aura_read'];
+// Dữ kiện đêm vừa qua cho kịch bản nhận vai (chỉ server biết; bot tự quyết nói thật hay nói dối).
+function liveNightFacts(ctx,meta,lease,alive){
+ const n=Number(meta.cycleNight||0),key='night-'+n,events=(Array.isArray(lease.history)?lease.history:[]).filter(e=>String(e?.matchId||'')===String(meta.matchId||'')&&String(e?.cycleKey||'')===key&&e.status==='accepted');
+ const bot=id=>ctx.players['member:'+id]&&ctx.players['member:'+id].humanControlled!==true;
+ const seerEvent=events.find(e=>SEER_ACTIONS.includes(e.audioActionId)&&e.actorId&&bot(e.actorId)&&e.targetIds?.[0]);
+ const witchRow=ctx.assignments.find(a=>a.roleId==='role_witch'&&bot(a.loginId));
+ let bitten=[];try{bitten=(resolveWolfNight({interactions:ctx.rows,players:ctx.players,matchId:meta.matchId,night:n}).attacked||[]).map(x=>x.to).filter(Boolean)}catch{}
+ const died=ctx.rows.filter(x=>x?.type==='dead'&&x.effectActive!==false&&matchRow(x,meta)&&Number(x.night)===n).map(x=>String(x.loginId||'').replace(/^member:/,''));
+ return {alive,wolves:ctx.assignments.filter(a=>isWolfFaction(a.faction||a.roleCard?.factionId)).map(a=>a.loginId),
+  seer:seerEvent?{actorId:seerEvent.actorId,targetId:seerEvent.targetIds[0]}:null,witch:witchRow?{actorId:witchRow.loginId}:null,
+  bitten,witchSaved:events.some(e=>e.audioActionId==='action_witch_save'),diedLastNight:died};
+}
 // Catalogued divination rules take precedence over stale saved-card targetCount.
 export const demoDivinationTargetCount=action=>({
  action_compare_faction:2,action_bear_scan:2,action_fox_scan:3,action_scan_three:3
@@ -138,7 +158,8 @@ export function demoTaskAt(duration,plan){
  // short clock and should show live nominations early rather than bunching
  // 30 ballots into the last seconds at x2/x5.
  const ballot=plan?.tasks?.some(x=>x.kind==='nominate'||x.kind==='vote');
- const base=ballot?duration*(.1+.72*cursor/count):duration/2+duration/2*cursor/count;
+ // LIVE: lời nói rải đều từ đầu tới gần cuối giờ thảo luận (không dồn nửa sau).
+ const base=ballot?duration*(.1+.72*cursor/count):plan?.live?duration*(.04+.86*cursor/count):duration/2+duration/2*cursor/count;
  return task?.humanControlled?Math.max(base,duration-Math.min(1800,duration*.2)):base;
 }
 export function targetsFor(action,actorId,ctx,meta){
@@ -194,11 +215,23 @@ export function pendingDemoAssassinResponses(ctx,meta){
   .map(row=>({id:'assassin:'+row.id,kind:'assassin-response',actorId:row.loginId,interactionId:row.id}));
 }
 // LIVE: một vòng thảo luận — vài bot nói theo thứ tự ngẫu nhiên (câu đầu có thể tranh cãi, câu sau đồng tình/phản bác).
-function liveTalkTasks(eligible){
- const ids=eligible.slice().sort(()=>Math.random()-.5).slice(0,Math.min(8,Math.max(3,Math.ceil(eligible.length*.7))));
- return ids.map((actorId,i)=>({id:'talk:'+i+':'+actorId,actorId,kind:'talk',humanControlled:false}));
+function liveTalkTasks(eligible,from=0){
+ const n=Math.min(12,Math.max(5,Math.ceil(eligible.length*.8))),out=[];let last='';
+ for(let i=0;i<n&&eligible.length;i++){let id=pick(eligible);if(id===last&&eligible.length>1)id=pick(eligible.filter(x=>x!==last));last=id;out.push({id:'talk:'+(from+i)+':'+id,actorId:id,kind:'talk',humanControlled:false})}
+ return out;
 }
-async function tasksFor(room,meta,ctx){
+// LIVE ban ngày: mở màn phản ứng đêm qua → nhận vai / phản biện / tin-không tin → thảo luận chung.
+async function liveDayTasks(room,meta,ctx,eligible,lease){
+ const bots=eligible.filter(id=>ctx.players['member:'+id]?.humanControlled!==true);if(!bots.length)return [];
+ const alive=eligible.slice(),out=[];
+ const n=Number(meta.cycleNight||0),died=ctx.rows.filter(x=>x?.type==='dead'&&x.effectActive!==false&&matchRow(x,meta)&&Number(x.night)===n).map(x=>String(x.loginId||'').replace(/^member:/,''));
+ out.push({id:'talk:open',actorId:pick(bots),kind:'talk',humanControlled:false,script:died.length?{bank:'live',label:'death_react',vars:{t:died[0]}}:{bank:'live',label:'no_death',vars:{}}});
+ const steps=planClaimScript(liveNightFacts(ctx,meta,lease,alive),liveProfilesById(lease,meta,alive),Math.random)
+  .filter(x=>ctx.players['member:'+x.actorId]?.humanControlled!==true);
+ steps.forEach((step,i)=>out.push({id:'talk:claim:'+i+':'+step.actorId,actorId:step.actorId,kind:'talk',humanControlled:false,script:step}));
+ return [...out,...liveTalkTasks(bots,out.length)];
+}
+async function tasksFor(room,meta,ctx,lease={}){
  if(meta.cyclePhase==='night'){
   const rt=await room.getNightRuntime(meta,meta.cycleNight,true),turn=rt?.queue?.[rt.cursor],usage=await ctx.store.get('battleRoleUsage:'+meta.matchId)||[];
   return nightActions(ctx,meta,turn,usage).map(a=>({id:a.id,humanControlled:a.actorIds.some(id=>ctx.players['member:'+id]?.humanControlled===true),declined:a.actionId==='action_witch_save'&&!a.artifactId&&Math.random()>=.5}));
@@ -208,15 +241,15 @@ async function tasksFor(room,meta,ctx){
  if(['ready','resolved'].includes(ballot.stage))return [
   ...pendingDemoAssassinResponses(ctx,meta).map(task=>({...task,humanControlled:ctx.players['member:'+task.actorId]?.humanControlled===true})),
   ...dayActions(ctx,meta,await ctx.store.get('dayRoleUsage:'+meta.matchId)||[],ballot).map(a=>({id:a.id,humanControlled:ctx.players['member:'+a.actorIds[0]]?.humanControlled===true})),
-  ...(meta.live===true&&ballot.stage==='ready'?liveTalkTasks(eligible):[])
+  ...(meta.live===true&&ballot.stage==='ready'?await liveDayTasks(room,meta,ctx,eligible,lease):[])
  ];
  if(ballot.stage==='nominating')return eligible.filter(id=>!Object.hasOwn(ballot.nominations||{},id)&&!(ballot.blockedNomination||[]).includes(id)).map(id=>({id:'nominate:'+id,actorId:id,kind:'nominate',humanControlled:ctx.players['member:'+id]?.humanControlled===true}));
  if(ballot.stage==='voting')return eligible.filter(id=>id!==ballot.candidateId&&!Object.hasOwn(ballot.votes||{},id)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(id)).map(id=>({id:'vote:'+id,actorId:id,kind:'vote',humanControlled:ctx.players['member:'+id]?.humanControlled===true}));
  return [];
 }
-async function planFor(room,meta,clock){
+async function planFor(room,meta,clock,lease={}){
  let plan=await room.ctx.storage.get('demoPlan');
- if(plan?.key!==clock.key){const ctx=await context(room,meta);plan={key:clock.key,tasks:await tasksFor(room,meta,ctx),cursor:0};await room.ctx.storage.put('demoPlan',plan)}
+ if(plan?.key!==clock.key){const ctx=await context(room,meta);plan={key:clock.key,tasks:await tasksFor(room,meta,ctx,lease),cursor:0,live:meta.live===true&&meta.cyclePhase==='morning'};await room.ctx.storage.put('demoPlan',plan);if(meta.live===true&&lease?.engine==='server')await room.ctx.storage.put('demoLease',lease)}
  return plan;
 }
 export async function nextServerDemoDue(room,meta){
@@ -240,13 +273,19 @@ export async function runServerDemo(room,meta,budget=32){
  if(win){await stopServerDemo(room,meta,lease,'winner');room.broadcast({type:'demo_winner',winProposal:win,serverTime:now});await room.scheduleRoomAlarm(meta);return true}
  if(!['night','morning'].includes(meta.cyclePhase)){await room.applyCycle(meta,'night',1,'night-1','demo-server');await room.scheduleRoomAlarm();return true}
  lease.failures=0;lease.error='';
- const clock=await room.syncDemoClock(meta,lease),plan=await planFor(room,meta,clock),duration=Number(clock.durationMs)||0,remaining=Number(clock.remainingMs)||0;
+ const clock=await room.syncDemoClock(meta,lease),plan=await planFor(room,meta,clock,lease),duration=Number(clock.durationMs)||0,remaining=Number(clock.remainingMs)||0;
  if(remaining<=0&&['nominating','voting'].includes(clock.kind)){plan.cursor=plan.tasks.length;await store.put('demoPlan',plan)}
  const slot=demoTaskAt(duration,plan);
  if(plan.cursor<plan.tasks.length&&duration-remaining+1>=slot){
   const task=plan.tasks[plan.cursor],ctx=await context(room,meta);
   if(task.kind){
-   if(task.kind==='talk'){
+   if(task.kind==='talk'&&task.script){
+    const sc=task.script,profile=liveProfileOf(lease,task.actorId,meta.matchId),vars={};
+    for(const k of ['t','s'])if(sc.vars?.[k])vars[k]=seatTag(ctx.players,sc.vars[k]);
+    const text=sc.bank==='claim'?claimLine(sc.label,profile.tone,vars,Math.random):liveLine(sc.label,task.actorId,vars,Math.random,profile.tone);
+    if(sc.effect){const ids=Object.keys(ctx.players).map(k=>k.replace(/^member:/,''));applyClaimEffect(sc.effect,task.actorId,liveProfilesById(lease,meta,ids),liveSuspicion(lease,meta),plan.tasks.map(t=>t.script).filter(Boolean))}
+    await liveSay(room,meta,lease,task.actorId,sc.label,vars,text);
+   }else if(task.kind==='talk'){
     const {eligible}=await room.gallowsState(meta),others=eligible.filter(id=>id!==task.actorId),prev=lease.liveLines?.[lease.liveLines.length-1];
     const target=others.length?pick(others):'',recentPrev=prev&&prev.matchId===meta.matchId&&Date.now()-prev.at<120000?prev:null;
     const profile=liveProfileOf(lease,task.actorId,meta.matchId),prevProfile=recentPrev?liveProfileOf(lease,recentPrev.loginId,meta.matchId):null;
@@ -266,9 +305,9 @@ export async function runServerDemo(room,meta,budget=32){
    if(ballot.mode==='gm'){ /* GM owns this ballot; retain their choices. */ }
    else if(task.kind==='nominate'&&eligible.includes(task.actorId)&&!(ballot.blockedNomination||[]).includes(task.actorId)&&!Object.hasOwn(ballot.nominations||{},task.actorId)){
     const targets=eligible.slice();
-    if(targets.length){const target=pick(targets);if(await ballotAction(room,{command:'nominate',loginId:task.actorId,targetId:target})){await observe(room,meta,lease,'Đề cử',task.actorId,[target]);if(Math.random()<.5)await liveSay(room,meta,lease,task.actorId,'nominate',{t:seatTag(ctx.players,target)})}}
+    if(targets.length){const others=targets.filter(id=>id!==task.actorId),target=meta.live===true&&others.length?weightedPick(others,liveSuspicion(lease,meta)):pick(targets);if(await ballotAction(room,{command:'nominate',loginId:task.actorId,targetId:target})){await observe(room,meta,lease,'Đề cử',task.actorId,[target]);if(Math.random()<.5)await liveSay(room,meta,lease,task.actorId,'nominate',{t:seatTag(ctx.players,target)})}}
    }else if(task.kind==='vote'&&eligible.includes(task.actorId)&&!(ballot.blockedVotes||ballot.blocked||[]).includes(task.actorId)&&!Object.hasOwn(ballot.votes||{},task.actorId)){
-    const choice=pick(['👍','👎']);if(await ballotAction(room,{command:'vote',loginId:task.actorId,choice})){await observe(room,meta,lease,'Bỏ phiếu '+choice,task.actorId,[ballot.candidateId]);if(Math.random()<.45)await liveSay(room,meta,lease,task.actorId,choice==='👎'?'vote_kill':'vote_save',{t:seatTag(ctx.players,ballot.candidateId)})}
+    const choice=meta.live===true?(Math.random()<killChance(liveSuspicion(lease,meta)[ballot.candidateId])?'👎':'👍'):pick(['👍','👎']);if(await ballotAction(room,{command:'vote',loginId:task.actorId,choice})){await observe(room,meta,lease,'Bỏ phiếu '+choice,task.actorId,[ballot.candidateId]);if(Math.random()<.45)await liveSay(room,meta,lease,task.actorId,choice==='👎'?'vote_kill':'vote_save',{t:seatTag(ctx.players,ballot.candidateId)})}
    }
    }
   }else{
