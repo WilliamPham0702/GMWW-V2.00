@@ -3,11 +3,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createBotProfile,decideTalk,applyLynchOutcome,revealStats,toneFor,BOT_STAT_KEYS} from '../src/gmww-live-bot-brain.js';
 
-test('profile has 7 stats in range and is stable per loginId', () => {
-  const a=createBotProfile('bot-anna'), b=createBotProfile('bot-anna');
-  assert.deepEqual(a,b);
+test('profile has 7 stats in range', () => {
+  const a=createBotProfile('bot-anna','m1');
   assert.deepEqual(Object.keys(a.stats).sort(), [...BOT_STAT_KEYS].sort());
   for (const k of BOT_STAT_KEYS) assert.ok(a.stats[k]>=10 && a.stats[k]<=90, k);
+});
+
+test('same bot in a new match gets a different personality (no repeat)', () => {
+  const sigs=new Set();
+  for (let m=0;m<20;m++) sigs.add(JSON.stringify(createBotProfile('bot-A','match-'+m).stats));
+  assert.equal(sigs.size,20);
 });
 
 test('different bots get different personalities', () => {

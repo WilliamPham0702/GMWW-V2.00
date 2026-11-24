@@ -14,12 +14,13 @@ function seededRandom(seed){
 
 const clamp=(n,lo=0,hi=100)=>Math.max(lo,Math.min(hi,n));
 
-// Tạo hồ sơ bot: 7 chỉ số 0–100 cố định theo loginId.
-export function createBotProfile(loginId){
- const rnd=seededRandom(hash('live-bot:'+loginId));
+// Tạo hồ sơ bot: 7 chỉ số 0–100, ngẫu nhiên nhưng cố định trong một ván.
+// Seed gồm matchId, nên cùng một bot sang ván mới sẽ có bộ chỉ số khác.
+export function createBotProfile(loginId,matchId=''){
+ const rnd=seededRandom(hash('live-bot:'+matchId+':'+loginId)^hash(Math.random().toString()));
  const stats={};
  for(const k of BOT_STAT_KEYS)stats[k]=Math.round(10+rnd()*80); // 10–90, tránh cực đoan
- return {loginId:String(loginId),stats,trust:stats.trust,tone:toneFor(stats)};
+ return {loginId:String(loginId),matchId:String(matchId),stats,trust:stats.trust,tone:toneFor(stats)};
 }
 
 // Giọng nói: 0 = nóng, 1 = vừa, 2 = điềm (khớp thứ tự LIVE_BANK).

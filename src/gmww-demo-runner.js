@@ -16,17 +16,18 @@ const pick=rows=>rows[Math.floor(Math.random()*rows.length)];
 async function liveSay(room,meta,lease,actorId,label,vars={}){
  if(meta.live!==true||!actorId)return;
  const players=await room.ctx.storage.get('players')||{},me=players['member:'+actorId];if(!me)return;
- const profile=liveProfileOf(lease,actorId),text=liveLine(label,actorId,vars,Math.random,profile.tone);if(!text)return;
+ const profile=liveProfileOf(lease,actorId,meta.matchId),text=liveLine(label,actorId,vars,Math.random,profile.tone);if(!text)return;
  const line={id:'live-'+crypto.randomUUID(),matchId:meta.matchId,loginId:actorId,seatId:Number(me.seatId||0),name:me.displayName||'',text,label,at:Date.now()};
  lease.liveLines=[...(Array.isArray(lease.liveLines)?lease.liveLines:[]),line].slice(-12);
  await room.ctx.storage.put('demoLease',lease);
  room.broadcast({type:'live_line',line,serverTime:line.at});
 }
-// Hồ sơ bot (7 chỉ số ẩn + tin cậy) lưu trong lease, tạo lazily theo loginId.
-function liveProfileOf(lease,loginId){
+// Hồ sơ bot (7 chỉ số ẩn + tin cậy) lưu trong lease theo từng ván: ván mới = cá tính mới.
+function liveProfileOf(lease,loginId,matchId){
  lease.liveProfiles=lease.liveProfiles||{};
- if(!lease.liveProfiles[loginId])lease.liveProfiles[loginId]=createBotProfile(loginId);
- return lease.liveProfiles[loginId];
+ const key=String(matchId||'')+':'+loginId;
+ if(!lease.liveProfiles[key])lease.liveProfiles[key]=createBotProfile(loginId,matchId);
+ return lease.liveProfiles[key];
 }
 const seatTag=(players,id)=>{const m=players['member:'+id];return m?.seatId?'ghế '+m.seatId:(m?.displayName||'người đó')};
 // Catalogued divination rules take precedence over stale saved-card targetCount.
@@ -248,7 +249,7 @@ export async function runServerDemo(room,meta,budget=32){
    if(task.kind==='talk'){
     const {eligible}=await room.gallowsState(meta),others=eligible.filter(id=>id!==task.actorId),prev=lease.liveLines?.[lease.liveLines.length-1];
     const target=others.length?pick(others):'',recentPrev=prev&&prev.matchId===meta.matchId&&Date.now()-prev.at<120000?prev:null;
-    const profile=liveProfileOf(lease,task.actorId),prevProfile=recentPrev?liveProfileOf(lease,recentPrev.loginId):null;
+    const profile=liveProfileOf(lease,task.actorId,meta.matchId),prevProfile=recentPrev?liveProfileOf(lease,recentPrev.loginId,meta.matchId):null;
     const {label,vars:raw}=decideTalk(profile,{prev:recentPrev,prevSeat:recentPrev?.seatId?'ghế '+recentPrev.seatId:'bạn',prevTrust:prevProfile?.trust,target},Math.random);
     const vars=raw.t?{t:seatTag(ctx.players,target)}:raw;
     await liveSay(room,meta,lease,task.actorId,label,vars);
