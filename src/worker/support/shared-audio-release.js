@@ -38,12 +38,18 @@ export async function getSharedAudioCatalog(fetcher=fetch,now=Date.now()){
   if(Date.now()>=cachedUntil||next){cached=next;cachedUntil=Date.now()+(next?600000:30000)}
   return cached;
 }
+// Chơi nhanh: theo tag đã chọn. Phòng GM Online: dùng làm dự phòng khi GM chưa tải clip lên phòng
+// (GM mở trên PC/web không có thư viện audio, app ở nền...) để Player Web vẫn nghe timeline.
+export function sharedAudioAllowed(meta){
+  if(meta?.quickPlay===true)return meta?.quickPlayAudioReleaseTag===GMWW_SHARED_AUDIO_TAG;
+  return meta?.demo!==true&&String(meta?.roomMode||'online').toLowerCase()==='online';
+}
 export function sharedAudioTargetsForCue(meta,targets,catalog){
-  if(meta?.quickPlay!==true||meta?.quickPlayAudioReleaseTag!==GMWW_SHARED_AUDIO_TAG||!catalog)return [];
+  if(!sharedAudioAllowed(meta)||!catalog)return [];
   return (Array.isArray(targets)?targets:[]).flatMap(t=>catalog.clips[t]?[catalog.clips[t]]:[]);
 }
 export async function readSharedAudioClip(meta,targets,sha,fetcher=fetch,catalog=null){
-  if(!SHA.test(sha)||meta?.quickPlay!==true||meta?.quickPlayAudioReleaseTag!==GMWW_SHARED_AUDIO_TAG)return new Response(null,{status:404});
+  if(!SHA.test(sha)||!sharedAudioAllowed(meta))return new Response(null,{status:404});
   const available=catalog||await getSharedAudioCatalog(fetcher);
   const matched=sharedAudioTargetsForCue(meta,targets,available).find(c=>c.sha256===sha);
   if(!matched)return new Response(null,{status:404});

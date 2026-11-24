@@ -22,10 +22,12 @@ test('manifest validates exact pinned GitHub origin, filenames and full SHA-256'
   {...doc,clips:{'../admin':clip}}
  ])assert.equal(verifiedSharedAudioCatalog(c),null);
 });
-test('shared audio only applies to a Quick Play room with pinned template release',()=>{
+test('shared audio applies to Quick Play with pinned release and to GM Online rooms (fallback)',()=>{
  const catalog=verifiedSharedAudioCatalog(doc);
  assert.equal(sharedAudioTargetsForCue(meta,[target],catalog).length,1);
- assert.equal(sharedAudioTargetsForCue({...meta,quickPlay:false},[target],catalog).length,0);
+ assert.equal(sharedAudioTargetsForCue({...meta,quickPlay:false},[target],catalog).length,1,'GM Online room fallback');
+ assert.equal(sharedAudioTargetsForCue({...meta,quickPlay:false,roomMode:'offline'},[target],catalog).length,0);
+ assert.equal(sharedAudioTargetsForCue({...meta,quickPlay:false,demo:true},[target],catalog).length,0);
  assert.equal(sharedAudioTargetsForCue({...meta,quickPlayAudioReleaseTag:'../evil'},[target],catalog).length,0);
  assert.equal(sharedAudioTargetsForCue(meta,['cards:role_guard'],catalog).length,0);
 });
@@ -47,7 +49,7 @@ test('existing room-uploaded audio and privacy admission retain precedence',()=>
  const ann=readFileSync('src/worker/room/announcements.js','utf8');
  assert.match(ann,/if\(lib\[target\]\)return \[/);
  assert.match(ann,/if\(!cue\?\.audio\?\.some\(u=>u\.endsWith\('\?a='\+hash\)\)&&!recentOk\)return new Response\(null,\{status:404\}\)/);
- assert.match(ann,/meta\.quickPlay===true&&hash\.startsWith\('s'\)\?this\.recentAnnClips/);
+ assert.match(ann,/const recent=hash\.startsWith\('s'\)\?this\.recentAnnClips/);
  assert.match(ann,/readSharedAudioClip\(meta,targets,hash\.slice\(1\)\)/);
  assert.match(ann,/sharedAudioTargetsForCue\(meta,\['system:audio_system_countdown'\],shared\)/);
  const worker=workerSource();
@@ -69,5 +71,5 @@ test('Quick Play daytime system cue resolves published audio while old rooms sti
  assert.match(ann,/if\(!targets\.some\(t=>lib\[t\]\)\)\{/);
  assert.match(ann,/const shared=meta\?\.quickPlay===true\?await getSharedAudioCatalog\(\):null;/);
  assert.match(ann,/if\(!sharedAudioTargetsForCue\(meta,targets,shared\)\.length\)return j\(\{ok:false,error:'DAY_AUDIO_NOT_UPLOADED'\},409\)/);
- assert.equal(sharedAudioTargetsForCue({...meta,quickPlay:false},['system:audio_system_countdown'],verifiedSharedAudioCatalog(doc)).length,0);
+ assert.equal(sharedAudioTargetsForCue({...meta,quickPlay:false,demo:true},['system:audio_system_countdown'],verifiedSharedAudioCatalog(doc)).length,0);
 });
