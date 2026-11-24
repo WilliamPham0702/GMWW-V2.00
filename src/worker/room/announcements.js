@@ -22,7 +22,8 @@ export class RoomAnnouncementMethods {
     const lib=await announcementLibrary(this.ctx.storage);
     // Existing room-owned clips win; missing Quick Play clips can be read from
     // the immutable, verified template catalog without copying them to this DO.
-    const needShared=meta?.quickPlay===true&&cue.targets.some(t=>!lib[t]);
+    // Phòng GM Online cũng dùng audio chung khi GM chưa tải clip lên phòng (Player Web không bị im).
+    const needShared=(meta?.quickPlay===true||meta?.demo!==true&&String(meta?.roomMode||'online').toLowerCase()==='online')&&cue.targets.some(t=>!lib[t]);
     const shared=needShared?await getSharedAudioCatalog():null;
     const urls=cue.targets.flatMap(target=>{
       if(lib[target])return ['/api/rooms/'+encodeURIComponent(meta.code)+'/announcement-audio?a='+lib[target]];
@@ -162,7 +163,7 @@ export class RoomAnnouncementMethods {
     if(!meta||meta.enabled===false||!players['member:'+normalizeLoginId(body?.loginId)])return j({ok:false,error:'PLAYER_NOT_IN_ROOM'},403);
     // Only clips of the turn that is live right now are readable by Players.
     const cue=await this.announcementWithAudio(meta),hash=String(body?.a||'');
-    const recent=meta.quickPlay===true&&hash.startsWith('s')?this.recentAnnClips?.get(hash):null,recentOk=!!recent&&recent.until>Date.now();
+    const recent=hash.startsWith('s')?this.recentAnnClips?.get(hash):null,recentOk=!!recent&&recent.until>Date.now();
     if(!cue?.audio?.some(u=>u.endsWith('?a='+hash))&&!recentOk)return new Response(null,{status:404});
     if(/^s[a-f0-9]{64}$/.test(hash)){
       const live=await this.currentAnnouncement(meta);

@@ -123,7 +123,7 @@ test('6. Server publishes the 30s countdown to every Player at deadline-30s, onc
   const mod=vm.runInNewContext(recording+';({announcementCue,dayAnnouncementTargets,saveAnnouncementTarget,announcementLibrary,decodeRecording,readAnnouncementBlob,DAY_COUNTDOWN_MS})',
     {Response,Uint8Array,atob,crypto:webcrypto,Object,Date,Math,Number,String,Array,Set});
   const methods=slice(worker,'  async currentAnnouncement(meta,runtime){','  async gmRoleAssets(');
-  const Room=vm.runInNewContext('(class Room {'+methods+'})',{...mod,normalizeLoginId:x=>String(x||'').toLowerCase(),
+  const Room=vm.runInNewContext('(class Room {'+methods+'})',{...mod,getSharedAudioCatalog:async()=>null,sharedAudioTargetsForCue:()=>[],normalizeLoginId:x=>String(x||'').toLowerCase(),
     j:(data,status)=>Response.json(data,{status}),setTimeout,Response,Date,Math,Number,String,Array});
   const s=memStorage(),sent=[],room=new Room();room.ctx={storage:s};room.broadcast=m=>sent.push(m);
   let alarms=0;room.scheduleRoomAlarm=async()=>{alarms++};
