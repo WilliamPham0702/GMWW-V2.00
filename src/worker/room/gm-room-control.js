@@ -136,6 +136,8 @@ export class RoomGmRoomControlMethods {
     // Room is created once; GM selects Online / Offline / Demo afterwards.
     // Only an EMPTY lobby can cross the demo isolation boundary.
     const previousDemo=meta.demo===true,desiredDemo=body&&Object.prototype.hasOwnProperty.call(body,"demo")?body.demo===true:previousDemo;
+    // LIVE = DEMO chạy trên server + lớp "show" (bot nói thoại). Chỉ hợp lệ khi phòng là DEMO.
+    const desiredLive=desiredDemo&&(body&&Object.prototype.hasOwnProperty.call(body,"live")?body.live===true:meta.live===true);
     const demoChanging=desiredDemo!==previousDemo;
     if(demoChanging){
       const assignments=await this.ctx.storage.get("assignments")||[];
@@ -168,6 +170,7 @@ export class RoomGmRoomControlMethods {
         clearPlayerMovement(p);p.positionX=point.x;p.positionY=point.y;
       }
     }
+    meta.live=desiredLive;
     meta.roomMode=roomMode;meta.seatMoveMode=seatMoveMode;meta.seatCount=requested;meta.seatLayout=seatLayout;meta.seatOffset=seatOffset;meta.seatSpacing=seatSpacing;
     if(demoChanging){
       meta.demo=desiredDemo;meta.autoGM=desiredDemo?false:true;

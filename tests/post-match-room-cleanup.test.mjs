@@ -67,7 +67,7 @@ test('Old finished DEMO room: changing mode repairs remaining seats once, never 
   const runtime={room:{phase:'lobby',endedAt:'2026-10-26T12:00:00Z',lastEndedMatchId:'m1',resetVersion:2,demo:true},
     players:[{seatId:4}],assignments:[{loginId:'alice'}]};
   const fn=vm.runInNewContext(between(setup,'async function flushPlayRoomMode(){','function bindPlayRoomModeButtons()')+';flushPlayRoomMode',{
-    playRoomUiState:ui,playSceneState:scene,playSceneRuntime:runtime,
+    playRoomUiState:ui,playSceneState:scene,playSceneRuntime:runtime,playRoomModeOf:r=>r?.demo===true?(r.live===true?'live':'demo'):r?.roomMode==='offline'?'offline':'online',
     isLivePlayRoom:()=>true,playRoomApi:async(path,options)=>{
       calls.push([path,JSON.parse(options.body)]);
       if(path==='/room-settings'&&calls.length===1){const e=new Error('Not empty');e.code='ROOM_MODE_REQUIRES_EMPTY_RESET';throw e}
