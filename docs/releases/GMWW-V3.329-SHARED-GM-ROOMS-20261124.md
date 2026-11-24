@@ -9,3 +9,4 @@ Ngày: 24/11/2026. Thiết kế đã chốt với chủ dự án:
 - Thư viện (Vai/Artifact/Ván mẫu), ảnh, audio vẫn lưu riêng từng máy.
 - Timer phòng online: đã chạy trên server (alarm Durable Object, Auto GM) từ trước; máy GM chỉ hiển thị theo hạn server, khóa màn hình không làm lệch lượt.
 - Rollback: cài lại Runtime V3.328.
+- Sửa sau merge: test cô lập danh sách phòng Demo (stub + kiểm tra hàm tồn tại); phát hành V3.329 cùng bản sửa này.
