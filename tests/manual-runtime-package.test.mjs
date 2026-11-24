@@ -46,7 +46,7 @@ test('manual action never posts to an unsupported shell and blocks duplicate req
  const source=gmSource('10-library-and-settings');
  const fn=source.slice(source.indexOf('function installManualRuntimeUpdate(){'),source.indexOf('async function installRuntimeUpdate(){'));
  const calls=[],ui=[];
- const ctx={window:{},gmwwUpdateBusy:false,gmwwNativePost:a=>{calls.push(a);return true},setUpdateUi:(...a)=>ui.push(a),gmwwSetUpdateProgress:()=>{}};
+ const ctx={window:{},gmwwIsWebGm:()=>false,gmwwUpdateBusy:false,gmwwNativePost:a=>{calls.push(a);return true},setUpdateUi:(...a)=>ui.push(a),gmwwSetUpdateProgress:()=>{}};
  runInNewContext(fn,ctx);
  assert.equal(ctx.installManualRuntimeUpdate(),false);assert.equal(calls.length,0);assert.match(ui[0][2],/IPA/);
  ctx.window.GMWW_NATIVE_MANUAL_RUNTIME=true;
