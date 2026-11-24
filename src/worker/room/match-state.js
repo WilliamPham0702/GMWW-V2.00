@@ -30,6 +30,13 @@ export class RoomMatchStateMethods {
       if(lease?.engine!=="server"&&lease?.running&&Number(lease.until)>Date.now()&&request.headers.get("x-gmww-demo-owner")!==lease.owner)
         return{ok:false,response:j({ok:false,error:"DEMO_LEASE_OWNED",message:"Phòng Demo đang được điều khiển ở một phiên GM khác."},409)};
     }
+    // GM device lease (opt-in): chỉ khi client gửi x-gmww-device. Client cũ không gửi header nên không bị chặn.
+    const deviceId=request.headers.get("x-gmww-device")||"";
+    if(deviceId&&request.method!=="GET"&&new URL(request.url).pathname!=="/gm/device-lease"){
+      const lease=await this.ctx.storage.get("gmDeviceLease");
+      if(lease?.owner&&Number(lease.until)>Date.now()&&lease.owner!==deviceId)
+        return{ok:false,response:j({ok:false,error:"GM_DEVICE_LEASE_OWNED",message:"Phòng đang được điều khiển ở một thiết bị GM khác.",owner:lease.label||"thiết bị khác"},409)};
+    }
     return{ok:true,meta,admin:token===GM_SYNC_TOKEN}}
   computeWinProposal(meta,assignments,interactions){
     if(String(meta?.phase||"").toLowerCase()!=="running")return null;
