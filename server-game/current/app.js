@@ -1,6 +1,6 @@
 (()=>{'use strict';
 
-const VERSION='3.328';
+const VERSION='3.329';
 function createVillageLocalCache(base){
  const scope=new URL(base).origin;
  const valid=x=>x&&x.record&&Number.isFinite(x.record.revision)&&x.images&&['day','night'].every(k=>x.record[k]?typeof x.images[k]==='string'&&/^data:image\/(png|jpeg|webp);base64,/.test(x.images[k]):x.images[k]===null);
@@ -4199,7 +4199,9 @@ function liveShowBubble(line){
 function playRoomRegistry(){try{const v=JSON.parse(localStorage.getItem(PLAY_ROOM_REGISTRY_KEY)||'[]');return Array.isArray(v)?v:[]}catch{return []}}
 function savePlayRoomRegistry(rows){try{localStorage.setItem(PLAY_ROOM_REGISTRY_KEY,JSON.stringify((rows||[]).slice(0,30)))}catch{}}
 function rememberPlayRoom(roomCode,gmToken,room={}){
-  roomCode=String(roomCode||'');gmToken=String(gmToken||'');if(!roomCode||!gmToken)return;
+  roomCode=String(roomCode||'');gmToken=String(gmToken||'');if(!roomCode)return;
+  // V3.329: phòng mở từ máy GM khác (PC/iPhone) không có gmToken riêng; lệnh GM dùng token chung nên vẫn lưu.
+  const prior=playRoomRegistry().find(x=>String(x.roomCode)===roomCode);if(!gmToken)gmToken=String(prior?.gmToken||'');
   const rows=playRoomRegistry().filter(x=>String(x.roomCode)!==roomCode);
   rows.unshift({roomCode,gmToken,roomName:playReadableRoomName(room.roomName||document.getElementById('playCreateRoomName')?.value),roomMode:playRoomModeOf(room),seatCount:Math.max(1,Math.min(30,Number(room.seatCount)||playSceneState.seatCount||12)),demo:room.demo===true,enabled:room.enabled!==false,updatedAt:Date.now()});savePlayRoomRegistry(rows)
 }
@@ -4226,8 +4228,31 @@ async function selectPlayExistingRoom(r){
   rememberPlayRoom(playSceneState.roomCode,playSceneState.gmToken,playSceneRuntime.room||data.room||{});
   renderPlayCreateRoomSheet()
 }
+/* V3.329: một bản chung cho mọi máy GM — danh sách phòng của GM (Offline/Online/Demo/Live) lấy thêm từ server,
+   nên PC và iPhone mở cùng một phòng (cùng ván trên Durable Object). Khóa thiết bị chống hai máy ghi đè nhau. */
+const sharedRoomRegistry={at:0,busy:false};
+function mergeServerRoomsIntoRegistry(rooms){
+  const rows=playRoomRegistry(),known=new Set(rows.map(x=>String(x.roomCode)));let added=0;
+  for(const r of Array.isArray(rooms)?rooms:[]){
+    const code=String(r?.code||'');
+    if(r?.playerRoom===true||!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code)||known.has(code))continue;
+    const phase=String(r.phase||'').toLowerCase();if(phase==='deleted')continue;
+    rows.push({roomCode:code,gmToken:'',roomName:playReadableRoomName(r.roomName),roomMode:playRoomModeOf(r),seatCount:Math.max(1,Math.min(30,Number(r.seatCount)||12)),demo:r.demo===true,enabled:r.enabled!==false,updatedAt:Date.parse(r.updatedAt||'')||0,shared:true});
+    known.add(code);added++;
+  }
+  if(added)savePlayRoomRegistry(rows);
+  return added;
+}
+async function syncSharedRoomRegistry(force=false){
+  if(sharedRoomRegistry.busy||(!force&&Date.now()-sharedRoomRegistry.at<15000))return;
+  sharedRoomRegistry.busy=true;sharedRoomRegistry.at=Date.now();
+  try{const data=await gmApi('/api/gm/rooms',{method:'GET'});if(mergeServerRoomsIntoRegistry(data?.rooms))renderPlayCreatedRooms()}
+  catch(err){console.warn('GMWW_SHARED_ROOMS',err)}
+  finally{sharedRoomRegistry.busy=false}
+}
 function renderPlayCreatedRooms(){
   const list=document.getElementById('playCreatedRoomList');if(!list)return;
+  void syncSharedRoomRegistry();
   list.replaceChildren();
   playRoomRegistry().forEach(r=>{
     const b=document.createElement('button');b.type='button';b.className='play-created-room'+(String(r.roomCode)===String(playRoomUiState.selectedCode)?' active':'');
