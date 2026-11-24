@@ -5,6 +5,7 @@ import { gameCharacterCatalog, gameCharacterImage } from "../support/characters.
 import { isValidRoomCode, memberStore, normalizeRoomCode, roomStub } from "../support/room-access.js";
 import { createRoom, gmLobbyResetAll, gmReset939, gmRoomConfig, gmRoomDelete, gmRoomEnabled, gmRoomEnd, gmRoomKick, gmRoomLock, gmRoomParticipants, gmRoomRename, gmRoomReset, gmRoomSettingsApi, gmRoomState, gmRoomsPurge, roomProxy } from "./gm-api.js";
 import { gmObserverApi } from "./gm-observer-api.js";
+import { GM_WEB_PREFIX, handleGmWebRoute } from "./gm-web.js";
 import { avatarImage, playerPage } from "./pages.js";
 import { heartbeatRoom, joinRoom, leaveRoomApi, playerArtifactActivateApi, playerArtifactViewedApi, playerDeliveryReceivedApi, playerDemoActionApi, playerDrunkDrawApi, playerGallowsApi, playerInteractionRespondApi, playerOnlineActionApi, playerOnlineUndoApi, playerPrivateState, playerRoleViewedApi, playerRoomChatApi, playerRoomChatAudioApi, playerRoomMoveApi, playerRoomMoveCompleteApi, playerRoomPostApi, playerRoomSetupApi, playerSeatSwapApi, playerThiefChooseApi, publicRoomState, readyRoom } from "./player-api.js";
 import { gmPushSettingsGet, gmPushSettingsPut, gmPushTest } from "./gm-push-api.js";
@@ -67,6 +68,8 @@ export default {async fetch(request,env){
     if(!env.ASSETS)return new Response("Runtime assets unavailable",{status:503});
     return env.ASSETS.fetch(request);
   }
+  // GM Server trên web/PWA cho PC: phục vụ đúng gói Runtime đã phát hành.
+  if(url.pathname===GM_WEB_PREFIX||url.pathname.startsWith(GM_WEB_PREFIX+"/"))return handleGmWebRoute(request,env,url);
   // CORS-safe access to the exact canonical role artwork bundled with the current Runtime.
   // Native WKWebView can display local images but reject fetch(file://) during template packaging.
   const templateRoleArtwork=url.pathname.match(/^\/api\/gm\/template-role-artwork\/([A-Za-z0-9_-]{1,120})$/);
@@ -417,6 +420,7 @@ export default {async fetch(request,env){
   const gmGallowsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/gallows$/);if(gmGallowsRoute&&request.method==="POST")return roomProxy(env,gmGallowsRoute[1],"/gm/gallows",request);
   const gmParticipants=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/participants$/);if(gmParticipants&&request.method==="POST")return gmRoomParticipants(env,gmParticipants[1],request);
   const gmRoomSettingsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/room-settings$/);if(gmRoomSettingsRoute&&request.method==="POST")return gmRoomSettingsApi(env,gmRoomSettingsRoute[1],request);
+  const gmDeviceLeaseRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/device-lease$/);if(gmDeviceLeaseRoute&&request.method==="POST")return roomProxy(env,gmDeviceLeaseRoute[1],"/gm/device-lease",request);
   const gmStageRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/stage$/);if(gmStageRoute&&request.method==="POST")return roomProxy(env,gmStageRoute[1],"/gm/stage",request);
   const gmSeatRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seat$/);if(gmSeatRoute&&request.method==="POST")return roomProxy(env,gmSeatRoute[1],"/gm/seat",request);
   const gmRandomSeatsRoute=url.pathname.match(/^\/api\/gm\/rooms\/([A-Za-z0-9]+)\/seats\/randomize-remaining$/);if(gmRandomSeatsRoute&&request.method==="POST")return roomProxy(env,gmRandomSeatsRoute[1],"/gm/seats/randomize-remaining",request);

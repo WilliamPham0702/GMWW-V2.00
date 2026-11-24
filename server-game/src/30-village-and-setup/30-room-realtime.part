@@ -23,7 +23,14 @@ async function playRoomApi(path='',opts={}){
   // While the Demo bot owns a lease, all its writes carry the same owner ID.
   const headers=playSceneRuntime.room?.demo===true&&typeof demoRunner!=='undefined'&&demoRunner.owner&&demoRunner.roomCode===String(playSceneState.roomCode)
     ?{...(opts.headers||{}),'x-gmww-demo-owner':demoRunner.owner}:opts.headers;
-  return gmApi('/api/gm/rooms/'+encodeURIComponent(playSceneState.roomCode)+path,{...opts,headers});
+  // V3.328: khóa điều khiển theo thiết bị (iPhone + PC).
+  gmDeviceLeaseNoteRoom();
+  const write=String(opts.method||'GET').toUpperCase()!=='GET';
+  try{
+    const data=await gmApi('/api/gm/rooms/'+encodeURIComponent(playSceneState.roomCode)+path,{...opts,headers:{...(headers||{}),'x-gmww-device':gmDeviceId()}});
+    if(write)gmDeviceLeaseNoteWrite();
+    return data;
+  }catch(err){if(err?.code==='GM_DEVICE_LEASE_OWNED')gmDeviceLeaseBlocked();throw err}
 }
 function disconnectPlaySocket(){if(playSceneRuntime.socketReconnect){clearTimeout(playSceneRuntime.socketReconnect);playSceneRuntime.socketReconnect=0}if(playSceneRuntime.roomSyncTimer){clearTimeout(playSceneRuntime.roomSyncTimer);playSceneRuntime.roomSyncTimer=0}if(playSceneRuntime.pollTimer){clearInterval(playSceneRuntime.pollTimer);playSceneRuntime.pollTimer=0}try{playSceneRuntime.socket?.close(1000,'GM_ROOM_CHANGED')}catch{}playSceneRuntime.socket=null;playSceneRuntime.socketRoomCode=''}
 function stopPlayGlobalVillagePoll(){if(playSceneRuntime.villagePollTimer){clearInterval(playSceneRuntime.villagePollTimer);playSceneRuntime.villagePollTimer=0}}
