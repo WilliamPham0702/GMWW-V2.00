@@ -220,6 +220,7 @@ async function gmwwChatRefresh(){
     gmwwVillageTickerUpdate(result.notices,result.noticeCycleNight);
     // Public notices appear only in the ticker; these are conversation messages.
     const items=[...(Array.isArray(result.broadcasts)?result.broadcasts:[]),...(Array.isArray(result.messages)?result.messages:[])].sort((a,b)=>Number(a.at||0)-Number(b.at||0));
+    try{gmwwCbFeed(room+'|'+gmwwChatTarget+'|'+String(result.channel||''),items)}catch{}
     const signature=JSON.stringify([gmwwChatTarget,items]);
     // Never expose message contents through room_state or the WebSocket.
     // The authenticated chat GET is the source of truth for a new-message cue.
