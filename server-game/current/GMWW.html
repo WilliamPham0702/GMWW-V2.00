@@ -130,6 +130,9 @@ body.play-immersive #start #playGatherToolbar .play-gather-toolbar-actions>butto
 }
 #playGatherToolbar #playRoomModeToggle[data-mode="online"]{border-color:rgba(91,223,220,.8)!important}
 #playGatherToolbar #playRoomModeToggle[data-mode="offline"]{border-color:rgba(255,211,133,.75)!important}
+#liveBubbleLayer{position:fixed;inset:0;pointer-events:none;z-index:9000}
+.live-bubble{position:fixed;max-width:min(62vw,230px);padding:6px 10px;border-radius:14px;background:rgba(255,255,255,.96);color:#1c1530;font:600 12px/1.3 system-ui,-apple-system,sans-serif;box-shadow:0 3px 12px rgba(0,0,0,.35);border:1.5px solid rgba(236,98,160,.8);opacity:0;transition:opacity .15s}
+#playGatherToolbar #playRoomModeToggle[data-mode="live"]{border-color:rgba(255,92,150,.9)!important}
 #playGatherToolbar #playRoomModeToggle[data-mode="demo"]{border-color:rgba(204,155,255,.85)!important}
 #playSeatPresetPanel .play-seat-preset-tools{display:flex;align-items:center;gap:6px}
 #playSeatPresetPanel .play-seat-preset-tools>button{

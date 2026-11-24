@@ -86,6 +86,7 @@ function connectPlaySocket(){
     if(playSceneRuntime.socket===ws)playSceneRuntime.socketMessageAt=Date.now();
     const d=JSON.parse(e.data||'{}');
     if(d.type==='chat_tick'&&String(playSceneState.roomCode)===code){if(typeof gmwwGMChatRefresh==='function'&&gmwwGMChatOpen)void gmwwGMChatRefresh();return}
+    if(d.type==='live_line'&&String(playSceneState.roomCode)===code){liveShowBubble(d.line);return}
     if(['demo_event','demo_control','demo_winner'].includes(d.type)&&String(playSceneState.roomCode)===code){void playSyncRoom(true);return}
     if(d.type==='gallows_updated'&&String(playSceneState.roomCode)===code){
       if(Number.isFinite(Number(d.serverTime)))playSceneRuntime.serverClockOffsetMs=Number(d.serverTime)-Date.now();

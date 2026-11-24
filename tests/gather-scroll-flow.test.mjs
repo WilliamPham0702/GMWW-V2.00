@@ -11,7 +11,7 @@ test('Gathering toolbar exposes exactly six swipeable actions in order',()=>{
   assert.match(region,/TẬP HỢP/);assert.match(region,/PHÂN BỐ/);
   assert.match(read('server-game/current/style.css'),/touch-action:pan-x!important/);
 });
-test('Mode clicks cycle Online, Offline, Demo',()=>{
+test('Mode clicks cycle Online, Offline, Demo, Live',()=>{
   const source=gmSource('30-village-and-setup');
   const expr=source.match(/const PLAY_ROOM_MODE_CYCLE=[^\n]+;\nfunction nextPlayRoomMode\([^\n]+\{[\s\S]*?\n\}/)?.[0];
   assert.ok(expr,'mode cycle present');
@@ -19,7 +19,8 @@ test('Mode clicks cycle Online, Offline, Demo',()=>{
   assert.equal(next('offline',false),'online');
   assert.equal(next('online',true),'offline');
   assert.equal(next('offline',true),'demo');
-  assert.equal(next('demo',true),'online');
+  assert.equal(next('demo',true),'live');
+  assert.equal(next('live',true),'online');
 });
 test('Only explicit roster selection can add online members; seat progress gates next actions',()=>{
   const battle=gmSource('40-battle-and-timeline');
