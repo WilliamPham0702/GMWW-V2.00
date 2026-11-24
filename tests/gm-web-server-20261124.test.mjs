@@ -75,3 +75,10 @@ test('GM Server sends x-gmww-device on room calls and shows lease chip', () => {
   // No unused polling: renewal only while this device holds the lease and the app is visible.
   assert.match(app,/const want=gmDeviceLease\.mine&&document\.visibilityState!=='hidden'/);
 });
+
+test('V3.332: lease chip only when ANOTHER device holds control, placed below the top menu; Live seat number is red', () => {
+  const app=fs.readFileSync('server-game/current/app.js','utf8'),html=fs.readFileSync('server-game/current/GMWW.html','utf8');
+  assert.match(app,/&&!gmDeviceLease\.mine&&!!gmDeviceLease\.owner;/);
+  assert.match(app,/top:calc\(env\(safe-area-inset-top,0px\) \+ 78px\)/);
+  assert.match(html,/\.play-seat-number\{[^}]*background:#e3172f;[^}]*border:2px solid #fff/);
+});

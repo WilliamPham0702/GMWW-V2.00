@@ -57,11 +57,12 @@ async function gmDeviceLeaseTakeover(){if(gmDeviceLease.busy)return;gmDeviceLeas
 async function gmDeviceLeaseRelease(){if(gmDeviceLease.busy)return;gmDeviceLease.busy=true;renderGmDeviceLease();try{await gmDeviceLeaseCall('release')}finally{gmDeviceLease.busy=false;renderGmDeviceLease()}}
 function renderGmDeviceLease(){
   let el=document.getElementById('gmDeviceLeaseChip');
-  const show=isLivePlayRoom()&&gmDeviceLease.room===String(playSceneState.roomCode||'')&&(gmDeviceLease.mine||!!gmDeviceLease.owner);
+  // V3.332: chỉ hiện khi MÁY KHÁC đang giữ quyền (không che menu khi chỉ dùng một máy).
+  const show=isLivePlayRoom()&&gmDeviceLease.room===String(playSceneState.roomCode||'')&&!gmDeviceLease.mine&&!!gmDeviceLease.owner;
   if(!show){if(el)el.hidden=true;return}
   if(!el){
     el=document.createElement('div');el.id='gmDeviceLeaseChip';
-    el.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:10px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;font:600 12px/1.2 system-ui,-apple-system,sans-serif;color:#eaf6ff;background:rgba(8,28,44,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(140,200,255,.28);box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:calc(100vw - 20px)';
+    el.style.cssText='position:fixed;top:calc(env(safe-area-inset-top,0px) + 78px);right:10px;z-index:2147483000;display:flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;font:600 12px/1.2 system-ui,-apple-system,sans-serif;color:#eaf6ff;background:rgba(8,28,44,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(140,200,255,.28);box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:calc(100vw - 20px)';
     el.innerHTML='<span data-lease-text style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></span><button type="button" data-lease-btn style="border:0;border-radius:999px;padding:5px 10px;font:700 12px system-ui,-apple-system,sans-serif;cursor:pointer"></button>';
     el.querySelector('[data-lease-btn]').addEventListener('click',()=>gmDeviceLease.mine?gmDeviceLeaseRelease():gmDeviceLeaseTakeover());
     document.body.appendChild(el);
