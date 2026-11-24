@@ -43,6 +43,7 @@ if(openPlayerWeb)openPlayerWeb.addEventListener('click',()=>window.location.assi
 const healthButton=document.getElementById('checkServerHealth');
 if(healthButton)healthButton.addEventListener('click',checkServerHealth);
 document.getElementById('installManualRuntimeUpdate')?.addEventListener('click',installManualRuntimeUpdate);
+gmwwWebUpdateSetup();
 const installRuntimeUpdateBtn=document.getElementById('installRuntimeUpdate');if(installRuntimeUpdateBtn)installRuntimeUpdateBtn.addEventListener('click',updateDataNow);
 const downloadNewIPA=document.getElementById('downloadNewIPA');if(downloadNewIPA)downloadNewIPA.addEventListener('click',downloadUpdateIPA);
 const syncPlayerWebUpdateBtn=document.getElementById('syncPlayerWebUpdate');if(syncPlayerWebUpdateBtn)syncPlayerWebUpdateBtn.addEventListener('click',syncPlayerWebUpdate);
