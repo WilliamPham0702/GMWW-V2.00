@@ -12,7 +12,7 @@ test('Demo rooms are listed like any other user-created room, with no extra fixe
  const children=[],list={replaceChildren(){children.length=0},appendChild(x){children.push(x)}};
  const ctx={document:{getElementById:id=>id==='playCreatedRoomList'?list:null,createElement:()=>({})},
   playRoomRegistry:()=>[{roomCode:'A',roomName:'A'},{roomCode:'B',roomName:'B'},{roomCode:'D',roomName:'D',demo:true}],
-  playSceneState:{},playRoomUiState:{},playEsc:x=>x,playReadableRoomName:x=>x};
+  playSceneState:{},playRoomUiState:{},playEsc:x=>x,playReadableRoomName:x=>x,syncSharedRoomRegistry:()=>{}};
  vm.runInNewContext(extract(setup,'function renderPlayCreatedRooms(){','/* Demo controls')+';renderPlayCreatedRooms()',ctx);
  assert.equal(children.length,3);
  assert.match(children[2].innerHTML,/DEMO/);

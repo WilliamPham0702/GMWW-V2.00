@@ -4252,7 +4252,7 @@ async function syncSharedRoomRegistry(force=false){
 }
 function renderPlayCreatedRooms(){
   const list=document.getElementById('playCreatedRoomList');if(!list)return;
-  void syncSharedRoomRegistry();
+  if(typeof syncSharedRoomRegistry==='function')void syncSharedRoomRegistry();
   list.replaceChildren();
   playRoomRegistry().forEach(r=>{
     const b=document.createElement('button');b.type='button';b.className='play-created-room'+(String(r.roomCode)===String(playRoomUiState.selectedCode)?' active':'');
