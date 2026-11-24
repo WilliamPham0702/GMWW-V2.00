@@ -45,7 +45,8 @@ export class RoomGmStateMethods {
       demoClock=storedDemoClock?projectDemoClock(storedDemoClock,Date.now()):null;
     if(meta.demo&&meta.autoGM!==true&&nightRuntime&&demoClock?.kind==="night"){
       nightRuntime.deadlineAt=demoClock.deadlineAt?new Date(demoClock.deadlineAt).toISOString():null;
-      nightRuntime.autoPausedRemainingMs=demoClock.running?0:demoClock.remainingMs/demoClock.speed;
+      // Đang chạy: null (không phải 0) để đồng hồ dùng deadlineAt; 0 làm đồng hồ hành động luôn 00:00.
+      nightRuntime.autoPausedRemainingMs=demoClock.running?null:demoClock.remainingMs/demoClock.speed;
     }
     return j({ok:true,demoControl:meta.demo?{engine:demoLease?.engine||"server",paused:demoLease?.reason==="paused",reason:demoLease?.reason||"",error:demoLease?.error||"",steps:Number(demoLease?.steps||0),lastEvent:demoLease?.lastEvent||null,history:(Array.isArray(demoLease?.history)?demoLease.history:[]).filter(event=>String(event?.matchId||'')===String(meta.matchId||'')),running:serverDemoActive(meta,demoLease),speed:Math.max(1,Number(demoLease?.speed)||1),until:Number(demoLease?.until)||0,clock:demoClock}:null,serverTime:Date.now(),room:publicRoom(meta),players:Object.values(players).map(publicPlayer),gameConfig:(await this.ctx.storage.get("gameConfig"))||null,assignments,interactions:interactions.slice(-100),
       // Unlike the 100-row rules buffer, the immutable actionLog archive

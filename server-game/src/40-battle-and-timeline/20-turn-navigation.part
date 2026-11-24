@@ -5,6 +5,10 @@ function battleTickCountdown(){
   const serverNow=Date.now()+Number(playSceneRuntime.serverClockOffsetMs||0);
   const rt=playSceneRuntime.nightRuntime,phase=playSceneState.phase;
   let seconds=phase==='night'?battleRules()?.remainingSeconds(rt,serverNow):null;
+  // V3.330: Demo/Live chạy trên server — đồng hồ hành động lấy hạn của đồng hồ Demo khi đang chạy (trước đây luôn 00:00).
+  const demoClock=playSceneRuntime.room?.demo===true?playSceneRuntime.demoControl?.clock:null;
+  if(phase==='night'&&demoClock?.kind==='night'&&demoClock.running&&Number(demoClock.deadlineAt)>0&&(!Number.isFinite(seconds)||seconds<=0))
+    seconds=Math.max(0,Math.ceil((Number(demoClock.deadlineAt)-serverNow)/1000));
   if(phase==='day'){
     const room=playSceneRuntime.room||{},duration=Number(playSceneRuntime.gameConfig?.timing?.villageDiscussionSec),
       deadline=Date.parse(room.dayDeadlineAt||''),started=Date.parse(room.cycleStartedAt||'');

@@ -37,7 +37,7 @@ export class RoomDemoAutoMethods {
     const auth=await this.gmAuthorized(request);if(!auth.ok)return auth.response;const meta=auth.meta;
     if(meta.demo!==true)return j({ok:false,error:"NOT_DEMO_ROOM"},403);
     const command=String(body?.command||"status"),previous=await this.ctx.storage.get("demoLease")||{},now=Date.now(),
-      speed=[1,2,5,10].includes(Number(body?.speed))?Number(body.speed):Math.max(1,Number(previous.speed)||1);
+      speed=meta.live===true?1:[1,2,5,10].includes(Number(body?.speed))?Number(body.speed):Math.max(1,Number(previous.speed)||1); // LIVE luôn x1 (thời gian thật)
     if(!["status","start","stop","speed","hold","release"].includes(command))return j({ok:false,error:"DEMO_SERVER_OWNED",message:"Demo chạy trên server. Hãy cập nhật Runtime để điều khiển."},409);
     if(command==="start"&&body?.owner)return j({ok:false,error:"DEMO_RUNTIME_UPDATE_REQUIRED",message:"Hãy cập nhật Runtime để dùng Demo chạy trên server."},409);
     if(command==="start"){

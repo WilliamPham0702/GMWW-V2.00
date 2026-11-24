@@ -112,9 +112,11 @@ function demoRenderControls(){
   const enabled=playSceneRuntime.room?.demo===true,button=document.getElementById('battleDemoToggle'),
     wrap=document.getElementById('battleDemoSpeedWrap'),auto=document.getElementById('battleGMAuto'),
     field=document.getElementById('battleDemoSpeed');
-  if(button){button.hidden=!enabled;button.dataset.runState=demoRunner.running?'running':'paused';button.title=demoRunner.error||demoRunner.status||'DEMO';button.setAttribute('aria-label',demoRunner.running?'Đang chạy DEMO, chạm để tạm dừng':'Đã tạm dừng DEMO, chạm để tiếp tục');button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
-  const orbit=button?.querySelector('.demo-clockwise-orbit');if(orbit)orbit.textContent=demoRunner.running?'↻':'Ⅱ';
-  if(wrap)wrap.hidden=!enabled;
+  // V3.330: LIVE tách khỏi DEMO — phòng Live hiện nút LIVE riêng (đỏ, chạy thời gian thật), không có ×1/×2/×5/×10.
+  const live=enabled&&playSceneRuntime.room?.live===true,modeName=live?'LIVE':'DEMO';
+  if(button){button.hidden=!enabled;button.classList.toggle('is-live-mode',live);const label=button.querySelector('b');if(label&&label.textContent!==modeName)label.textContent=modeName;button.dataset.runState=demoRunner.running?'running':'paused';button.title=demoRunner.error||demoRunner.status||modeName;button.setAttribute('aria-label',demoRunner.running?'Đang chạy '+modeName+', chạm để tạm dừng':'Đã tạm dừng '+modeName+', chạm để tiếp tục');button.setAttribute('aria-pressed',String(demoRunner.running));button.classList.toggle('is-off',!demoRunner.running)}
+  const orbit=button?.querySelector('.demo-clockwise-orbit');if(orbit)orbit.textContent=live?(demoRunner.running?'●':'Ⅱ'):(demoRunner.running?'↻':'Ⅱ');
+  if(wrap)wrap.hidden=!enabled||live;
   if(auto)auto.hidden=false;
   if(field){field.dataset.speed=String(demoRunner.speed);field.textContent='×'+String(demoRunner.speed);field.setAttribute('aria-label','Tốc độ DEMO: '+demoRunner.speed+' lần. Chạm để thay đổi.');}
   const matchKey=[playSceneState.roomCode,playSceneRuntime.room?.matchId].join(':');
